@@ -1,0 +1,39 @@
+[
+  {
+    "name": "add1",
+    "kind": "subroutine",
+    "module": "m1",
+    "arguments": [
+      {
+        "name": "n",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "intent": "in",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": "8",
+        "rank": 1,
+        "shape": [
+          "n"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false
+  }
+]

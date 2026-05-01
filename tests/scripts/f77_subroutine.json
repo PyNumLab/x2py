@@ -1,0 +1,61 @@
+[
+  {
+    "name": "daxpy",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "n",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "intent": "unknown",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "a",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "intent": "unknown",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "intent": "unknown",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "y",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "intent": "unknown",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false
+  }
+]

@@ -1,0 +1,98 @@
+{
+  "signatures": [],
+  "types": [
+    {
+      "name": "node",
+      "module": "mesh_mod",
+      "fields": [
+        {
+          "name": "id",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "intent": "unknown",
+          "optional": false,
+          "value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "xyz",
+          "base_type": "real",
+          "kind": "8",
+          "rank": 1,
+          "shape": [
+            "3"
+          ],
+          "intent": "unknown",
+          "optional": false,
+          "value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "methods": [
+        "move"
+      ],
+      "extends": null,
+      "attributes": [],
+      "procedure_bindings": [
+        {
+          "name": "move",
+          "attrs": []
+        }
+      ],
+      "generic_bindings": []
+    },
+    {
+      "name": "mesh",
+      "module": "mesh_mod",
+      "fields": [
+        {
+          "name": "nnodes",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "intent": "unknown",
+          "optional": false,
+          "value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "nodes",
+          "base_type": "derived",
+          "kind": "node",
+          "rank": 1,
+          "shape": [
+            ":"
+          ],
+          "intent": "unknown",
+          "optional": false,
+          "value": false,
+          "allocatable": true,
+          "pointer": false
+        }
+      ],
+      "methods": [
+        "init",
+        "clear"
+      ],
+      "extends": null,
+      "attributes": [],
+      "procedure_bindings": [
+        {
+          "name": "init",
+          "attrs": []
+        },
+        {
+          "name": "clear",
+          "attrs": []
+        }
+      ],
+      "generic_bindings": []
+    }
+  ]
+}

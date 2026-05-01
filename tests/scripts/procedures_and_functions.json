@@ -1,0 +1,75 @@
+[
+  {
+    "name": "norm2",
+    "kind": "function",
+    "module": "math_mod",
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": "8",
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "intent": "in",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "res",
+      "base_type": "real",
+      "kind": "8",
+      "rank": 0,
+      "shape": [],
+      "intent": "unknown",
+      "optional": false,
+      "value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": false
+  },
+  {
+    "name": "scale",
+    "kind": "subroutine",
+    "module": "math_mod",
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "real",
+        "kind": "8",
+        "rank": 0,
+        "shape": [],
+        "intent": "in",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": "8",
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false
+  }
+]

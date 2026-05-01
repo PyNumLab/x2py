@@ -1,0 +1,78 @@
+{
+  "signatures": [
+    {
+      "name": "touch",
+      "kind": "subroutine",
+      "module": "particle_mod",
+      "arguments": [
+        {
+          "name": "p",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "intent": "unknown",
+          "optional": false,
+          "value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {},
+      "in_interface": false
+    }
+  ],
+  "types": [
+    {
+      "name": "particle",
+      "module": "particle_mod",
+      "fields": [
+        {
+          "name": "id",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "intent": "unknown",
+          "optional": false,
+          "value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "x",
+          "base_type": "real",
+          "kind": "8",
+          "rank": 1,
+          "shape": [
+            "3"
+          ],
+          "intent": "unknown",
+          "optional": false,
+          "value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "methods": [
+        "move",
+        "reset"
+      ],
+      "extends": null,
+      "attributes": [],
+      "procedure_bindings": [
+        {
+          "name": "move",
+          "attrs": []
+        },
+        {
+          "name": "reset",
+          "attrs": []
+        }
+      ],
+      "generic_bindings": []
+    }
+  ]
+}
