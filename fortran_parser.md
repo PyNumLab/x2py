@@ -86,6 +86,21 @@ for `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`, `.f08`.
 
 ### 3.2 Human-readable output example
 
+Input Fortran (`tests/fcode/basic_subroutine.f90`):
+
+```fortran
+module m1
+  implicit none
+  integer :: n
+  real, dimension(10) :: x
+contains
+  subroutine add1(n, x)
+    integer, intent(in) :: n
+    real, dimension(n), intent(inout) :: x
+  end subroutine add1
+end module m1
+```
+
 Command:
 
 ```bash
@@ -110,6 +125,46 @@ Interpretation:
 - Empty sections are omitted from the human-readable report.
 
 More complex example:
+
+Input Fortran (`mixed_example.f90`):
+
+```fortran
+subroutine driver(n)
+  integer, intent(in) :: n
+end subroutine driver
+
+module math_ops
+  use iso_c_binding, only: c_double
+  implicit none
+  real(c_double) :: alpha
+contains
+  subroutine saxpy(n, a, x, y)
+    integer, intent(in) :: n
+    real(c_double), intent(in) :: a
+    real(c_double), dimension(n), intent(in) :: x
+    real(c_double), dimension(n), intent(inout) :: y
+  end subroutine saxpy
+
+  function dot(x, y) result(r)
+    real(c_double), dimension(:), intent(in) :: x, y
+    real(c_double) :: r
+  end function dot
+end module math_ops
+
+module io_ops
+  implicit none
+contains
+  subroutine dump(v)
+    real, dimension(:), intent(in) :: v
+  end subroutine dump
+end module io_ops
+```
+
+Command:
+
+```bash
+python -m fortran_parser mixed_example.f90
+```
 
 ```text
 File: mixed_example.f90
