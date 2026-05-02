@@ -1,209 +1,220 @@
-# Building a minimal Fortran parser for an f2py-like wrapper tool
+# Fortran parser reference (wrapper-focused subset)
 
-This guide focuses on a **self-contained minimal parser** (no external Fortran parser frameworks) that extracts enough information to generate Python wrappers for common Fortran procedures.
+This document defines the currently supported parser subset, expected behavior,
+and practical usage from terminal and Python.
 
-## Scope and philosophy
+## 1) Supported features (comprehensive)
 
-The goal is not full Fortran compliance. The goal is a robust subset parser for wrapper generation:
+### 1.1 Source forms and preprocessing
 
-- free-form Fortran source
-- module/subroutine/function declarations
-- declaration statements for arguments/results
-- `intent`, `optional`, `value`, `dimension`, `allocatable`, `pointer`
-- `use` statements needed to resolve kind constants
+- Free-form Fortran: `.f90`, `.f95`, `.f03`, `.f08`
+- Fixed-form Fortran: `.f`, `.for`, `.ftn`
+- Free/fixed comment stripping
+- Continuation handling for both forms
 
-Anything outside this subset should return a clear "unsupported syntax" diagnostic.
+### 1.2 Procedure parsing
 
-This parser is intentionally **not** a complete Fortran 77→latest compiler front-end.
-It is a wrapper-focused subset parser and should be paired with a readiness check.
+- `subroutine` headers
+- `function` headers
+- Header modifiers: `pure`, `elemental`, `recursive`
+- Function `result(...)` parsing (tolerant support for `results(...)`)
 
-The sections below enumerate the handled features and data extracted for wrappers so behavior can be tracked through version control diffs.
+### 1.3 Declaration/argument parsing
 
-## Comprehensive handled coverage
-
-### Source forms and preprocessing
-
-- Free-form Fortran (`.f90`, `.f95`, `.f03`, `.f08`).
-- Fixed-form Fortran (`.f`, `.for`, `.ftn`) including classic continuation in column 6.
-- Comment stripping for free/fixed forms.
-- Continuation handling for both forms.
-
-### Procedures and callable signatures
-
-- `subroutine` and `function` headers.
-- Procedure prefixes/attributes in headers: `pure`, `elemental`, `recursive`.
-- Function results via `result(...)` (and tolerant `results(...)` parsing).
-- Procedure-level `use` imports, plus module-level `use` imports propagated to contained procedures.
-- Argument declaration parsing with:
-  - intrinsic base types (`integer`, `real`, `complex`, `logical`, `character`)
-  - kind extraction (`kind=...`)
+- Intrinsic types: `integer`, `real`, `complex`, `logical`, `character`
+- Kind extraction from declaration specs (`kind=...`)
+- Attribute extraction:
   - `intent(in|out|inout)`
-  - `optional`, `value`, `allocatable`, `pointer`
-  - `dimension(...)` and variable-level array shape (`x(:)`, `x(n)`).
+  - `optional`
+  - `value`
+  - `allocatable`
+  - `pointer`
+- Array extraction:
+  - `dimension(...)`
+  - variable-level shape syntax (`x(:)`, `x(n)`)
 
-### Module-level parsing
+### 1.4 Modules, imports, and project context
 
-- Module discovery and module-level variable declarations.
-- Module-level `use` dependency extraction.
-- Namespace parsing of an entire folder with file dependency graph and deterministic ordering.
-- Cross-file kind resolution for imported module parameters (e.g. `rk` from a kinds module).
+- Module discovery
+- Module variable extraction
+- `use` extraction at module and procedure scope
+- Propagation of module-level `use` imports into contained procedures
+- Folder/project parsing with dependency-aware ordering
+- Cross-file kind constant resolution (e.g., kinds modules)
 
-### Multi-file project and folder parsing
+### 1.5 Derived type parsing
 
-- `parse_fortran_project_signatures(files: dict[str, str])` parses a provided file map and resolves imported kind parameters across files.
-- `parse_fortran_namespace(root)` scans a folder recursively for Fortran files (`.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`, `.f08`) and parses it as one namespace.
-- Namespace parsing builds:
-  - module-to-file ownership mapping
-  - file dependency graph from `use` relations
-  - deterministic dependency-aware parse ordering (topological where possible, stable fallback for cycles)
-- Module-level `use` imports are propagated to contained procedures so imports declared at module scope are still visible during signature extraction.
+- `type :: ... end type` discovery
+- Type attributes (e.g., `abstract`)
+- Inheritance (`extends(parent)`)
+- Field extraction including shape/pointer/allocatable
+- Type-bound procedures:
+  - `procedure ... :: ...` bindings with attributes (e.g. `pass(self)`, `nopass`)
+  - `generic ... :: name => target1, target2`
 
-### Derived datatypes
+### 1.6 Readiness diagnostics
 
-- `type :: ... end type` discovery.
-- Type attributes (e.g. `abstract`) and inheritance (`extends(parent_type)`).
-- Field extraction (intrinsic + `type(...)` fields), including shape/pointer/allocatable metadata.
-- Type-bound procedures from `contains` blocks:
-  - `procedure ... :: ...` bindings with parsed binding attributes (e.g. `pass(self)`, `nopass`).
-  - `generic ... :: name => target1, target2` bindings (including operator-like names such as `assignment(=)`).
+- Unsupported-pattern checks
+- Unknown argument declaration reporting
+- Final boolean readiness (`wrappable`)
 
-### Diagnostics and readiness checks
+## 2) Public API surface
 
-- `assess_wrap_readiness(...)` report with:
-  - parsed entity counts
-  - unsupported-construct hits based on known pattern checks
-  - unknown argument declarations
-  - final `wrappable` boolean.
+- `parse_fortran_signatures`
+- `parse_fortran_types`
+- `parse_fortran_modules`
+- `parse_fortran_project_signatures`
+- `parse_fortran_namespace`
+- `assess_wrap_readiness`
 
-## Output model (normalized signature)
+## 3) Terminal usage and expected outputs
 
-For each exported callable, emit:
+### 3.1 Basic CLI invocation
 
-- identity: module name (optional), procedure name
-- kind: `function` or `subroutine`
-- ordered argument list:
-  - name
-  - base type (`integer|real|complex|logical|character`)
-  - kind (raw expression text is acceptable initially)
-  - rank and shape spec (if any)
-  - intent (`in|out|inout|unknown`)
-  - flags (`optional`, `value`, `allocatable`, `pointer`)
-- function result metadata (for functions)
-- procedure attributes (e.g. `pure`, `elemental`, `bind(c)` if parsed)
+```bash
+python -m fortran_parser <path ...>
+```
 
-This schema should be parser-internal-agnostic and directly consumable by wrapper codegen.
+or (if installed as a console script):
 
-## Minimal parser architecture (no external parsers)
+```bash
+fortran-parser <path ...>
+```
 
-Use a straightforward **three-stage pipeline**:
+`<path ...>` supports files and directories. Directories are recursively scanned
+for `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`, `.f08`.
 
-1. **Preprocessor-lite scanner**
-   - strip comments
-   - join continuation lines (`&`)
-   - normalize case for keywords while preserving identifiers
-2. **Line-based declaration parser**
-   - detect block boundaries (`module`, `contains`, `subroutine`, `function`, `end`)
-   - parse procedure headers (names + argument list)
-   - parse declaration lines into type + attributes + variable list
-3. **Semantic collector**
-   - build per-procedure symbol table
-   - merge header arguments with declaration metadata
-   - produce normalized signature records
+### 3.2 Human-readable output example
 
-Keep all parsing deterministic and regex/token based; avoid trying to parse full executable statements.
+Command:
 
-## Grammar subset to implement first
+```bash
+python -m fortran_parser tests/fcode/basic_subroutine.f90
+```
 
-Implement recognition for these forms first:
+Expected output shape:
 
-- Procedure headers:
-  - `subroutine name(a,b,c)`
-  - `pure subroutine name(a,b)`
-  - `function f(x) result(y)`
-- Type declarations:
-  - `real(kind=8), intent(in) :: x`
-  - `integer, dimension(:), intent(inout) :: a`
-  - `character(len=*), intent(in) :: s`
-- Multi-variable declarations:
-  - `real, intent(in) :: x, y, z`
-- `use` statements:
-  - `use iso_c_binding, only: c_int, c_double`
+```text
+File: tests/fcode/basic_subroutine.f90
+  Procedures: 1
+    - subroutine add1(n:integer[0], x:real[1])
+  Derived types: 0
+  Modules: 1
+    - module m1 (vars=2, uses=0)
+  Wrappable: True
+```
 
-Start with this subset, then expand only from real failures in your test corpus.
+Interpretation:
 
-## Suggested implementation modules
+- Parsed entities are counted per file.
+- Signatures are shown compactly.
+- Wrappability is summarized as a single boolean.
 
-A simple project structure:
+### 3.3 JSON output example
 
-- `lexer.py`
-  - comment stripping
-  - continuation folding
-  - token utilities
-- `fortran_subset_parser.py`
-  - block traversal
-  - header/declaration parsers
-- `signature_model.py`
-  - dataclasses for normalized signatures
-- `extract_signatures.py`
-  - public API: parse file(s) → list/signature JSON
+Print JSON:
 
-A compact hand-written parser is easier to debug than a large generalized grammar for this use case.
+```bash
+python -m fortran_parser tests/fcode/basic_subroutine.f90 --json
+```
 
-## Error handling rules
+Write JSON:
 
-- Unsupported construct inside a target procedure: emit a structured warning with file+line.
-- Missing declaration for an argument: keep argument with `type=unknown` and continue.
-- Ambiguous parse: fail the procedure, not the whole file, unless configured as strict.
+```bash
+python -m fortran_parser tests/fcode/basic_subroutine.f90 --json-out report.json
+```
 
-This allows incremental adoption on real-world codebases.
+Print + write:
 
-## Validation strategy
+```bash
+python -m fortran_parser tests/fcode/basic_subroutine.f90 --json --json-out report.json
+```
 
-Use a golden-fixture approach:
+Expected JSON layout:
 
-- `tests/scripts/*.f*` with small focused inputs
-- `tests/scripts/*.json` with normalized signatures
-- regression test compares produced JSON to expected JSON
+- Top-level object keyed by input path
+- Per-file payload with keys:
+  - `signatures`
+  - `types`
+  - `modules`
+  - `wrap_readiness`
 
-Add fixtures every time a user file breaks parsing.
+## 4) Python usage and expected outputs
 
-### Auto-updating expected outputs
+### 4.1 Parse folder namespace
 
-To avoid manually writing JSON expected files, use:
+```python
+from fortran_parser import parse_fortran_namespace
 
-- `python tests/generate_fortran_parser_goldens.py`
-- `python tests/generate_fortran_parser_goldens.py fcode/basic_subroutine.f90`
+namespace = parse_fortran_namespace("tests/fcode")
+print(namespace.keys())
+print(len(namespace["signatures"]))
+```
 
-This script scans `tests/fcode/*.f*` by default, parses each file, and rewrites
-`tests/fcode/<fixture>.json`.
-If file names are provided as arguments, it updates only those fixtures.
+Expected behavior:
 
-For convenience during development, the fixture test also supports:
+- Recursively scans Fortran files.
+- Resolves dependencies and module imports across files.
+- Returns aggregate namespace parse output.
 
-- `FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py --confcutdir=tests/`
+### 4.2 Parse single file and run readiness check
 
-In this mode the test updates golden files in-place instead of asserting diffs.
+```python
+from pathlib import Path
+from fortran_parser import parse_fortran_signatures, assess_wrap_readiness
 
-## Wrap-readiness check
+p = Path("tests/fcode/basic_subroutine.f90")
+code = p.read_text()
 
-Use `assess_wrap_readiness(code, filename=None)` before wrapper generation.
-It reports:
+signatures = parse_fortran_signatures(code, filename=str(p))
+readiness = assess_wrap_readiness(code, filename=str(p))
 
-- number of parsed procedures/types/modules
-- unsupported constructs detected by pattern checks
-- arguments whose declarations could not be typed (`base_type = unknown`)
-- a boolean `wrappable` summary
+print("signatures", len(signatures))
+print("wrappable", readiness["wrappable"])
+print("unsupported", readiness["unsupported_hits"])
+```
 
-This gives an explicit signal when a file likely needs parser extensions before
-automatic wrapping is safe.
+Expected behavior:
 
-## First milestone checklist
+- `signatures` is a normalized list of callable records.
+- `readiness` includes counts, unsupported hits, unknown args, and `wrappable`.
 
-- [ ] parse module-level procedures + contained procedures
-- [ ] parse argument declarations with type/kind/intent/rank/optional
-- [ ] support function result variables
-- [ ] emit stable JSON signatures
-- [ ] cover at least 20 fixture files across common scientific signatures
+## 5) Running tests
 
-With this milestone, you can generate wrappers for a useful subset of Fortran APIs while keeping the parser small and maintainable.
+Run all tests:
 
+```bash
+PYTHONPATH=. pytest -q
+```
+
+Run parser-focused tests:
+
+```bash
+PYTHONPATH=. pytest -q tests/test_fortran_signature_parser.py
+PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py
+PYTHONPATH=. pytest -q tests/test_cli.py
+```
+
+Update golden JSON fixtures:
+
+```bash
+python tests/fcode/generate_fortran_parser_goldens.py
+```
+
+Update selected fixture(s):
+
+```bash
+python tests/fcode/generate_fortran_parser_goldens.py tests/fcode/basic_subroutine.f90
+```
+
+In-test auto-update mode:
+
+```bash
+FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py --confcutdir=tests/
+```
+
+## 6) Scope note
+
+This parser is intentionally wrapper-focused and not a complete Fortran front
+end. Unsupported syntax should be surfaced through diagnostics/readiness output
+for incremental parser extension.
