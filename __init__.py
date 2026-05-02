@@ -4,7 +4,7 @@
 #------------------------------------------------------------------------------------------#
 """Compatibility layer for the minimal Fortran signature parser."""
 
-from .fortran_parser import (
+from fortran_parser import (
     FortranArgument,
     FortranDerivedType,
     FortranModule,
