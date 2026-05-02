@@ -51,8 +51,10 @@ def _find_legacy_star_kind(type_left: str) -> tuple[str, str] | None:
 
 
 def _enforce_source_form_compatibility(line: str, filename: str | None) -> None:
-    source_form = _source_form(filename)
-    if source_form != "f77":
+    # Keep strict legacy checks only for files explicitly marked as .f77.
+    # Many .f sources in real-world projects (e.g. LAPACK) are fixed-form but
+    # still use modern declaration attributes.
+    if not filename or Path(filename).suffix.lower() != ".f77":
         return
     forbidden = (
         r"\bmodule\b",
