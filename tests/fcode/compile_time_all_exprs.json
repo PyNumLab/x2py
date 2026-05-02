@@ -1,0 +1,139 @@
+[
+  {
+    "name": "all_exprs",
+    "kind": "subroutine",
+    "module": "expr_mod",
+    "arguments": [
+      {
+        "name": "x1",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "1:p_add"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x2",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "1:p_sub"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x3",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "1:p_mul"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x4",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "1:p_div"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x5",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "1:p_pow"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x6",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "0:p_mix"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x7",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "1:-(-a + b)"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x8",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "1:(a+b)*(c+1)-1"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x9",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "1:(a-b)*(a-c)"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false
+  }
+]
