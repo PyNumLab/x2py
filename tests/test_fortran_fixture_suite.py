@@ -11,6 +11,7 @@ _REQUIRED_FIXTURES = {
     "module_vars_use",
     "procedures_and_functions",
     "derived_types_and_methods",
+    "assumed_shape_and_derived_args",
 }
 
 

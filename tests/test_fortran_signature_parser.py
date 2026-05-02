@@ -225,6 +225,44 @@ end function fact
     assert sig.result.name == "res"
 
 
+def test_assumed_shape_with_explicit_lower_bounds_is_preserved():
+    code = """
+subroutine fill_grid(x)
+  integer, intent(inout) :: x(0:,0:)
+end subroutine fill_grid
+"""
+    sig = parse_fortran_signatures(code)[0]
+    arg = sig.arguments[0]
+    assert arg.base_type == "integer"
+    assert arg.rank == 2
+    assert arg.shape == ["0:", "0:"]
+
+
+def test_dimension_attribute_with_mixed_bounds_is_parsed():
+    code = """
+subroutine update_plane(x)
+  real, intent(inout), dimension(0:, 1:n) :: x
+end subroutine update_plane
+"""
+    sig = parse_fortran_signatures(code)[0]
+    arg = sig.arguments[0]
+    assert arg.rank == 2
+    assert arg.shape == ["0:", "1:n"]
+
+
+def test_subroutine_derived_type_arguments_are_parsed():
+    code = """
+subroutine step(state)
+  type(sim_state), intent(inout) :: state
+end subroutine step
+"""
+    sig = parse_fortran_signatures(code)[0]
+    arg = sig.arguments[0]
+    assert arg.base_type == "derived"
+    assert arg.kind == "sim_state"
+    assert arg.intent == "inout"
+
+
 def test_derived_type_extends_and_attributes():
     code = """
 module m
