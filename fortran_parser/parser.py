@@ -481,6 +481,9 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
     if re.match(r"^external\b", stripped, flags=re.IGNORECASE):
         # EXTERNAL declares procedure names (not data objects); keep parsing without treating as datatype declarations.
         return
+    if re.match(r"^intrinsic\b", stripped, flags=re.IGNORECASE):
+        # INTRINSIC lists intrinsic procedures that may appear as bare statements in legacy fixed-form code.
+        return
 
     pm = _PARAM_RE.match(stripped)
     if pm:
