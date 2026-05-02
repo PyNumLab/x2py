@@ -1,0 +1,256 @@
+{
+  "signatures": [
+    {
+      "name": "do_work_i",
+      "kind": "subroutine",
+      "module": "scope_name_reuse_combinations",
+      "arguments": [
+        {
+          "name": "same_name",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "do_work_i",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "do_work_r",
+      "kind": "subroutine",
+      "module": "scope_name_reuse_combinations",
+      "arguments": [
+        {
+          "name": "same_name",
+          "base_type": "real",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "do_work_r",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "do_work_l",
+      "kind": "subroutine",
+      "module": "scope_name_reuse_combinations",
+      "arguments": [
+        {
+          "name": "same_name",
+          "base_type": "logical",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "do_work_l",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "convert_to_complex",
+      "kind": "function",
+      "module": "scope_name_reuse_combinations",
+      "arguments": [
+        {
+          "name": "same_name",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "convert_to_complex",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "shared",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "convert_to_complex",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "convert_to_char",
+      "kind": "function",
+      "module": "scope_name_reuse_combinations",
+      "arguments": [
+        {
+          "name": "same_name",
+          "base_type": "real",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "convert_to_char",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "shared",
+        "base_type": "character",
+        "kind": "len=16",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "convert_to_char",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "convert_to_logical",
+      "kind": "function",
+      "module": "scope_name_reuse_combinations",
+      "arguments": [
+        {
+          "name": "same_name",
+          "base_type": "character",
+          "kind": "len=*",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "convert_to_logical",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "shared",
+        "base_type": "logical",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "convert_to_logical",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    }
+  ],
+  "types": [
+    {
+      "name": "same_name",
+      "module": "scope_name_reuse_combinations",
+      "fields": [
+        {
+          "name": "payload",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "methods": [],
+      "extends": null,
+      "attributes": [],
+      "procedure_bindings": [],
+      "generic_bindings": []
+    }
+  ]
+}
