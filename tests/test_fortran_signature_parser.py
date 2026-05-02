@@ -284,24 +284,28 @@ end module dims_mod
     assert sig.arguments[1].shape == ["1:8"]
 
 
-def test_module_parameter_lookup_ignores_contained_procedure_locals():
+def test_local_parameters_in_contained_procedures_do_not_leak_across_signatures():
     files = {
         "dims.f90": """
 module dims_mod
+  integer, parameter :: n = 3
 contains
   subroutine a()
-    integer, parameter :: n = 99
+    integer, parameter :: n = 9
   end subroutine a
 
   subroutine b(x)
-    integer, intent(inout) :: x(1:n)
+    real, intent(inout) :: x(1:n)
   end subroutine b
 end module dims_mod
 """
     }
-    signatures = parse_fortran_project_signatures(files)
-    b_sig = [s for s in signatures if s.name == "b"][0]
-    assert b_sig.arguments[0].shape == ["1:n"]
+
+    sig = parse_fortran_project_signatures(files)[0]
+    assert sig.name == "a"
+    sig_b = parse_fortran_project_signatures(files)[1]
+    assert sig_b.name == "b"
+    assert sig_b.arguments[0].shape == ["1:3"]
 
 
 def test_compiler_dependent_parameter_expressions_remain_symbolic():

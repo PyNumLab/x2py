@@ -430,6 +430,7 @@ def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dic
     current_module = None
     in_module_spec_part = False
     output: dict[str, dict[str, str]] = {}
+    in_module_spec_part = False
     for line in lines:
         s = line.strip()
         if not s:
@@ -439,6 +440,7 @@ def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dic
             current_module = s.split()[1].lower()
             in_module_spec_part = True
             output.setdefault(current_module, {})
+            in_module_spec_part = True
             continue
         if l.startswith("contains") and current_module is not None:
             in_module_spec_part = False
@@ -448,6 +450,11 @@ def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dic
             in_module_spec_part = False
             continue
         if current_module is None or not in_module_spec_part:
+            continue
+        if l == "contains":
+            in_module_spec_part = False
+            continue
+        if not in_module_spec_part:
             continue
         pm = _PARAM_RE.match(s)
         if not pm:
