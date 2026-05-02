@@ -498,7 +498,8 @@ def _resolve_compile_time_expression(expr: str, symbols: dict[str, str]) -> str:
         return ":".join(_resolve_compile_time_expression(p, symbols) if p.strip() else p for p in parts)
 
     replaced = text
-    for _ in range(4):
+    max_passes = max(8, len(symbols) * 2)
+    for _ in range(max_passes):
         updated = replaced
         for name, value in sorted(symbols.items(), key=lambda kv: len(kv[0]), reverse=True):
             updated = re.sub(rf"\b{re.escape(name)}\b", f"({value})", updated, flags=re.IGNORECASE)
