@@ -1,0 +1,85 @@
+from __future__ import annotations
+
+import argparse
+import json
+from dataclasses import asdict
+from pathlib import Path
+
+from .parser import assess_wrap_readiness, parse_fortran_modules, parse_fortran_signatures, parse_fortran_types
+
+
+def _collect_extensions(path: Path) -> list[Path]:
+    exts = {".f", ".for", ".ftn", ".f90", ".f95", ".f03", ".f08"}
+    return sorted(p for p in path.rglob("*") if p.suffix.lower() in exts)
+
+
+def _parse_paths(paths: list[str]) -> dict[str, dict]:
+    out: dict[str, dict] = {}
+    expanded: list[Path] = []
+    for raw in paths:
+        p = Path(raw)
+        if p.is_dir():
+            expanded.extend(_collect_extensions(p))
+        else:
+            expanded.append(p)
+
+    for p in sorted(set(expanded)):
+        code = p.read_text(encoding="utf-8")
+        out[str(p)] = {
+            "signatures": [asdict(s) for s in parse_fortran_signatures(code, filename=str(p))],
+            "types": [asdict(t) for t in parse_fortran_types(code, filename=str(p))],
+            "modules": [asdict(m) for m in parse_fortran_modules(code, filename=str(p))],
+            "wrap_readiness": assess_wrap_readiness(code, filename=str(p)),
+        }
+    return out
+
+
+def _format_report(report: dict[str, dict]) -> str:
+    lines: list[str] = []
+    for fname, parsed in report.items():
+        lines.append(f"File: {fname}")
+        lines.append(f"  Procedures: {len(parsed['signatures'])}")
+        for sig in parsed["signatures"]:
+            args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in sig["arguments"])
+            lines.append(f"    - {sig['kind']} {sig['name']}({args})")
+
+        lines.append(f"  Derived types: {len(parsed['types'])}")
+        for dtype in parsed["types"]:
+            lines.append(f"    - type {dtype['name']} (fields={len(dtype['fields'])}, methods={len(dtype['methods'])})")
+
+        lines.append(f"  Modules: {len(parsed['modules'])}")
+        for mod in parsed["modules"]:
+            lines.append(f"    - module {mod['name']} (vars={len(mod['variables'])}, uses={len(mod['uses'])})")
+
+        readiness = parsed["wrap_readiness"]
+        lines.append(f"  Wrappable: {readiness['wrappable']}")
+        if readiness["unsupported_constructs"]:
+            lines.append("  Unsupported constructs:")
+            for c in readiness["unsupported_constructs"]:
+                lines.append(f"    - line {c['line']}: {c['text']}")
+        lines.append("")
+    return "\n".join(lines).rstrip()
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Parse Fortran files and print a human-readable report or JSON.")
+    parser.add_argument("paths", nargs="+", help="Fortran file(s) or directory path(s)")
+    parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
+    parser.add_argument("--json-out", type=Path, help="Write JSON report to this file")
+    args = parser.parse_args()
+
+    report = _parse_paths(args.paths)
+
+    if args.json_out:
+        args.json_out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print(_format_report(report))
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
