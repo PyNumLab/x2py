@@ -1,0 +1,17 @@
+__pycache__
+.pymon
+
+*.pyc
+*.pyo
+*egg*
+dist/*
+
+*.mod
+*.out
+*.o
+*.so
+*.log
+*.ps
+*.gv
+*.exe
+*.lock

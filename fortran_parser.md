@@ -161,8 +161,8 @@ This allows incremental adoption on real-world codebases.
 
 Use a golden-fixture approach:
 
-- `tests/parser/tests/*.f*` with small focused inputs
-- `tests/parser/tests/*.json` with normalized signatures
+- `tests/scripts/*.f*` with small focused inputs
+- `tests/scripts/*.json` with normalized signatures
 - regression test compares produced JSON to expected JSON
 
 Add fixtures every time a user file breaks parsing.
@@ -171,16 +171,16 @@ Add fixtures every time a user file breaks parsing.
 
 To avoid manually writing JSON expected files, use:
 
-- `python tests/parser/generate_fortran_parser_goldens.py`
-- `python tests/parser/generate_fortran_parser_goldens.py basic_subroutine.f90`
+- `python tests/generate_fortran_parser_goldens.py`
+- `python tests/generate_fortran_parser_goldens.py fcode/basic_subroutine.f90`
 
-This script scans `tests/parser/tests/*.f*` by default, parses each file, and rewrites
-`tests/parser/tests/<fixture>.json`.
+This script scans `tests/fcode/*.f*` by default, parses each file, and rewrites
+`tests/fcode/<fixture>.json`.
 If file names are provided as arguments, it updates only those fixtures.
 
 For convenience during development, the fixture test also supports:
 
-- `FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser/test_fortran_fixture_suite.py --confcutdir=tests/parser`
+- `FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py --confcutdir=tests/`
 
 In this mode the test updates golden files in-place instead of asserting diffs.
 

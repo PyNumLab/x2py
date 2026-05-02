@@ -1,4 +1,4 @@
-from pyccel.parser.fortran_signature_parser import (
+from fortran_parser import (
     assess_wrap_readiness,
     parse_fortran_namespace,
     parse_fortran_project_signatures,

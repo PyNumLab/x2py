@@ -7,9 +7,9 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from pyccel.parser.fortran_signature_parser import parse_fortran_signatures, parse_fortran_types
+from fortran_parser.parser import parse_fortran_signatures, parse_fortran_types
 
-_TESTS_DIR = Path(__file__).parent / "tests"
+_TESTS_DIR = Path(__file__).parent
 
 
 def _serialize_fixture(fixture: Path) -> dict | list:

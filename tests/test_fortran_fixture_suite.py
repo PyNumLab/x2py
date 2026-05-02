@@ -3,9 +3,9 @@ import os
 from dataclasses import asdict
 from pathlib import Path
 
-from pyccel.parser.fortran_signature_parser import parse_fortran_signatures, parse_fortran_types
+from fortran_parser import parse_fortran_signatures, parse_fortran_types
 
-_TESTS_DIR = Path(__file__).parent / "tests"
+_TESTS_DIR = Path(__file__).parent / "fcode"
 _REQUIRED_FIXTURES = {
     "f77_subroutine",
     "module_vars_use",
@@ -34,7 +34,7 @@ def _dump_expected(path: Path, signatures: list[dict], types: list[dict]) -> Non
 
 def test_fortran_fixture_golden_suite():
     fixture_files = sorted(_TESTS_DIR.glob("*.f*"))
-    assert fixture_files, "No fixtures found in tests/parser/tests"
+    assert fixture_files, "No fixtures found in tests/fcode"
     present = {f.stem for f in fixture_files}
     missing = sorted(_REQUIRED_FIXTURES - present)
     assert not missing, f"Missing required baseline fixtures: {missing}"
