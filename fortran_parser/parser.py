@@ -209,7 +209,7 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
             continue
         _parse_module_variable_line(s, current)
 
-    # Attach child nodes to module objects to provide a traversable tree.
+    # Attach parsed procedures/types/interfaces to their owning modules.
     signatures = parse_fortran_signatures(code, filename)
     types = parse_fortran_types(code, filename)
     interfaces = parse_fortran_interfaces(code, filename)
@@ -218,38 +218,18 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
         if sig.module and not sig.in_interface:
             mod = modules_by_name.get(sig.module.lower())
             if mod is not None:
-                sig.parent = mod
-                _link_signature_children(sig)
                 mod.procedures.append(sig)
     for dtype in types:
         if dtype.module:
             mod = modules_by_name.get(dtype.module.lower())
             if mod is not None:
-                dtype.parent = mod
-                _link_type_children(dtype)
                 mod.derived_types.append(dtype)
-    for mod in modules:
-        for var in mod.variables:
-            var.parent = mod
     for iface in interfaces:
         if iface.module:
             mod = modules_by_name.get(iface.module.lower())
             if mod is not None:
-                iface.parent = mod
                 mod.interfaces.append(iface)
     return modules
-
-
-def _link_signature_children(sig: FortranProcedureSignature) -> None:
-    for arg in sig.arguments:
-        arg.parent = sig
-    if sig.result is not None:
-        sig.result.parent = sig
-
-
-def _link_type_children(dtype: FortranDerivedType) -> None:
-    for field in dtype.fields:
-        field.parent = dtype
 
 
 def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[FortranInterface]:
@@ -278,8 +258,6 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
         if l.startswith("end interface"):
             if current_proc is not None and current_interface is not None:
                 sig = _finalize_proc(current_proc)
-                _link_signature_children(sig)
-                sig.parent = current_interface
                 current_interface.procedures.append(sig)
                 current_proc = None
             if current_interface is not None:
@@ -297,8 +275,6 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
 
         if l.startswith("end subroutine") or l.startswith("end function") or l == "end":
             sig = _finalize_proc(current_proc)
-            _link_signature_children(sig)
-            sig.parent = current_interface
             current_interface.procedures.append(sig)
             current_proc = None
             continue

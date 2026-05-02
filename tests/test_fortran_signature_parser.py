@@ -166,14 +166,9 @@ end module m1
     assert mod.name == "m1"
     assert [p.name for p in mod.procedures] == ["add1"]
     assert [t.name for t in mod.derived_types] == ["particle"]
-    assert mod.variables[0].parent is mod
-    assert mod.procedures[0].parent is mod
-    assert mod.derived_types[0].parent is mod
-    assert mod.procedures[0].arguments[0].parent is mod.procedures[0]
-    assert mod.derived_types[0].fields[0].parent is mod.derived_types[0]
 
 
-def test_module_contains_interfaces_with_parent_links():
+def test_module_contains_interfaces():
     code = """
 module m1
   interface apply
@@ -189,12 +184,8 @@ end module m1
     assert iface.name == "apply"
     assert iface.module == "m1"
     assert [p.name for p in iface.procedures] == ["do_apply"]
-    assert iface.procedures[0].parent is iface
-    assert iface.procedures[0].arguments[0].parent is iface.procedures[0]
-
     mod = parse_fortran_modules(code)[0]
     assert len(mod.interfaces) == 1
-    assert mod.interfaces[0].parent is mod
 
 
 def test_fixed_form_fortran77_continuation():
