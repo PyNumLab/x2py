@@ -433,15 +433,24 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
             k, v = [x.strip() for x in assign.split("=", 1)]
             proc_state["local_params"][k.lower()] = v
         return
-    if "::" not in line:
-        return
-    left, right = [x.strip() for x in line.split("::", 1)]
+    if "::" in line:
+        left, right = [x.strip() for x in line.split("::", 1)]
+    else:
+        # Fortran 77 fixed-form declarations commonly omit "::"
+        # (e.g., "INTEGER N", "COMPLEX CX(*), CY(*)").
+        left = line.strip()
+        right = ""
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
     if tm:
         base = tm.group(1).lower()
         type_spec = (tm.group(2) or "").strip()
-        attrs = split_csv(tm.group(3).strip().lstrip(", "))
+        trailing = tm.group(3).strip().lstrip(", ")
+        if "::" in line:
+            attrs = split_csv(trailing)
+        else:
+            attrs = []
+            right = trailing
         kind = extract_kind_from_type_spec(base, type_spec)
     elif derived:
         base = "derived"
@@ -527,6 +536,8 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
             arg.kind = _resolve_symbol_reference(arg.kind, local_params)
         if arg.shape:
             arg.shape = [_resolve_compile_time_expression(dim, local_params) for dim in arg.shape]
+        if arg.base_type == "unknown":
+            raise ValueError(f"Unknown datatype for argument '{arg.name}' in procedure '{sig.name}'")
     if sig.result and sig.result.kind:
         sig.result.kind = _resolve_symbol_reference(sig.result.kind, local_params)
     sig.uses = dict(state["uses"])

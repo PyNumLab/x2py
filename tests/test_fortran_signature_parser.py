@@ -203,6 +203,9 @@ def test_fixed_form_fortran77_continuation():
     sigs = parse_fortran_signatures(code, filename="legacy.f")
     assert len(sigs) == 1
     assert sigs[0].name == "saxpy"
+    assert sigs[0].arguments[0].base_type == "integer"
+    assert sigs[0].arguments[1].base_type == "real"
+    assert sigs[0].arguments[1].rank == 1
 
 
 def test_ignore_local_variables_in_signatures():
