@@ -58,12 +58,9 @@ def _enforce_source_form_compatibility(line: str, filename: str | None) -> None:
         r"\bmodule\b",
         r"\bcontains\b",
         r"\binterface\b",
-        r"::",
-        r"\bintent\s*\(",
-        r"\boptional\b",
-        r"\ballocatable\b",
-        r"\bpointer\b",
-        r"\bresult\s*\(",
+        # Some codebases (e.g. LAPACK) keep modern attribute declarations
+        # in fixed-form .f sources. Permit declaration-level modern syntax,
+        # but keep rejecting larger unsupported structural features.
         r"\bclass\s*\(",
     )
     for pat in forbidden:
