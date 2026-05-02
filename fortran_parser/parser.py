@@ -6,7 +6,7 @@ from pathlib import Path
 from dataclasses import replace
 
 from .lexer import preprocess_lines
-from .models import FortranArgument, FortranDerivedType, FortranInterface, FortranModule, FortranProcedureSignature
+from .models import FortranArgument, FortranDerivedType, FortranInterface, FortranModule, FortranProcedureSignature, FortranVariable
 from .type_resolver import extract_kind_from_type_spec
 from .utils import split_csv
 
@@ -184,6 +184,14 @@ def parse_fortran_types(code: str, filename: str | None = None) -> list[FortranD
                 current_type.generic_bindings.append({"name": lhs, "targets": rhs, "attrs": attrs})
             continue
         _parse_type_field_line(s, current_type)
+    # Resolve extends references for parent types declared in the same parsed file.
+    # Keep cross-file parents as strings.
+    by_name = {t.name.lower(): t for t in types}
+    for t in types:
+        if isinstance(t.extends, str):
+            parent = by_name.get(t.extends.lower())
+            if parent is not None:
+                t.extends = parent
     return types
 
 
@@ -197,7 +205,7 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
             continue
         l = s.lower()
         if l.startswith("module ") and not l.startswith("module procedure"):
-            current = FortranModule(name=s.split()[1])
+            current = FortranModule(name=s.split()[1], filename=filename)
             continue
         if l.startswith("end module"):
             if current:
@@ -385,7 +393,7 @@ def evaluate_signature_shapes(
 def _parse_header(line: str, module: str | None, in_interface: bool):
     m = _PROC_RE.match(line)
     if m:
-        args = [FortranArgument(name=a) for a in split_csv(m.group("args"))]
+        args = [FortranArgument(name=a, procedure=m.group("name")) for a in split_csv(m.group("args"))]
         return {
             "signature": FortranProcedureSignature(name=m.group("name"), kind="subroutine", module=module, arguments=args, attributes=_attrs(m.group("prefix"), m.group("tail")), in_interface=in_interface),
             "symbols": {a.name.lower(): a for a in args},
@@ -396,10 +404,10 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
     m = _FUNC_RE.match(line)
     if not m:
         return None
-    args = [FortranArgument(name=a) for a in split_csv(m.group("args"))]
+    args = [FortranArgument(name=a, procedure=m.group("name")) for a in split_csv(m.group("args"))]
     result_match = _RESULT_RE.search(m.group("tail"))
     result_name = result_match.group("name") if result_match else m.group("name")
-    result = FortranArgument(name=result_name)
+    result = FortranArgument(name=result_name, procedure=m.group("name"))
     return {
         "signature": FortranProcedureSignature(name=m.group("name"), kind="function", module=module, arguments=args, result=result, attributes=_attrs(m.group("prefix"), m.group("tail")), in_interface=in_interface),
         "symbols": {**{a.name.lower(): a for a in args}, result_name.lower(): result},
@@ -495,7 +503,7 @@ def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
     arg.kind = meta["kind"]
     arg.intent = meta["intent"]
     arg.optional = meta["optional"]
-    arg.value = meta["value"]
+    arg.pass_by_value = meta["value"]
     arg.allocatable = meta["allocatable"]
     arg.pointer = meta["pointer"]
     if shape:
@@ -510,6 +518,7 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
     sig = state["signature"]
     symbols = state["symbols"]
     local_params = state.get("local_params", {})
+    sig.variables = _resolve_variables(local_params)
     sig.arguments = [symbols.get(a.name.lower(), a) for a in sig.arguments]
     if sig.result:
         sig.result = symbols.get(sig.result.name.lower(), sig.result)
@@ -579,6 +588,10 @@ def _resolve_signature_kinds(sig: FortranProcedureSignature, module_params: dict
                     symbol_to_value[sym] = params[sym]
         else:
             symbol_to_value.update(params)
+    for name, var in sig.variables.items():
+        if var.value is not None:
+            symbol_to_value.setdefault(name.lower(), var.value)
+    sig.variables.update(_resolve_variables(symbol_to_value))
     for arg in sig.arguments:
         if arg.kind:
             arg.kind = _resolve_symbol_reference(arg.kind, symbol_to_value)
@@ -597,7 +610,27 @@ def _resolve_symbol_reference(expr: str, symbols: dict[str, str]) -> str:
     return out
 
 
-def _resolve_compile_time_expression(expr: str, symbols: dict[str, str]) -> str:
+
+
+def _resolve_variables(symbols: dict[str, str]) -> dict[str, FortranVariable]:
+    valued: dict[str, FortranVariable] = {}
+    for name, value in symbols.items():
+        valued[name] = FortranVariable(
+            name=name,
+            value=_resolve_compile_time_expression(value, symbols, prefer_symbolic=False),
+            value_type="expression",
+            is_parameter=True,
+        )
+    return valued
+
+
+def _is_evaluable_symbol(name: str, symbols: dict[str, str]) -> bool:
+    if name.lower() not in symbols:
+        return False
+    resolved = _resolve_compile_time_expression(symbols[name.lower()], symbols, prefer_symbolic=False)
+    return _safe_eval_int_expr(resolved) is not None
+
+def _resolve_compile_time_expression(expr: str, symbols: dict[str, str], prefer_symbolic: bool = True) -> str:
     text = expr.strip()
     if not text:
         return expr
@@ -610,7 +643,8 @@ def _resolve_compile_time_expression(expr: str, symbols: dict[str, str]) -> str:
     for _ in range(max_passes):
         updated = replaced
         for name, value in sorted(symbols.items(), key=lambda kv: len(kv[0]), reverse=True):
-            updated = re.sub(rf"\b{re.escape(name)}\b", f"({value})", updated, flags=re.IGNORECASE)
+            replacement = name if (prefer_symbolic and not _is_evaluable_symbol(name, symbols)) else f"({value})"
+            updated = re.sub(rf"\b{re.escape(name)}\b", replacement, updated, flags=re.IGNORECASE)
         if updated == replaced:
             break
         replaced = updated

@@ -164,7 +164,9 @@ end module m1
     assert len(modules) == 1
     mod = modules[0]
     assert mod.name == "m1"
+    assert mod.filename is None
     assert [p.name for p in mod.procedures] == ["add1"]
+    assert mod.procedures[0].arguments[0].procedure == "add1"
     assert [t.name for t in mod.derived_types] == ["particle"]
 
 
@@ -411,7 +413,9 @@ end module dims_mod
     assert sig_b.arguments[0].shape == ["1:3"]
 
 
-def test_compiler_dependent_parameter_expressions_remain_symbolic():
+
+
+def test_compiler_dependent_parameter_expressions_remain_symbolic_with_value_at_module_level():
     files = {
         "kinds.f90": """
 module kinds_mod
@@ -425,6 +429,21 @@ end module kinds_mod
     }
     sig = parse_fortran_project_signatures(files)[0]
     assert sig.arguments[0].shape == ["1:ip"]
+    assert sig.variables["ip"].name == "ip"
+    assert sig.variables["ip"].value == "selected_int_kind(9)"
+
+
+def test_local_compiler_dependent_parameter_expressions_remain_symbolic_with_value():
+    code = """
+subroutine use_local_kind_expr(x)
+  integer, parameter :: ip = selected_int_kind(9)
+  real, dimension(1:ip), intent(inout) :: x
+end subroutine use_local_kind_expr
+"""
+    sig = parse_fortran_signatures(code)[0]
+    assert sig.arguments[0].shape == ["1:ip"]
+    assert sig.variables["ip"].name == "ip"
+    assert sig.variables["ip"].value == "selected_int_kind(9)"
 
 
 def test_compile_time_parameter_expression_resolves_deep_dependency_chains():
@@ -496,6 +515,8 @@ end module expr_mod
 def test_derived_type_extends_and_attributes():
     code = """
 module m
+  type :: base_t
+  end type base_t
   type, extends(base_t), abstract :: child_t
     integer :: id
   contains
@@ -503,10 +524,22 @@ module m
   end type child_t
 end module m
 """
-    dt = parse_fortran_types(code)[0]
+    dt = parse_fortran_types(code)[1]
     assert dt.name == "child_t"
-    assert dt.extends == "base_t"
+    assert dt.extends is not None
+    assert getattr(dt.extends, "name", None) == "base_t"
     assert "abstract" in dt.attributes
+
+
+def test_derived_type_extends_external_parent_stays_symbolic():
+    code = """
+module m
+  type, extends(external_base_t) :: child_t
+  end type child_t
+end module m
+"""
+    dt = parse_fortran_types(code)[0]
+    assert dt.extends == "external_base_t"
 
 
 def test_derived_type_procedure_and_generic_bindings():
