@@ -9,12 +9,15 @@ from fortran_parser import parse_fortran_signatures, parse_fortran_types
 
 _TESTS_DIR = Path(__file__).parent / "fcode"
 _GOLDEN_FIXTURES = sorted(_TESTS_DIR.glob("*.f*"))
-_BLAS_LAPACK_FIXTURES = sorted(
+_BLAS_FIXTURES = sorted(
     f
-    for f in _TESTS_DIR.rglob("*")
-    if f.is_file()
-    and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08"}
-    and any(part in {"blas", "lapack"} for part in f.parts)
+    for f in (_TESTS_DIR / "blas").rglob("*")
+    if f.is_file() and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08"}
+)
+_LAPACK_FIXTURES = sorted(
+    f
+    for f in (_TESTS_DIR / "lapack").rglob("*")
+    if f.is_file() and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08"}
 )
 
 
@@ -43,47 +46,62 @@ def _dump_expected(path: Path, signatures: list[dict], types: list[dict]) -> Non
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+def _run_fixture_comparison(fixture: Path, *, filename_for_parser: str, expected_path: Path) -> None:
+    source = fixture.read_text(encoding="utf-8")
+    assert source.strip(), f"Fixture is empty: {filename_for_parser}"
+
+    parsed_sigs = _to_dict_list(parse_fortran_signatures(source, filename=filename_for_parser))
+    parsed_types = _to_dict_list(parse_fortran_types(source, filename=filename_for_parser))
+
+    if not expected_path.exists():
+        _dump_expected(expected_path, parsed_sigs, parsed_types)
+
+    update_mode = os.getenv("FORTRAN_PARSER_UPDATE_GOLDENS", "0") == "1"
+    if update_mode:
+        _dump_expected(expected_path, parsed_sigs, parsed_types)
+        return
+
+    expected = _load_expected(expected_path)
+    assert parsed_sigs == expected["signatures"], f"Signature mismatch for {fixture.name}"
+    assert parsed_types == expected["types"], f"Derived type mismatch for {fixture.name}"
+
+
 def test_fortran_fixture_golden_suite_has_fixtures():
     assert _GOLDEN_FIXTURES, "No fixtures found in tests/fcode"
 
 
 @pytest.mark.parametrize("fixture", _GOLDEN_FIXTURES, ids=lambda f: f.name)
 def test_fortran_fixture_golden_suite(fixture):
-
-    update_mode = os.getenv("FORTRAN_PARSER_UPDATE_GOLDENS", "0") == "1"
-
-    expected_path = fixture.with_suffix(".json")
-    if not expected_path.exists() and update_mode:
-        _dump_expected(expected_path, [], [])
-    expected = _load_expected(expected_path)
-    source = fixture.read_text(encoding="utf-8")
-
-    parsed_sigs = _to_dict_list(parse_fortran_signatures(source, filename=fixture.name))
-    parsed_types = _to_dict_list(parse_fortran_types(source, filename=fixture.name))
-
-    if update_mode:
-        _dump_expected(expected_path, parsed_sigs, parsed_types)
-        return
-
-    assert parsed_sigs == expected["signatures"], f"Signature mismatch for {fixture.name}"
-    assert parsed_types == expected["types"], f"Derived type mismatch for {fixture.name}"
+    _run_fixture_comparison(
+        fixture,
+        filename_for_parser=fixture.name,
+        expected_path=fixture.with_suffix(".json"),
+    )
 
 
-def test_fortran_blas_lapack_parse_suite_has_fixtures():
-    assert _BLAS_LAPACK_FIXTURES, "No BLAS/LAPACK fixtures found in tests/fcode"
+def test_fortran_blas_parse_suite_has_fixtures():
+    assert _BLAS_FIXTURES, "No BLAS fixtures found in tests/fcode/blas"
 
 
-@pytest.mark.parametrize("fixture", _BLAS_LAPACK_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
-def test_fortran_blas_lapack_parse_suite(fixture):
-    source = fixture.read_text(encoding="utf-8")
+@pytest.mark.parametrize("fixture", _BLAS_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
+def test_fortran_blas_parse_suite(fixture):
     relpath = str(fixture.relative_to(_TESTS_DIR))
-    parsed_sigs = _to_dict_list(parse_fortran_signatures(source, filename=relpath))
-    parsed_types = _to_dict_list(parse_fortran_types(source, filename=relpath))
-    expected = {
-        "signatures": _to_dict_list(parse_fortran_signatures(source, filename=relpath)),
-        "types": _to_dict_list(parse_fortran_types(source, filename=relpath)),
-    }
+    _run_fixture_comparison(
+        fixture,
+        filename_for_parser=relpath,
+        expected_path=fixture.with_suffix(".json"),
+    )
 
-    assert source.strip(), f"Fixture is empty: {relpath}"
-    assert parsed_sigs == expected["signatures"], f"Signature mismatch for {fixture.name}"
-    assert parsed_types == expected["types"], f"Derived type mismatch for {fixture.name}"
+
+def test_fortran_lapack_parse_suite_has_fixtures():
+    assert _LAPACK_FIXTURES, "No LAPACK fixtures found in tests/fcode/lapack"
+
+
+@pytest.mark.parametrize("fixture", _LAPACK_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
+def test_fortran_lapack_parse_suite(fixture):
+    relpath = str(fixture.relative_to(_TESTS_DIR))
+    _run_fixture_comparison(
+        fixture,
+        filename_for_parser=relpath,
+        expected_path=fixture.with_suffix(".json"),
+    )
