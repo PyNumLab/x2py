@@ -1,3 +1,5 @@
+import pytest
+
 from fortran_parser import (
     assess_wrap_readiness,
     collect_signature_shape_symbols,
@@ -76,7 +78,10 @@ def test_fixed_form_and_interface_detection():
         end subroutine cb
       end interface
 """
-    signatures = parse_fortran_signatures(code, filename="legacy.f")
+    with pytest.raises(ValueError, match="Fortran 77"):
+        parse_fortran_signatures(code, filename="legacy.f")
+
+    signatures = parse_fortran_signatures(code, filename="legacy.f90")
     assert len(signatures) == 2
     assert signatures[0].name == "saxpy"
     assert signatures[0].arguments[1].shape == ["n"]
@@ -562,3 +567,23 @@ end module m
     assert {"name": "clear", "attrs": ["nopass"]} in dt.procedure_bindings
     assert {"name": "assignment(=)", "targets": ["init"], "attrs": []} in dt.generic_bindings
     assert {"name": "setup", "targets": ["init", "clear"], "attrs": ["public"]} in dt.generic_bindings
+
+
+def test_star_kind_is_rejected_in_modern_fortran_file():
+    code = """
+subroutine bad(x)
+  real*8 :: x
+end subroutine bad
+"""
+    with pytest.raises(ValueError, match="star-kind"):
+        parse_fortran_signatures(code, filename="bad.f90")
+
+
+def test_unknown_datatype_for_argument_crashes_parser():
+    code = """
+subroutine bad(x)
+  weirdtype :: x
+end subroutine bad
+"""
+    with pytest.raises(ValueError, match="Unknown or unsupported datatype"):
+        parse_fortran_signatures(code, filename="bad.f90")

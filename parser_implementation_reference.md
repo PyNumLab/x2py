@@ -309,3 +309,19 @@ Manual force mode is also supported: add the pull-request label
 `require-parser-reference-update` to require this document update even when the
 parser-impact path patterns do not match. With that label present, CI fails
 unless `parser_implementation_reference.md` is updated in the PR diff.
+
+
+### Parser error-raising rules (quick guardrail)
+
+When updating parser behavior, keep this fail-fast contract aligned with tests:
+
+- **Version/source-form mismatch (hard error):**
+  - For files detected as Fortran 77 (`.f`, `.for`, `.ftn`, `.f77`), modern-only syntax raises `ValueError` (for example: `::`, `intent(...)`, `module`, `contains`, `interface`, `use`, `class(...)`).
+  - For files detected as modern (`.f90`, `.f95`, `.f03`, `.f08`), legacy star-kind declarations (e.g. `real*8`) raise `ValueError`.
+- **Unknown datatype declaration (hard error):**
+  - Procedure declarations, derived-type fields, and module-variable declarations raise `ValueError` when the datatype declaration is unknown/unsupported instead of silently skipping.
+- **Design intent:**
+  - The parser is intentionally strict at parse time to avoid mixed-standard inputs producing ambiguous metadata.
+  - "Unsupported but recognized" constructs are still surfaced via readiness diagnostics where appropriate; truly invalid-for-version or unknown datatype syntax should crash early.
+
+Implementation note: enforce these checks close to lexical declaration handling (source-form check + declaration parse) so behavior is consistent across signatures, types, modules, and interfaces.
