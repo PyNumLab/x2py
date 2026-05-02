@@ -83,3 +83,28 @@ jobs:
           fi
 
           echo "No parser-related files changed; parser_implementation_reference.md update not required."
+
+  require-main-sync:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure pull request branch contains latest main
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+
+          if git merge-base --is-ancestor origin/main "$HEAD_SHA"; then
+            echo "PR branch is up to date with main."
+            exit 0
+          fi
+
+          echo "PR branch is behind main."
+          echo "Please merge or rebase main into this branch before merging."
+          exit 1
