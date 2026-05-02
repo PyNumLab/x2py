@@ -78,6 +78,11 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
             signatures.append(_finalize_proc(current_proc))
             current_proc = None
             continue
+        if l == "contains":
+            current_proc["in_contains"] = True
+            continue
+        if current_proc.get("in_contains"):
+            continue
 
         m = _USE_RE.match(s)
         if m:
@@ -385,6 +390,8 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "signature": FortranProcedureSignature(name=m.group("name"), kind="subroutine", module=module, arguments=args, attributes=_attrs(m.group("prefix"), m.group("tail")), in_interface=in_interface),
             "symbols": {a.name.lower(): a for a in args},
             "uses": {},
+            "in_contains": False,
+            "local_params": {},
         }
     m = _FUNC_RE.match(line)
     if not m:
@@ -397,6 +404,8 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         "signature": FortranProcedureSignature(name=m.group("name"), kind="function", module=module, arguments=args, result=result, attributes=_attrs(m.group("prefix"), m.group("tail")), in_interface=in_interface),
         "symbols": {**{a.name.lower(): a for a in args}, result_name.lower(): result},
         "uses": {},
+        "in_contains": False,
+        "local_params": {},
     }
 
 
@@ -408,6 +417,14 @@ def _attrs(prefix: str, tail: str) -> list[str]:
 
 
 def _parse_declaration(line: str, proc_state: dict) -> None:
+    pm = _PARAM_RE.match(line.strip())
+    if pm:
+        for assign in split_csv(pm.group("body")):
+            if "=" not in assign:
+                continue
+            k, v = [x.strip() for x in assign.split("=", 1)]
+            proc_state["local_params"][k.lower()] = v
+        return
     if "::" not in line:
         return
     left, right = [x.strip() for x in line.split("::", 1)]
@@ -457,8 +474,9 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         if not name:
             continue
         symbols = proc_state["symbols"]
-        arg = symbols.get(name.lower(), FortranArgument(name=name))
-        symbols[name.lower()] = arg
+        arg = symbols.get(name.lower())
+        if arg is None:
+            continue
         _apply(arg, meta, shape)
 
 
@@ -491,9 +509,17 @@ def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
 def _finalize_proc(state: dict) -> FortranProcedureSignature:
     sig = state["signature"]
     symbols = state["symbols"]
+    local_params = state.get("local_params", {})
     sig.arguments = [symbols.get(a.name.lower(), a) for a in sig.arguments]
     if sig.result:
         sig.result = symbols.get(sig.result.name.lower(), sig.result)
+    for arg in sig.arguments:
+        if arg.kind:
+            arg.kind = _resolve_symbol_reference(arg.kind, local_params)
+        if arg.shape:
+            arg.shape = [_resolve_compile_time_expression(dim, local_params) for dim in arg.shape]
+    if sig.result and sig.result.kind:
+        sig.result.kind = _resolve_symbol_reference(sig.result.kind, local_params)
     sig.uses = dict(state["uses"])
     return replace(sig)
 
@@ -554,12 +580,21 @@ def _resolve_signature_kinds(sig: FortranProcedureSignature, module_params: dict
         else:
             symbol_to_value.update(params)
     for arg in sig.arguments:
-        if arg.kind and arg.kind.lower() in symbol_to_value:
-            arg.kind = symbol_to_value[arg.kind.lower()]
+        if arg.kind:
+            arg.kind = _resolve_symbol_reference(arg.kind, symbol_to_value)
         if arg.shape:
             arg.shape = [_resolve_compile_time_expression(dim, symbol_to_value) for dim in arg.shape]
-    if sig.result and sig.result.kind and sig.result.kind.lower() in symbol_to_value:
-        sig.result.kind = symbol_to_value[sig.result.kind.lower()]
+    if sig.result and sig.result.kind:
+        sig.result.kind = _resolve_symbol_reference(sig.result.kind, symbol_to_value)
+
+
+def _resolve_symbol_reference(expr: str, symbols: dict[str, str]) -> str:
+    out = expr.strip()
+    seen: set[str] = set()
+    while out.lower() in symbols and out.lower() not in seen:
+        seen.add(out.lower())
+        out = symbols[out.lower()].strip()
+    return out
 
 
 def _resolve_compile_time_expression(expr: str, symbols: dict[str, str]) -> str:
@@ -581,9 +616,11 @@ def _resolve_compile_time_expression(expr: str, symbols: dict[str, str]) -> str:
         replaced = updated
 
     evaluated = _safe_eval_int_expr(replaced)
-    # Keep the original symbolic expression when the value is compiler/runtime dependent
-    # (e.g. selected_*_kind intrinsics) or otherwise not a pure integer expression.
-    return str(evaluated) if evaluated is not None else text
+    # Keep a resolved symbolic expression when integer folding is not possible
+    # (e.g. selected_*_kind intrinsics), rather than the original unresolved token.
+    if evaluated is not None:
+        return str(evaluated)
+    return replaced if replaced != text else text
 
 
 def _safe_eval_int_expr(expr: str) -> int | None:

@@ -203,6 +203,66 @@ def test_fixed_form_fortran77_continuation():
     assert sigs[0].name == "saxpy"
 
 
+def test_ignore_local_variables_in_signatures():
+    code = """
+subroutine update(n, x)
+  integer, intent(in) :: n
+  real, intent(inout) :: x(n)
+  integer :: i
+  real :: tmp
+end subroutine update
+"""
+    sig = parse_fortran_signatures(code)[0]
+    assert [a.name for a in sig.arguments] == ["n", "x"]
+    assert sig.arguments[0].base_type == "integer"
+    assert sig.arguments[1].base_type == "real"
+
+
+def test_ignore_internal_procedures_in_contains_block():
+    code = """
+subroutine outer(x)
+  real, intent(inout) :: x
+contains
+  subroutine inner(y)
+    real, intent(inout) :: y
+  end subroutine inner
+end subroutine outer
+"""
+    sigs = parse_fortran_signatures(code)
+    assert len(sigs) == 1
+    assert sigs[0].name == "outer"
+
+
+def test_local_parameter_kind_used_in_argument_declaration():
+    code = """
+subroutine saxpy(x)
+  integer, parameter :: rk = selected_real_kind(15, 307)
+  real(kind=rk), intent(inout) :: x(:)
+end subroutine saxpy
+"""
+    sig = parse_fortran_signatures(code)[0]
+    assert sig.arguments[0].kind == "selected_real_kind(15, 307)"
+
+
+def test_compile_time_shape_eval_with_local_and_imported_params():
+    files = {
+        "kinds.f90": """
+module k
+  integer, parameter :: n = 8
+end module k
+""",
+        "solver.f90": """
+subroutine step(x)
+  use k, only: n
+  integer, parameter :: m = n + 2
+  real, intent(inout) :: x(m*2)
+end subroutine step
+""",
+    }
+    sig = parse_fortran_project_signatures(files)[0]
+    assert sig.arguments[0].shape == ["20"]
+
+
 def test_assess_wrap_readiness_supported_and_unsupported():
     supported = """
 subroutine saxpy(n, x, y)
