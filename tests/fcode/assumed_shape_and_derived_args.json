@@ -13,9 +13,14 @@
           "0:",
           "0:"
         ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "fill_grid",
         "intent": "inout",
         "optional": false,
-        "value": false,
+        "pass_by_value": false,
         "allocatable": false,
         "pointer": false
       }
@@ -23,7 +28,8 @@
     "result": null,
     "attributes": [],
     "uses": {},
-    "in_interface": false
+    "in_interface": false,
+    "variables": {}
   },
   {
     "name": "update_plane",
@@ -39,9 +45,14 @@
           "0:",
           "1:n"
         ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "update_plane",
         "intent": "inout",
         "optional": false,
-        "value": false,
+        "pass_by_value": false,
         "allocatable": false,
         "pointer": false
       }
@@ -49,7 +60,8 @@
     "result": null,
     "attributes": [],
     "uses": {},
-    "in_interface": false
+    "in_interface": false,
+    "variables": {}
   },
   {
     "name": "step",
@@ -62,9 +74,14 @@
         "kind": "sim_state",
         "rank": 0,
         "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "step",
         "intent": "inout",
         "optional": false,
-        "value": false,
+        "pass_by_value": false,
         "allocatable": false,
         "pointer": false
       }
@@ -72,6 +89,7 @@
     "result": null,
     "attributes": [],
     "uses": {},
-    "in_interface": false
+    "in_interface": false,
+    "variables": {}
   }
 ]

@@ -12,9 +12,14 @@
         "shape": [
           "0:n1-1"
         ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "use_expr",
         "intent": "inout",
         "optional": false,
-        "value": false,
+        "pass_by_value": false,
         "allocatable": false,
         "pointer": false
       },
@@ -26,9 +31,14 @@
         "shape": [
           "1:n0*2"
         ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "use_expr",
         "intent": "inout",
         "optional": false,
-        "value": false,
+        "pass_by_value": false,
         "allocatable": false,
         "pointer": false
       }
@@ -36,6 +46,7 @@
     "result": null,
     "attributes": [],
     "uses": {},
-    "in_interface": false
+    "in_interface": false,
+    "variables": {}
   }
 ]

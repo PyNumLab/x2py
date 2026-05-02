@@ -11,9 +11,14 @@
           "kind": null,
           "rank": 0,
           "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
           "intent": "unknown",
           "optional": false,
-          "value": false,
+          "pass_by_value": false,
           "allocatable": false,
           "pointer": false
         },
@@ -25,9 +30,14 @@
           "shape": [
             "3"
           ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
           "intent": "unknown",
           "optional": false,
-          "value": false,
+          "pass_by_value": false,
           "allocatable": false,
           "pointer": false
         }
@@ -55,9 +65,14 @@
           "kind": null,
           "rank": 0,
           "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
           "intent": "unknown",
           "optional": false,
-          "value": false,
+          "pass_by_value": false,
           "allocatable": false,
           "pointer": false
         },
@@ -69,9 +84,14 @@
           "shape": [
             ":"
           ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
           "intent": "unknown",
           "optional": false,
-          "value": false,
+          "pass_by_value": false,
           "allocatable": true,
           "pointer": false
         }

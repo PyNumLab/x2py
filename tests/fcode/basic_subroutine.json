@@ -10,9 +10,14 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "add1",
         "intent": "in",
         "optional": false,
-        "value": false,
+        "pass_by_value": false,
         "allocatable": false,
         "pointer": false
       },
@@ -24,9 +29,14 @@
         "shape": [
           "n"
         ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "add1",
         "intent": "inout",
         "optional": false,
-        "value": false,
+        "pass_by_value": false,
         "allocatable": false,
         "pointer": false
       }
@@ -34,6 +44,7 @@
     "result": null,
     "attributes": [],
     "uses": {},
-    "in_interface": false
+    "in_interface": false,
+    "variables": {}
   }
 ]

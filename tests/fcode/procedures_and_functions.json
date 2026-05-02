@@ -12,9 +12,14 @@
         "shape": [
           ":"
         ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "norm2",
         "intent": "in",
         "optional": false,
-        "value": false,
+        "pass_by_value": false,
         "allocatable": false,
         "pointer": false
       }
@@ -25,15 +30,21 @@
       "kind": "8",
       "rank": 0,
       "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "norm2",
       "intent": "unknown",
       "optional": false,
-      "value": false,
+      "pass_by_value": false,
       "allocatable": false,
       "pointer": false
     },
     "attributes": [],
     "uses": {},
-    "in_interface": false
+    "in_interface": false,
+    "variables": {}
   },
   {
     "name": "scale",
@@ -46,9 +57,14 @@
         "kind": "8",
         "rank": 0,
         "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "scale",
         "intent": "in",
         "optional": false,
-        "value": false,
+        "pass_by_value": false,
         "allocatable": false,
         "pointer": false
       },
@@ -60,9 +76,14 @@
         "shape": [
           ":"
         ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "scale",
         "intent": "inout",
         "optional": false,
-        "value": false,
+        "pass_by_value": false,
         "allocatable": false,
         "pointer": false
       }
@@ -70,6 +91,7 @@
     "result": null,
     "attributes": [],
     "uses": {},
-    "in_interface": false
+    "in_interface": false,
+    "variables": {}
   }
 ]
