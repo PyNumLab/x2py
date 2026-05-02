@@ -428,7 +428,9 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
 def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dict[str, str]]:
     lines = preprocess_lines(code, filename)
     current_module = None
+    in_module_spec_part = False
     output: dict[str, dict[str, str]] = {}
+    in_module_spec_part = False
     for line in lines:
         s = line.strip()
         if not s:
@@ -436,12 +438,23 @@ def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dic
         l = s.lower()
         if l.startswith("module ") and not l.startswith("module procedure"):
             current_module = s.split()[1].lower()
+            in_module_spec_part = True
             output.setdefault(current_module, {})
+            in_module_spec_part = True
+            continue
+        if l.startswith("contains") and current_module is not None:
+            in_module_spec_part = False
             continue
         if l.startswith("end module"):
             current_module = None
+            in_module_spec_part = False
             continue
-        if current_module is None:
+        if current_module is None or not in_module_spec_part:
+            continue
+        if l == "contains":
+            in_module_spec_part = False
+            continue
+        if not in_module_spec_part:
             continue
         pm = _PARAM_RE.match(s)
         if not pm:
