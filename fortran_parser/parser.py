@@ -473,7 +473,12 @@ def _attrs(prefix: str, tail: str) -> list[str]:
 
 
 def _parse_declaration(line: str, proc_state: dict) -> None:
-    pm = _PARAM_RE.match(line.strip())
+    stripped = line.strip()
+    if re.match(r"^implicit\b", stripped, flags=re.IGNORECASE):
+        # IMPLICIT statements configure typing rules and are not variable declarations.
+        return
+
+    pm = _PARAM_RE.match(stripped)
     if pm:
         for assign in split_csv(pm.group("body")):
             if "=" not in assign:
@@ -514,8 +519,12 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         kind = derived.group("dtype")
         attrs = split_csv((derived.group("attrs") or "").strip().lstrip(", "))
     else:
-        first_word = line.strip().split()[0].lower() if line.strip() else ""
-        non_decl_starts = {"do", "if", "where", "call", "select", "case", "allocate", "deallocate", "print", "write", "read", "return", "stop", "cycle", "exit", "continue"}
+        m_first = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)", line.strip())
+        first_word = m_first.group(1).lower() if m_first else ""
+        non_decl_starts = {"do", "if", "where", "call", "select", "case", "allocate", "deallocate", "print", "write", "read", "return", "stop", "cycle", "exit", "continue", "end", "else", "elseif", "contains"}
+        if "=" in line and "::" not in line:
+            # Assignment statement, not a declaration.
+            return
         looks_like_decl = bool(re.match(r"^[A-Za-z]", line.strip())) and first_word not in non_decl_starts and ("::" in line or "," in line or " " in line.strip())
         if looks_like_decl:
             if any(p.search(line) for p in _UNSUPPORTED_PATTERNS):
