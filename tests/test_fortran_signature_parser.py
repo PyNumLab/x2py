@@ -145,6 +145,33 @@ end module cfg
     assert mod.variables[1].shape == ["3"]
 
 
+def test_module_contains_procedure_and_type_children():
+    code = """
+module m1
+  integer :: cfg
+  type :: particle
+    integer :: id
+  end type particle
+contains
+  subroutine add1(n, x)
+    integer, intent(in) :: n
+    real, intent(inout) :: x(:)
+  end subroutine add1
+end module m1
+"""
+    modules = parse_fortran_modules(code)
+    assert len(modules) == 1
+    mod = modules[0]
+    assert mod.name == "m1"
+    assert [p.name for p in mod.procedures] == ["add1"]
+    assert [t.name for t in mod.derived_types] == ["particle"]
+    assert mod.variables[0].parent is mod
+    assert mod.procedures[0].parent is mod
+    assert mod.derived_types[0].parent is mod
+    assert mod.procedures[0].arguments[0].parent is mod.procedures[0]
+    assert mod.derived_types[0].fields[0].parent is mod.derived_types[0]
+
+
 def test_fixed_form_fortran77_continuation():
     code = """
       subroutine saxpy(n,x,y,a)

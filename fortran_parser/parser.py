@@ -89,6 +89,8 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
 
     if current_proc is not None:
         signatures.append(_finalize_proc(current_proc))
+    for sig in signatures:
+        _link_signature_children(sig)
     return signatures
 
 
@@ -179,6 +181,8 @@ def parse_fortran_types(code: str, filename: str | None = None) -> list[FortranD
                 current_type.generic_bindings.append({"name": lhs, "targets": rhs, "attrs": attrs})
             continue
         _parse_type_field_line(s, current_type)
+    for dtype in types:
+        _link_type_children(dtype)
     return types
 
 
@@ -208,7 +212,39 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
             current.uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
             continue
         _parse_module_variable_line(s, current)
+
+    # Attach child nodes to module objects to provide a traversable tree.
+    signatures = parse_fortran_signatures(code, filename)
+    types = parse_fortran_types(code, filename)
+    modules_by_name = {m.name.lower(): m for m in modules}
+    for sig in signatures:
+        if sig.module:
+            mod = modules_by_name.get(sig.module.lower())
+            if mod is not None:
+                sig.parent = mod
+                mod.procedures.append(sig)
+    for dtype in types:
+        if dtype.module:
+            mod = modules_by_name.get(dtype.module.lower())
+            if mod is not None:
+                dtype.parent = mod
+                mod.derived_types.append(dtype)
+    for mod in modules:
+        for var in mod.variables:
+            var.parent = mod
     return modules
+
+
+def _link_signature_children(sig: FortranProcedureSignature) -> None:
+    for arg in sig.arguments:
+        arg.parent = sig
+    if sig.result is not None:
+        sig.result.parent = sig
+
+
+def _link_type_children(dtype: FortranDerivedType) -> None:
+    for field in dtype.fields:
+        field.parent = dtype
 
 
 def assess_wrap_readiness(code: str, filename: str | None = None) -> dict:

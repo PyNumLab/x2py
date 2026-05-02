@@ -2,10 +2,25 @@ from __future__ import annotations
 
 import argparse
 import json
-from dataclasses import asdict
+from dataclasses import fields, is_dataclass
 from pathlib import Path
 
 from .parser import assess_wrap_readiness, parse_fortran_modules, parse_fortran_signatures, parse_fortran_types
+
+
+def _to_dict_no_parent(obj):
+    if is_dataclass(obj):
+        out = {}
+        for f in fields(obj):
+            if f.name == "parent":
+                continue
+            out[f.name] = _to_dict_no_parent(getattr(obj, f.name))
+        return out
+    if isinstance(obj, list):
+        return [_to_dict_no_parent(v) for v in obj]
+    if isinstance(obj, dict):
+        return {k: _to_dict_no_parent(v) for k, v in obj.items()}
+    return obj
 
 
 def _collect_extensions(path: Path) -> list[Path]:
@@ -26,9 +41,9 @@ def _parse_paths(paths: list[str]) -> dict[str, dict]:
     for p in sorted(set(expanded)):
         code = p.read_text(encoding="utf-8")
         out[str(p)] = {
-            "signatures": [asdict(s) for s in parse_fortran_signatures(code, filename=str(p))],
-            "types": [asdict(t) for t in parse_fortran_types(code, filename=str(p))],
-            "modules": [asdict(m) for m in parse_fortran_modules(code, filename=str(p))],
+            "signatures": [_to_dict_no_parent(s) for s in parse_fortran_signatures(code, filename=str(p))],
+            "types": [_to_dict_no_parent(t) for t in parse_fortran_types(code, filename=str(p))],
+            "modules": [_to_dict_no_parent(m) for m in parse_fortran_modules(code, filename=str(p))],
             "wrap_readiness": assess_wrap_readiness(code, filename=str(p)),
         }
     return out
