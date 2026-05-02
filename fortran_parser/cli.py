@@ -53,12 +53,7 @@ def _format_report(report: dict[str, dict]) -> str:
     lines: list[str] = []
     for fname, parsed in report.items():
         lines.append(f"File: {fname}")
-        module_proc_names = {
-            s["name"]
-            for mod in parsed["modules"]
-            for s in mod.get("procedures", [])
-        }
-        free_procedures = [s for s in parsed["signatures"] if s["name"] not in module_proc_names]
+        free_procedures = [s for s in parsed["signatures"] if s.get("module") is None]
 
         if free_procedures:
             lines.append(f"  Procedures: {len(free_procedures)}")
