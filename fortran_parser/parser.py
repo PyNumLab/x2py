@@ -429,6 +429,7 @@ def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dic
     lines = preprocess_lines(code, filename)
     current_module = None
     output: dict[str, dict[str, str]] = {}
+    in_module_spec_part = False
     for line in lines:
         s = line.strip()
         if not s:
@@ -437,11 +438,18 @@ def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dic
         if l.startswith("module ") and not l.startswith("module procedure"):
             current_module = s.split()[1].lower()
             output.setdefault(current_module, {})
+            in_module_spec_part = True
             continue
         if l.startswith("end module"):
             current_module = None
+            in_module_spec_part = False
             continue
         if current_module is None:
+            continue
+        if l == "contains":
+            in_module_spec_part = False
+            continue
+        if not in_module_spec_part:
             continue
         pm = _PARAM_RE.match(s)
         if not pm:
