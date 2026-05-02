@@ -127,9 +127,18 @@ another source language.
   readiness report.  
 - CLI human output prints tree-like structure grouped by file/module/procedure.  
 
-## 4) Test strategy implemented
+## 4) Test strategy implemented (current workflow)
 
-### 4.1 Unit-style parser tests (`tests/test_fortran_signature_parser.py`)
+### 4.1 Day-to-day test command
+
+Primary regression command used now:
+
+- `PYTHONPATH=. pytest -q tests/test_fortran_signature_parser.py tests/test_fortran_fixture_suite.py tests/test_cli.py`
+
+This single command runs all parser/unit checks, fixture/golden checks,
+large corpus parse checks (BLAS/LAPACK fixture parsing), and CLI checks.
+
+### 4.2 Unit-style parser tests (`tests/test_fortran_signature_parser.py`)
 
 Covers, among others:
 - intent/kind/rank extraction for routine arguments
@@ -146,26 +155,34 @@ Covers, among others:
 - shape symbol collection helpers
 - readiness diagnostics and unsupported detection
 
-### 4.2 Fixture/golden regression suite (`tests/test_fortran_fixture_suite.py`)
+### 4.3 Fixture and corpus regression (`tests/test_fortran_fixture_suite.py`)
 
-- Parses a curated set of Fortran fixtures in `tests/fcode/*.f90` and `.f`.  
-- Compares normalized parse outputs against JSON golden files in the same
-  fixture directory.  
-- Ensures parser behavior remains stable across incremental changes.  
+- Golden fixture tests:
+  - parse curated fixtures under `tests/fcode/*.f90` and `tests/fcode/*.f`
+  - compare normalized parse output against sibling JSON goldens
+- Large corpus parse-only sanity tests:
+  - parse BLAS source fixtures under `tests/fcode/blas`
+  - parse LAPACK source fixtures under `tests/fcode/lapack`
 
-### 4.3 Golden regeneration support
+The corpus checks provide broad “does it parse?” coverage over many real-world
+fixed/free-form Fortran files without requiring full golden outputs for each.
 
-- Script provided: `tests/fcode/generate_fortran_parser_goldens.py`.  
-- Used to regenerate JSON reference outputs when parser behavior is intentionally
-  updated.  
+### 4.4 Golden regeneration support
 
-### 4.4 CLI tests (`tests/test_cli.py`)
+- Script provided: `tests/fcode/generate_fortran_parser_goldens.py`.
+- Use when parser behavior is intentionally changed and golden JSON needs
+  updating.
+- Optional in-test auto-update flow is also supported:
+  - `FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py --confcutdir=tests/`
 
-- Validates command-line behavior for:
-  - path expansion
-  - human-readable output
-  - JSON output
-  - JSON file writing
+### 4.5 CLI tests (`tests/test_cli.py`)
+
+Validates command-line behavior for:
+- path expansion
+- human-readable output
+- JSON output
+- JSON file writing
+- module/free-procedure name collision handling
 
 ## 5) Repository/file structure reference
 
