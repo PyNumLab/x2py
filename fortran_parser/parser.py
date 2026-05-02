@@ -64,7 +64,6 @@ def _enforce_source_form_compatibility(line: str, filename: str | None) -> None:
         r"\ballocatable\b",
         r"\bpointer\b",
         r"\bresult\s*\(",
-        r"\buse\b",
         r"\bclass\s*\(",
     )
     for pat in forbidden:
@@ -484,6 +483,18 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
     if re.match(r"^intrinsic\b", stripped, flags=re.IGNORECASE):
         # INTRINSIC lists intrinsic procedures that may appear as bare statements in legacy fixed-form code.
         return
+    if re.match(r"^data\b", stripped, flags=re.IGNORECASE):
+        # DATA initializes variables in legacy fixed-form code.
+        return
+    if re.match(r"^format\s*\(", stripped, flags=re.IGNORECASE):
+        # FORMAT labels are executable I/O formatting statements, not declarations.
+        return
+    if re.match(r"^go\s*to\b", stripped, flags=re.IGNORECASE):
+        # GO TO is an executable statement.
+        return
+    if re.match(r"^use\b", stripped, flags=re.IGNORECASE):
+        # USE statements can appear in free-form and preprocessed fixed-form sources.
+        return
 
     pm = _PARAM_RE.match(stripped)
     if pm:
@@ -528,7 +539,7 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
     else:
         m_first = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)", line.strip())
         first_word = m_first.group(1).lower() if m_first else ""
-        non_decl_starts = {"do", "if", "where", "call", "select", "case", "allocate", "deallocate", "print", "write", "read", "return", "stop", "cycle", "exit", "continue", "end", "else", "elseif", "contains"}
+        non_decl_starts = {"do", "if", "where", "call", "select", "case", "allocate", "deallocate", "print", "write", "read", "return", "stop", "cycle", "exit", "continue", "end", "else", "elseif", "contains", "goto", "go", "data", "format", "use"}
         if "=" in line and "::" not in line:
             # Assignment statement, not a declaration.
             return
