@@ -317,14 +317,21 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         return
     left, right = [x.strip() for x in line.split("::", 1)]
     tm = _TYPE_RE.match(left)
-    if not tm:
+    derived = _TYPE_FIELD_RE.match(left)
+    if tm:
+        base = tm.group(1).lower()
+        type_spec = (tm.group(2) or "").strip()
+        attrs = split_csv(tm.group(3).strip().lstrip(", "))
+        kind = extract_kind_from_type_spec(base, type_spec)
+    elif derived:
+        base = "derived"
+        kind = derived.group("dtype")
+        attrs = split_csv((derived.group("attrs") or "").strip().lstrip(", "))
+    else:
         return
-    base = tm.group(1).lower()
-    type_spec = (tm.group(2) or "").strip()
-    attrs = split_csv(tm.group(3).strip().lstrip(", "))
     meta = {
         "base_type": base,
-        "kind": extract_kind_from_type_spec(base, type_spec),
+        "kind": kind,
         "rank": 0,
         "shape": [],
         "intent": "unknown",
