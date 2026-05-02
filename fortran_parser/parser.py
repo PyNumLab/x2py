@@ -536,8 +536,6 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
             arg.kind = _resolve_symbol_reference(arg.kind, local_params)
         if arg.shape:
             arg.shape = [_resolve_compile_time_expression(dim, local_params) for dim in arg.shape]
-        if arg.base_type == "unknown":
-            raise ValueError(f"Unknown datatype for argument '{arg.name}' in procedure '{sig.name}'")
     if sig.result and sig.result.kind:
         sig.result.kind = _resolve_symbol_reference(sig.result.kind, local_params)
     sig.uses = dict(state["uses"])
