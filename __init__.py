@@ -16,6 +16,8 @@ from .fortran_parser import (
     parse_fortran_project_signatures,
     parse_fortran_signatures,
     parse_fortran_types,
+    collect_signature_shape_symbols,
+    evaluate_signature_shapes,
 )
 
 __all__ = (
@@ -30,4 +32,6 @@ __all__ = (
     "parse_fortran_project_signatures",
     "parse_fortran_signatures",
     "parse_fortran_types",
+    "collect_signature_shape_symbols",
+    "evaluate_signature_shapes",
 )

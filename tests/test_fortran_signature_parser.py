@@ -1,5 +1,7 @@
 from fortran_parser import (
     assess_wrap_readiness,
+    collect_signature_shape_symbols,
+    evaluate_signature_shapes,
     parse_fortran_namespace,
     parse_fortran_project_signatures,
     parse_fortran_signatures,
@@ -280,6 +282,35 @@ end module dims_mod
     sig = parse_fortran_project_signatures(files)[0]
     assert sig.arguments[0].shape == ["0:5"]
     assert sig.arguments[1].shape == ["1:8"]
+
+
+def test_compiler_dependent_parameter_expressions_remain_symbolic():
+    files = {
+        "kinds.f90": """
+module kinds_mod
+  integer, parameter :: ip = selected_int_kind(9)
+contains
+  subroutine use_kind_expr(x)
+    real, dimension(1:ip), intent(inout) :: x
+  end subroutine use_kind_expr
+end module kinds_mod
+"""
+    }
+    sig = parse_fortran_project_signatures(files)[0]
+    assert sig.arguments[0].shape == ["1:ip"]
+
+
+def test_symbolic_shape_symbols_can_be_collected_and_later_evaluated():
+    code = """
+subroutine s(a)
+  real, intent(inout) :: a(0:nx-1, 1:ny*2)
+end subroutine s
+"""
+    sig = parse_fortran_signatures(code)[0]
+    assert collect_signature_shape_symbols(sig) == {"nx", "ny"}
+
+    evaluated = evaluate_signature_shapes(sig, {"nx": 6, "ny": 4})
+    assert evaluated.arguments[0].shape == ["0:5", "1:8"]
 
 
 def test_derived_type_extends_and_attributes():

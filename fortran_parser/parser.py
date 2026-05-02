@@ -283,6 +283,27 @@ def parse_fortran_namespace(root: str | Path, extensions: tuple[str, ...] = (".f
     }
 
 
+def collect_signature_shape_symbols(sig: FortranProcedureSignature) -> set[str]:
+    symbols: set[str] = set()
+    for arg in sig.arguments:
+        for dim in arg.shape:
+            symbols.update(re.findall(r"\b[a-zA-Z_]\w*\b", dim))
+    return {s.lower() for s in symbols}
+
+
+def evaluate_signature_shapes(
+    sig: FortranProcedureSignature,
+    symbol_values: dict[str, int | str],
+) -> FortranProcedureSignature:
+    normalized = {k.lower(): str(v) for k, v in symbol_values.items()}
+    out = replace(sig)
+    out.arguments = [replace(a) for a in sig.arguments]
+    for arg in out.arguments:
+        if arg.shape:
+            arg.shape = [_resolve_compile_time_expression(dim, normalized) for dim in arg.shape]
+    return out
+
+
 def _parse_header(line: str, module: str | None, in_interface: bool):
     m = _PROC_RE.match(line)
     if m:
@@ -473,7 +494,9 @@ def _resolve_compile_time_expression(expr: str, symbols: dict[str, str]) -> str:
         replaced = updated
 
     evaluated = _safe_eval_int_expr(replaced)
-    return str(evaluated) if evaluated is not None else replaced
+    # Keep the original symbolic expression when the value is compiler/runtime dependent
+    # (e.g. selected_*_kind intrinsics) or otherwise not a pure integer expression.
+    return str(evaluated) if evaluated is not None else text
 
 
 def _safe_eval_int_expr(expr: str) -> int | None:
