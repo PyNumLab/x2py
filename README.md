@@ -65,6 +65,21 @@ scanned recursively for: `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`, `.f08`.
 
 ### Example 1: human-readable output
 
+Fortran input (`tests/fcode/basic_subroutine.f90`):
+
+```fortran
+module m1
+  implicit none
+  integer :: n
+  real, dimension(10) :: x
+contains
+  subroutine add1(n, x)
+    integer, intent(in) :: n
+    real, dimension(n), intent(inout) :: x
+  end subroutine add1
+end module m1
+```
+
 ```bash
 python -m fortran_parser tests/fcode/basic_subroutine.f90
 ```
@@ -73,11 +88,75 @@ Expected style of output:
 
 ```text
 File: tests/fcode/basic_subroutine.f90
-  Procedures: 1
-    - subroutine add1(n:integer[0], x:real[1])
   Modules: 1
     - module m1 (vars=2, uses=0)
+      Procedures: 1
+        - subroutine add1(n:integer[0], x:real[1])
 ```
+
+### Example 1b: more complex tree output
+
+Fortran input (`mixed_example.f90`):
+
+```fortran
+subroutine driver(n)
+  integer, intent(in) :: n
+end subroutine driver
+
+module math_ops
+  use iso_c_binding, only: c_double
+  implicit none
+  real(c_double) :: alpha
+contains
+  subroutine saxpy(n, a, x, y)
+    integer, intent(in) :: n
+    real(c_double), intent(in) :: a
+    real(c_double), dimension(n), intent(in) :: x
+    real(c_double), dimension(n), intent(inout) :: y
+  end subroutine saxpy
+
+  function dot(x, y) result(r)
+    real(c_double), dimension(:), intent(in) :: x, y
+    real(c_double) :: r
+  end function dot
+end module math_ops
+
+module io_ops
+  implicit none
+contains
+  subroutine dump(v)
+    real, dimension(:), intent(in) :: v
+  end subroutine dump
+end module io_ops
+```
+
+Command:
+
+```bash
+python -m fortran_parser mixed_example.f90
+```
+
+Expected output style:
+
+```text
+File: mixed_example.f90
+  Procedures: 1
+    - subroutine driver(n:integer[0])
+  Modules: 2
+    - module math_ops (vars=1, uses=1)
+      Procedures: 2
+        - subroutine saxpy(n:integer[0], a:real[0], x:real[1], y:real[1])
+        - function dot(x:real[1], y:real[1])
+    - module io_ops (vars=0, uses=0)
+      Procedures: 1
+        - subroutine dump(v:real[1])
+```
+
+Notes:
+
+- Top-level `Procedures` contains only free procedures (not inside a module).
+- Module members are listed under each `module ...` entry.
+- Empty sections are omitted.
 
 ### Example 2: JSON output to stdout
 
