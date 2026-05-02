@@ -478,6 +478,10 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         # IMPLICIT statements configure typing rules and are not variable declarations.
         return
 
+    if re.match(r"^external\b", stripped, flags=re.IGNORECASE):
+        # EXTERNAL declares procedure names (not data objects); keep parsing without treating as datatype declarations.
+        return
+
     pm = _PARAM_RE.match(stripped)
     if pm:
         for assign in split_csv(pm.group("body")):
