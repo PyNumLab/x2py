@@ -485,6 +485,9 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
     if re.match(r"^data\b", stripped, flags=re.IGNORECASE):
         # DATA initializes variables in legacy fixed-form code.
         return
+    if re.match(r"^equivalence\b", stripped, flags=re.IGNORECASE):
+        # EQUIVALENCE overlays storage in legacy code; it is not a datatype declaration.
+        return
     if re.match(r"^format\s*\(", stripped, flags=re.IGNORECASE):
         # FORMAT labels are executable I/O formatting statements, not declarations.
         return
