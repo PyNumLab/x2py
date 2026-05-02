@@ -53,9 +53,16 @@ def _format_report(report: dict[str, dict]) -> str:
     lines: list[str] = []
     for fname, parsed in report.items():
         lines.append(f"File: {fname}")
-        if parsed["signatures"]:
-            lines.append(f"  Procedures: {len(parsed['signatures'])}")
-            for s in parsed["signatures"]:
+        module_proc_names = {
+            s["name"]
+            for mod in parsed["modules"]
+            for s in mod.get("procedures", [])
+        }
+        free_procedures = [s for s in parsed["signatures"] if s["name"] not in module_proc_names]
+
+        if free_procedures:
+            lines.append(f"  Procedures: {len(free_procedures)}")
+            for s in free_procedures:
                 args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in s["arguments"])
                 lines.append(f"    - {s['kind']} {s['name']}({args})")
 
@@ -68,6 +75,11 @@ def _format_report(report: dict[str, dict]) -> str:
             lines.append(f"  Modules: {len(parsed['modules'])}")
             for mod in parsed["modules"]:
                 lines.append(f"    - module {mod['name']} (vars={len(mod['variables'])}, uses={len(mod['uses'])})")
+                if mod.get("procedures"):
+                    lines.append(f"      Procedures: {len(mod['procedures'])}")
+                    for s in mod["procedures"]:
+                        args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in s["arguments"])
+                        lines.append(f"        - {s['kind']} {s['name']}({args})")
 
         readiness = parsed["wrap_readiness"]
         if readiness["unsupported_constructs"]:

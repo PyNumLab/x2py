@@ -96,17 +96,34 @@ Expected output shape:
 
 ```text
 File: tests/fcode/basic_subroutine.f90
-  Procedures: 1
-    - subroutine add1(n:integer[0], x:real[1])
   Modules: 1
     - module m1 (vars=2, uses=0)
+      Procedures: 1
+        - subroutine add1(n:integer[0], x:real[1])
 ```
 
 Interpretation:
 
 - Parsed entities are counted per file.
-- Signatures are shown compactly.
+- Free procedures (outside modules) are shown in top-level `Procedures`.
+- Module-contained procedures are nested under each module.
 - Empty sections are omitted from the human-readable report.
+
+More complex example:
+
+```text
+File: mixed_example.f90
+  Procedures: 1
+    - subroutine driver(n:integer[0])
+  Modules: 2
+    - module math_ops (vars=1, uses=1)
+      Procedures: 2
+        - subroutine saxpy(n:integer[0], a:real[0], x:real[1], y:real[1])
+        - function dot(x:real[1], y:real[1])
+    - module io_ops (vars=0, uses=0)
+      Procedures: 1
+        - subroutine dump(v:real[1])
+```
 
 ### 3.3 JSON output example
 
