@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import ast
 from pathlib import Path
 from dataclasses import replace
 
@@ -282,6 +283,27 @@ def parse_fortran_namespace(root: str | Path, extensions: tuple[str, ...] = (".f
     }
 
 
+def collect_signature_shape_symbols(sig: FortranProcedureSignature) -> set[str]:
+    symbols: set[str] = set()
+    for arg in sig.arguments:
+        for dim in arg.shape:
+            symbols.update(re.findall(r"\b[a-zA-Z_]\w*\b", dim))
+    return {s.lower() for s in symbols}
+
+
+def evaluate_signature_shapes(
+    sig: FortranProcedureSignature,
+    symbol_values: dict[str, int | str],
+) -> FortranProcedureSignature:
+    normalized = {k.lower(): str(v) for k, v in symbol_values.items()}
+    out = replace(sig)
+    out.arguments = [replace(a) for a in sig.arguments]
+    for arg in out.arguments:
+        if arg.shape:
+            arg.shape = [_resolve_compile_time_expression(dim, normalized) for dim in arg.shape]
+    return out
+
+
 def _parse_header(line: str, module: str | None, in_interface: bool):
     m = _PROC_RE.match(line)
     if m:
@@ -317,14 +339,21 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         return
     left, right = [x.strip() for x in line.split("::", 1)]
     tm = _TYPE_RE.match(left)
-    if not tm:
+    derived = _TYPE_FIELD_RE.match(left)
+    if tm:
+        base = tm.group(1).lower()
+        type_spec = (tm.group(2) or "").strip()
+        attrs = split_csv(tm.group(3).strip().lstrip(", "))
+        kind = extract_kind_from_type_spec(base, type_spec)
+    elif derived:
+        base = "derived"
+        kind = derived.group("dtype")
+        attrs = split_csv((derived.group("attrs") or "").strip().lstrip(", "))
+    else:
         return
-    base = tm.group(1).lower()
-    type_spec = (tm.group(2) or "").strip()
-    attrs = split_csv(tm.group(3).strip().lstrip(", "))
     meta = {
         "base_type": base,
-        "kind": extract_kind_from_type_spec(base, type_spec),
+        "kind": kind,
         "rank": 0,
         "shape": [],
         "intent": "unknown",
@@ -428,6 +457,8 @@ def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dic
 def _resolve_signature_kinds(sig: FortranProcedureSignature, module_params: dict[str, dict[str, str]]) -> None:
     use_map = {k.lower(): [s.lower() for s in v] for k, v in sig.uses.items()}
     symbol_to_value: dict[str, str] = {}
+    if sig.module:
+        symbol_to_value.update(module_params.get(sig.module.lower(), {}))
     for mod, only_symbols in use_map.items():
         params = module_params.get(mod.lower(), {})
         if only_symbols:
@@ -439,8 +470,81 @@ def _resolve_signature_kinds(sig: FortranProcedureSignature, module_params: dict
     for arg in sig.arguments:
         if arg.kind and arg.kind.lower() in symbol_to_value:
             arg.kind = symbol_to_value[arg.kind.lower()]
+        if arg.shape:
+            arg.shape = [_resolve_compile_time_expression(dim, symbol_to_value) for dim in arg.shape]
     if sig.result and sig.result.kind and sig.result.kind.lower() in symbol_to_value:
         sig.result.kind = symbol_to_value[sig.result.kind.lower()]
+
+
+def _resolve_compile_time_expression(expr: str, symbols: dict[str, str]) -> str:
+    text = expr.strip()
+    if not text:
+        return expr
+    if ":" in text:
+        parts = text.split(":")
+        return ":".join(_resolve_compile_time_expression(p, symbols) if p.strip() else p for p in parts)
+
+    replaced = text
+    for _ in range(4):
+        updated = replaced
+        for name, value in sorted(symbols.items(), key=lambda kv: len(kv[0]), reverse=True):
+            updated = re.sub(rf"\b{re.escape(name)}\b", f"({value})", updated, flags=re.IGNORECASE)
+        if updated == replaced:
+            break
+        replaced = updated
+
+    evaluated = _safe_eval_int_expr(replaced)
+    # Keep the original symbolic expression when the value is compiler/runtime dependent
+    # (e.g. selected_*_kind intrinsics) or otherwise not a pure integer expression.
+    return str(evaluated) if evaluated is not None else text
+
+
+def _safe_eval_int_expr(expr: str) -> int | None:
+    try:
+        node = ast.parse(expr, mode="eval")
+    except SyntaxError:
+        return None
+
+    allowed_binops = (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow)
+    allowed_unary = (ast.UAdd, ast.USub)
+
+    def _eval(n):
+        if isinstance(n, ast.Expression):
+            return _eval(n.body)
+        if isinstance(n, ast.Constant) and isinstance(n.value, (int, float)):
+            return n.value
+        if isinstance(n, ast.BinOp) and isinstance(n.op, allowed_binops):
+            left = _eval(n.left)
+            right = _eval(n.right)
+            if left is None or right is None:
+                return None
+            if isinstance(n.op, ast.Add):
+                return left + right
+            if isinstance(n.op, ast.Sub):
+                return left - right
+            if isinstance(n.op, ast.Mult):
+                return left * right
+            if isinstance(n.op, ast.Div):
+                return left / right
+            if isinstance(n.op, ast.FloorDiv):
+                return left // right
+            if isinstance(n.op, ast.Mod):
+                return left % right
+            if isinstance(n.op, ast.Pow):
+                return left ** right
+        if isinstance(n, ast.UnaryOp) and isinstance(n.op, allowed_unary):
+            v = _eval(n.operand)
+            if v is None:
+                return None
+            return +v if isinstance(n.op, ast.UAdd) else -v
+        return None
+
+    val = _eval(node)
+    if val is None:
+        return None
+    if isinstance(val, float) and val.is_integer():
+        return int(val)
+    return val if isinstance(val, int) else None
 
 
 def _parse_type_field_line(line: str, dtype: FortranDerivedType) -> None:

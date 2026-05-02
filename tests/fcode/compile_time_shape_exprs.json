@@ -1,0 +1,41 @@
+[
+  {
+    "name": "use_expr",
+    "kind": "subroutine",
+    "module": "dims_mod",
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "0:n1-1"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "y",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "1:n0*2"
+        ],
+        "intent": "inout",
+        "optional": false,
+        "value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false
+  }
+]

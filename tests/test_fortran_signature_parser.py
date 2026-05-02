@@ -1,5 +1,7 @@
 from fortran_parser import (
     assess_wrap_readiness,
+    collect_signature_shape_symbols,
+    evaluate_signature_shapes,
     parse_fortran_namespace,
     parse_fortran_project_signatures,
     parse_fortran_signatures,
@@ -223,6 +225,92 @@ end function fact
     assert "recursive" in sig.attributes
     assert sig.result is not None
     assert sig.result.name == "res"
+
+
+def test_assumed_shape_with_explicit_lower_bounds_is_preserved():
+    code = """
+subroutine fill_grid(x)
+  integer, intent(inout) :: x(0:,0:)
+end subroutine fill_grid
+"""
+    sig = parse_fortran_signatures(code)[0]
+    arg = sig.arguments[0]
+    assert arg.base_type == "integer"
+    assert arg.rank == 2
+    assert arg.shape == ["0:", "0:"]
+
+
+def test_dimension_attribute_with_mixed_bounds_is_parsed():
+    code = """
+subroutine update_plane(x)
+  real, intent(inout), dimension(0:, 1:n) :: x
+end subroutine update_plane
+"""
+    sig = parse_fortran_signatures(code)[0]
+    arg = sig.arguments[0]
+    assert arg.rank == 2
+    assert arg.shape == ["0:", "1:n"]
+
+
+def test_subroutine_derived_type_arguments_are_parsed():
+    code = """
+subroutine step(state)
+  type(sim_state), intent(inout) :: state
+end subroutine step
+"""
+    sig = parse_fortran_signatures(code)[0]
+    arg = sig.arguments[0]
+    assert arg.base_type == "derived"
+    assert arg.kind == "sim_state"
+    assert arg.intent == "inout"
+
+
+def test_compile_time_parameter_expressions_are_evaluated_in_shapes():
+    files = {
+        "dims.f90": """
+module dims_mod
+  integer, parameter :: n0 = 4
+  integer, parameter :: n1 = n0 + 2
+contains
+  subroutine use_expr(x, y)
+    integer, intent(inout) :: x(0:n1-1)
+    real, intent(inout), dimension(1:n0*2) :: y
+  end subroutine use_expr
+end module dims_mod
+"""
+    }
+    sig = parse_fortran_project_signatures(files)[0]
+    assert sig.arguments[0].shape == ["0:5"]
+    assert sig.arguments[1].shape == ["1:8"]
+
+
+def test_compiler_dependent_parameter_expressions_remain_symbolic():
+    files = {
+        "kinds.f90": """
+module kinds_mod
+  integer, parameter :: ip = selected_int_kind(9)
+contains
+  subroutine use_kind_expr(x)
+    real, dimension(1:ip), intent(inout) :: x
+  end subroutine use_kind_expr
+end module kinds_mod
+"""
+    }
+    sig = parse_fortran_project_signatures(files)[0]
+    assert sig.arguments[0].shape == ["1:ip"]
+
+
+def test_symbolic_shape_symbols_can_be_collected_and_later_evaluated():
+    code = """
+subroutine s(a)
+  real, intent(inout) :: a(0:nx-1, 1:ny*2)
+end subroutine s
+"""
+    sig = parse_fortran_signatures(code)[0]
+    assert collect_signature_shape_symbols(sig) == {"nx", "ny"}
+
+    evaluated = evaluate_signature_shapes(sig, {"nx": 6, "ny": 4})
+    assert evaluated.arguments[0].shape == ["0:5", "1:8"]
 
 
 def test_derived_type_extends_and_attributes():
