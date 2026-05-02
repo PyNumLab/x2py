@@ -263,6 +263,25 @@ end subroutine step
     assert arg.intent == "inout"
 
 
+def test_compile_time_parameter_expressions_are_evaluated_in_shapes():
+    files = {
+        "dims.f90": """
+module dims_mod
+  integer, parameter :: n0 = 4
+  integer, parameter :: n1 = n0 + 2
+contains
+  subroutine use_expr(x, y)
+    integer, intent(inout) :: x(0:n1-1)
+    real, intent(inout), dimension(1:n0*2) :: y
+  end subroutine use_expr
+end module dims_mod
+"""
+    }
+    sig = parse_fortran_project_signatures(files)[0]
+    assert sig.arguments[0].shape == ["0:5"]
+    assert sig.arguments[1].shape == ["1:8"]
+
+
 def test_derived_type_extends_and_attributes():
     code = """
 module m
