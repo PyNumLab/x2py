@@ -63,7 +63,8 @@ def _format_report(report: dict[str, dict]) -> str:
         for mod in parsed["modules"]:
             lines.append(
                 f"    ├─ module {mod['name']} (vars={len(mod['variables'])}, uses={len(mod['uses'])}, "
-                f"procs={len(mod.get('procedures', []))}, types={len(mod.get('derived_types', []))})"
+                f"procs={len(mod.get('procedures', []))}, types={len(mod.get('derived_types', []))}, "
+                f"ifaces={len(mod.get('interfaces', []))})"
             )
             for v in mod["variables"]:
                 lines.append(f"    │  ├─ var {v['name']}:{v['base_type']}[{v['rank']}]")
@@ -72,6 +73,9 @@ def _format_report(report: dict[str, dict]) -> str:
             for s in mod.get("procedures", []):
                 args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in s["arguments"])
                 lines.append(f"    │  └─ {s['kind']} {s['name']}({args})")
+            for iface in mod.get("interfaces", []):
+                iface_name = iface["name"] if iface.get("name") else "<anonymous>"
+                lines.append(f"    │  ├─ interface {iface_name} (procs={len(iface.get('procedures', []))})")
 
         module_names = {m["name"].lower() for m in parsed["modules"]}
         orphan_types = [t for t in parsed["types"] if not t.get("module") or t["module"].lower() not in module_names]

@@ -6,7 +6,7 @@ from pathlib import Path
 from dataclasses import replace
 
 from .lexer import preprocess_lines
-from .models import FortranArgument, FortranDerivedType, FortranModule, FortranProcedureSignature
+from .models import FortranArgument, FortranDerivedType, FortranInterface, FortranModule, FortranProcedureSignature
 from .type_resolver import extract_kind_from_type_spec
 from .utils import split_csv
 
@@ -216,6 +216,7 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
     # Attach child nodes to module objects to provide a traversable tree.
     signatures = parse_fortran_signatures(code, filename)
     types = parse_fortran_types(code, filename)
+    interfaces = parse_fortran_interfaces(code, filename)
     modules_by_name = {m.name.lower(): m for m in modules}
     for sig in signatures:
         if sig.module:
@@ -232,6 +233,12 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
     for mod in modules:
         for var in mod.variables:
             var.parent = mod
+    for iface in interfaces:
+        if iface.module:
+            mod = modules_by_name.get(iface.module.lower())
+            if mod is not None:
+                iface.parent = mod
+                mod.interfaces.append(iface)
     return modules
 
 
@@ -245,6 +252,43 @@ def _link_signature_children(sig: FortranProcedureSignature) -> None:
 def _link_type_children(dtype: FortranDerivedType) -> None:
     for field in dtype.fields:
         field.parent = dtype
+
+
+def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[FortranInterface]:
+    lines = preprocess_lines(code, filename)
+    current_module = None
+    current_interface: FortranInterface | None = None
+    interfaces: list[FortranInterface] = []
+    for line in lines:
+        s = line.strip()
+        if not s:
+            continue
+        l = s.lower()
+        if l.startswith("module ") and not l.startswith("module procedure"):
+            current_module = s.split()[1]
+            continue
+        if l.startswith("end module"):
+            current_module = None
+            continue
+        if l.startswith("interface"):
+            parts = s.split(maxsplit=1)
+            name = parts[1].strip() if len(parts) > 1 else None
+            current_interface = FortranInterface(name=name, module=current_module)
+            continue
+        if l.startswith("end interface"):
+            if current_interface is not None:
+                interfaces.append(current_interface)
+            current_interface = None
+            continue
+        if current_interface is None:
+            continue
+        parsed = _parse_header(s, current_module, True)
+        if parsed:
+            sig = _finalize_proc(parsed)
+            _link_signature_children(sig)
+            sig.parent = current_interface
+            current_interface.procedures.append(sig)
+    return interfaces
 
 
 def assess_wrap_readiness(code: str, filename: str | None = None) -> dict:

@@ -46,10 +46,19 @@ class FortranDerivedType:
 
 
 @dataclass
+class FortranInterface:
+    name: str | None = None
+    module: Optional[str] = None
+    procedures: list[FortranProcedureSignature] = field(default_factory=list)
+    parent: object | None = field(default=None, repr=False, compare=False)
+
+
+@dataclass
 class FortranModule:
     name: str
     uses: dict[str, list[str]] = field(default_factory=dict)
     variables: list[FortranArgument] = field(default_factory=list)
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
     derived_types: list[FortranDerivedType] = field(default_factory=list)
+    interfaces: list[FortranInterface] = field(default_factory=list)
     parent: object | None = field(default=None, repr=False, compare=False)
