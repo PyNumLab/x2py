@@ -13,6 +13,7 @@ _REQUIRED_FIXTURES = {
     "derived_types_and_methods",
     "assumed_shape_and_derived_args",
     "compile_time_shape_exprs",
+    "compile_time_all_exprs",
 }
 
 
