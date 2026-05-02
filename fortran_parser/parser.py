@@ -428,6 +428,7 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
 def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dict[str, str]]:
     lines = preprocess_lines(code, filename)
     current_module = None
+    in_module_spec_part = False
     output: dict[str, dict[str, str]] = {}
     for line in lines:
         s = line.strip()
@@ -436,12 +437,17 @@ def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dic
         l = s.lower()
         if l.startswith("module ") and not l.startswith("module procedure"):
             current_module = s.split()[1].lower()
+            in_module_spec_part = True
             output.setdefault(current_module, {})
+            continue
+        if l.startswith("contains") and current_module is not None:
+            in_module_spec_part = False
             continue
         if l.startswith("end module"):
             current_module = None
+            in_module_spec_part = False
             continue
-        if current_module is None:
+        if current_module is None or not in_module_spec_part:
             continue
         pm = _PARAM_RE.match(s)
         if not pm:
@@ -485,7 +491,8 @@ def _resolve_compile_time_expression(expr: str, symbols: dict[str, str]) -> str:
         return ":".join(_resolve_compile_time_expression(p, symbols) if p.strip() else p for p in parts)
 
     replaced = text
-    for _ in range(4):
+    max_passes = max(1, len(symbols) + 1)
+    for _ in range(max_passes):
         updated = replaced
         for name, value in sorted(symbols.items(), key=lambda kv: len(kv[0]), reverse=True):
             updated = re.sub(rf"\b{re.escape(name)}\b", f"({value})", updated, flags=re.IGNORECASE)

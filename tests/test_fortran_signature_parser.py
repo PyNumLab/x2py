@@ -284,6 +284,26 @@ end module dims_mod
     assert sig.arguments[1].shape == ["1:8"]
 
 
+def test_module_parameter_lookup_ignores_contained_procedure_locals():
+    files = {
+        "dims.f90": """
+module dims_mod
+contains
+  subroutine a()
+    integer, parameter :: n = 99
+  end subroutine a
+
+  subroutine b(x)
+    integer, intent(inout) :: x(1:n)
+  end subroutine b
+end module dims_mod
+"""
+    }
+    signatures = parse_fortran_project_signatures(files)
+    b_sig = [s for s in signatures if s.name == "b"][0]
+    assert b_sig.arguments[0].shape == ["1:n"]
+
+
 def test_compiler_dependent_parameter_expressions_remain_symbolic():
     files = {
         "kinds.f90": """
@@ -298,6 +318,27 @@ end module kinds_mod
     }
     sig = parse_fortran_project_signatures(files)[0]
     assert sig.arguments[0].shape == ["1:ip"]
+
+
+def test_compile_time_parameter_expression_resolves_deep_dependency_chains():
+    files = {
+        "dims.f90": """
+module dims_mod
+  integer, parameter :: n0 = 1
+  integer, parameter :: n1 = n0 + 1
+  integer, parameter :: n2 = n1 + 1
+  integer, parameter :: n3 = n2 + 1
+  integer, parameter :: n4 = n3 + 1
+  integer, parameter :: n5 = n4 + 1
+contains
+  subroutine use_expr(x)
+    integer, intent(inout) :: x(1:n5)
+  end subroutine use_expr
+end module dims_mod
+"""
+    }
+    sig = parse_fortran_project_signatures(files)[0]
+    assert sig.arguments[0].shape == ["1:6"]
 
 
 def test_symbolic_shape_symbols_can_be_collected_and_later_evaluated():
