@@ -102,3 +102,14 @@ def test_fortran_lapack_parse_suite(fixture):
         filename_for_parser=relpath,
         expected_path=fixture.with_suffix(".json"),
     )
+
+
+def test_blas_caxpy_has_no_unknown_argument_datatypes():
+    fixture = _TESTS_DIR / "blas" / "caxpy.f"
+    source = fixture.read_text(encoding="utf-8")
+    signatures = parse_fortran_signatures(source, filename="blas/caxpy.f")
+    assert signatures, "No signature parsed for BLAS fixture caxpy.f"
+
+    unknown = [arg.name for arg in signatures[0].arguments if arg.base_type == "unknown"]
+    if unknown:
+        raise AssertionError(f"Unknown argument datatypes in caxpy.f: {unknown}")
