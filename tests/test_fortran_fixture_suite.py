@@ -53,9 +53,6 @@ def _run_fixture_comparison(fixture: Path, *, filename_for_parser: str, expected
     parsed_sigs = _to_dict_list(parse_fortran_signatures(source, filename=filename_for_parser))
     parsed_types = _to_dict_list(parse_fortran_types(source, filename=filename_for_parser))
 
-    if not expected_path.exists():
-        _dump_expected(expected_path, parsed_sigs, parsed_types)
-
     update_mode = os.getenv("FORTRAN_PARSER_UPDATE_GOLDENS", "0") == "1"
     if update_mode:
         _dump_expected(expected_path, parsed_sigs, parsed_types)
