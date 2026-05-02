@@ -10,7 +10,7 @@ from .models import FortranArgument, FortranDerivedType, FortranInterface, Fortr
 from .type_resolver import extract_kind_from_type_spec
 from .utils import split_csv
 
-_TYPE_RE = re.compile(r"^(integer|real|complex|logical|character)\s*(\([^)]*\))?\s*(.*)$", re.IGNORECASE)
+_TYPE_RE = re.compile(r"^(integer|real|complex|logical|character|double\s+precision)\s*(\([^)]*\))?\s*(.*)$", re.IGNORECASE)
 _PROC_RE = re.compile(r"^(?P<prefix>(?:\w+\s+)*)subroutine\s+(?P<name>\w+)\s*\((?P<args>[^)]*)\)\s*(?P<tail>.*)$", re.IGNORECASE)
 _FUNC_RE = re.compile(r"^(?P<prefix>(?:\w+\s+)*)function\s+(?P<name>\w+)\s*\((?P<args>[^)]*)\)\s*(?P<tail>.*)$", re.IGNORECASE)
 _RESULT_RE = re.compile(r"results?\s*\(\s*(?P<name>\w+)\s*\)", re.IGNORECASE)
@@ -498,6 +498,9 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
     derived = _TYPE_FIELD_RE.match(left)
     if tm:
         base = tm.group(1).lower()
+        if base == "double precision":
+            # Legacy Fortran alias for double-precision real.
+            base = "real"
         type_spec = (tm.group(2) or "").strip()
         trailing = tm.group(3).strip().lstrip(", ")
         if "::" in line:
