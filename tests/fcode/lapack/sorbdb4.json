@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "M",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -23,7 +23,7 @@
       },
       {
         "name": "P",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -40,7 +40,7 @@
       },
       {
         "name": "Q",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -57,10 +57,13 @@
       },
       {
         "name": "X11",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 2,
+        "shape": [
+          "LDX11",
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -74,7 +77,7 @@
       },
       {
         "name": "LDX11",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -91,10 +94,13 @@
       },
       {
         "name": "X21",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 2,
+        "shape": [
+          "LDX21",
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -108,7 +114,7 @@
       },
       {
         "name": "LDX21",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -125,10 +131,12 @@
       },
       {
         "name": "THETA",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -142,10 +150,12 @@
       },
       {
         "name": "PHI",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -159,10 +169,12 @@
       },
       {
         "name": "TAUP1",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -176,10 +188,12 @@
       },
       {
         "name": "TAUP2",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -193,10 +207,12 @@
       },
       {
         "name": "TAUQ1",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -210,10 +226,12 @@
       },
       {
         "name": "PHANTOM",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -227,10 +245,12 @@
       },
       {
         "name": "WORK",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -244,7 +264,7 @@
       },
       {
         "name": "LWORK",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -261,7 +281,7 @@
       },
       {
         "name": "INFO",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

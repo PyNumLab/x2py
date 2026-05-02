@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "WANTQ",
-        "base_type": "unknown",
+        "base_type": "logical",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -23,7 +23,7 @@
       },
       {
         "name": "WANTZ",
-        "base_type": "unknown",
+        "base_type": "logical",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -40,7 +40,7 @@
       },
       {
         "name": "N",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -74,7 +74,7 @@
       },
       {
         "name": "LDA",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -108,7 +108,7 @@
       },
       {
         "name": "LDB",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -142,7 +142,7 @@
       },
       {
         "name": "LDQ",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -176,7 +176,7 @@
       },
       {
         "name": "LDZ",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -193,7 +193,7 @@
       },
       {
         "name": "J1",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -210,7 +210,7 @@
       },
       {
         "name": "N1",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -227,7 +227,7 @@
       },
       {
         "name": "N2",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -261,7 +261,7 @@
       },
       {
         "name": "LWORK",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -278,7 +278,7 @@
       },
       {
         "name": "INFO",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "N",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -23,10 +23,12 @@
       },
       {
         "name": "D",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -40,10 +42,12 @@
       },
       {
         "name": "E",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -57,7 +61,7 @@
       },
       {
         "name": "ANORM",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -74,7 +78,7 @@
       },
       {
         "name": "RCOND",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -91,10 +95,12 @@
       },
       {
         "name": "RWORK",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -108,7 +114,7 @@
       },
       {
         "name": "INFO",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

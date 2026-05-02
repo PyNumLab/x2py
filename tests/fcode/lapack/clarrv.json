@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "N",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -23,7 +23,7 @@
       },
       {
         "name": "VL",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -40,7 +40,7 @@
       },
       {
         "name": "VU",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -57,10 +57,12 @@
       },
       {
         "name": "D",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -74,10 +76,12 @@
       },
       {
         "name": "L",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -91,7 +95,7 @@
       },
       {
         "name": "PIVMIN",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -108,10 +112,12 @@
       },
       {
         "name": "ISPLIT",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -125,7 +131,7 @@
       },
       {
         "name": "M",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -142,7 +148,7 @@
       },
       {
         "name": "DOL",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -159,7 +165,7 @@
       },
       {
         "name": "DOU",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -176,7 +182,7 @@
       },
       {
         "name": "MINRGP",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -193,7 +199,7 @@
       },
       {
         "name": "RTOL1",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -210,7 +216,7 @@
       },
       {
         "name": "RTOL2",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -227,10 +233,12 @@
       },
       {
         "name": "W",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -244,10 +252,12 @@
       },
       {
         "name": "WERR",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -261,10 +271,12 @@
       },
       {
         "name": "WGAP",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -278,10 +290,12 @@
       },
       {
         "name": "IBLOCK",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -295,10 +309,12 @@
       },
       {
         "name": "INDEXW",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -312,10 +328,12 @@
       },
       {
         "name": "GERS",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -329,10 +347,13 @@
       },
       {
         "name": "Z",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 2,
+        "shape": [
+          "LDZ",
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -346,7 +367,7 @@
       },
       {
         "name": "LDZ",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -363,10 +384,12 @@
       },
       {
         "name": "ISUPPZ",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -380,10 +403,12 @@
       },
       {
         "name": "WORK",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -397,10 +422,12 @@
       },
       {
         "name": "IWORK",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -414,7 +441,7 @@
       },
       {
         "name": "INFO",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

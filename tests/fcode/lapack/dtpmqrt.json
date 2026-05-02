@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "SIDE",
-        "base_type": "unknown",
+        "base_type": "character",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -23,7 +23,7 @@
       },
       {
         "name": "TRANS",
-        "base_type": "unknown",
+        "base_type": "character",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -40,7 +40,7 @@
       },
       {
         "name": "M",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -57,7 +57,7 @@
       },
       {
         "name": "N",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -74,7 +74,7 @@
       },
       {
         "name": "K",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -91,7 +91,7 @@
       },
       {
         "name": "L",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -108,7 +108,7 @@
       },
       {
         "name": "NB",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -142,7 +142,7 @@
       },
       {
         "name": "LDV",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -176,7 +176,7 @@
       },
       {
         "name": "LDT",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -210,7 +210,7 @@
       },
       {
         "name": "LDA",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -244,7 +244,7 @@
       },
       {
         "name": "LDB",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -278,7 +278,7 @@
       },
       {
         "name": "INFO",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

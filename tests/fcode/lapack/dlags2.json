@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "UPPER",
-        "base_type": "unknown",
+        "base_type": "logical",
         "kind": null,
         "rank": 0,
         "shape": [],

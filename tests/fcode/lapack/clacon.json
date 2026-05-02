@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "N",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -23,10 +23,12 @@
       },
       {
         "name": "V",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "N"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -40,10 +42,12 @@
       },
       {
         "name": "X",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "N"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -57,7 +61,7 @@
       },
       {
         "name": "EST",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -74,7 +78,7 @@
       },
       {
         "name": "KASE",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

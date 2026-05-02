@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "N",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -23,7 +23,7 @@
       },
       {
         "name": "NRHS",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -57,7 +57,7 @@
       },
       {
         "name": "LDA",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -74,10 +74,12 @@
       },
       {
         "name": "IPIV",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -108,7 +110,7 @@
       },
       {
         "name": "LDB",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -142,7 +144,7 @@
       },
       {
         "name": "LDX",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -176,10 +178,12 @@
       },
       {
         "name": "SWORK",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -193,7 +197,7 @@
       },
       {
         "name": "ITER",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -210,7 +214,7 @@
       },
       {
         "name": "INFO",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

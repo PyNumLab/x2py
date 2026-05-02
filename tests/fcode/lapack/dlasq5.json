@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "I0",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -23,7 +23,7 @@
       },
       {
         "name": "N0",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -57,7 +57,7 @@
       },
       {
         "name": "PP",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -210,7 +210,7 @@
       },
       {
         "name": "IEEE",
-        "base_type": "unknown",
+        "base_type": "logical",
         "kind": null,
         "rank": 0,
         "shape": [],

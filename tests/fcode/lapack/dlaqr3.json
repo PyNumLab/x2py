@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "WANTT",
-        "base_type": "unknown",
+        "base_type": "logical",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -23,7 +23,7 @@
       },
       {
         "name": "WANTZ",
-        "base_type": "unknown",
+        "base_type": "logical",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -40,7 +40,7 @@
       },
       {
         "name": "N",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -57,7 +57,7 @@
       },
       {
         "name": "KTOP",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -74,7 +74,7 @@
       },
       {
         "name": "KBOT",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -91,7 +91,7 @@
       },
       {
         "name": "NW",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -125,7 +125,7 @@
       },
       {
         "name": "LDH",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -142,7 +142,7 @@
       },
       {
         "name": "ILOZ",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -159,7 +159,7 @@
       },
       {
         "name": "IHIZ",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -193,7 +193,7 @@
       },
       {
         "name": "LDZ",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -210,7 +210,7 @@
       },
       {
         "name": "NS",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -227,7 +227,7 @@
       },
       {
         "name": "ND",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -295,7 +295,7 @@
       },
       {
         "name": "LDV",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -312,7 +312,7 @@
       },
       {
         "name": "NH",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -346,7 +346,7 @@
       },
       {
         "name": "LDT",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -363,7 +363,7 @@
       },
       {
         "name": "NV",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -397,7 +397,7 @@
       },
       {
         "name": "LDWV",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -431,7 +431,7 @@
       },
       {
         "name": "LWORK",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "JOBVSL",
-        "base_type": "unknown",
+        "base_type": "character",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -23,7 +23,7 @@
       },
       {
         "name": "JOBVSR",
-        "base_type": "unknown",
+        "base_type": "character",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -40,7 +40,7 @@
       },
       {
         "name": "SORT",
-        "base_type": "unknown",
+        "base_type": "character",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -57,7 +57,7 @@
       },
       {
         "name": "SELCTG",
-        "base_type": "unknown",
+        "base_type": "logical",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -74,7 +74,7 @@
       },
       {
         "name": "SENSE",
-        "base_type": "unknown",
+        "base_type": "character",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -91,7 +91,7 @@
       },
       {
         "name": "N",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -125,7 +125,7 @@
       },
       {
         "name": "LDA",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -142,10 +142,13 @@
       },
       {
         "name": "B",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 2,
+        "shape": [
+          "LDB",
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -159,7 +162,7 @@
       },
       {
         "name": "LDB",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -176,7 +179,7 @@
       },
       {
         "name": "SDIM",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -193,10 +196,12 @@
       },
       {
         "name": "ALPHA",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -210,10 +215,12 @@
       },
       {
         "name": "BETA",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -227,10 +234,13 @@
       },
       {
         "name": "VSL",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 2,
+        "shape": [
+          "LDVSL",
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -244,7 +254,7 @@
       },
       {
         "name": "LDVSL",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -261,10 +271,13 @@
       },
       {
         "name": "VSR",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 2,
+        "shape": [
+          "LDVSR",
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -278,7 +291,7 @@
       },
       {
         "name": "LDVSR",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -329,10 +342,12 @@
       },
       {
         "name": "WORK",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -346,7 +361,7 @@
       },
       {
         "name": "LWORK",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -380,10 +395,12 @@
       },
       {
         "name": "IWORK",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -397,7 +414,7 @@
       },
       {
         "name": "LIWORK",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -414,10 +431,12 @@
       },
       {
         "name": "BWORK",
-        "base_type": "unknown",
+        "base_type": "logical",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -431,7 +450,7 @@
       },
       {
         "name": "INFO",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

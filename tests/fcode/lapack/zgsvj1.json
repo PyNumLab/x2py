@@ -23,7 +23,7 @@
       },
       {
         "name": "M",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -40,7 +40,7 @@
       },
       {
         "name": "N",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -57,7 +57,7 @@
       },
       {
         "name": "N1",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -91,7 +91,7 @@
       },
       {
         "name": "LDA",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -108,10 +108,12 @@
       },
       {
         "name": "D",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "N"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -142,7 +144,7 @@
       },
       {
         "name": "MV",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -159,10 +161,13 @@
       },
       {
         "name": "V",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 2,
+        "shape": [
+          "LDV",
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -176,7 +181,7 @@
       },
       {
         "name": "LDV",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -244,7 +249,7 @@
       },
       {
         "name": "NSWEEP",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -261,10 +266,12 @@
       },
       {
         "name": "WORK",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "LWORK"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -278,7 +285,7 @@
       },
       {
         "name": "LWORK",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -295,7 +302,7 @@
       },
       {
         "name": "INFO",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

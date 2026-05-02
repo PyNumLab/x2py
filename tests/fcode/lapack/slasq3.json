@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "I0",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -23,7 +23,7 @@
       },
       {
         "name": "N0",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -40,10 +40,12 @@
       },
       {
         "name": "Z",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -57,7 +59,7 @@
       },
       {
         "name": "PP",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -74,7 +76,7 @@
       },
       {
         "name": "DMIN",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -91,7 +93,7 @@
       },
       {
         "name": "SIGMA",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -108,7 +110,7 @@
       },
       {
         "name": "DESIG",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -125,7 +127,7 @@
       },
       {
         "name": "QMAX",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -142,7 +144,7 @@
       },
       {
         "name": "NFAIL",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -159,7 +161,7 @@
       },
       {
         "name": "ITER",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -176,7 +178,7 @@
       },
       {
         "name": "NDIV",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -193,7 +195,7 @@
       },
       {
         "name": "IEEE",
-        "base_type": "unknown",
+        "base_type": "logical",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -210,7 +212,7 @@
       },
       {
         "name": "TTYPE",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -227,7 +229,7 @@
       },
       {
         "name": "DMIN1",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -244,7 +246,7 @@
       },
       {
         "name": "DMIN2",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -261,7 +263,7 @@
       },
       {
         "name": "DN",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -278,7 +280,7 @@
       },
       {
         "name": "DN1",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -295,7 +297,7 @@
       },
       {
         "name": "DN2",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -312,7 +314,7 @@
       },
       {
         "name": "G",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -329,7 +331,7 @@
       },
       {
         "name": "TAU",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],

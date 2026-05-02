@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "DIAG",
-        "base_type": "unknown",
+        "base_type": "character",
         "kind": null,
         "rank": 0,
         "shape": [],

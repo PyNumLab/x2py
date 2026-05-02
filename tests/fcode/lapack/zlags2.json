@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "UPPER",
-        "base_type": "unknown",
+        "base_type": "logical",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -91,7 +91,7 @@
       },
       {
         "name": "B2",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -142,7 +142,7 @@
       },
       {
         "name": "SNU",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -176,7 +176,7 @@
       },
       {
         "name": "SNV",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -210,7 +210,7 @@
       },
       {
         "name": "SNQ",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],

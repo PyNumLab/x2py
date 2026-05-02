@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "SMALL",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -23,7 +23,7 @@
       },
       {
         "name": "LARGE",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],

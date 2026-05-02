@@ -6,10 +6,12 @@
     "arguments": [
       {
         "name": "SRNAME_ARRAY",
-        "base_type": "unknown",
+        "base_type": "character",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "SRNAME_LEN"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -23,7 +25,7 @@
       },
       {
         "name": "SRNAME_LEN",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -40,7 +42,7 @@
       },
       {
         "name": "INFO",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

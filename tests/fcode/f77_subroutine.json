@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "n",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

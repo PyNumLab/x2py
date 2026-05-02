@@ -23,7 +23,7 @@
       },
       {
         "name": "B",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -40,7 +40,7 @@
       },
       {
         "name": "C",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -57,7 +57,7 @@
       },
       {
         "name": "RT1",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -74,7 +74,7 @@
       },
       {
         "name": "RT2",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -91,7 +91,7 @@
       },
       {
         "name": "EVSCAL",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -108,7 +108,7 @@
       },
       {
         "name": "CS1",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -125,7 +125,7 @@
       },
       {
         "name": "SN1",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],
