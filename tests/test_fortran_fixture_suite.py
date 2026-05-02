@@ -17,8 +17,7 @@ _REQUIRED_FIXTURES = {
 }
 
 
-def _load_expected(fixture_name: str):
-    expected_path = _TESTS_DIR / f"{fixture_name}.json"
+def _load_expected(expected_path: Path):
     with expected_path.open("r", encoding="utf-8") as f:
         data = json.load(f)
     if isinstance(data, list):
@@ -54,10 +53,10 @@ def test_fortran_fixture_golden_suite():
 
     for fixture in fixture_files:
         key = fixture.stem
-        expected_path = _TESTS_DIR / f"{key}.json"
+        expected_path = fixture.with_suffix(".json")
         if not expected_path.exists() and update_mode:
             _dump_expected(expected_path, [], [])
-        expected = _load_expected(key)
+        expected = _load_expected(expected_path)
         source = fixture.read_text(encoding="utf-8")
 
         parsed_sigs = _to_dict_list(parse_fortran_signatures(source, filename=fixture.name))
@@ -69,3 +68,17 @@ def test_fortran_fixture_golden_suite():
 
         assert parsed_sigs == expected["signatures"], f"Signature mismatch for {fixture.name}"
         assert parsed_types == expected["types"], f"Derived type mismatch for {fixture.name}"
+
+
+def test_fortran_blas_lapack_parse_suite():
+    fixture_files = sorted(
+        f
+        for f in _TESTS_DIR.rglob("*.f*")
+        if any(part in {"blas", "lapack"} for part in f.parts)
+    )
+    assert fixture_files, "No BLAS/LAPACK fixtures found in tests/fcode"
+
+    for fixture in fixture_files:
+        source = fixture.read_text(encoding="utf-8")
+        parse_fortran_signatures(source, filename=str(fixture.relative_to(_TESTS_DIR)))
+        parse_fortran_types(source, filename=str(fixture.relative_to(_TESTS_DIR)))
