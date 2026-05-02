@@ -5,6 +5,7 @@ from fortran_parser import (
     parse_fortran_namespace,
     parse_fortran_project_signatures,
     parse_fortran_signatures,
+    parse_fortran_interfaces,
     parse_fortran_modules,
     parse_fortran_types,
 )
@@ -143,6 +144,57 @@ end module cfg
     assert mod.uses["iso_c_binding"] == ["c_int"]
     assert [v.name for v in mod.variables] == ["nmax", "origin"]
     assert mod.variables[1].shape == ["3"]
+
+
+def test_module_contains_procedure_and_type_children():
+    code = """
+module m1
+  integer :: cfg
+  type :: particle
+    integer :: id
+  end type particle
+contains
+  subroutine add1(n, x)
+    integer, intent(in) :: n
+    real, intent(inout) :: x(:)
+  end subroutine add1
+end module m1
+"""
+    modules = parse_fortran_modules(code)
+    assert len(modules) == 1
+    mod = modules[0]
+    assert mod.name == "m1"
+    assert [p.name for p in mod.procedures] == ["add1"]
+    assert [t.name for t in mod.derived_types] == ["particle"]
+    assert mod.variables[0].parent is mod
+    assert mod.procedures[0].parent is mod
+    assert mod.derived_types[0].parent is mod
+    assert mod.procedures[0].arguments[0].parent is mod.procedures[0]
+    assert mod.derived_types[0].fields[0].parent is mod.derived_types[0]
+
+
+def test_module_contains_interfaces_with_parent_links():
+    code = """
+module m1
+  interface apply
+    subroutine do_apply(n)
+      integer, intent(in) :: n
+    end subroutine do_apply
+  end interface
+end module m1
+"""
+    interfaces = parse_fortran_interfaces(code)
+    assert len(interfaces) == 1
+    iface = interfaces[0]
+    assert iface.name == "apply"
+    assert iface.module == "m1"
+    assert [p.name for p in iface.procedures] == ["do_apply"]
+    assert iface.procedures[0].parent is iface
+    assert iface.procedures[0].arguments[0].parent is iface.procedures[0]
+
+    mod = parse_fortran_modules(code)[0]
+    assert len(mod.interfaces) == 1
+    assert mod.interfaces[0].parent is mod
 
 
 def test_fixed_form_fortran77_continuation():
