@@ -75,10 +75,8 @@ Expected style of output:
 File: tests/fcode/basic_subroutine.f90
   Procedures: 1
     - subroutine add1(n:integer[0], x:real[1])
-  Derived types: 0
   Modules: 1
     - module m1 (vars=2, uses=0)
-  Wrappable: True
 ```
 
 ### Example 2: JSON output to stdout

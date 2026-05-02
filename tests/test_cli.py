@@ -12,6 +12,8 @@ def test_cli_readable_output():
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert f"File: {TEST_FILE}" in res.stdout
     assert "subroutine add1" in res.stdout
+    assert "Derived types: 0" not in res.stdout
+    assert "Wrappable:" not in res.stdout
 
 
 def test_cli_json_out(tmp_path: Path):
