@@ -1,0 +1,47 @@
+[
+  {
+    "name": "ILAUPLO",
+    "kind": "function",
+    "module": null,
+    "arguments": [
+      {
+        "name": "UPLO",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "ILAUPLO",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "ILAUPLO",
+      "base_type": "unknown",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "ILAUPLO",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  }
+]

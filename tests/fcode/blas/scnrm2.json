@@ -1,0 +1,172 @@
+[
+  {
+    "name": "SCNRM2",
+    "kind": "function",
+    "module": null,
+    "arguments": [
+      {
+        "name": "n",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "SCNRM2",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "*"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "SCNRM2",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "incx",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "SCNRM2",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "SCNRM2",
+      "base_type": "real",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "SCNRM2",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {
+      "wp": {
+        "name": "wp",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": "kind(1.e0)",
+        "value_type": "expression",
+        "is_parameter": true,
+        "dimensions": []
+      },
+      "zero": {
+        "name": "zero",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": "0.0_wp",
+        "value_type": "expression",
+        "is_parameter": true,
+        "dimensions": []
+      },
+      "one": {
+        "name": "one",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": "1.0_wp",
+        "value_type": "expression",
+        "is_parameter": true,
+        "dimensions": []
+      },
+      "maxn": {
+        "name": "maxn",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": "huge(0.0_wp)",
+        "value_type": "expression",
+        "is_parameter": true,
+        "dimensions": []
+      },
+      "tsml": {
+        "name": "tsml",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": "real(radix(0._wp), (kind(1.e0)))**ceiling(       (minexponent(0._wp) - 1) * 0.5_wp)",
+        "value_type": "expression",
+        "is_parameter": true,
+        "dimensions": []
+      },
+      "tbig": {
+        "name": "tbig",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": "real(radix(0._wp), (kind(1.e0)))**floor(       (maxexponent(0._wp) - digits(0._wp) + 1) * 0.5_wp)",
+        "value_type": "expression",
+        "is_parameter": true,
+        "dimensions": []
+      },
+      "ssml": {
+        "name": "ssml",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": "real(radix(0._wp), (kind(1.e0)))**( - floor(       (minexponent(0._wp) - digits(0._wp)) * 0.5_wp))",
+        "value_type": "expression",
+        "is_parameter": true,
+        "dimensions": []
+      },
+      "sbig": {
+        "name": "sbig",
+        "base_type": "unknown",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": "real(radix(0._wp), (kind(1.e0)))**( - ceiling(       (maxexponent(0._wp) + digits(0._wp) - 1) * 0.5_wp))",
+        "value_type": "expression",
+        "is_parameter": true,
+        "dimensions": []
+      }
+    }
+  }
+]

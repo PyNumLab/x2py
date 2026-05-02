@@ -1,0 +1,100 @@
+[
+  {
+    "name": "SISNAN",
+    "kind": "function",
+    "module": "LA_XISNAN",
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "SISNAN",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "SISNAN",
+      "base_type": "unknown",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "SISNAN",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {
+      "LA_CONSTANTS": [
+        "wp=>sp"
+      ]
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "DISNAN",
+    "kind": "function",
+    "module": "LA_XISNAN",
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "DISNAN",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "DISNAN",
+      "base_type": "unknown",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "DISNAN",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {
+      "LA_CONSTANTS": [
+        "wp=>dp"
+      ]
+    },
+    "in_interface": false,
+    "variables": {}
+  }
+]
