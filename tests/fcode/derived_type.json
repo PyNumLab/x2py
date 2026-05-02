@@ -7,11 +7,11 @@
       "arguments": [
         {
           "name": "p",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "particle",
           "rank": 0,
           "shape": [],
-          "intent": "unknown",
+          "intent": "inout",
           "optional": false,
           "value": false,
           "allocatable": false,

@@ -26,8 +26,16 @@ def _load_expected(fixture_name: str):
     return {"signatures": data.get("signatures", []), "types": data.get("types", [])}
 
 
+def _strip_parent_fields(value):
+    if isinstance(value, dict):
+        return {k: _strip_parent_fields(v) for k, v in value.items() if k != "parent"}
+    if isinstance(value, list):
+        return [_strip_parent_fields(v) for v in value]
+    return value
+
+
 def _to_dict_list(items):
-    return [asdict(i) for i in items]
+    return [_strip_parent_fields(asdict(i)) for i in items]
 
 
 def _dump_expected(path: Path, signatures: list[dict], types: list[dict]) -> None:

@@ -89,8 +89,6 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
 
     if current_proc is not None:
         signatures.append(_finalize_proc(current_proc))
-    for sig in signatures:
-        _link_signature_children(sig)
     return signatures
 
 
@@ -181,8 +179,6 @@ def parse_fortran_types(code: str, filename: str | None = None) -> list[FortranD
                 current_type.generic_bindings.append({"name": lhs, "targets": rhs, "attrs": attrs})
             continue
         _parse_type_field_line(s, current_type)
-    for dtype in types:
-        _link_type_children(dtype)
     return types
 
 
@@ -219,16 +215,18 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
     interfaces = parse_fortran_interfaces(code, filename)
     modules_by_name = {m.name.lower(): m for m in modules}
     for sig in signatures:
-        if sig.module:
+        if sig.module and not sig.in_interface:
             mod = modules_by_name.get(sig.module.lower())
             if mod is not None:
                 sig.parent = mod
+                _link_signature_children(sig)
                 mod.procedures.append(sig)
     for dtype in types:
         if dtype.module:
             mod = modules_by_name.get(dtype.module.lower())
             if mod is not None:
                 dtype.parent = mod
+                _link_type_children(dtype)
                 mod.derived_types.append(dtype)
     for mod in modules:
         for var in mod.variables:
@@ -258,6 +256,7 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
     lines = preprocess_lines(code, filename)
     current_module = None
     current_interface: FortranInterface | None = None
+    current_proc = None
     interfaces: list[FortranInterface] = []
     for line in lines:
         s = line.strip()
@@ -274,20 +273,38 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
             parts = s.split(maxsplit=1)
             name = parts[1].strip() if len(parts) > 1 else None
             current_interface = FortranInterface(name=name, module=current_module)
+            current_proc = None
             continue
         if l.startswith("end interface"):
+            if current_proc is not None and current_interface is not None:
+                sig = _finalize_proc(current_proc)
+                _link_signature_children(sig)
+                sig.parent = current_interface
+                current_interface.procedures.append(sig)
+                current_proc = None
             if current_interface is not None:
                 interfaces.append(current_interface)
             current_interface = None
             continue
         if current_interface is None:
             continue
-        parsed = _parse_header(s, current_module, True)
-        if parsed:
-            sig = _finalize_proc(parsed)
+
+        if current_proc is None:
+            parsed = _parse_header(s, current_module, True)
+            if parsed:
+                current_proc = parsed
+            continue
+
+        if l.startswith("end subroutine") or l.startswith("end function") or l == "end":
+            sig = _finalize_proc(current_proc)
             _link_signature_children(sig)
             sig.parent = current_interface
             current_interface.procedures.append(sig)
+            current_proc = None
+            continue
+
+        _parse_declaration(s, current_proc)
+
     return interfaces
 
 
