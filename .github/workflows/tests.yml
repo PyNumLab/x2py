@@ -33,3 +33,53 @@ jobs:
         env:
           PYTHONPATH: .
         run: pytest -q
+
+  parser-reference-guard:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify parser implementation reference was updated when needed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          echo "PR labels: ${PR_LABELS:-<none>}"
+
+          DOC_CHANGED=false
+          if echo "$CHANGED_FILES" | grep -Fxq "parser_implementation_reference.md"; then
+            DOC_CHANGED=true
+          fi
+
+          FORCE_LABEL="require-parser-reference-update"
+          if echo ",${PR_LABELS}," | grep -Fq ",${FORCE_LABEL},"; then
+            if [ "$DOC_CHANGED" = true ]; then
+              echo "${FORCE_LABEL} label present and parser_implementation_reference.md was updated."
+              exit 0
+            fi
+            echo "${FORCE_LABEL} label present, but parser_implementation_reference.md was not updated."
+            exit 1
+          fi
+
+          if [ "$DOC_CHANGED" = true ]; then
+            echo "parser_implementation_reference.md changed in this PR."
+            exit 0
+          fi
+
+          if echo "$CHANGED_FILES" | grep -Eq "^(fortran_parser/|tests/fcode/|tests/test_fortran_signature_parser.py|\.github/workflows/)"; then
+            echo "Parser-related files changed without updating parser_implementation_reference.md."
+            echo "Please update parser_implementation_reference.md or add '${FORCE_LABEL}' only when you want to enforce it manually."
+            exit 1
+          fi
+
+          echo "No parser-related files changed; parser_implementation_reference.md update not required."

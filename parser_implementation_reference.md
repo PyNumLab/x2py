@@ -264,3 +264,31 @@ A condensed history of important parser capabilities added over time (from
 - Refined CLI tree output (omit empty/internal sections; stable module
   procedure grouping).
 - Added tests/fixtures for same-name reuse across different scopes.
+
+## 9) Pull-request maintenance policy for this reference
+
+To keep this document useful as an implementation transfer artifact, pull
+requests should update `parser_implementation_reference.md` whenever parser
+behavior, parser coverage, parser fixtures/goldens, or parser validation flow
+meaningfully changes.
+
+A CI guard in `.github/workflows/tests.yml` enforces this on pull requests by
+failing when parser-related files change without a matching update to this
+reference. The guard currently watches these path groups:
+
+- `fortran_parser/`
+- `tests/fcode/`
+- `tests/test_fortran_signature_parser.py`
+- `.github/workflows/`
+
+If a specific PR is a legitimate exception, either:
+
+- include a brief no-op/reference update here explaining why no behavior-level
+  doc change is needed, or
+- adjust the guard patterns in CI to better match actual parser-impacting
+  paths.
+
+Manual force mode is also supported: add the pull-request label
+`require-parser-reference-update` to require this document update even when the
+parser-impact path patterns do not match. With that label present, CI fails
+unless `parser_implementation_reference.md` is updated in the PR diff.
