@@ -32,6 +32,46 @@ _UNSUPPORTED_PATTERNS = (
 )
 
 
+def _source_form(filename: str | None) -> str:
+    if not filename:
+        return "unknown"
+    ext = Path(filename).suffix.lower()
+    if ext in {".f", ".for", ".ftn", ".f77"}:
+        return "f77"
+    if ext in {".f90", ".f95", ".f03", ".f08"}:
+        return "modern"
+    return "unknown"
+
+
+def _find_legacy_star_kind(type_left: str) -> tuple[str, str] | None:
+    m = re.match(r"^(integer|real|complex|logical|character)\s*\*\s*([0-9]+)\b", type_left, re.IGNORECASE)
+    if not m:
+        return None
+    return m.group(1).lower(), m.group(2)
+
+
+def _enforce_source_form_compatibility(line: str, filename: str | None) -> None:
+    source_form = _source_form(filename)
+    if source_form != "f77":
+        return
+    forbidden = (
+        r"\bmodule\b",
+        r"\bcontains\b",
+        r"\binterface\b",
+        r"::",
+        r"\bintent\s*\(",
+        r"\boptional\b",
+        r"\ballocatable\b",
+        r"\bpointer\b",
+        r"\bresult\s*\(",
+        r"\buse\b",
+        r"\bclass\s*\(",
+    )
+    for pat in forbidden:
+        if re.search(pat, line, re.IGNORECASE):
+            raise ValueError(f"Unsupported syntax for Fortran 77 source '{filename}': {line.strip()}")
+
+
 def parse_fortran_signatures(code: str, filename: str | None = None) -> list[FortranProcedureSignature]:
     lines = preprocess_lines(code, filename)
     signatures: list[FortranProcedureSignature] = []
@@ -45,6 +85,8 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
         if not s:
             continue
         l = s.lower()
+
+        _enforce_source_form_compatibility(s, filename)
 
         if l.startswith("interface"):
             interface_depth += 1
@@ -72,6 +114,7 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
             current_proc = _parse_header(s, current_module, interface_depth > 0)
             if current_proc:
                 current_proc["uses"].update(current_module_uses)
+                current_proc["filename"] = filename
             continue
 
         if l.startswith("end subroutine") or l.startswith("end function") or l == "end":
@@ -130,6 +173,7 @@ def parse_fortran_types(code: str, filename: str | None = None) -> list[FortranD
         if not s:
             continue
         l = s.lower()
+        _enforce_source_form_compatibility(s, filename)
         if l.startswith("module ") and not l.startswith("module procedure"):
             current_module = s.split()[1]
             continue
@@ -183,7 +227,7 @@ def parse_fortran_types(code: str, filename: str | None = None) -> list[FortranD
                 rhs = [r.strip() for r in split_csv(rhs_txt)]
                 current_type.generic_bindings.append({"name": lhs, "targets": rhs, "attrs": attrs})
             continue
-        _parse_type_field_line(s, current_type)
+        _parse_type_field_line(s, current_type, filename)
     # Resolve extends references for parent types declared in the same parsed file.
     # Keep cross-file parents as strings.
     by_name = {t.name.lower(): t for t in types}
@@ -204,6 +248,7 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
         if not s:
             continue
         l = s.lower()
+        _enforce_source_form_compatibility(s, filename)
         if l.startswith("module ") and not l.startswith("module procedure"):
             current = FortranModule(name=s.split()[1], filename=filename)
             continue
@@ -220,7 +265,7 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
         if m:
             current.uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
             continue
-        _parse_module_variable_line(s, current)
+        _parse_module_variable_line(s, current, filename)
 
     # Attach parsed procedures/types/interfaces to their owning modules.
     signatures = parse_fortran_signatures(code, filename)
@@ -256,6 +301,7 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
         if not s:
             continue
         l = s.lower()
+        _enforce_source_form_compatibility(s, filename)
         if l.startswith("module ") and not l.startswith("module procedure"):
             current_module = s.split()[1]
             continue
@@ -400,6 +446,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "uses": {},
             "in_contains": False,
             "local_params": {},
+            "filename": None,
         }
     m = _FUNC_RE.match(line)
     if not m:
@@ -414,6 +461,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         "uses": {},
         "in_contains": False,
         "local_params": {},
+        "filename": None,
     }
 
 
@@ -440,6 +488,12 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         # (e.g., "INTEGER N", "COMPLEX CX(*), CY(*)").
         left = line.strip()
         right = ""
+    star_kind = _find_legacy_star_kind(left)
+    source_form = _source_form(proc_state.get("filename"))
+    if star_kind and source_form == "modern":
+        base, kind = star_kind
+        raise ValueError(f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{proc_state.get('filename')}'.")
+
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
     if tm:
@@ -457,6 +511,13 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         kind = derived.group("dtype")
         attrs = split_csv((derived.group("attrs") or "").strip().lstrip(", "))
     else:
+        first_word = line.strip().split()[0].lower() if line.strip() else ""
+        non_decl_starts = {"do", "if", "where", "call", "select", "case", "allocate", "deallocate", "print", "write", "read", "return", "stop", "cycle", "exit", "continue"}
+        looks_like_decl = bool(re.match(r"^[A-Za-z]", line.strip())) and first_word not in non_decl_starts and ("::" in line or "," in line or " " in line.strip())
+        if looks_like_decl:
+            if any(p.search(line) for p in _UNSUPPORTED_PATTERNS):
+                return
+            raise ValueError(f"Unknown or unsupported datatype declaration for procedure '{proc_state['signature'].name}': {line.strip()}")
         return
     meta = {
         "base_type": base,
@@ -553,6 +614,7 @@ def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dic
         if not s:
             continue
         l = s.lower()
+        _enforce_source_form_compatibility(s, filename)
         if l.startswith("module ") and not l.startswith("module procedure"):
             current_module = s.split()[1].lower()
             in_module_spec_part = True
@@ -714,10 +776,18 @@ def _safe_eval_int_expr(expr: str) -> int | None:
     return val if isinstance(val, int) else None
 
 
-def _parse_type_field_line(line: str, dtype: FortranDerivedType) -> None:
+def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str | None) -> None:
     if "::" not in line:
         return
+    if re.match(r"^type\s*::\s*\w+$", line.strip(), re.IGNORECASE):
+        return
     left, right = [x.strip() for x in line.split("::", 1)]
+    star_kind = _find_legacy_star_kind(left)
+    source_form = _source_form(filename)
+    if star_kind and source_form == "modern":
+        base, kind = star_kind
+        raise ValueError(f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.")
+
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
     if tm:
@@ -749,7 +819,7 @@ def _parse_type_field_line(line: str, dtype: FortranDerivedType) -> None:
             "pointer": False,
         }
     else:
-        return
+        raise ValueError(f"Unknown or unsupported datatype declaration: {line.strip()}")
 
     for a in attrs:
         la = a.lower()
@@ -771,10 +841,18 @@ def _parse_type_field_line(line: str, dtype: FortranDerivedType) -> None:
         dtype.fields.append(field)
 
 
-def _parse_module_variable_line(line: str, module: FortranModule) -> None:
+def _parse_module_variable_line(line: str, module: FortranModule, filename: str | None) -> None:
     if "::" not in line:
         return
+    if re.match(r"^type\s*::\s*\w+$", line.strip(), re.IGNORECASE):
+        return
     left, right = [x.strip() for x in line.split("::", 1)]
+    star_kind = _find_legacy_star_kind(left)
+    source_form = _source_form(filename)
+    if star_kind and source_form == "modern":
+        base, kind = star_kind
+        raise ValueError(f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.")
+
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
     if tm:
@@ -806,7 +884,7 @@ def _parse_module_variable_line(line: str, module: FortranModule) -> None:
             "pointer": False,
         }
     else:
-        return
+        raise ValueError(f"Unknown or unsupported datatype declaration: {line.strip()}")
 
     for a in attrs:
         la = a.lower()
