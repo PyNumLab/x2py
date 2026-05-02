@@ -60,6 +60,39 @@ contains
     end if
   end subroutine do_work_l
 
+
+  subroutine host_one(same_name)
+    implicit none
+    integer, intent(inout) :: same_name
+
+    call helper(same_name)
+
+  contains
+
+    subroutine helper(same_name)
+      implicit none
+      integer, intent(inout) :: same_name
+      same_name = same_name + 1
+    end subroutine helper
+
+  end subroutine host_one
+
+  subroutine host_two(same_name)
+    implicit none
+    real, intent(inout) :: same_name
+
+    call helper(same_name)
+
+  contains
+
+    subroutine helper(same_name)
+      implicit none
+      real, intent(inout) :: same_name
+      same_name = same_name + 1.0
+    end subroutine helper
+
+  end subroutine host_two
+
   function convert_to_complex(same_name) result(shared)
     implicit none
     integer, intent(in) :: same_name
