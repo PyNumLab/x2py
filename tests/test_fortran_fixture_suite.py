@@ -101,5 +101,10 @@ def test_fortran_blas_lapack_parse_suite_has_fixtures():
 @pytest.mark.parametrize("fixture", _BLAS_LAPACK_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
 def test_fortran_blas_lapack_parse_suite(fixture):
     source = fixture.read_text(encoding="utf-8")
-    parse_fortran_signatures(source, filename=str(fixture.relative_to(_TESTS_DIR)))
-    parse_fortran_types(source, filename=str(fixture.relative_to(_TESTS_DIR)))
+    relpath = str(fixture.relative_to(_TESTS_DIR))
+    parsed_sigs = parse_fortran_signatures(source, filename=relpath)
+    parsed_types = parse_fortran_types(source, filename=relpath)
+
+    assert source.strip(), f"Fixture is empty: {relpath}"
+    assert isinstance(parsed_sigs, list), f"Signature parse did not return a list for {relpath}"
+    assert isinstance(parsed_types, list), f"Type parse did not return a list for {relpath}"
