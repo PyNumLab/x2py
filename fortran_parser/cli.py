@@ -53,41 +53,23 @@ def _format_report(report: dict[str, dict]) -> str:
     lines: list[str] = []
     for fname, parsed in report.items():
         lines.append(f"File: {fname}")
-        lines.append(
-            "  Summary: "
-            f"procedures={len(parsed['signatures'])}, "
-            f"types={len(parsed['types'])}, "
-            f"modules={len(parsed['modules'])}"
-        )
-        lines.append("  Tree:")
-        for mod in parsed["modules"]:
-            lines.append(
-                f"    ├─ module {mod['name']} (vars={len(mod['variables'])}, uses={len(mod['uses'])}, "
-                f"procs={len(mod.get('procedures', []))}, types={len(mod.get('derived_types', []))}, "
-                f"ifaces={len(mod.get('interfaces', []))})"
-            )
-            for v in mod["variables"]:
-                lines.append(f"    │  ├─ var {v['name']}:{v['base_type']}[{v['rank']}]")
-            for t in mod.get("derived_types", []):
-                lines.append(f"    │  ├─ type {t['name']} (fields={len(t['fields'])}, methods={len(t['methods'])})")
-            for s in mod.get("procedures", []):
+        if parsed["signatures"]:
+            lines.append(f"  Procedures: {len(parsed['signatures'])}")
+            for s in parsed["signatures"]:
                 args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in s["arguments"])
-                lines.append(f"    │  └─ {s['kind']} {s['name']}({args})")
-            for iface in mod.get("interfaces", []):
-                iface_name = iface["name"] if iface.get("name") else "<anonymous>"
-                lines.append(f"    │  ├─ interface {iface_name} (procs={len(iface.get('procedures', []))})")
+                lines.append(f"    - {s['kind']} {s['name']}({args})")
 
-        module_names = {m["name"].lower() for m in parsed["modules"]}
-        orphan_types = [t for t in parsed["types"] if not t.get("module") or t["module"].lower() not in module_names]
-        orphan_sigs = [s for s in parsed["signatures"] if not s.get("module") or s["module"].lower() not in module_names]
-        for t in orphan_types:
-            lines.append(f"    ├─ type {t['name']} (fields={len(t['fields'])}, methods={len(t['methods'])})")
-        for s in orphan_sigs:
-            args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in s["arguments"])
-            lines.append(f"    └─ {s['kind']} {s['name']}({args})")
+        if parsed["types"]:
+            lines.append(f"  Derived types: {len(parsed['types'])}")
+            for t in parsed["types"]:
+                lines.append(f"    - type {t['name']} (fields={len(t['fields'])}, methods={len(t['methods'])})")
+
+        if parsed["modules"]:
+            lines.append(f"  Modules: {len(parsed['modules'])}")
+            for mod in parsed["modules"]:
+                lines.append(f"    - module {mod['name']} (vars={len(mod['variables'])}, uses={len(mod['uses'])})")
 
         readiness = parsed["wrap_readiness"]
-        lines.append(f"  Wrappable: {readiness['wrappable']}")
         if readiness["unsupported_constructs"]:
             lines.append("  Unsupported constructs:")
             for c in readiness["unsupported_constructs"]:
