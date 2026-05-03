@@ -248,12 +248,24 @@ end subroutine dup
 def test_fixed_form_parameter_without_typed_declaration_raises_error():
     code = """
       subroutine cst(a)
+      implicit none
       real a
       parameter ( zero = 0.0e+0 )
       end
 """
     with pytest.raises(ValueError, match="Unknown datatype for PARAMETER symbol"):
         parse_fortran_signatures(code, filename="legacy.f")
+
+
+def test_fixed_form_parameter_without_typed_declaration_allowed_with_implicit_typing():
+    code = """
+      subroutine cst()
+      parameter ( one = 1.0e+0 )
+      end
+"""
+    sigs = parse_fortran_signatures(code, filename="legacy.f")
+    assert len(sigs) == 1
+    assert sigs[0].variables == {}
 
 
 def test_duplicate_initialized_declaration_raises_error():

@@ -454,6 +454,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "uses": {},
             "in_contains": False,
             "local_params": {},
+            "implicit_none": False,
             "filename": None,
         }
     m = _FUNC_RE.match(line)
@@ -470,6 +471,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         "uses": {},
         "in_contains": False,
         "local_params": {},
+        "implicit_none": False,
         "filename": None,
     }
 
@@ -485,6 +487,8 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
     stripped = line.strip()
     if re.match(r"^implicit\b", stripped, flags=re.IGNORECASE):
         # IMPLICIT statements configure typing rules and are not variable declarations.
+        if re.match(r"^implicit\s+none\b", stripped, flags=re.IGNORECASE):
+            proc_state["implicit_none"] = True
         return
 
     if re.match(r"^external\b", stripped, flags=re.IGNORECASE):
@@ -527,10 +531,15 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
             if "=" not in assign:
                 continue
             k, v = [x.strip() for x in assign.split("=", 1)]
-            if k.lower() not in proc_state["typed_symbols"]:
+            if k.lower() not in proc_state["typed_symbols"] and proc_state.get("implicit_none", False):
                 raise ValueError(
                     f"Unknown datatype for PARAMETER symbol '{k}' in procedure '{proc_state['signature'].name}'."
                 )
+            if k.lower() not in proc_state["typed_symbols"]:
+                # In legacy fixed-form code with implicit typing, keep compatibility
+                # with existing fixtures by not materializing implicitly-typed
+                # PARAMETER values as explicit local variables.
+                continue
             if k.lower() in proc_state["local_params"]:
                 raise ValueError(
                     f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'."
