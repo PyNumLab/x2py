@@ -813,6 +813,11 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
     relevant_params = _collect_relevant_local_params(sig, local_params)
     declared_local_types = state.get("declared_local_types", {})
     for name, value in relevant_params.items():
+        if name.lower() in legacy_local_params:
+            # Legacy PARAMETER (...) constants are declaration artifacts in
+            # fixed-form sources; keep them available for compile-time
+            # resolution but do not expose them as parsed procedure variables.
+            continue
         local_decl = declared_local_types.get(name.lower(), {})
         sig.variables[name.lower()] = FortranVariable(
             name=name.lower(),
