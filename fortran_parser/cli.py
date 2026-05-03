@@ -59,7 +59,8 @@ def _format_report(report: dict[str, dict]) -> str:
             lines.append(f"  Procedures: {len(free_procedures)}")
             for s in free_procedures:
                 args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in s["arguments"])
-                lines.append(f"    - {s['kind']} {s['name']}({args})")
+                result_txt = f" -> {s['result']['base_type']}[{s['result']['rank']}]" if s.get('result') else ""
+                lines.append(f"    - {s['kind']} {s['name']}({args}){result_txt}")
 
         if parsed["types"]:
             lines.append(f"  Derived types: {len(parsed['types'])}")
@@ -74,7 +75,8 @@ def _format_report(report: dict[str, dict]) -> str:
                     lines.append(f"      Procedures: {len(mod['procedures'])}")
                     for s in mod["procedures"]:
                         args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in s["arguments"])
-                        lines.append(f"        - {s['kind']} {s['name']}({args})")
+                        result_txt = f" -> {s['result']['base_type']}[{s['result']['rank']}]" if s.get('result') else ""
+                        lines.append(f"        - {s['kind']} {s['name']}({args}){result_txt}")
 
         readiness = parsed["wrap_readiness"]
         if readiness["unsupported_constructs"]:

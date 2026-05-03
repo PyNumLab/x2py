@@ -244,6 +244,41 @@ end subroutine dup
         parse_fortran_signatures(code, filename="dup.f90")
 
 
+def test_fixed_form_character_star_length_is_parsed():
+    code = """
+      subroutine xerbla(srname, info)
+      character*(*) srname
+      integer info
+      end
+"""
+    sigs = parse_fortran_signatures(code, filename="legacy.f")
+    assert len(sigs) == 1
+    assert sigs[0].arguments[0].base_type == "character"
+    assert sigs[0].arguments[0].kind == "*"
+
+
+def test_duplicate_function_result_declaration_raises_error():
+    code = """
+real function f(x)
+  real :: x
+  real :: f
+end function f
+"""
+    with pytest.raises(ValueError, match="Duplicate declaration"):
+        parse_fortran_signatures(code, filename="dup_result.f90")
+
+
+def test_duplicate_function_result_with_result_keyword_raises_error():
+    code = """
+real function f(x) result(res)
+  real :: x
+  real :: res
+end function f
+"""
+    with pytest.raises(ValueError, match="Duplicate declaration"):
+        parse_fortran_signatures(code, filename="dup_result_kw.f90")
+
+
 def test_fixed_form_parameter_without_typed_declaration_raises_error():
     code = """
       subroutine cst(a)

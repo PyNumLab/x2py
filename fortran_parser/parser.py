@@ -11,9 +11,12 @@ from .type_resolver import extract_kind_from_type_spec
 from .utils import split_csv
 
 _TYPE_RE = re.compile(r"^(integer|real|complex|logical|character|double\s+precision)\s*(\([^)]*\))?\s*(.*)$", re.IGNORECASE)
+_CHAR_STAR_RE = re.compile(r"^character\s*\*\s*(?P<len>\([^)]*\)|\*|[A-Za-z_]\w*|\d+)\s*(?P<rest>.*)$", re.IGNORECASE)
 _PROC_RE = re.compile(r"^(?P<prefix>(?:\w+\s+)*)subroutine\s+(?P<name>\w+)\s*\((?P<args>[^)]*)\)\s*(?P<tail>.*)$", re.IGNORECASE)
 _FUNC_RE = re.compile(r"^(?P<prefix>(?:\w+\s+)*)function\s+(?P<name>\w+)\s*\((?P<args>[^)]*)\)\s*(?P<tail>.*)$", re.IGNORECASE)
 _RESULT_RE = re.compile(r"results?\s*\(\s*(?P<name>\w+)\s*\)", re.IGNORECASE)
+_ATTR_PREFIX_WORDS = {"pure", "elemental", "recursive"}
+
 _BINDC_RE = re.compile(r"bind\s*\(\s*c\s*(?:,\s*name\s*=\s*['\"][^'\"]*['\"])?\s*\)", re.IGNORECASE)
 _USE_RE = re.compile(r"^use\s+(?P<module>\w+)\s*(?:,\s*only\s*:\s*(?P<symbols>.*))?$", re.IGNORECASE)
 _PARAM_RE = re.compile(
@@ -56,6 +59,28 @@ def _find_legacy_star_kind(type_left: str) -> tuple[str, str] | None:
     if not m:
         return None
     return m.group(1).lower(), m.group(2)
+
+
+def _parse_type_prefix(prefix: str) -> tuple[str, str | None] | None:
+    txt = prefix.strip()
+    if not txt:
+        return None
+    cm = _CHAR_STAR_RE.match(txt)
+    if cm:
+        raw_len = cm.group("len").strip()
+        char_kind = raw_len[1:-1].strip() if raw_len.startswith("(") and raw_len.endswith(")") else raw_len
+        return "character", char_kind
+    tm = _TYPE_RE.match(txt)
+    if tm:
+        base = tm.group(1).lower()
+        if base == "double precision":
+            base = "real"
+        type_spec = (tm.group(2) or "").strip()
+        return base, extract_kind_from_type_spec(base, type_spec)
+    derived = _TYPE_FIELD_RE.match(txt)
+    if derived:
+        return "derived", derived.group("dtype")
+    return None
 
 
 def _enforce_source_form_compatibility(line: str, filename: str | None) -> None:
@@ -485,10 +510,18 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
     result_match = _RESULT_RE.search(m.group("tail"))
     result_name = result_match.group("name") if result_match else m.group("name")
     result = FortranArgument(name=result_name, procedure=m.group("name"))
+
+    prefix = (m.group("prefix") or "").strip()
+    type_tokens = [t for t in prefix.split() if t.lower() not in _ATTR_PREFIX_WORDS]
+    type_prefix = " ".join(type_tokens)
+    parsed_prefix = _parse_type_prefix(type_prefix)
+    if parsed_prefix:
+        result.base_type, result.kind = parsed_prefix
+
     return {
         "signature": FortranProcedureSignature(name=m.group("name"), kind="function", module=module, arguments=args, result=result, attributes=_attrs(m.group("prefix"), m.group("tail")), in_interface=in_interface),
         "symbols": {**{a.name.lower(): a for a in args}, result_name.lower(): result},
-        "typed_symbols": set(),
+        "typed_symbols": {result_name.lower()} if parsed_prefix else set(),
         "uses": {},
         "in_contains": False,
         "local_params": {},
@@ -584,9 +617,21 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         base, kind = star_kind
         raise ValueError(f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{proc_state.get('filename')}'.")
 
+    char_star = _CHAR_STAR_RE.match(left)
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
-    if tm:
+    if char_star:
+        base = "character"
+        kind = char_star.group("len").strip()
+        if kind.startswith("(") and kind.endswith(")"):
+            kind = kind[1:-1].strip()
+        trailing = (char_star.group("rest") or "").strip().lstrip(", ")
+        if "::" in line:
+            attrs = split_csv(trailing)
+        else:
+            attrs = []
+            right = trailing
+    elif tm:
         base = tm.group(1).lower()
         if base == "double precision":
             # Legacy Fortran alias for double-precision real.
@@ -757,6 +802,11 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
             arg.shape = [_resolve_compile_time_expression(dim, local_params) for dim in arg.shape]
     if sig.result and sig.result.kind:
         sig.result.kind = _resolve_symbol_reference(sig.result.kind, local_params)
+    if sig.kind == "function" and sig.result and sig.result.base_type == "unknown":
+        if not state.get("implicit_none", False):
+            sig.result.base_type = _infer_implicit_base_type(sig.result.name)
+        if sig.result.base_type == "unknown":
+            raise ValueError(f"Unknown datatype for function result '{sig.result.name}' in procedure '{sig.name}'.")
     sig.uses = dict(state["uses"])
     return replace(sig)
 
