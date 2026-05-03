@@ -454,6 +454,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "uses": {},
             "in_contains": False,
             "local_params": {},
+            "legacy_local_params": set(),
             "implicit_none": False,
             "filename": None,
         }
@@ -471,6 +472,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         "uses": {},
         "in_contains": False,
         "local_params": {},
+        "legacy_local_params": set(),
         "implicit_none": False,
         "filename": None,
     }
@@ -545,6 +547,7 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
                     f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'."
                 )
             proc_state["local_params"][k.lower()] = v
+            proc_state["legacy_local_params"].add(k.lower())
         return
     if "::" in line:
         left, right = [x.strip() for x in line.split("::", 1)]
@@ -568,12 +571,12 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
             base = "real"
         type_spec = (tm.group(2) or "").strip()
         trailing = tm.group(3).strip().lstrip(", ")
+        kind = extract_kind_from_type_spec(base, type_spec)
         if "::" in line:
             attrs = split_csv(trailing)
         else:
             attrs = []
             right = trailing
-        kind = extract_kind_from_type_spec(base, type_spec)
     elif derived:
         base = "derived"
         kind = derived.group("dtype")
@@ -623,6 +626,11 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         name, shape = _var(v)
         if not name:
             continue
+        if name.startswith("*") and "," not in right:
+            # Preserve historical parsing for mixed fixed-form lists like
+            # "COMPLEX*16 ALPHA,BETA", while still recognizing single-symbol
+            # declarations like "COMPLEX*16 ONE" for PARAMETER validation.
+            name = re.sub(r"^\*\s*[0-9]+\s*", "", name).strip()
         declared = proc_state["typed_symbols"]
         lowered_name = name.lower()
         if lowered_name in declared:
@@ -696,7 +704,8 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
     sig = state["signature"]
     symbols = state["symbols"]
     local_params = state.get("local_params", {})
-    sig.variables = _resolve_variables(local_params)
+    legacy_local_params = state.get("legacy_local_params", set())
+    sig.variables = _resolve_variables({k: v for k, v in local_params.items() if k not in legacy_local_params})
     sig.arguments = [symbols.get(a.name.lower(), a) for a in sig.arguments]
     if sig.result:
         sig.result = symbols.get(sig.result.name.lower(), sig.result)

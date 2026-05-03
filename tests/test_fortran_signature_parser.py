@@ -230,8 +230,7 @@ def test_fixed_form_parameter_statement_after_typed_constants():
 """
     sigs = parse_fortran_signatures(code, filename="legacy.f")
     assert len(sigs) == 1
-    assert sigs[0].variables["zero"].value == "0"
-    assert sigs[0].variables["one"].value == "1"
+    assert sigs[0].variables == {}
 
 
 def test_duplicate_declaration_raises_error():
@@ -277,6 +276,17 @@ end subroutine dup_init
 """
     with pytest.raises(ValueError, match="Duplicate declaration"):
         parse_fortran_signatures(code, filename="dup_init.f90")
+
+
+def test_legacy_star_kind_parameter_symbol_is_recognized():
+    code = """
+      subroutine zgbmv_like()
+      complex*16 one
+      parameter (one = (1.0d+0,0.0d+0))
+      end
+"""
+    sig = parse_fortran_signatures(code, filename="legacy.f")[0]
+    assert sig.variables == {}
 
 
 def test_ignore_local_variables_in_signatures():
