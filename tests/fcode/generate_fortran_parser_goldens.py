@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Generate/update golden files for Fortran parser fixtures."""
 
 from __future__ import annotations
