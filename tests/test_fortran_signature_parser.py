@@ -219,6 +219,100 @@ def test_fixed_form_fortran77_continuation():
     assert sigs[0].arguments[1].rank == 1
 
 
+def test_fixed_form_parameter_statement_after_typed_constants():
+    code = """
+      subroutine cst(a)
+      real a
+      real zero, one
+      parameter ( zero = 0.0e+0, one = 1.0e+0 )
+      a = a + one - zero
+      end
+"""
+    sigs = parse_fortran_signatures(code, filename="legacy.f")
+    assert len(sigs) == 1
+    assert sigs[0].variables == {}
+
+
+def test_duplicate_declaration_raises_error():
+    code = """
+subroutine dup(x)
+  real :: x
+  integer :: x
+end subroutine dup
+"""
+    with pytest.raises(ValueError, match="Duplicate declaration"):
+        parse_fortran_signatures(code, filename="dup.f90")
+
+
+def test_fixed_form_parameter_without_typed_declaration_raises_error():
+    code = """
+      subroutine cst(a)
+      implicit none
+      real a
+      parameter ( zero = 0.0e+0 )
+      end
+"""
+    with pytest.raises(ValueError, match="Unknown datatype for PARAMETER symbol"):
+        parse_fortran_signatures(code, filename="legacy.f")
+
+
+def test_fixed_form_parameter_without_typed_declaration_allowed_with_implicit_typing():
+    code = """
+      subroutine cst()
+      parameter ( one = 1.0e+0 )
+      end
+"""
+    sigs = parse_fortran_signatures(code, filename="legacy.f")
+    assert len(sigs) == 1
+    assert sigs[0].variables["one"].base_type == "real"
+    assert sigs[0].variables["one"].value == "1"
+
+
+def test_modern_parameter_without_typed_declaration_uses_implicit_typing():
+    code = """
+subroutine cst()
+  parameter (ival = 2)
+end subroutine cst
+"""
+    sig = parse_fortran_signatures(code, filename="modern.f90")[0]
+    assert sig.variables["ival"].base_type == "integer"
+    assert sig.variables["ival"].value == "2"
+
+
+def test_duplicate_initialized_declaration_raises_error():
+    code = """
+subroutine dup_init()
+  integer :: x = 1
+  integer :: x = 2
+end subroutine dup_init
+"""
+    with pytest.raises(ValueError, match="Duplicate declaration"):
+        parse_fortran_signatures(code, filename="dup_init.f90")
+
+
+def test_legacy_star_kind_parameter_symbol_is_recognized():
+    code = """
+      subroutine zgbmv_like()
+      complex*16 one
+      parameter (one = (1.0d+0,0.0d+0))
+      end
+"""
+    sig = parse_fortran_signatures(code, filename="legacy.f")[0]
+    assert sig.variables == {}
+
+
+def test_legacy_star_kind_parameter_list_with_implicit_none_is_recognized():
+    code = """
+      subroutine zgejsv_like()
+      implicit none
+      complex*16 czero, cone
+      parameter ( czero = (0.0d0,0.0d0), cone = (1.0d0,0.0d0) )
+      end
+"""
+    sig = parse_fortran_signatures(code, filename="legacy.f")[0]
+    assert sig.variables == {}
+
+
 def test_ignore_local_variables_in_signatures():
     code = """
 subroutine update(n, x)

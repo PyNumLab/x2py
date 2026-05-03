@@ -20,6 +20,7 @@ _PARAM_RE = re.compile(
     r"^(integer|real|logical|character|complex)\s*(?:\([^)]*\))?\s*,\s*parameter\s*::\s*(?P<body>.*)$",
     re.IGNORECASE,
 )
+_LEGACY_PARAM_STMT_RE = re.compile(r"^parameter\s*\(\s*(?P<body>.*)\s*\)$", re.IGNORECASE)
 _DERIVED_TYPE_RE = re.compile(r"^type\s*(?P<attrs>(?:,\s*[^:]+)?)::\s*(?P<name>\w+)$", re.IGNORECASE)
 _TYPE_FIELD_RE = re.compile(r"^type\s*\(\s*(?P<dtype>\w+)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE)
 _PROC_BIND_RE = re.compile(r"^procedure\s*(?:,\s*[^:]*)?::\s*(?P<names>.*)$", re.IGNORECASE)
@@ -41,6 +42,13 @@ def _source_form(filename: str | None) -> str:
     if ext in {".f90", ".f95", ".f03", ".f08"}:
         return "modern"
     return "unknown"
+
+
+def _infer_implicit_base_type(symbol_name: str) -> str:
+    first = symbol_name.strip()[:1].lower()
+    if "i" <= first <= "n":
+        return "integer"
+    return "real"
 
 
 def _find_legacy_star_kind(type_left: str) -> tuple[str, str] | None:
@@ -449,9 +457,13 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         return {
             "signature": FortranProcedureSignature(name=m.group("name"), kind="subroutine", module=module, arguments=args, attributes=_attrs(m.group("prefix"), m.group("tail")), in_interface=in_interface),
             "symbols": {a.name.lower(): a for a in args},
+            "typed_symbols": set(),
             "uses": {},
             "in_contains": False,
             "local_params": {},
+            "legacy_local_params": set(),
+            "implicit_typed_symbols": {},
+            "implicit_none": False,
             "filename": None,
         }
     m = _FUNC_RE.match(line)
@@ -464,9 +476,13 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
     return {
         "signature": FortranProcedureSignature(name=m.group("name"), kind="function", module=module, arguments=args, result=result, attributes=_attrs(m.group("prefix"), m.group("tail")), in_interface=in_interface),
         "symbols": {**{a.name.lower(): a for a in args}, result_name.lower(): result},
+        "typed_symbols": set(),
         "uses": {},
         "in_contains": False,
         "local_params": {},
+        "legacy_local_params": set(),
+        "implicit_typed_symbols": {},
+        "implicit_none": False,
         "filename": None,
     }
 
@@ -482,6 +498,8 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
     stripped = line.strip()
     if re.match(r"^implicit\b", stripped, flags=re.IGNORECASE):
         # IMPLICIT statements configure typing rules and are not variable declarations.
+        if re.match(r"^implicit\s+none\b", stripped, flags=re.IGNORECASE):
+            proc_state["implicit_none"] = True
         return
 
     if re.match(r"^external\b", stripped, flags=re.IGNORECASE):
@@ -512,7 +530,34 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
             if "=" not in assign:
                 continue
             k, v = [x.strip() for x in assign.split("=", 1)]
+            if k.lower() in proc_state["local_params"]:
+                raise ValueError(
+                    f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'."
+                )
             proc_state["local_params"][k.lower()] = v
+        return
+    legacy_pm = _LEGACY_PARAM_STMT_RE.match(stripped)
+    if legacy_pm:
+        for assign in split_csv(legacy_pm.group("body")):
+            if "=" not in assign:
+                continue
+            k, v = [x.strip() for x in assign.split("=", 1)]
+            if k.lower() not in proc_state["typed_symbols"] and proc_state.get("implicit_none", False):
+                raise ValueError(
+                    f"Unknown datatype for PARAMETER symbol '{k}' in procedure '{proc_state['signature'].name}'."
+                )
+            if k.lower() not in proc_state["typed_symbols"]:
+                # In legacy fixed-form code with implicit typing, keep compatibility
+                # with implicit typing rules: infer type from symbol name.
+                proc_state["local_params"][k.lower()] = v
+                proc_state["implicit_typed_symbols"][k.lower()] = _infer_implicit_base_type(k)
+                continue
+            if k.lower() in proc_state["local_params"]:
+                raise ValueError(
+                    f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'."
+                )
+            proc_state["local_params"][k.lower()] = v
+            proc_state["legacy_local_params"].add(k.lower())
         return
     if "::" in line:
         left, right = [x.strip() for x in line.split("::", 1)]
@@ -536,12 +581,12 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
             base = "real"
         type_spec = (tm.group(2) or "").strip()
         trailing = tm.group(3).strip().lstrip(", ")
+        kind = extract_kind_from_type_spec(base, type_spec)
         if "::" in line:
             attrs = split_csv(trailing)
         else:
             attrs = []
             right = trailing
-        kind = extract_kind_from_type_spec(base, type_spec)
     elif derived:
         base = "derived"
         kind = derived.group("dtype")
@@ -588,11 +633,26 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
             meta["rank"] = len(shape)
 
     for v in split_csv(right):
-        name, shape = _var(v)
-        if not name:
+        raw_name, shape = _var(v)
+        if not raw_name:
             continue
+        normalized_name = re.sub(r"^\*\s*[0-9]+\s*", "", raw_name).strip()
+        if not normalized_name:
+            continue
+        declared = proc_state["typed_symbols"]
+        lowered_name = normalized_name.lower()
+        if lowered_name in declared:
+            raise ValueError(
+                f"Duplicate declaration of symbol '{normalized_name}' in procedure '{proc_state['signature'].name}'."
+            )
+        declared.add(lowered_name)
         symbols = proc_state["symbols"]
-        arg = symbols.get(name.lower())
+        # Keep historical behavior for mixed star-kind lists (e.g. "COMPLEX*16 ALPHA,BETA")
+        # where only subsequent entities were previously applied.
+        lookup_name = lowered_name
+        if raw_name.startswith("*") and "," in right:
+            lookup_name = raw_name.lower()
+        arg = symbols.get(lookup_name)
         if arg is None:
             continue
         _apply(arg, meta, shape)
@@ -616,6 +676,8 @@ def _is_executable_statement_start(line: str) -> bool:
         return True
     if re.match(r"^go\s*to\b", lowered):
         return True
+    if _LEGACY_PARAM_STMT_RE.match(stripped):
+        return False
     if "=" in stripped and "::" not in stripped:
         # Covers assignment and statement functions in execution part.
         return True
@@ -626,6 +688,9 @@ def _var(entry: str):
     e = entry.strip()
     if not e:
         return "", []
+    if "=" in e:
+        # Keep only the declared entity name/shape; drop initializer text.
+        e = e.split("=", 1)[0].strip()
     if "(" in e and e.endswith(")"):
         name = e[:e.find("(")].strip()
         return name, split_csv(e[e.find("(")+1:-1])
@@ -652,7 +717,12 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
     sig = state["signature"]
     symbols = state["symbols"]
     local_params = state.get("local_params", {})
-    sig.variables = _resolve_variables(local_params)
+    legacy_local_params = state.get("legacy_local_params", set())
+    implicit_typed_symbols = state.get("implicit_typed_symbols", {})
+    sig.variables = _resolve_variables(
+        {k: v for k, v in local_params.items() if k not in legacy_local_params or k in implicit_typed_symbols},
+        base_types=implicit_typed_symbols,
+    )
     sig.arguments = [symbols.get(a.name.lower(), a) for a in sig.arguments]
     if sig.result:
         sig.result = symbols.get(sig.result.name.lower(), sig.result)
@@ -747,11 +817,13 @@ def _resolve_symbol_reference(expr: str, symbols: dict[str, str]) -> str:
 
 
 
-def _resolve_variables(symbols: dict[str, str]) -> dict[str, FortranVariable]:
+def _resolve_variables(symbols: dict[str, str], base_types: dict[str, str] | None = None) -> dict[str, FortranVariable]:
+    base_types = base_types or {}
     valued: dict[str, FortranVariable] = {}
     for name, value in symbols.items():
         valued[name] = FortranVariable(
             name=name,
+            base_type=base_types.get(name.lower(), "unknown"),
             value=_resolve_compile_time_expression(value, symbols, prefer_symbolic=False),
             value_type="expression",
             is_parameter=True,

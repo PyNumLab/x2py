@@ -6,7 +6,7 @@
     "arguments": [
       {
         "name": "JOBV",
-        "base_type": "unknown",
+        "base_type": "character",
         "kind": null,
         "rank": 0,
         "shape": [],
