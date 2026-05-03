@@ -7,7 +7,7 @@
       {
         "name": "UPLO",
         "base_type": "character",
-        "kind": null,
+        "kind": "1",
         "rank": 0,
         "shape": [],
         "value": null,
@@ -134,7 +134,7 @@
     ],
     "result": {
       "name": "DLA_PORPVGRW",
-      "base_type": "unknown",
+      "base_type": "real",
       "kind": null,
       "rank": 0,
       "shape": [],

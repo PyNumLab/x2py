@@ -7,7 +7,7 @@
       {
         "name": "JOBA",
         "base_type": "character",
-        "kind": null,
+        "kind": "1",
         "rank": 0,
         "shape": [],
         "value": null,
@@ -24,7 +24,7 @@
       {
         "name": "JOBU",
         "base_type": "character",
-        "kind": null,
+        "kind": "1",
         "rank": 0,
         "shape": [],
         "value": null,
@@ -41,7 +41,7 @@
       {
         "name": "JOBV",
         "base_type": "character",
-        "kind": null,
+        "kind": "1",
         "rank": 0,
         "shape": [],
         "value": null,
@@ -58,7 +58,7 @@
       {
         "name": "JOBR",
         "base_type": "character",
-        "kind": null,
+        "kind": "1",
         "rank": 0,
         "shape": [],
         "value": null,
@@ -75,7 +75,7 @@
       {
         "name": "JOBT",
         "base_type": "character",
-        "kind": null,
+        "kind": "1",
         "rank": 0,
         "shape": [],
         "value": null,
@@ -92,7 +92,7 @@
       {
         "name": "JOBP",
         "base_type": "character",
-        "kind": null,
+        "kind": "1",
         "rank": 0,
         "shape": [],
         "value": null,

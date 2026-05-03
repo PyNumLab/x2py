@@ -7,7 +7,7 @@
       {
         "name": "JOBV",
         "base_type": "character",
-        "kind": null,
+        "kind": "1",
         "rank": 0,
         "shape": [],
         "value": null,

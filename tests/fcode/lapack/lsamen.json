@@ -23,8 +23,8 @@
       },
       {
         "name": "CA",
-        "base_type": "unknown",
-        "kind": null,
+        "base_type": "character",
+        "kind": "*",
         "rank": 0,
         "shape": [],
         "value": null,
@@ -41,7 +41,7 @@
       {
         "name": "CB",
         "base_type": "character",
-        "kind": null,
+        "kind": "*",
         "rank": 0,
         "shape": [],
         "value": null,
@@ -58,7 +58,7 @@
     ],
     "result": {
       "name": "LSAMEN",
-      "base_type": "unknown",
+      "base_type": "logical",
       "kind": null,
       "rank": 0,
       "shape": [],

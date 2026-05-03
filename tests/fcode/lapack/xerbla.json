@@ -6,8 +6,8 @@
     "arguments": [
       {
         "name": "SRNAME",
-        "base_type": "unknown",
-        "kind": null,
+        "base_type": "character",
+        "kind": "*",
         "rank": 0,
         "shape": [],
         "value": null,

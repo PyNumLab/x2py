@@ -23,8 +23,8 @@
       },
       {
         "name": "NAME",
-        "base_type": "unknown",
-        "kind": null,
+        "base_type": "character",
+        "kind": "*",
         "rank": 0,
         "shape": [],
         "value": null,
@@ -41,7 +41,7 @@
       {
         "name": "OPTS",
         "base_type": "character",
-        "kind": null,
+        "kind": "*",
         "rank": 0,
         "shape": [],
         "value": null,
@@ -126,7 +126,7 @@
     ],
     "result": {
       "name": "ILAENV",
-      "base_type": "unknown",
+      "base_type": "integer",
       "kind": null,
       "rank": 0,
       "shape": [],
