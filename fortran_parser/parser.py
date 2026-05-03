@@ -777,10 +777,10 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
     local_params = state.get("local_params", {})
     legacy_local_params = state.get("legacy_local_params", set())
     implicit_typed_symbols = state.get("implicit_typed_symbols", {})
-    sig.variables = _resolve_variables(
-        {k: v for k, v in local_params.items() if k not in legacy_local_params or k in implicit_typed_symbols},
-        base_types=implicit_typed_symbols,
-    )
+    # Procedure-local PARAMETER constants are used for internal compile-time
+    # expression resolution, but they are not part of the callable signature
+    # and should not be emitted in the public JSON surface.
+    sig.variables = {}
     sig.arguments = [symbols.get(a.name.lower(), a) for a in sig.arguments]
     if sig.result:
         sig.result = symbols.get(sig.result.name.lower(), sig.result)
