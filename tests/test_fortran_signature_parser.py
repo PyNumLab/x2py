@@ -290,6 +290,38 @@ end subroutine dup_init
         parse_fortran_signatures(code, filename="dup_init.f90")
 
 
+def test_duplicate_procedure_name_same_scope_raises_error():
+    code = """
+subroutine work(n)
+  integer, intent(in) :: n
+end subroutine work
+
+function work(n) result(out)
+  integer, intent(in) :: n
+  integer :: out
+end function work
+"""
+    with pytest.raises(ValueError, match="Duplicate procedure name"):
+        parse_fortran_signatures(code, filename="dup_proc.f90")
+
+
+def test_duplicate_procedure_name_same_module_scope_raises_error():
+    code = """
+module m
+contains
+  subroutine work(n)
+    integer, intent(in) :: n
+  end subroutine work
+  function work(n) result(out)
+    integer, intent(in) :: n
+    integer :: out
+  end function work
+end module m
+"""
+    with pytest.raises(ValueError, match="Duplicate procedure name"):
+        parse_fortran_signatures(code, filename="dup_mod_proc.f90")
+
+
 def test_legacy_star_kind_parameter_symbol_is_recognized():
     code = """
       subroutine zgbmv_like()
