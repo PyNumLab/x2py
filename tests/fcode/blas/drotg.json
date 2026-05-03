@@ -77,62 +77,6 @@
     "attributes": [],
     "uses": {},
     "in_interface": false,
-    "variables": {
-      "wp": {
-        "name": "wp",
-        "base_type": "unknown",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": "kind(1.d0)",
-        "value_type": "expression",
-        "is_parameter": true,
-        "dimensions": []
-      },
-      "zero": {
-        "name": "zero",
-        "base_type": "unknown",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": "0.0_wp",
-        "value_type": "expression",
-        "is_parameter": true,
-        "dimensions": []
-      },
-      "one": {
-        "name": "one",
-        "base_type": "unknown",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": "1.0_wp",
-        "value_type": "expression",
-        "is_parameter": true,
-        "dimensions": []
-      },
-      "safmin": {
-        "name": "safmin",
-        "base_type": "unknown",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": "real(radix(0._wp),(kind(1.d0)))**max(      minexponent(0._wp)-1,      1-maxexponent(0._wp)   )",
-        "value_type": "expression",
-        "is_parameter": true,
-        "dimensions": []
-      },
-      "safmax": {
-        "name": "safmax",
-        "base_type": "unknown",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": "real(radix(0._wp),(kind(1.d0)))**max(      1-minexponent(0._wp),      maxexponent(0._wp)-1   )",
-        "value_type": "expression",
-        "is_parameter": true,
-        "dimensions": []
-      }
-    }
+    "variables": {}
   }
 ]
