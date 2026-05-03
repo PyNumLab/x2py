@@ -500,6 +500,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "local_params": {},
             "legacy_local_params": set(),
             "implicit_typed_symbols": {},
+            "declared_local_types": {},
             "implicit_none": False,
             "filename": None,
         }
@@ -527,6 +528,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         "local_params": {},
         "legacy_local_params": set(),
         "implicit_typed_symbols": {},
+        "declared_local_types": {},
         "implicit_none": False,
         "filename": None,
     }
@@ -694,6 +696,11 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         if not raw_name:
             continue
         normalized_name = re.sub(r"^\*\s*[0-9]+\s*", "", raw_name).strip()
+        if meta["base_type"] == "character" and "*" in normalized_name:
+            # Legacy CHARACTER declarations may carry entity-local length
+            # specifiers (e.g. NAME*(*) or SUBNAM*6). Strip the `*len`
+            # suffix so symbol lookup matches procedure arguments.
+            normalized_name = normalized_name.split("*", 1)[0].strip()
         if not normalized_name:
             continue
         declared = proc_state["typed_symbols"]
@@ -712,6 +719,10 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         lookup_name = lowered_name
         arg = symbols.get(lookup_name)
         if arg is None:
+            proc_state["declared_local_types"][lookup_name] = {
+                "base_type": meta["base_type"],
+                "kind": meta["kind"],
+            }
             continue
         _apply(arg, meta, shape)
 
@@ -777,9 +788,6 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
     local_params = state.get("local_params", {})
     legacy_local_params = state.get("legacy_local_params", set())
     implicit_typed_symbols = state.get("implicit_typed_symbols", {})
-    # Procedure-local PARAMETER constants are used for internal compile-time
-    # expression resolution, but they are not part of the callable signature
-    # and should not be emitted in the public JSON surface.
     sig.variables = {}
     sig.arguments = [symbols.get(a.name.lower(), a) for a in sig.arguments]
     if sig.result:
@@ -802,6 +810,18 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
             arg.shape = [_resolve_compile_time_expression(dim, local_params) for dim in arg.shape]
     if sig.result and sig.result.kind:
         sig.result.kind = _resolve_symbol_reference(sig.result.kind, local_params)
+    relevant_params = _collect_relevant_local_params(sig, local_params)
+    declared_local_types = state.get("declared_local_types", {})
+    for name, value in relevant_params.items():
+        local_decl = declared_local_types.get(name.lower(), {})
+        sig.variables[name.lower()] = FortranVariable(
+            name=name.lower(),
+            base_type=local_decl.get("base_type", implicit_typed_symbols.get(name.lower(), "unknown")),
+            kind=local_decl.get("kind"),
+            value=_normalize_parameter_value(value),
+            value_type="expression",
+            is_parameter=True,
+        )
     if sig.kind == "function" and sig.result and sig.result.base_type == "unknown":
         if not state.get("implicit_none", False):
             sig.result.base_type = _infer_implicit_base_type(sig.result.name)
@@ -887,6 +907,54 @@ def _resolve_symbol_reference(expr: str, symbols: dict[str, str]) -> str:
         seen.add(out.lower())
         out = symbols[out.lower()].strip()
     return out
+
+
+def _collect_relevant_local_params(sig: FortranProcedureSignature, local_params: dict[str, str]) -> dict[str, str]:
+    if not local_params:
+        return {}
+    if not sig.arguments and sig.result is None:
+        return dict(local_params)
+    pending = set()
+    for arg in sig.arguments:
+        if arg.kind:
+            pending.update(_extract_symbol_names(arg.kind))
+        for dim in arg.shape:
+            pending.update(_extract_symbol_names(dim))
+    if sig.result and sig.result.kind:
+        pending.update(_extract_symbol_names(sig.result.kind))
+    relevant: dict[str, str] = {}
+    while pending:
+        sym = pending.pop().lower()
+        if sym in relevant or sym not in local_params:
+            continue
+        value = local_params[sym]
+        relevant[sym] = value
+        pending.update(_extract_symbol_names(value))
+    return relevant
+
+
+def _extract_symbol_names(expr: str) -> set[str]:
+    keywords = {"and", "or", "not"}
+    return {
+        token.lower()
+        for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", expr or "")
+        if not token.isdigit() and token.lower() not in keywords
+    }
+
+
+def _normalize_parameter_value(value: str) -> str:
+    parsed_int = _safe_eval_int_expr(value)
+    if parsed_int is not None:
+        return str(parsed_int)
+    text = value.strip()
+    if re.fullmatch(r"[+-]?\d+(?:\.\d*)?(?:[deDE][+-]?\d+)?", text):
+        try:
+            as_float = float(text.replace("d", "e").replace("D", "E"))
+            if as_float.is_integer():
+                return str(int(as_float))
+        except ValueError:
+            pass
+    return text
 
 
 
