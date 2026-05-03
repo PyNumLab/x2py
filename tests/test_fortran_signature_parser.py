@@ -78,8 +78,14 @@ def test_fixed_form_and_interface_detection():
         end subroutine cb
       end interface
 """
+    signatures = parse_fortran_signatures(code, filename="legacy.f")
+    assert len(signatures) == 2
+    assert signatures[0].name == "saxpy"
+    assert signatures[0].arguments[1].shape == ["n"]
+    assert signatures[1].in_interface is True
+
     with pytest.raises(ValueError, match="Fortran 77"):
-        parse_fortran_signatures(code, filename="legacy.f")
+        parse_fortran_signatures(code, filename="legacy.f77")
 
     signatures = parse_fortran_signatures(code, filename="legacy.f90")
     assert len(signatures) == 2
