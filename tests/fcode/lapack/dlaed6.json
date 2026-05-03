@@ -40,7 +40,7 @@
       },
       {
         "name": "RHO",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -57,10 +57,12 @@
       },
       {
         "name": "D",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "3"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -74,10 +76,12 @@
       },
       {
         "name": "Z",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "3"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -91,7 +95,7 @@
       },
       {
         "name": "FINIT",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -108,7 +112,7 @@
       },
       {
         "name": "TAU",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],

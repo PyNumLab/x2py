@@ -94,7 +94,7 @@
       },
       {
         "name": "RDSUM",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -111,7 +111,7 @@
       },
       {
         "name": "RDSCAL",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],

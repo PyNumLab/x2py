@@ -162,7 +162,7 @@
       },
       {
         "name": "BETA",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],

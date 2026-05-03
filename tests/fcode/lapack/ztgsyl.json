@@ -293,7 +293,7 @@
       },
       {
         "name": "SCALE",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -310,7 +310,7 @@
       },
       {
         "name": "DIF",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
