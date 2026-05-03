@@ -44,6 +44,13 @@ def _source_form(filename: str | None) -> str:
     return "unknown"
 
 
+def _infer_implicit_base_type(symbol_name: str) -> str:
+    first = symbol_name.strip()[:1].lower()
+    if "i" <= first <= "n":
+        return "integer"
+    return "real"
+
+
 def _find_legacy_star_kind(type_left: str) -> tuple[str, str] | None:
     m = re.match(r"^(integer|real|complex|logical|character)\s*\*\s*([0-9]+)\b", type_left, re.IGNORECASE)
     if not m:
@@ -455,6 +462,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "in_contains": False,
             "local_params": {},
             "legacy_local_params": set(),
+            "implicit_typed_symbols": {},
             "implicit_none": False,
             "filename": None,
         }
@@ -473,6 +481,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         "in_contains": False,
         "local_params": {},
         "legacy_local_params": set(),
+        "implicit_typed_symbols": {},
         "implicit_none": False,
         "filename": None,
     }
@@ -539,8 +548,9 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
                 )
             if k.lower() not in proc_state["typed_symbols"]:
                 # In legacy fixed-form code with implicit typing, keep compatibility
-                # with existing fixtures by not materializing implicitly-typed
-                # PARAMETER values as explicit local variables.
+                # with implicit typing rules: infer type from symbol name.
+                proc_state["local_params"][k.lower()] = v
+                proc_state["implicit_typed_symbols"][k.lower()] = _infer_implicit_base_type(k)
                 continue
             if k.lower() in proc_state["local_params"]:
                 raise ValueError(
@@ -705,7 +715,11 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
     symbols = state["symbols"]
     local_params = state.get("local_params", {})
     legacy_local_params = state.get("legacy_local_params", set())
-    sig.variables = _resolve_variables({k: v for k, v in local_params.items() if k not in legacy_local_params})
+    implicit_typed_symbols = state.get("implicit_typed_symbols", {})
+    sig.variables = _resolve_variables(
+        {k: v for k, v in local_params.items() if k not in legacy_local_params or k in implicit_typed_symbols},
+        base_types=implicit_typed_symbols,
+    )
     sig.arguments = [symbols.get(a.name.lower(), a) for a in sig.arguments]
     if sig.result:
         sig.result = symbols.get(sig.result.name.lower(), sig.result)
@@ -800,11 +814,13 @@ def _resolve_symbol_reference(expr: str, symbols: dict[str, str]) -> str:
 
 
 
-def _resolve_variables(symbols: dict[str, str]) -> dict[str, FortranVariable]:
+def _resolve_variables(symbols: dict[str, str], base_types: dict[str, str] | None = None) -> dict[str, FortranVariable]:
+    base_types = base_types or {}
     valued: dict[str, FortranVariable] = {}
     for name, value in symbols.items():
         valued[name] = FortranVariable(
             name=name,
+            base_type=base_types.get(name.lower(), "unknown"),
             value=_resolve_compile_time_expression(value, symbols, prefer_symbolic=False),
             value_type="expression",
             is_parameter=True,

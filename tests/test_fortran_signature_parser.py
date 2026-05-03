@@ -264,7 +264,19 @@ def test_fixed_form_parameter_without_typed_declaration_allowed_with_implicit_ty
 """
     sigs = parse_fortran_signatures(code, filename="legacy.f")
     assert len(sigs) == 1
-    assert sigs[0].variables == {}
+    assert sigs[0].variables["one"].base_type == "real"
+    assert sigs[0].variables["one"].value == "1"
+
+
+def test_modern_parameter_without_typed_declaration_uses_implicit_typing():
+    code = """
+subroutine cst()
+  parameter (ival = 2)
+end subroutine cst
+"""
+    sig = parse_fortran_signatures(code, filename="modern.f90")[0]
+    assert sig.variables["ival"].base_type == "integer"
+    assert sig.variables["ival"].value == "2"
 
 
 def test_duplicate_initialized_declaration_raises_error():
