@@ -219,6 +219,32 @@ def test_fixed_form_fortran77_continuation():
     assert sigs[0].arguments[1].rank == 1
 
 
+def test_fixed_form_parameter_statement_after_typed_constants():
+    code = """
+      subroutine cst(a)
+      real a
+      real zero, one
+      parameter ( zero = 0.0e+0, one = 1.0e+0 )
+      a = a + one - zero
+      end
+"""
+    sigs = parse_fortran_signatures(code, filename="legacy.f")
+    assert len(sigs) == 1
+    assert sigs[0].variables["zero"].value == "0"
+    assert sigs[0].variables["one"].value == "1"
+
+
+def test_duplicate_declaration_raises_error():
+    code = """
+subroutine dup(x)
+  real :: x
+  integer :: x
+end subroutine dup
+"""
+    with pytest.raises(ValueError, match="Duplicate declaration"):
+        parse_fortran_signatures(code, filename="dup.f90")
+
+
 def test_ignore_local_variables_in_signatures():
     code = """
 subroutine update(n, x)

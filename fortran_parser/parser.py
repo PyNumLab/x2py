@@ -20,6 +20,7 @@ _PARAM_RE = re.compile(
     r"^(integer|real|logical|character|complex)\s*(?:\([^)]*\))?\s*,\s*parameter\s*::\s*(?P<body>.*)$",
     re.IGNORECASE,
 )
+_LEGACY_PARAM_STMT_RE = re.compile(r"^parameter\s*\(\s*(?P<body>.*)\s*\)$", re.IGNORECASE)
 _DERIVED_TYPE_RE = re.compile(r"^type\s*(?P<attrs>(?:,\s*[^:]+)?)::\s*(?P<name>\w+)$", re.IGNORECASE)
 _TYPE_FIELD_RE = re.compile(r"^type\s*\(\s*(?P<dtype>\w+)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE)
 _PROC_BIND_RE = re.compile(r"^procedure\s*(?:,\s*[^:]*)?::\s*(?P<names>.*)$", re.IGNORECASE)
@@ -449,6 +450,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         return {
             "signature": FortranProcedureSignature(name=m.group("name"), kind="subroutine", module=module, arguments=args, attributes=_attrs(m.group("prefix"), m.group("tail")), in_interface=in_interface),
             "symbols": {a.name.lower(): a for a in args},
+            "typed_symbols": set(),
             "uses": {},
             "in_contains": False,
             "local_params": {},
@@ -464,6 +466,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
     return {
         "signature": FortranProcedureSignature(name=m.group("name"), kind="function", module=module, arguments=args, result=result, attributes=_attrs(m.group("prefix"), m.group("tail")), in_interface=in_interface),
         "symbols": {**{a.name.lower(): a for a in args}, result_name.lower(): result},
+        "typed_symbols": set(),
         "uses": {},
         "in_contains": False,
         "local_params": {},
@@ -509,6 +512,14 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
     pm = _PARAM_RE.match(stripped)
     if pm:
         for assign in split_csv(pm.group("body")):
+            if "=" not in assign:
+                continue
+            k, v = [x.strip() for x in assign.split("=", 1)]
+            proc_state["local_params"][k.lower()] = v
+        return
+    legacy_pm = _LEGACY_PARAM_STMT_RE.match(stripped)
+    if legacy_pm:
+        for assign in split_csv(legacy_pm.group("body")):
             if "=" not in assign:
                 continue
             k, v = [x.strip() for x in assign.split("=", 1)]
@@ -591,8 +602,15 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         name, shape = _var(v)
         if not name:
             continue
+        declared = proc_state["typed_symbols"]
+        lowered_name = name.lower()
+        if lowered_name in declared:
+            raise ValueError(
+                f"Duplicate declaration of symbol '{name}' in procedure '{proc_state['signature'].name}'."
+            )
+        declared.add(lowered_name)
         symbols = proc_state["symbols"]
-        arg = symbols.get(name.lower())
+        arg = symbols.get(lowered_name)
         if arg is None:
             continue
         _apply(arg, meta, shape)
@@ -616,6 +634,8 @@ def _is_executable_statement_start(line: str) -> bool:
         return True
     if re.match(r"^go\s*to\b", lowered):
         return True
+    if _LEGACY_PARAM_STMT_RE.match(stripped):
+        return False
     if "=" in stripped and "::" not in stripped:
         # Covers assignment and statement functions in execution part.
         return True
