@@ -113,6 +113,7 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
             if current_proc:
                 current_proc["uses"].update(current_module_uses)
                 current_proc["filename"] = filename
+                current_proc["in_exec_part"] = False
             continue
 
         if l.startswith("end subroutine") or l.startswith("end function") or l == "end":
@@ -129,6 +130,13 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
         if m:
             symbols = split_csv(m.group("symbols")) if m.group("symbols") else []
             current_proc["uses"][m.group("module")] = symbols
+            continue
+
+        if current_proc.get("in_exec_part"):
+            continue
+
+        if _is_executable_statement_start(s):
+            current_proc["in_exec_part"] = True
             continue
 
         _parse_declaration(s, current_proc)
@@ -588,6 +596,30 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         if arg is None:
             continue
         _apply(arg, meta, shape)
+
+
+def _is_executable_statement_start(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped:
+        return False
+    lowered = stripped.lower()
+    first = lowered.split(None, 1)[0]
+    if first.isdigit():
+        return False
+    executable_starts = {
+        "do", "if", "where", "call", "select", "case", "allocate", "deallocate",
+        "print", "write", "read", "return", "stop", "cycle", "exit", "continue",
+        "goto", "go", "open", "close", "rewind", "backspace", "inquire", "flush",
+        "wait", "nullify", "associate", "block", "forall", "error", "pause",
+    }
+    if first in executable_starts:
+        return True
+    if re.match(r"^go\s*to\b", lowered):
+        return True
+    if "=" in stripped and "::" not in stripped:
+        # Covers assignment and statement functions in execution part.
+        return True
+    return False
 
 
 def _var(entry: str):
