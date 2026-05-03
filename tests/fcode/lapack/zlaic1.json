@@ -76,10 +76,12 @@
       },
       {
         "name": "W",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          "J"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -144,7 +146,7 @@
       },
       {
         "name": "C",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],
