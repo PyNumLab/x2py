@@ -81,6 +81,7 @@ def _enforce_source_form_compatibility(line: str, filename: str | None) -> None:
 def parse_fortran_signatures(code: str, filename: str | None = None) -> list[FortranProcedureSignature]:
     lines = preprocess_lines(code, filename)
     signatures: list[FortranProcedureSignature] = []
+    declared_procedures: dict[tuple[str | None, bool], set[str]] = {}
     current_module = None
     current_module_uses: dict[str, list[str]] = {}
     current_proc = None
@@ -119,6 +120,17 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
         if current_proc is None:
             current_proc = _parse_header(s, current_module, interface_depth > 0)
             if current_proc:
+                scope_key = (current_module.lower() if current_module else None, interface_depth > 0)
+                seen_in_scope = declared_procedures.setdefault(scope_key, set())
+                proc_name = current_proc["signature"].name.lower()
+                if proc_name in seen_in_scope:
+                    scope_label = (
+                        f"module '{current_module}'" if current_module is not None else "global scope"
+                    )
+                    raise ValueError(
+                        f"Duplicate procedure name '{current_proc['signature'].name}' in {scope_label}."
+                    )
+                seen_in_scope.add(proc_name)
                 current_proc["uses"].update(current_module_uses)
                 current_proc["filename"] = filename
                 current_proc["in_exec_part"] = False
