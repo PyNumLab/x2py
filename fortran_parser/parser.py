@@ -647,11 +647,12 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
             )
         declared.add(lowered_name)
         symbols = proc_state["symbols"]
-        # Keep historical behavior for mixed star-kind lists (e.g. "COMPLEX*16 ALPHA,BETA")
-        # where only subsequent entities were previously applied.
+        # Legacy star-kind declarations can appear as:
+        #   COMPLEX*16 AP(*), X(*)
+        # In this case the first parsed entity may carry the `*16` token
+        # in `raw_name`; always resolve symbols using the normalized name so
+        # all listed variables receive the declaration metadata.
         lookup_name = lowered_name
-        if raw_name.startswith("*") and "," in right:
-            lookup_name = raw_name.lower()
         arg = symbols.get(lookup_name)
         if arg is None:
             continue
@@ -726,6 +727,17 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
     sig.arguments = [symbols.get(a.name.lower(), a) for a in sig.arguments]
     if sig.result:
         sig.result = symbols.get(sig.result.name.lower(), sig.result)
+    # Safety check: if an argument has been explicitly declared in this
+    # procedure, it must not remain unknown after declaration parsing.
+    # This catches declaration-application regressions (e.g. legacy
+    # star-kind list handling) while still allowing truly undeclared
+    # arguments to be reported via readiness diagnostics.
+    declared_symbols = state.get("typed_symbols", set())
+    for arg in sig.arguments:
+        if arg.name.lower() in declared_symbols and arg.base_type == "unknown":
+            raise ValueError(
+                f"Failed to resolve declared argument '{arg.name}' in procedure '{sig.name}'."
+            )
     for arg in sig.arguments:
         if arg.kind:
             arg.kind = _resolve_symbol_reference(arg.kind, local_params)
