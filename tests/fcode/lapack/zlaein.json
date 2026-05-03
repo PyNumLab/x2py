@@ -94,7 +94,7 @@
       },
       {
         "name": "W",
-        "base_type": "unknown",
+        "base_type": "complex",
         "kind": null,
         "rank": 0,
         "shape": [],
