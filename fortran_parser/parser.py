@@ -51,19 +51,18 @@ def _find_legacy_star_kind(type_left: str) -> tuple[str, str] | None:
 
 
 def _enforce_source_form_compatibility(line: str, filename: str | None) -> None:
-    source_form = _source_form(filename)
-    if source_form != "f77":
+    # Keep strict legacy checks only for files explicitly marked as .f77.
+    # Many .f sources in real-world projects (e.g. LAPACK) are fixed-form but
+    # still use modern declaration attributes.
+    if not filename or Path(filename).suffix.lower() != ".f77":
         return
     forbidden = (
         r"\bmodule\b",
         r"\bcontains\b",
         r"\binterface\b",
-        r"::",
-        r"\bintent\s*\(",
-        r"\boptional\b",
-        r"\ballocatable\b",
-        r"\bpointer\b",
-        r"\bresult\s*\(",
+        # Some codebases (e.g. LAPACK) keep modern attribute declarations
+        # in fixed-form .f sources. Permit declaration-level modern syntax,
+        # but keep rejecting larger unsupported structural features.
         r"\bclass\s*\(",
     )
     for pat in forbidden:
@@ -485,6 +484,9 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         return
     if re.match(r"^data\b", stripped, flags=re.IGNORECASE):
         # DATA initializes variables in legacy fixed-form code.
+        return
+    if re.match(r"^equivalence\b", stripped, flags=re.IGNORECASE):
+        # EQUIVALENCE overlays storage in legacy code; it is not a datatype declaration.
         return
     if re.match(r"^format\s*\(", stripped, flags=re.IGNORECASE):
         # FORMAT labels are executable I/O formatting statements, not declarations.
