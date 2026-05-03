@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from .models import FortranArgument, FortranDerivedType, FortranInterface, FortranModule, FortranProcedureSignature
 from .parser import (
     parse_fortran_file,
