@@ -256,6 +256,17 @@ def test_fixed_form_parameter_without_typed_declaration_raises_error():
         parse_fortran_signatures(code, filename="legacy.f")
 
 
+def test_duplicate_initialized_declaration_raises_error():
+    code = """
+subroutine dup_init()
+  integer :: x = 1
+  integer :: x = 2
+end subroutine dup_init
+"""
+    with pytest.raises(ValueError, match="Duplicate declaration"):
+        parse_fortran_signatures(code, filename="dup_init.f90")
+
+
 def test_ignore_local_variables_in_signatures():
     code = """
 subroutine update(n, x)

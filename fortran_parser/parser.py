@@ -658,6 +658,9 @@ def _var(entry: str):
     e = entry.strip()
     if not e:
         return "", []
+    if "=" in e:
+        # Keep only the declared entity name/shape; drop initializer text.
+        e = e.split("=", 1)[0].strip()
     if "(" in e and e.endswith(")"):
         name = e[:e.find("(")].strip()
         return name, split_csv(e[e.find("(")+1:-1])
