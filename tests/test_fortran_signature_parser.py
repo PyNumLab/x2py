@@ -301,6 +301,18 @@ def test_legacy_star_kind_parameter_symbol_is_recognized():
     assert sig.variables == {}
 
 
+def test_legacy_star_kind_parameter_list_with_implicit_none_is_recognized():
+    code = """
+      subroutine zgejsv_like()
+      implicit none
+      complex*16 czero, cone
+      parameter ( czero = (0.0d0,0.0d0), cone = (1.0d0,0.0d0) )
+      end
+"""
+    sig = parse_fortran_signatures(code, filename="legacy.f")[0]
+    assert sig.variables == {}
+
+
 def test_ignore_local_variables_in_signatures():
     code = """
 subroutine update(n, x)

@@ -633,23 +633,26 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
             meta["rank"] = len(shape)
 
     for v in split_csv(right):
-        name, shape = _var(v)
-        if not name:
+        raw_name, shape = _var(v)
+        if not raw_name:
             continue
-        if name.startswith("*") and "," not in right:
-            # Preserve historical parsing for mixed fixed-form lists like
-            # "COMPLEX*16 ALPHA,BETA", while still recognizing single-symbol
-            # declarations like "COMPLEX*16 ONE" for PARAMETER validation.
-            name = re.sub(r"^\*\s*[0-9]+\s*", "", name).strip()
+        normalized_name = re.sub(r"^\*\s*[0-9]+\s*", "", raw_name).strip()
+        if not normalized_name:
+            continue
         declared = proc_state["typed_symbols"]
-        lowered_name = name.lower()
+        lowered_name = normalized_name.lower()
         if lowered_name in declared:
             raise ValueError(
-                f"Duplicate declaration of symbol '{name}' in procedure '{proc_state['signature'].name}'."
+                f"Duplicate declaration of symbol '{normalized_name}' in procedure '{proc_state['signature'].name}'."
             )
         declared.add(lowered_name)
         symbols = proc_state["symbols"]
-        arg = symbols.get(lowered_name)
+        # Keep historical behavior for mixed star-kind lists (e.g. "COMPLEX*16 ALPHA,BETA")
+        # where only subsequent entities were previously applied.
+        lookup_name = lowered_name
+        if raw_name.startswith("*") and "," in right:
+            lookup_name = raw_name.lower()
+        arg = symbols.get(lookup_name)
         if arg is None:
             continue
         _apply(arg, meta, shape)
