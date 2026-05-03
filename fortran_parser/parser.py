@@ -515,6 +515,10 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
             if "=" not in assign:
                 continue
             k, v = [x.strip() for x in assign.split("=", 1)]
+            if k.lower() in proc_state["local_params"]:
+                raise ValueError(
+                    f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'."
+                )
             proc_state["local_params"][k.lower()] = v
         return
     legacy_pm = _LEGACY_PARAM_STMT_RE.match(stripped)
@@ -523,6 +527,14 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
             if "=" not in assign:
                 continue
             k, v = [x.strip() for x in assign.split("=", 1)]
+            if k.lower() not in proc_state["typed_symbols"]:
+                raise ValueError(
+                    f"Unknown datatype for PARAMETER symbol '{k}' in procedure '{proc_state['signature'].name}'."
+                )
+            if k.lower() in proc_state["local_params"]:
+                raise ValueError(
+                    f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'."
+                )
             proc_state["local_params"][k.lower()] = v
         return
     if "::" in line:

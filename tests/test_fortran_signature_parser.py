@@ -245,6 +245,17 @@ end subroutine dup
         parse_fortran_signatures(code, filename="dup.f90")
 
 
+def test_fixed_form_parameter_without_typed_declaration_raises_error():
+    code = """
+      subroutine cst(a)
+      real a
+      parameter ( zero = 0.0e+0 )
+      end
+"""
+    with pytest.raises(ValueError, match="Unknown datatype for PARAMETER symbol"):
+        parse_fortran_signatures(code, filename="legacy.f")
+
+
 def test_ignore_local_variables_in_signatures():
     code = """
 subroutine update(n, x)
