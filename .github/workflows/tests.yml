@@ -38,7 +38,10 @@ jobs:
   parser-reference-guard:
     if: >
       github.event_name == 'pull_request' &&
-      !contains(github.event.pull_request.labels.*.name, 'ignore-parser-reference-guard')
+      (
+        !contains(github.event.pull_request.labels.*.name, 'ignore-parser-reference-guard') ||
+        contains(github.event.pull_request.labels.*.name, 'require-parser-reference-update')
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
