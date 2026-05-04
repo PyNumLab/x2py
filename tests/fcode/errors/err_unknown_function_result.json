@@ -2,7 +2,7 @@
   "parser": "parse_fortran_signatures",
   "error_type": "FortranParseError",
   "message_contains": [
-  #  "Unknown datatype for function result 'res' in procedure 'f'."
     "File 'err_unknown_function_result.f90': Function result 'res' in procedure 'f' has no type declaration (implicit none is active)."
   ]
+  "alternative" : ["Unknown datatype for function result 'res' in procedure 'f'."]
 }
