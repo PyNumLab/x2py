@@ -7,7 +7,7 @@ from pathlib import Path
 from dataclasses import replace
 
 from .lexer import preprocess_lines
-from .models import FortranArgument, FortranDerivedType, FortranInterface, FortranModule, FortranProcedureSignature, FortranVariable
+from .models import FortranArgument, FortranDerivedType, FortranInterface, FortranModule, FortranParseError, FortranProcedureSignature, FortranVariable
 from .type_resolver import extract_kind_from_type_spec
 from .utils import split_csv
 
@@ -84,24 +84,23 @@ def _parse_type_prefix(prefix: str) -> tuple[str, str | None] | None:
     return None
 
 
-def _enforce_source_form_compatibility(line: str, filename: str | None) -> None:
-    # Keep strict legacy checks only for files explicitly marked as .f77.
-    # Many .f sources in real-world projects (e.g. LAPACK) are fixed-form but
-    # still use modern declaration attributes.
+def _enforce_source_form_compatibility(line: str, filename: str | None, lineno: int | None = None, source_line: str | None = None) -> None:
     if not filename or Path(filename).suffix.lower() != ".f77":
         return
     forbidden = (
         r"\bmodule\b",
         r"\bcontains\b",
         r"\binterface\b",
-        # Some codebases (e.g. LAPACK) keep modern attribute declarations
-        # in fixed-form .f sources. Permit declaration-level modern syntax,
-        # but keep rejecting larger unsupported structural features.
         r"\bclass\s*\(",
     )
     for pat in forbidden:
         if re.search(pat, line, re.IGNORECASE):
-            raise ValueError(f"Unsupported syntax for Fortran 77 source '{filename}': {line.strip()}")
+            raise FortranParseError(
+                f"Unsupported syntax for Fortran 77 source '{filename}': {line.strip()}",
+                filename=filename,
+                line_number=lineno,
+                source_line=source_line,
+            )
 
 
 def parse_fortran_signatures(code: str, filename: str | None = None) -> list[FortranProcedureSignature]:
@@ -113,13 +112,13 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
     current_proc = None
     interface_depth = 0
 
-    for line in lines:
+    for line, lineno, source_line in lines:
         s = line.strip()
         if not s:
             continue
         l = s.lower()
 
-        _enforce_source_form_compatibility(s, filename)
+        _enforce_source_form_compatibility(s, filename, lineno, source_line)
 
         if l.startswith("interface"):
             interface_depth += 1
@@ -153,8 +152,11 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
                     scope_label = (
                         f"module '{current_module}'" if current_module is not None else "global scope"
                     )
-                    raise ValueError(
-                        f"Duplicate procedure name '{current_proc['signature'].name}' in {scope_label}."
+                    raise FortranParseError(
+                        f"Duplicate procedure name '{current_proc['signature'].name}' in {scope_label}.",
+                        filename=filename,
+                        line_number=lineno,
+                        source_line=source_line,
                     )
                 seen_in_scope.add(proc_name)
                 current_proc["uses"].update(current_module_uses)
@@ -185,7 +187,7 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
             current_proc["in_exec_part"] = True
             continue
 
-        _parse_declaration(s, current_proc)
+        _parse_declaration(s, current_proc, filename=filename, lineno=lineno, source_line=source_line)
 
     if current_proc is not None:
         signatures.append(_finalize_proc(current_proc))
@@ -220,12 +222,12 @@ def parse_fortran_types(code: str, filename: str | None = None) -> list[FortranD
     current_type: FortranDerivedType | None = None
     in_type_contains = False
     types: list[FortranDerivedType] = []
-    for line in lines:
+    for line, lineno, source_line in lines:
         s = line.strip()
         if not s:
             continue
         l = s.lower()
-        _enforce_source_form_compatibility(s, filename)
+        _enforce_source_form_compatibility(s, filename, lineno, source_line)
         if l.startswith("module ") and not l.startswith("module procedure"):
             current_module = s.split()[1]
             continue
@@ -257,6 +259,7 @@ def parse_fortran_types(code: str, filename: str | None = None) -> list[FortranD
             in_type_contains = True
             continue
         if l.startswith("end type"):
+            _validate_derived_type_fields(current_type, filename)
             types.append(current_type)
             current_type = None
             in_type_contains = False
@@ -279,9 +282,7 @@ def parse_fortran_types(code: str, filename: str | None = None) -> list[FortranD
                 rhs = [r.strip() for r in split_csv(rhs_txt)]
                 current_type.generic_bindings.append({"name": lhs, "targets": rhs, "attrs": attrs})
             continue
-        _parse_type_field_line(s, current_type, filename)
-    # Resolve extends references for parent types declared in the same parsed file.
-    # Keep cross-file parents as strings.
+        _parse_type_field_line(s, current_type, filename, lineno=lineno, source_line=source_line)
     by_name = {t.name.lower(): t for t in types}
     for t in types:
         if isinstance(t.extends, str):
@@ -295,17 +296,18 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
     lines = preprocess_lines(code, filename)
     modules: list[FortranModule] = []
     current: FortranModule | None = None
-    for line in lines:
+    for line, lineno, source_line in lines:
         s = line.strip()
         if not s:
             continue
         l = s.lower()
-        _enforce_source_form_compatibility(s, filename)
+        _enforce_source_form_compatibility(s, filename, lineno, source_line)
         if l.startswith("module ") and not l.startswith("module procedure"):
             current = FortranModule(name=s.split()[1], filename=filename)
             continue
         if l.startswith("end module"):
             if current:
+                _validate_module_variables(current, filename)
                 modules.append(current)
             current = None
             continue
@@ -317,7 +319,7 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
         if m:
             current.uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
             continue
-        _parse_module_variable_line(s, current, filename)
+        _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
 
     # Attach parsed procedures/types/interfaces to their owning modules.
     signatures = parse_fortran_signatures(code, filename)
@@ -348,12 +350,12 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
     current_interface: FortranInterface | None = None
     current_proc = None
     interfaces: list[FortranInterface] = []
-    for line in lines:
+    for line, lineno, source_line in lines:
         s = line.strip()
         if not s:
             continue
         l = s.lower()
-        _enforce_source_form_compatibility(s, filename)
+        _enforce_source_form_compatibility(s, filename, lineno, source_line)
         if l.startswith("module ") and not l.startswith("module procedure"):
             current_module = s.split()[1]
             continue
@@ -390,7 +392,7 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
             current_proc = None
             continue
 
-        _parse_declaration(s, current_proc)
+        _parse_declaration(s, current_proc, filename=filename, lineno=lineno, source_line=source_line)
 
     return interfaces
 
@@ -401,7 +403,7 @@ def assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
     types = parse_fortran_types(code, filename)
     modules = parse_fortran_modules(code, filename)
     unsupported: list[dict] = []
-    for lineno, line in enumerate(lines, start=1):
+    for line, lineno, source_line in lines:
         for p in _UNSUPPORTED_PATTERNS:
             if p.search(line):
                 unsupported.append({"line": lineno, "text": line.strip(), "pattern": p.pattern})
@@ -542,34 +544,26 @@ def _attrs(prefix: str, tail: str) -> list[str]:
     return attrs
 
 
-def _parse_declaration(line: str, proc_state: dict) -> None:
+def _parse_declaration(line: str, proc_state: dict, filename: str | None = None, lineno: int | None = None, source_line: str | None = None) -> None:
     stripped = line.strip()
     if re.match(r"^implicit\b", stripped, flags=re.IGNORECASE):
-        # IMPLICIT statements configure typing rules and are not variable declarations.
         if re.match(r"^implicit\s+none\b", stripped, flags=re.IGNORECASE):
             proc_state["implicit_none"] = True
         return
 
     if re.match(r"^external\b", stripped, flags=re.IGNORECASE):
-        # EXTERNAL declares procedure names (not data objects); keep parsing without treating as datatype declarations.
         return
     if re.match(r"^intrinsic\b", stripped, flags=re.IGNORECASE):
-        # INTRINSIC lists intrinsic procedures that may appear as bare statements in legacy fixed-form code.
         return
     if re.match(r"^data\b", stripped, flags=re.IGNORECASE):
-        # DATA initializes variables in legacy fixed-form code.
         return
     if re.match(r"^equivalence\b", stripped, flags=re.IGNORECASE):
-        # EQUIVALENCE overlays storage in legacy code; it is not a datatype declaration.
         return
     if re.match(r"^format\s*\(", stripped, flags=re.IGNORECASE):
-        # FORMAT labels are executable I/O formatting statements, not declarations.
         return
     if re.match(r"^go\s*to\b", stripped, flags=re.IGNORECASE):
-        # GO TO is an executable statement.
         return
     if re.match(r"^use\b", stripped, flags=re.IGNORECASE):
-        # USE statements can appear in free-form and preprocessed fixed-form sources.
         return
 
     pm = _PARAM_RE.match(stripped)
@@ -579,8 +573,11 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
                 continue
             k, v = [x.strip() for x in assign.split("=", 1)]
             if k.lower() in proc_state["local_params"]:
-                raise ValueError(
-                    f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'."
+                raise FortranParseError(
+                    f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'.",
+                    filename=filename,
+                    line_number=lineno,
+                    source_line=source_line,
                 )
             proc_state["local_params"][k.lower()] = v
         return
@@ -591,18 +588,22 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
                 continue
             k, v = [x.strip() for x in assign.split("=", 1)]
             if k.lower() not in proc_state["typed_symbols"] and proc_state.get("implicit_none", False):
-                raise ValueError(
-                    f"Unknown datatype for PARAMETER symbol '{k}' in procedure '{proc_state['signature'].name}'."
+                raise FortranParseError(
+                    f"Unknown datatype for PARAMETER symbol '{k}' in procedure '{proc_state['signature'].name}'.",
+                    filename=filename,
+                    line_number=lineno,
+                    source_line=source_line,
                 )
             if k.lower() not in proc_state["typed_symbols"]:
-                # In legacy fixed-form code with implicit typing, keep compatibility
-                # with implicit typing rules: infer type from symbol name.
                 proc_state["local_params"][k.lower()] = v
                 proc_state["implicit_typed_symbols"][k.lower()] = _infer_implicit_base_type(k)
                 continue
             if k.lower() in proc_state["local_params"]:
-                raise ValueError(
-                    f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'."
+                raise FortranParseError(
+                    f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'.",
+                    filename=filename,
+                    line_number=lineno,
+                    source_line=source_line,
                 )
             proc_state["local_params"][k.lower()] = v
             proc_state["legacy_local_params"].add(k.lower())
@@ -610,15 +611,18 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
     if "::" in line:
         left, right = [x.strip() for x in line.split("::", 1)]
     else:
-        # Fortran 77 fixed-form declarations commonly omit "::"
-        # (e.g., "INTEGER N", "COMPLEX CX(*), CY(*)").
         left = line.strip()
         right = ""
     star_kind = _find_legacy_star_kind(left)
     source_form = _source_form(proc_state.get("filename"))
     if star_kind and source_form == "modern":
         base, kind = star_kind
-        raise ValueError(f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{proc_state.get('filename')}'.")
+        raise FortranParseError(
+            f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{proc_state.get('filename')}'.",
+            filename=filename,
+            line_number=lineno,
+            source_line=source_line,
+        )
 
     char_star = _CHAR_STAR_RE.match(left)
     tm = _TYPE_RE.match(left)
@@ -637,7 +641,6 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
     elif tm:
         base = tm.group(1).lower()
         if base == "double precision":
-            # Legacy Fortran alias for double-precision real.
             base = "real"
         type_spec = (tm.group(2) or "").strip()
         trailing = tm.group(3).strip().lstrip(", ")
@@ -656,13 +659,17 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         first_word = m_first.group(1).lower() if m_first else ""
         non_decl_starts = {"do", "if", "where", "call", "select", "case", "allocate", "deallocate", "print", "write", "read", "return", "stop", "cycle", "exit", "continue", "end", "else", "elseif", "contains", "goto", "go", "data", "format", "use"}
         if "=" in line and "::" not in line:
-            # Assignment statement, not a declaration.
             return
         looks_like_decl = bool(re.match(r"^[A-Za-z]", line.strip())) and first_word not in non_decl_starts and ("::" in line or "," in line or " " in line.strip())
         if looks_like_decl:
             if any(p.search(line) for p in _UNSUPPORTED_PATTERNS):
                 return
-            raise ValueError(f"Unknown or unsupported datatype declaration for procedure '{proc_state['signature'].name}': {line.strip()}")
+            raise FortranParseError(
+                f"Unknown or unsupported datatype declaration for procedure '{proc_state['signature'].name}': {line.strip()}",
+                filename=filename,
+                line_number=lineno,
+                source_line=source_line,
+            )
         return
     meta = {
         "base_type": base,
@@ -707,8 +714,11 @@ def _parse_declaration(line: str, proc_state: dict) -> None:
         declared = proc_state["typed_symbols"]
         lowered_name = normalized_name.lower()
         if lowered_name in declared:
-            raise ValueError(
-                f"Duplicate declaration of symbol '{normalized_name}' in procedure '{proc_state['signature'].name}'."
+            raise FortranParseError(
+                f"Duplicate declaration of symbol '{normalized_name}' in procedure '{proc_state['signature'].name}'.",
+                filename=filename,
+                line_number=lineno,
+                source_line=source_line,
             )
         declared.add(lowered_name)
         symbols = proc_state["symbols"]
@@ -783,6 +793,24 @@ def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
         arg.rank = meta["rank"]
 
 
+def _validate_module_variables(module: FortranModule, filename: str | None) -> None:
+    for var in module.variables:
+        if var.base_type == "unknown":
+            raise FortranParseError(
+                f"Unknown type for variable '{var.name}' in module '{module.name}'.",
+                filename=filename,
+            )
+
+
+def _validate_derived_type_fields(dtype: FortranDerivedType, filename: str | None) -> None:
+    for field in dtype.fields:
+        if field.base_type == "unknown":
+            raise FortranParseError(
+                f"Unknown type for field '{field.name}' in derived type '{dtype.name}'.",
+                filename=filename,
+            )
+
+
 def _finalize_proc(state: dict) -> FortranProcedureSignature:
     sig = state["signature"]
     symbols = state["symbols"]
@@ -801,8 +829,9 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
     declared_symbols = state.get("typed_symbols", set())
     for arg in sig.arguments:
         if arg.name.lower() in declared_symbols and arg.base_type == "unknown":
-            raise ValueError(
-                f"Failed to resolve declared argument '{arg.name}' in procedure '{sig.name}'."
+            raise FortranParseError(
+                f"Failed to resolve declared argument '{arg.name}' in procedure '{sig.name}'.",
+                filename=state.get("filename"),
             )
     for arg in sig.arguments:
         if arg.kind:
@@ -832,7 +861,10 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
         if not state.get("implicit_none", False):
             sig.result.base_type = _infer_implicit_base_type(sig.result.name)
         if sig.result.base_type == "unknown":
-            raise ValueError(f"Unknown datatype for function result '{sig.result.name}' in procedure '{sig.name}'.")
+            raise FortranParseError(
+                f"Unknown datatype for function result '{sig.result.name}' in procedure '{sig.name}'.",
+                filename=state.get("filename"),
+            )
     sig.uses = dict(state["uses"])
     return replace(sig)
 
@@ -843,12 +875,12 @@ def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dic
     in_module_spec_part = False
     output: dict[str, dict[str, str]] = {}
     in_module_spec_part = False
-    for line in lines:
+    for line, lineno, source_line in lines:
         s = line.strip()
         if not s:
             continue
         l = s.lower()
-        _enforce_source_form_compatibility(s, filename)
+        _enforce_source_form_compatibility(s, filename, lineno, source_line)
         if l.startswith("module ") and not l.startswith("module procedure"):
             current_module = s.split()[1].lower()
             in_module_spec_part = True
@@ -1060,7 +1092,7 @@ def _safe_eval_int_expr(expr: str) -> int | None:
     return val if isinstance(val, int) else None
 
 
-def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str | None) -> None:
+def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str | None, lineno: int | None = None, source_line: str | None = None) -> None:
     if "::" not in line:
         return
     if re.match(r"^type\s*::\s*\w+$", line.strip(), re.IGNORECASE):
@@ -1070,7 +1102,12 @@ def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str |
     source_form = _source_form(filename)
     if star_kind and source_form == "modern":
         base, kind = star_kind
-        raise ValueError(f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.")
+        raise FortranParseError(
+            f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.",
+            filename=filename,
+            line_number=lineno,
+            source_line=source_line,
+        )
 
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
@@ -1103,7 +1140,12 @@ def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str |
             "pointer": False,
         }
     else:
-        raise ValueError(f"Unknown or unsupported datatype declaration: {line.strip()}")
+        raise FortranParseError(
+            f"Unknown or unsupported datatype declaration in type '{dtype.name}': {line.strip()}",
+            filename=filename,
+            line_number=lineno,
+            source_line=source_line,
+        )
 
     for a in attrs:
         la = a.lower()
@@ -1125,7 +1167,7 @@ def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str |
         dtype.fields.append(field)
 
 
-def _parse_module_variable_line(line: str, module: FortranModule, filename: str | None) -> None:
+def _parse_module_variable_line(line: str, module: FortranModule, filename: str | None, lineno: int | None = None, source_line: str | None = None) -> None:
     if "::" not in line:
         return
     if re.match(r"^type\s*::\s*\w+$", line.strip(), re.IGNORECASE):
@@ -1135,7 +1177,12 @@ def _parse_module_variable_line(line: str, module: FortranModule, filename: str 
     source_form = _source_form(filename)
     if star_kind and source_form == "modern":
         base, kind = star_kind
-        raise ValueError(f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.")
+        raise FortranParseError(
+            f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.",
+            filename=filename,
+            line_number=lineno,
+            source_line=source_line,
+        )
 
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
@@ -1168,7 +1215,12 @@ def _parse_module_variable_line(line: str, module: FortranModule, filename: str 
             "pointer": False,
         }
     else:
-        raise ValueError(f"Unknown or unsupported datatype declaration: {line.strip()}")
+        raise FortranParseError(
+            f"Unknown or unsupported datatype declaration in module '{module.name}': {line.strip()}",
+            filename=filename,
+            line_number=lineno,
+            source_line=source_line,
+        )
 
     for a in attrs:
         la = a.lower()

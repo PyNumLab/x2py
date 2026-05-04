@@ -26,17 +26,20 @@ def strip_comment(line: str, form: str) -> str:
     return "".join(out)
 
 
-def preprocess_lines(code: str, filename: str | None = None) -> list[str]:
+def preprocess_lines(code: str, filename: str | None = None) -> list[tuple[str, int, str]]:
     form = detect_source_form(code, filename)
-    raw = [strip_comment(l.rstrip("\n"), form) for l in code.splitlines()]
+    raw_lines = code.splitlines()
+    raw = [(strip_comment(l.rstrip("\n"), form), i + 1, l.rstrip("\n")) for i, l in enumerate(raw_lines)]
 
-    folded: list[str] = []
+    folded: list[tuple[str, int, str]] = []
     pending = ""
+    pending_lineno = 0
+    pending_raw = ""
     continuing = False
-    for line in raw:
+    for stripped_line, lineno, original_line in raw:
         if form == "fixed":
-            cont = len(line) >= 6 and line[5:6].strip() != ""
-            text = line[6:] if len(line) > 6 else ""
+            cont = len(stripped_line) >= 6 and stripped_line[5:6].strip() != ""
+            text = stripped_line[6:] if len(stripped_line) > 6 else ""
             if not text.strip() and not continuing:
                 continue
             if cont and pending:
@@ -44,29 +47,35 @@ def preprocess_lines(code: str, filename: str | None = None) -> list[str]:
                 continuing = False
                 continue
             if pending:
-                folded.append(pending)
+                folded.append((pending, pending_lineno, pending_raw))
             pending = text.strip()
+            pending_lineno = lineno
+            pending_raw = original_line
             continuing = False
             continue
 
-        stripped = line.rstrip()
-        if not stripped and not continuing:
+        line = stripped_line.rstrip()
+        if not line and not continuing:
             continue
-        starts_with_amp = stripped.lstrip().startswith("&")
+        starts_with_amp = line.lstrip().startswith("&")
         if starts_with_amp:
-            stripped = stripped.lstrip()[1:].lstrip()
+            line = line.lstrip()[1:].lstrip()
         if continuing:
-            pending += stripped
+            pending += line
         else:
-            pending = stripped
+            pending = line
+            pending_lineno = lineno
+            pending_raw = original_line
         if pending.endswith("&"):
             pending = pending[:-1].rstrip()
             continuing = True
             continue
-        folded.append(pending)
+        folded.append((pending, pending_lineno, pending_raw))
         pending = ""
+        pending_lineno = 0
+        pending_raw = ""
         continuing = False
 
     if pending:
-        folded.append(pending)
+        folded.append((pending, pending_lineno, pending_raw))
     return folded
