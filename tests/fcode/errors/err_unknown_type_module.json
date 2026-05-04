@@ -1,0 +1,7 @@
+{
+  "parser": "parse_fortran_modules",
+  "error_type": "FortranParseError",
+  "message_contains": [
+    "Unknown or unsupported datatype declaration in module 'm': weirdtype :: x"
+  ]
+}

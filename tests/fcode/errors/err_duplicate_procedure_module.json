@@ -1,0 +1,7 @@
+{
+  "parser": "parse_fortran_signatures",
+  "error_type": "FortranParseError",
+  "message_contains": [
+    "Duplicate procedure name 'work' in module 'm'."
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "parser": "parse_fortran_signatures",
+  "error_type": "FortranParseError",
+  "message_contains": [
+    "has no type declaration (implicit none is active)."
+  ]
+}

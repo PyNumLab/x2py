@@ -1,0 +1,7 @@
+{
+  "parser": "parse_fortran_types",
+  "error_type": "FortranParseError",
+  "message_contains": [
+    "Duplicate field 'x' in derived type 'point'."
+  ]
+}
