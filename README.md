@@ -232,6 +232,11 @@ From repository root:
 PYTHONPATH=. pytest -q
 ```
 
+## Merging policy (soft enforcement)
+
+This repository uses CI checks to validate parser behavior. As a project policy,
+**do not merge pull requests unless all checks are green**.
+
 Run key suites individually:
 
 ```bash
