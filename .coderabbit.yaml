@@ -1,5 +1,6 @@
 # .coderabbit.yaml
 reviews:
+  review_status: false   # set to false to suppress review-status messages
   auto_review:
     enabled: false
     labels:
