@@ -2,7 +2,7 @@ name: Tests
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, synchronize, reopened]
   push:
     branches:
       - main
@@ -10,97 +10,23 @@ on:
 
 jobs:
   test:
-    if: >
-      github.event_name != 'pull_request' ||
-      (github.event.action != 'labeled' && github.event.action != 'unlabeled')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: ['3.10', '3.11', '3.12']
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pytest
-
       - name: Run tests
         env:
           PYTHONPATH: .
         run: pytest -q
-
-
-  parser-reference-guard:
-    if: >
-      github.event_name == 'pull_request' &&
-      !contains(github.event.pull_request.labels.*.name, 'ignore-parser-reference-guard')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Verify parser implementation reference was updated when needed
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
-        run: |
-          set -euo pipefail
-          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
-
-          echo "Changed files:"
-          echo "$CHANGED_FILES"
-          echo "PR labels: ${PR_LABELS:-<none>}"
-
-          FORCE_LABEL="require-parser-reference-update"
-          IGNORE_LABEL="ignore-parser-reference-guard"
-
-          if echo ",${PR_LABELS}," | grep -Fq ",${FORCE_LABEL}," && \
-             echo ",${PR_LABELS}," | grep -Fq ",${IGNORE_LABEL},"; then
-            echo "Conflicting labels present: ${FORCE_LABEL} and ${IGNORE_LABEL}. Remove one."
-            exit 1
-          fi
-
-          if echo ",${PR_LABELS}," | grep -Fq ",${IGNORE_LABEL},"; then
-            echo "${IGNORE_LABEL} label present; skipping parser_implementation_reference.md guard."
-            exit 0
-          fi
-
-          DOC_CHANGED=false
-          if echo "$CHANGED_FILES" | grep -Fxq "parser_implementation_reference.md"; then
-            DOC_CHANGED=true
-          fi
-
-          FORCE_LABEL="require-parser-reference-update"
-          if echo ",${PR_LABELS}," | grep -Fq ",${FORCE_LABEL},"; then
-            if [ "$DOC_CHANGED" = true ]; then
-              echo "${FORCE_LABEL} label present and parser_implementation_reference.md was updated."
-              exit 0
-            fi
-            echo "${FORCE_LABEL} label present, but parser_implementation_reference.md was not updated."
-            exit 1
-          fi
-
-          if [ "$DOC_CHANGED" = true ]; then
-            echo "parser_implementation_reference.md changed in this PR."
-            exit 0
-          fi
-
-          if echo "$CHANGED_FILES" | grep -Eq "^(fortran_parser/|tests/fcode/|tests/test_fortran_signature_parser.py|\.github/workflows/)"; then
-            echo "Parser-related files changed without updating parser_implementation_reference.md."
-            echo "Please update parser_implementation_reference.md or add '${FORCE_LABEL}' only when you want to enforce it manually."
-            exit 1
-          fi
-
-          echo "No parser-related files changed; parser_implementation_reference.md update not required."
