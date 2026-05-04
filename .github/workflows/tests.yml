@@ -10,6 +10,9 @@ on:
 
 jobs:
   test:
+    if: >
+      github.event_name != 'pull_request' ||
+      (github.event.action != 'labeled' && github.event.action != 'unlabeled')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -38,7 +41,11 @@ jobs:
   parser-reference-guard:
     if: >
       github.event_name == 'pull_request' &&
-      !contains(github.event.pull_request.labels.*.name, 'ignore-parser-reference-guard')
+      !contains(github.event.pull_request.labels.*.name, 'ignore-parser-reference-guard') &&
+      (github.event.action == 'opened' ||
+       github.event.action == 'synchronize' ||
+       github.event.action == 'reopened' ||
+       github.event.label.name == 'ignore-parser-reference-guard')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
