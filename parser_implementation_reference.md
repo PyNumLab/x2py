@@ -321,6 +321,11 @@ Manual force mode is also supported: add the pull-request label
 parser-impact path patterns do not match. With that label present, CI fails
 unless `parser_implementation_reference.md` is updated in the PR diff.
 
+Manual ignore mode is supported: add the pull-request label
+`ignore-parser-reference-guard` to skip the parser reference guard entirely.
+Use this sparingly (e.g. doc-only refactors, purely mechanical changes) to avoid
+the reference drifting from actual parser behavior.
+
 
 ### Parser error-raising rules (quick guardrail)
 
@@ -333,6 +338,9 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
   - Procedure declarations, derived-type fields, and module-variable declarations raise `FortranParseError` when the datatype declaration is unknown/unsupported instead of silently skipping.
 - **Post-scope validation (hard error):**
   - After parsing each module, derived type, or procedure scope, a validation pass checks that all declared variables/fields/arguments have a known (non-`"unknown"`) base type; failures raise `FortranParseError`.
+  - Under `implicit none`, missing declarations are treated as hard errors. For functions:
+    - if the header uses an explicit `result(name)`, an undeclared result raises an "Unknown datatype for function result ..." error for that result symbol
+    - otherwise the result is implicitly the function name and the usual "has no type declaration (implicit none is active)" wording is used
 - **Design intent:**
   - The parser is intentionally strict at parse time to avoid mixed-standard inputs producing ambiguous metadata.
   - "Unsupported but recognized" constructs are still surfaced via readiness diagnostics where appropriate; truly invalid-for-version or unknown datatype syntax should crash early.
