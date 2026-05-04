@@ -283,7 +283,342 @@ In-test auto-update mode:
 FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py --confcutdir=tests/
 ```
 
-## 6) Scope note
+## 6) Error handling
+
+All parse failures raise `FortranParseError`, a subclass of `ValueError`.
+When a filename is supplied the message begins with a location prefix:
+
+```
+File '<filename>', line <N>: <message>
+    <source line>
+```
+
+Without a filename only the bare message is shown.
+
+The sections below list each error category, the triggering condition, and the
+exact message format (with `<...>` placeholders for runtime values).
+
+### 6.1 Unknown or unsupported type declaration
+
+Triggered when a declaration line cannot be matched to any known intrinsic type,
+`type(...)`, or `character` variant.
+
+**In a procedure:**
+
+```
+Unknown or unsupported datatype declaration for procedure '<name>': <line>
+```
+
+Example Fortran that triggers this:
+
+```fortran
+subroutine bad(x)
+  weirdtype :: x
+end subroutine bad
+```
+
+Example error:
+
+```
+File 'bad.f90', line 3: Unknown or unsupported datatype declaration for procedure 'bad': weirdtype :: x
+    weirdtype :: x
+```
+
+**In a derived type:**
+
+```
+Unknown or unsupported datatype declaration in type '<name>': <line>
+```
+
+**In a module:**
+
+```
+Unknown or unsupported datatype declaration in module '<name>': <line>
+```
+
+### 6.2 Duplicate declaration
+
+Triggered when the same symbol is declared more than once in the same scope.
+
+**In a procedure (arguments and local declarations):**
+
+```
+Duplicate declaration of symbol '<name>' in procedure '<proc>'.
+```
+
+Example:
+
+```fortran
+subroutine dup(x)
+  real :: x
+  integer :: x
+end subroutine dup
+```
+
+Example error:
+
+```
+File 'dup.f90', line 4: Duplicate declaration of symbol 'x' in procedure 'dup'.
+    integer :: x
+```
+
+**PARAMETER constants:**
+
+```
+Duplicate PARAMETER declaration of symbol '<name>' in procedure '<proc>'.
+```
+
+**In a derived type:**
+
+```
+Duplicate field '<name>' in derived type '<type>'.
+```
+
+**In a module:**
+
+```
+Duplicate variable '<name>' in module '<module>'.
+```
+
+### 6.3 Duplicate procedure name
+
+Triggered when the same procedure name appears more than once within the same
+module or global scope.
+
+**Global scope:**
+
+```
+Duplicate procedure name '<name>' in global scope.
+```
+
+**Module scope:**
+
+```
+Duplicate procedure name '<name>' in module '<module>'.
+```
+
+Example:
+
+```fortran
+subroutine work(n)
+  integer, intent(in) :: n
+end subroutine work
+
+subroutine work(n)
+  integer, intent(in) :: n
+end subroutine work
+```
+
+Example error:
+
+```
+File 'dup.f90', line 6: Duplicate procedure name 'work' in global scope.
+    subroutine work(n)
+```
+
+### 6.4 Duplicate argument name
+
+Triggered when a procedure's argument list contains the same name more than once.
+
+```
+Duplicate argument name '<name>' in procedure '<proc>'.
+```
+
+Example:
+
+```fortran
+subroutine dup(x, y, x)
+  integer, intent(in) :: x
+  real, intent(in) :: y
+end subroutine dup
+```
+
+Example error:
+
+```
+File 'dup_arg.f90': Duplicate argument name 'x' in procedure 'dup'.
+```
+
+### 6.5 Star-kind in modern source
+
+Triggered when a legacy `type*N` (e.g. `real*8`) declaration appears in a file
+with a modern Fortran extension (`.f90`, `.f95`, `.f03`, `.f08`).
+
+```
+Unsupported Fortran 77 star-kind declaration '<type>*<kind>' in modern source '<filename>'.
+```
+
+Example:
+
+```fortran
+subroutine bad(x)
+  real*8 :: x
+end subroutine bad
+```
+
+Example error (file `bad.f90`):
+
+```
+File 'bad.f90', line 3: Unsupported Fortran 77 star-kind declaration 'real*8' in modern source 'bad.f90'.
+    real*8 :: x
+```
+
+### 6.6 Fortran 77 syntax in a `.f77` source file
+
+Triggered when modern constructs (`module`, `contains`, `interface`,
+`class(...)`) appear in a file with extension `.f77`.
+
+```
+Unsupported syntax for Fortran 77 source '<filename>': <line>
+```
+
+Example:
+
+```fortran
+      module bad_module
+      end module bad_module
+```
+
+Example error (file `legacy.f77`):
+
+```
+File 'legacy.f77', line 2: Unsupported syntax for Fortran 77 source 'legacy.f77': module bad_module
+    module bad_module
+```
+
+### 6.7 Implicit none — undeclared argument or result
+
+Triggered when `implicit none` is active and an argument (or function result)
+has no matching type declaration.
+
+**Argument:**
+
+```
+Argument '<name>' in procedure '<proc>' has no type declaration (implicit none is active).
+```
+
+**Function result:**
+
+```
+Function result '<name>' in procedure '<proc>' has no type declaration (implicit none is active).
+```
+
+Example:
+
+```fortran
+subroutine foo(x, y)
+  implicit none
+  integer, intent(in) :: x
+end subroutine foo
+```
+
+Example error:
+
+```
+File 'implicit_none.f90': Argument 'y' in procedure 'foo' has no type declaration (implicit none is active).
+```
+
+### 6.8 Unknown datatype for function result
+
+Triggered when a function result has no resolvable type after parsing (and
+`implicit none` prevents implicit typing).
+
+```
+Unknown datatype for function result '<name>' in procedure '<proc>'.
+```
+
+Example:
+
+```fortran
+function f(x) result(res)
+  implicit none
+  real :: x
+end function f
+```
+
+Example error:
+
+```
+File 'bad.f90': Unknown datatype for function result 'res' in procedure 'f'.
+```
+
+### 6.9 Unknown datatype for a module variable
+
+Triggered by `_validate_module_variables` when a parsed module variable still
+has `base_type == "unknown"` after declaration parsing.
+
+```
+Unknown type for variable '<name>' in module '<module>'.
+```
+
+### 6.10 Unknown datatype for a derived type field
+
+Triggered by `_validate_derived_type_fields` when a field still has
+`base_type == "unknown"`.
+
+```
+Unknown type for field '<name>' in derived type '<type>'.
+```
+
+### 6.11 PARAMETER symbol without type in `implicit none` scope
+
+Triggered when a legacy `PARAMETER (...)` statement names a symbol that has not
+been typed and `implicit none` is in effect.
+
+```
+Unknown datatype for PARAMETER symbol '<name>' in procedure '<proc>'.
+```
+
+Example:
+
+```fortran
+      subroutine cst(a)
+      implicit none
+      real a
+      parameter ( zero = 0.0e+0 )
+      end
+```
+
+Example error:
+
+```
+File 'legacy.f': Unknown datatype for PARAMETER symbol 'zero' in procedure 'cst'.
+```
+
+### 6.12 Function result variable shadows an argument
+
+Triggered when a `result(name)` clause reuses an argument name (and the two
+names are different from each other — the special case `result(f)` on a
+function named `f` is allowed).
+
+```
+Function result variable '<result>' in function '<func>' shadows an argument name.
+```
+
+Example:
+
+```fortran
+function f(res) result(res)
+  integer, intent(in) :: res
+end function f
+```
+
+Example error:
+
+```
+File 'shadow.f90': Function result variable 'res' in function 'f' shadows an argument name.
+```
+
+### 6.13 Failed to resolve declared argument
+
+An internal safety check: if a symbol was explicitly declared but its type
+could not be applied (a parser regression guard), the following error is raised.
+
+```
+Failed to resolve declared argument '<name>' in procedure '<proc>'.
+```
+
+## 7) Scope note
 
 This parser is intentionally wrapper-focused and not a complete Fortran front
 end. Unsupported syntax should be surfaced through diagnostics/readiness output
