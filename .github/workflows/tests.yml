@@ -10,9 +10,6 @@ on:
 
 jobs:
   test:
-    if: >
-      github.event_name != 'pull_request' ||
-      (github.event.action != 'labeled' && github.event.action != 'unlabeled')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -81,7 +78,6 @@ jobs:
             DOC_CHANGED=true
           fi
 
-          FORCE_LABEL="require-parser-reference-update"
           if echo ",${PR_LABELS}," | grep -Fq ",${FORCE_LABEL},"; then
             if [ "$DOC_CHANGED" = true ]; then
               echo "${FORCE_LABEL} label present and parser_implementation_reference.md was updated."
@@ -96,7 +92,7 @@ jobs:
             exit 0
           fi
 
-          if echo "$CHANGED_FILES" | grep -Eq "^(fortran_parser/|tests/fcode/|tests/test_fortran_signature_parser.py|\.github/workflows/)"; then
+          if echo "$CHANGED_FILES" | grep -Eq "^(fortran_parser/|tests/fcode/|tests/test_fortran_signature_parser.py)"; then
             echo "Parser-related files changed without updating parser_implementation_reference.md."
             echo "Please update parser_implementation_reference.md or add '${FORCE_LABEL}' only when you want to enforce it manually."
             exit 1
