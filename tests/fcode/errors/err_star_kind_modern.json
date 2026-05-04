@@ -1,0 +1,7 @@
+{
+  "parser": "parse_fortran_signatures",
+  "error_type": "FortranParseError",
+  "message_contains": [
+    "Unsupported Fortran 77 star-kind declaration 'real*8' in modern source"
+  ]
+}
