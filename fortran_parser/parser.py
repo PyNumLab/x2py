@@ -490,6 +490,18 @@ def evaluate_signature_shapes(
     return out
 
 
+def _validate_no_duplicate_arg_names(args: list[FortranArgument], proc_name: str, filename: str | None) -> None:
+    seen: set[str] = set()
+    for arg in args:
+        key = arg.name.lower()
+        if key in seen:
+            raise FortranParseError(
+                f"Duplicate argument name '{arg.name}' in procedure '{proc_name}'.",
+                filename=filename,
+            )
+        seen.add(key)
+
+
 def _parse_header(line: str, module: str | None, in_interface: bool):
     m = _PROC_RE.match(line)
     if m:
@@ -793,8 +805,45 @@ def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
         arg.rank = meta["rank"]
 
 
+def _validate_all_args_declared(sig: FortranProcedureSignature, filename: str | None) -> None:
+    for arg in sig.arguments:
+        if arg.base_type == "unknown":
+            raise FortranParseError(
+                f"Argument '{arg.name}' in procedure '{sig.name}' has no type declaration (implicit none is active).",
+                filename=filename,
+            )
+    if sig.kind == "function" and sig.result and sig.result.base_type == "unknown":
+        raise FortranParseError(
+            f"Function result '{sig.result.name}' in procedure '{sig.name}' has no type declaration (implicit none is active).",
+            filename=filename,
+        )
+
+
+def _validate_function_result(sig: FortranProcedureSignature, filename: str | None) -> None:
+    if sig.result is None:
+        raise FortranParseError(
+            f"Function '{sig.name}' has no result variable.",
+            filename=filename,
+        )
+    result_name = sig.result.name.lower()
+    func_name = sig.name.lower()
+    for arg in sig.arguments:
+        if arg.name.lower() == result_name and result_name != func_name:
+            raise FortranParseError(
+                f"Function result variable '{sig.result.name}' in function '{sig.name}' shadows an argument name.",
+                filename=filename,
+            )
+
+
 def _validate_module_variables(module: FortranModule, filename: str | None) -> None:
+    seen: set[str] = set()
     for var in module.variables:
+        if var.name.lower() in seen:
+            raise FortranParseError(
+                f"Duplicate variable '{var.name}' in module '{module.name}'.",
+                filename=filename,
+            )
+        seen.add(var.name.lower())
         if var.base_type == "unknown":
             raise FortranParseError(
                 f"Unknown type for variable '{var.name}' in module '{module.name}'.",
@@ -803,10 +852,17 @@ def _validate_module_variables(module: FortranModule, filename: str | None) -> N
 
 
 def _validate_derived_type_fields(dtype: FortranDerivedType, filename: str | None) -> None:
-    for field in dtype.fields:
-        if field.base_type == "unknown":
+    seen: set[str] = set()
+    for f in dtype.fields:
+        if f.name.lower() in seen:
             raise FortranParseError(
-                f"Unknown type for field '{field.name}' in derived type '{dtype.name}'.",
+                f"Duplicate field '{f.name}' in derived type '{dtype.name}'.",
+                filename=filename,
+            )
+        seen.add(f.name.lower())
+        if f.base_type == "unknown":
+            raise FortranParseError(
+                f"Unknown type for field '{f.name}' in derived type '{dtype.name}'.",
                 filename=filename,
             )
 
@@ -817,10 +873,18 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
     local_params = state.get("local_params", {})
     legacy_local_params = state.get("legacy_local_params", set())
     implicit_typed_symbols = state.get("implicit_typed_symbols", {})
+    filename = state.get("filename")
+    implicit_none = state.get("implicit_none", False)
     sig.variables = {}
     sig.arguments = [symbols.get(a.name.lower(), a) for a in sig.arguments]
     if sig.result:
         sig.result = symbols.get(sig.result.name.lower(), sig.result)
+
+    _validate_no_duplicate_arg_names(sig.arguments, sig.name, filename)
+
+    if implicit_none:
+        _validate_all_args_declared(sig, filename)
+
     # Safety check: if an argument has been explicitly declared in this
     # procedure, it must not remain unknown after declaration parsing.
     # This catches declaration-application regressions (e.g. legacy
@@ -831,7 +895,7 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
         if arg.name.lower() in declared_symbols and arg.base_type == "unknown":
             raise FortranParseError(
                 f"Failed to resolve declared argument '{arg.name}' in procedure '{sig.name}'.",
-                filename=state.get("filename"),
+                filename=filename,
             )
     for arg in sig.arguments:
         if arg.kind:
@@ -858,13 +922,15 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
             is_parameter=True,
         )
     if sig.kind == "function" and sig.result and sig.result.base_type == "unknown":
-        if not state.get("implicit_none", False):
+        if not implicit_none:
             sig.result.base_type = _infer_implicit_base_type(sig.result.name)
         if sig.result.base_type == "unknown":
             raise FortranParseError(
                 f"Unknown datatype for function result '{sig.result.name}' in procedure '{sig.name}'.",
-                filename=state.get("filename"),
+                filename=filename,
             )
+    if sig.kind == "function":
+        _validate_function_result(sig, filename)
     sig.uses = dict(state["uses"])
     return replace(sig)
 
