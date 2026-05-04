@@ -3,13 +3,13 @@ from __future__ import annotations
 
 import re
 import ast
-from pathlib import Path
+from pathlib     import Path
 from dataclasses import replace
 
-from .lexer import preprocess_lines
-from .models import FortranArgument, FortranDerivedType, FortranInterface, FortranModule, FortranParseError, FortranProcedureSignature, FortranVariable
+from .lexer         import preprocess_lines
+from .models        import FortranArgument, FortranDerivedType, FortranInterface, FortranModule, FortranParseError, FortranProcedureSignature, FortranVariable
 from .type_resolver import extract_kind_from_type_spec
-from .utils import split_csv
+from .utils         import split_csv
 
 _TYPE_RE = re.compile(r"^(integer|real|complex|logical|character|double\s+precision)\s*(\([^)]*\))?\s*(.*)$", re.IGNORECASE)
 _CHAR_STAR_RE = re.compile(r"^character\s*\*\s*(?P<len>\([^)]*\)|\*|[A-Za-z_]\w*|\d+)\s*(?P<rest>.*)$", re.IGNORECASE)
