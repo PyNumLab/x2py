@@ -10,6 +10,12 @@ from .parser import assess_wrap_readiness, parse_fortran_modules, parse_fortran_
 
 
 def _to_dict_no_parent(obj):
+    """Convert dataclass-based parse models into JSON-serializable dicts.
+
+    The `FortranDerivedType.extends` field may contain a parent object reference.
+    To keep JSON acyclic and stable for goldens, we drop any `parent`-like
+    back-reference fields during serialization.
+    """
     if is_dataclass(obj):
         out = {}
         for f in fields(obj):
@@ -25,11 +31,13 @@ def _to_dict_no_parent(obj):
 
 
 def _collect_extensions(path: Path) -> list[Path]:
+    """Recursively collect Fortran source files under a directory."""
     exts = {".f", ".for", ".ftn", ".f90", ".f95", ".f03", ".f08"}
     return sorted(p for p in path.rglob("*") if p.suffix.lower() in exts)
 
 
 def _parse_paths(paths: list[str]) -> dict[str, dict]:
+    """Parse one or more files/directories into a per-file report structure."""
     out: dict[str, dict] = {}
     expanded: list[Path] = []
     for raw in paths:
@@ -51,6 +59,7 @@ def _parse_paths(paths: list[str]) -> dict[str, dict]:
 
 
 def _format_report(report: dict[str, dict]) -> str:
+    """Format the per-file parse report as a stable, human-readable tree."""
     lines: list[str] = []
     for fname, parsed in report.items():
         lines.append(f"File: {fname}")
@@ -89,6 +98,13 @@ def _format_report(report: dict[str, dict]) -> str:
 
 
 def main() -> int:
+    """CLI entrypoint for `python -m fortran_parser` and `fortran_parser.cli`.
+
+    The CLI supports:
+    - parsing one or more paths (files and/or directories)
+    - printing a human-readable report, or JSON
+    - optionally writing the JSON report to a file
+    """
     parser = argparse.ArgumentParser(description="Parse Fortran files and print a human-readable report or JSON.")
     parser.add_argument("paths", nargs="+", help="Fortran file(s) or directory path(s)")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
