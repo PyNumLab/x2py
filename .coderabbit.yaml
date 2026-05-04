@@ -1,0 +1,6 @@
+# .coderabbit.yaml
+reviews:
+  auto_review:
+    enabled: false
+    labels:
+      - "coderabbitai-review-this"
