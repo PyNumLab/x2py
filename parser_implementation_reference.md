@@ -295,7 +295,6 @@ A condensed history of important parser capabilities added over time (from
 
 ## 9) Pull-request maintenance policy for this reference
 
-
 requests should update `parser_implementation_reference.md` whenever parser
 behavior, parser coverage, parser fixtures/goldens, or parser validation flow
 meaningfully changes.
