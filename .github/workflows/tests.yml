@@ -38,7 +38,6 @@ jobs:
           PYTHONPATH: .
         run: pytest -q
 
-
   parser-reference-guard:
     if: >
       github.event_name == 'pull_request' &&
