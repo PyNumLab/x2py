@@ -5,6 +5,13 @@ from .utils import detect_source_form
 
 
 def strip_comment(line: str, form: str) -> str:
+    """Remove comments from a single source line.
+
+    - **Fixed form**: lines starting with ``c``, ``C``, ``*`` or ``!`` in column 1
+      are treated as full-line comments.
+    - **Free form**: ``!`` starts an inline comment *unless* it occurs inside a
+      quoted string literal (single or double quotes).
+    """
     if form == "fixed" and line and line[0] in ("c", "C", "*", "!"):
         return ""
     in_string = False
@@ -27,6 +34,21 @@ def strip_comment(line: str, form: str) -> str:
 
 
 def preprocess_lines(code: str, filename: str | None = None) -> list[tuple[str, int, str]]:
+    """Preprocess Fortran source into parse-ready logical lines.
+
+    This is the lexer/preprocessing stage used by all parsing entrypoints.
+    It performs:
+
+    - **Source-form detection** (fixed vs free) via `detect_source_form`.
+    - **Comment stripping** (including fixed-form comment-line rules).
+    - **Continuation folding**:
+      - fixed-form: continuation in column 6 (1-based)
+      - free-form: trailing ``&`` and optional leading ``&`` on the next line
+
+    Returns a list of ``(logical_line, original_line_number, original_source_line)``
+    tuples so downstream parsers can raise `FortranParseError` with accurate
+    location context even after folding.
+    """
     form = detect_source_form(code, filename)
     raw_lines = code.splitlines()
     raw = [(strip_comment(l.rstrip("\n"), form), i + 1, l.rstrip("\n")) for i, l in enumerate(raw_lines)]

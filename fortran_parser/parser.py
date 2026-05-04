@@ -85,6 +85,16 @@ def _parse_type_prefix(prefix: str) -> tuple[str, str | None] | None:
 
 
 def _enforce_source_form_compatibility(line: str, filename: str | None, lineno: int | None = None, source_line: str | None = None) -> None:
+    """Raise `FortranParseError` if a file's dialect/source-form is violated.
+
+    This guard enforces a strict contract used throughout the parser:
+
+    - Files recognized as **Fortran 77** (by suffix) must not contain modern-only
+      constructs such as `module`, `contains`, or `interface`.
+
+    The goal is to fail fast on mixed-standard inputs that would otherwise
+    produce ambiguous metadata.
+    """
     if not filename or Path(filename).suffix.lower() != ".f77":
         return
     forbidden = (
@@ -104,6 +114,22 @@ def _enforce_source_form_compatibility(line: str, filename: str | None, lineno: 
 
 
 def parse_fortran_signatures(code: str, filename: str | None = None) -> list[FortranProcedureSignature]:
+    """Parse procedure signatures from a single Fortran source string.
+
+    Produces `FortranProcedureSignature` objects for top-level procedures and
+    module-contained procedures. Internal procedures in a `contains` block are
+    intentionally ignored for the host routine signature.
+
+    Notes
+    -----
+    - The input is first normalized by `preprocess_lines` (comment stripping and
+      continuation folding).
+    - Declarations are only applied while the parser is in the specification
+      part; once an executable statement start is detected, later lines are
+      ignored for declaration purposes.
+    - Procedures declared inside `interface ... end interface` are included and
+      flagged with `in_interface=True`.
+    """
     lines = preprocess_lines(code, filename)
     signatures: list[FortranProcedureSignature] = []
     declared_procedures: dict[tuple[str | None, bool], set[str]] = {}
@@ -195,6 +221,13 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
 
 
 def parse_fortran_project_signatures(files: dict[str, str]) -> list[FortranProcedureSignature]:
+    """Parse signatures for multiple files and resolve cross-file kinds/shapes.
+
+    This is a two-pass routine:
+    - pass 1: parse each file and collect module-scope `parameter` constants
+    - pass 2: for each signature, resolve kind/shape expressions using imported
+      module parameters (honoring `use, only:` restrictions when present)
+    """
     module_params: dict[str, dict[str, str]] = {}
     parsed_files: list[tuple[str, list[FortranProcedureSignature]]] = []
     for fname, code in files.items():
@@ -212,11 +245,19 @@ def parse_fortran_project_signatures(files: dict[str, str]) -> list[FortranProce
 
 
 def parse_fortran_file(path: str) -> list[FortranProcedureSignature]:
+    """Convenience wrapper to parse signatures from a file path."""
     with open(path, "r", encoding="utf-8") as f:
         return parse_fortran_signatures(f.read(), filename=path)
 
 
 def parse_fortran_types(code: str, filename: str | None = None) -> list[FortranDerivedType]:
+    """Parse `type ... end type` derived type blocks from a source string.
+
+    Captures:
+    - fields (including rank/shape, pointer/allocatable)
+    - `extends(parent)` relationships (linked to same-file parent objects)
+    - type-bound procedures and generic bindings inside the type `contains` part
+    """
     lines = preprocess_lines(code, filename)
     current_module = None
     current_type: FortranDerivedType | None = None
@@ -293,6 +334,14 @@ def parse_fortran_types(code: str, filename: str | None = None) -> list[FortranD
 
 
 def parse_fortran_modules(code: str, filename: str | None = None) -> list[FortranModule]:
+    """Parse module blocks and attach child entities (procedures/types/interfaces).
+
+    The module object includes:
+    - `uses` map from `use` statements in the module specification part
+    - module variables declared in the specification part
+    - procedures/types/interfaces discovered in the same source and associated
+      back to the owning module
+    """
     lines = preprocess_lines(code, filename)
     modules: list[FortranModule] = []
     current: FortranModule | None = None
@@ -345,6 +394,7 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
 
 
 def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[FortranInterface]:
+    """Parse `interface ... end interface` blocks and contained procedures."""
     lines = preprocess_lines(code, filename)
     current_module = None
     current_interface: FortranInterface | None = None
@@ -398,6 +448,14 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
 
 
 def assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
+    """Heuristically assess whether a source is "wrap-ready".
+
+    This is a diagnostic API: it does not try to be a complete static analysis,
+    but instead surfaces common wrapper blockers:
+    - known unsupported constructs (pattern-based scan)
+    - signature arguments that remain undeclared (`base_type == "unknown"`)
+    - basic counts (n_signatures, n_types, n_modules)
+    """
     lines = preprocess_lines(code, filename)
     signatures = parse_fortran_signatures(code, filename)
     types = parse_fortran_types(code, filename)
@@ -426,6 +484,15 @@ def assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
 
 
 def parse_fortran_namespace(root: str | Path, extensions: tuple[str, ...] = (".f", ".for", ".ftn", ".f90", ".f95", ".f03", ".f08")) -> dict:
+    """Parse a directory tree as a Fortran namespace with dependency ordering.
+
+    The namespace parse:
+    - discovers sources under `root` with the provided suffixes
+    - builds a file dependency graph from module `use` statements
+    - topologically orders files (best-effort; cycles are appended deterministically)
+    - parses signatures with cross-file kind/shape resolution
+    - returns aggregate modules/types/signatures plus dependency metadata
+    """
     root_path = Path(root)
     files = sorted([p for p in root_path.rglob("*") if p.suffix.lower() in extensions])
     sources = {str(p): p.read_text(encoding="utf-8") for p in files}
@@ -470,6 +537,11 @@ def parse_fortran_namespace(root: str | Path, extensions: tuple[str, ...] = (".f
 
 
 def collect_signature_shape_symbols(sig: FortranProcedureSignature) -> set[str]:
+    """Collect identifier tokens referenced by argument shape expressions.
+
+    Useful for callers that want to provide a dictionary of concrete sizes to
+    `evaluate_signature_shapes`.
+    """
     symbols: set[str] = set()
     for arg in sig.arguments:
         for dim in arg.shape:
@@ -481,6 +553,12 @@ def evaluate_signature_shapes(
     sig: FortranProcedureSignature,
     symbol_values: dict[str, int | str],
 ) -> FortranProcedureSignature:
+    """Return a copy of `sig` with shapes rewritten using `symbol_values`.
+
+    This does not mutate the input signature. Values are coerced to strings and
+    applied case-insensitively. This is intended for consumers that know array
+    extents at wrapper-generation time and want concrete dimension expressions.
+    """
     normalized = {k.lower(): str(v) for k, v in symbol_values.items()}
     out = replace(sig)
     out.arguments = [replace(a) for a in sig.arguments]
@@ -1084,6 +1162,21 @@ def _is_evaluable_symbol(name: str, symbols: dict[str, str]) -> bool:
     return _safe_eval_int_expr(resolved) is not None
 
 def _resolve_compile_time_expression(expr: str, symbols: dict[str, str], prefer_symbolic: bool = True) -> str:
+    """Resolve a kind/shape expression using a dictionary of compile-time symbols.
+
+    The resolver performs repeated, whole-token substitutions (using word
+    boundaries) and then tries to fold the result to an integer when safe.
+
+    Parameters
+    ----------
+    expr:
+        Expression text to resolve (e.g. ``"dp"`` or ``"n+1"`` or ``"1:n"``).
+    symbols:
+        Mapping of symbol -> expression text. Resolution is case-insensitive.
+    prefer_symbolic:
+        If True, keep non-evaluable symbols in symbolic form rather than
+        inlining their definitions. This improves readability for wrappers.
+    """
     text = expr.strip()
     if not text:
         return expr
@@ -1111,6 +1204,12 @@ def _resolve_compile_time_expression(expr: str, symbols: dict[str, str], prefer_
 
 
 def _safe_eval_int_expr(expr: str) -> int | None:
+    """Safely evaluate a restricted integer-only Python expression.
+
+    Used to fold simple arithmetic after symbol substitution. Only numeric
+    constants and basic arithmetic operators are allowed. Any other syntax
+    returns None rather than raising.
+    """
     try:
         node = ast.parse(expr, mode="eval")
     except SyntaxError:
