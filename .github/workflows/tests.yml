@@ -56,6 +56,20 @@ jobs:
           echo "$CHANGED_FILES"
           echo "PR labels: ${PR_LABELS:-<none>}"
 
+          FORCE_LABEL="require-parser-reference-update"
+          IGNORE_LABEL="ignore-parser-reference-guard"
+
+          if echo ",${PR_LABELS}," | grep -Fq ",${FORCE_LABEL}," && \
+             echo ",${PR_LABELS}," | grep -Fq ",${IGNORE_LABEL},"; then
+            echo "Conflicting labels present: ${FORCE_LABEL} and ${IGNORE_LABEL}. Remove one."
+            exit 1
+          fi
+
+          if echo ",${PR_LABELS}," | grep -Fq ",${IGNORE_LABEL},"; then
+            echo "${IGNORE_LABEL} label present; skipping parser_implementation_reference.md guard."
+            exit 0
+          fi
+
           DOC_CHANGED=false
           if echo "$CHANGED_FILES" | grep -Fxq "parser_implementation_reference.md"; then
             DOC_CHANGED=true

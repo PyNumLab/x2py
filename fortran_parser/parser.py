@@ -602,6 +602,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         return None
     args = [FortranArgument(name=a, procedure=m.group("name")) for a in split_csv(m.group("args"))]
     result_match = _RESULT_RE.search(m.group("tail"))
+    explicit_result = result_match is not None
     result_name = result_match.group("name") if result_match else m.group("name")
     result = FortranArgument(name=result_name, procedure=m.group("name"))
 
@@ -616,6 +617,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         "signature": FortranProcedureSignature(name=m.group("name"), kind="function", module=module, arguments=args, result=result, attributes=_attrs(m.group("prefix"), m.group("tail")), in_interface=in_interface),
         "symbols": {**{a.name.lower(): a for a in args}, result_name.lower(): result},
         "typed_symbols": {result_name.lower()} if parsed_prefix else set(),
+        "explicit_result": explicit_result,
         "uses": {},
         "in_contains": False,
         "local_params": {},
@@ -883,7 +885,7 @@ def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
         arg.rank = meta["rank"]
 
 
-def _validate_all_args_declared(sig: FortranProcedureSignature, filename: str | None) -> None:
+def _validate_all_args_declared(sig: FortranProcedureSignature, filename: str | None, *, explicit_result: bool) -> None:
     for arg in sig.arguments:
         if arg.base_type == "unknown":
             raise FortranParseError(
@@ -891,6 +893,11 @@ def _validate_all_args_declared(sig: FortranProcedureSignature, filename: str | 
                 filename=filename,
             )
     if sig.kind == "function" and sig.result and sig.result.base_type == "unknown":
+        if explicit_result:
+            raise FortranParseError(
+                f"Unknown datatype for function result '{sig.result.name}' in procedure '{sig.name}'.",
+                filename=filename,
+            )
         raise FortranParseError(
             f"Function result '{sig.result.name}' in procedure '{sig.name}' has no type declaration (implicit none is active).",
             filename=filename,
@@ -961,7 +968,7 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
     _validate_no_duplicate_arg_names(sig.arguments, sig.name, filename)
 
     if implicit_none:
-        _validate_all_args_declared(sig, filename)
+        _validate_all_args_declared(sig, filename, explicit_result=bool(state.get("explicit_result", False)))
 
     # Safety check: if an argument has been explicitly declared in this
     # procedure, it must not remain unknown after declaration parsing.
