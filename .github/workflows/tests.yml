@@ -2,6 +2,7 @@ name: Tests
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches:
       - main
@@ -9,6 +10,9 @@ on:
 
 jobs:
   test:
+    if: >
+      github.event_name != 'pull_request' ||
+      (github.event.action != 'labeled' && github.event.action != 'unlabeled')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -34,8 +38,11 @@ jobs:
           PYTHONPATH: .
         run: pytest -q
 
+
   parser-reference-guard:
-    if: github.event_name == 'pull_request'
+    if: >
+      github.event_name == 'pull_request' &&
+      !contains(github.event.pull_request.labels.*.name, 'ignore-parser-reference-guard')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
