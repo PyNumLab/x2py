@@ -5,6 +5,27 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
+class FortranParseError(ValueError):
+    def __init__(self, message: str, filename: str | None = None, line_number: int | None = None, source_line: str | None = None):
+        self.filename = filename
+        self.line_number = line_number
+        self.source_line = source_line
+        parts = []
+        if filename:
+            parts.append(f"File '{filename}'")
+        if line_number is not None:
+            parts.append(f"line {line_number}")
+        location = ", ".join(parts)
+        if location:
+            full_message = f"{location}: {message}"
+        else:
+            full_message = message
+        if source_line is not None:
+            full_message += f"\n    {source_line.strip()}"
+        super().__init__(full_message)
+        self.base_message = message
+
+
 @dataclass
 class FortranVariable:
     name: str

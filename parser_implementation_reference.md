@@ -133,7 +133,7 @@ another source language.
 
 Primary regression command used now:
 
-- `PYTHONPATH=. pytest -q tests/test_fortran_signature_parser.py tests/test_fortran_fixture_suite.py tests/test_cli.py`
+- `PYTHONPATH=. pytest -q tests/test_fortran_signature_parser.py tests/test_fortran_fixture_suite.py tests/test_cli.py tests/test_error_handling.py`
 
 This single command runs all parser/unit checks, fixture/golden checks,
 large corpus parse checks (BLAS/LAPACK fixture parsing), and CLI checks.
@@ -184,16 +184,25 @@ Validates command-line behavior for:
 - JSON file writing
 - module/free-procedure name collision handling
 
+### 4.6 Error handling tests (`tests/test_error_handling.py`)
+
+Dedicated tests for the error handling system:
+- `FortranParseError` attribute presence (`filename`, `line_number`, `source_line`, `base_message`)
+- Error message formatting (location prefix, source line context)
+- Error raised for all error categories in all scopes: procedures, modules, derived types, interfaces
+- Line number accuracy
+- `FortranParseError` is a subclass of `ValueError` (backward compatibility)
+
 ## 5) Repository/file structure reference
 
 - `fortran_parser/lexer.py`
-  - line preprocessing, source-form handling, continuation/comment normalization.
+  - line preprocessing, source-form handling, continuation/comment normalization; returns tuples of `(preprocessed_line, original_line_number, original_source_line)` for downstream error reporting.
 - `fortran_parser/parser.py`
   - main grammar subset parser and orchestration functions.
 - `fortran_parser/type_resolver.py`
   - kind extraction and symbol/expression helpers.
 - `fortran_parser/models.py`
-  - parser data structures / model schema.
+  - parser data structures / model schema; includes `FortranParseError` exception class.
 - `fortran_parser/utils.py`
   - shared text utilities (e.g., CSV-like splitting used by declarations).
 - `fortran_parser/cli.py`
@@ -202,6 +211,8 @@ Validates command-line behavior for:
   - `python -m fortran_parser` entry point.
 - `tests/test_fortran_signature_parser.py`
   - focused behavior tests per feature.
+- `tests/test_error_handling.py`
+  - dedicated error handling and `FortranParseError` behavior tests.
 - `tests/test_fortran_fixture_suite.py`
   - fixture-vs-golden regression checks.
 - `tests/test_cli.py`
@@ -316,12 +327,22 @@ unless `parser_implementation_reference.md` is updated in the PR diff.
 When updating parser behavior, keep this fail-fast contract aligned with tests:
 
 - **Version/source-form mismatch (hard error):**
-  - For files detected as Fortran 77 (`.f`, `.for`, `.ftn`, `.f77`), modern-only syntax raises `ValueError` (for example: `::`, `intent(...)`, `module`, `contains`, `interface`, `use`, `class(...)`).
-  - For files detected as modern (`.f90`, `.f95`, `.f03`, `.f08`), legacy star-kind declarations (e.g. `real*8`) raise `ValueError`.
+  - For files detected as Fortran 77 (`.f`, `.for`, `.ftn`, `.f77`), modern-only syntax raises `FortranParseError` (for example: `::`, `intent(...)`, `module`, `contains`, `interface`, `use`, `class(...)`).
+  - For files detected as modern (`.f90`, `.f95`, `.f03`, `.f08`), legacy star-kind declarations (e.g. `real*8`) raise `FortranParseError`.
 - **Unknown datatype declaration (hard error):**
-  - Procedure declarations, derived-type fields, and module-variable declarations raise `ValueError` when the datatype declaration is unknown/unsupported instead of silently skipping.
+  - Procedure declarations, derived-type fields, and module-variable declarations raise `FortranParseError` when the datatype declaration is unknown/unsupported instead of silently skipping.
+- **Post-scope validation (hard error):**
+  - After parsing each module, derived type, or procedure scope, a validation pass checks that all declared variables/fields/arguments have a known (non-`"unknown"`) base type; failures raise `FortranParseError`.
 - **Design intent:**
   - The parser is intentionally strict at parse time to avoid mixed-standard inputs producing ambiguous metadata.
   - "Unsupported but recognized" constructs are still surfaced via readiness diagnostics where appropriate; truly invalid-for-version or unknown datatype syntax should crash early.
+
+`FortranParseError` is a subclass of `ValueError` and carries structured location metadata:
+- `filename` — source file path (if provided)
+- `line_number` — 1-based line number in the original source where the error was detected
+- `source_line` — the original (pre-preprocessed) source line text
+- `base_message` — the error message without location prefix
+
+The formatted `str()` of `FortranParseError` prepends location context and appends the source line for human-readable output.
 
 Implementation note: enforce these checks close to lexical declaration handling (source-form check + declaration parse) so behavior is consistent across signatures, types, modules, and interfaces.
