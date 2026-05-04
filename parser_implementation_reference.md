@@ -292,7 +292,6 @@ A condensed history of important parser capabilities added over time (from
 - Refined CLI tree output (omit empty/internal sections; stable module
   procedure grouping).
 - Added tests/fixtures for same-name reuse across different scopes.
-- Added section-header comments to `parser.py` (readability refactor; no logic change).
 
 ## 9) Pull-request maintenance policy for this reference
 
