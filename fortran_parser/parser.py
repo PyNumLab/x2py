@@ -36,6 +36,9 @@ _UNSUPPORTED_PATTERNS = (
     re.compile(r"\btype\s*\(\s*c_ptr\s*\)", re.IGNORECASE),
 )
 
+# -----------------------------------------------------------------------------
+# Public entrypoints
+# -----------------------------------------------------------------------------
 
 def _source_form(filename: str | None) -> str:
     if not filename:
@@ -535,6 +538,9 @@ def parse_fortran_namespace(root: str | Path, extensions: tuple[str, ...] = (".f
         "signatures": signatures,
     }
 
+# -----------------------------------------------------------------------------
+# Helper APIs (used by tests / wrapper generators)
+# -----------------------------------------------------------------------------
 
 def collect_signature_shape_symbols(sig: FortranProcedureSignature) -> set[str]:
     """Collect identifier tokens referenced by argument shape expressions.
@@ -567,6 +573,9 @@ def evaluate_signature_shapes(
             arg.shape = [_resolve_compile_time_expression(dim, normalized) for dim in arg.shape]
     return out
 
+# -----------------------------------------------------------------------------
+# Procedure parsing helpers
+# -----------------------------------------------------------------------------
 
 def _validate_no_duplicate_arg_names(args: list[FortranArgument], proc_name: str, filename: str | None) -> None:
     seen: set[str] = set()
@@ -638,6 +647,10 @@ def _attrs(prefix: str, tail: str) -> list[str]:
 
 def _parse_declaration(line: str, proc_state: dict, filename: str | None = None, lineno: int | None = None, source_line: str | None = None) -> None:
     stripped = line.strip()
+    # This parser is a subset parser focused on wrapper-relevant metadata.
+    # Many Fortran statements are intentionally ignored here because they do not
+    # affect signature typing/shapes (or because we only support them at the
+    # module/project resolution layer).
     if re.match(r"^implicit\b", stripped, flags=re.IGNORECASE):
         if re.match(r"^implicit\s+none\b", stripped, flags=re.IGNORECASE):
             proc_state["implicit_none"] = True
@@ -884,6 +897,10 @@ def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
         arg.shape = list(meta["shape"])
         arg.rank = meta["rank"]
 
+# -----------------------------------------------------------------------------
+# Validation and finalization
+# -----------------------------------------------------------------------------
+
 
 def _validate_all_args_declared(sig: FortranProcedureSignature, filename: str | None, *, explicit_result: bool) -> None:
     for arg in sig.arguments:
@@ -1061,6 +1078,10 @@ def _collect_module_parameters(code: str, filename: str | None) -> dict[str, dic
             k, v = [x.strip() for x in assign.split("=", 1)]
             output[current_module][k.lower()] = v
     return output
+
+# -----------------------------------------------------------------------------
+# Cross-file resolution helpers
+# -----------------------------------------------------------------------------
 
 
 def _resolve_signature_kinds(sig: FortranProcedureSignature, module_params: dict[str, dict[str, str]]) -> None:
@@ -1262,6 +1283,10 @@ def _safe_eval_int_expr(expr: str) -> int | None:
     if isinstance(val, float) and val.is_integer():
         return int(val)
     return val if isinstance(val, int) else None
+
+# -----------------------------------------------------------------------------
+# Derived type and module declaration parsing
+# -----------------------------------------------------------------------------
 
 
 def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str | None, lineno: int | None = None, source_line: str | None = None) -> None:
