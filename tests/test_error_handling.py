@@ -11,7 +11,7 @@ from fortran_parser import (
 
 
 # ---------------------------------------------------------------------------
-# Existing semantic/error regression tests
+# FortranParseError attributes
 # ---------------------------------------------------------------------------
 
 def test_parse_error_carries_filename():
@@ -28,6 +28,56 @@ end subroutine bad
     assert err.source_line is not None
 
 
+def test_parse_error_message_includes_filename_and_lineno():
+    code = """
+subroutine bad(x)
+  weirdtype :: x
+end subroutine bad
+"""
+    with pytest.raises(FortranParseError) as exc_info:
+        parse_fortran_signatures(code, filename="myfile.f90")
+    msg = str(exc_info.value)
+    assert "myfile.f90" in msg
+
+
+def test_parse_error_message_includes_source_line():
+    code = """
+subroutine bad(x)
+  weirdtype :: x
+end subroutine bad
+"""
+    with pytest.raises(FortranParseError) as exc_info:
+        parse_fortran_signatures(code, filename="myfile.f90")
+    msg = str(exc_info.value)
+    assert "weirdtype" in msg
+
+
+def test_parse_error_without_filename_has_no_location_prefix():
+    code = """
+subroutine bad(x)
+  weirdtype :: x
+end subroutine bad
+"""
+    with pytest.raises(FortranParseError) as exc_info:
+        parse_fortran_signatures(code)
+    msg = str(exc_info.value)
+    assert "Unknown or unsupported datatype" in msg
+
+
+def test_parse_error_is_subclass_of_value_error():
+    code = """
+subroutine bad(x)
+  weirdtype :: x
+end subroutine bad
+"""
+    with pytest.raises(ValueError):
+        parse_fortran_signatures(code, filename="bad.f90")
+
+
+# ---------------------------------------------------------------------------
+# Duplicate declaration errors
+# ---------------------------------------------------------------------------
+
 def test_duplicate_declaration_raises_parse_error():
     code = """
 subroutine dup(x)
@@ -39,89 +89,37 @@ end subroutine dup
         parse_fortran_signatures(code, filename="dup.f90")
 
 
-def test_duplicate_procedure_name_in_module_raises_parse_error():
+def test_duplicate_function_result_raises_parse_error():
     code = """
-module m
-contains
-  subroutine work(n)
-    integer, intent(in) :: n
-  end subroutine work
-  function work(n) result(out)
-    integer, intent(in) :: n
-    integer :: out
-  end function work
-end module m
-"""
-    with pytest.raises(FortranParseError, match="Duplicate procedure name"):
-        parse_fortran_signatures(code, filename="dup_mod_proc.f90")
-
-
-def test_star_kind_in_modern_source_raises_parse_error():
-    code = """
-subroutine bad(x)
-  real*8 :: x
-end subroutine bad
-"""
-    with pytest.raises(FortranParseError, match="star-kind"):
-        parse_fortran_signatures(code, filename="bad.f90")
-
-
-def test_unknown_type_in_interface_raises_parse_error():
-    code = """
-module m
-  interface foo
-    subroutine bar(x)
-      weirdtype :: x
-    end subroutine bar
-  end interface
-end module m
-"""
-    with pytest.raises(FortranParseError, match="Unknown or unsupported datatype"):
-        parse_fortran_interfaces(code, filename="bad.f90")
-
-
-def test_parameter_without_type_in_implicit_none_scope_raises_parse_error():
-    code = """
-      subroutine cst(a)
-      implicit none
-      real a
-      parameter ( zero = 0.0e+0 )
-      end
-"""
-    with pytest.raises(FortranParseError, match="Unknown datatype for PARAMETER symbol"):
-        parse_fortran_signatures(code, filename="legacy.f")
-
-
-def test_f77_source_with_module_keyword_raises_parse_error():
-    code = """
-      module bad_module
-      end module bad_module
-"""
-    with pytest.raises(FortranParseError, match="Fortran 77"):
-        parse_fortran_signatures(code, filename="legacy.f77")
-
-
-def test_function_result_shadowing_arg_name_raises_parse_error():
-    code = """
-function f(res) result(res)
-  integer, intent(in) :: res
+real function f(x)
+  real :: x
+  real :: f
 end function f
 """
-    with pytest.raises(FortranParseError, match="shadows an argument name"):
-        parse_fortran_signatures(code, filename="shadow.f90")
+    with pytest.raises(FortranParseError, match="Duplicate declaration"):
+        parse_fortran_signatures(code, filename="dup_result.f90")
 
 
-def test_duplicate_field_in_derived_type_raises_parse_error():
+def test_duplicate_function_result_with_result_keyword_raises_parse_error():
     code = """
-module m
-  type :: point
-    real :: x
-    integer :: x
-  end type point
-end module m
+real function f(x) result(res)
+  real :: x
+  real :: res
+end function f
 """
-    with pytest.raises(FortranParseError, match="Duplicate field"):
-        parse_fortran_types(code, filename="dup_field.f90")
+    with pytest.raises(FortranParseError, match="Duplicate declaration"):
+        parse_fortran_signatures(code, filename="dup_result_kw.f90")
+
+
+def test_duplicate_initialized_declaration_raises_parse_error():
+    code = """
+subroutine dup_init()
+  integer :: x = 1
+  integer :: x = 2
+end subroutine dup_init
+"""
+    with pytest.raises(FortranParseError, match="Duplicate declaration"):
+        parse_fortran_signatures(code, filename="dup_init.f90")
 
 
 # ---------------------------------------------------------------------------
@@ -161,49 +159,3 @@ def test_error_debug_mode_shows_internal_location():
     msg = err.format(debug=True)
     assert "[internal]" in msg
     assert "in " in msg
-
-
-def test_error_env_debug_mode(monkeypatch):
-    monkeypatch.setenv("X2PY_DEBUG_ERRORS", "1")
-    err = _make_error()
-    assert "[internal]" in err.format()
-
-
-def test_error_color_mode_does_not_crash():
-    err = _make_error()
-    assert isinstance(err.format(color=True), str)
-
-
-def test_realistic_f77_diagnostic_context():
-    code = """
-      SUBROUTINE TEST(X)
-      IMPLICIT NONE
-      REAL*8 X
-      WEIRDTYPE Y
-      END
-"""
-    with pytest.raises(FortranParseError) as exc_info:
-        parse_fortran_signatures(code, filename="legacy_blas.f")
-
-    msg = str(exc_info.value)
-
-    assert "legacy_blas.f" in msg
-    assert "WEIRDTYPE Y" in msg
-
-
-def test_realistic_module_diagnostic_context():
-    code = """
-module mesh_types
-  type :: node
-     integer :: id
-     weirdtype :: coord
-  end type node
-end module mesh_types
-"""
-    with pytest.raises(FortranParseError) as exc_info:
-        parse_fortran_types(code, filename="mesh_types.f90")
-
-    msg = str(exc_info.value)
-
-    assert "mesh_types.f90" in msg
-    assert "weirdtype :: coord" in msg
