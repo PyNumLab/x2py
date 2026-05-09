@@ -22,7 +22,7 @@ The system should:
 * avoid compiler dependence whenever possible
 * avoid forcing users to modify native code
 * avoid the limitations of SWIG/f2py-style systems
-* support wrapping libraries even when source code is unavailable
+* support wrapping libraries even when the source code is unavailable
 
 The project is not merely a wrapper generator.
 
@@ -31,6 +31,7 @@ It is a:
 * semantic wrapper compiler
 * interoperability runtime
 * runtime coercion engine
+* runtime validation engine
 * language-independent semantic API system
 
 ---
@@ -151,6 +152,7 @@ It defines:
 * semantic types
 * allowed coercions
 * constraints
+* contracts
 * ownership semantics
 * API remapping
 
@@ -193,7 +195,6 @@ The semantic interface may look like:
 class SparseMatrix:
 
     @bind("create_sparse")
-    @constructor
     def __init__(self, nrows: int, ncols: int): ...
 
     @bind("sparse_multiply")
@@ -255,54 +256,6 @@ Examples:
 * `ComplexVector`
 
 Semantic types are language-independent.
-
----
-
-# Important Distinction: API vs ABI
-
-## API
-
-API describes:
-
-* functions
-* methods
-* semantic behavior
-* user-facing operations
-
-Example:
-
-```python
-def solve(A)
-```
-
----
-
-## ABI
-
-ABI describes:
-
-* symbol names
-* calling conventions
-* memory layout
-* array descriptors
-* stack/register usage
-* compiler-specific representations
-
-Example:
-
-```text
-__solver_mod_MOD_solve
-```
-
-The framework explicitly separates:
-
-```text
-Semantic API
-    ≠
-Native ABI
-```
-
-This is a core architectural principle.
 
 ---
 
@@ -385,6 +338,8 @@ Examples:
 * `Aligned(64)`
 
 ---
+# Contracts
+---
 
 # Important Concept Separation
 
@@ -403,7 +358,7 @@ This separation is fundamental.
 
 # Runtime Coercion Registry
 
-Allowed coercions declared in `.pyi` are implemented through a runtime coercion registry.
+Allowed coercions declared in `.pyi` are implemented through a runtime coercion registry in the equivalent .py file.
 
 Example:
 
