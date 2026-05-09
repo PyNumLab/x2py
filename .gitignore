@@ -16,3 +16,5 @@ dist/*
 *.gv
 *.exe
 *.lock
+# Added by code-review-graph
+.code-review-graph/
