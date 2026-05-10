@@ -3,5 +3,10 @@
   "error_type": "FortranParseError",
   "message_contains": [
     "Function result variable 'res' in function 'f' shadows an argument name."
+  ],
+  "diagnostic_contains": [
+    "error[PARSE001]",
+    "Function result variable 'res' in function 'f' shadows an argument name.",
+    ""
   ]
 }

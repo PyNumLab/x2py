@@ -3,5 +3,10 @@
   "error_type": "FortranParseError",
   "message_contains": [
     "Duplicate PARAMETER declaration of symbol 'n' in procedure 'dup_param'."
+  ],
+  "diagnostic_contains": [
+    "error[PARSE001]",
+    "Duplicate PARAMETER declaration of symbol 'n' in procedure 'dup_param'.",
+    "integer, parameter :: n = 10"
   ]
 }

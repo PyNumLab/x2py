@@ -3,5 +3,10 @@
   "error_type": "FortranParseError",
   "message_contains": [
     "Duplicate field 'x' in derived type 'point'."
+  ],
+  "diagnostic_contains": [
+    "error[PARSE001]",
+    "Duplicate field 'x' in derived type 'point'.",
+    ""
   ]
 }

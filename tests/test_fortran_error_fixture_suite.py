@@ -30,11 +30,16 @@ def _load_expected_error(expected_path: Path) -> dict:
         return json.load(fh)
 
 
-def _dump_expected_error(path: Path, error_type: str, message: str, parser: str) -> None:
+def _dump_expected_error(path: Path, error_type: str, exc: FortranParseError, parser: str) -> None:
     payload = {
         "parser": parser,
         "error_type": error_type,
-        "message_contains": [message],
+        "message_contains": [exc.base_message],
+        "diagnostic_contains": [
+            f"error[{exc.code}]",
+            exc.base_message,
+            exc.source_line.strip() if exc.source_line else "",
+        ],
     }
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
@@ -55,7 +60,7 @@ def _run_error_fixture(fixture: Path, *, filename_for_parser: str, expected_path
                 f"Expected FortranParseError from {fixture.name} but no error was raised"
             )
         except FortranParseError as exc:
-            _dump_expected_error(expected_path, "FortranParseError", exc.base_message, parser_name)
+            _dump_expected_error(expected_path, "FortranParseError", exc, parser_name)
         return
 
     expected = _load_expected_error(expected_path)
@@ -63,6 +68,7 @@ def _run_error_fixture(fixture: Path, *, filename_for_parser: str, expected_path
     parser_fn = _PARSER_MAP[parser_name]
     error_type = expected["error_type"]
     message_contains = expected["message_contains"]
+    diagnostic_contains = expected.get("diagnostic_contains", [])
 
     assert error_type == "FortranParseError", f"Unknown error_type '{error_type}' in {expected_path.name}"
 
@@ -74,6 +80,15 @@ def _run_error_fixture(fixture: Path, *, filename_for_parser: str, expected_path
         assert fragment in err_msg, (
             f"Expected fragment {fragment!r} not found in error message for {fixture.name}.\n"
             f"Got: {err_msg!r}"
+        )
+
+    diagnostic = exc_info.value.format_diagnostic(color=False)
+    for fragment in diagnostic_contains:
+        if not fragment:
+            continue
+        assert fragment in diagnostic, (
+            f"Expected diagnostic fragment {fragment!r} not found for {fixture.name}.\n"
+            f"Got: {diagnostic!r}"
         )
 
 

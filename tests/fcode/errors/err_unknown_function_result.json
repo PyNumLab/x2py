@@ -3,5 +3,10 @@
   "error_type": "FortranParseError",
   "message_contains": [
     "Unknown datatype for function result 'res' in procedure 'f'."
+  ],
+  "diagnostic_contains": [
+    "error[PARSE001]",
+    "Unknown datatype for function result 'res' in procedure 'f'.",
+    ""
   ]
 }
