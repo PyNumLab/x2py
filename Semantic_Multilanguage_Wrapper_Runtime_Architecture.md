@@ -214,8 +214,8 @@ class SparseMatrix:
 
     @bind("sparse_multiply")
     @contract(
-        pre=["x.shape == (self.ncols,)", "x.dtype == float64"],
-        post=["result.shape == (self.nrows,)", "result.dtype == float64"],
+        pre=lambda c: c.args.x.shape == (c.self.ncols,) and c.args.x.dtype == "float64",
+        post=lambda c: c.result.shape == (c.self.nrows,) and c.result.dtype == "float64",
     )
     def multiply(
         self,
@@ -441,16 +441,16 @@ Example:
 ```python
 @contract(
     pre=[
-        "A.shape == (N, N)",
-        "b.shape == (N,)",
-        "A.device == b.device == 'cpu'",
+        lambda ctx: ctx.args.A.shape == (ctx.args.N, ctx.args.N),
+        lambda ctx: ctx.args.b.shape == (ctx.args.N,),
+        lambda ctx: ctx.args.A.device == ctx.args.b.device == 'cpu',
     ],
     post=[
-        "result.shape == (N,)",
-        "result.dtype == float64",
+        lambda ctx: ctx.result.shape == (ctx.args.N,),
+        lambda ctx: ctx.result.dtype == "float64",
     ],
     invariants=[
-        "not result.aliases(A)",
+        lambda ctx: not ctx.result.aliases(ctx.args.A)",
     ],
 )
 def solve(
@@ -508,7 +508,7 @@ Validation contracts can also be registered and reused by name.
 Example:
 
 ```python
-@validation_contract("square_linear_system")
+@validation_contract
 def square_linear_system(ctx):
     A = ctx.arg("A")
     b = ctx.arg("b")
@@ -523,7 +523,7 @@ def square_linear_system(ctx):
 The interface can then reference the contract:
 
 ```python
-@contract("square_linear_system")
+@contract(square_linear_system)
 def solve(A: Float64Matrix, b: Float64Vector) -> Float64Vector: ...
 ```
 
@@ -768,7 +768,7 @@ The semantic API may expose:
 
 ```python
 class Solver:
-    @contract("square_linear_system")
+    @contract(pre=square_linear_system)
     def solve(
         self,
         A: Float64Matrix[From(np.ndarray), FortranContiguous],
@@ -776,7 +776,7 @@ class Solver:
     ) -> Float64Vector: ...
 
 class Mesh:
-    @contract(post=["self.is_valid()"])
+    @contract(post=[lambda ctx:ctx.self.is_valid()])
     def refine(self) -> None: ...
 
 def optimize(
