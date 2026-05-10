@@ -3,10 +3,26 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
 from dataclasses import fields, is_dataclass
 from pathlib import Path
 
+from .models import FortranParseError
 from .parser import assess_wrap_readiness, parse_fortran_modules, parse_fortran_signatures, parse_fortran_types
+
+
+_TRUE_VALUES = {"1", "true", "yes", "on"}
+
+
+def _env_flag(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in _TRUE_VALUES
+
+
+def _diagnostic_color_enabled(*, disabled: bool) -> bool:
+    if disabled:
+        return False
+    return "NO_COLOR" not in os.environ
 
 
 def _to_dict_no_parent(obj):
@@ -109,9 +125,26 @@ def main() -> int:
     parser.add_argument("paths", nargs="+", help="Fortran file(s) or directory path(s)")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
     parser.add_argument("--json-out", type=Path, help="Write JSON report to this file")
+    parser.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Disable ANSI color in parse diagnostics. Diagnostics are colored by default when available.",
+    )
+    parser.add_argument(
+        "--debug-traceback",
+        action="store_true",
+        help="Re-raise parser errors so Python prints a traceback for parser debugging. "
+        "Can also be enabled with FORTRAN_PARSER_DEBUG=1.",
+    )
     args = parser.parse_args()
 
-    report = _parse_paths(args.paths)
+    try:
+        report = _parse_paths(args.paths)
+    except FortranParseError as exc:
+        if args.debug_traceback or _env_flag("FORTRAN_PARSER_DEBUG"):
+            raise
+        print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
+        return 1
 
     if args.json_out:
         args.json_out.write_text(json.dumps(report, indent=2), encoding="utf-8")

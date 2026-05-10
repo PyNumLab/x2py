@@ -44,6 +44,11 @@ def _serialize_error_fixture(fixture: Path) -> dict:
             "parser": parser_name,
             "error_type": "FortranParseError",
             "message_contains": [exc.base_message],
+            "diagnostic_contains": [
+                f"error[{exc.code}]",
+                exc.base_message,
+                exc.source_line.strip() if exc.source_line else "",
+            ],
         }
 
 

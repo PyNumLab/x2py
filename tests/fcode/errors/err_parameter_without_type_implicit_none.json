@@ -3,5 +3,10 @@
   "error_type": "FortranParseError",
   "message_contains": [
     "Unknown datatype for PARAMETER symbol 'zero' in procedure 'cst'."
+  ],
+  "diagnostic_contains": [
+    "error[PARSE001]",
+    "Unknown datatype for PARAMETER symbol 'zero' in procedure 'cst'.",
+    "parameter ( zero = 0.0e+0 )"
   ]
 }

@@ -3,5 +3,10 @@
   "error_type": "FortranParseError",
   "message_contains": [
     "Duplicate argument name 'x' in procedure 'dup'."
+  ],
+  "diagnostic_contains": [
+    "error[PARSE001]",
+    "Duplicate argument name 'x' in procedure 'dup'.",
+    "subroutine dup(x, y, x)"
   ]
 }

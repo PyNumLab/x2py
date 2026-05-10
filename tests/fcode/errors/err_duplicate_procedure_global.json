@@ -3,5 +3,10 @@
   "error_type": "FortranParseError",
   "message_contains": [
     "Duplicate procedure name 'work' in global scope."
+  ],
+  "diagnostic_contains": [
+    "error[PARSE001]",
+    "Duplicate procedure name 'work' in global scope.",
+    "subroutine work(n)"
   ]
 }

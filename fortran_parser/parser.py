@@ -190,6 +190,8 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
                 seen_in_scope.add(proc_name)
                 current_proc["uses"].update(current_module_uses)
                 current_proc["filename"] = filename
+                current_proc["header_lineno"] = lineno
+                current_proc["header_source_line"] = source_line
                 current_proc["in_exec_part"] = False
             continue
 
@@ -437,6 +439,9 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
             parsed = _parse_header(s, current_module, True)
             if parsed:
                 current_proc = parsed
+                current_proc["filename"] = filename
+                current_proc["header_lineno"] = lineno
+                current_proc["header_source_line"] = source_line
             continue
 
         if l.startswith("end subroutine") or l.startswith("end function") or l == "end":
@@ -577,7 +582,13 @@ def evaluate_signature_shapes(
 # Procedure parsing helpers
 # -----------------------------------------------------------------------------
 
-def _validate_no_duplicate_arg_names(args: list[FortranArgument], proc_name: str, filename: str | None) -> None:
+def _validate_no_duplicate_arg_names(
+    args: list[FortranArgument],
+    proc_name: str,
+    filename: str | None,
+    line_number: int | None = None,
+    source_line: str | None = None,
+) -> None:
     seen: set[str] = set()
     for arg in args:
         key = arg.name.lower()
@@ -585,6 +596,8 @@ def _validate_no_duplicate_arg_names(args: list[FortranArgument], proc_name: str
             raise FortranParseError(
                 f"Duplicate argument name '{arg.name}' in procedure '{proc_name}'.",
                 filename=filename,
+                line_number=line_number,
+                source_line=source_line,
             )
         seen.add(key)
 
@@ -982,7 +995,13 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
     if sig.result:
         sig.result = symbols.get(sig.result.name.lower(), sig.result)
 
-    _validate_no_duplicate_arg_names(sig.arguments, sig.name, filename)
+    _validate_no_duplicate_arg_names(
+        sig.arguments,
+        sig.name,
+        filename,
+        state.get("header_lineno"),
+        state.get("header_source_line"),
+    )
 
     if implicit_none:
         _validate_all_args_declared(sig, filename, explicit_result=bool(state.get("explicit_result", False)))

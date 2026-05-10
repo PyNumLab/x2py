@@ -209,6 +209,56 @@ Expected JSON layout:
   - `modules`
   - `wrap_readiness`
 
+### 3.4 Parse-error diagnostics and debug mode
+
+When parsing fails, the CLI prints a compiler-style diagnostic to `stderr` and
+exits with status code `1`. By default this output is intended for end users: it
+includes the source location, diagnostic code, message, source line, and caret
+context, but it does **not** include a Python traceback.
+
+Example command:
+
+```bash
+python -m fortran_parser tests/fcode/errors/err_duplicate_argument_name.f90
+```
+
+Example diagnostic shape:
+
+```text
+tests/fcode/errors/err_duplicate_argument_name.f90:1:1: error[PARSE001]: Duplicate argument name 'x' in procedure 'dup'.
+  |
+1 | subroutine dup(x, y, x)
+  | ^
+```
+
+ANSI color is enabled by default when available; no color flag is needed for
+normal use. To disable color explicitly, pass `--no-color` or set the standard
+`NO_COLOR` environment variable:
+
+```bash
+python -m fortran_parser bad.f90 --no-color
+NO_COLOR=1 python -m fortran_parser bad.f90
+```
+
+For parser development, use `--debug-traceback` to re-raise
+`FortranParseError` and let Python print the full traceback showing where the
+error was raised internally:
+
+```bash
+python -m fortran_parser bad.f90 --debug-traceback
+```
+
+The same developer mode can be enabled with the environment variable
+`FORTRAN_PARSER_DEBUG=1`:
+
+```bash
+FORTRAN_PARSER_DEBUG=1 python -m fortran_parser bad.f90
+```
+
+In debug mode, the traceback's final exception message also includes a
+`note: parser raised at ...` line with the internal parser file, line, and
+function that created the diagnostic.
+
 ## 4) Python usage and expected outputs
 
 ### 4.1 Parse folder namespace
@@ -285,18 +335,42 @@ FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixtur
 
 ## 6) Error handling
 
-All parse failures raise `FortranParseError`, a subclass of `ValueError`.
-When a filename is supplied the message begins with a location prefix:
+All parse failures raise `FortranParseError`, a subclass of `ValueError`. The
+exception keeps structured metadata for consumers:
 
-```
-File '<filename>', line <N>: <message>
-    <source line>
+- `filename` — source path supplied to the parser, if any
+- `line_number` — 1-based source line where the error was detected, if known
+- `source_line` — original source text for context, if known
+- `base_message` — stable error text without location/source context
+- `code` — diagnostic code; the default parse diagnostic code is `PARSE001`
+
+`str(error)` and `error.format_diagnostic(color=False)` render a
+compiler-style diagnostic:
+
+```text
+<filename>:<line>:1: error[PARSE001]: <message>
+  |
+<N> | <source line>
+  | ^
 ```
 
-Without a filename only the bare message is shown.
+If no filename is available, the location is rendered as `<unknown>`. If a line
+number or source line is unavailable, that part of the diagnostic is omitted or
+shown with `?` as appropriate. Use `error.base_message` when tests or API
+consumers need only the message text.
+
+`format_diagnostic(color=True)` adds ANSI styling. The CLI requests colored
+diagnostics by default when available; pass `--no-color` or set `NO_COLOR=1` to
+disable ANSI output. On Windows, ANSI console compatibility is enabled through
+`colorama` when it is installed.
+
+For parser development, `format_diagnostic(debug=True)` appends a note with the
+internal parser file, line, and function that raised the error. The CLI exposes
+this through `--debug-traceback` or `FORTRAN_PARSER_DEBUG=1`; normal CLI parse
+errors intentionally hide Python tracebacks.
 
 The sections below list each error category, the triggering condition, and the
-exact message format (with `<...>` placeholders for runtime values).
+exact `base_message` format (with `<...>` placeholders for runtime values).
 
 ### 6.1 Unknown or unsupported type declaration
 
@@ -320,8 +394,10 @@ end subroutine bad
 Example error:
 
 ```
-File 'bad.f90', line 3: Unknown or unsupported datatype declaration for procedure 'bad': weirdtype :: x
-    weirdtype :: x
+bad.f90:2:1: error[PARSE001]: Unknown or unsupported datatype declaration for procedure 'bad': weirdtype :: x
+  |
+2 |   weirdtype :: x
+  | ^
 ```
 
 **In a derived type:**
@@ -358,8 +434,10 @@ end subroutine dup
 Example error:
 
 ```
-File 'dup.f90', line 4: Duplicate declaration of symbol 'x' in procedure 'dup'.
-    integer :: x
+dup.f90:3:1: error[PARSE001]: Duplicate declaration of symbol 'x' in procedure 'dup'.
+  |
+3 |   integer :: x
+  | ^
 ```
 
 **PARAMETER constants:**
@@ -412,8 +490,10 @@ end subroutine work
 Example error:
 
 ```
-File 'dup.f90', line 6: Duplicate procedure name 'work' in global scope.
-    subroutine work(n)
+dup.f90:5:1: error[PARSE001]: Duplicate procedure name 'work' in global scope.
+  |
+5 | subroutine work(n)
+  | ^
 ```
 
 ### 6.4 Duplicate argument name
@@ -436,7 +516,10 @@ end subroutine dup
 Example error:
 
 ```
-File 'dup_arg.f90': Duplicate argument name 'x' in procedure 'dup'.
+dup_arg.f90:1:1: error[PARSE001]: Duplicate argument name 'x' in procedure 'dup'.
+  |
+1 | subroutine dup(x, y, x)
+  | ^
 ```
 
 ### 6.5 Star-kind in modern source
@@ -459,8 +542,10 @@ end subroutine bad
 Example error (file `bad.f90`):
 
 ```
-File 'bad.f90', line 3: Unsupported Fortran 77 star-kind declaration 'real*8' in modern source 'bad.f90'.
-    real*8 :: x
+bad.f90:2:1: error[PARSE001]: Unsupported Fortran 77 star-kind declaration 'real*8' in modern source 'bad.f90'.
+  |
+2 |   real*8 :: x
+  | ^
 ```
 
 ### 6.6 Fortran 77 syntax in a `.f77` source file
@@ -482,8 +567,10 @@ Example:
 Example error (file `legacy.f77`):
 
 ```
-File 'legacy.f77', line 2: Unsupported syntax for Fortran 77 source 'legacy.f77': module bad_module
-    module bad_module
+legacy.f77:1:1: error[PARSE001]: Unsupported syntax for Fortran 77 source 'legacy.f77': module bad_module
+  |
+1 |       module bad_module
+  | ^
 ```
 
 ### 6.7 Implicit none — undeclared argument or result
@@ -515,7 +602,10 @@ end subroutine foo
 Example error:
 
 ```
-File 'implicit_none.f90': Argument 'y' in procedure 'foo' has no type declaration (implicit none is active).
+implicit_none.f90:1:1: error[PARSE001]: Argument 'y' in procedure 'foo' has no type declaration (implicit none is active).
+  |
+1 | subroutine foo(x, y)
+  | ^
 ```
 
 ### 6.8 Unknown datatype for function result
@@ -539,7 +629,10 @@ end function f
 Example error:
 
 ```
-File 'bad.f90': Unknown datatype for function result 'res' in procedure 'f'.
+bad.f90:1:1: error[PARSE001]: Unknown datatype for function result 'res' in procedure 'f'.
+  |
+1 | function f(x) result(res)
+  | ^
 ```
 
 ### 6.9 Unknown datatype for a module variable
@@ -582,7 +675,10 @@ Example:
 Example error:
 
 ```
-File 'legacy.f': Unknown datatype for PARAMETER symbol 'zero' in procedure 'cst'.
+legacy.f:4:1: error[PARSE001]: Unknown datatype for PARAMETER symbol 'zero' in procedure 'cst'.
+  |
+4 |       parameter ( zero = 0.0e+0 )
+  | ^
 ```
 
 ### 6.12 Function result variable shadows an argument
@@ -606,7 +702,10 @@ end function f
 Example error:
 
 ```
-File 'shadow.f90': Function result variable 'res' in function 'f' shadows an argument name.
+shadow.f90:1:1: error[PARSE001]: Function result variable 'res' in function 'f' shadows an argument name.
+  |
+1 | function f(res) result(res)
+  | ^
 ```
 
 ### 6.13 Failed to resolve declared argument

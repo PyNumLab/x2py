@@ -3,5 +3,10 @@
   "error_type": "FortranParseError",
   "message_contains": [
     "Unknown or unsupported datatype declaration in type 't': weirdtype :: x"
+  ],
+  "diagnostic_contains": [
+    "error[PARSE001]",
+    "Unknown or unsupported datatype declaration in type 't': weirdtype :: x",
+    "weirdtype :: x"
   ]
 }

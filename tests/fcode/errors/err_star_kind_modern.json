@@ -2,6 +2,11 @@
   "parser": "parse_fortran_signatures",
   "error_type": "FortranParseError",
   "message_contains": [
-    "Unsupported Fortran 77 star-kind declaration 'real*8' in modern source"
+    "Unsupported Fortran 77 star-kind declaration 'real*8' in modern source 'err_star_kind_modern.f90'."
+  ],
+  "diagnostic_contains": [
+    "error[PARSE001]",
+    "Unsupported Fortran 77 star-kind declaration 'real*8' in modern source 'err_star_kind_modern.f90'.",
+    "real*8 :: x"
   ]
 }

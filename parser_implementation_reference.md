@@ -183,12 +183,16 @@ Validates command-line behavior for:
 - JSON output
 - JSON file writing
 - module/free-procedure name collision handling
+- parse-error diagnostics without tracebacks by default
+- developer traceback opt-in through `--debug-traceback` and `FORTRAN_PARSER_DEBUG=1`
+- default ANSI color for diagnostics, with `--no-color` and `NO_COLOR=1` opt-out
 
 ### 4.6 Error handling tests (`tests/test_error_handling.py`)
 
 Dedicated tests for the error handling system:
-- `FortranParseError` attribute presence (`filename`, `line_number`, `source_line`, `base_message`)
-- Error message formatting (location prefix, source line context)
+- `FortranParseError` attribute presence (`filename`, `line_number`, `source_line`, `base_message`, `code`)
+- Compiler-style diagnostic formatting with `PARSE001`, source line context, and caret marker
+- ANSI color formatting and environment-variable debug activation
 - Error raised for all error categories in all scopes: procedures, modules, derived types, interfaces
 - Line number accuracy
 - `FortranParseError` is a subclass of `ValueError` (backward compatibility)
@@ -202,11 +206,11 @@ Dedicated tests for the error handling system:
 - `fortran_parser/type_resolver.py`
   - kind extraction and symbol/expression helpers.
 - `fortran_parser/models.py`
-  - parser data structures / model schema; includes `FortranParseError` exception class.
+  - parser data structures / model schema; includes `FortranParseError` and its compiler-style diagnostic renderer.
 - `fortran_parser/utils.py`
   - shared text utilities (e.g., CSV-like splitting used by declarations).
 - `fortran_parser/cli.py`
-  - CLI argument parsing and report formatting.
+  - CLI argument parsing, report formatting, and user-facing parse-error handling.
 - `fortran_parser/__main__.py`
   - `python -m fortran_parser` entry point.
 - `tests/test_fortran_signature_parser.py`
@@ -349,8 +353,33 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
 - `filename` — source file path (if provided)
 - `line_number` — 1-based line number in the original source where the error was detected
 - `source_line` — the original (pre-preprocessed) source line text
-- `base_message` — the error message without location prefix
+- `base_message` — the stable error message without source/location context
+- `code` — diagnostic code; current parser errors default to `PARSE001`
+- `parser_file`, `parser_line_number`, `parser_function` — internal raise-site metadata used only for debug diagnostics
 
-The formatted `str()` of `FortranParseError` prepends location context and appends the source line for human-readable output.
+The formatted `str()` of `FortranParseError` is a compiler-style diagnostic:
 
-Implementation note: enforce these checks close to lexical declaration handling (source-form check + declaration parse) so behavior is consistent across signatures, types, modules, and interfaces.
+```text
+<filename>:<line>:1: error[PARSE001]: <base_message>
+  |
+<N> | <source_line>
+  | ^
+```
+
+Use `error.format_diagnostic(color=True)` to add ANSI color and
+`error.format_diagnostic(debug=True)` to append a `note: parser raised at ...`
+line with the internal parser location. `format_diagnostic(debug=None)` also
+honors `FORTRAN_PARSER_DEBUG=1`.
+
+CLI contract:
+- End-user parse failures are caught, rendered to `stderr` with
+  `format_diagnostic(...)`, and return exit status `1`; they do not print Python
+  tracebacks by default.
+- CLI diagnostics request ANSI color by default when available.
+- `--no-color` and `NO_COLOR=1` disable ANSI color in CLI diagnostics.
+- `--debug-traceback` re-raises `FortranParseError` so Python prints the full
+  traceback for parser developers.
+- `FORTRAN_PARSER_DEBUG=1` enables the same traceback/debug behavior without
+  changing command-line arguments.
+
+Implementation note: enforce these checks close to lexical declaration handling (source-form check + declaration parse) so behavior is consistent across signatures, types, modules, and interfaces. Preserve the original source line and line number whenever possible so diagnostics can show the Fortran source context rather than only the error text.

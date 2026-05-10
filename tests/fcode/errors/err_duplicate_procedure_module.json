@@ -3,5 +3,10 @@
   "error_type": "FortranParseError",
   "message_contains": [
     "Duplicate procedure name 'work' in module 'm'."
+  ],
+  "diagnostic_contains": [
+    "error[PARSE001]",
+    "Duplicate procedure name 'work' in module 'm'.",
+    "subroutine work(n)"
   ]
 }

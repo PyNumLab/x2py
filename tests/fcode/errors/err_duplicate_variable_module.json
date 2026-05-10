@@ -3,5 +3,10 @@
   "error_type": "FortranParseError",
   "message_contains": [
     "Duplicate variable 'n' in module 'm'."
+  ],
+  "diagnostic_contains": [
+    "error[PARSE001]",
+    "Duplicate variable 'n' in module 'm'.",
+    ""
   ]
 }

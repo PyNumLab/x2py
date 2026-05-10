@@ -3,5 +3,10 @@
   "error_type": "FortranParseError",
   "message_contains": [
     "Argument 'y' in procedure 'foo' has no type declaration (implicit none is active)."
+  ],
+  "diagnostic_contains": [
+    "error[PARSE001]",
+    "Argument 'y' in procedure 'foo' has no type declaration (implicit none is active).",
+    ""
   ]
 }
