@@ -1,13 +1,12 @@
 # Semantic Multilanguage Wrapper and Interoperability Runtime
 
-# Vision
+## Vision
 
 The goal of this project is to create a modern interoperability framework capable of wrapping and connecting libraries written in multiple native languages through a unified semantic API layer.
 
 The system should:
 
 * wrap native libraries from:
-
   * Fortran
   * C
   * C++
@@ -16,8 +15,8 @@ The system should:
   * and potentially more languages later
 * expose clean Python APIs
 * support semantic interoperability between different native runtimes
-* support automatic coercions/conversions
-* support runtime constraints
+* support automatic coercions and conversions
+* support runtime constraints and validation contracts
 * support zero-copy array interoperability when possible
 * avoid compiler dependence whenever possible
 * avoid forcing users to modify native code
@@ -32,11 +31,12 @@ It is a:
 * interoperability runtime
 * runtime coercion engine
 * runtime validation engine
+* runtime validation contract system
 * language-independent semantic API system
 
 ---
 
-# Core Philosophy
+## Core Philosophy
 
 The most important architectural decision is:
 
@@ -51,21 +51,22 @@ NOT:
 
 The system separates:
 
-| Concern           | Responsibility               |
-| ----------------- | ---------------------------- |
-| Semantic API      | `.pyi`-style interface layer |
-| Runtime coercions | conversion registry          |
-| Constraints       | runtime validation           |
-| Native ABI        | backend adapters             |
-| Source parsing    | optional helper              |
+| Concern | Responsibility |
+| --- | --- |
+| Semantic API | `.pyi`-style interface layer |
+| Runtime coercions | conversion registry and coercion graph |
+| Runtime validation | constraint checks on adapted values |
+| Validation contracts | reusable preconditions, postconditions, and invariants |
+| Native ABI | backend adapters |
+| Source parsing | optional helper |
 
 This separation is the foundation of the whole architecture.
 
 ---
 
-# Why Existing Systems Are Not Enough
+## Why Existing Systems Are Not Enough
 
-## SWIG
+### SWIG
 
 SWIG is:
 
@@ -84,9 +85,7 @@ It also becomes difficult to maintain when:
 * runtime conversions are needed
 * API remapping becomes advanced
 
----
-
-## f2py
+### f2py
 
 f2py is:
 
@@ -97,9 +96,7 @@ f2py is:
 * weak for object systems
 * weak for heterogeneous runtimes
 
----
-
-## pybind11
+### pybind11
 
 pybind11 is excellent for:
 
@@ -115,7 +112,7 @@ But:
 
 ---
 
-# High-Level Architecture
+## High-Level Architecture
 
 The architecture is composed of multiple layers.
 
@@ -128,7 +125,11 @@ Canonical semantic interface layer (.pyi)
         ↓
 Semantic IR
         ↓
-Runtime coercion system
+Runtime coercion engine
+        ↓
+Runtime validation engine
+        ↓
+Runtime validation contracts
         ↓
 Backend adapters
         ↓
@@ -137,9 +138,11 @@ Generated CPython extension
 Python API
 ```
 
+The validation engine enforces concrete checks. Validation contracts describe when those checks run, what they guarantee, and how failures are reported.
+
 ---
 
-# Canonical Semantic Interface Layer
+## Canonical Semantic Interface Layer
 
 The `.pyi`-style interface file is the central abstraction.
 
@@ -152,7 +155,7 @@ It defines:
 * semantic types
 * allowed coercions
 * constraints
-* contracts
+* validation contracts
 * ownership semantics
 * API remapping
 
@@ -170,9 +173,9 @@ The `.pyi` interface file is.
 
 ---
 
-# Example Basic Wrapper
+## Example Basic Wrapper
 
-Suppose native Fortran code contains:
+Suppose native Fortran code contains a procedural matrix API:
 
 ```fortran
 module sparse_mod
@@ -182,23 +185,42 @@ module sparse_mod
 
 contains
 
-  subroutine sparse_multiply(A, x)
+  subroutine create_sparse(A, nrows, ncols)
+    type(sparse_matrix), intent(out) :: A
+    integer, intent(in) :: nrows, ncols
+  end subroutine
+
+  subroutine sparse_multiply(A, x, y)
+    type(sparse_matrix), intent(in) :: A
+    real(8), intent(in) :: x(:)
+    real(8), intent(out) :: y(:)
   end subroutine
 
 end module
 ```
 
-The semantic interface may look like:
+The semantic interface may expose a Pythonic object model:
 
 ```python
 @bind("sparse_matrix")
 class SparseMatrix:
 
     @bind("create_sparse")
-    def __init__(self, nrows: int, ncols: int): ...
+    def __init__(
+        self,
+        nrows: int[Positive],
+        ncols: int[Positive],
+    ) -> None: ...
 
     @bind("sparse_multiply")
-    def multiply(self, x): ...
+    @contract(
+        pre=["x.shape == (self.ncols,)", "x.dtype == float64"],
+        post=["result.shape == (self.nrows,)", "result.dtype == float64"],
+    )
+    def multiply(
+        self,
+        x: Float64Vector[From(np.ndarray), CPUResident],
+    ) -> Float64Vector: ...
 ```
 
 This allows:
@@ -206,36 +228,36 @@ This allows:
 * semantic API redesign
 * Pythonic APIs
 * decoupling native APIs from exposed APIs
-
-Without changing native source code.
+* explicit validation of user-facing expectations
+* reusable runtime checks without changing native source code
 
 ---
 
-# API Projection
+## API Projection
 
-The framework allows transforming ugly procedural APIs into clean object-oriented APIs.
-
-Example:
+The framework allows transforming procedural APIs into clean object-oriented APIs.
 
 Native:
 
 ```fortran
-call sparse_multiply(A, x)
+call sparse_multiply(A, x, y)
 ```
 
 Exposed Python API:
 
 ```python
-A.multiply(x)
+y = A.multiply(x)
 ```
 
 This is called:
 
 > semantic API projection.
 
+The projection records how Python-level `self`, arguments, and return values map to native parameters.
+
 ---
 
-# Semantic Types
+## Semantic Types
 
 Semantic types represent:
 
@@ -254,12 +276,13 @@ Examples:
 * `Tensor3D`
 * `CSRMatrix`
 * `ComplexVector`
+* `DeviceBuffer`
 
 Semantic types are language-independent.
 
 ---
 
-# Coercions
+## Coercions
 
 Coercions define:
 
@@ -270,17 +293,20 @@ Examples:
 * `int -> float`
 * `np.ndarray -> Float64Matrix`
 * `TorchTensor -> Float64Matrix`
+* `CuPyArray -> DeviceBuffer`
+
+Coercions should be explicit in the semantic interface so that the runtime can reject surprising conversions and explain accepted ones.
 
 ---
 
-# Declaring Coercions
+## Declaring Coercions
 
 The semantic interface can declare allowed coercions.
 
 Example:
 
 ```python
-def func(a: float[From(int)]): ...
+def scale(alpha: float[From(int)], x: Float64Vector) -> Float64Vector: ...
 ```
 
 Meaning:
@@ -289,11 +315,11 @@ Meaning:
 int -> float
 ```
 
-is an allowed coercion.
+is an allowed coercion for `alpha`.
 
 ---
 
-# Matrix Example
+## Matrix Example
 
 ```python
 def solve(
@@ -301,26 +327,31 @@ def solve(
         From(np.ndarray),
         FortranContiguous,
         Writable,
-    ]
-): ...
+        Shape("N", "N"),
+    ],
+    b: Float64Vector[
+        From(np.ndarray),
+        Shape("N"),
+    ],
+) -> Float64Vector[Shape("N")]: ...
 ```
 
 This means:
 
-* target semantic type:
-
+* target semantic type for `A`:
   * `Float64Matrix`
-* allowed coercion:
-
+* allowed coercion for `A`:
   * `np.ndarray -> Float64Matrix`
-* required constraints:
-
+* required constraints for `A`:
   * Fortran contiguous
   * writable
+  * square shape
+* cross-argument contract:
+  * `A.shape[0] == A.shape[1] == b.shape[0]`
 
 ---
 
-# Constraints
+## Constraints
 
 Constraints define:
 
@@ -336,36 +367,128 @@ Examples:
 * `CPUResident`
 * `Shape(N, N)`
 * `Aligned(64)`
+* `Finite`
+* `NonNull`
+
+A constraint is usually local to one value: dtype, shape, device, alignment, mutability, ownership, or value range.
 
 ---
-# Contracts
+
+## Runtime Coercion Engine
+
+The runtime coercion engine is responsible for converting accepted Python objects into semantic runtime objects.
+
+Responsibilities:
+
+* find an allowed conversion path from the observed input type to the target semantic type
+* rank competing conversion paths by cost, safety, and zero-copy potential
+* apply conversions in order
+* preserve ownership and lifetime metadata
+* emit a trace that can be shown in diagnostics
+
+Example conversion trace:
+
+```text
+argument A:
+  np.ndarray(shape=(10, 10), dtype=float64, order=C)
+    -> copy_to_fortran_order
+  Float64Matrix(shape=(10, 10), dtype=float64, order=F, owner=temporary)
+```
+
 ---
 
-# Important Concept Separation
+## Runtime Validation Engine
+
+The runtime validation engine checks that semantic runtime objects satisfy the declared constraints and contract predicates.
+
+Responsibilities:
+
+* validate per-argument constraints after coercion
+* validate cross-argument preconditions before native calls
+* validate return-value postconditions after native calls
+* validate object invariants after mutating methods
+* produce structured errors with the failing parameter, expected condition, observed value, and coercion trace
+
+Example validation error:
+
+```text
+ValidationError in solve(A, b)
+  parameter: A
+  failed: FortranContiguous
+  observed: order='C', shape=(10, 10), dtype=float64
+  hint: declare From(np.ndarray, copy=True) or pass np.asfortranarray(A)
+```
+
+The validation engine is runtime-oriented. It does not replace static typing; it protects the native ABI boundary and provides clear diagnostics for dynamic Python inputs.
+
+---
+
+## Runtime Validation Contracts
+
+Runtime validation contracts are reusable groups of validation rules that describe the semantic obligations of an API.
+
+Contracts may include:
+
+* preconditions: requirements before a native call
+* postconditions: guarantees after a native call
+* invariants: requirements that must remain true for an object over its lifetime
+* aliasing rules: whether inputs may overlap in memory
+* mutation rules: which arguments may be modified
+* ownership rules: whether returned objects borrow, own, or view native memory
+
+Example:
+
+```python
+@contract(
+    pre=[
+        "A.shape == (N, N)",
+        "b.shape == (N,)",
+        "A.device == b.device == 'cpu'",
+    ],
+    post=[
+        "result.shape == (N,)",
+        "result.dtype == float64",
+    ],
+    invariants=[
+        "not result.aliases(A)",
+    ],
+)
+def solve(
+    A: Float64Matrix[From(np.ndarray), CPUResident],
+    b: Float64Vector[From(np.ndarray), CPUResident],
+) -> Float64Vector: ...
+```
+
+Contracts are higher-level than constraints. A constraint can say `b` has shape `N`; a contract can say `A` and `b` agree on the same `N` and that the returned vector does not alias mutable input storage.
+
+---
+
+## Important Concept Separation
 
 The architecture separates:
 
-| Concept         | Meaning                              |
-| --------------- | ------------------------------------ |
-| Semantic type   | what the object IS                   |
-| Coercion        | how another type becomes it          |
-| Constraint      | requirements on final representation |
+| Concept | Meaning |
+| --- | --- |
+| Semantic type | what the object is |
+| Coercion | how another type becomes it |
+| Constraint | local requirements on an adapted value |
+| Validation contract | API-level preconditions, postconditions, invariants, and aliasing rules |
 | Backend adapter | semantic object → ABI representation |
 
 This separation is fundamental.
 
 ---
 
-# Runtime Coercion Registry
+## Runtime Coercion Registry
 
-Allowed coercions declared in `.pyi` are implemented through a runtime coercion registry in the equivalent .py file.
+Allowed coercions declared in `.pyi` are implemented through a runtime coercion registry in the equivalent `.py` file.
 
 Example:
 
 ```python
-@coercion(np.ndarray, Float64Matrix)
-def ndarray_to_matrix(A):
-    ...
+@coercion(np.ndarray, Float64Matrix, implicit=True, cost=1, zero_copy="if_compatible")
+def ndarray_to_matrix(A: np.ndarray) -> Float64MatrixObject:
+    return Float64MatrixObject.from_numpy(A)
 ```
 
 This registers:
@@ -378,35 +501,71 @@ inside the runtime registry.
 
 ---
 
-# Runtime Dispatch Flow
+## Runtime Contract Registry
+
+Validation contracts can also be registered and reused by name.
+
+Example:
+
+```python
+@validation_contract("square_linear_system")
+def square_linear_system(ctx):
+    A = ctx.arg("A")
+    b = ctx.arg("b")
+    result = ctx.result
+
+    ctx.require(A.ndim == 2, "A must be a matrix")
+    ctx.require(A.shape[0] == A.shape[1], "A must be square")
+    ctx.require(b.shape == (A.shape[0],), "b must match A rows")
+    ctx.ensure(result.shape == b.shape, "solution shape must match b")
+```
+
+The interface can then reference the contract:
+
+```python
+@contract("square_linear_system")
+def solve(A: Float64Matrix, b: Float64Vector) -> Float64Vector: ...
+```
+
+This allows common validation logic to be shared across Fortran, C, C++, Rust, and CUDA backends.
+
+---
+
+## Runtime Dispatch Flow
 
 Suppose:
 
 ```python
-solve(np.ones((10,10)))
+x = solve(np.ones((10, 10)), np.ones(10))
 ```
 
 Runtime pipeline:
 
 ```text
-Input object
+Input objects
     ↓
-Find semantic target type
+Find semantic target types
     ↓
-Find coercion path
+Find coercion paths
     ↓
-Apply coercion
+Apply coercions
     ↓
-Validate constraints
+Validate argument constraints
     ↓
-Backend adapter
+Validate contract preconditions
+    ↓
+Backend adapters
     ↓
 Native ABI call
+    ↓
+Validate contract postconditions and invariants
+    ↓
+Return Python object
 ```
 
 ---
 
-# Coercion Graphs
+## Coercion Graphs
 
 The runtime should support composed coercions.
 
@@ -426,11 +585,11 @@ The runtime can automatically infer:
 TorchTensor -> Float64Matrix
 ```
 
-through graph traversal.
+through graph traversal when the path is declared safe and allowed for the target API.
 
 ---
 
-# Coercion Metadata
+## Coercion Metadata
 
 Coercions may contain metadata.
 
@@ -443,6 +602,7 @@ Example:
     implicit=True,
     cost=1,
     zero_copy=True,
+    preserves_aliasing=True,
 )
 def ndarray_to_matrix(A):
     ...
@@ -456,10 +616,12 @@ Possible metadata:
 * zero-copy
 * ownership
 * device awareness
+* aliasing behavior
+* mutability preservation
 
 ---
 
-# Semantic Runtime Objects
+## Semantic Runtime Objects
 
 The runtime should internally use semantic runtime objects.
 
@@ -467,11 +629,13 @@ Example:
 
 ```python
 class Float64MatrixObject:
-    ptr
-    shape
-    strides
-    owner
-    device
+    ptr: int
+    shape: tuple[int, int]
+    strides: tuple[int, int]
+    owner: object | None
+    device: str
+    writable: bool
+    aliases: set[int]
 ```
 
 These objects are:
@@ -488,7 +652,7 @@ NOT:
 
 ---
 
-# Backend Adapters
+## Backend Adapters
 
 Backend adapters convert:
 
@@ -505,9 +669,11 @@ Examples:
 * C structs
 * CUDA tensors
 
+Adapters should receive values only after coercion and validation have completed. This keeps ABI code focused on call mechanics instead of user-input cleanup.
+
 ---
 
-# Wrapping Libraries Without Source Code
+## Wrapping Libraries Without Source Code
 
 The framework should support wrapping:
 
@@ -521,13 +687,14 @@ Users provide:
 
 * semantic `.pyi`
 * coercions if needed
+* validation contracts if needed
 * optional metadata
 
 No source parsing required.
 
 ---
 
-# Optional Parser Frontends
+## Optional Parser Frontends
 
 Parsers are helpers.
 
@@ -550,7 +717,7 @@ The semantic interface remains canonical.
 
 ---
 
-# Mixed-Language Libraries
+## Mixed-Language Libraries
 
 The framework should support libraries implemented in multiple languages simultaneously.
 
@@ -566,21 +733,23 @@ All unified through:
 
 * semantic types
 * coercions
+* constraints
+* validation contracts
 * backend adapters
 
 ---
 
-# Example Mixed-Language Workflow
+## Example Mixed-Language Workflow
 
 Suppose:
 
-## Fortran solver
+### Fortran solver
 
 ```fortran
-subroutine solve_system(A,b)
+subroutine solve_system(A, b, x)
 ```
 
-## C++ mesh
+### C++ mesh
 
 ```cpp
 class Mesh {
@@ -589,29 +758,37 @@ public:
 };
 ```
 
-## Rust optimizer
+### Rust optimizer
 
 ```rust
-extern "C" fn optimize(...)
+extern "C" fn optimize(ptr: *mut f64, len: usize) -> i32;
 ```
 
-The Python API may expose:
+The semantic API may expose:
 
 ```python
 class Solver:
-    def solve(self, A, b)
+    @contract("square_linear_system")
+    def solve(
+        self,
+        A: Float64Matrix[From(np.ndarray), FortranContiguous],
+        b: Float64Vector[From(np.ndarray)],
+    ) -> Float64Vector: ...
 
 class Mesh:
-    def refine(self)
+    @contract(post=["self.is_valid()"])
+    def refine(self) -> None: ...
 
-def optimize(x)
+def optimize(
+    x: Float64Vector[From(np.ndarray), Writable, CPUResident],
+) -> OptimizationResult: ...
 ```
 
-The user does not care about implementation language.
+The user does not care about implementation language. The semantic layer records type meaning, conversion policy, validation policy, and backend dispatch.
 
 ---
 
-# Ownership and Lifetime Management
+## Ownership and Lifetime Management
 
 The runtime must manage:
 
@@ -620,28 +797,32 @@ The runtime must manage:
 * zero-copy views
 * temporary coercions
 * destruction policies
+* aliasing constraints
+* mutation contracts
 
 This is one of the hardest parts of the system.
 
 ---
 
-# Zero-Copy Interoperability
+## Zero-Copy Interoperability
 
 The runtime should avoid unnecessary copies whenever possible.
 
 Examples:
 
-| Conversion              | Strategy  |
-| ----------------------- | --------- |
+| Conversion | Strategy |
+| --- | --- |
 | NumPy F-order → Fortran | zero-copy |
-| NumPy → Eigen::Map      | zero-copy |
-| Torch CUDA → CPU array  | copy      |
+| NumPy C-order → Fortran descriptor requiring F-order | copy or reject, depending on contract |
+| NumPy → Eigen::Map | zero-copy when dtype, alignment, and strides match |
+| Torch CUDA → CPU array | copy, unless API accepts GPU memory |
+| CuPy array → CUDA kernel | zero-copy when stream and device contracts match |
 
-The runtime should optimize coercion paths automatically.
+The runtime should optimize coercion paths automatically while still honoring explicit API contracts.
 
 ---
 
-# Scientific Computing Focus
+## Scientific Computing Focus
 
 The architecture is especially useful for:
 
@@ -660,10 +841,11 @@ because these domains already contain:
 * difficult interoperability
 * legacy Fortran/C++ code
 * array-heavy APIs
+* strict shape, device, ownership, and aliasing requirements
 
 ---
 
-# CPython Extension Backend
+## CPython Extension Backend
 
 The project should generate custom CPython extensions directly.
 
@@ -672,6 +854,7 @@ Reasons:
 * full control over runtime
 * full control over arrays
 * full control over coercions
+* full control over validation contracts
 * better diagnostics
 * better ownership handling
 * better performance
@@ -686,7 +869,7 @@ although optional backends may exist later.
 
 ---
 
-# Diagnostics
+## Diagnostics
 
 Diagnostics are extremely important.
 
@@ -694,21 +877,37 @@ The framework should provide:
 
 * clear coercion errors
 * constraint validation errors
+* contract validation errors
 * coercion trace visualization
 * ownership diagnostics
 * backend dispatch diagnostics
 
-Much better than typical SWIG/f2py errors.
+Example diagnostic:
+
+```text
+ContractError in Solver.solve(A, b)
+  contract: square_linear_system
+  failed: b.shape == (A.shape[0],)
+  observed:
+    A.shape = (10, 10)
+    b.shape = (8,)
+  coercion trace:
+    A: np.ndarray -> Float64Matrix [zero-copy]
+    b: np.ndarray -> Float64Vector [zero-copy]
+```
+
+This should be much better than typical SWIG/f2py errors.
 
 ---
 
-# Plugin Ecosystem
+## Plugin Ecosystem
 
 Third-party ecosystems should be able to register:
 
 * semantic types
 * coercions
 * constraints
+* validation contracts
 * backend adapters
 
 This allows:
@@ -722,7 +921,48 @@ This allows:
 
 ---
 
-# Long-Term Goal
+## Roadmap
+
+### Phase 1: Semantic API and IR
+
+* Define the `.pyi`-style semantic grammar.
+* Represent semantic types, argument mappings, ownership rules, constraints, and validation contracts in the IR.
+* Generate a minimal Python-facing wrapper skeleton from the IR.
+
+### Phase 2: Runtime Coercion Engine
+
+* Implement the coercion registry.
+* Support direct coercions, composed coercion paths, cost ranking, and zero-copy metadata.
+* Add structured coercion traces for diagnostics.
+
+### Phase 3: Runtime Validation Engine
+
+* Implement local constraint validation for shape, dtype, contiguity, device, mutability, ownership, and alignment.
+* Attach validation failures to source parameters and semantic declarations.
+* Run validation after coercion and before backend adaptation.
+
+### Phase 4: Runtime Validation Contracts
+
+* Add reusable contract declarations for preconditions, postconditions, invariants, aliasing, mutation, and ownership.
+* Support named contract registration and inline contracts in the semantic interface.
+* Validate cross-argument relationships such as matching dimensions, shared devices, non-overlapping buffers, and stable object invariants.
+* Include contract traces in diagnostics.
+
+### Phase 5: Backend Adapters
+
+* Implement initial Fortran and C adapters.
+* Add C++ and Rust adapters after the semantic runtime is stable.
+* Add CUDA/device-memory adapters once device contracts are available.
+
+### Phase 6: Parser Frontends and Ecosystem Plugins
+
+* Add optional parser frontends that generate starter semantic interfaces.
+* Add plugin APIs for NumPy, Torch, JAX, CUDA, and sparse matrix ecosystems.
+* Keep parser output editable and subordinate to the canonical semantic interface.
+
+---
+
+## Long-Term Goal
 
 The final system becomes:
 
@@ -730,6 +970,8 @@ The final system becomes:
 * a runtime interoperability framework
 * a mixed-language scientific runtime layer
 * a semantic coercion engine
+* a runtime validation engine
+* a runtime validation contract system
 * a modern replacement for old wrapper systems
 
 The key innovation is:
@@ -742,7 +984,7 @@ parser-centric wrapper generation
 
 ---
 
-# Final Summary
+## Final Summary
 
 The architecture is built around:
 
@@ -752,6 +994,8 @@ Semantic API
 Coercions
         ↓
 Constraints
+        ↓
+Validation contracts
         ↓
 Semantic runtime objects
         ↓
@@ -765,6 +1009,9 @@ The project focuses on:
 * clean semantic APIs
 * runtime interoperability
 * mixed-language support
+* runtime coercion
+* runtime validation
+* runtime validation contracts
 * scientific computing
 * extensibility
 * high performance
@@ -776,4 +1023,3 @@ while avoiding:
 * compiler dependence
 * rigid ABI-centric designs
 * old wrapper system limitations.
-
