@@ -73,7 +73,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "fortran_parser", str(f90), "--color", "never"]
+    cmd = [sys.executable, "-m", "fortran_parser", str(f90), "--no-color"]
     res = subprocess.run(cmd, capture_output=True, text=True)
 
     assert res.returncode == 1
@@ -124,7 +124,7 @@ end subroutine bad
     assert "note: parser raised at" in res.stderr
 
 
-def test_cli_color_always_formats_parse_error_with_ansi(tmp_path: Path):
+def test_cli_formats_parse_error_with_ansi_by_default(tmp_path: Path):
     f90 = tmp_path / "bad.f90"
     f90.write_text(
         """subroutine bad(x)
@@ -134,9 +134,33 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "fortran_parser", str(f90), "--color", "always"]
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    cmd = [sys.executable, "-m", "fortran_parser", str(f90)]
+    env = {k: v for k, v in os.environ.items() if k != "NO_COLOR"}
+    res = subprocess.run(cmd, capture_output=True, text=True, env=env)
 
     assert res.returncode == 1
     assert "\033[" in res.stderr
     assert "error" in res.stderr
+
+
+def test_cli_no_color_env_disables_default_ansi(tmp_path: Path):
+    f90 = tmp_path / "bad.f90"
+    f90.write_text(
+        """subroutine bad(x)
+  weirdtype :: x
+end subroutine bad
+""",
+        encoding="utf-8",
+    )
+
+    cmd = [sys.executable, "-m", "fortran_parser", str(f90)]
+    res = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "NO_COLOR": "1"},
+    )
+
+    assert res.returncode == 1
+    assert "\033[" not in res.stderr
+    assert f"{f90}:2:1: error[PARSE001]:" in res.stderr

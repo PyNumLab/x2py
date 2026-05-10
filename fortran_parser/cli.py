@@ -19,12 +19,10 @@ def _env_flag(name: str) -> bool:
     return os.getenv(name, "").strip().lower() in _TRUE_VALUES
 
 
-def _should_color(mode: str) -> bool:
-    if mode == "always":
-        return True
-    if mode == "never":
+def _diagnostic_color_enabled(*, disabled: bool) -> bool:
+    if disabled:
         return False
-    return sys.stderr.isatty()
+    return "NO_COLOR" not in os.environ
 
 
 def _to_dict_no_parent(obj):
@@ -128,10 +126,9 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
     parser.add_argument("--json-out", type=Path, help="Write JSON report to this file")
     parser.add_argument(
-        "--color",
-        choices=("auto", "always", "never"),
-        default="auto",
-        help="Control ANSI color in parse diagnostics (default: auto)",
+        "--no-color",
+        action="store_true",
+        help="Disable ANSI color in parse diagnostics. Diagnostics are colored by default when available.",
     )
     parser.add_argument(
         "--debug-traceback",
@@ -146,7 +143,7 @@ def main() -> int:
     except FortranParseError as exc:
         if args.debug_traceback or _env_flag("FORTRAN_PARSER_DEBUG"):
             raise
-        print(exc.format_diagnostic(color=_should_color(args.color), debug=False), file=sys.stderr)
+        print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
         return 1
 
     if args.json_out:

@@ -185,7 +185,7 @@ Validates command-line behavior for:
 - module/free-procedure name collision handling
 - parse-error diagnostics without tracebacks by default
 - developer traceback opt-in through `--debug-traceback` and `FORTRAN_PARSER_DEBUG=1`
-- ANSI color control for diagnostics through `--color`
+- default ANSI color for diagnostics, with `--no-color` and `NO_COLOR=1` opt-out
 
 ### 4.6 Error handling tests (`tests/test_error_handling.py`)
 
@@ -375,7 +375,8 @@ CLI contract:
 - End-user parse failures are caught, rendered to `stderr` with
   `format_diagnostic(...)`, and return exit status `1`; they do not print Python
   tracebacks by default.
-- `--color auto|always|never` controls ANSI color in CLI diagnostics.
+- CLI diagnostics request ANSI color by default when available.
+- `--no-color` and `NO_COLOR=1` disable ANSI color in CLI diagnostics.
 - `--debug-traceback` re-raises `FortranParseError` so Python prints the full
   traceback for parser developers.
 - `FORTRAN_PARSER_DEBUG=1` enables the same traceback/debug behavior without

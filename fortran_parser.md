@@ -231,12 +231,13 @@ tests/fcode/errors/err_duplicate_argument_name.f90:1:1: error[PARSE001]: Duplica
   | ^
 ```
 
-Color is controlled with `--color`:
+ANSI color is enabled by default when available; no color flag is needed for
+normal use. To disable color explicitly, pass `--no-color` or set the standard
+`NO_COLOR` environment variable:
 
 ```bash
-python -m fortran_parser bad.f90 --color auto    # default: color only for terminals
-python -m fortran_parser bad.f90 --color always  # force ANSI color
-python -m fortran_parser bad.f90 --color never   # disable ANSI color
+python -m fortran_parser bad.f90 --no-color
+NO_COLOR=1 python -m fortran_parser bad.f90
 ```
 
 For parser development, use `--debug-traceback` to re-raise
@@ -358,8 +359,10 @@ number or source line is unavailable, that part of the diagnostic is omitted or
 shown with `?` as appropriate. Use `error.base_message` when tests or API
 consumers need only the message text.
 
-`format_diagnostic(color=True)` adds ANSI styling. On Windows, ANSI console
-compatibility is enabled through `colorama` when it is installed.
+`format_diagnostic(color=True)` adds ANSI styling. The CLI requests colored
+diagnostics by default when available; pass `--no-color` or set `NO_COLOR=1` to
+disable ANSI output. On Windows, ANSI console compatibility is enabled through
+`colorama` when it is installed.
 
 For parser development, `format_diagnostic(debug=True)` appends a note with the
 internal parser file, line, and function that raised the error. The CLI exposes
