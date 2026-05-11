@@ -1,0 +1,69 @@
+[
+  {
+    "name": "r8_tables",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "ido",
+        "base_type": "integer",
+        "kind": "4",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "r8_tables",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "ip",
+        "base_type": "integer",
+        "kind": "4",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "r8_tables",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "wa",
+        "base_type": "real",
+        "kind": "8",
+        "rank": 3,
+        "shape": [
+          "ido",
+          "ip-1",
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "r8_tables",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  }
+]

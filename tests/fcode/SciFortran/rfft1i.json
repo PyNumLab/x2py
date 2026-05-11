@@ -1,0 +1,84 @@
+[
+  {
+    "name": "rfft1i",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "n",
+        "base_type": "integer",
+        "kind": "4",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "rfft1i",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "wsave",
+        "base_type": "real",
+        "kind": "8",
+        "rank": 1,
+        "shape": [
+          "lensav"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "rfft1i",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "lensav",
+        "base_type": "integer",
+        "kind": "4",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "rfft1i",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "ier",
+        "base_type": "integer",
+        "kind": "4",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "rfft1i",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  }
+]

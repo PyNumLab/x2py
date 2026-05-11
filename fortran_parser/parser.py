@@ -1140,6 +1140,12 @@ def _is_executable_statement_start(line: str) -> bool:
     if _LEGACY_PARAM_STMT_RE.match(stripped):
         return False
     if "=" in stripped and "::" not in stripped:
+        # Distinguish assignment/statements from declaration lines carrying
+        # type specs with named arguments, e.g.:
+        #   integer ( kind = 4 ) i
+        #   character ( len = * ) s
+        if _CHAR_STAR_RE.match(stripped) or _TYPE_RE.match(stripped) or _TYPE_FIELD_RE.match(stripped) or _CLASS_FIELD_RE.match(stripped):
+            return False
         # Covers assignment and statement functions in execution part.
         return True
     return False
@@ -1266,9 +1272,6 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
         state.get("header_source_line"),
     )
 
-    if implicit_none:
-        _validate_all_args_declared(sig, filename, explicit_result=bool(state.get("explicit_result", False)))
-
     # Safety check: if an argument has been explicitly declared in this
     # procedure, it must not remain unknown after declaration parsing.
     # This catches declaration-application regressions (e.g. legacy
@@ -1292,6 +1295,22 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
         sig.result.kind = _resolve_symbol_reference(sig.result.kind, local_params)
     relevant_params = _collect_relevant_local_params(sig, local_params)
     declared_local_types = state.get("declared_local_types", {})
+    # Defensive reconciliation: some legacy declaration forms can be parsed into
+    # `declared_local_types` before being matched back to argument symbols.
+    # If an argument is still unknown but we have an exact-name local type
+    # record, apply it before implicit-none validation to avoid false positives.
+    for arg in sig.arguments:
+        if arg.base_type != "unknown":
+            continue
+        inferred = declared_local_types.get(arg.name.lower())
+        if not inferred:
+            continue
+        arg.base_type = inferred.get("base_type", arg.base_type)
+        arg.kind = inferred.get("kind", arg.kind)
+
+    if implicit_none:
+        _validate_all_args_declared(sig, filename, explicit_result=bool(state.get("explicit_result", False)))
+
     for name, value in relevant_params.items():
         if name.lower() in legacy_local_params:
             # Legacy PARAMETER (...) constants are declaration artifacts in
