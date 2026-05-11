@@ -141,3 +141,18 @@ def test_fortran_scifortran_error_manifest_is_in_sync():
         message = str(exc_info.value)
         for fragment in item.get("message_fragments", []):
             assert fragment in message, f"Missing message fragment {fragment!r} for {relpath}"
+
+
+def test_fortran_scifortran_error_manifest_covers_error_directory():
+    with _SCIFORTRAN_ERROR_EXPECTATIONS.open("r", encoding="utf-8") as f:
+        error_expectations = json.load(f)
+
+    manifest_paths = {item["fixture"] for item in error_expectations}
+    error_dir_paths = {
+        str(p.relative_to(_TESTS_DIR))
+        for p in (_TESTS_DIR / "SciFortran" / "errors").glob("*.f90")
+    }
+
+    assert manifest_paths == error_dir_paths, (
+        "SciFortran error manifest and SciFortran/errors directory are out of sync"
+    )
