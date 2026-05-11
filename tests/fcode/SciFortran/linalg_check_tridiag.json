@@ -13,6 +13,14 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -31,6 +39,8 @@
       "kind": null,
       "rank": 0,
       "shape": [],
+      "lbound": [],
+      "ubound": [],
       "value": null,
       "value_type": "unknown",
       "is_parameter": false,
@@ -61,6 +71,14 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -79,6 +97,8 @@
       "kind": null,
       "rank": 0,
       "shape": [],
+      "lbound": [],
+      "ubound": [],
       "value": null,
       "value_type": "unknown",
       "is_parameter": false,
@@ -106,6 +126,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -123,6 +145,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -140,6 +164,14 @@
         "kind": null,
         "rank": 2,
         "shape": [
+          "Nblock*Nsize",
+          "Nblock*Nsize"
+        ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
           "Nblock*Nsize",
           "Nblock*Nsize"
         ],
@@ -161,6 +193,8 @@
       "kind": null,
       "rank": 0,
       "shape": [],
+      "lbound": [],
+      "ubound": [],
       "value": null,
       "value_type": "unknown",
       "is_parameter": false,
@@ -188,6 +222,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -205,6 +241,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -222,6 +260,14 @@
         "kind": null,
         "rank": 2,
         "shape": [
+          "Nblock*Nsize",
+          "Nblock*Nsize"
+        ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
           "Nblock*Nsize",
           "Nblock*Nsize"
         ],
@@ -243,6 +289,8 @@
       "kind": null,
       "rank": 0,
       "shape": [],
+      "lbound": [],
+      "ubound": [],
       "value": null,
       "value_type": "unknown",
       "is_parameter": false,

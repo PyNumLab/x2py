@@ -11,6 +11,8 @@
           "kind": "particle",
           "rank": 0,
           "shape": [],
+          "lbound": [],
+          "ubound": [],
           "value": null,
           "value_type": "unknown",
           "is_parameter": false,
@@ -41,6 +43,8 @@
           "kind": null,
           "rank": 0,
           "shape": [],
+          "lbound": [],
+          "ubound": [],
           "value": null,
           "value_type": "unknown",
           "is_parameter": false,
@@ -58,6 +62,12 @@
           "kind": "8",
           "rank": 1,
           "shape": [
+            "3"
+          ],
+          "lbound": [
+            null
+          ],
+          "ubound": [
             "3"
           ],
           "value": null,

@@ -10,6 +10,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -29,6 +31,12 @@
         "shape": [
           "1"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "1"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -46,6 +54,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -65,6 +75,12 @@
         "shape": [
           "2"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "2"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -82,6 +98,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -99,6 +117,8 @@
         "kind": "c_float",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -118,6 +138,12 @@
         "shape": [
           "n"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "n"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -135,6 +161,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -155,6 +183,14 @@
           "ldv",
           "ncv"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          "ldv",
+          "ncv"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -172,6 +208,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -189,6 +227,12 @@
         "kind": "c_int",
         "rank": 1,
         "shape": [
+          "11"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "11"
         ],
         "value": null,
@@ -210,6 +254,12 @@
         "shape": [
           "11"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "11"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -227,6 +277,12 @@
         "kind": "c_float_complex",
         "rank": 1,
         "shape": [
+          "3*n"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "3*n"
         ],
         "value": null,
@@ -248,6 +304,12 @@
         "shape": [
           "lworkl"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "lworkl"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -265,6 +327,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -284,6 +348,12 @@
         "shape": [
           "ncv"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "ncv"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -301,6 +371,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -332,6 +404,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -349,6 +423,12 @@
         "kind": "c_char",
         "rank": 1,
         "shape": [
+          "1"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "1"
         ],
         "value": null,
@@ -370,6 +450,12 @@
         "shape": [
           "ncv"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "ncv"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -387,6 +473,12 @@
         "kind": "c_float_complex",
         "rank": 1,
         "shape": [
+          "nev"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "nev"
         ],
         "value": null,
@@ -409,6 +501,14 @@
           "n",
           "nev"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          "n",
+          "nev"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -426,6 +526,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -443,6 +545,8 @@
         "kind": "c_float_complex",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -460,6 +564,12 @@
         "kind": "c_float_complex",
         "rank": 1,
         "shape": [
+          "2*ncv"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "2*ncv"
         ],
         "value": null,
@@ -481,6 +591,12 @@
         "shape": [
           "1"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "1"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -498,6 +614,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -517,6 +635,12 @@
         "shape": [
           "2"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "2"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -534,6 +658,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -551,6 +677,8 @@
         "kind": "c_float",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -570,6 +698,12 @@
         "shape": [
           "n"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "n"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -587,6 +721,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -607,6 +743,14 @@
           "ldv",
           "ncv"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          "ldv",
+          "ncv"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -624,6 +768,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -641,6 +787,12 @@
         "kind": "c_int",
         "rank": 1,
         "shape": [
+          "11"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "11"
         ],
         "value": null,
@@ -662,6 +814,12 @@
         "shape": [
           "11"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "11"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -679,6 +837,12 @@
         "kind": "c_float_complex",
         "rank": 1,
         "shape": [
+          "3*n"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "3*n"
         ],
         "value": null,
@@ -700,6 +864,12 @@
         "shape": [
           "lworkl"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "lworkl"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -717,6 +887,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -736,6 +908,12 @@
         "shape": [
           "ncv"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "ncv"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -753,6 +931,8 @@
         "kind": "c_int",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
