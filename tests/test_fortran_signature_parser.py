@@ -8,8 +8,11 @@ from fortran_parser import (
     parse_fortran_namespace,
     parse_fortran_project_signatures,
     parse_fortran_signatures,
+    parse_fortran_block_data,
     parse_fortran_interfaces,
     parse_fortran_modules,
+    parse_fortran_programs,
+    parse_fortran_submodules,
     parse_fortran_types,
 )
 
@@ -755,3 +758,89 @@ end subroutine bad
 """
     with pytest.raises(ValueError, match="Unknown or unsupported datatype"):
         parse_fortran_signatures(code, filename="bad.f90")
+
+
+def test_submodule_procedures_and_namespace_dependencies(tmp_path):
+    parent = tmp_path / "parent.f90"
+    child = tmp_path / "child.f90"
+    parent.write_text(
+        """
+module parent_mod
+  integer, parameter :: rk = 8
+  interface
+    module subroutine scale(x)
+      real(kind=rk), intent(inout) :: x(:)
+    end subroutine scale
+  end interface
+end module parent_mod
+""",
+        encoding="utf-8",
+    )
+    child.write_text(
+        """
+submodule (parent_mod) child_impl
+contains
+  module subroutine scale(x)
+    real(kind=8), intent(inout) :: x(:)
+  end subroutine scale
+end submodule child_impl
+""",
+        encoding="utf-8",
+    )
+
+    namespace = parse_fortran_namespace(tmp_path)
+    assert namespace["files"] == [str(parent), str(child)]
+    assert namespace["file_dependencies"][str(child)] == [str(parent)]
+    assert namespace["submodule_to_file"] == {"child_impl": str(child)}
+    assert len(namespace["submodules"]) == 1
+    submodule = namespace["submodules"][0]
+    assert submodule.name == "child_impl"
+    assert submodule.parent == "parent_mod"
+    assert submodule.ancestor is None
+    assert [p.name for p in submodule.procedures] == ["scale"]
+    assert submodule.procedures[0].module == "child_impl"
+
+
+def test_submodule_module_procedure_stub_and_additional_program_units():
+    code = """
+submodule (ancestor_mod:parent_impl) child_impl
+  use iso_c_binding, only: c_int
+  integer(kind=c_int) :: counter
+contains
+  module procedure reset_counter
+  end procedure reset_counter
+end submodule child_impl
+
+program driver
+  use ancestor_mod
+  integer :: ierr
+end program driver
+
+block data init_data
+  integer :: seed
+end block data init_data
+"""
+    submodules = parse_fortran_submodules(code)
+    assert len(submodules) == 1
+    submodule = submodules[0]
+    assert submodule.parent == "parent_impl"
+    assert submodule.ancestor == "ancestor_mod"
+    assert submodule.uses["iso_c_binding"] == ["c_int"]
+    assert [v.name for v in submodule.variables] == ["counter"]
+    assert [(p.name, p.kind) for p in submodule.procedures] == [("reset_counter", "module procedure")]
+
+    programs = parse_fortran_programs(code)
+    assert len(programs) == 1
+    assert programs[0].name == "driver"
+    assert programs[0].uses["ancestor_mod"] == []
+    assert [v.name for v in programs[0].variables] == ["ierr"]
+
+    block_data = parse_fortran_block_data(code)
+    assert len(block_data) == 1
+    assert block_data[0].name == "init_data"
+    assert [v.name for v in block_data[0].variables] == ["seed"]
+
+    readiness = assess_wrap_readiness(code)
+    assert readiness["n_submodules"] == 1
+    assert readiness["n_programs"] == 1
+    assert readiness["n_block_data"] == 1
