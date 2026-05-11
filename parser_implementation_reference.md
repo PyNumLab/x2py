@@ -355,6 +355,13 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
 - **Design intent:**
   - The parser is intentionally strict at parse time to avoid mixed-standard inputs producing ambiguous metadata.
   - "Unsupported but recognized" constructs are still surfaced via readiness diagnostics where appropriate; truly invalid-for-version or unknown datatype syntax should crash early.
+- **Preprocessor-conditional duplicate procedures (guarded allowance):**
+  - The parser does **not** run a full C preprocessor stage before parsing.
+  - While scanning signatures, simple directive structure is tracked for `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` to model mutually-exclusive branches.
+  - Duplicate procedure-name checks in a module/global scope are evaluated against this branch context:
+    - if two same-name procedure headers are reachable in an overlapping branch context, raise `FortranParseError` (duplicate procedure name).
+    - if they are only present in mutually-exclusive branches of the same conditional group, allow both signatures.
+  - This is a structural exclusivity model (branch groups), not semantic evaluation of macro expressions. In other words, branch mutual exclusivity is honored without requiring expression truth evaluation.
 
 `FortranParseError` is a subclass of `ValueError` and carries structured location metadata:
 - `filename` — source file path (if provided)
