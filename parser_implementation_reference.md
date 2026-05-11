@@ -78,7 +78,7 @@ another source language.
 
 ### 2.6 Derived types
 
-- `type :: name ... end type` discovery.  
+- `type :: name ... end type` and legacy `type name ... end type` discovery.  
 - Type attributes list extraction (e.g., `abstract`).  
 - `extends(parent)` extraction.  
 - Same-file parent linking (`extends` string replaced with parent object when
@@ -153,6 +153,7 @@ Covers, among others:
 - fixed-form parsing and interface detection
 - cross-file kind resolution from imported module parameters
 - derived type fields and method detection
+- storage directives (`save`, `common`) in procedures are recognized and skipped as non-declaration statements
 - module variable and `use` parsing
 - module children attachment (procedures/types/interfaces)
 - ignoring local vars in external signatures
