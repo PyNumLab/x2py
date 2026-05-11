@@ -396,6 +396,21 @@ end subroutine fdjac1
     assert sig.arguments[0].name == "fcn"
     assert sig.arguments[0].base_type == "procedure"
 
+def test_external_function_dummy_with_explicit_result_type_is_parsed():
+    code = """
+subroutine apply_cb(f, x, y)
+  implicit none
+  real, intent(in) :: x
+  real, intent(out) :: y
+  real, external :: f
+  y = f(x)
+end subroutine apply_cb
+"""
+    sig = parse_fortran_signatures(code, filename="apply_cb.f90")[0]
+    f_arg = sig.arguments[0]
+    assert f_arg.name == "f"
+    assert f_arg.base_type == "real"
+
 def test_ignore_local_variables_in_signatures():
     code = """
 subroutine update(n, x)

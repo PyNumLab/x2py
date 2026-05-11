@@ -727,3 +727,13 @@ Failed to resolve declared argument '<name>' in procedure '<proc>'.
 This parser is intentionally wrapper-focused and not a complete Fortran front
 end. Unsupported syntax should be surfaced through diagnostics/readiness output
 for incremental parser extension.
+
+
+### External callback dummy declarations
+
+The parser accepts legacy callback-style declarations inside procedure scopes, including:
+
+- `external :: cb` (treated as a procedure-typed dummy)
+- `real, external :: f` / `integer, external :: g` (typed external function dummies)
+
+Under `implicit none`, these declarations count as valid argument declarations, so callback arguments are not reported as missing datatype declarations.
