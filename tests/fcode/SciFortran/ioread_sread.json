@@ -1,0 +1,982 @@
+[
+  {
+    "name": "sreadA1_RR",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA1_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA1_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(X)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA1_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA1_RC",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA1_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA1_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(X)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA1_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA2_RR",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA2_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(Y1,2)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA2_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA2_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA2_RC",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA2_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(Y1,2)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA2_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA2_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA3_RR",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA3_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(Y1,3)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA3_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "real",
+        "kind": null,
+        "rank": 3,
+        "shape": [
+          ":",
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA3_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA3_RC",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA3_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(Y1,3)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA3_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 3,
+        "shape": [
+          ":",
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA3_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA4_RR",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA4_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(Y1,4)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA4_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "real",
+        "kind": null,
+        "rank": 4,
+        "shape": [
+          ":",
+          ":",
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA4_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA4_RC",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA4_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(Y1,4)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA4_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 4,
+        "shape": [
+          ":",
+          ":",
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA4_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA5_RR",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA5_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(Y1,5)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA5_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "real",
+        "kind": null,
+        "rank": 5,
+        "shape": [
+          ":",
+          ":",
+          ":",
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA5_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA5_RC",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA5_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(Y1,5)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA5_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 5,
+        "shape": [
+          ":",
+          ":",
+          ":",
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA5_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA6_RR",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA6_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(Y1,6)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA6_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "real",
+        "kind": null,
+        "rank": 6,
+        "shape": [
+          ":",
+          ":",
+          ":",
+          ":",
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA6_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA6_RC",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA6_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(Y1,6)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA6_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 6,
+        "shape": [
+          ":",
+          ":",
+          ":",
+          ":",
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA6_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA7_RR",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA7_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(Y1,7)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA7_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "real",
+        "kind": null,
+        "rank": 7,
+        "shape": [
+          ":",
+          ":",
+          ":",
+          ":",
+          ":",
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA7_RR",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sreadA7_RC",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "pname",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA7_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "X",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(Y1,7)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA7_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Y1",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 7,
+        "shape": [
+          ":",
+          ":",
+          ":",
+          ":",
+          ":",
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sreadA7_RC",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  }
+]

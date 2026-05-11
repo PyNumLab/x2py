@@ -1,0 +1,3516 @@
+{
+  "signatures": [
+    {
+      "name": "init_dmatrix_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "init_dmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "N",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "init_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "N1",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "init_dmatrix_csr",
+          "intent": "in",
+          "optional": true,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [
+        "elemental"
+      ],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "construct_dmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "matrix",
+          "base_type": "real",
+          "kind": null,
+          "rank": 2,
+          "shape": [
+            ":",
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "construct_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "construct_dmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "load_dmatrix_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "load_dmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "matrix",
+          "base_type": "real",
+          "kind": null,
+          "rank": 2,
+          "shape": [
+            ":",
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "load_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "init_zmatrix_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "init_zmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "N",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "init_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "N1",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "init_zmatrix_csr",
+          "intent": "in",
+          "optional": true,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [
+        "elemental"
+      ],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "construct_zmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "matrix",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 2,
+          "shape": [
+            ":",
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "construct_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "construct_zmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "load_zmatrix_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "load_zmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "matrix",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 2,
+          "shape": [
+            ":",
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "load_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "free_dmatrix_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "free_dmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [
+        "elemental"
+      ],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "free_zmatrix_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "free_zmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [
+        "elemental"
+      ],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "insert_delement_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "insert_delement_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "value",
+          "base_type": "real",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "insert_delement_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "i",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "insert_delement_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "j",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "insert_delement_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "insert_zelement_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "insert_zelement_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "value",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "insert_zelement_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "i",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "insert_zelement_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "j",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "insert_zelement_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "get_delement_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "get_delement_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "i",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "get_delement_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "j",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "get_delement_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "value",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "get_delement_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "get_zelement_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "get_zelement_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "i",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "get_zelement_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "j",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "get_zelement_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "value",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "get_zelement_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "dump_dmatrix_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "dump_dmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "matrix",
+          "base_type": "real",
+          "kind": null,
+          "rank": 2,
+          "shape": [
+            ":",
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "dump_dmatrix_csr",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "dump_zmatrix_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "dump_zmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "matrix",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 2,
+          "shape": [
+            ":",
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "dump_zmatrix_csr",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "as_dmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "as_dmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "matrix",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          "sparse%Nrow",
+          "sparse%Ncol"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "as_dmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "as_zmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "sparse",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "as_zmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "matrix",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          "sparse%Nrow",
+          "sparse%Ncol"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "as_zmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "kron_dmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "kron_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "B",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "kron_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "AxB",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "kron_dmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "restricted_kron_dmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "restricted_kron_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "B",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "restricted_kron_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "states",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "restricted_kron_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "AxB",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "restricted_kron_dmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "kron_zmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "kron_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "B",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "kron_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "AxB",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "kron_zmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "restricted_kron_zmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "restricted_kron_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "B",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "restricted_kron_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "states",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "restricted_kron_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "AxB",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "restricted_kron_zmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "dgr_dmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "dgr_dmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "c",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "dgr_dmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "transpose_dmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "transpose_dmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "c",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "transpose_dmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "dmatrix_equal_dmatrix_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "dmatrix_equal_dmatrix_csr",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "b",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "dmatrix_equal_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "dmatrix_equal_scalar_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "dmatrix_equal_scalar_csr",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "c",
+          "base_type": "real",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "dmatrix_equal_scalar_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "plus_dmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "plus_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "b",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "plus_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "c",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "plus_dmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "minus_dmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "minus_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "b",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "minus_dmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "c",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "minus_dmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "left_product_dmatrix_i_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "C",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "left_product_dmatrix_i_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "left_product_dmatrix_i_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "left_product_dmatrix_i_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "left_product_dmatrix_d_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "C",
+          "base_type": "real",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "left_product_dmatrix_d_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "left_product_dmatrix_d_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "left_product_dmatrix_d_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "right_product_dmatrix_i_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_product_dmatrix_i_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "C",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_product_dmatrix_i_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "right_product_dmatrix_i_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "right_product_dmatrix_d_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_product_dmatrix_d_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "C",
+          "base_type": "real",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_product_dmatrix_d_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "right_product_dmatrix_d_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "right_division_dmatrix_i_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_division_dmatrix_i_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "C",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_division_dmatrix_i_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "right_division_dmatrix_i_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "right_division_dmatrix_d_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_division_dmatrix_d_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "C",
+          "base_type": "real",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_division_dmatrix_d_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_dmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "right_division_dmatrix_d_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "right_matmul_dmatrix_darray_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_matmul_dmatrix_darray_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "C",
+          "base_type": "real",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_matmul_dmatrix_darray_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(C)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "right_matmul_dmatrix_darray_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "right_matmul_zmatrix_zarray_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_matmul_zmatrix_zarray_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "C",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_matmul_zmatrix_zarray_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(C)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "right_matmul_zmatrix_zarray_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "dgr_zmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "dgr_zmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "c",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "dgr_zmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "transpose_zmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "transpose_zmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "c",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "transpose_zmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "conjg_zmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "unknown",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "conjg_zmatrix_csr",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "c",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "conjg_zmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "zmatrix_equal_zmatrix_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "zmatrix_equal_zmatrix_csr",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "b",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "zmatrix_equal_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "zmatrix_equal_scalar_csr",
+      "kind": "subroutine",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "zmatrix_equal_scalar_csr",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "c",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "zmatrix_equal_scalar_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "plus_zmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "plus_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "b",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "plus_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "c",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "plus_zmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "minus_zmatrix_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "a",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "minus_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "b",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "minus_zmatrix_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "c",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "minus_zmatrix_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "left_product_zmatrix_i_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "C",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "left_product_zmatrix_i_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "left_product_zmatrix_i_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "left_product_zmatrix_i_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "left_product_zmatrix_d_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "C",
+          "base_type": "real",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "left_product_zmatrix_d_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "left_product_zmatrix_d_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "left_product_zmatrix_d_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "left_product_zmatrix_z_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "C",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "left_product_zmatrix_z_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "left_product_zmatrix_z_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "left_product_zmatrix_z_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "right_product_zmatrix_i_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_product_zmatrix_i_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "C",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_product_zmatrix_i_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "right_product_zmatrix_i_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "right_product_zmatrix_d_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_product_zmatrix_d_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "C",
+          "base_type": "real",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_product_zmatrix_d_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "right_product_zmatrix_d_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "right_product_zmatrix_z_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_product_zmatrix_z_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "C",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_product_zmatrix_z_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "right_product_zmatrix_z_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "right_division_zmatrix_i_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_division_zmatrix_i_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "C",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_division_zmatrix_i_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "right_division_zmatrix_i_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "right_division_zmatrix_d_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_division_zmatrix_d_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "C",
+          "base_type": "real",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_division_zmatrix_d_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "right_division_zmatrix_d_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "right_division_zmatrix_z_csr",
+      "kind": "function",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "arguments": [
+        {
+          "name": "A",
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csr",
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_division_zmatrix_z_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "C",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "right_division_zmatrix_z_csr",
+          "intent": "in",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "B",
+        "base_type": "derived",
+        "kind": "sparse_zmatrix_csr",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "right_division_zmatrix_z_csr",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {
+        "SF_LINALG": [
+          "zeye",
+          "deye"
+        ],
+        "SF_SPARSE_COMMON": [],
+        "MPI": []
+      },
+      "in_interface": false,
+      "variables": {}
+    }
+  ],
+  "types": [
+    {
+      "name": "sparse_drow_csr",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "fields": [
+        {
+          "name": "vals",
+          "base_type": "real",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": true,
+          "pointer": false
+        }
+      ],
+      "methods": [],
+      "extends": "sparse_row_csr",
+      "attributes": [],
+      "procedure_bindings": [],
+      "generic_bindings": []
+    },
+    {
+      "name": "sparse_zrow_csr",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "fields": [
+        {
+          "name": "vals",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": true,
+          "pointer": false
+        }
+      ],
+      "methods": [],
+      "extends": "sparse_row_csr",
+      "attributes": [],
+      "procedure_bindings": [],
+      "generic_bindings": []
+    },
+    {
+      "name": "sparse_dmatrix_csr",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "fields": [
+        {
+          "name": "row",
+          "base_type": "derived",
+          "kind": "sparse_drow_csr",
+          "rank": 1,
+          "shape": [
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": true,
+          "pointer": false
+        }
+      ],
+      "methods": [
+        "init      => init_dmatrix_csr",
+        "free      => free_dmatrix_csr",
+        "load      => load_dmatrix_csr",
+        "dump      => dump_dmatrix_csr",
+        "insert    => insert_delement_csr",
+        "get       => get_delement_csr",
+        "as_matrix => as_dmatrix_csr",
+        "dgr       => dgr_dmatrix_csr",
+        "transpose => transpose_dmatrix_csr"
+      ],
+      "extends": "sparse_matrix",
+      "attributes": [],
+      "procedure_bindings": [
+        {
+          "name": "init      => init_dmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "free      => free_dmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "load      => load_dmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "dump      => dump_dmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "insert    => insert_delement_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "get       => get_delement_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "as_matrix => as_dmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "dgr       => dgr_dmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "transpose => transpose_dmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        }
+      ],
+      "generic_bindings": []
+    },
+    {
+      "name": "sparse_zmatrix_csr",
+      "module": "SF_SPARSE_ARRAY_CSR",
+      "fields": [
+        {
+          "name": "row",
+          "base_type": "derived",
+          "kind": "sparse_zrow_csr",
+          "rank": 1,
+          "shape": [
+            ":"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": true,
+          "pointer": false
+        }
+      ],
+      "methods": [
+        "init      => init_zmatrix_csr",
+        "free      => free_zmatrix_csr",
+        "load      => load_zmatrix_csr",
+        "dump      => dump_zmatrix_csr",
+        "insert    => insert_zelement_csr",
+        "get       => get_zelement_csr",
+        "as_matrix => as_zmatrix_csr",
+        "dgr       => dgr_zmatrix_csr",
+        "transpose => transpose_zmatrix_csr",
+        "conjg     => conjg_zmatrix_csr"
+      ],
+      "extends": "sparse_matrix",
+      "attributes": [],
+      "procedure_bindings": [
+        {
+          "name": "init      => init_zmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "free      => free_zmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "load      => load_zmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "dump      => dump_zmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "insert    => insert_zelement_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "get       => get_zelement_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "as_matrix => as_zmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "dgr       => dgr_zmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "transpose => transpose_zmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        },
+        {
+          "name": "conjg     => conjg_zmatrix_csr",
+          "attrs": [
+            "pass"
+          ]
+        }
+      ],
+      "generic_bindings": []
+    }
+  ]
+}
