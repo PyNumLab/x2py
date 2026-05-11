@@ -156,3 +156,34 @@ def test_fortran_scifortran_error_manifest_covers_error_directory():
     assert manifest_paths == error_dir_paths, (
         "SciFortran error manifest and SciFortran/errors directory are out of sync"
     )
+
+
+def test_fortran_scifortran_error_manifest_uses_error_directory_only():
+    with _SCIFORTRAN_ERROR_EXPECTATIONS.open("r", encoding="utf-8") as f:
+        error_expectations = json.load(f)
+
+    for item in error_expectations:
+        relpath = item["fixture"]
+        assert relpath.startswith("SciFortran/errors/"), (
+            f"Error manifest fixture must live in SciFortran/errors: {relpath}"
+        )
+        assert item.get("message_fragments"), (
+            f"Error manifest item must document at least one error fragment: {relpath}"
+        )
+
+
+def test_fortran_scifortran_main_directory_has_no_error_fixtures():
+    with _SCIFORTRAN_ERROR_EXPECTATIONS.open("r", encoding="utf-8") as f:
+        error_expectations = json.load(f)
+
+    manifest_basenames = {Path(item["fixture"]).name for item in error_expectations}
+    main_scifortran_fixtures = {
+        p.name
+        for p in (_TESTS_DIR / "SciFortran").glob("*.f90")
+    }
+
+    overlap = sorted(manifest_basenames & main_scifortran_fixtures)
+    assert not overlap, (
+        "Files listed as parse-failing must be moved out of SciFortran/ and into "
+        f"SciFortran/errors first: {overlap[:10]}"
+    )
