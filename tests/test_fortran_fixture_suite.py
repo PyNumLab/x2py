@@ -23,14 +23,11 @@ _LAPACK_FIXTURES = sorted(
 _SCIFORTRAN_FIXTURES = sorted(
     f
     for f in (_TESTS_DIR / "SciFortran").glob("*")
-    if f.is_file() and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08"}
+    if f.is_file()
+    and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08"}
+    and f.with_suffix(".json").exists()
 )
-_RUN_SCIFORTRAN_FIXTURES = os.getenv("FORTRAN_PARSER_RUN_SCIFORTRAN", "0") == "1"
-_SCIFORTRAN_SKIP = pytest.mark.skipif(
-    not _RUN_SCIFORTRAN_FIXTURES,
-    reason="SciFortran goldens are generated locally on demand",
-)
-
+_SCIFORTRAN_ERROR_EXPECTATIONS = _TESTS_DIR / "SciFortran_errors.json"
 
 def _load_expected(expected_path: Path):
     with expected_path.open("r", encoding="utf-8") as f:
@@ -115,12 +112,10 @@ def test_fortran_lapack_parse_suite(fixture):
     )
 
 
-@_SCIFORTRAN_SKIP
 def test_fortran_scifortran_parse_suite_has_fixtures():
     assert _SCIFORTRAN_FIXTURES, "No SciFortran fixtures found in tests/fcode/SciFortran"
 
 
-@_SCIFORTRAN_SKIP
 @pytest.mark.parametrize("fixture", _SCIFORTRAN_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
 def test_fortran_scifortran_parse_suite(fixture):
     relpath = str(fixture.relative_to(_TESTS_DIR))
@@ -129,3 +124,20 @@ def test_fortran_scifortran_parse_suite(fixture):
         filename_for_parser=relpath,
         expected_path=fixture.with_suffix(".json"),
     )
+
+
+def test_fortran_scifortran_error_manifest_is_in_sync():
+    with _SCIFORTRAN_ERROR_EXPECTATIONS.open("r", encoding="utf-8") as f:
+        error_expectations = json.load(f)
+
+    for item in error_expectations:
+        relpath = item["fixture"]
+        fixture = _TESTS_DIR / relpath
+        source = fixture.read_text(encoding="utf-8")
+
+        with pytest.raises(Exception) as exc_info:
+            parse_fortran_signatures(source, filename=relpath)
+
+        message = str(exc_info.value)
+        for fragment in item.get("message_fragments", []):
+            assert fragment in message, f"Missing message fragment {fragment!r} for {relpath}"

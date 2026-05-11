@@ -27,13 +27,14 @@ _PARAM_RE = re.compile(
 _LEGACY_PARAM_STMT_RE = re.compile(r"^parameter\s*\(\s*(?P<body>.*)\s*\)$", re.IGNORECASE)
 _DERIVED_TYPE_RE = re.compile(r"^type\s*(?P<attrs>(?:,\s*[^:]+)?)::\s*(?P<name>\w+)$", re.IGNORECASE)
 _TYPE_FIELD_RE = re.compile(r"^type\s*\(\s*(?P<dtype>\w+)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE)
+_CLASS_FIELD_RE = re.compile(r"^class\s*\(\s*(?P<dtype>\w+)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE)
 _PROC_BIND_RE = re.compile(r"^procedure\s*(?:,\s*[^:]*)?::\s*(?P<names>.*)$", re.IGNORECASE)
 _SUBMODULE_RE = re.compile(r"^submodule\s*\(\s*(?P<parent>[^)]+?)\s*\)\s*(?P<name>\w+)\s*$", re.IGNORECASE)
 _MOD_PROC_IMPL_RE = re.compile(r"^module\s+procedure\s+(?P<name>\w+)\s*$", re.IGNORECASE)
 _PROGRAM_RE = re.compile(r"^program\s+(?P<name>\w+)\s*$", re.IGNORECASE)
 _BLOCK_DATA_RE = re.compile(r"^block\s+data(?:\s+(?P<name>\w+))?\s*$", re.IGNORECASE)
 _UNSUPPORTED_PATTERNS = (
-    re.compile(r"\bclass\s*\(", re.IGNORECASE),
+    re.compile(r"\bclass\s*\(\s*\*\s*\)", re.IGNORECASE),
     re.compile(r"\bselect\s+type\b", re.IGNORECASE),
     re.compile(r"\bcoarray\b|\[[^\]]*\]", re.IGNORECASE),
     re.compile(r"\bprocedure\s*,\s*pointer\b", re.IGNORECASE),
@@ -88,6 +89,9 @@ def _parse_type_prefix(prefix: str) -> tuple[str, str | None] | None:
     derived = _TYPE_FIELD_RE.match(txt)
     if derived:
         return "derived", derived.group("dtype")
+    class_derived = _CLASS_FIELD_RE.match(txt)
+    if class_derived:
+        return "derived", class_derived.group("dtype")
     return None
 
 
@@ -969,6 +973,7 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
     char_star = _CHAR_STAR_RE.match(left)
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
+    class_derived = _CLASS_FIELD_RE.match(left)
     if char_star:
         base = "character"
         kind = char_star.group("len").strip()
@@ -992,10 +997,11 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
         else:
             attrs = []
             right = trailing
-    elif derived:
+    elif derived or class_derived:
         base = "derived"
-        kind = derived.group("dtype")
-        attrs = split_csv((derived.group("attrs") or "").strip().lstrip(", "))
+        kind = (derived or class_derived).group("dtype")
+        decl = derived or class_derived
+        attrs = split_csv((decl.group("attrs") or "").strip().lstrip(", "))
     else:
         m_first = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)", line.strip())
         first_word = m_first.group(1).lower() if m_first else ""
@@ -1551,6 +1557,7 @@ def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str |
 
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
+    class_derived = _CLASS_FIELD_RE.match(left)
     if tm:
         base = tm.group(1).lower()
         type_spec = (tm.group(2) or "").strip()
@@ -1566,11 +1573,12 @@ def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str |
             "allocatable": False,
             "pointer": False,
         }
-    elif derived:
-        attrs = split_csv((derived.group("attrs") or "").strip().lstrip(", "))
+    elif derived or class_derived:
+        decl = derived or class_derived
+        attrs = split_csv((decl.group("attrs") or "").strip().lstrip(", "))
         meta = {
             "base_type": "derived",
-            "kind": derived.group("dtype"),
+            "kind": decl.group("dtype"),
             "rank": 0,
             "shape": [],
             "intent": "unknown",
@@ -1626,6 +1634,7 @@ def _parse_module_variable_line(line: str, module: FortranModule, filename: str 
 
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
+    class_derived = _CLASS_FIELD_RE.match(left)
     if tm:
         base = tm.group(1).lower()
         type_spec = (tm.group(2) or "").strip()
@@ -1641,11 +1650,12 @@ def _parse_module_variable_line(line: str, module: FortranModule, filename: str 
             "allocatable": False,
             "pointer": False,
         }
-    elif derived:
-        attrs = split_csv((derived.group("attrs") or "").strip().lstrip(", "))
+    elif derived or class_derived:
+        decl = derived or class_derived
+        attrs = split_csv((decl.group("attrs") or "").strip().lstrip(", "))
         meta = {
             "base_type": "derived",
-            "kind": derived.group("dtype"),
+            "kind": decl.group("dtype"),
             "rank": 0,
             "shape": [],
             "intent": "unknown",

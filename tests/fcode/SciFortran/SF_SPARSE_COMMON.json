@@ -1,0 +1,543 @@
+[
+  {
+    "name": "shape_matrix",
+    "kind": "function",
+    "module": "SF_SPARSE_COMMON",
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "sparse_matrix",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "shape_matrix",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "shape",
+      "base_type": "integer",
+      "kind": null,
+      "rank": 1,
+      "shape": [
+        "2"
+      ],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "shape_matrix",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {
+      "SF_LINALG": [
+        "deye",
+        "zeye"
+      ]
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sort_array",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_COMMON",
+    "arguments": [
+      {
+        "name": "array",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sort_array",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "order",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(array)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sort_array",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_LINALG": [
+        "deye",
+        "zeye"
+      ]
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "qsort_swap",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_COMMON",
+    "arguments": [
+      {
+        "name": "order",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qsort_swap",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "first",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qsort_swap",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "second",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qsort_swap",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_LINALG": [
+        "deye",
+        "zeye"
+      ]
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "qsort_rand",
+    "kind": "function",
+    "module": "SF_SPARSE_COMMON",
+    "arguments": [
+      {
+        "name": "lower",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qsort_rand",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "upper",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qsort_rand",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "qsort_rand",
+      "base_type": "integer",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "qsort_rand",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {
+      "SF_LINALG": [
+        "deye",
+        "zeye"
+      ]
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "compare",
+    "kind": "function",
+    "module": "SF_SPARSE_COMMON",
+    "arguments": [
+      {
+        "name": "f",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "compare",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "g",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "compare",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "compare",
+      "base_type": "integer",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "compare",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {
+      "SF_LINALG": [
+        "deye",
+        "zeye"
+      ]
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "binary_search",
+    "kind": "function",
+    "module": "SF_SPARSE_COMMON",
+    "arguments": [
+      {
+        "name": "Ain",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "binary_search",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "value",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "binary_search",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "bsresult",
+      "base_type": "integer",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "binary_search",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [
+      "recursive"
+    ],
+    "uses": {
+      "SF_LINALG": [
+        "deye",
+        "zeye"
+      ]
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "append_I",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_COMMON",
+    "arguments": [
+      {
+        "name": "vec",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "append_I",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": true,
+        "pointer": false
+      },
+      {
+        "name": "val",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "append_I",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_LINALG": [
+        "deye",
+        "zeye"
+      ]
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "append_D",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_COMMON",
+    "arguments": [
+      {
+        "name": "vec",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "append_D",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": true,
+        "pointer": false
+      },
+      {
+        "name": "val",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "append_D",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_LINALG": [
+        "deye",
+        "zeye"
+      ]
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "append_Z",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_COMMON",
+    "arguments": [
+      {
+        "name": "vec",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "append_Z",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": true,
+        "pointer": false
+      },
+      {
+        "name": "val",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "append_Z",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_LINALG": [
+        "deye",
+        "zeye"
+      ]
+    },
+    "in_interface": false,
+    "variables": {}
+  }
+]

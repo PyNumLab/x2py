@@ -1,0 +1,1595 @@
+[
+  {
+    "fixture": "SciFortran/GAUSS_QUADRATURE.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'gauss_func_method': import :: integration_type\n   |\n54 |     "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/IOFILE.f90",
+    "message_fragments": [
+      "Argument 'intval' in procedure 'i4_to_s_zero' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/LIST_INPUT.f90",
+    "message_fragments": [
+      "Argument 's' in procedure 's_blank_delete' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/SF_BLACS.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'init_BLACS': include \"mpif.h\"\n   |\n33 |     include \"mpif.h\"\n"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/SF_MISC.f90",
+    "message_fragments": [
+      "Duplicate procedure name 'swap_order' in module 'SF_MISC'.\n    |\n706 |     subroutine swap_order( order, first, second )"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/SF_MPI.f90",
+    "message_fragments": [
+      "Duplicate procedure name 'Init_MPI' in module 'SF_MPI'.\n     |\n3344 |   subroutine Init_MPI()\n     | ^"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/SF_OPTIMIZE.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'sub_func_jacobian': function funcv(x)\n    |\n210 |        func"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/SF_PARSE_INPUT.f90",
+    "message_fragments": [
+      "Argument 's' in procedure 's_blank_delete' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/arpack_c.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'lanczos_arpack_c': subroutine MatVec(Nloc,vin,vout)\n  |\n4 |  "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/arpack_d.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'lanczos_arpack_d': subroutine MatVec(Nloc,vin,vout)\n  |\n4 |  "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/brent.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'brent': function func(x)\n   |\n16 |      function func(x)\n   |"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/broyden1.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'broyden1': procedure(broydn_func)               :: ff\n  |\n2 |"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/c1f2kb.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'c1f2kb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/c1f2kf.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'c1f2kf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/c1f3kb.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'c1f3kb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/c1f3kf.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'c1f3kf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/c1f4kb.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'c1f4kb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/c1f4kf.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'c1f4kf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/c1f5kb.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'c1f5kb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/c1f5kf.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'c1f5kf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/c1fgkb.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'c1fgkb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/c1fgkf.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'c1fgkf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/c1fm1b.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'c1fm1b' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/c1fm1f.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'c1fm1f' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cfft1b.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cfft1b' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cfft1f.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cfft1f' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cfft1i.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cfft1i' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cfft2b.f90",
+    "message_fragments": [
+      "Argument 'ldim' in procedure 'cfft2b' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cfft2f.f90",
+    "message_fragments": [
+      "Argument 'ldim' in procedure 'cfft2f' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cfft2i.f90",
+    "message_fragments": [
+      "Argument 'l' in procedure 'cfft2i' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cfftmb.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cfftmb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cfftmf.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cfftmf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cfftmi.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cfftmi' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/chkder.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'chkder' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cmf2kb.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cmf2kb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cmf2kf.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cmf2kf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cmf3kb.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cmf3kb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cmf3kf.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cmf3kf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cmf4kb.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cmf4kb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cmf4kf.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cmf4kf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cmf5kb.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cmf5kb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cmf5kf.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cmf5kf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cmfgkb.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cmfgkb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cmfgkf.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cmfgkf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cmfm1b.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cmfm1b' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cmfm1f.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cmfm1f' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cosq1b.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cosq1b' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cosq1f.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cosq1f' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cosq1i.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cosq1i' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cosqb1.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cosqb1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cosqf1.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cosqf1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cosqmb.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cosqmb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cosqmf.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'cosqmf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cosqmi.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cosqmi' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cost1b.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cost1b' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cost1f.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cost1f' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/cost1i.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cost1i' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/costb1.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'costb1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/costf1.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'costf1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/costmb.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'costmb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/costmf.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'costmf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/costmi.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'costmi' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/curvefit.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'curvefit_lmdif_func': function model_func(x,a)\n  |\n7 |       "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/derivate_fjacobian_c.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'c_fdjac_nn_func': function funcv(x)\n  |\n7 |      function fun"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/derivate_fjacobian_d.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'fdjac_nn_func': function funcv(x)\n  |\n6 |      function funcv"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/dogleg.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'dogleg' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/dvdson_serial.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'dvdson_eigh_d': subroutine MatVec(Nloc,vin,vout)\n    |\n119 | "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/enorm.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'enorm' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/enorm2.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'enorm2' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/fdjac1.f90",
+    "message_fragments": [
+      "Argument 'fcn' in procedure 'fdjac1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/fdjac2.f90",
+    "message_fragments": [
+      "Argument 'fcn' in procedure 'fdjac2' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/fmin_Nelder_Mead.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'fmin': function fn(x)\n   |\n48 |      function fn(x)\n   | ^"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/fmin_bfgs.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'bfgs_with_grad': function func(x)\n  |\n3 |      function func("
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/fmin_cg.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'fmin_cg_df': procedure(cgfit_func)                :: f\n   |\n2"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/fmin_cg_cgplus.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'fmin_cgplus_df': function func(a)\n  |\n5 |      function func("
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/fmin_cg_minimize.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'fmin_cgminimize_func': procedure(cgfit_func)              :: "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/froot_scalar.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'brentq': function func(x)\n  |\n5 |      function func(x)\n  | ^"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/fsolve.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'fsolve_hybrd_func': function func(x)\n  |\n6 |      function fu"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/hybrd.f90",
+    "message_fragments": [
+      "Argument 'fcn' in procedure 'hybrd' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/hybrd1.f90",
+    "message_fragments": [
+      "Argument 'fcn' in procedure 'hybrd1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/hybrj.f90",
+    "message_fragments": [
+      "Argument 'fcn' in procedure 'hybrj' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/hybrj1.f90",
+    "message_fragments": [
+      "Argument 'fcn' in procedure 'hybrj1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/integrate_func_1d.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'd_trapz_ab_func': function f(x)\n  |\n5 |      function f(x)\n  "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/integrate_func_2d.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'd_trapz2d_func': function func(x)\n  |\n3 |      function func("
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/integrate_quad_func.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'quad_func': function func(x)\n   |\n14 |      function func(x)\n"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/integrate_quad_sample.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'quad_sample': type finter_type\n   |\n47 |   type finter_type\n "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/interpolate_cubspl_routines.f90",
+    "message_fragments": [
+      "Argument 'tau' in procedure 'cubspl' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/interpolate_pack.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'cc_abscissas' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/interpolate_pppack.f90",
+    "message_fragments": [
+      "Argument 'w' in procedure 'banfac' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/lanczos_c.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'lanczos_eigh_c': subroutine MatVec(Nloc,vin,vout)\n  |\n6 |    "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/lanczos_d.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'lanczos_eigh_d': subroutine MatVec(Nloc,vin,vout)\n  |\n6 |    "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/leastsq.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'leastsq_lmdif_func': function func(a,m)\n  |\n9 |      function"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/linalg_blacs_aux.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'd_distribute_BLACS': include 'mpif.h'\n  |\n3 |   include 'mpif"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/linalg_inv_gj.f90",
+    "message_fragments": [
+      "Duplicate procedure name 'outerprod' in global scope.\n    |\n138 |   function outerprod(a,b)\n    | ^"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/lmder.f90",
+    "message_fragments": [
+      "Argument 'fcn' in procedure 'lmder' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/lmder1.f90",
+    "message_fragments": [
+      "Argument 'fcn' in procedure 'lmder1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/lmdif.f90",
+    "message_fragments": [
+      "Argument 'fcn' in procedure 'lmdif' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/lmdif1.f90",
+    "message_fragments": [
+      "Argument 'fcn' in procedure 'lmdif1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/lmpar.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'lmpar' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/lmstr.f90",
+    "message_fragments": [
+      "Argument 'fcn' in procedure 'lmstr' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/lmstr1.f90",
+    "message_fragments": [
+      "Argument 'fcn' in procedure 'lmstr1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mcsqb1.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'mcsqb1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mcsqf1.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'mcsqf1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mcstb1.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'mcstb1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mcstf1.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'mcstf1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mpi_lanczos_c.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'mpi_lanczos_eigh_c': subroutine MatVec(Nloc,vin,vout)\n  |\n7 |"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mpi_lanczos_d.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'mpi_lanczos_eigh_d': subroutine MatVec(Nloc,vin,vout)\n  |\n7 |"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mradb2.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'mradb2' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mradb3.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'mradb3' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mradb4.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'mradb4' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mradb5.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'mradb5' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mradbg.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'mradbg' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mradf2.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'mradf2' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mradf3.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'mradf3' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mradf4.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'mradf4' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mradf5.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'mradf5' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mradfg.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'mradfg' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mrftb1.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'mrftb1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mrftf1.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'mrftf1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/mrfti1.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'mrfti1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/msntb1.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'msntb1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/msntf1.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'msntf1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/optimize_broyden_routines.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'lnsrch': function func(x)\n   |\n53 |        function func(x)\n "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/optimize_cgfit_routines.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'mnbrak': function func(x)\n    |\n119 |        function func(x)"
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/parpack_c.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'lanczos_parpack_c': subroutine MatVec(nchunk,vin,vout)\n  |\n6 "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/parpack_d.f90",
+    "message_fragments": [
+      "Unknown or unsupported datatype declaration for procedure 'lanczos_parpack_d': subroutine MatVec(nchunk,vin,vout)\n  |\n6 "
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/qform.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'qform' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/qrfac.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'qrfac' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/qrsolv.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'qrsolv' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r1f2kb.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'r1f2kb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r1f2kf.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'r1f2kf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r1f3kb.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'r1f3kb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r1f3kf.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'r1f3kf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r1f4kb.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'r1f4kb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r1f4kf.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'r1f4kf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r1f5kb.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'r1f5kb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r1f5kf.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'r1f5kf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r1fgkb.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'r1fgkb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r1fgkf.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'r1fgkf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r1mpyq.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'r1mpyq' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r1updt.f90",
+    "message_fragments": [
+      "Argument 'm' in procedure 'r1updt' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r2w.f90",
+    "message_fragments": [
+      "Argument 'ldr' in procedure 'r2w' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r8_factor.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'r8_factor' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r8_mcfti1.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'r8_mcfti1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r8_tables.f90",
+    "message_fragments": [
+      "Argument 'ido' in procedure 'r8_tables' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/r8vec_print.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'r8vec_print' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rfft1b.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'rfft1b' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rfft1f.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'rfft1f' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rfft1i.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'rfft1i' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rfft2b.f90",
+    "message_fragments": [
+      "Argument 'ldim' in procedure 'rfft2b' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rfft2f.f90",
+    "message_fragments": [
+      "Argument 'ldim' in procedure 'rfft2f' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rfft2i.f90",
+    "message_fragments": [
+      "Argument 'l' in procedure 'rfft2i' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rfftb1.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'rfftb1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rfftf1.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'rfftf1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rffti1.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'rffti1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rfftmb.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'rfftmb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rfftmf.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'rfftmf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rfftmi.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'rfftmi' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/rwupdt.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'rwupdt' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sinq1b.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'sinq1b' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sinq1f.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'sinq1f' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sinq1i.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'sinq1i' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sinqmb.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'sinqmb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sinqmf.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'sinqmf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sinqmi.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'sinqmi' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sint1b.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'sint1b' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sint1f.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'sint1f' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sint1i.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'sint1i' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sintb1.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'sintb1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sintf1.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'sintf1' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sintmb.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'sintmb' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sintmf.f90",
+    "message_fragments": [
+      "Argument 'lot' in procedure 'sintmf' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/sintmi.f90",
+    "message_fragments": [
+      "Argument 'n' in procedure 'sintmi' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/special_functions.f90",
+    "message_fragments": [
+      "Argument 'x' in procedure 'airya' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/w2r.f90",
+    "message_fragments": [
+      "Argument 'ldr' in procedure 'w2r' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/xercon.f90",
+    "message_fragments": [
+      "Argument 'inc' in procedure 'xercon' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  },
+  {
+    "fixture": "SciFortran/xerfft.f90",
+    "message_fragments": [
+      "Argument 'srname' in procedure 'xerfft' has no type declaration (implicit none is active)."
+    ],
+    "diagnostic_fragments": [
+      "error[PARSE001]"
+    ]
+  }
+]

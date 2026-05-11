@@ -1,0 +1,468 @@
+[
+  {
+    "name": "sf_init_dmatrix_coo",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_ARRAY_COO",
+    "arguments": [
+      {
+        "name": "sparse",
+        "base_type": "derived",
+        "kind": "sf_sparse_dmatrix_coo",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_init_dmatrix_coo",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "N",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_init_dmatrix_coo",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "N1",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_init_dmatrix_coo",
+        "intent": "unknown",
+        "optional": true,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_SPARSE_COMMON": [],
+      "MPI": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sf_init_cmatrix_coo",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_ARRAY_COO",
+    "arguments": [
+      {
+        "name": "sparse",
+        "base_type": "derived",
+        "kind": "sf_sparse_cmatrix_coo",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_init_cmatrix_coo",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "N",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_init_cmatrix_coo",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "N1",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_init_cmatrix_coo",
+        "intent": "unknown",
+        "optional": true,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_SPARSE_COMMON": [],
+      "MPI": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sf_delete_dmatrix_coo",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_ARRAY_COO",
+    "arguments": [
+      {
+        "name": "sparse",
+        "base_type": "derived",
+        "kind": "sf_sparse_dmatrix_coo",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_delete_dmatrix_coo",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_SPARSE_COMMON": [],
+      "MPI": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sf_delete_cmatrix_coo",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_ARRAY_COO",
+    "arguments": [
+      {
+        "name": "sparse",
+        "base_type": "derived",
+        "kind": "sf_sparse_cmatrix_coo",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_delete_cmatrix_coo",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_SPARSE_COMMON": [],
+      "MPI": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sf_insert_delement_coo",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_ARRAY_COO",
+    "arguments": [
+      {
+        "name": "sparse",
+        "base_type": "derived",
+        "kind": "sf_sparse_dmatrix_coo",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_insert_delement_coo",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "value",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_insert_delement_coo",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "i",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_insert_delement_coo",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "j",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_insert_delement_coo",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_SPARSE_COMMON": [],
+      "MPI": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sf_insert_celement_coo",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_ARRAY_COO",
+    "arguments": [
+      {
+        "name": "sparse",
+        "base_type": "derived",
+        "kind": "sf_sparse_cmatrix_coo",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_insert_celement_coo",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "value",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_insert_celement_coo",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "i",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_insert_celement_coo",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "j",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_insert_celement_coo",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_SPARSE_COMMON": [],
+      "MPI": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sf_dump_dmatrix_coo",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_ARRAY_COO",
+    "arguments": [
+      {
+        "name": "sparse",
+        "base_type": "derived",
+        "kind": "sf_sparse_dmatrix_coo",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_dump_dmatrix_coo",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "matrix",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_dump_dmatrix_coo",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_SPARSE_COMMON": [],
+      "MPI": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "sf_dump_cmatrix_coo",
+    "kind": "subroutine",
+    "module": "SF_SPARSE_ARRAY_COO",
+    "arguments": [
+      {
+        "name": "sparse",
+        "base_type": "derived",
+        "kind": "sf_sparse_cmatrix_coo",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_dump_cmatrix_coo",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "matrix",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "sf_dump_cmatrix_coo",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "SF_SPARSE_COMMON": [],
+      "MPI": []
+    },
+    "in_interface": false,
+    "variables": {}
+  }
+]

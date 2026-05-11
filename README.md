@@ -215,7 +215,7 @@ report = assess_wrap_readiness(code, filename=str(path))
 
 print("procedures:", len(sigs))
 print("wrappable:", report["wrappable"])
-print("unknown args:", report["unknown_arguments"])
+print("unknown args:", report["unknown_argument_types"])
 ```
 
 Expected result:

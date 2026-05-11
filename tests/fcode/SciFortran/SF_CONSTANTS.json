@@ -1,0 +1,477 @@
+[
+  {
+    "name": "i_isinfty",
+    "kind": "function",
+    "module": "SF_CONSTANTS",
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "i_isinfty",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "bool",
+      "base_type": "logical",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "i_isinfty",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [
+      "elemental"
+    ],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "d_isinfty",
+    "kind": "function",
+    "module": "SF_CONSTANTS",
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "d_isinfty",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "bool",
+      "base_type": "logical",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "d_isinfty",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [
+      "elemental"
+    ],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "z_isinfty",
+    "kind": "function",
+    "module": "SF_CONSTANTS",
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "z_isinfty",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "bool",
+      "base_type": "logical",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "z_isinfty",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [
+      "elemental"
+    ],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "i_isnan",
+    "kind": "function",
+    "module": "SF_CONSTANTS",
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "i_isnan",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "bool",
+      "base_type": "logical",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "i_isnan",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [
+      "elemental"
+    ],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "d_isnan",
+    "kind": "function",
+    "module": "SF_CONSTANTS",
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "d_isnan",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "bool",
+      "base_type": "logical",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "d_isnan",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [
+      "elemental"
+    ],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "z_isnan",
+    "kind": "function",
+    "module": "SF_CONSTANTS",
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "z_isnan",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "bool",
+      "base_type": "logical",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "z_isnan",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [
+      "elemental"
+    ],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "timestamp",
+    "kind": "subroutine",
+    "module": "SF_CONSTANTS",
+    "arguments": [
+      {
+        "name": "unit",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "timestamp",
+        "intent": "unknown",
+        "optional": true,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "print_date",
+    "kind": "subroutine",
+    "module": "SF_CONSTANTS",
+    "arguments": [
+      {
+        "name": "dummy",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "8"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "print_date",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "unit",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "print_date",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "stop_error",
+    "kind": "subroutine",
+    "module": "SF_CONSTANTS",
+    "arguments": [
+      {
+        "name": "msg",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "stop_error",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "i_wait",
+    "kind": "subroutine",
+    "module": "SF_CONSTANTS",
+    "arguments": [
+      {
+        "name": "time",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "i_wait",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "r_wait",
+    "kind": "subroutine",
+    "module": "SF_CONSTANTS",
+    "arguments": [
+      {
+        "name": "time",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "r_wait",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "d_wait",
+    "kind": "subroutine",
+    "module": "SF_CONSTANTS",
+    "arguments": [
+      {
+        "name": "time",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "d_wait",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  }
+]
