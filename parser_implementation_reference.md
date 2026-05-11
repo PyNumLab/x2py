@@ -358,6 +358,10 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
 - **Preprocessor-conditional duplicate procedures (guarded allowance):**
   - The parser does **not** run a full C preprocessor stage before parsing.
   - While scanning signatures, simple directive structure is tracked for `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` to model mutually-exclusive branches.
+  - `parse_fortran_signatures(..., macro_defines=...)` can optionally provide a macro decision set/map; when provided, inactive conditional branches are skipped during signature parsing so the parser can select the active code path.
+    - accepted forms: `set[str]` or `dict[str, int|bool|str]`
+    - dictionary values are truthy/falsey (`0`, `False`, `"0"`, `"false"` treated as undefined/disabled)
+  - Basic `#if` expressions are supported for branch selection (`defined(X)`, `!`, `&&`, `||`, parentheses, `0`/`1`).
   - Duplicate procedure-name checks in a module/global scope are evaluated against this branch context:
     - if two same-name procedure headers are reachable in an overlapping branch context, raise `FortranParseError` (duplicate procedure name).
     - if they are only present in mutually-exclusive branches of the same conditional group, allow both signatures.

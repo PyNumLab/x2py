@@ -12,6 +12,8 @@ def strip_comment(line: str, form: str) -> str:
     - **Free form**: ``!`` starts an inline comment *unless* it occurs inside a
       quoted string literal (single or double quotes).
     """
+    if line.lstrip().startswith("#"):
+        return line
     if form == "fixed" and line and line[0] in ("c", "C", "*", "!"):
         return ""
     in_string = False

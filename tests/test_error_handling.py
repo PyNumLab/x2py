@@ -235,6 +235,54 @@ end module m
     assert all(sig.name.lower() == "work" for sig in signatures)
 
 
+def test_macro_defines_select_active_branch_only():
+    code = """
+module m
+#ifdef USE_MPI
+contains
+  subroutine work(n)
+    integer, intent(in) :: n
+  end subroutine work
+#else
+contains
+  function work(n) result(out)
+    integer, intent(in) :: n
+    integer :: out
+  end function work
+#endif
+end module m
+"""
+    signatures = parse_fortran_signatures(code, filename="macro_alt_work.f90", macro_defines={"USE_MPI"})
+    assert len(signatures) == 1
+    assert signatures[0].kind == "subroutine"
+
+
+def test_if_defined_macro_expression_selects_branch():
+    code = """
+module m
+#if defined(USE_MPI) && !defined(USE_SERIAL)
+contains
+  subroutine work(n)
+    integer, intent(in) :: n
+  end subroutine work
+#else
+contains
+  function work(n) result(out)
+    integer, intent(in) :: n
+    integer :: out
+  end function work
+#endif
+end module m
+"""
+    signatures = parse_fortran_signatures(
+        code,
+        filename="macro_if_expr.f90",
+        macro_defines={"USE_MPI": 1, "USE_SERIAL": 0},
+    )
+    assert len(signatures) == 1
+    assert signatures[0].kind == "subroutine"
+
+
 def test_duplicate_procedure_name_error_carries_location():
     code = """
 subroutine work(n)
