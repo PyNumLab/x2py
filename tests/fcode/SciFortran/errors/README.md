@@ -2,7 +2,7 @@
 
 This directory contains **only** SciFortran fixtures that are currently expected to fail parsing.
 
-Source of truth for failures: `tests/fcode/SciFortran_errors.json`.
+Source of truth for failures: `tests/fcode/SciFortran/errors/SciFortran_errors.json`.
 
 ## Workflow
 
@@ -12,7 +12,7 @@ Source of truth for failures: `tests/fcode/SciFortran_errors.json`.
 2. Tests assert these files still fail with the documented error fragments.
 3. When a file is fixed so it parses successfully:
    - move the file out of `SciFortran/errors/` into `SciFortran/`
-   - remove its entry from `SciFortran_errors.json`
+   - remove its entry from `SciFortran/errors/SciFortran_errors.json`
    - add/update its golden `*.json` fixture next to the Fortran file in `SciFortran/`
 
 If a file remains in `SciFortran/errors/` but parses successfully, tests should fail to force cleanup.

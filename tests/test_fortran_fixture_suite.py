@@ -27,7 +27,7 @@ _SCIFORTRAN_FIXTURES = sorted(
     and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08"}
     and f.with_suffix(".json").exists()
 )
-_SCIFORTRAN_ERROR_EXPECTATIONS = _TESTS_DIR / "SciFortran_errors.json"
+_SCIFORTRAN_ERROR_EXPECTATIONS = _TESTS_DIR / "SciFortran" / "errors" / "SciFortran_errors.json"
 
 def _load_expected(expected_path: Path):
     with expected_path.open("r", encoding="utf-8") as f:
