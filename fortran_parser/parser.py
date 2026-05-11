@@ -152,11 +152,13 @@ def parse_fortran_signatures(
     lines = preprocess_lines(code, filename)
     macro_selection_enabled = macro_defines is not None
     signatures: list[FortranProcedureSignature] = []
+    interface_memberships: dict[str, set[str]] = {}
     declared_procedures: dict[tuple[str | None, bool], dict[str, list[frozenset[str]]]] = {}
     current_module = None
     current_module_uses: dict[str, list[str]] = {}
     current_proc = None
     interface_depth = 0
+    interface_name_stack: list[str | None] = []
     program_depth = 0
     macro_names = _normalize_macro_defines(macro_defines)
     pp_condition_stack: list[tuple[int, int]] = []
@@ -222,9 +224,14 @@ def parse_fortran_signatures(
 
         if l.startswith("interface"):
             interface_depth += 1
+            parts = s.split(maxsplit=1)
+            iface_name = parts[1].strip() if len(parts) > 1 else None
+            interface_name_stack.append(iface_name)
             continue
         if l.startswith("end interface"):
             interface_depth = max(0, interface_depth - 1)
+            if interface_name_stack:
+                interface_name_stack.pop()
             continue
 
         submodule_match = _SUBMODULE_RE.match(s)
@@ -336,6 +343,12 @@ def parse_fortran_signatures(
 
     if current_proc is not None:
         signatures.append(_finalize_proc(current_proc))
+    for sig in signatures:
+        for iface_name in sorted(interface_memberships.get(sig.name.lower(), set())):
+            iface_attr = f"interface({iface_name})"
+            if iface_attr not in sig.attributes:
+                sig.attributes.append(iface_attr)
+
     return signatures
 
 
@@ -603,6 +616,10 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
         if l.startswith("end interface"):
             if current_proc is not None and current_interface is not None:
                 sig = _finalize_proc(current_proc)
+                if current_interface.name:
+                    iface_attr = f"interface({current_interface.name})"
+                    if iface_attr not in sig.attributes:
+                        sig.attributes.append(iface_attr)
                 current_interface.procedures.append(sig)
                 current_proc = None
             if current_interface is not None:
@@ -623,6 +640,10 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
 
         if l.startswith("end subroutine") or l.startswith("end function") or l == "end":
             sig = _finalize_proc(current_proc)
+            if current_interface.name:
+                iface_attr = f"interface({current_interface.name})"
+                if iface_attr not in sig.attributes:
+                    sig.attributes.append(iface_attr)
             current_interface.procedures.append(sig)
             current_proc = None
             continue

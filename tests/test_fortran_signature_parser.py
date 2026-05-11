@@ -409,6 +409,25 @@ end subroutine lapack_style
     assert sig.arguments[0].base_type == "real"
 
 
+def test_named_generic_interface_procedures_are_tagged_with_interface_name():
+    code = """
+interface foo
+  integer function foo_i(x)
+    integer, intent(in) :: x
+  end function foo_i
+
+  real function foo_r(x)
+    real, intent(in) :: x
+  end function foo_r
+end interface foo
+"""
+    interfaces = parse_fortran_interfaces(code, filename="iface_generic.f90")
+    assert len(interfaces) == 1
+    assert interfaces[0].name == "foo"
+    assert [p.name for p in interfaces[0].procedures] == ["foo_i", "foo_r"]
+    assert all(p.in_interface for p in interfaces[0].procedures)
+
+
 def test_external_dummy_keeps_recursive_attribute_metadata():
     code = """
 recursive function apply_once(f, x) result(y)
