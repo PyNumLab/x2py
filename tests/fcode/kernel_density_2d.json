@@ -1,0 +1,760 @@
+[
+  {
+    "name": "pdf_allocate_2d",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "pdf_kernel_2d",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_allocate_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Nvec",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_allocate_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "pdf_deallocate_2d",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "pdf_kernel_2d",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_deallocate_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "pdf_save_2d",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "pdf_kernel_2d",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_save_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "pfile",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_save_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "pdf_read_2d",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "pdf_kernel_2d",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_read_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "pfile",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_read_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "pdf_set_range_2d",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "pdf_kernel_2d",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_set_range_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "a",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_set_range_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "b",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_set_range_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "pdf_push_sigma_2d",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "pdf_kernel_2d",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_push_sigma_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "sigma",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          "2",
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_push_sigma_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "pdf_get_sigma_2d",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "pdf_kernel_2d",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_get_sigma_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "sigma",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          "2",
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_get_sigma_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "pdf_sigma_data_2d",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "pdf_kernel_2d",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_sigma_data_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "data",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_sigma_data_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "h",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          "2",
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_sigma_data_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "pdf_sigma_sdev_2d",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "pdf_kernel_2d",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_sigma_sdev_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "sdev",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_sigma_sdev_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "Nvec",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_sigma_sdev_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "h",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          "2",
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_sigma_sdev_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "pdf_accumulate_s_2d",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "pdf_kernel_2d",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_accumulate_s_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "data",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_accumulate_s_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "sigma",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          "2",
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_accumulate_s_2d",
+        "intent": "unknown",
+        "optional": true,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "gaussian_kernel_2d",
+    "kind": "function",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "gaussian_kernel_2d",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "y",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "gaussian_kernel_2d",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "mean",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "gaussian_kernel_2d",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "sigma",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          "2",
+          "2"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "gaussian_kernel_2d",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "gaussian_kernel",
+      "base_type": "real",
+      "kind": null,
+      "rank": 2,
+      "shape": [
+        "size(x)",
+        "size(y)"
+      ],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "gaussian_kernel_2d",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "pdf_normalize_2d",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "pdf_kernel_2d",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_normalize_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "pdf_print_pfile_2d",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "self",
+        "base_type": "derived",
+        "kind": "pdf_kernel_2d",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_print_pfile_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "pfile",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_print_pfile_2d",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "normalize",
+        "base_type": "logical",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pdf_print_pfile_2d",
+        "intent": "unknown",
+        "optional": true,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  }
+]

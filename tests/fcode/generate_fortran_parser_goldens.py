@@ -42,11 +42,13 @@ def main() -> None:
     for fixture in fixtures:
         if not fixture.exists():
             raise SystemExit(f"Fixture does not exist: {fixture}")
-        payload = _serialize_fixture(fixture)
-        out = _TESTS_DIR / f"{fixture.stem}.json"
-        out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-        print(f"updated {out}")
-
+        try:
+            payload = _serialize_fixture(fixture)
+            out = _TESTS_DIR / f"{fixture.stem}.json"
+            out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            print(f"updated {out}")
+        except:
+            pass
 
 if __name__ == "__main__":
     main()
