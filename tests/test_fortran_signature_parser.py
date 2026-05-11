@@ -844,3 +844,28 @@ end block data init_data
     assert readiness["n_submodules"] == 1
     assert readiness["n_programs"] == 1
     assert readiness["n_block_data"] == 1
+
+
+def test_procedure_dummy_declaration_tracks_local_interface_kind():
+    code = """
+subroutine caller(cb)
+  procedure(local_cb) :: cb
+end subroutine caller
+"""
+    sig = parse_fortran_signatures(code)[0]
+    cb = next(a for a in sig.arguments if a.name == "cb")
+    assert cb.base_type == "procedure"
+    assert cb.kind == "local_cb"
+
+
+def test_procedure_dummy_declaration_with_imported_interface_keeps_kind_unresolved():
+    code = """
+subroutine caller(cb)
+  import :: ext_cb
+  procedure(ext_cb) :: cb
+end subroutine caller
+"""
+    sig = parse_fortran_signatures(code)[0]
+    cb = next(a for a in sig.arguments if a.name == "cb")
+    assert cb.base_type == "procedure"
+    assert cb.kind is None
