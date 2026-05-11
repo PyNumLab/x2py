@@ -151,6 +151,29 @@ class FortranVariable:
     is_parameter: bool = False
     dimensions: list[int] = field(default_factory=list)
 
+    @property
+    def shape_info(self) -> list[dict[str, str | None]]:
+        """Structured per-dimension shape metadata derived from `shape` tokens."""
+        return [_parse_shape_dim(dim) for dim in self.shape]
+
+    @property
+    def lower_bounds(self) -> list[str | None]:
+        return [d["lower"] for d in self.shape_info]
+
+    @property
+    def upper_bounds(self) -> list[str | None]:
+        return [d["upper"] for d in self.shape_info]
+
+    @property
+    def lbound(self) -> list[str | None]:
+        """Backward-compatible alias for lower_bounds."""
+        return self.lower_bounds
+
+    @property
+    def ubound(self) -> list[str | None]:
+        """Backward-compatible alias for upper_bounds."""
+        return self.upper_bounds
+
 
 @dataclass
 class FortranArgument(FortranVariable):
