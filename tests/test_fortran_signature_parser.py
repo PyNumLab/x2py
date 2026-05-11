@@ -409,6 +409,40 @@ end subroutine lapack_style
     assert sig.arguments[0].base_type == "real"
 
 
+def test_external_dummy_keeps_recursive_attribute_metadata():
+    code = """
+recursive function apply_once(f, x) result(y)
+  implicit none
+  real, external :: f
+  real, intent(in) :: x
+  real :: y
+  y = f(x)
+end function apply_once
+"""
+    sig = parse_fortran_signatures(code, filename="apply_once.f90")[0]
+    assert sig.kind == "function"
+    assert "recursive" in sig.attributes
+    assert sig.arguments[0].name == "f"
+    assert sig.arguments[0].base_type == "real"
+
+
+def test_external_dummy_keeps_interface_context_metadata():
+    code = """
+interface
+  subroutine driver(fcn, x)
+    implicit none
+    external :: fcn
+    real, intent(in) :: x
+  end subroutine driver
+end interface
+"""
+    sig = parse_fortran_signatures(code, filename="iface_external.f90")[0]
+    assert sig.in_interface is True
+    assert sig.arguments[0].name == "fcn"
+    assert sig.arguments[1].name == "x"
+    assert sig.arguments[1].base_type == "real"
+
+
 def test_external_function_dummy_with_explicit_result_type_is_parsed():
     code = """
 subroutine apply_cb(f, x, y)
