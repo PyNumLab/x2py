@@ -28,13 +28,62 @@ def _has_non_empty_name(entry: dict) -> bool:
     return isinstance(name, str) and bool(name.strip())
 
 
+def _split_dim_bounds(dim: str) -> tuple[str | None, str | None]:
+    """Return the parser-normalized lower/upper bounds for a shape token."""
+    part = dim.strip()
+    if not part:
+        return None, None
+    if ":" not in part:
+        return "1", part
+    lower, upper = part.split(":", 1)
+    return lower.strip() or None, upper.strip() or None
+
+
+def _bounds_from_shape(shape: list[str]) -> tuple[list[str | None], list[str | None]]:
+    lower_bounds = []
+    upper_bounds = []
+    for dim in shape:
+        lower, upper = _split_dim_bounds(dim)
+        lower_bounds.append(lower)
+        upper_bounds.append(upper)
+    return lower_bounds, upper_bounds
+
+
+def _has_valid_bounds(entry: dict) -> bool:
+    """Validate optional lower/upper bound metadata against rank and shape."""
+    rank = entry.get("rank")
+    shape = entry.get("shape")
+    lbound = entry.get("lbound")
+    ubound = entry.get("ubound")
+
+    if not isinstance(rank, int) or rank < 0:
+        return False
+
+    if rank == 0:
+        return lbound in (None, []) and ubound in (None, [])
+
+    if lbound is not None and (not isinstance(lbound, list) or len(lbound) != rank):
+        return False
+    if ubound is not None and (not isinstance(ubound, list) or len(ubound) != rank):
+        return False
+
+    if isinstance(shape, list) and lbound is not None and ubound is not None:
+        expected_lbound, expected_ubound = _bounds_from_shape(shape)
+        return lbound == expected_lbound and ubound == expected_ubound
+
+    return True
+
+
 def _is_valid_shape_info(entry: dict) -> bool:
     """Enforce non-ambiguous shape metadata with clear scalar/array exception rules.
 
     Rule: rank must match the intent of shape metadata.
-    - scalar (rank == 0): `shape` and `dimensions` may be omitted/None/[] only.
-    - array  (rank > 0): `shape` and `dimensions` can be omitted for legacy fixtures,
-      but if present they must be lists.
+    - scalar (rank == 0): `shape`, `dimensions`, `lbound`, and `ubound` may be
+      omitted/None/[] only.
+    - array  (rank > 0): `shape`, `dimensions`, `lbound`, and `ubound` can be
+      omitted for legacy fixtures, but if present they must be lists. Present
+      bounds must match rank, and when `shape` is available they must match the
+      parser-normalized lower/upper bounds for each dimension.
     """
     rank = entry.get("rank")
     shape = entry.get("shape")
@@ -44,9 +93,13 @@ def _is_valid_shape_info(entry: dict) -> bool:
         return False
 
     if rank == 0:
-        return shape in (None, []) and dimensions in (None, [])
+        return shape in (None, []) and dimensions in (None, []) and _has_valid_bounds(entry)
 
-    return (shape is None or isinstance(shape, list)) and (dimensions is None or isinstance(dimensions, list))
+    return (
+        (shape is None or isinstance(shape, list))
+        and (dimensions is None or isinstance(dimensions, list))
+        and _has_valid_bounds(entry)
+    )
 
 
 def _load_fixture_payload(path: Path):
