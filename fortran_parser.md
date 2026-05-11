@@ -44,7 +44,7 @@ and practical usage from terminal and Python.
 
 ### 1.5 Derived type parsing
 
-- `type :: ... end type` discovery
+- `type :: ... end type` and legacy `type name ... end type` discovery
 - Type attributes (e.g., `abstract`)
 - Inheritance (`extends(parent)`)
 - Field extraction including shape/pointer/allocatable

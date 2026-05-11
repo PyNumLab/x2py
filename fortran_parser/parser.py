@@ -326,6 +326,14 @@ def parse_fortran_signatures(
         if current_proc.get("in_contains"):
             continue
 
+        if re.match(r"^type\s+\w+$", s, flags=re.IGNORECASE):
+            current_proc["local_type_depth"] = current_proc.get("local_type_depth", 0) + 1
+            continue
+        if current_proc.get("local_type_depth", 0) > 0:
+            if re.match(r"^end\s+type\b", s, flags=re.IGNORECASE):
+                current_proc["local_type_depth"] -= 1
+            continue
+
         m = _USE_RE.match(s)
         if m:
             symbols = split_csv(m.group("symbols")) if m.group("symbols") else []
@@ -987,6 +995,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "external_symbols": set(),
             "includes": [],
             "filename": None,
+            "local_type_depth": 0,
         }
 
     m = _PROC_RE.match(line)
@@ -1007,6 +1016,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "external_symbols": set(),
             "includes": [],
             "filename": None,
+            "local_type_depth": 0,
         }
     m = _FUNC_RE.match(line)
     if not m:
@@ -1086,6 +1096,10 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
     if re.match(r"^go\s*to\b", stripped, flags=re.IGNORECASE):
         return
     if re.match(r"^use\b", stripped, flags=re.IGNORECASE):
+        return
+    if re.match(r"^save\b", stripped, flags=re.IGNORECASE):
+        return
+    if re.match(r"^common\b", stripped, flags=re.IGNORECASE):
         return
     include_match = _INCLUDE_RE.match(stripped)
     if include_match:
@@ -1200,7 +1214,7 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
     else:
         m_first = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)", line.strip())
         first_word = m_first.group(1).lower() if m_first else ""
-        non_decl_starts = {"do", "if", "where", "call", "select", "case", "allocate", "deallocate", "print", "write", "read", "return", "stop", "cycle", "exit", "continue", "end", "else", "elseif", "contains", "goto", "go", "data", "format", "use"}
+        non_decl_starts = {"do", "if", "where", "call", "select", "case", "allocate", "deallocate", "print", "write", "read", "return", "stop", "cycle", "exit", "continue", "end", "else", "elseif", "contains", "goto", "go", "data", "format", "use", "save", "common"}
         if "=" in line and "::" not in line:
             return
         looks_like_decl = bool(re.match(r"^[A-Za-z]", line.strip())) and first_word not in non_decl_starts and ("::" in line or "," in line or " " in line.strip())
