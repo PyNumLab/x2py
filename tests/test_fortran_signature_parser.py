@@ -384,6 +384,18 @@ def test_legacy_star_kind_parameter_list_with_implicit_none_is_recognized():
     assert sig.variables == {}
 
 
+def test_implicit_none_allows_external_dummy_procedure_argument():
+    code = """
+subroutine fdjac1(fcn, n)
+  implicit none
+  integer, intent(in) :: n
+  external :: fcn
+end subroutine fdjac1
+"""
+    sig = parse_fortran_signatures(code, filename="fdjac1.f90")[0]
+    assert sig.arguments[0].name == "fcn"
+    assert sig.arguments[0].base_type == "procedure"
+
 def test_ignore_local_variables_in_signatures():
     code = """
 subroutine update(n, x)

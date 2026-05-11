@@ -1037,7 +1037,14 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
             proc_state["implicit_none"] = True
         return
 
-    if re.match(r"^external\b", stripped, flags=re.IGNORECASE):
+    external_match = re.match(r"^external\b\s*(?:::)?\s*(?P<names>.*)$", stripped, flags=re.IGNORECASE)
+    if external_match:
+        names = [n.strip().lower() for n in split_csv(external_match.group("names") or "") if n.strip()]
+        for name in names:
+            proc_state["typed_symbols"].add(name)
+            arg = proc_state["symbols"].get(name)
+            if arg is not None and arg.base_type == "unknown":
+                arg.base_type = "procedure"
         return
     if re.match(r"^(function|subroutine)\b", stripped, flags=re.IGNORECASE):
         # Legacy callback declarations often appear as bare:
