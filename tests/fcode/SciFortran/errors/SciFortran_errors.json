@@ -9,15 +9,6 @@
     ]
   },
   {
-    "fixture": "SciFortran/errors/SF_MPI.f90",
-    "message_fragments": [
-      "SciFortran/errors/SF_MPI.f90:3344:1: error[PARSE001]: Duplicate procedure name 'Init_MPI' in module 'SF_MPI'.\n     |\n3344 |   subroutine Init_MPI()\n     | ^"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
     "fixture": "SciFortran/errors/SF_OPTIMIZE.f90",
     "message_fragments": [
       "SciFortran/errors/SF_OPTIMIZE.f90: error[PARSE001]: Argument 'fjac' in procedure 'sub_func_jacobian' has no type declaration (implicit none is active)."
