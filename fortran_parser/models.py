@@ -176,3 +176,32 @@ class FortranModule:
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
     derived_types: list[FortranDerivedType] = field(default_factory=list)
     interfaces: list[FortranInterface] = field(default_factory=list)
+
+
+@dataclass
+class FortranSubmodule:
+    name: str
+    parent: str
+    ancestor: Optional[str] = None
+    filename: Optional[str] = None
+    uses: dict[str, list[str]] = field(default_factory=dict)
+    variables: list[FortranVariable] = field(default_factory=list)
+    procedures: list[FortranProcedureSignature] = field(default_factory=list)
+    derived_types: list[FortranDerivedType] = field(default_factory=list)
+    interfaces: list[FortranInterface] = field(default_factory=list)
+
+
+@dataclass
+class FortranProgram:
+    name: Optional[str] = None
+    filename: Optional[str] = None
+    uses: dict[str, list[str]] = field(default_factory=dict)
+    variables: list[FortranVariable] = field(default_factory=list)
+    procedures: list[FortranProcedureSignature] = field(default_factory=list)
+
+
+@dataclass
+class FortranBlockData:
+    name: Optional[str] = None
+    filename: Optional[str] = None
+    variables: list[FortranVariable] = field(default_factory=list)

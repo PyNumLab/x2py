@@ -8,7 +8,7 @@ another source language.
 
 - Parse individual Fortran sources into normalized callable signatures.  
 - Parse derived types (including inheritance and type-bound procedures).  
-- Parse modules (including module `use` imports and module variables).  
+- Parse modules (including module `use` imports and module variables).
 - Parse interfaces and procedures declared inside interfaces.  
 - Parse whole directories/namespaces with dependency-aware ordering.  
 - Resolve compile-time symbols used in type kinds and array shapes, both local
@@ -99,7 +99,14 @@ another source language.
 - Procedures parsed inside interface blocks.  
 - Interface objects associated to surrounding module when present.  
 
-### 2.8 Wrap-readiness analysis
+### 2.8 Submodules and additional program units
+
+- Fortran 2008 `submodule (parent) name` and `submodule (ancestor:parent) name` blocks detected.
+- Submodule specification-part `use` statements and variables captured.
+- Submodule procedure implementations recognized via `module subroutine/function` and `module procedure`.
+- Main `program` and `block data` units are parsed into dedicated model objects.
+
+### 2.9 Wrap-readiness analysis
 
 - Unsupported construct patterns explicitly scanned:
   - polymorphic `class(...)`
@@ -109,7 +116,7 @@ another source language.
   - `type(c_ptr)`
 - Unknown argument declaration tracking (`base_type == "unknown"`).  
 - Summary report fields:
-  - `n_signatures`, `n_types`, `n_modules`
+  - `n_signatures`, `n_types`, `n_modules`, `n_submodules`, `n_programs`, `n_block_data`
   - `unsupported_constructs`
   - `unknown_argument_types`
   - `wrappable`
@@ -117,12 +124,12 @@ another source language.
 ## 3) Output/data model behavior
 
 - Core parsing APIs return typed model objects (procedures, arguments, modules,
-  types, interfaces, variables).  
+  submodules, programs, block data, types, interfaces, variables).
 - Namespace parse returns aggregate dictionary with:
   - ordered file list
   - file dependency graph
-  - module-to-file index
-  - merged modules/types/signatures
+  - module-to-file and submodule-to-file indexes
+  - merged modules/submodules/programs/block-data/types/signatures
 - CLI JSON output emits per-file buckets for signatures, types, modules,
   readiness report.  
 - CLI human output prints tree-like structure grouped by file/module/procedure.  

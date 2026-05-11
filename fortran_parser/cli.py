@@ -9,7 +9,7 @@ from dataclasses import fields, is_dataclass
 from pathlib import Path
 
 from .models import FortranParseError
-from .parser import assess_wrap_readiness, parse_fortran_modules, parse_fortran_signatures, parse_fortran_types
+from .parser import assess_wrap_readiness, parse_fortran_block_data, parse_fortran_modules, parse_fortran_programs, parse_fortran_signatures, parse_fortran_submodules, parse_fortran_types
 
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
@@ -48,7 +48,7 @@ def _to_dict_no_parent(obj):
 
 def _collect_extensions(path: Path) -> list[Path]:
     """Recursively collect Fortran source files under a directory."""
-    exts = {".f", ".for", ".ftn", ".f90", ".f95", ".f03", ".f08"}
+    exts = {".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"}
     return sorted(p for p in path.rglob("*") if p.suffix.lower() in exts)
 
 
@@ -69,6 +69,9 @@ def _parse_paths(paths: list[str]) -> dict[str, dict]:
             "signatures": [_to_dict_no_parent(s) for s in parse_fortran_signatures(code, filename=str(p))],
             "types": [_to_dict_no_parent(t) for t in parse_fortran_types(code, filename=str(p))],
             "modules": [_to_dict_no_parent(m) for m in parse_fortran_modules(code, filename=str(p))],
+            "submodules": [_to_dict_no_parent(m) for m in parse_fortran_submodules(code, filename=str(p))],
+            "programs": [_to_dict_no_parent(m) for m in parse_fortran_programs(code, filename=str(p))],
+            "block_data": [_to_dict_no_parent(m) for m in parse_fortran_block_data(code, filename=str(p))],
             "wrap_readiness": assess_wrap_readiness(code, filename=str(p)),
         }
     return out
@@ -103,6 +106,29 @@ def _format_report(report: dict[str, dict]) -> str:
                         args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in s["arguments"])
                         result_txt = f" -> {s['result']['base_type']}[{s['result']['rank']}]" if s.get('result') else ""
                         lines.append(f"        - {s['kind']} {s['name']}({args}){result_txt}")
+
+        if parsed.get("submodules"):
+            lines.append(f"  Submodules: {len(parsed['submodules'])}")
+            for submod in parsed["submodules"]:
+                parent = submod["parent"] if submod.get("ancestor") is None else f"{submod['ancestor']}:{submod['parent']}"
+                lines.append(f"    - submodule {submod['name']} (parent={parent}, vars={len(submod['variables'])}, uses={len(submod['uses'])})")
+                if submod.get("procedures"):
+                    lines.append(f"      Procedures: {len(submod['procedures'])}")
+                    for proc in submod["procedures"]:
+                        args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in proc["arguments"])
+                        result_txt = f" -> {proc['result']['base_type']}[{proc['result']['rank']}]" if proc.get('result') else ""
+                        lines.append(f"        - {proc['kind']} {proc['name']}({args}){result_txt}")
+
+        if parsed.get("programs"):
+            lines.append(f"  Programs: {len(parsed['programs'])}")
+            for prog in parsed["programs"]:
+                lines.append(f"    - program {prog['name']} (vars={len(prog['variables'])}, uses={len(prog['uses'])})")
+
+        if parsed.get("block_data"):
+            lines.append(f"  Block data: {len(parsed['block_data'])}")
+            for block in parsed["block_data"]:
+                name = block["name"] or "<unnamed>"
+                lines.append(f"    - block data {name} (vars={len(block['variables'])})")
 
         readiness = parsed["wrap_readiness"]
         if readiness["unsupported_constructs"]:
