@@ -1,0 +1,9 @@
+# SCIFOR library
+#Generate version module:
+CONFIGURE_FILE(${LIB_SRC}/scifor_version.in ${LIB_SRC}/SCIFOR_VERSION.f90 @ONLY)
+
+file(GLOB SCIFOR_LOCAL_SRC
+  "*.f90"
+  )
+SET(SCIFOR_src ${SCIFOR_LOCAL_SRC})
+ADD_LIBRARY(SCIFORLIB OBJECT ${SCIFOR_src})
