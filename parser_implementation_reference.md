@@ -267,11 +267,16 @@ implemented today:
   leakage from executable regions.
 - **Interface scope tracking**: procedures parsed inside `interface ... end
   interface` are represented separately and flagged as interface procedures.
+  Interface-local argument declarations do not conflict with host declarations;
+  callback dummies referenced by interface headers are typed as `procedure`.
 - **Internal procedure scope protection**: nested procedures in a host
   `contains` block are not merged into the host routine signature.
 - **Name-reuse safety across scopes**: fixtures/tests cover same identifier
   reuse in separate host/internal/type scopes to ensure no cross-scope symbol
   pollution.
+- **Preprocessor branch-aware duplicate checks**: duplicate procedure names are
+  allowed in mutually exclusive `#if/#ifdef` branches but still raise when two
+  same-name procedures are active in overlapping branch conditions.
 - **Valued variables map**: compile-time constants are preserved as
   `FortranVariable(name, value)` records in signature metadata.
 - **Expression normalization using valued variables**: argument kinds and shape

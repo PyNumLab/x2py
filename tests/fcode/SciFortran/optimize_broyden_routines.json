@@ -1,78 +1,42 @@
 [
   {
-    "name": "sgrnd",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "seed",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "sgrnd",
-        "intent": "in",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "init_genrand",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "seed",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "init_genrand",
-        "intent": "in",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "grnd",
+    "name": "broydn_func",
     "kind": "function",
-    "module": null,
-    "arguments": [],
+    "module": "BROYDEN_FUNC_INTERFACE",
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "broydn_func",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
     "result": {
-      "name": "grnd",
+      "name": "broydn_func",
       "base_type": "real",
       "kind": null,
-      "rank": 0,
-      "shape": [],
+      "rank": 1,
+      "shape": [
+        "size(x)"
+      ],
       "value": null,
       "value_type": "unknown",
       "is_parameter": false,
       "dimensions": [],
-      "procedure": "grnd",
+      "procedure": "broydn_func",
       "intent": "unknown",
       "optional": false,
       "pass_by_value": false,
@@ -85,12 +49,12 @@
     "variables": {}
   },
   {
-    "name": "d_grnd_1",
+    "name": "fdjac",
     "kind": "subroutine",
-    "module": null,
+    "module": "BROYDEN_ROUTINES",
     "arguments": [
       {
-        "name": "A",
+        "name": "x",
         "base_type": "real",
         "kind": null,
         "rank": 1,
@@ -101,235 +65,16 @@
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "d_grnd_1",
-        "intent": "unknown",
+        "procedure": "fdjac",
+        "intent": "inout",
         "optional": false,
         "pass_by_value": false,
         "allocatable": false,
         "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "d_grnd_2",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
+      },
       {
-        "name": "A",
+        "name": "fvec",
         "base_type": "real",
-        "kind": null,
-        "rank": 2,
-        "shape": [
-          ":",
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "d_grnd_2",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "d_grnd_3",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "A",
-        "base_type": "real",
-        "kind": null,
-        "rank": 3,
-        "shape": [
-          ":",
-          ":",
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "d_grnd_3",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "d_grnd_4",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "A",
-        "base_type": "real",
-        "kind": null,
-        "rank": 4,
-        "shape": [
-          ":",
-          ":",
-          ":",
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "d_grnd_4",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "d_grnd_5",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "A",
-        "base_type": "real",
-        "kind": null,
-        "rank": 5,
-        "shape": [
-          ":",
-          ":",
-          ":",
-          ":",
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "d_grnd_5",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "d_grnd_6",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "A",
-        "base_type": "real",
-        "kind": null,
-        "rank": 6,
-        "shape": [
-          ":",
-          ":",
-          ":",
-          ":",
-          ":",
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "d_grnd_6",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "d_grnd_7",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "A",
-        "base_type": "real",
-        "kind": null,
-        "rank": 7,
-        "shape": [
-          ":",
-          ":",
-          ":",
-          ":",
-          ":",
-          ":",
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "d_grnd_7",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "c_grnd_1",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "A",
-        "base_type": "complex",
         "kind": null,
         "rank": 1,
         "shape": [
@@ -339,243 +84,7 @@
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "c_grnd_1",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "c_grnd_2",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "A",
-        "base_type": "complex",
-        "kind": null,
-        "rank": 2,
-        "shape": [
-          ":",
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "c_grnd_2",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "c_grnd_3",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "A",
-        "base_type": "complex",
-        "kind": null,
-        "rank": 3,
-        "shape": [
-          ":",
-          ":",
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "c_grnd_3",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "c_grnd_4",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "A",
-        "base_type": "complex",
-        "kind": null,
-        "rank": 4,
-        "shape": [
-          ":",
-          ":",
-          ":",
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "c_grnd_4",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "c_grnd_5",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "A",
-        "base_type": "complex",
-        "kind": null,
-        "rank": 5,
-        "shape": [
-          ":",
-          ":",
-          ":",
-          ":",
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "c_grnd_5",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "c_grnd_6",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "A",
-        "base_type": "complex",
-        "kind": null,
-        "rank": 6,
-        "shape": [
-          ":",
-          ":",
-          ":",
-          ":",
-          ":",
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "c_grnd_6",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "c_grnd_7",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "A",
-        "base_type": "complex",
-        "kind": null,
-        "rank": 7,
-        "shape": [
-          ":",
-          ":",
-          ":",
-          ":",
-          ":",
-          ":",
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "c_grnd_7",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "igrnd",
-    "kind": "function",
-    "module": null,
-    "arguments": [
-      {
-        "name": "l",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "igrnd",
+        "procedure": "fdjac",
         "intent": "in",
         "optional": false,
         "pass_by_value": false,
@@ -583,8 +92,61 @@
         "pointer": false
       },
       {
-        "name": "h",
-        "base_type": "integer",
+        "name": "df",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "fdjac",
+        "intent": "out",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "lnsrch",
+    "kind": "subroutine",
+    "module": "BROYDEN_ROUTINES",
+    "arguments": [
+      {
+        "name": "xold",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "lnsrch",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "fold",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -592,7 +154,419 @@
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "igrnd",
+        "procedure": "lnsrch",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "g",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "lnsrch",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "p",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "lnsrch",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "lnsrch",
+        "intent": "out",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "f",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "lnsrch",
+        "intent": "out",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "stpmax",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "lnsrch",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "icheck",
+        "base_type": "logical",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "lnsrch",
+        "intent": "out",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "func",
+        "base_type": "procedure",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "lnsrch",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "qrdcmp",
+    "kind": "subroutine",
+    "module": "BROYDEN_ROUTINES",
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qrdcmp",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "c",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qrdcmp",
+        "intent": "out",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "d",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qrdcmp",
+        "intent": "out",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "sing",
+        "base_type": "logical",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qrdcmp",
+        "intent": "out",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "qrupdt",
+    "kind": "subroutine",
+    "module": "BROYDEN_ROUTINES",
+    "arguments": [
+      {
+        "name": "r",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qrupdt",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "qt",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qrupdt",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "u",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qrupdt",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "v",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "qrupdt",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "rsolv",
+    "kind": "subroutine",
+    "module": "BROYDEN_ROUTINES",
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "rsolv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "d",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "rsolv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "b",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "rsolv",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "get_diag",
+    "kind": "function",
+    "module": "BROYDEN_ROUTINES",
+    "arguments": [
+      {
+        "name": "mat",
+        "base_type": "real",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "get_diag",
         "intent": "in",
         "optional": false,
         "pass_by_value": false,
@@ -601,7 +575,90 @@
       }
     ],
     "result": {
-      "name": "igrnd",
+      "name": "get_diag_dv",
+      "base_type": "real",
+      "kind": null,
+      "rank": 1,
+      "shape": [
+        "size(mat,1)"
+      ],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "get_diag",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "assert_eq2",
+    "kind": "function",
+    "module": "BROYDEN_ROUTINES",
+    "arguments": [
+      {
+        "name": "n1",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "assert_eq2",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "n2",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "assert_eq2",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "string",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "assert_eq2",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "assert_eq2",
       "base_type": "integer",
       "kind": null,
       "rank": 0,
@@ -610,7 +667,7 @@
       "value_type": "unknown",
       "is_parameter": false,
       "dimensions": [],
-      "procedure": "igrnd",
+      "procedure": "assert_eq2",
       "intent": "unknown",
       "optional": false,
       "pass_by_value": false,
@@ -618,18 +675,20 @@
       "pointer": false
     },
     "attributes": [],
-    "uses": {},
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
     "in_interface": false,
     "variables": {}
   },
   {
-    "name": "dgrnd_uniform",
+    "name": "assert_eq4",
     "kind": "function",
-    "module": null,
+    "module": "BROYDEN_ROUTINES",
     "arguments": [
       {
-        "name": "a",
-        "base_type": "real",
+        "name": "n1",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -637,8 +696,346 @@
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "dgrnd_uniform",
-        "intent": "unknown",
+        "procedure": "assert_eq4",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "n2",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "assert_eq4",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "n3",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "assert_eq4",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "n4",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "assert_eq4",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "string",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "assert_eq4",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "assert_eq4",
+      "base_type": "integer",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "assert_eq4",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "assert_eqn",
+    "kind": "function",
+    "module": "BROYDEN_ROUTINES",
+    "arguments": [
+      {
+        "name": "nn",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "assert_eqn",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "string",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "assert_eqn",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "assert_eqn",
+      "base_type": "integer",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "assert_eqn",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "lower_triangle",
+    "kind": "function",
+    "module": "BROYDEN_ROUTINES",
+    "arguments": [
+      {
+        "name": "j",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "lower_triangle",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "k",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "lower_triangle",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "extra",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "lower_triangle",
+        "intent": "in",
+        "optional": true,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "lower_triangle",
+      "base_type": "logical",
+      "kind": null,
+      "rank": 2,
+      "shape": [
+        "j",
+        "k"
+      ],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "lower_triangle",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "outerdiff",
+    "kind": "function",
+    "module": "BROYDEN_ROUTINES",
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "outerdiff",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "b",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "outerdiff",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "outerdiff_i",
+      "base_type": "integer",
+      "kind": null,
+      "rank": 2,
+      "shape": [
+        "size(a)",
+        "size(b)"
+      ],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "outerdiff",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "outerprod",
+    "kind": "function",
+    "module": "BROYDEN_ROUTINES",
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "outerprod",
+        "intent": "in",
         "optional": false,
         "pass_by_value": false,
         "allocatable": false,
@@ -648,14 +1045,16 @@
         "name": "b",
         "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "dgrnd_uniform",
-        "intent": "unknown",
+        "procedure": "outerprod",
+        "intent": "in",
         "optional": false,
         "pass_by_value": false,
         "allocatable": false,
@@ -663,16 +1062,19 @@
       }
     ],
     "result": {
-      "name": "c",
+      "name": "outerprod_d",
       "base_type": "real",
       "kind": null,
-      "rank": 0,
-      "shape": [],
+      "rank": 2,
+      "shape": [
+        "size(a)",
+        "size(b)"
+      ],
       "value": null,
       "value_type": "unknown",
       "is_parameter": false,
       "dimensions": [],
-      "procedure": "dgrnd_uniform",
+      "procedure": "outerprod",
       "intent": "unknown",
       "optional": false,
       "pass_by_value": false,
@@ -680,686 +1082,30 @@
       "pointer": false
     },
     "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "gaussrnd",
-    "kind": "function",
-    "module": null,
-    "arguments": [],
-    "result": {
-      "name": "gaussrnd",
-      "base_type": "real",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "gaussrnd",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
     },
-    "attributes": [],
-    "uses": {},
     "in_interface": false,
     "variables": {}
   },
   {
-    "name": "normalrnd",
-    "kind": "function",
-    "module": null,
-    "arguments": [
-      {
-        "name": "mean",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "normalrnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "stdev",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "normalrnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "c",
-      "base_type": "real",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "normalrnd",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "exponentialrnd",
-    "kind": "function",
-    "module": null,
-    "arguments": [
-      {
-        "name": "mean",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "exponentialrnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "c",
-      "base_type": "real",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "exponentialrnd",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "gammarnd",
-    "kind": "function",
-    "module": null,
-    "arguments": [
-      {
-        "name": "shape",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "gammarnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "scale",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "gammarnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "ans",
-      "base_type": "real",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "gammarnd",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [
-      "recursive"
-    ],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "chi_squarernd",
-    "kind": "function",
-    "module": null,
-    "arguments": [
-      {
-        "name": "dof",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "chi_squarernd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "ans",
-      "base_type": "real",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "chi_squarernd",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "inverse_gammarnd",
-    "kind": "function",
-    "module": null,
-    "arguments": [
-      {
-        "name": "shape",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "inverse_gammarnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "scale",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "inverse_gammarnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "ans",
-      "base_type": "real",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "inverse_gammarnd",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "weibullrnd",
-    "kind": "function",
-    "module": null,
-    "arguments": [
-      {
-        "name": "shape",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "weibullrnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "scale",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "weibullrnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "ans",
-      "base_type": "real",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "weibullrnd",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "cauchyrnd",
-    "kind": "function",
-    "module": null,
-    "arguments": [
-      {
-        "name": "median",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "cauchyrnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "scale",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "cauchyrnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "ans",
-      "base_type": "real",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "cauchyrnd",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "student_trnd",
-    "kind": "function",
-    "module": null,
-    "arguments": [
-      {
-        "name": "dof",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "student_trnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "ans",
-      "base_type": "real",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "student_trnd",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "laplacernd",
-    "kind": "function",
-    "module": null,
-    "arguments": [
-      {
-        "name": "mean",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "laplacernd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "scale",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "laplacernd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "ans",
-      "base_type": "real",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "laplacernd",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "log_normalrnd",
-    "kind": "function",
-    "module": null,
-    "arguments": [
-      {
-        "name": "mu",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "log_normalrnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "sigma",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "log_normalrnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "ans",
-      "base_type": "real",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "log_normalrnd",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "betarnd",
-    "kind": "function",
-    "module": null,
-    "arguments": [
-      {
-        "name": "a",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "betarnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "b",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "betarnd",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "ans",
-      "base_type": "real",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "betarnd",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "mtsavef",
+    "name": "put_diag",
     "kind": "subroutine",
-    "module": null,
+    "module": "BROYDEN_ROUTINES",
     "arguments": [
       {
-        "name": "fname",
-        "base_type": "character",
+        "name": "diagv",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "mtsavef",
+        "procedure": "put_diag",
         "intent": "in",
         "optional": false,
         "pass_by_value": false,
@@ -1367,17 +1113,20 @@
         "pointer": false
       },
       {
-        "name": "forma",
-        "base_type": "character",
+        "name": "mat",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "mtsavef",
-        "intent": "in",
+        "procedure": "put_diag",
+        "intent": "inout",
         "optional": false,
         "pass_by_value": false,
         "allocatable": false,
@@ -1386,44 +1135,32 @@
     ],
     "result": null,
     "attributes": [],
-    "uses": {},
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
     "in_interface": false,
     "variables": {}
   },
   {
-    "name": "mtsaveu",
+    "name": "unit_matrix",
     "kind": "subroutine",
-    "module": null,
+    "module": "BROYDEN_ROUTINES",
     "arguments": [
       {
-        "name": "unum",
-        "base_type": "integer",
+        "name": "mat",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "mtsaveu",
-        "intent": "in",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "forma",
-        "base_type": "character",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "mtsaveu",
-        "intent": "in",
+        "procedure": "unit_matrix",
+        "intent": "out",
         "optional": false,
         "pass_by_value": false,
         "allocatable": false,
@@ -1432,43 +1169,30 @@
     ],
     "result": null,
     "attributes": [],
-    "uses": {},
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
     "in_interface": false,
     "variables": {}
   },
   {
-    "name": "mtgetf",
-    "kind": "subroutine",
-    "module": null,
+    "name": "vabs",
+    "kind": "function",
+    "module": "BROYDEN_ROUTINES",
     "arguments": [
       {
-        "name": "fname",
-        "base_type": "character",
+        "name": "v",
+        "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "mtgetf",
-        "intent": "in",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "forma",
-        "base_type": "character",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "mtgetf",
+        "procedure": "vabs",
         "intent": "in",
         "optional": false,
         "pass_by_value": false,
@@ -1476,45 +1200,48 @@
         "pointer": false
       }
     ],
-    "result": null,
+    "result": {
+      "name": "vabs",
+      "base_type": "real",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "vabs",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
     "attributes": [],
-    "uses": {},
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
     "in_interface": false,
     "variables": {}
   },
   {
-    "name": "mtgetu",
-    "kind": "subroutine",
-    "module": null,
+    "name": "ifirstloc",
+    "kind": "function",
+    "module": "BROYDEN_ROUTINES",
     "arguments": [
       {
-        "name": "unum",
-        "base_type": "integer",
+        "name": "mask",
+        "base_type": "logical",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "mtgetu",
-        "intent": "in",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "forma",
-        "base_type": "character",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "mtgetu",
+        "procedure": "ifirstloc",
         "intent": "in",
         "optional": false,
         "pass_by_value": false,
@@ -1522,9 +1249,27 @@
         "pointer": false
       }
     ],
-    "result": null,
+    "result": {
+      "name": "ifirstloc",
+      "base_type": "integer",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "ifirstloc",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
     "attributes": [],
-    "uses": {},
+    "uses": {
+      "BROYDEN_FUNC_INTERFACE": []
+    },
     "in_interface": false,
     "variables": {}
   }

@@ -213,6 +213,27 @@ end module m
         parse_fortran_signatures(code, filename="dup_mod_proc.f90")
 
 
+def test_contained_procedures_with_same_name_in_different_hosts_are_allowed():
+    code = """
+module m
+contains
+  subroutine host_a()
+  contains
+    subroutine swap_order()
+    end subroutine swap_order
+  end subroutine host_a
+
+  subroutine host_b()
+  contains
+    subroutine swap_order()
+    end subroutine swap_order
+  end subroutine host_b
+end module m
+"""
+    signatures = parse_fortran_signatures(code, filename="contained_scope_ok.f90")
+    assert [sig.name.lower() for sig in signatures] == ["host_a", "host_b"]
+
+
 def test_duplicate_procedure_name_in_mutually_exclusive_macro_branches_allowed():
     code = """
 module m

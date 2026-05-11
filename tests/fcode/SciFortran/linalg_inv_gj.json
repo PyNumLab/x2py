@@ -1,218 +1,56 @@
 [
   {
-    "name": "shape_matrix",
-    "kind": "function",
-    "module": "SF_SPARSE_COMMON",
-    "arguments": [
-      {
-        "name": "self",
-        "base_type": "derived",
-        "kind": "sparse_matrix",
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "shape_matrix",
-        "intent": "in",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "shape",
-      "base_type": "integer",
-      "kind": null,
-      "rank": 1,
-      "shape": [
-        "2"
-      ],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "shape_matrix",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [],
-    "uses": {
-      "SF_LINALG": [
-        "deye",
-        "zeye"
-      ]
-    },
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "sort_array",
+    "name": "Dinv_gj",
     "kind": "subroutine",
-    "module": "SF_SPARSE_COMMON",
+    "module": null,
     "arguments": [
       {
-        "name": "array",
-        "base_type": "integer",
+        "name": "a",
+        "base_type": "real",
         "kind": null,
-        "rank": 1,
+        "rank": 2,
         "shape": [
+          ":",
           ":"
         ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "sort_array",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "order",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          "size(array)"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "sort_array",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {
-      "SF_LINALG": [
-        "deye",
-        "zeye"
-      ]
-    },
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "binary_search",
-    "kind": "function",
-    "module": "SF_SPARSE_COMMON",
-    "arguments": [
-      {
-        "name": "Ain",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "binary_search",
-        "intent": "in",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "value",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "binary_search",
-        "intent": "in",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "bsresult",
-      "base_type": "integer",
-      "kind": null,
-      "rank": 0,
-      "shape": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "binary_search",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [
-      "recursive"
-    ],
-    "uses": {
-      "SF_LINALG": [
-        "deye",
-        "zeye"
-      ]
-    },
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "append_I",
-    "kind": "subroutine",
-    "module": "SF_SPARSE_COMMON",
-    "arguments": [
-      {
-        "name": "vec",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          ":"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "append_I",
+        "procedure": "Dinv_gj",
         "intent": "inout",
         "optional": false,
         "pass_by_value": false,
-        "allocatable": true,
+        "allocatable": false,
         "pointer": false
-      },
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "Zinv_gj",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
       {
-        "name": "val",
-        "base_type": "integer",
+        "name": "a",
+        "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "append_I",
-        "intent": "in",
+        "procedure": "Zinv_gj",
+        "intent": "inout",
         "optional": false,
         "pass_by_value": false,
         "allocatable": false,
@@ -221,22 +59,109 @@
     ],
     "result": null,
     "attributes": [],
-    "uses": {
-      "SF_LINALG": [
-        "deye",
-        "zeye"
-      ]
-    },
+    "uses": {},
     "in_interface": false,
     "variables": {}
   },
   {
-    "name": "append_D",
+    "name": "swap_i",
     "kind": "subroutine",
-    "module": "SF_SPARSE_COMMON",
+    "module": null,
     "arguments": [
       {
-        "name": "vec",
+        "name": "a",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "swap_i",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "b",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "swap_i",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "swap_r",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "swap_r",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "b",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "swap_r",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "swap_rv",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "a",
         "base_type": "real",
         "kind": null,
         "rank": 1,
@@ -247,25 +172,27 @@
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "append_D",
+        "procedure": "swap_rv",
         "intent": "inout",
         "optional": false,
         "pass_by_value": false,
-        "allocatable": true,
+        "allocatable": false,
         "pointer": false
       },
       {
-        "name": "val",
+        "name": "b",
         "base_type": "real",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "append_D",
-        "intent": "in",
+        "procedure": "swap_rv",
+        "intent": "inout",
         "optional": false,
         "pass_by_value": false,
         "allocatable": false,
@@ -274,22 +201,63 @@
     ],
     "result": null,
     "attributes": [],
-    "uses": {
-      "SF_LINALG": [
-        "deye",
-        "zeye"
-      ]
-    },
+    "uses": {},
     "in_interface": false,
     "variables": {}
   },
   {
-    "name": "append_Z",
+    "name": "swap_z",
     "kind": "subroutine",
-    "module": "SF_SPARSE_COMMON",
+    "module": null,
     "arguments": [
       {
-        "name": "vec",
+        "name": "a",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "swap_z",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "b",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "swap_z",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "swap_zv",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "a",
         "base_type": "complex",
         "kind": null,
         "rank": 1,
@@ -300,25 +268,27 @@
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "append_Z",
+        "procedure": "swap_zv",
         "intent": "inout",
         "optional": false,
         "pass_by_value": false,
-        "allocatable": true,
+        "allocatable": false,
         "pointer": false
       },
       {
-        "name": "val",
+        "name": "b",
         "base_type": "complex",
         "kind": null,
-        "rank": 0,
-        "shape": [],
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
         "dimensions": [],
-        "procedure": "append_Z",
-        "intent": "in",
+        "procedure": "swap_zv",
+        "intent": "inout",
         "optional": false,
         "pass_by_value": false,
         "allocatable": false,
@@ -327,12 +297,59 @@
     ],
     "result": null,
     "attributes": [],
-    "uses": {
-      "SF_LINALG": [
-        "deye",
-        "zeye"
-      ]
-    },
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "swap_zm",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "a",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "swap_zm",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "b",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 2,
+        "shape": [
+          ":",
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "swap_zm",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
     "in_interface": false,
     "variables": {}
   }

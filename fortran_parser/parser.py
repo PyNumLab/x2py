@@ -289,6 +289,26 @@ def parse_fortran_signatures(
                 current_proc["in_exec_part"] = False
             continue
 
+        if current_proc is not None and current_proc.get("in_contains"):
+            if l.startswith("end subroutine") or l.startswith("end function") or l.startswith("end procedure"):
+                end_parts = l.split()
+                end_name = end_parts[2] if len(end_parts) > 2 else None
+                if end_name == current_proc["signature"].name.lower():
+                    signatures.append(_finalize_proc(current_proc))
+                    current_proc = None
+            continue
+        if current_proc is not None and interface_depth > 0:
+            if l.startswith("function ") or l.startswith("subroutine "):
+                iface_proc = _parse_header(s, current_module, True)
+                if iface_proc:
+                    iface_name = iface_proc["signature"].name.lower()
+                    current_proc["typed_symbols"].add(iface_name)
+                    arg = current_proc["symbols"].get(iface_name)
+                    if arg is not None:
+                        arg.base_type = "procedure"
+                        arg.kind = None
+            continue
+
         if l.startswith("end subroutine") or l.startswith("end function") or l.startswith("end procedure") or l == "end":
             signatures.append(_finalize_proc(current_proc))
             current_proc = None
