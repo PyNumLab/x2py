@@ -13,6 +13,14 @@
           "0:",
           "0:"
         ],
+        "lbound": [
+          "0",
+          "0"
+        ],
+        "ubound": [
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -45,6 +53,14 @@
           "0:",
           "1:n"
         ],
+        "lbound": [
+          "0",
+          "1"
+        ],
+        "ubound": [
+          null,
+          "n"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -74,6 +90,8 @@
         "kind": "sim_state",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,

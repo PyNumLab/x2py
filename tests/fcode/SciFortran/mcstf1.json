@@ -10,6 +10,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -27,6 +29,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -44,6 +48,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -61,6 +67,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -78,6 +86,14 @@
         "kind": "8",
         "rank": 2,
         "shape": [
+          "inc",
+          "*"
+        ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
           "inc",
           "*"
         ],
@@ -100,6 +116,12 @@
         "shape": [
           "*"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -117,6 +139,12 @@
         "kind": "8",
         "rank": 1,
         "shape": [
+          "*"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "*"
         ],
         "value": null,
@@ -138,6 +166,12 @@
         "shape": [
           "*"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -155,6 +189,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,

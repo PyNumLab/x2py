@@ -1345,6 +1345,30 @@ def _var(entry: str):
     return e, []
 
 
+
+
+def _split_dim_bounds(dim: str) -> tuple[str | None, str | None]:
+    part = dim.strip()
+    if not part:
+        return None, None
+    if ':' not in part:
+        return None, part
+    lo, hi = part.split(':', 1)
+    lo = lo.strip() or None
+    hi = hi.strip() or None
+    return lo, hi
+
+
+def _extract_bounds(shape: list[str]) -> tuple[list[str | None], list[str | None]]:
+    lbounds: list[str | None] = []
+    ubounds: list[str | None] = []
+    for dim in shape:
+        lo, hi = _split_dim_bounds(dim)
+        lbounds.append(lo)
+        ubounds.append(hi)
+    return lbounds, ubounds
+
+
 def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
     arg.base_type = meta["base_type"]
     arg.kind = meta["kind"]
@@ -1359,6 +1383,7 @@ def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
     else:
         arg.shape = list(meta["shape"])
         arg.rank = meta["rank"]
+    arg.lbound, arg.ubound = _extract_bounds(arg.shape)
 
 # -----------------------------------------------------------------------------
 # Validation and finalization

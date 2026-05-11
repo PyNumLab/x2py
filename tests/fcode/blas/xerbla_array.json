@@ -12,6 +12,12 @@
         "shape": [
           "SRNAME_LEN"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "SRNAME_LEN"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -29,6 +35,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -46,6 +54,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,

@@ -10,6 +10,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -27,6 +29,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -44,6 +48,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -61,6 +67,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -78,6 +86,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "*"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "*"
         ],
         "value": null,
@@ -99,6 +113,12 @@
         "shape": [
           "*"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -118,6 +138,12 @@
         "shape": [
           "*"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -135,6 +161,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -152,6 +180,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -169,6 +199,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "*"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "*"
         ],
         "value": null,
@@ -190,6 +226,12 @@
         "shape": [
           "*"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -207,6 +249,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -227,6 +271,14 @@
           "LDGCOL",
           "*"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          "LDGCOL",
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -244,6 +296,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -264,6 +318,14 @@
           "LDGNUM",
           "*"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          "LDGNUM",
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -281,6 +343,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -298,6 +362,14 @@
         "kind": null,
         "rank": 2,
         "shape": [
+          "LDGNUM",
+          "*"
+        ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
           "LDGNUM",
           "*"
         ],
@@ -320,6 +392,12 @@
         "shape": [
           "*"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -337,6 +415,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "*"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "*"
         ],
         "value": null,
@@ -358,6 +442,12 @@
         "shape": [
           "*"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -375,6 +465,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -392,6 +484,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -409,6 +503,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -426,6 +522,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "*"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "*"
         ],
         "value": null,
@@ -447,6 +549,12 @@
         "shape": [
           "*"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "*"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -464,6 +572,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,

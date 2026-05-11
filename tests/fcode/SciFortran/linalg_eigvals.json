@@ -13,6 +13,14 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -31,6 +39,12 @@
       "kind": null,
       "rank": 1,
       "shape": [
+        "size(A,1)"
+      ],
+      "lbound": [
+        null
+      ],
+      "ubound": [
         "size(A,1)"
       ],
       "value": null,
@@ -63,6 +77,14 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -81,6 +103,12 @@
       "kind": null,
       "rank": 1,
       "shape": [
+        "size(A,1)"
+      ],
+      "lbound": [
+        null
+      ],
+      "ubound": [
         "size(A,1)"
       ],
       "value": null,

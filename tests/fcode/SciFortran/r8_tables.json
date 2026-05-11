@@ -10,6 +10,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -27,6 +29,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -44,6 +48,16 @@
         "kind": "8",
         "rank": 3,
         "shape": [
+          "ido",
+          "ip-1",
+          "2"
+        ],
+        "lbound": [
+          null,
+          null,
+          null
+        ],
+        "ubound": [
           "ido",
           "ip-1",
           "2"

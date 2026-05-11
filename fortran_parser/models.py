@@ -18,6 +18,18 @@ _ANSI = {
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
+def _parse_shape_dim(dim: str) -> dict[str, str | None]:
+    token = (dim or "").strip()
+    if not token:
+        return {"raw": "", "lower": None, "upper": None}
+    if ":" not in token:
+        return {"raw": token, "lower": "1", "upper": token}
+    lo, hi = token.split(":", 1)
+    lo = lo.strip() or None
+    hi = hi.strip() or None
+    return {"raw": token, "lower": lo, "upper": hi}
+
+
 def _env_flag(name: str) -> bool:
     return os.getenv(name, "").strip().lower() in _TRUE_VALUES
 
@@ -119,6 +131,21 @@ class FortranVariable:
     kind: Optional[str] = None
     rank: int = 0
     shape: list[str] = field(default_factory=list)
+    @property
+    def shape_info(self) -> list[dict[str, str | None]]:
+        """Structured per-dimension shape metadata derived from `shape` tokens."""
+        return [_parse_shape_dim(dim) for dim in self.shape]
+
+    @property
+    def lower_bounds(self) -> list[str | None]:
+        return [d["lower"] for d in self.shape_info]
+
+    @property
+    def upper_bounds(self) -> list[str | None]:
+        return [d["upper"] for d in self.shape_info]
+
+    lbound: list[str | None] = field(default_factory=list)
+    ubound: list[str | None] = field(default_factory=list)
     value: str | None = None
     value_type: str = "unknown"
     is_parameter: bool = False

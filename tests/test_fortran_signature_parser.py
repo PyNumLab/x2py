@@ -627,6 +627,40 @@ end subroutine update_plane
     arg = sig.arguments[0]
     assert arg.rank == 2
     assert arg.shape == ["0:", "1:n"]
+    assert arg.lower_bounds == ["0", "1"]
+    assert arg.upper_bounds == [None, "n"]
+    assert arg.shape_info == [
+        {"raw": "0:", "lower": "0", "upper": None},
+        {"raw": "1:n", "lower": "1", "upper": "n"},
+    ]
+
+
+def test_shape_info_for_explicit_extent_dimension():
+    code = """
+subroutine resize(x)
+  real, intent(inout) :: x(n)
+end subroutine resize
+"""
+    sig = parse_fortran_signatures(code)[0]
+    arg = sig.arguments[0]
+    assert arg.shape_info == [
+        {"raw": "n", "lower": "1", "upper": "n"},
+    ]
+    assert arg.lbound == ["0", "1"]
+    assert arg.ubound == [None, "n"]
+
+
+def test_scalar_argument_has_empty_bounds_metadata():
+    code = """
+subroutine step(i)
+  integer, intent(in) :: i
+end subroutine step
+"""
+    sig = parse_fortran_signatures(code)[0]
+    arg = sig.arguments[0]
+    assert arg.rank == 0
+    assert arg.lbound == []
+    assert arg.ubound == []
 
 
 def test_subroutine_derived_type_arguments_are_parsed():

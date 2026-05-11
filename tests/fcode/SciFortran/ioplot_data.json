@@ -10,6 +10,8 @@
         "kind": "len=*",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -29,6 +31,12 @@
         "shape": [
           ":"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -46,6 +54,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Y1)"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Y1)"
         ],
         "value": null,
@@ -77,6 +91,8 @@
         "kind": "len=*",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -96,6 +112,12 @@
         "shape": [
           ":"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -113,6 +135,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Y1)"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Y1)"
         ],
         "value": null,
@@ -144,6 +172,8 @@
         "kind": "len=*",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -163,6 +193,12 @@
         "shape": [
           ":"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -180,6 +216,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Y1)"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Y1)"
         ],
         "value": null,
@@ -211,6 +253,8 @@
         "kind": "len=*",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -231,6 +275,14 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -248,6 +300,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Y1,2)"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Y1,2)"
         ],
         "value": null,
@@ -279,6 +337,8 @@
         "kind": "len=*",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -299,6 +359,14 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -316,6 +384,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Y1,2)"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Y1,2)"
         ],
         "value": null,
@@ -347,6 +421,8 @@
         "kind": "len=*",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -367,6 +443,14 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -384,6 +468,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Y1,2)"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Y1,2)"
         ],
         "value": null,
@@ -415,6 +505,8 @@
         "kind": "len=*",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -436,6 +528,16 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -453,6 +555,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Y1,3)"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Y1,3)"
         ],
         "value": null,
@@ -484,6 +592,8 @@
         "kind": "len=*",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -505,6 +615,16 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -522,6 +642,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Y1,3)"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Y1,3)"
         ],
         "value": null,
@@ -553,6 +679,8 @@
         "kind": "len=*",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -574,6 +702,16 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -591,6 +729,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Y1,3)"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Y1,3)"
         ],
         "value": null,

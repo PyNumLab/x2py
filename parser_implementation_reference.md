@@ -52,6 +52,11 @@ another source language.
 - Rank/shape extraction from:
   - declaration-level `dimension(...)`
   - variable-level inline shape `x(...)`
+- Structured shape components are available from model helpers while preserving
+  serialized `shape` tokens:
+  - `shape_info`: per-dimension `{raw, lower, upper}`
+  - `lower_bounds` / `upper_bounds` convenience accessors
+  - For extent-only forms like `x(n)`, bounds normalize to lower=`1`, upper=`n`
 - `kind=...` extraction and assignment into argument/result metadata.  
 
 ### 2.4 Compile-time symbol and expression resolution
@@ -297,6 +302,7 @@ A condensed history of important parser capabilities added over time (from
 - Added assumed-shape bounds and derived-argument fixture coverage.
 - Added compile-time shape-expression resolution from parameters.
 - Added symbolic shape-evaluation API for externally supplied symbol values.
+- Added structured per-dimension shape component helpers (`raw/lower/upper`).
 - Restricted module-parameter collection to module specification scope.
 - Fixed deep and cyclic compile-time dependency resolution behavior.
 - Added comprehensive compile-time expression fixtures.
