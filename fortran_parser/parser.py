@@ -147,17 +147,46 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
     """
     lines = preprocess_lines(code, filename)
     signatures: list[FortranProcedureSignature] = []
-    declared_procedures: dict[tuple[str | None, bool], set[str]] = {}
+    declared_procedures: dict[tuple[str | None, bool], dict[str, list[frozenset[str]]]] = {}
     current_module = None
     current_module_uses: dict[str, list[str]] = {}
     current_proc = None
     interface_depth = 0
     program_depth = 0
+    pp_condition_stack: list[tuple[int, int]] = []
+    pp_group_counter = 0
 
     for line, lineno, source_line in lines:
         s = line.strip()
         if not s:
             continue
+
+        if s.startswith("#"):
+            directive = s[1:].strip()
+            directive_low = directive.lower()
+            if directive_low.startswith("ifdef "):
+                pp_group_counter += 1
+                pp_condition_stack.append((pp_group_counter, 0))
+                continue
+            if directive_low.startswith("ifndef "):
+                pp_group_counter += 1
+                pp_condition_stack.append((pp_group_counter, 0))
+                continue
+            if directive_low.startswith("else"):
+                if pp_condition_stack:
+                    group_id, branch_id = pp_condition_stack.pop()
+                    pp_condition_stack.append((group_id, branch_id + 1))
+                continue
+            if directive_low.startswith("elif "):
+                if pp_condition_stack:
+                    group_id, branch_id = pp_condition_stack.pop()
+                    pp_condition_stack.append((group_id, branch_id + 1))
+                continue
+            if directive_low.startswith("endif"):
+                if pp_condition_stack:
+                    pp_condition_stack.pop()
+                continue
+
         l = s.lower()
 
         _enforce_source_form_compatibility(s, filename, lineno, source_line)
@@ -207,9 +236,13 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
             current_proc = _parse_header(s, current_module, interface_depth > 0)
             if current_proc:
                 scope_key = (current_module.lower() if current_module else None, interface_depth > 0)
-                seen_in_scope = declared_procedures.setdefault(scope_key, set())
+                seen_in_scope = declared_procedures.setdefault(scope_key, {})
                 proc_name = current_proc["signature"].name.lower()
-                if proc_name in seen_in_scope:
+                condition_set = frozenset(
+                    f"g{group_id}:b{branch_id}" for group_id, branch_id in pp_condition_stack
+                )
+                existing_conditions = seen_in_scope.setdefault(proc_name, [])
+                if any(_preprocessor_conditions_overlap(existing, condition_set) for existing in existing_conditions):
                     scope_label = (
                         f"module '{current_module}'" if current_module is not None else "global scope"
                     )
@@ -219,7 +252,7 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
                         line_number=lineno,
                         source_line=source_line,
                     )
-                seen_in_scope.add(proc_name)
+                existing_conditions.append(condition_set)
                 current_proc["uses"].update(current_module_uses)
                 current_proc["filename"] = filename
                 current_proc["header_lineno"] = lineno
@@ -279,6 +312,19 @@ def parse_fortran_project_signatures(files: dict[str, str]) -> list[FortranProce
     for _, signatures in parsed_files:
         out.extend(signatures)
     return out
+
+
+def _preprocessor_conditions_overlap(c1: frozenset[str], c2: frozenset[str]) -> bool:
+    """Return True when two preprocessor condition sets may both be active."""
+    if not c1 or not c2:
+        return True
+    values: dict[str, str] = {}
+    for token in c1 | c2:
+        group, _, branch = token.partition(":")
+        if group in values and values[group] != branch:
+            return False
+        values[group] = branch
+    return True
 
 
 def parse_fortran_file(path: str) -> list[FortranProcedureSignature]:
