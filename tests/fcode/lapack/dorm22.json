@@ -128,8 +128,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDQ",
@@ -175,8 +175,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDC",
@@ -221,7 +221,7 @@
           "*"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "*"

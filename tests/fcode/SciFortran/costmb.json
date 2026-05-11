@@ -90,8 +90,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "inc",
@@ -136,7 +136,7 @@
           "lensav"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "lensav"
@@ -180,7 +180,7 @@
           "lenwrk"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "lenwrk"

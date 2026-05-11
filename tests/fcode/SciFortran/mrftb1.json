@@ -90,8 +90,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "in",
@@ -118,8 +118,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "m",
@@ -145,7 +145,7 @@
           "n"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "n"
@@ -170,7 +170,7 @@
           "15"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "15"

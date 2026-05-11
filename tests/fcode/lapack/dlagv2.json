@@ -14,8 +14,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDA",
@@ -61,8 +61,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDB",
@@ -107,7 +107,7 @@
           "2"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "2"
@@ -132,7 +132,7 @@
           "2"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "2"
@@ -157,7 +157,7 @@
           "2"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "2"

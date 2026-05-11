@@ -147,8 +147,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDA",
@@ -194,8 +194,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDT",
@@ -241,8 +241,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDC",
@@ -287,7 +287,7 @@
           "*"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "*"

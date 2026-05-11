@@ -71,8 +71,8 @@
           "m"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "ldim",
@@ -98,7 +98,7 @@
           "lensav"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "lensav"
@@ -142,7 +142,7 @@
           "lenwrk"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "lenwrk"

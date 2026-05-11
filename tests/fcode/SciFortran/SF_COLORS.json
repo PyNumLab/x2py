@@ -419,7 +419,7 @@
           "size(v)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(v)"

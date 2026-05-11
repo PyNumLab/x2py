@@ -57,7 +57,7 @@
           "size(xin)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(xin)"
@@ -157,7 +157,7 @@
           "size(xin)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(xin)"

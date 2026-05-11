@@ -283,7 +283,7 @@
           "size(A,2)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(A,2)"
@@ -500,7 +500,7 @@
           "size(A,2)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(A,2)"
@@ -714,7 +714,7 @@
           "max(1,size(d)-1)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "max(1,size(d)-1)"
@@ -767,7 +767,7 @@
           "2"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "2"
@@ -792,7 +792,7 @@
           "2"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "2"

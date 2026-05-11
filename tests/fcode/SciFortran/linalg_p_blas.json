@@ -223,8 +223,8 @@
           "size(B,2)"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "size(A,1)",
@@ -377,8 +377,8 @@
         "size(B,2)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(A,1)",
@@ -472,8 +472,8 @@
         "size(B,2)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(A,1)",

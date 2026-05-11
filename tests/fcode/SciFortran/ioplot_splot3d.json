@@ -83,8 +83,8 @@
           "size(X2)"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "size(X1)",
@@ -325,8 +325,8 @@
           "size(X2)"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "size(X1)",

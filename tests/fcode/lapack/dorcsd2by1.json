@@ -128,8 +128,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDX11",
@@ -175,8 +175,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDX21",
@@ -221,7 +221,7 @@
           "*"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "*"
@@ -247,8 +247,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDU1",
@@ -294,8 +294,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDU2",
@@ -341,8 +341,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDV1T",
@@ -387,7 +387,7 @@
           "*"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "*"
@@ -431,7 +431,7 @@
           "*"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "*"

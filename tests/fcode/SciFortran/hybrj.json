@@ -51,7 +51,7 @@
           "n"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "n"
@@ -76,7 +76,7 @@
           "n"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "n"
@@ -102,8 +102,8 @@
           "n"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "ldfjac",
@@ -186,7 +186,7 @@
           "n"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "n"
@@ -325,7 +325,7 @@
           "lr"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "lr"
@@ -369,7 +369,7 @@
           "n"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "n"

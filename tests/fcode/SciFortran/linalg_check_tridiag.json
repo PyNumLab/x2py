@@ -168,8 +168,8 @@
           "Nblock*Nsize"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "Nblock*Nsize",
@@ -264,8 +264,8 @@
           "Nblock*Nsize"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "Nblock*Nsize",

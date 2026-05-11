@@ -109,8 +109,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDA",
@@ -155,7 +155,7 @@
           "N"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "N"
@@ -200,8 +200,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDV",
@@ -246,7 +246,7 @@
           "LWORK"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "LWORK"

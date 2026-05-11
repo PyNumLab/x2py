@@ -41,7 +41,7 @@
           "size(Amat,1)-1"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(Amat,1)-1"
@@ -66,7 +66,7 @@
           "size(Amat,1)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(Amat,1)"
@@ -91,7 +91,7 @@
           "size(Amat,1)-1"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(Amat,1)-1"
@@ -156,7 +156,7 @@
           "size(Amat,1)-1"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(Amat,1)-1"
@@ -181,7 +181,7 @@
           "size(Amat,1)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(Amat,1)"
@@ -206,7 +206,7 @@
           "size(Amat,1)-1"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(Amat,1)-1"
@@ -282,8 +282,8 @@
           "Nblock*Nsize"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "Nblock*Nsize",
@@ -311,9 +311,9 @@
           "Nsize"
         ],
         "lbound": [
-          null,
-          null,
-          null
+          "1",
+          "1",
+          "1"
         ],
         "ubound": [
           "Nblock-1",
@@ -342,9 +342,9 @@
           "Nsize"
         ],
         "lbound": [
-          null,
-          null,
-          null
+          "1",
+          "1",
+          "1"
         ],
         "ubound": [
           "Nblock",
@@ -373,9 +373,9 @@
           "Nsize"
         ],
         "lbound": [
-          null,
-          null,
-          null
+          "1",
+          "1",
+          "1"
         ],
         "ubound": [
           "Nblock-1",
@@ -453,8 +453,8 @@
           "Nblock*Nsize"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "Nblock*Nsize",
@@ -482,9 +482,9 @@
           "Nsize"
         ],
         "lbound": [
-          null,
-          null,
-          null
+          "1",
+          "1",
+          "1"
         ],
         "ubound": [
           "Nblock-1",
@@ -513,9 +513,9 @@
           "Nsize"
         ],
         "lbound": [
-          null,
-          null,
-          null
+          "1",
+          "1",
+          "1"
         ],
         "ubound": [
           "Nblock",
@@ -544,9 +544,9 @@
           "Nsize"
         ],
         "lbound": [
-          null,
-          null,
-          null
+          "1",
+          "1",
+          "1"
         ],
         "ubound": [
           "Nblock-1",

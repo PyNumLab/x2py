@@ -13,7 +13,7 @@
           "4"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "4"
@@ -57,7 +57,7 @@
           "N"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "N"

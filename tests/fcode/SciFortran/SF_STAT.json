@@ -539,7 +539,7 @@
             "size(data,1)"
           ],
           "lbound": [
-            null
+            "1"
           ],
           "ubound": [
             "size(data,1)"
@@ -566,8 +566,8 @@
           "size(data,1)"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "size(data,1)",
@@ -935,7 +935,7 @@
             "2"
           ],
           "lbound": [
-            null
+            "1"
           ],
           "ubound": [
             "2"
@@ -960,7 +960,7 @@
             "2"
           ],
           "lbound": [
-            null
+            "1"
           ],
           "ubound": [
             "2"
@@ -985,7 +985,7 @@
             "2"
           ],
           "lbound": [
-            null
+            "1"
           ],
           "ubound": [
             "2"
@@ -1010,7 +1010,7 @@
             "2"
           ],
           "lbound": [
-            null
+            "1"
           ],
           "ubound": [
             "2"
@@ -1133,8 +1133,8 @@
             "2"
           ],
           "lbound": [
-            null,
-            null
+            "1",
+            "1"
           ],
           "ubound": [
             "2",
