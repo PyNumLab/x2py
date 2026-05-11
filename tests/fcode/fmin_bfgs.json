@@ -23,7 +23,7 @@
       },
       {
         "name": "grad",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -59,7 +59,7 @@
       },
       {
         "name": "l",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -76,7 +76,7 @@
       },
       {
         "name": "u",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -93,7 +93,7 @@
       },
       {
         "name": "nbd",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -110,7 +110,7 @@
       },
       {
         "name": "factr",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -127,7 +127,7 @@
       },
       {
         "name": "pgtol",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -144,7 +144,7 @@
       },
       {
         "name": "iprint",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -161,7 +161,7 @@
       },
       {
         "name": "nloop",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -275,7 +275,7 @@
       },
       {
         "name": "l",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -292,7 +292,7 @@
       },
       {
         "name": "u",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -309,7 +309,7 @@
       },
       {
         "name": "nbd",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -326,7 +326,7 @@
       },
       {
         "name": "factr",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -343,7 +343,7 @@
       },
       {
         "name": "pgtol",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -360,7 +360,7 @@
       },
       {
         "name": "iprint",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -377,7 +377,7 @@
       },
       {
         "name": "nloop",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],

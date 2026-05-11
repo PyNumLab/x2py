@@ -350,7 +350,7 @@
         {
           "name": "fx",
           "base_type": "procedure",
-          "kind": null,
+          "kind": "f_x",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -516,7 +516,7 @@
         },
         {
           "name": "xl",
-          "base_type": "unknown",
+          "base_type": "real",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -533,7 +533,7 @@
         },
         {
           "name": "xu",
-          "base_type": "unknown",
+          "base_type": "real",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -550,7 +550,7 @@
         },
         {
           "name": "ans",
-          "base_type": "unknown",
+          "base_type": "real",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -567,7 +567,7 @@
         },
         {
           "name": "tol",
-          "base_type": "unknown",
+          "base_type": "real",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -584,7 +584,7 @@
         },
         {
           "name": "method",
-          "base_type": "unknown",
+          "base_type": "integer",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -601,7 +601,7 @@
         },
         {
           "name": "ierr",
-          "base_type": "unknown",
+          "base_type": "integer",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -618,7 +618,7 @@
         },
         {
           "name": "err",
-          "base_type": "unknown",
+          "base_type": "real",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -729,7 +729,7 @@
         {
           "name": "fxvec",
           "base_type": "procedure",
-          "kind": null,
+          "kind": "f_xvec",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -1257,7 +1257,7 @@
         },
         {
           "name": "xl",
-          "base_type": "unknown",
+          "base_type": "real",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -1274,7 +1274,7 @@
         },
         {
           "name": "xu",
-          "base_type": "unknown",
+          "base_type": "real",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -1291,7 +1291,7 @@
         },
         {
           "name": "ans",
-          "base_type": "unknown",
+          "base_type": "real",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -1308,7 +1308,7 @@
         },
         {
           "name": "methods",
-          "base_type": "unknown",
+          "base_type": "integer",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -1325,7 +1325,7 @@
         },
         {
           "name": "method",
-          "base_type": "unknown",
+          "base_type": "integer",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -1342,7 +1342,7 @@
         },
         {
           "name": "tols",
-          "base_type": "unknown",
+          "base_type": "real",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -1359,7 +1359,7 @@
         },
         {
           "name": "tol",
-          "base_type": "unknown",
+          "base_type": "real",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -1376,7 +1376,7 @@
         },
         {
           "name": "ierr",
-          "base_type": "unknown",
+          "base_type": "integer",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -1393,7 +1393,7 @@
         },
         {
           "name": "err",
-          "base_type": "unknown",
+          "base_type": "real",
           "kind": null,
           "rank": 0,
           "shape": [],
@@ -3326,7 +3326,7 @@
         {
           "name": "g",
           "base_type": "procedure",
-          "kind": null,
+          "kind": "gauss_func_method",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -3338,12 +3338,12 @@
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
-          "pointer": false
+          "pointer": true
         },
         {
           "name": "fx",
           "base_type": "procedure",
-          "kind": null,
+          "kind": "f_x",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -3355,12 +3355,12 @@
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
-          "pointer": false
+          "pointer": true
         },
         {
           "name": "fxvec",
           "base_type": "procedure",
-          "kind": null,
+          "kind": "f_xvec",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -3372,7 +3372,7 @@
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
-          "pointer": false
+          "pointer": true
         },
         {
           "name": "ivec",

@@ -7,7 +7,7 @@
       {
         "name": "ff",
         "base_type": "procedure",
-        "kind": null,
+        "kind": "broydn_func",
         "rank": 0,
         "shape": [],
         "value": null,

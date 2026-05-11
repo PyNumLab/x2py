@@ -26,7 +26,7 @@
       {
         "name": "fcn",
         "base_type": "procedure",
-        "kind": null,
+        "kind": "cgfit_func",
         "rank": 0,
         "shape": [],
         "value": null,
@@ -274,7 +274,7 @@
       },
       {
         "name": "fcn",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -291,7 +291,7 @@
       },
       {
         "name": "iter",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -308,7 +308,7 @@
       },
       {
         "name": "fret",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -325,7 +325,7 @@
       },
       {
         "name": "ftol",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -342,7 +342,7 @@
       },
       {
         "name": "itmax",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -359,7 +359,7 @@
       },
       {
         "name": "iverbose",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -376,7 +376,7 @@
       },
       {
         "name": "mode",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -393,7 +393,7 @@
       },
       {
         "name": "new_version",
-        "base_type": "unknown",
+        "base_type": "integer",
         "kind": null,
         "rank": 0,
         "shape": [],
@@ -410,7 +410,7 @@
       },
       {
         "name": "hh_par",
-        "base_type": "unknown",
+        "base_type": "real",
         "kind": null,
         "rank": 0,
         "shape": [],

@@ -31,6 +31,7 @@ _DERIVED_TYPE_RE = re.compile(r"^type\s*(?P<attrs>(?:,\s*[^:]+)?)::\s*(?P<name>\
 _TYPE_FIELD_RE = re.compile(r"^type\s*\(\s*(?P<dtype>\w+)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE)
 _CLASS_FIELD_RE = re.compile(r"^class\s*\(\s*(?P<dtype>\w+)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE)
 _PROC_BIND_RE = re.compile(r"^procedure\s*(?:,\s*[^:]*)?::\s*(?P<names>.*)$", re.IGNORECASE)
+_PROC_DUMMY_RE = re.compile(r"^procedure\s*\(\s*(?P<iface>\w+)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE)
 _SUBMODULE_RE = re.compile(r"^submodule\s*\(\s*(?P<parent>[^)]+?)\s*\)\s*(?P<name>\w+)\s*$", re.IGNORECASE)
 _MOD_PROC_IMPL_RE = re.compile(r"^module\s+procedure\s+(?P<name>\w+)\s*$", re.IGNORECASE)
 _PROGRAM_RE = re.compile(r"^program\s+(?P<name>\w+)\s*$", re.IGNORECASE)
@@ -1028,9 +1029,12 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
         # Support procedure dummy declarations, e.g.
         #   procedure(my_iface) :: f
         #   procedure(my_iface), pointer :: f
+        procm = _PROC_DUMMY_RE.match(left)
+        iface = procm.group("iface").lower() if procm else None
         base = "procedure"
-        kind = None
-        attrs = []
+        imported = proc_state.get("imports", set())
+        kind = None if iface in imported else iface
+        attrs = split_csv((procm.group("attrs") if procm else "").strip().lstrip(", "))
     else:
         m_first = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)", line.strip())
         first_word = m_first.group(1).lower() if m_first else ""
@@ -1282,6 +1286,8 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
             arg.kind = _resolve_symbol_reference(arg.kind, local_params)
         if arg.shape:
             arg.shape = [_resolve_compile_time_expression(dim, local_params) for dim in arg.shape]
+        if arg.base_type == "unknown" and not implicit_none:
+            arg.base_type = _infer_implicit_base_type(arg.name)
     if sig.result and sig.result.kind:
         sig.result.kind = _resolve_symbol_reference(sig.result.kind, local_params)
     relevant_params = _collect_relevant_local_params(sig, local_params)
@@ -1617,10 +1623,12 @@ def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str |
             "pointer": False,
         }
     elif re.match(r"^procedure\s*\(", left, re.IGNORECASE):
-        attrs = []
+        procm = _PROC_DUMMY_RE.match(left)
+        iface = procm.group("iface").lower() if procm else None
+        attrs = split_csv((procm.group("attrs") if procm else "").strip().lstrip(", "))
         meta = {
             "base_type": "procedure",
-            "kind": None,
+            "kind": iface,
             "rank": 0,
             "shape": [],
             "intent": "unknown",
