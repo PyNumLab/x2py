@@ -1,0 +1,122 @@
+[
+  {
+    "name": "w2r",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "ldr",
+        "base_type": "integer",
+        "kind": "4",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "w2r",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "ldw",
+        "base_type": "integer",
+        "kind": "4",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "w2r",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "l",
+        "base_type": "integer",
+        "kind": "4",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "w2r",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "m",
+        "base_type": "integer",
+        "kind": "4",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "w2r",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "r",
+        "base_type": "real",
+        "kind": "8",
+        "rank": 2,
+        "shape": [
+          "ldr",
+          "m"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "w2r",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "w",
+        "base_type": "real",
+        "kind": "8",
+        "rank": 2,
+        "shape": [
+          "ldw",
+          "m"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "w2r",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  }
+]
