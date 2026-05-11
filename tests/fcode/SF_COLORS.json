@@ -1,0 +1,462 @@
+[
+  {
+    "name": "rgb",
+    "kind": "function",
+    "module": "SF_COLORS",
+    "arguments": [
+      {
+        "name": "c",
+        "base_type": "derived",
+        "kind": "rgb_color",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "rgb",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "num",
+      "base_type": "integer",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "rgb",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "equal_colors",
+    "kind": "subroutine",
+    "module": "SF_COLORS",
+    "arguments": [
+      {
+        "name": "C1",
+        "base_type": "derived",
+        "kind": "rgb_color",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "equal_colors",
+        "intent": "inout",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "C2",
+        "base_type": "derived",
+        "kind": "rgb_color",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "equal_colors",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [
+      "elemental"
+    ],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "add_colors",
+    "kind": "function",
+    "module": "SF_COLORS",
+    "arguments": [
+      {
+        "name": "c1",
+        "base_type": "derived",
+        "kind": "rgb_color",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "add_colors",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "c2",
+        "base_type": "derived",
+        "kind": "rgb_color",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "add_colors",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "c",
+      "base_type": "derived",
+      "kind": "rgb_color",
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "add_colors",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [
+      "elemental"
+    ],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "subtract_colors",
+    "kind": "function",
+    "module": "SF_COLORS",
+    "arguments": [
+      {
+        "name": "c1",
+        "base_type": "derived",
+        "kind": "rgb_color",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "subtract_colors",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "c2",
+        "base_type": "derived",
+        "kind": "rgb_color",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "subtract_colors",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "c",
+      "base_type": "derived",
+      "kind": "rgb_color",
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "subtract_colors",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [
+      "elemental"
+    ],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "scalar_left_color",
+    "kind": "function",
+    "module": "SF_COLORS",
+    "arguments": [
+      {
+        "name": "k",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "scalar_left_color",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "cin",
+        "base_type": "derived",
+        "kind": "rgb_color",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "scalar_left_color",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "cout",
+      "base_type": "derived",
+      "kind": "rgb_color",
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "scalar_left_color",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [
+      "elemental"
+    ],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "scalar_right_color",
+    "kind": "function",
+    "module": "SF_COLORS",
+    "arguments": [
+      {
+        "name": "k",
+        "base_type": "real",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "scalar_right_color",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "cin",
+        "base_type": "derived",
+        "kind": "rgb_color",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "scalar_right_color",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "cout",
+      "base_type": "derived",
+      "kind": "rgb_color",
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "scalar_right_color",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [
+      "elemental"
+    ],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "dot_scalar_colors",
+    "kind": "function",
+    "module": "SF_COLORS",
+    "arguments": [
+      {
+        "name": "v",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "dot_scalar_colors",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "cin",
+        "base_type": "derived",
+        "kind": "rgb_color",
+        "rank": 1,
+        "shape": [
+          "size(v)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "dot_scalar_colors",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "cout",
+      "base_type": "derived",
+      "kind": "rgb_color",
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "dot_scalar_colors",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  },
+  {
+    "name": "pick_color",
+    "kind": "function",
+    "module": "SF_COLORS",
+    "arguments": [
+      {
+        "name": "string",
+        "base_type": "character",
+        "kind": "len=*",
+        "rank": 0,
+        "shape": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "pick_color",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "crgb",
+      "base_type": "derived",
+      "kind": "rgb_color",
+      "rank": 0,
+      "shape": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "pick_color",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  }
+]

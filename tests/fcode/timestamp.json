@@ -1,0 +1,13 @@
+[
+  {
+    "name": "timestamp",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": false,
+    "variables": {}
+  }
+]
