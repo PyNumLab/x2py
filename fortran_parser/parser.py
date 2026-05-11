@@ -128,7 +128,11 @@ def _enforce_source_form_compatibility(line: str, filename: str | None, lineno: 
             )
 
 
-def parse_fortran_signatures(code: str, filename: str | None = None) -> list[FortranProcedureSignature]:
+def parse_fortran_signatures(
+    code: str,
+    filename: str | None = None,
+    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+) -> list[FortranProcedureSignature]:
     """Parse procedure signatures from a single Fortran source string.
 
     Produces `FortranProcedureSignature` objects for top-level procedures and
@@ -146,18 +150,72 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
       flagged with `in_interface=True`.
     """
     lines = preprocess_lines(code, filename)
+    macro_selection_enabled = macro_defines is not None
     signatures: list[FortranProcedureSignature] = []
-    declared_procedures: dict[tuple[str | None, bool], set[str]] = {}
+    declared_procedures: dict[tuple[str | None, bool], dict[str, list[frozenset[str]]]] = {}
     current_module = None
     current_module_uses: dict[str, list[str]] = {}
     current_proc = None
     interface_depth = 0
     program_depth = 0
+    macro_names = _normalize_macro_defines(macro_defines)
+    pp_condition_stack: list[tuple[int, int]] = []
+    pp_active_stack: list[bool] = []
+    pp_group_counter = 0
 
     for line, lineno, source_line in lines:
         s = line.strip()
         if not s:
             continue
+
+        if s.startswith("#"):
+            directive = s[1:].strip()
+            directive_low = directive.lower()
+            if directive_low.startswith("ifdef "):
+                pp_group_counter += 1
+                pp_condition_stack.append((pp_group_counter, 0))
+                expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
+                pp_active_stack.append((bool(expr) and expr.lower() in macro_names) if macro_selection_enabled else True)
+                continue
+            if directive_low.startswith("ifndef "):
+                pp_group_counter += 1
+                pp_condition_stack.append((pp_group_counter, 0))
+                expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
+                pp_active_stack.append(((not expr) or expr.lower() not in macro_names) if macro_selection_enabled else True)
+                continue
+            if directive_low.startswith("if "):
+                pp_group_counter += 1
+                pp_condition_stack.append((pp_group_counter, 0))
+                expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
+                pp_active_stack.append(_eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
+                continue
+            if directive_low.startswith("else"):
+                if pp_condition_stack:
+                    group_id, branch_id = pp_condition_stack.pop()
+                    pp_condition_stack.append((group_id, branch_id + 1))
+                if pp_active_stack:
+                    prev = pp_active_stack.pop()
+                    pp_active_stack.append((not prev) if macro_selection_enabled else True)
+                continue
+            if directive_low.startswith("elif "):
+                if pp_condition_stack:
+                    group_id, branch_id = pp_condition_stack.pop()
+                    pp_condition_stack.append((group_id, branch_id + 1))
+                if pp_active_stack:
+                    pp_active_stack.pop()
+                    expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
+                    pp_active_stack.append(_eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
+                continue
+            if directive_low.startswith("endif"):
+                if pp_condition_stack:
+                    pp_condition_stack.pop()
+                if pp_active_stack:
+                    pp_active_stack.pop()
+                continue
+
+        if macro_selection_enabled and pp_active_stack and not all(pp_active_stack):
+            continue
+
         l = s.lower()
 
         _enforce_source_form_compatibility(s, filename, lineno, source_line)
@@ -207,9 +265,13 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
             current_proc = _parse_header(s, current_module, interface_depth > 0)
             if current_proc:
                 scope_key = (current_module.lower() if current_module else None, interface_depth > 0)
-                seen_in_scope = declared_procedures.setdefault(scope_key, set())
+                seen_in_scope = declared_procedures.setdefault(scope_key, {})
                 proc_name = current_proc["signature"].name.lower()
-                if proc_name in seen_in_scope:
+                condition_set = frozenset(
+                    f"g{group_id}:b{branch_id}" for group_id, branch_id in pp_condition_stack
+                )
+                existing_conditions = seen_in_scope.setdefault(proc_name, [])
+                if any(_preprocessor_conditions_overlap(existing, condition_set) for existing in existing_conditions):
                     scope_label = (
                         f"module '{current_module}'" if current_module is not None else "global scope"
                     )
@@ -219,7 +281,7 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
                         line_number=lineno,
                         source_line=source_line,
                     )
-                seen_in_scope.add(proc_name)
+                existing_conditions.append(condition_set)
                 current_proc["uses"].update(current_module_uses)
                 current_proc["filename"] = filename
                 current_proc["header_lineno"] = lineno
@@ -279,6 +341,55 @@ def parse_fortran_project_signatures(files: dict[str, str]) -> list[FortranProce
     for _, signatures in parsed_files:
         out.extend(signatures)
     return out
+
+
+def _preprocessor_conditions_overlap(c1: frozenset[str], c2: frozenset[str]) -> bool:
+    """Return True when two preprocessor condition sets may both be active."""
+    if not c1 or not c2:
+        return True
+    values: dict[str, str] = {}
+    for token in c1 | c2:
+        group, _, branch = token.partition(":")
+        if group in values and values[group] != branch:
+            return False
+        values[group] = branch
+    return True
+
+
+def _normalize_macro_defines(macro_defines: set[str] | dict[str, int | bool | str] | None) -> set[str]:
+    if not macro_defines:
+        return set()
+    if isinstance(macro_defines, dict):
+        out = set()
+        for k, v in macro_defines.items():
+            if str(v).strip() not in {"", "0", "false", "False"}:
+                out.add(str(k).lower())
+        return out
+    return {str(x).lower() for x in macro_defines}
+
+
+def _eval_cpp_expr(expr: str, macro_names: set[str]) -> bool:
+    """Evaluate a small C-preprocessor boolean expression."""
+    txt = expr.strip()
+    if not txt:
+        return False
+    txt = re.sub(r"defined\s*\(\s*([A-Za-z_]\w*)\s*\)", lambda m: str(m.group(1).lower() in macro_names), txt)
+    txt = re.sub(r"\bdefined\s+([A-Za-z_]\w*)\b", lambda m: str(m.group(1).lower() in macro_names), txt)
+    def _ident_to_bool(m: re.Match[str]) -> str:
+        token = m.group(1)
+        if token in {"True", "False", "and", "or", "not"}:
+            return token
+        return "True" if token.lower() in macro_names else "False"
+    txt = re.sub(r"\b([A-Za-z_]\w*)\b", _ident_to_bool, txt)
+    txt = txt.replace("&&", " and ").replace("||", " or ")
+    txt = re.sub(r"(?<![=!<>])!(?!=)", " not ", txt)
+    txt = re.sub(r"\b0\b", "False", txt)
+    txt = re.sub(r"\b1\b", "True", txt)
+    try:
+        node = ast.parse(txt, mode="eval")
+        return bool(eval(compile(node, "<cpp-expr>", "eval"), {"__builtins__": {}}, {}))
+    except Exception:
+        return False
 
 
 def parse_fortran_file(path: str) -> list[FortranProcedureSignature]:

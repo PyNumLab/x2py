@@ -1,26 +1,8 @@
 [
   {
-    "fixture": "SciFortran/errors/SF_BLACS.f90",
-    "message_fragments": [
-      "SciFortran/errors/SF_BLACS.f90:121:1: error[PARSE001]: Duplicate procedure name 'init_BLACS' in module 'SF_BLACS'.\n    |\n121 |   subroutine init_BLACS()\n    | ^"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
     "fixture": "SciFortran/errors/SF_MISC.f90",
     "message_fragments": [
       "SciFortran/errors/SF_MISC.f90:706:1: error[PARSE001]: Duplicate procedure name 'swap_order' in module 'SF_MISC'.\n    |\n706 |     subroutine swap_order( order, first, second )\n    | ^"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/SF_MPI.f90",
-    "message_fragments": [
-      "SciFortran/errors/SF_MPI.f90:3344:1: error[PARSE001]: Duplicate procedure name 'Init_MPI' in module 'SF_MPI'.\n     |\n3344 |   subroutine Init_MPI()\n     | ^"
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
