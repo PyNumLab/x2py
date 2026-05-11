@@ -21,13 +21,13 @@ _TRUE_VALUES = {"1", "true", "yes", "on"}
 def _parse_shape_dim(dim: str) -> dict[str, str | None]:
     token = (dim or "").strip()
     if not token:
-        return {"raw": "", "lower": None, "upper": None, "extent": None}
+        return {"raw": "", "lower": None, "upper": None}
     if ":" not in token:
-        return {"raw": token, "lower": None, "upper": token, "extent": token}
+        return {"raw": token, "lower": "1", "upper": token}
     lo, hi = token.split(":", 1)
     lo = lo.strip() or None
     hi = hi.strip() or None
-    return {"raw": token, "lower": lo, "upper": hi, "extent": None}
+    return {"raw": token, "lower": lo, "upper": hi}
 
 
 def _env_flag(name: str) -> bool:

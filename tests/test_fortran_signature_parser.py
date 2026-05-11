@@ -630,8 +630,8 @@ end subroutine update_plane
     assert arg.lower_bounds == ["0", "1"]
     assert arg.upper_bounds == [None, "n"]
     assert arg.shape_info == [
-        {"raw": "0:", "lower": "0", "upper": None, "extent": None},
-        {"raw": "1:n", "lower": "1", "upper": "n", "extent": None},
+        {"raw": "0:", "lower": "0", "upper": None},
+        {"raw": "1:n", "lower": "1", "upper": "n"},
     ]
 
 
@@ -644,7 +644,7 @@ end subroutine resize
     sig = parse_fortran_signatures(code)[0]
     arg = sig.arguments[0]
     assert arg.shape_info == [
-        {"raw": "n", "lower": None, "upper": "n", "extent": "n"},
+        {"raw": "n", "lower": "1", "upper": "n"},
     ]
     assert arg.lbound == ["0", "1"]
     assert arg.ubound == [None, "n"]
