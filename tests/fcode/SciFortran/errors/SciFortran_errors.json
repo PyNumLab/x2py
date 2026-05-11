@@ -1,41 +1,5 @@
 [
   {
-    "fixture": "SciFortran/errors/SF_MISC.f90",
-    "message_fragments": [
-      "SciFortran/errors/SF_MISC.f90:706:1: error[PARSE001]: Duplicate procedure name 'swap_order' in module 'SF_MISC'.\n    |\n706 |     subroutine swap_order( order, first, second )\n    | ^"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/SF_OPTIMIZE.f90",
-    "message_fragments": [
-      "SciFortran/errors/SF_OPTIMIZE.f90: error[PARSE001]: Argument 'fjac' in procedure 'sub_func_jacobian' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/brent.f90",
-    "message_fragments": [
-      "SciFortran/errors/brent.f90:66:1: error[PARSE001]: Duplicate declaration of symbol 'x' in procedure 'brent_optimize'.\n   |\n66 |        real(8) :: x\n   | ^"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/curvefit.f90",
-    "message_fragments": [
-      "SciFortran/errors/curvefit.f90:145:1: error[PARSE001]: Duplicate procedure name 'model_dfunc' in global scope.\n    |\n145 |        subroutine model_dfunc(x,a,df)\n    | ^"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
     "fixture": "SciFortran/errors/derivate_fjacobian_c.f90",
     "message_fragments": [
       "SciFortran/errors/derivate_fjacobian_c.f90: error[PARSE001]: Argument 'fjac' in procedure 'c_fdjac_nn_func' has no type declaration (implicit none is active)."

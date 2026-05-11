@@ -465,6 +465,8 @@ Duplicate variable '<name>' in module '<module>'.
 
 Triggered when the same procedure name appears more than once within the same
 module or global scope.
+Internal procedures inside separate host `contains` blocks are scoped to their
+host and do **not** conflict with each other.
 
 **Global scope:**
 
