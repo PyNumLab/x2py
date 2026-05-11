@@ -10,6 +10,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -27,6 +29,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -44,6 +48,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -61,6 +67,14 @@
         "kind": null,
         "rank": 2,
         "shape": [
+          "N",
+          "NRHS"
+        ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
           "N",
           "NRHS"
         ],
@@ -84,6 +98,14 @@
           "N",
           "NRHS"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          "N",
+          "NRHS"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -101,6 +123,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "NRHS"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "NRHS"
         ],
         "value": null,

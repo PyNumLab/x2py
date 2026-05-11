@@ -12,6 +12,12 @@
         "shape": [
           ":"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -30,6 +36,8 @@
       "kind": "8",
       "rank": 0,
       "shape": [],
+      "lbound": [],
+      "ubound": [],
       "value": null,
       "value_type": "unknown",
       "is_parameter": false,
@@ -57,6 +65,8 @@
         "kind": "8",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -75,6 +85,12 @@
         "rank": 1,
         "shape": [
           ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
         ],
         "value": null,
         "value_type": "unknown",

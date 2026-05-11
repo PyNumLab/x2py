@@ -13,6 +13,14 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -30,6 +38,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Amat,1)-1"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Amat,1)-1"
         ],
         "value": null,
@@ -51,6 +65,12 @@
         "shape": [
           "size(Amat,1)"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "size(Amat,1)"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -68,6 +88,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Amat,1)-1"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Amat,1)-1"
         ],
         "value": null,
@@ -102,6 +128,14 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -119,6 +153,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Amat,1)-1"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Amat,1)-1"
         ],
         "value": null,
@@ -140,6 +180,12 @@
         "shape": [
           "size(Amat,1)"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "size(Amat,1)"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -157,6 +203,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "size(Amat,1)-1"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "size(Amat,1)-1"
         ],
         "value": null,
@@ -188,6 +240,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -205,6 +259,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -225,6 +281,14 @@
           "Nblock*Nsize",
           "Nblock*Nsize"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          "Nblock*Nsize",
+          "Nblock*Nsize"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -242,6 +306,16 @@
         "kind": null,
         "rank": 3,
         "shape": [
+          "Nblock-1",
+          "Nsize",
+          "Nsize"
+        ],
+        "lbound": [
+          null,
+          null,
+          null
+        ],
+        "ubound": [
           "Nblock-1",
           "Nsize",
           "Nsize"
@@ -267,6 +341,16 @@
           "Nsize",
           "Nsize"
         ],
+        "lbound": [
+          null,
+          null,
+          null
+        ],
+        "ubound": [
+          "Nblock",
+          "Nsize",
+          "Nsize"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -284,6 +368,16 @@
         "kind": null,
         "rank": 3,
         "shape": [
+          "Nblock-1",
+          "Nsize",
+          "Nsize"
+        ],
+        "lbound": [
+          null,
+          null,
+          null
+        ],
+        "ubound": [
           "Nblock-1",
           "Nsize",
           "Nsize"
@@ -317,6 +411,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -334,6 +430,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -354,6 +452,14 @@
           "Nblock*Nsize",
           "Nblock*Nsize"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          "Nblock*Nsize",
+          "Nblock*Nsize"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -371,6 +477,16 @@
         "kind": null,
         "rank": 3,
         "shape": [
+          "Nblock-1",
+          "Nsize",
+          "Nsize"
+        ],
+        "lbound": [
+          null,
+          null,
+          null
+        ],
+        "ubound": [
           "Nblock-1",
           "Nsize",
           "Nsize"
@@ -396,6 +512,16 @@
           "Nsize",
           "Nsize"
         ],
+        "lbound": [
+          null,
+          null,
+          null
+        ],
+        "ubound": [
+          "Nblock",
+          "Nsize",
+          "Nsize"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -413,6 +539,16 @@
         "kind": null,
         "rank": 3,
         "shape": [
+          "Nblock-1",
+          "Nsize",
+          "Nsize"
+        ],
+        "lbound": [
+          null,
+          null,
+          null
+        ],
+        "ubound": [
           "Nblock-1",
           "Nsize",
           "Nsize"

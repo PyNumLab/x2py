@@ -13,6 +13,14 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -44,6 +52,14 @@
         "shape": [
           ":",
           ":"
+        ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null
         ],
         "value": null,
         "value_type": "unknown",

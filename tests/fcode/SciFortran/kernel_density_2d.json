@@ -10,6 +10,8 @@
         "kind": "pdf_kernel_2d",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -27,6 +29,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "2"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "2"
         ],
         "value": null,
@@ -58,6 +66,8 @@
         "kind": "pdf_kernel_2d",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -87,6 +97,8 @@
         "kind": "pdf_kernel_2d",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -104,6 +116,8 @@
         "kind": "len=*",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -133,6 +147,8 @@
         "kind": "pdf_kernel_2d",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -150,6 +166,8 @@
         "kind": "len=*",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -179,6 +197,8 @@
         "kind": "pdf_kernel_2d",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -198,6 +218,12 @@
         "shape": [
           "2"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "2"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -215,6 +241,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "2"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "2"
         ],
         "value": null,
@@ -246,6 +278,8 @@
         "kind": "pdf_kernel_2d",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -263,6 +297,14 @@
         "kind": null,
         "rank": 2,
         "shape": [
+          "2",
+          "2"
+        ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
           "2",
           "2"
         ],
@@ -295,6 +337,8 @@
         "kind": "pdf_kernel_2d",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -312,6 +356,14 @@
         "kind": null,
         "rank": 2,
         "shape": [
+          "2",
+          "2"
+        ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
           "2",
           "2"
         ],
@@ -344,6 +396,8 @@
         "kind": "pdf_kernel_2d",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -364,6 +418,14 @@
           ":",
           ":"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          null,
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -381,6 +443,14 @@
         "kind": null,
         "rank": 2,
         "shape": [
+          "2",
+          "2"
+        ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
           "2",
           "2"
         ],
@@ -413,6 +483,8 @@
         "kind": "pdf_kernel_2d",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -430,6 +502,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "2"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "2"
         ],
         "value": null,
@@ -451,6 +529,12 @@
         "shape": [
           "2"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "2"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -468,6 +552,14 @@
         "kind": null,
         "rank": 2,
         "shape": [
+          "2",
+          "2"
+        ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
           "2",
           "2"
         ],
@@ -500,6 +592,8 @@
         "kind": "pdf_kernel_2d",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -519,6 +613,12 @@
         "shape": [
           "2"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "2"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -536,6 +636,14 @@
         "kind": null,
         "rank": 2,
         "shape": [
+          "2",
+          "2"
+        ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
           "2",
           "2"
         ],
@@ -570,6 +678,12 @@
         "shape": [
           ":"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -589,6 +703,12 @@
         "shape": [
           ":"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -606,6 +726,12 @@
         "kind": null,
         "rank": 1,
         "shape": [
+          "2"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "2"
         ],
         "value": null,
@@ -628,6 +754,14 @@
           "2",
           "2"
         ],
+        "lbound": [
+          null,
+          null
+        ],
+        "ubound": [
+          "2",
+          "2"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -646,6 +780,14 @@
       "kind": null,
       "rank": 2,
       "shape": [
+        "size(x)",
+        "size(y)"
+      ],
+      "lbound": [
+        null,
+        null
+      ],
+      "ubound": [
         "size(x)",
         "size(y)"
       ],
@@ -676,6 +818,8 @@
         "kind": "pdf_kernel_2d",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -705,6 +849,8 @@
         "kind": "pdf_kernel_2d",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -722,6 +868,8 @@
         "kind": "len=*",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -739,6 +887,8 @@
         "kind": null,
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,

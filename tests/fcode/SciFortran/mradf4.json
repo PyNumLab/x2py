@@ -10,6 +10,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -27,6 +29,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -44,6 +48,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -66,6 +72,18 @@
           "l1",
           "4"
         ],
+        "lbound": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "ubound": [
+          "in1",
+          "ido",
+          "l1",
+          "4"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -83,6 +101,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -100,6 +120,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -122,6 +144,18 @@
           "4",
           "l1"
         ],
+        "lbound": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "ubound": [
+          "in2",
+          "ido",
+          "4",
+          "l1"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -139,6 +173,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -156,6 +192,8 @@
         "kind": "4",
         "rank": 0,
         "shape": [],
+        "lbound": [],
+        "ubound": [],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -173,6 +211,12 @@
         "kind": "8",
         "rank": 1,
         "shape": [
+          "ido"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "ido"
         ],
         "value": null,
@@ -194,6 +238,12 @@
         "shape": [
           "ido"
         ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          "ido"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -211,6 +261,12 @@
         "kind": "8",
         "rank": 1,
         "shape": [
+          "ido"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
           "ido"
         ],
         "value": null,

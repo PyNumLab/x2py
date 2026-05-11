@@ -12,6 +12,12 @@
         "shape": [
           "1:p_add"
         ],
+        "lbound": [
+          "1"
+        ],
+        "ubound": [
+          "p_add"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -30,6 +36,12 @@
         "rank": 1,
         "shape": [
           "1:p_sub"
+        ],
+        "lbound": [
+          "1"
+        ],
+        "ubound": [
+          "p_sub"
         ],
         "value": null,
         "value_type": "unknown",
@@ -50,6 +62,12 @@
         "shape": [
           "1:p_mul"
         ],
+        "lbound": [
+          "1"
+        ],
+        "ubound": [
+          "p_mul"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -68,6 +86,12 @@
         "rank": 1,
         "shape": [
           "1:p_div"
+        ],
+        "lbound": [
+          "1"
+        ],
+        "ubound": [
+          "p_div"
         ],
         "value": null,
         "value_type": "unknown",
@@ -88,6 +112,12 @@
         "shape": [
           "1:p_pow"
         ],
+        "lbound": [
+          "1"
+        ],
+        "ubound": [
+          "p_pow"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -106,6 +136,12 @@
         "rank": 1,
         "shape": [
           "0:p_mix"
+        ],
+        "lbound": [
+          "0"
+        ],
+        "ubound": [
+          "p_mix"
         ],
         "value": null,
         "value_type": "unknown",
@@ -126,6 +162,12 @@
         "shape": [
           "1:-(-a + b)"
         ],
+        "lbound": [
+          "1"
+        ],
+        "ubound": [
+          "-(-a + b)"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -145,6 +187,12 @@
         "shape": [
           "1:(a+b)*(c+1)-1"
         ],
+        "lbound": [
+          "1"
+        ],
+        "ubound": [
+          "(a+b)*(c+1)-1"
+        ],
         "value": null,
         "value_type": "unknown",
         "is_parameter": false,
@@ -163,6 +211,12 @@
         "rank": 1,
         "shape": [
           "1:(a-b)*(a-c)"
+        ],
+        "lbound": [
+          "1"
+        ],
+        "ubound": [
+          "(a-b)*(a-c)"
         ],
         "value": null,
         "value_type": "unknown",
