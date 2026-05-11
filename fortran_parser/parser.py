@@ -1041,7 +1041,6 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
     if external_match:
         names = [n.strip().lower() for n in split_csv(external_match.group("names") or "") if n.strip()]
         for name in names:
-            proc_state["typed_symbols"].add(name)
             arg = proc_state["symbols"].get(name)
             if arg is not None and arg.base_type == "unknown":
                 arg.base_type = "procedure"
