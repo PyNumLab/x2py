@@ -7,8 +7,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -16,7 +16,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "init_dmatrix_csc",
-          "intent": "unknown",
+          "intent": "inout",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -134,8 +134,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -143,7 +143,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "load_dmatrix_csc",
-          "intent": "unknown",
+          "intent": "inout",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -190,8 +190,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -199,7 +199,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "init_zmatrix_csc",
-          "intent": "unknown",
+          "intent": "inout",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -317,8 +317,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -326,7 +326,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "load_zmatrix_csc",
-          "intent": "unknown",
+          "intent": "inout",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -373,8 +373,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -382,7 +382,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "free_dmatrix_csc",
-          "intent": "unknown",
+          "intent": "inout",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -411,8 +411,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -420,7 +420,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "free_zmatrix_csc",
-          "intent": "unknown",
+          "intent": "inout",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -449,8 +449,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -458,7 +458,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "insert_delement_csc",
-          "intent": "unknown",
+          "intent": "inout",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -536,8 +536,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -545,7 +545,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "insert_zelement_csc",
-          "intent": "unknown",
+          "intent": "inout",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -623,8 +623,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -632,7 +632,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "get_delement_csc",
-          "intent": "unknown",
+          "intent": "inout",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -709,8 +709,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -718,7 +718,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "get_zelement_csc",
-          "intent": "unknown",
+          "intent": "inout",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -795,8 +795,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -804,7 +804,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "dump_dmatrix_csc",
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -851,8 +851,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -860,7 +860,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "dump_zmatrix_csc",
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -907,8 +907,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -916,7 +916,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "as_dmatrix_csc",
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -962,8 +962,8 @@
       "arguments": [
         {
           "name": "sparse",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -971,7 +971,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "as_zmatrix_csc",
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -1331,8 +1331,8 @@
       "arguments": [
         {
           "name": "a",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -1340,7 +1340,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "dgr_dmatrix_csc",
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -1383,8 +1383,8 @@
       "arguments": [
         {
           "name": "a",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_dmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -1392,7 +1392,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "transpose_dmatrix_csc",
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -2093,8 +2093,8 @@
       "arguments": [
         {
           "name": "a",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -2102,7 +2102,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "dgr_zmatrix_csc",
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -2145,8 +2145,8 @@
       "arguments": [
         {
           "name": "a",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -2154,7 +2154,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "transpose_zmatrix_csc",
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
@@ -2197,8 +2197,8 @@
       "arguments": [
         {
           "name": "a",
-          "base_type": "unknown",
-          "kind": null,
+          "base_type": "derived",
+          "kind": "sparse_zmatrix_csc",
           "rank": 0,
           "shape": [],
           "value": null,
@@ -2206,7 +2206,7 @@
           "is_parameter": false,
           "dimensions": [],
           "procedure": "conjg_zmatrix_csc",
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,
