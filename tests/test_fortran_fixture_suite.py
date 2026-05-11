@@ -142,6 +142,9 @@ def test_fortran_scifortran_error_manifest_is_in_sync():
         for fragment in item.get("message_fragments", []):
             assert fragment in message, f"Missing message fragment {fragment!r} for {relpath}"
 
+        for fragment in item.get("diagnostic_fragments", []):
+            assert fragment in message, f"Missing diagnostic fragment {fragment!r} for {relpath}"
+
 
 def test_fortran_scifortran_error_manifest_covers_error_directory():
     with _SCIFORTRAN_ERROR_EXPECTATIONS.open("r", encoding="utf-8") as f:
