@@ -34,6 +34,7 @@ _MOD_PROC_IMPL_RE = re.compile(r"^module\s+procedure\s+(?P<name>\w+)\s*$", re.IG
 _PROGRAM_RE = re.compile(r"^program\s+(?P<name>\w+)\s*$", re.IGNORECASE)
 _BLOCK_DATA_RE = re.compile(r"^block\s+data(?:\s+(?P<name>\w+))?\s*$", re.IGNORECASE)
 _UNSUPPORTED_PATTERNS = (
+    re.compile(r"\bclass\s*\(\s*\*\s*\)", re.IGNORECASE),
     re.compile(r"\bselect\s+type\b", re.IGNORECASE),
     re.compile(r"\bcoarray\b|\[[^\]]*\]", re.IGNORECASE),
     re.compile(r"\bprocedure\s*,\s*pointer\b", re.IGNORECASE),

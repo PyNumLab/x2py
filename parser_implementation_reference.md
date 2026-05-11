@@ -109,7 +109,7 @@ another source language.
 ### 2.9 Wrap-readiness analysis
 
 - Unsupported construct patterns explicitly scanned:
-  - polymorphic `class(...)`
+  - assumed-type polymorphic `class(*)`
   - `select type`
   - coarray forms
   - `procedure, pointer`
