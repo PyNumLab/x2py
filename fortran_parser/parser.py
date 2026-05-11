@@ -153,7 +153,8 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
     current_proc = None
     interface_depth = 0
     program_depth = 0
-    pp_condition_stack: list[tuple[str, bool]] = []
+    pp_condition_stack: list[tuple[int, int]] = []
+    pp_group_counter = 0
 
     for line, lineno, source_line in lines:
         s = line.strip()
@@ -164,26 +165,22 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
             directive = s[1:].strip()
             directive_low = directive.lower()
             if directive_low.startswith("ifdef "):
-                sym = directive.split(None, 1)[1].strip()
-                if sym:
-                    pp_condition_stack.append((sym.lower(), True))
+                pp_group_counter += 1
+                pp_condition_stack.append((pp_group_counter, 0))
                 continue
             if directive_low.startswith("ifndef "):
-                sym = directive.split(None, 1)[1].strip()
-                if sym:
-                    pp_condition_stack.append((sym.lower(), False))
+                pp_group_counter += 1
+                pp_condition_stack.append((pp_group_counter, 0))
                 continue
             if directive_low.startswith("else"):
                 if pp_condition_stack:
-                    sym, state = pp_condition_stack.pop()
-                    pp_condition_stack.append((sym, not state))
+                    group_id, branch_id = pp_condition_stack.pop()
+                    pp_condition_stack.append((group_id, branch_id + 1))
                 continue
             if directive_low.startswith("elif "):
-                expr = directive.split(None, 1)[1].strip()
                 if pp_condition_stack:
-                    pp_condition_stack.pop()
-                if expr:
-                    pp_condition_stack.append((expr.lower(), True))
+                    group_id, branch_id = pp_condition_stack.pop()
+                    pp_condition_stack.append((group_id, branch_id + 1))
                 continue
             if directive_low.startswith("endif"):
                 if pp_condition_stack:
@@ -242,7 +239,7 @@ def parse_fortran_signatures(code: str, filename: str | None = None) -> list[For
                 seen_in_scope = declared_procedures.setdefault(scope_key, {})
                 proc_name = current_proc["signature"].name.lower()
                 condition_set = frozenset(
-                    f"{'' if state else '!'}{sym}" for sym, state in pp_condition_stack
+                    f"g{group_id}:b{branch_id}" for group_id, branch_id in pp_condition_stack
                 )
                 existing_conditions = seen_in_scope.setdefault(proc_name, [])
                 if any(_preprocessor_conditions_overlap(existing, condition_set) for existing in existing_conditions):
@@ -321,14 +318,12 @@ def _preprocessor_conditions_overlap(c1: frozenset[str], c2: frozenset[str]) -> 
     """Return True when two preprocessor condition sets may both be active."""
     if not c1 or not c2:
         return True
-    values: dict[str, bool] = {}
+    values: dict[str, str] = {}
     for token in c1 | c2:
-        neg = token.startswith("!")
-        name = token[1:] if neg else token
-        val = not neg
-        if name in values and values[name] != val:
+        group, _, branch = token.partition(":")
+        if group in values and values[group] != branch:
             return False
-        values[name] = val
+        values[group] = branch
     return True
 
 
