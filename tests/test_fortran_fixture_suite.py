@@ -20,6 +20,16 @@ _LAPACK_FIXTURES = sorted(
     for f in (_TESTS_DIR / "lapack").rglob("*")
     if f.is_file() and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08"}
 )
+_SCIFORTRAN_FIXTURES = sorted(
+    f
+    for f in (_TESTS_DIR / "SciFortran").glob("*")
+    if f.is_file() and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08"}
+)
+_RUN_SCIFORTRAN_FIXTURES = os.getenv("FORTRAN_PARSER_RUN_SCIFORTRAN", "0") == "1"
+_SCIFORTRAN_SKIP = pytest.mark.skipif(
+    not _RUN_SCIFORTRAN_FIXTURES,
+    reason="SciFortran goldens are generated locally on demand",
+)
 
 
 def _load_expected(expected_path: Path):
@@ -97,6 +107,22 @@ def test_fortran_lapack_parse_suite_has_fixtures():
 
 @pytest.mark.parametrize("fixture", _LAPACK_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
 def test_fortran_lapack_parse_suite(fixture):
+    relpath = str(fixture.relative_to(_TESTS_DIR))
+    _run_fixture_comparison(
+        fixture,
+        filename_for_parser=relpath,
+        expected_path=fixture.with_suffix(".json"),
+    )
+
+
+@_SCIFORTRAN_SKIP
+def test_fortran_scifortran_parse_suite_has_fixtures():
+    assert _SCIFORTRAN_FIXTURES, "No SciFortran fixtures found in tests/fcode/SciFortran"
+
+
+@_SCIFORTRAN_SKIP
+@pytest.mark.parametrize("fixture", _SCIFORTRAN_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
+def test_fortran_scifortran_parse_suite(fixture):
     relpath = str(fixture.relative_to(_TESTS_DIR))
     _run_fixture_comparison(
         fixture,
