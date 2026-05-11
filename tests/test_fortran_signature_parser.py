@@ -650,7 +650,7 @@ end subroutine resize
     ]
     assert arg.lower_bounds == ["1"]
     assert arg.upper_bounds == ["n"]
-    assert arg.lbound == [None]
+    assert arg.lbound == ["1"]
     assert arg.ubound == ["n"]
 
 

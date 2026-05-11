@@ -128,8 +128,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDH",
@@ -213,8 +213,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDZ",
@@ -297,7 +297,7 @@
           "*"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "*"
@@ -322,7 +322,7 @@
           "*"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "*"
@@ -348,8 +348,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDV",
@@ -414,8 +414,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDT",
@@ -480,8 +480,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDWV",
@@ -526,7 +526,7 @@
           "*"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "*"

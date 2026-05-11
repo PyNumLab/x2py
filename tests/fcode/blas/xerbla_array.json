@@ -13,7 +13,7 @@
           "SRNAME_LEN"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "SRNAME_LEN"

@@ -58,8 +58,8 @@
           "size(x)"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "size(x)",
@@ -199,8 +199,8 @@
           "size(x)"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "size(x)",
@@ -341,8 +341,8 @@
         "size(x)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(x)",
@@ -424,8 +424,8 @@
         "size(x)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(x)",
@@ -525,8 +525,8 @@
           "size(x)"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "m",
@@ -647,8 +647,8 @@
           "size(x)"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "m",
@@ -770,8 +770,8 @@
         "size(x)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "m",
@@ -872,8 +872,8 @@
         "size(x)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "m",
@@ -953,7 +953,7 @@
           "size(x)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(x)"
@@ -1053,7 +1053,7 @@
           "size(x)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(x)"
@@ -1154,7 +1154,7 @@
         "size(x)"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "size(x)"
@@ -1234,7 +1234,7 @@
         "size(x)"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "size(x)"

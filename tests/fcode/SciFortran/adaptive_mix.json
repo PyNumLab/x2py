@@ -38,7 +38,7 @@
           "size(x)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(x)"
@@ -138,7 +138,7 @@
           "size(z)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(z)"

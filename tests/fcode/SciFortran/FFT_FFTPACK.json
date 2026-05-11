@@ -38,7 +38,7 @@
           "size(func_in)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(func_in)"
@@ -100,7 +100,7 @@
           "size(func_in)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(func_in)"
@@ -162,7 +162,7 @@
           "size(func_in)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(func_in)"
@@ -224,7 +224,7 @@
           "size(func_in)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(func_in)"
@@ -1343,7 +1343,7 @@
         "size(fin)"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "size(fin)"
@@ -1404,7 +1404,7 @@
         "size(fin)"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "size(fin)"
@@ -1465,7 +1465,7 @@
         "size(fin)"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "size(fin)"
@@ -1526,7 +1526,7 @@
         "size(fin)"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "size(fin)"

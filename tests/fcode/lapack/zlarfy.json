@@ -51,7 +51,7 @@
           "*"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "*"
@@ -115,8 +115,8 @@
           "*"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "LDC",
@@ -161,7 +161,7 @@
           "*"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "*"

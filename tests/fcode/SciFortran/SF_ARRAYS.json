@@ -128,7 +128,7 @@
         "num"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "num"
@@ -240,7 +240,7 @@
         "num"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "num"
@@ -314,7 +314,7 @@
         "num"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "num"
@@ -501,7 +501,7 @@
           "ndim"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "ndim"
@@ -527,7 +527,7 @@
         "ndim"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "ndim"
@@ -695,7 +695,7 @@
           "2*P*Q+1"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "2*P*Q+1"
@@ -721,7 +721,7 @@
         "2*p*q+1"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "2*p*q+1"
@@ -833,7 +833,7 @@
         "num"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "num"

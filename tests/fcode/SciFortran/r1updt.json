@@ -51,7 +51,7 @@
           "ls"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "ls"
@@ -95,7 +95,7 @@
           "m"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "m"
@@ -120,7 +120,7 @@
           "n"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "n"
@@ -145,7 +145,7 @@
           "m"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "m"

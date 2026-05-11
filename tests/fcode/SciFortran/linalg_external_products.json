@@ -71,8 +71,8 @@
         "size(A,2)*size(B,2)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(A,1)*size(B,1)",
@@ -166,8 +166,8 @@
         "size(A,2)*size(B,2)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(A,1)*size(B,1)",
@@ -261,8 +261,8 @@
         "size(A,2)*size(B,2)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(A,1)*size(B,1)",
@@ -356,8 +356,8 @@
         "size(A,2)*size(B,2)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(A,1)*size(B,1)",
@@ -451,8 +451,8 @@
         "size(A,2)*size(B,2)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(A,1)*size(B,1)",
@@ -540,8 +540,8 @@
         "size(b)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(a)",
@@ -629,8 +629,8 @@
         "size(b)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(a)",
@@ -666,7 +666,7 @@
           "2"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "2"
@@ -691,7 +691,7 @@
           "2"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "2"
@@ -746,7 +746,7 @@
           "2"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "2"
@@ -771,7 +771,7 @@
           "2"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "2"
@@ -826,7 +826,7 @@
           "3"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "3"
@@ -851,7 +851,7 @@
           "3"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "3"
@@ -877,7 +877,7 @@
         "3"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "3"
@@ -912,7 +912,7 @@
           "3"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "3"
@@ -937,7 +937,7 @@
           "3"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "3"
@@ -963,7 +963,7 @@
         "3"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "3"
@@ -998,7 +998,7 @@
           "3"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "3"
@@ -1023,7 +1023,7 @@
           "3"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "3"
@@ -1048,7 +1048,7 @@
           "3"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "3"
@@ -1103,7 +1103,7 @@
           "3"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "3"
@@ -1128,7 +1128,7 @@
           "3"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "3"
@@ -1153,7 +1153,7 @@
           "3"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "3"

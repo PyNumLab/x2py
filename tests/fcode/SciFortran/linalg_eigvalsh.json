@@ -42,7 +42,7 @@
         "size(A,1)"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "size(A,1)"
@@ -106,7 +106,7 @@
         "size(A,1)"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "size(A,1)"

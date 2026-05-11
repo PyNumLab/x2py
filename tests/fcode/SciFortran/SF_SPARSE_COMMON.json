@@ -33,7 +33,7 @@
         "2"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "2"
@@ -98,7 +98,7 @@
           "size(array)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(array)"

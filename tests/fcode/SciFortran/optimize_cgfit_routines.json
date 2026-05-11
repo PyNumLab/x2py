@@ -94,7 +94,7 @@
         "size(a)"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "size(a)"

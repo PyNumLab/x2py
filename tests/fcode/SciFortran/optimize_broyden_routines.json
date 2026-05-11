@@ -39,7 +39,7 @@
         "size(x)"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "size(x)"
@@ -727,7 +727,7 @@
         "size(mat,1)"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "size(mat,1)"
@@ -1115,8 +1115,8 @@
         "k"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "j",
@@ -1206,8 +1206,8 @@
         "size(b)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(a)",
@@ -1297,8 +1297,8 @@
         "size(b)"
       ],
       "lbound": [
-        null,
-        null
+        "1",
+        "1"
       ],
       "ubound": [
         "size(a)",

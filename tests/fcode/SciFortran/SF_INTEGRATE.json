@@ -13,7 +13,7 @@
           "M"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "M"
@@ -38,7 +38,7 @@
           "M"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "M"
@@ -83,7 +83,7 @@
         "M"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "M"
@@ -293,7 +293,7 @@
         "num"
       ],
       "lbound": [
-        null
+        "1"
       ],
       "ubound": [
         "num"

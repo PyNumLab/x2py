@@ -1043,8 +1043,8 @@
           "sparse%Ncol"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "sparse%Nrow",
@@ -1108,8 +1108,8 @@
           "sparse%Ncol"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "sparse%Nrow",
@@ -3480,7 +3480,7 @@
           "size(C)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(C)"
@@ -3567,7 +3567,7 @@
           "size(C)"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "size(C)"

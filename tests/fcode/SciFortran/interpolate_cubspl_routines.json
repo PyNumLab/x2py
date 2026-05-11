@@ -13,7 +13,7 @@
           "n"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "n"
@@ -39,8 +39,8 @@
           "n"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "4",
@@ -135,7 +135,7 @@
           "l+1"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "l+1"
@@ -161,8 +161,8 @@
           "l"
         ],
         "lbound": [
-          null,
-          null
+          "1",
+          "1"
         ],
         "ubound": [
           "k",
@@ -294,7 +294,7 @@
           "lxt"
         ],
         "lbound": [
-          null
+          "1"
         ],
         "ubound": [
           "lxt"
