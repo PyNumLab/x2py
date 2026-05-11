@@ -1,14 +1,5 @@
 [
   {
-    "fixture": "SciFortran/errors/GAUSS_QUADRATURE.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'gauss_func_method': import :: integration_type\n   |\n54 |     "
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
     "fixture": "SciFortran/errors/IOFILE.f90",
     "message_fragments": [
       "Argument 'intval' in procedure 'i4_to_s_zero' has no type declaration (implicit none is active)."
@@ -29,7 +20,7 @@
   {
     "fixture": "SciFortran/errors/SF_BLACS.f90",
     "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'init_BLACS': include \"mpif.h\"\n   |\n33 |     include \"mpif.h\"\n"
+      "SciFortran/errors/SF_BLACS.f90:121:1: error[PARSE001]: Duplicate procedure name 'init_BLACS' in module 'SF_BLACS'."
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
@@ -56,7 +47,7 @@
   {
     "fixture": "SciFortran/errors/SF_OPTIMIZE.f90",
     "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'sub_func_jacobian': function funcv(x)\n    |\n210 |        func"
+      "SciFortran/errors/SF_OPTIMIZE.f90: error[PARSE001]: Argument 'fjac' in procedure 'sub_func_jacobian' has no type declaration (implicit none is active)."
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
@@ -72,36 +63,9 @@
     ]
   },
   {
-    "fixture": "SciFortran/errors/arpack_c.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'lanczos_arpack_c': subroutine MatVec(Nloc,vin,vout)\n  |\n4 |  "
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/arpack_d.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'lanczos_arpack_d': subroutine MatVec(Nloc,vin,vout)\n  |\n4 |  "
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
     "fixture": "SciFortran/errors/brent.f90",
     "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'brent': function func(x)\n   |\n16 |      function func(x)\n   |"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/broyden1.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'broyden1': procedure(broydn_func)               :: ff\n  |\n2 |"
+      "SciFortran/errors/brent.f90:66:1: error[PARSE001]: Duplicate declaration of symbol 'x' in procedure 'brent_optimize'."
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
@@ -560,7 +524,7 @@
   {
     "fixture": "SciFortran/errors/curvefit.f90",
     "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'curvefit_lmdif_func': function model_func(x,a)\n  |\n7 |       "
+      "SciFortran/errors/curvefit.f90:145:1: error[PARSE001]: Duplicate procedure name 'model_dfunc' in global scope."
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
@@ -569,7 +533,7 @@
   {
     "fixture": "SciFortran/errors/derivate_fjacobian_c.f90",
     "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'c_fdjac_nn_func': function funcv(x)\n  |\n7 |      function fun"
+      "SciFortran/errors/derivate_fjacobian_c.f90: error[PARSE001]: Argument 'fjac' in procedure 'c_fdjac_nn_func' has no type declaration (implicit none is active)."
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
@@ -578,7 +542,7 @@
   {
     "fixture": "SciFortran/errors/derivate_fjacobian_d.f90",
     "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'fdjac_nn_func': function funcv(x)\n  |\n6 |      function funcv"
+      "SciFortran/errors/derivate_fjacobian_d.f90: error[PARSE001]: Argument 'fjac' in procedure 'fdjac_mn_func' has no type declaration (implicit none is active)."
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
@@ -588,15 +552,6 @@
     "fixture": "SciFortran/errors/dogleg.f90",
     "message_fragments": [
       "Argument 'n' in procedure 'dogleg' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/dvdson_serial.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'dvdson_eigh_d': subroutine MatVec(Nloc,vin,vout)\n    |\n119 | "
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
@@ -639,54 +594,9 @@
     ]
   },
   {
-    "fixture": "SciFortran/errors/fmin_Nelder_Mead.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'fmin': function fn(x)\n   |\n48 |      function fn(x)\n   | ^"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/fmin_bfgs.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'bfgs_with_grad': function func(x)\n  |\n3 |      function func("
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/fmin_cg.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'fmin_cg_df': procedure(cgfit_func)                :: f\n   |\n2"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/fmin_cg_cgplus.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'fmin_cgplus_df': function func(a)\n  |\n5 |      function func("
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/fmin_cg_minimize.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'fmin_cgminimize_func': procedure(cgfit_func)              :: "
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
     "fixture": "SciFortran/errors/froot_scalar.f90",
     "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'brentq': function func(x)\n  |\n5 |      function func(x)\n  | ^"
+      "SciFortran/errors/froot_scalar.f90: error[PARSE001]: Argument 'x1' in procedure 'zbrent' has no type declaration (implicit none is active)."
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
@@ -695,7 +605,7 @@
   {
     "fixture": "SciFortran/errors/fsolve.f90",
     "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'fsolve_hybrd_func': function func(x)\n  |\n6 |      function fu"
+      "SciFortran/errors/fsolve.f90:141:1: error[PARSE001]: Duplicate procedure name 'dfunc' in global scope."
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
@@ -738,33 +648,6 @@
     ]
   },
   {
-    "fixture": "SciFortran/errors/integrate_func_1d.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'd_trapz_ab_func': function f(x)\n  |\n5 |      function f(x)\n  "
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/integrate_func_2d.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'd_trapz2d_func': function func(x)\n  |\n3 |      function func("
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/integrate_quad_func.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'quad_func': function func(x)\n   |\n14 |      function func(x)\n"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
     "fixture": "SciFortran/errors/integrate_quad_sample.f90",
     "message_fragments": [
       "Unknown or unsupported datatype declaration for procedure 'quad_sample': type finter_type\n   |\n47 |   type finter_type\n "
@@ -801,36 +684,9 @@
     ]
   },
   {
-    "fixture": "SciFortran/errors/lanczos_c.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'lanczos_eigh_c': subroutine MatVec(Nloc,vin,vout)\n  |\n6 |    "
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/lanczos_d.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'lanczos_eigh_d': subroutine MatVec(Nloc,vin,vout)\n  |\n6 |    "
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
     "fixture": "SciFortran/errors/leastsq.f90",
     "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'leastsq_lmdif_func': function func(a,m)\n  |\n9 |      function"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/linalg_blacs_aux.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'd_distribute_BLACS': include 'mpif.h'\n  |\n3 |   include 'mpif"
+      "SciFortran/errors/leastsq.f90:139:1: error[PARSE001]: Duplicate procedure name 'dfunc' in global scope."
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
@@ -939,24 +795,6 @@
     "fixture": "SciFortran/errors/mcstf1.f90",
     "message_fragments": [
       "Argument 'lot' in procedure 'mcstf1' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/mpi_lanczos_c.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'mpi_lanczos_eigh_c': subroutine MatVec(Nloc,vin,vout)\n  |\n7 |"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/mpi_lanczos_d.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'mpi_lanczos_eigh_d': subroutine MatVec(Nloc,vin,vout)\n  |\n7 |"
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
@@ -1100,7 +938,7 @@
   {
     "fixture": "SciFortran/errors/optimize_broyden_routines.f90",
     "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'lnsrch': function func(x)\n   |\n53 |        function func(x)\n "
+      "SciFortran/errors/optimize_broyden_routines.f90:55:1: error[PARSE001]: Duplicate declaration of symbol 'x' in procedure 'lnsrch'."
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"
@@ -1109,25 +947,7 @@
   {
     "fixture": "SciFortran/errors/optimize_cgfit_routines.f90",
     "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'mnbrak': function func(x)\n    |\n119 |        function func(x)"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/parpack_c.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'lanczos_parpack_c': subroutine MatVec(nchunk,vin,vout)\n  |\n6 "
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/parpack_d.f90",
-    "message_fragments": [
-      "Unknown or unsupported datatype declaration for procedure 'lanczos_parpack_d': subroutine MatVec(nchunk,vin,vout)\n  |\n6 "
+      "SciFortran/errors/optimize_cgfit_routines.f90:215:1: error[PARSE001]: Duplicate declaration of symbol 'x' in procedure 'brent_'."
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"

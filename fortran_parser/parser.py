@@ -20,6 +20,8 @@ _ATTR_PREFIX_WORDS = {"pure", "elemental", "recursive"}
 
 _BINDC_RE = re.compile(r"bind\s*\(\s*c\s*(?:,\s*name\s*=\s*['\"][^'\"]*['\"])?\s*\)", re.IGNORECASE)
 _USE_RE = re.compile(r"^use\s+(?P<module>\w+)\s*(?:,\s*only\s*:\s*(?P<symbols>.*))?$", re.IGNORECASE)
+_INCLUDE_RE = re.compile(r"^(?:#\s*)?include\s*(?P<path>['\"][^'\"]+['\"])", re.IGNORECASE)
+_IMPORT_RE = re.compile(r"^import\s*(?:::)?\s*(?P<symbols>.*)$", re.IGNORECASE)
 _PARAM_RE = re.compile(
     r"^(integer|real|logical|character|complex)\s*(?:\([^)]*\))?\s*,\s*parameter\s*::\s*(?P<body>.*)$",
     re.IGNORECASE,
@@ -828,6 +830,8 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "implicit_typed_symbols": {},
             "declared_local_types": {},
             "implicit_none": False,
+            "imports": set(),
+            "includes": [],
             "filename": None,
         }
 
@@ -845,6 +849,8 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "implicit_typed_symbols": {},
             "declared_local_types": {},
             "implicit_none": False,
+            "imports": set(),
+            "includes": [],
             "filename": None,
         }
     m = _FUNC_RE.match(line)
@@ -875,6 +881,8 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         "implicit_typed_symbols": {},
         "declared_local_types": {},
         "implicit_none": False,
+        "imports": set(),
+        "includes": [],
         "filename": None,
     }
 
@@ -899,6 +907,11 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
 
     if re.match(r"^external\b", stripped, flags=re.IGNORECASE):
         return
+    if re.match(r"^(function|subroutine)\b", stripped, flags=re.IGNORECASE):
+        # Legacy callback declarations often appear as bare:
+        #   function f(x)
+        # inside a procedure declaration section.
+        return
     if re.match(r"^intrinsic\b", stripped, flags=re.IGNORECASE):
         return
     if re.match(r"^data\b", stripped, flags=re.IGNORECASE):
@@ -910,6 +923,15 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
     if re.match(r"^go\s*to\b", stripped, flags=re.IGNORECASE):
         return
     if re.match(r"^use\b", stripped, flags=re.IGNORECASE):
+        return
+    include_match = _INCLUDE_RE.match(stripped)
+    if include_match:
+        proc_state.setdefault("includes", []).append(include_match.group("path"))
+        return
+    import_match = _IMPORT_RE.match(stripped)
+    if import_match:
+        symbols = [s.strip().lower() for s in split_csv(import_match.group("symbols") or "") if s.strip()]
+        proc_state.setdefault("imports", set()).update(symbols)
         return
 
     pm = _PARAM_RE.match(stripped)
@@ -1002,6 +1024,13 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
         kind = (derived or class_derived).group("dtype")
         decl = derived or class_derived
         attrs = split_csv((decl.group("attrs") or "").strip().lstrip(", "))
+    elif re.match(r"^procedure\s*\(", left, flags=re.IGNORECASE):
+        # Support procedure dummy declarations, e.g.
+        #   procedure(my_iface) :: f
+        #   procedure(my_iface), pointer :: f
+        base = "procedure"
+        kind = None
+        attrs = []
     else:
         m_first = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)", line.strip())
         first_word = m_first.group(1).lower() if m_first else ""
@@ -1579,6 +1608,19 @@ def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str |
         meta = {
             "base_type": "derived",
             "kind": decl.group("dtype"),
+            "rank": 0,
+            "shape": [],
+            "intent": "unknown",
+            "optional": False,
+            "value": False,
+            "allocatable": False,
+            "pointer": False,
+        }
+    elif re.match(r"^procedure\s*\(", left, re.IGNORECASE):
+        attrs = []
+        meta = {
+            "base_type": "procedure",
+            "kind": None,
             "rank": 0,
             "shape": [],
             "intent": "unknown",
