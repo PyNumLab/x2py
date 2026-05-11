@@ -131,19 +131,9 @@ class FortranVariable:
     kind: Optional[str] = None
     rank: int = 0
     shape: list[str] = field(default_factory=list)
-    @property
-    def shape_info(self) -> list[dict[str, str | None]]:
-        """Structured per-dimension shape metadata derived from `shape` tokens."""
-        return [_parse_shape_dim(dim) for dim in self.shape]
-
-    @property
-    def lower_bounds(self) -> list[str | None]:
-        return [d["lower"] for d in self.shape_info]
-
-    @property
-    def upper_bounds(self) -> list[str | None]:
-        return [d["upper"] for d in self.shape_info]
-
+    # Raw declaration bounds kept for fixture compatibility; use lower_bounds/
+    # upper_bounds for normalized Fortran defaults such as an implicit lower
+    # bound of 1 for explicit extents like x(n).
     lbound: list[str | None] = field(default_factory=list)
     ubound: list[str | None] = field(default_factory=list)
     value: str | None = None
@@ -163,16 +153,6 @@ class FortranVariable:
     @property
     def upper_bounds(self) -> list[str | None]:
         return [d["upper"] for d in self.shape_info]
-
-    @property
-    def lbound(self) -> list[str | None]:
-        """Backward-compatible alias for lower_bounds."""
-        return self.lower_bounds
-
-    @property
-    def ubound(self) -> list[str | None]:
-        """Backward-compatible alias for upper_bounds."""
-        return self.upper_bounds
 
 
 @dataclass

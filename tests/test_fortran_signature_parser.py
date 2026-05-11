@@ -648,7 +648,9 @@ end subroutine resize
     assert arg.shape_info == [
         {"raw": "n", "lower": "1", "upper": "n"},
     ]
-    assert arg.lbound == ["1"]
+    assert arg.lower_bounds == ["1"]
+    assert arg.upper_bounds == ["n"]
+    assert arg.lbound == [None]
     assert arg.ubound == ["n"]
 
 
