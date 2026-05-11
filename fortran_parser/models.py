@@ -119,6 +119,8 @@ class FortranVariable:
     kind: Optional[str] = None
     rank: int = 0
     shape: list[str] = field(default_factory=list)
+    lbound: list[str | None] = field(default_factory=list)
+    ubound: list[str | None] = field(default_factory=list)
     value: str | None = None
     value_type: str = "unknown"
     is_parameter: bool = False
