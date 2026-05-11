@@ -384,6 +384,99 @@ def test_legacy_star_kind_parameter_list_with_implicit_none_is_recognized():
     assert sig.variables == {}
 
 
+def test_implicit_none_allows_external_dummy_procedure_argument():
+    code = """
+subroutine fdjac1(fcn, n)
+  implicit none
+  integer, intent(in) :: n
+  external :: fcn
+end subroutine fdjac1
+"""
+    sig = parse_fortran_signatures(code, filename="fdjac1.f90")[0]
+    assert sig.arguments[0].name == "fcn"
+    assert sig.arguments[0].base_type == "procedure"
+
+def test_external_attribute_and_later_type_declaration_do_not_conflict():
+    code = """
+subroutine lapack_style(slamch)
+  implicit none
+  external slamch
+  real slamch
+end subroutine lapack_style
+"""
+    sig = parse_fortran_signatures(code, filename="lapack_style.f90")[0]
+    assert sig.arguments[0].name == "slamch"
+    assert sig.arguments[0].base_type == "real"
+
+
+def test_named_generic_interface_procedures_are_tagged_with_interface_name():
+    code = """
+interface foo
+  integer function foo_i(x)
+    integer, intent(in) :: x
+  end function foo_i
+
+  real function foo_r(x)
+    real, intent(in) :: x
+  end function foo_r
+end interface foo
+"""
+    interfaces = parse_fortran_interfaces(code, filename="iface_generic.f90")
+    assert len(interfaces) == 1
+    assert interfaces[0].name == "foo"
+    assert [p.name for p in interfaces[0].procedures] == ["foo_i", "foo_r"]
+    assert all(p.in_interface for p in interfaces[0].procedures)
+
+
+def test_external_dummy_keeps_recursive_attribute_metadata():
+    code = """
+recursive function apply_once(f, x) result(y)
+  implicit none
+  real, external :: f
+  real, intent(in) :: x
+  real :: y
+  y = f(x)
+end function apply_once
+"""
+    sig = parse_fortran_signatures(code, filename="apply_once.f90")[0]
+    assert sig.kind == "function"
+    assert "recursive" in sig.attributes
+    assert sig.arguments[0].name == "f"
+    assert sig.arguments[0].base_type == "real"
+
+
+def test_external_dummy_keeps_interface_context_metadata():
+    code = """
+interface
+  subroutine driver(fcn, x)
+    implicit none
+    external :: fcn
+    real, intent(in) :: x
+  end subroutine driver
+end interface
+"""
+    sig = parse_fortran_signatures(code, filename="iface_external.f90")[0]
+    assert sig.in_interface is True
+    assert sig.arguments[0].name == "fcn"
+    assert sig.arguments[1].name == "x"
+    assert sig.arguments[1].base_type == "real"
+
+
+def test_external_function_dummy_with_explicit_result_type_is_parsed():
+    code = """
+subroutine apply_cb(f, x, y)
+  implicit none
+  real, intent(in) :: x
+  real, intent(out) :: y
+  real, external :: f
+  y = f(x)
+end subroutine apply_cb
+"""
+    sig = parse_fortran_signatures(code, filename="apply_cb.f90")[0]
+    f_arg = sig.arguments[0]
+    assert f_arg.name == "f"
+    assert f_arg.base_type == "real"
+
 def test_ignore_local_variables_in_signatures():
     code = """
 subroutine update(n, x)

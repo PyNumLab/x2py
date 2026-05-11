@@ -152,11 +152,13 @@ def parse_fortran_signatures(
     lines = preprocess_lines(code, filename)
     macro_selection_enabled = macro_defines is not None
     signatures: list[FortranProcedureSignature] = []
+    interface_memberships: dict[str, set[str]] = {}
     declared_procedures: dict[tuple[str | None, bool], dict[str, list[frozenset[str]]]] = {}
     current_module = None
     current_module_uses: dict[str, list[str]] = {}
     current_proc = None
     interface_depth = 0
+    interface_name_stack: list[str | None] = []
     program_depth = 0
     macro_names = _normalize_macro_defines(macro_defines)
     pp_condition_stack: list[tuple[int, int]] = []
@@ -222,9 +224,14 @@ def parse_fortran_signatures(
 
         if l.startswith("interface"):
             interface_depth += 1
+            parts = s.split(maxsplit=1)
+            iface_name = parts[1].strip() if len(parts) > 1 else None
+            interface_name_stack.append(iface_name)
             continue
         if l.startswith("end interface"):
             interface_depth = max(0, interface_depth - 1)
+            if interface_name_stack:
+                interface_name_stack.pop()
             continue
 
         submodule_match = _SUBMODULE_RE.match(s)
@@ -336,6 +343,12 @@ def parse_fortran_signatures(
 
     if current_proc is not None:
         signatures.append(_finalize_proc(current_proc))
+    for sig in signatures:
+        for iface_name in sorted(interface_memberships.get(sig.name.lower(), set())):
+            iface_attr = f"interface({iface_name})"
+            if iface_attr not in sig.attributes:
+                sig.attributes.append(iface_attr)
+
     return signatures
 
 
@@ -603,6 +616,10 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
         if l.startswith("end interface"):
             if current_proc is not None and current_interface is not None:
                 sig = _finalize_proc(current_proc)
+                if current_interface.name:
+                    iface_attr = f"interface({current_interface.name})"
+                    if iface_attr not in sig.attributes:
+                        sig.attributes.append(iface_attr)
                 current_interface.procedures.append(sig)
                 current_proc = None
             if current_interface is not None:
@@ -623,6 +640,10 @@ def parse_fortran_interfaces(code: str, filename: str | None = None) -> list[For
 
         if l.startswith("end subroutine") or l.startswith("end function") or l == "end":
             sig = _finalize_proc(current_proc)
+            if current_interface.name:
+                iface_attr = f"interface({current_interface.name})"
+                if iface_attr not in sig.attributes:
+                    sig.attributes.append(iface_attr)
             current_interface.procedures.append(sig)
             current_proc = None
             continue
@@ -963,6 +984,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "declared_local_types": {},
             "implicit_none": False,
             "imports": set(),
+            "external_symbols": set(),
             "includes": [],
             "filename": None,
         }
@@ -982,6 +1004,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "declared_local_types": {},
             "implicit_none": False,
             "imports": set(),
+            "external_symbols": set(),
             "includes": [],
             "filename": None,
         }
@@ -1014,6 +1037,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         "declared_local_types": {},
         "implicit_none": False,
         "imports": set(),
+        "external_symbols": set(),
         "includes": [],
         "filename": None,
     }
@@ -1037,7 +1061,14 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
             proc_state["implicit_none"] = True
         return
 
-    if re.match(r"^external\b", stripped, flags=re.IGNORECASE):
+    external_match = re.match(r"^external\b\s*(?:::)?\s*(?P<names>.*)$", stripped, flags=re.IGNORECASE)
+    if external_match:
+        names = [n.strip().lower() for n in split_csv(external_match.group("names") or "") if n.strip()]
+        for name in names:
+            proc_state.setdefault("external_symbols", set()).add(name)
+            arg = proc_state["symbols"].get(name)
+            if arg is not None and arg.base_type == "unknown":
+                arg.base_type = "procedure"
         return
     if re.match(r"^(function|subroutine)\b", stripped, flags=re.IGNORECASE):
         # Legacy callback declarations often appear as bare:
@@ -1193,6 +1224,7 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
         "value": False,
         "allocatable": False,
         "pointer": False,
+        "external": False,
     }
     for a in attrs:
         la = a.lower()
@@ -1206,6 +1238,8 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
             meta["allocatable"] = True
         elif la == "pointer":
             meta["pointer"] = True
+        elif la == "external":
+            meta["external"] = True
         elif la.startswith("dimension") and "(" in a and ")" in a:
             shape = split_csv(a[a.find("(")+1:a.rfind(")")])
             meta["shape"] = shape
@@ -1233,6 +1267,8 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
                 source_line=source_line,
             )
         declared.add(lowered_name)
+        if meta.get("external"):
+            proc_state.setdefault("external_symbols", set()).add(lowered_name)
         symbols = proc_state["symbols"]
         # Legacy star-kind declarations can appear as:
         #   COMPLEX*16 AP(*), X(*)
@@ -1801,6 +1837,8 @@ def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str |
             meta["allocatable"] = True
         elif la == "pointer":
             meta["pointer"] = True
+        elif la == "external":
+            meta["external"] = True
         elif la.startswith("dimension") and "(" in a and ")" in a:
             shape = split_csv(a[a.find("(") + 1 : a.rfind(")")])
             meta["shape"] = shape
@@ -1878,6 +1916,8 @@ def _parse_module_variable_line(line: str, module: FortranModule, filename: str 
             meta["allocatable"] = True
         elif la == "pointer":
             meta["pointer"] = True
+        elif la == "external":
+            meta["external"] = True
         elif la.startswith("dimension") and "(" in a and ")" in a:
             shape = split_csv(a[a.find("(") + 1 : a.rfind(")")])
             meta["shape"] = shape

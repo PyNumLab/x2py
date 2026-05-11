@@ -1,59 +1,5 @@
 [
   {
-    "fixture": "SciFortran/errors/fdjac1.f90",
-    "message_fragments": [
-      "SciFortran/errors/fdjac1.f90: error[PARSE001]: Argument 'fcn' in procedure 'fdjac1' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/fdjac2.f90",
-    "message_fragments": [
-      "SciFortran/errors/fdjac2.f90: error[PARSE001]: Argument 'fcn' in procedure 'fdjac2' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/hybrd.f90",
-    "message_fragments": [
-      "SciFortran/errors/hybrd.f90: error[PARSE001]: Argument 'fcn' in procedure 'hybrd' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/hybrd1.f90",
-    "message_fragments": [
-      "SciFortran/errors/hybrd1.f90: error[PARSE001]: Argument 'fcn' in procedure 'hybrd1' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/hybrj.f90",
-    "message_fragments": [
-      "SciFortran/errors/hybrj.f90: error[PARSE001]: Argument 'fcn' in procedure 'hybrj' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/hybrj1.f90",
-    "message_fragments": [
-      "SciFortran/errors/hybrj1.f90: error[PARSE001]: Argument 'fcn' in procedure 'hybrj1' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
     "fixture": "SciFortran/errors/integrate_quad_sample.f90",
     "message_fragments": [
       "SciFortran/errors/integrate_quad_sample.f90:47:1: error[PARSE001]: Unknown or unsupported datatype declaration for procedure 'quad_sample': type finter_type\n   |\n47 |   type finter_type\n   | ^"
@@ -66,60 +12,6 @@
     "fixture": "SciFortran/errors/interpolate_pppack.f90",
     "message_fragments": [
       "SciFortran/errors/interpolate_pppack.f90:1714:1: error[PARSE001]: Unknown or unsupported datatype declaration for procedure 'colloc': save / approx /\n     |\n1714 |   save / approx /\n     | ^"
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/lmder.f90",
-    "message_fragments": [
-      "SciFortran/errors/lmder.f90: error[PARSE001]: Argument 'fcn' in procedure 'lmder' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/lmder1.f90",
-    "message_fragments": [
-      "SciFortran/errors/lmder1.f90: error[PARSE001]: Argument 'fcn' in procedure 'lmder1' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/lmdif.f90",
-    "message_fragments": [
-      "SciFortran/errors/lmdif.f90: error[PARSE001]: Argument 'fcn' in procedure 'lmdif' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/lmdif1.f90",
-    "message_fragments": [
-      "SciFortran/errors/lmdif1.f90: error[PARSE001]: Argument 'fcn' in procedure 'lmdif1' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/lmstr.f90",
-    "message_fragments": [
-      "SciFortran/errors/lmstr.f90: error[PARSE001]: Argument 'fcn' in procedure 'lmstr' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
-    "fixture": "SciFortran/errors/lmstr1.f90",
-    "message_fragments": [
-      "SciFortran/errors/lmstr1.f90: error[PARSE001]: Argument 'fcn' in procedure 'lmstr1' has no type declaration (implicit none is active)."
     ],
     "diagnostic_fragments": [
       "error[PARSE001]"

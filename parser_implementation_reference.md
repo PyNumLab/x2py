@@ -156,6 +156,7 @@ Covers, among others:
 - module variable and `use` parsing
 - module children attachment (procedures/types/interfaces)
 - ignoring local vars in external signatures
+- external callback declarations (including typed `real, external :: f`) under `implicit none`
 - ignoring internal procedures in `contains`
 - local parameter propagation into argument kinds
 - compile-time shape expression evaluation helpers
