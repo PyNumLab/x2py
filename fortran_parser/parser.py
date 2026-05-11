@@ -963,6 +963,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "declared_local_types": {},
             "implicit_none": False,
             "imports": set(),
+            "external_symbols": set(),
             "includes": [],
             "filename": None,
         }
@@ -982,6 +983,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
             "declared_local_types": {},
             "implicit_none": False,
             "imports": set(),
+            "external_symbols": set(),
             "includes": [],
             "filename": None,
         }
@@ -1014,6 +1016,7 @@ def _parse_header(line: str, module: str | None, in_interface: bool):
         "declared_local_types": {},
         "implicit_none": False,
         "imports": set(),
+        "external_symbols": set(),
         "includes": [],
         "filename": None,
     }
@@ -1041,6 +1044,7 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
     if external_match:
         names = [n.strip().lower() for n in split_csv(external_match.group("names") or "") if n.strip()]
         for name in names:
+            proc_state.setdefault("external_symbols", set()).add(name)
             arg = proc_state["symbols"].get(name)
             if arg is not None and arg.base_type == "unknown":
                 arg.base_type = "procedure"
@@ -1199,6 +1203,7 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
         "value": False,
         "allocatable": False,
         "pointer": False,
+        "external": False,
     }
     for a in attrs:
         la = a.lower()
@@ -1212,6 +1217,8 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
             meta["allocatable"] = True
         elif la == "pointer":
             meta["pointer"] = True
+        elif la == "external":
+            meta["external"] = True
         elif la.startswith("dimension") and "(" in a and ")" in a:
             shape = split_csv(a[a.find("(")+1:a.rfind(")")])
             meta["shape"] = shape
@@ -1239,6 +1246,8 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
                 source_line=source_line,
             )
         declared.add(lowered_name)
+        if meta.get("external"):
+            proc_state.setdefault("external_symbols", set()).add(lowered_name)
         symbols = proc_state["symbols"]
         # Legacy star-kind declarations can appear as:
         #   COMPLEX*16 AP(*), X(*)
@@ -1807,6 +1816,8 @@ def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str |
             meta["allocatable"] = True
         elif la == "pointer":
             meta["pointer"] = True
+        elif la == "external":
+            meta["external"] = True
         elif la.startswith("dimension") and "(" in a and ")" in a:
             shape = split_csv(a[a.find("(") + 1 : a.rfind(")")])
             meta["shape"] = shape
@@ -1884,6 +1895,8 @@ def _parse_module_variable_line(line: str, module: FortranModule, filename: str 
             meta["allocatable"] = True
         elif la == "pointer":
             meta["pointer"] = True
+        elif la == "external":
+            meta["external"] = True
         elif la.startswith("dimension") and "(" in a and ")" in a:
             shape = split_csv(a[a.find("(") + 1 : a.rfind(")")])
             meta["shape"] = shape

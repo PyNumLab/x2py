@@ -396,6 +396,19 @@ end subroutine fdjac1
     assert sig.arguments[0].name == "fcn"
     assert sig.arguments[0].base_type == "procedure"
 
+def test_external_attribute_and_later_type_declaration_do_not_conflict():
+    code = """
+subroutine lapack_style(slamch)
+  implicit none
+  external slamch
+  real slamch
+end subroutine lapack_style
+"""
+    sig = parse_fortran_signatures(code, filename="lapack_style.f90")[0]
+    assert sig.arguments[0].name == "slamch"
+    assert sig.arguments[0].base_type == "real"
+
+
 def test_external_function_dummy_with_explicit_result_type_is_parsed():
     code = """
 subroutine apply_cb(f, x, y)
