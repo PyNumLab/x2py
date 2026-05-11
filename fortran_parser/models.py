@@ -131,9 +131,6 @@ class FortranVariable:
     kind: Optional[str] = None
     rank: int = 0
     shape: list[str] = field(default_factory=list)
-    # Raw declaration bounds kept for fixture compatibility; use lower_bounds/
-    # upper_bounds for normalized Fortran defaults such as an implicit lower
-    # bound of 1 for explicit extents like x(n).
     lbound: list[str | None] = field(default_factory=list)
     ubound: list[str | None] = field(default_factory=list)
     value: str | None = None

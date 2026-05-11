@@ -1352,7 +1352,7 @@ def _split_dim_bounds(dim: str) -> tuple[str | None, str | None]:
     if not part:
         return None, None
     if ':' not in part:
-        return None, part
+        return "1", part
     lo, hi = part.split(':', 1)
     lo = lo.strip() or None
     hi = hi.strip() or None
