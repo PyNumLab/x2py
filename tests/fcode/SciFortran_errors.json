@@ -1,14 +1,5 @@
 [
   {
-    "fixture": "SciFortran/errors/IOFILE.f90",
-    "message_fragments": [
-      "Argument 'intval' in procedure 'i4_to_s_zero' has no type declaration (implicit none is active)."
-    ],
-    "diagnostic_fragments": [
-      "error[PARSE001]"
-    ]
-  },
-  {
     "fixture": "SciFortran/errors/LIST_INPUT.f90",
     "message_fragments": [
       "Argument 's' in procedure 's_blank_delete' has no type declaration (implicit none is active)."
