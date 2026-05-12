@@ -212,7 +212,18 @@ Expected JSON layout:
   - `modules`
   - `wrap_readiness`
 
-### 3.4 Parse-error diagnostics and debug mode
+### 3.4 Wrap-readiness summary
+
+```bash
+python -m fortran_parser tests/fcode/basic_subroutine.f90 --wrap-readiness
+```
+
+This mode prints only the per-file readiness status. A non-wrappable file is
+reported as `Wrappable: no` followed by a `Why not wrappable` section listing
+the blocking diagnostics, for example unresolved imported derived-type
+arguments/fields or unresolved symbolic kind arguments/fields.
+
+### 3.5 Parse-error diagnostics and debug mode
 
 When parsing fails, the CLI prints a compiler-style diagnostic to `stderr` and
 exits with status code `1`. By default this output is intended for end users: it
@@ -300,7 +311,8 @@ print("unsupported", readiness["unsupported_hits"])
 Expected behavior:
 
 - `signatures` is a normalized list of callable records.
-- `readiness` includes counts, unsupported hits, unknown args, and `wrappable`.
+- `readiness` includes counts, unsupported hits, unknown args, unresolved
+  imported derived-type/kind dependencies, and `wrappable`.
 
 ## 5) Running tests
 

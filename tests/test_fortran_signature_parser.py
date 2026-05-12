@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import pytest
 
+from fortran_parser.cli import _format_wrap_readiness
+
 from fortran_parser import (
     assess_wrap_readiness,
     collect_signature_shape_symbols,
@@ -557,6 +559,222 @@ end subroutine s
     report_bad = assess_wrap_readiness(unsupported)
     assert report_bad["wrappable"] is False
     assert report_bad["unsupported_constructs"]
+
+
+def test_assess_wrap_readiness_explains_no_procedures_found():
+    code = """
+module constants
+  integer, parameter :: n = 4
+end module constants
+"""
+    report = assess_wrap_readiness(code, filename="constants.f90")
+    assert report["wrappable"] is False
+    assert report["why_not_wrappable"] == ["No procedure signatures were found to wrap."]
+    assert report["wrappability_blockers"] == [
+        {
+            "code": "no_signatures",
+            "message": "No procedure signatures were found to wrap.",
+            "items": [],
+        }
+    ]
+
+
+def test_assess_wrap_readiness_explains_unsupported_constructs():
+    code = """
+subroutine visit(obj)
+  class(*), intent(inout) :: obj
+end subroutine visit
+"""
+    report = assess_wrap_readiness(code, filename="unsupported.f90")
+    assert report["wrappable"] is False
+    assert [b["code"] for b in report["wrappability_blockers"]] == ["unsupported_constructs"]
+    assert report["wrappability_blockers"][0]["items"][0]["text"] == "class(*), intent(inout) :: obj"
+
+
+def test_assess_wrap_readiness_reports_imported_derived_type_argument_without_definition():
+    code = """
+module solver
+  use state_mod, only: sim_state
+contains
+subroutine step(state)
+  type(sim_state), intent(inout) :: state
+end subroutine step
+end module solver
+"""
+    report = assess_wrap_readiness(code, filename="solver.f90")
+    assert report["wrappable"] is False
+    assert report["unresolved_derived_type_arguments"] == [
+        {
+            "procedure": "step",
+            "module": "solver",
+            "argument": "state",
+            "type": "sim_state",
+            "import_modules": ["state_mod"],
+        }
+    ]
+
+
+def test_assess_wrap_readiness_accepts_derived_type_argument_defined_in_same_source():
+    code = """
+module state_mod
+  type :: sim_state
+    real :: value
+  end type sim_state
+end module state_mod
+
+module solver
+  use state_mod, only: sim_state
+contains
+subroutine step(state)
+  type(sim_state), intent(inout) :: state
+end subroutine step
+end module solver
+"""
+    report = assess_wrap_readiness(code, filename="solver_with_state.f90")
+    assert report["wrappable"] is True
+    assert report["unresolved_derived_type_arguments"] == []
+
+
+def test_assess_wrap_readiness_reports_imported_derived_type_field_without_definition():
+    code = """
+module mesh_mod
+  use point_mod, only: point
+  type :: mesh
+    type(point) :: origin
+  end type mesh
+contains
+subroutine update(m)
+  type(mesh), intent(inout) :: m
+end subroutine update
+end module mesh_mod
+"""
+    report = assess_wrap_readiness(code, filename="mesh.f90")
+    assert report["wrappable"] is False
+    assert report["unresolved_derived_type_arguments"] == []
+    assert report["unresolved_derived_type_fields"] == [
+        {
+            "type_owner": "mesh",
+            "module": "mesh_mod",
+            "field": "origin",
+            "type": "point",
+            "import_modules": ["point_mod"],
+        }
+    ]
+
+
+def test_assess_wrap_readiness_reports_imported_kind_argument_without_definition():
+    code = """
+subroutine scale(x)
+  use kinds_mod, only: rk
+  real(kind=rk), intent(inout) :: x
+end subroutine scale
+"""
+    report = assess_wrap_readiness(code, filename="scale.f90")
+    assert report["wrappable"] is False
+    assert report["unresolved_kind_arguments"] == [
+        {
+            "procedure": "scale",
+            "module": None,
+            "argument": "x",
+            "kind": "rk",
+            "import_modules": ["kinds_mod"],
+        }
+    ]
+    assert [b["code"] for b in report["wrappability_blockers"]] == ["unresolved_kind_arguments"]
+
+
+def test_assess_wrap_readiness_reports_imported_kind_field_without_definition():
+    code = """
+module state_mod
+  use kinds_mod, only: rk
+  type :: sim_state
+    real(kind=rk) :: value
+  end type sim_state
+contains
+subroutine update(state)
+  type(sim_state), intent(inout) :: state
+end subroutine update
+end module state_mod
+"""
+    report = assess_wrap_readiness(code, filename="state.f90")
+    assert report["wrappable"] is False
+    assert report["unresolved_derived_type_fields"] == []
+    assert report["unresolved_kind_fields"] == [
+        {
+            "type_owner": "sim_state",
+            "module": "state_mod",
+            "field": "value",
+            "kind": "rk",
+            "import_modules": ["kinds_mod"],
+        }
+    ]
+
+
+def test_assess_wrap_readiness_accumulates_multiple_blocker_reasons():
+    code = """
+module state_mod
+  use point_mod, only: point
+  use kinds_mod, only: rk
+  type :: sim_state
+    type(point) :: origin
+    real(kind=rk) :: value
+  end type sim_state
+contains
+subroutine update(state, x)
+  type(missing_state), intent(inout) :: state
+  real(kind=rk), intent(inout) :: x
+end subroutine update
+end module state_mod
+"""
+    report = assess_wrap_readiness(code, filename="multi_blocker.f90")
+    assert report["wrappable"] is False
+    assert [b["code"] for b in report["wrappability_blockers"]] == [
+        "unresolved_derived_type_arguments",
+        "unresolved_derived_type_fields",
+        "unresolved_kind_arguments",
+        "unresolved_kind_fields",
+    ]
+
+
+def test_cli_wrap_readiness_format_reports_status_and_reasons():
+    report = {
+        "bad.f90": {
+            "wrap_readiness": {
+                "wrappable": False,
+                "wrappability_blockers": [
+                    {
+                        "code": "unresolved_derived_type_arguments",
+                        "message": "Some derived-type procedure arguments refer to types missing from the parsed source.",
+                        "items": [
+                            {
+                                "procedure": "step",
+                                "module": "solver",
+                                "argument": "state",
+                                "type": "sim_state",
+                                "import_modules": ["state_mod"],
+                            }
+                        ],
+                    }
+                ],
+            }
+        }
+    }
+    text = _format_wrap_readiness(report)
+    assert "Wrappable: no" in text
+    assert "Why not wrappable:" in text
+    assert "step:state uses type(sim_state) from state_mod" in text
+
+
+def test_assess_wrap_readiness_accepts_intrinsic_module_kind_symbols():
+    code = """
+subroutine scale(x)
+  use iso_c_binding, only: c_double
+  real(kind=c_double), intent(inout) :: x
+end subroutine scale
+"""
+    report = assess_wrap_readiness(code, filename="intrinsic_kind.f90")
+    assert report["wrappable"] is True
+    assert report["unresolved_kind_arguments"] == []
 
 
 def test_parse_namespace_dependency_resolution(tmp_path):

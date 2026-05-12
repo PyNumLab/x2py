@@ -36,6 +36,18 @@ _SUBMODULE_RE = re.compile(r"^submodule\s*\(\s*(?P<parent>[^)]+?)\s*\)\s*(?P<nam
 _MOD_PROC_IMPL_RE = re.compile(r"^module\s+procedure\s+(?P<name>\w+)\s*$", re.IGNORECASE)
 _PROGRAM_RE = re.compile(r"^program\s+(?P<name>\w+)\s*$", re.IGNORECASE)
 _BLOCK_DATA_RE = re.compile(r"^block\s+data(?:\s+(?P<name>\w+))?\s*$", re.IGNORECASE)
+_INTRINSIC_KIND_SYMBOLS = {
+    "int8", "int16", "int32", "int64",
+    "real32", "real64", "real128",
+    "c_signed_char", "c_short", "c_int", "c_long", "c_long_long",
+    "c_size_t", "c_int8_t", "c_int16_t", "c_int32_t", "c_int64_t",
+    "c_int_least8_t", "c_int_least16_t", "c_int_least32_t", "c_int_least64_t",
+    "c_int_fast8_t", "c_int_fast16_t", "c_int_fast32_t", "c_int_fast64_t",
+    "c_float", "c_double", "c_long_double",
+    "c_float_complex", "c_double_complex", "c_long_double_complex",
+    "c_bool", "c_char",
+}
+
 _UNSUPPORTED_PATTERNS = (
     re.compile(r"\bclass\s*\(\s*\*\s*\)", re.IGNORECASE),
     re.compile(r"\bselect\s+type\b", re.IGNORECASE),
@@ -804,6 +816,219 @@ def parse_fortran_block_data(code: str, filename: str | None = None) -> list[For
         _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
     return blocks
 
+
+def _visible_import_modules(symbol: str, uses: dict[str, list[str]]) -> list[str]:
+    """Return imported modules that could provide ``symbol`` under Fortran USE rules."""
+    wanted = symbol.lower()
+    providers: list[str] = []
+    for module_name, only_symbols in uses.items():
+        normalized_only = [str(sym).lower() for sym in only_symbols]
+        if not normalized_only or wanted in normalized_only:
+            providers.append(module_name)
+    return providers
+
+
+def _is_plain_symbol_reference(expr: str | None) -> bool:
+    """Return True for simple kind symbols, excluding literals and expressions."""
+    if expr is None:
+        return False
+    text = expr.strip()
+    if not text or text == "*":
+        return False
+    return bool(re.fullmatch(r"[A-Za-z_]\w*", text))
+
+
+def _kind_symbol_is_known(
+    symbol: str,
+    *,
+    owning_module: str | None,
+    uses: dict[str, list[str]],
+    local_symbols: set[str],
+    module_params: dict[str, dict[str, str]],
+) -> bool:
+    """Check whether a symbolic kind is declared locally or in parsed imports."""
+    lowered = symbol.lower()
+    if lowered in _INTRINSIC_KIND_SYMBOLS:
+        return True
+    if lowered in local_symbols:
+        return True
+    if owning_module and lowered in module_params.get(owning_module.lower(), {}):
+        return True
+    for provider in _visible_import_modules(symbol, uses):
+        if lowered in module_params.get(provider.lower(), {}):
+            return True
+    return False
+
+
+def _collect_unresolved_derived_type_diagnostics(
+    signatures: list[FortranProcedureSignature],
+    types: list[FortranDerivedType],
+    modules: list[FortranModule],
+) -> tuple[list[dict], list[dict]]:
+    """Find derived-type references that are not defined in the parsed source."""
+    defined_types = {dtype.name.lower() for dtype in types}
+    module_uses = {mod.name.lower(): mod.uses for mod in modules}
+    unresolved_args: list[dict] = []
+    unresolved_fields: list[dict] = []
+
+    def _missing_type(kind: str | None) -> bool:
+        return bool(kind) and kind.lower() not in defined_types
+
+    for sig in signatures:
+        for arg in sig.arguments:
+            if arg.base_type == "derived" and _missing_type(arg.kind):
+                unresolved_args.append({
+                    "procedure": sig.name,
+                    "module": sig.module,
+                    "argument": arg.name,
+                    "type": arg.kind,
+                    "import_modules": _visible_import_modules(arg.kind or "", sig.uses),
+                })
+        if sig.result and sig.result.base_type == "derived" and _missing_type(sig.result.kind):
+            unresolved_args.append({
+                "procedure": sig.name,
+                "module": sig.module,
+                "argument": sig.result.name,
+                "type": sig.result.kind,
+                "import_modules": _visible_import_modules(sig.result.kind or "", sig.uses),
+            })
+
+    for dtype in types:
+        uses = module_uses.get(dtype.module.lower(), {}) if dtype.module else {}
+        for field in dtype.fields:
+            if field.base_type == "derived" and _missing_type(field.kind):
+                unresolved_fields.append({
+                    "type_owner": dtype.name,
+                    "module": dtype.module,
+                    "field": field.name,
+                    "type": field.kind,
+                    "import_modules": _visible_import_modules(field.kind or "", uses),
+                })
+
+    return unresolved_args, unresolved_fields
+
+
+def _collect_unresolved_kind_diagnostics(
+    signatures: list[FortranProcedureSignature],
+    types: list[FortranDerivedType],
+    modules: list[FortranModule],
+    module_params: dict[str, dict[str, str]],
+) -> tuple[list[dict], list[dict]]:
+    """Find symbolic intrinsic kind references not declared in parsed source/imports."""
+    module_uses = {mod.name.lower(): mod.uses for mod in modules}
+    unresolved_args: list[dict] = []
+    unresolved_fields: list[dict] = []
+
+    for sig in signatures:
+        local_symbols = {name.lower() for name, var in sig.variables.items() if var.value is not None}
+        for arg in sig.arguments:
+            if arg.base_type != "derived" and _is_plain_symbol_reference(arg.kind) and not _kind_symbol_is_known(
+                arg.kind or "",
+                owning_module=sig.module,
+                uses=sig.uses,
+                local_symbols=local_symbols,
+                module_params=module_params,
+            ):
+                unresolved_args.append({
+                    "procedure": sig.name,
+                    "module": sig.module,
+                    "argument": arg.name,
+                    "kind": arg.kind,
+                    "import_modules": _visible_import_modules(arg.kind or "", sig.uses),
+                })
+        if sig.result and sig.result.base_type != "derived" and _is_plain_symbol_reference(sig.result.kind) and not _kind_symbol_is_known(
+            sig.result.kind or "",
+            owning_module=sig.module,
+            uses=sig.uses,
+            local_symbols=local_symbols,
+            module_params=module_params,
+        ):
+            unresolved_args.append({
+                "procedure": sig.name,
+                "module": sig.module,
+                "argument": sig.result.name,
+                "kind": sig.result.kind,
+                "import_modules": _visible_import_modules(sig.result.kind or "", sig.uses),
+            })
+
+    for dtype in types:
+        uses = module_uses.get(dtype.module.lower(), {}) if dtype.module else {}
+        local_symbols: set[str] = set()
+        for field in dtype.fields:
+            if field.base_type != "derived" and _is_plain_symbol_reference(field.kind) and not _kind_symbol_is_known(
+                field.kind or "",
+                owning_module=dtype.module,
+                uses=uses,
+                local_symbols=local_symbols,
+                module_params=module_params,
+            ):
+                unresolved_fields.append({
+                    "type_owner": dtype.name,
+                    "module": dtype.module,
+                    "field": field.name,
+                    "kind": field.kind,
+                    "import_modules": _visible_import_modules(field.kind or "", uses),
+                })
+
+    return unresolved_args, unresolved_fields
+
+
+def _build_wrap_blockers(
+    *,
+    signatures: list[FortranProcedureSignature],
+    unsupported: list[dict],
+    missing_decl_args: list[str],
+    unresolved_derived_args: list[dict],
+    unresolved_derived_fields: list[dict],
+    unresolved_kind_args: list[dict],
+    unresolved_kind_fields: list[dict],
+) -> list[dict]:
+    """Create explicit, user-facing reasons why a source is not wrap-ready."""
+    blockers: list[dict] = []
+    if not signatures:
+        blockers.append({
+            "code": "no_signatures",
+            "message": "No procedure signatures were found to wrap.",
+            "items": [],
+        })
+    if unsupported:
+        blockers.append({
+            "code": "unsupported_constructs",
+            "message": "Unsupported Fortran constructs were found.",
+            "items": unsupported,
+        })
+    if missing_decl_args:
+        blockers.append({
+            "code": "unknown_argument_types",
+            "message": "Some procedure arguments have no resolved declaration/type.",
+            "items": missing_decl_args,
+        })
+    if unresolved_derived_args:
+        blockers.append({
+            "code": "unresolved_derived_type_arguments",
+            "message": "Some derived-type procedure arguments refer to types missing from the parsed source.",
+            "items": unresolved_derived_args,
+        })
+    if unresolved_derived_fields:
+        blockers.append({
+            "code": "unresolved_derived_type_fields",
+            "message": "Some derived-type fields refer to types missing from the parsed source.",
+            "items": unresolved_derived_fields,
+        })
+    if unresolved_kind_args:
+        blockers.append({
+            "code": "unresolved_kind_arguments",
+            "message": "Some procedure arguments use kind symbols missing from the parsed source/imports.",
+            "items": unresolved_kind_args,
+        })
+    if unresolved_kind_fields:
+        blockers.append({
+            "code": "unresolved_kind_fields",
+            "message": "Some derived-type fields use kind symbols missing from the parsed source/imports.",
+            "items": unresolved_kind_fields,
+        })
+    return blockers
+
 def assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
     """Heuristically assess whether a source is "wrap-ready".
 
@@ -811,6 +1036,7 @@ def assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
     but instead surfaces common wrapper blockers:
     - known unsupported constructs (pattern-based scan)
     - signature arguments that remain undeclared (`base_type == "unknown"`)
+    - derived-type and symbolic-kind references that require missing imports
     - basic counts (n_signatures, n_types, n_modules)
     """
     lines = preprocess_lines(code, filename)
@@ -833,6 +1059,28 @@ def assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
             if a.base_type == "unknown":
                 missing_decl_args.append(f"{sig.name}:{a.name}")
 
+    module_params = _collect_module_parameters(code, filename)
+    unresolved_derived_args, unresolved_derived_fields = _collect_unresolved_derived_type_diagnostics(
+        signatures,
+        types,
+        modules,
+    )
+    unresolved_kind_args, unresolved_kind_fields = _collect_unresolved_kind_diagnostics(
+        signatures,
+        types,
+        modules,
+        module_params,
+    )
+    blockers = _build_wrap_blockers(
+        signatures=signatures,
+        unsupported=unsupported,
+        missing_decl_args=missing_decl_args,
+        unresolved_derived_args=unresolved_derived_args,
+        unresolved_derived_fields=unresolved_derived_fields,
+        unresolved_kind_args=unresolved_kind_args,
+        unresolved_kind_fields=unresolved_kind_fields,
+    )
+
     return {
         "n_signatures": len(signatures),
         "n_types": len(types),
@@ -842,7 +1090,13 @@ def assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
         "n_block_data": len(block_data),
         "unsupported_constructs": unsupported,
         "unknown_argument_types": missing_decl_args,
-        "wrappable": len(unsupported) == 0 and len(missing_decl_args) == 0 and len(signatures) > 0,
+        "unresolved_derived_type_arguments": unresolved_derived_args,
+        "unresolved_derived_type_fields": unresolved_derived_fields,
+        "unresolved_kind_arguments": unresolved_kind_args,
+        "unresolved_kind_fields": unresolved_kind_fields,
+        "wrappability_blockers": blockers,
+        "why_not_wrappable": [b["message"] for b in blockers],
+        "wrappable": not blockers,
     }
 
 

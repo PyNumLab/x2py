@@ -171,7 +171,18 @@ Expected JSON structure (top-level keyed by input path):
 - `<file>.modules`: parsed modules
 - `<file>.wrap_readiness`: readiness diagnostics
 
-### Example 3: JSON output written to file
+### Example 3: wrap-readiness summary
+
+```bash
+python -m fortran_parser tests/fcode/basic_subroutine.f90 --wrap-readiness
+```
+
+The summary prints `Wrappable: yes` when no blockers are detected. If the
+answer is `Wrappable: no`, it prints a `Why not wrappable` section with the
+blocking diagnostics, such as unresolved imported derived types or unresolved
+symbolic kinds.
+
+### Example 4: JSON output written to file
 
 ```bash
 python -m fortran_parser tests/fcode/basic_subroutine.f90 --json-out report.json
@@ -222,7 +233,8 @@ Expected result:
 
 - `sigs` is a list of normalized procedure signatures.
 - `report` includes counts, unsupported construct hits, unknown argument info,
-  and final `wrappable` boolean.
+  unresolved imported derived-type/kind dependencies, and final `wrappable`
+  boolean.
 
 ## Running tests
 
