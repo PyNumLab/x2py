@@ -172,14 +172,14 @@ def _format_report(report: dict[str, dict]) -> str:
                 name = block["name"] or "<unnamed>"
                 lines.append(f"    - block data {name} (vars={len(block['variables'])})")
 
-        readiness = parsed["wrap_readiness"]
-        lines.append(f"  Wrappable: {'yes' if readiness['wrappable'] else 'no'}")
-        if readiness.get("wrappability_blockers"):
-            lines.append("  Why not wrappable:")
-            for blocker in readiness["wrappability_blockers"]:
-                lines.append(f"    - {blocker['message']}")
-                for item in blocker.get("items", []):
-                    lines.append(f"      * {_format_blocker_item(blocker['code'], item)}")
+#        readiness = parsed["wrap_readiness"]
+#        lines.append(f"  Wrappable: {'yes' if readiness['wrappable'] else 'no'}")
+#        if readiness.get("wrappability_blockers"):
+#            lines.append("  Why not wrappable:")
+#            for blocker in readiness["wrappability_blockers"]:
+#                lines.append(f"    - {blocker['message']}")
+#                for item in blocker.get("items", []):
+#                    lines.append(f"      * {_format_blocker_item(blocker['code'], item)}")
         lines.append("")
     return "\n".join(lines).rstrip()
 
