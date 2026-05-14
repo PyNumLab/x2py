@@ -61,6 +61,10 @@ _PreprocessedLines = list[tuple[str, int | None, str | None]]
 _SourceOrLines = str | _PreprocessedLines
 
 
+# -----------------------------------------------------------------------------
+# Low-level syntax and declaration helpers
+# -----------------------------------------------------------------------------
+
 def _is_derived_type_block_start(line: str) -> bool:
     stripped = line.strip()
     lower = stripped.lower()
@@ -1012,6 +1016,16 @@ def _topological_files(file_deps: dict[str, set[str]]) -> list[str]:
     return ordered
 
 class FortranParser:
+    """Stateful parser that exposes file/project-level parsing entrypoints.
+
+    The implementation is intentionally grouped by parsing domain:
+    signatures/declarations, module-like units, project orchestration,
+    and finally thin public wrappers.
+    """
+    # ------------------------------------------------------------------
+    # Signature parsing and declaration typing
+    # ------------------------------------------------------------------
+
     def _parse_fortran_signatures_impl(
         self,
         code: _SourceOrLines,
@@ -2583,6 +2597,10 @@ class FortranParser:
         if isinstance(source, list):
             return source
         return preprocess_lines(source, filename)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
     def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):
         self.macro_defines = macro_defines
