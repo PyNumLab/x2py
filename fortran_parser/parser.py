@@ -1047,6 +1047,90 @@ class FortranParser:
     and finally thin public wrappers.
     """
     # ------------------------------------------------------------------
+    # Public API (kept first for discoverability)
+    # ------------------------------------------------------------------
+
+    def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):
+        self.macro_defines = macro_defines
+
+    def parse_file(
+        self,
+        source_or_path: str | Path,
+        filename: str | None = None,
+        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+        encoding: str = "utf-8",
+    ) -> FortranFile:
+        return self._parse_fortran_file(
+            source_or_path,
+            filename=filename,
+            macro_defines=macro_defines,
+            encoding=encoding,
+        )
+
+    def parse_project(self, files, *, encoding: str = "utf-8") -> FortranProject:
+        return self._parse_fortran_project(files, encoding=encoding)
+
+    def assess_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
+        return self._assess_wrap_readiness(code, filename=filename)
+
+    # ------------------------------------------------------------------
+    # High-level unit parsing (largest scopes first)
+    # ------------------------------------------------------------------
+
+    def _parse_fortran_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
+        return self._parse_fortran_programs_impl(code, filename=filename)
+
+    def _parse_fortran_modules(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        *,
+        require_present: bool = True,
+        signatures: list[FortranProcedureSignature] | None = None,
+        types: list[FortranDerivedType] | None = None,
+        interfaces: list[FortranInterface] | None = None,
+    ) -> list[FortranModule]:
+        return self._parse_fortran_modules_impl(
+            code,
+            filename=filename,
+            require_present=require_present,
+            signatures=signatures,
+            types=types,
+            interfaces=interfaces,
+        )
+
+    def _parse_fortran_submodules(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        *,
+        signatures: list[FortranProcedureSignature] | None = None,
+        types: list[FortranDerivedType] | None = None,
+        interfaces: list[FortranInterface] | None = None,
+    ) -> list[FortranSubmodule]:
+        return self._parse_fortran_submodules_impl(
+            code,
+            filename=filename,
+            signatures=signatures,
+            types=types,
+            interfaces=interfaces,
+        )
+
+    def _parse_fortran_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
+        return self._parse_fortran_interfaces_impl(code, filename=filename)
+
+    def _parse_fortran_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
+        return self._parse_fortran_types_impl(code, filename=filename)
+
+    def _parse_fortran_signatures(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+    ) -> list[FortranProcedureSignature]:
+        return self._parse_fortran_signatures_impl(code, filename=filename, macro_defines=macro_defines)
+
+    # ------------------------------------------------------------------
     # Signature parsing and declaration typing
     # ------------------------------------------------------------------
 
@@ -1860,7 +1944,7 @@ class FortranParser:
     # Derived types, modules, interfaces, and other program units
     # ------------------------------------------------------------------
 
-    def _parse_fortran_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
+    def _parse_fortran_types_impl(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
         lines = self._preprocessed_lines(code, filename)
         current_module = None
         current_type: FortranDerivedType | None = None
@@ -2055,7 +2139,7 @@ class FortranParser:
             filename=filename,
         )
 
-    def _parse_fortran_modules(
+    def _parse_fortran_modules_impl(
         self,
         code: _SourceOrLines,
         filename: str | None = None,
@@ -2161,7 +2245,7 @@ class FortranParser:
             filename=filename,
         )
 
-    def _parse_fortran_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
+    def _parse_fortran_interfaces_impl(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
         lines = self._preprocessed_lines(code, filename)
         current_module = None
         current_interface: FortranInterface | None = None
@@ -2315,7 +2399,7 @@ class FortranParser:
             filename=filename,
         )
 
-    def _parse_fortran_submodules(
+    def _parse_fortran_submodules_impl(
         self,
         code: _SourceOrLines,
         filename: str | None = None,
@@ -2394,7 +2478,7 @@ class FortranParser:
             filename=filename,
         )
 
-    def _parse_fortran_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
+    def _parse_fortran_programs_impl(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
         lines = self._preprocessed_lines(code, filename)
         programs: list[FortranProgram] = []
         current: FortranProgram | None = None
@@ -2633,35 +2717,6 @@ class FortranParser:
         if isinstance(source, list):
             return source
         return preprocess_lines(source, filename)
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
-    def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):
-        self.macro_defines = macro_defines
-
-    def parse_file(
-        self,
-        source_or_path: str | Path,
-        filename: str | None = None,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
-        encoding: str = "utf-8",
-    ) -> FortranFile:
-        return self._parse_fortran_file(
-            source_or_path,
-            filename=filename,
-            macro_defines=macro_defines,
-            encoding=encoding,
-        )
-
-    def parse_project(self, files, *, encoding: str = "utf-8") -> FortranProject:
-        return self._parse_fortran_project(files, encoding=encoding)
-
-
-    def assess_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
-        return self._assess_wrap_readiness(code, filename=filename)
-
 
 
 # -----------------------------------------------------------------------------
