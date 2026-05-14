@@ -1430,7 +1430,7 @@ def _parse_fortran_namespace(root: str | Path, extensions: tuple[str, ...] = (".
         file_dependencies[fname] = deps
 
     ordered_files = _topological_files(file_dependencies)
-    signatures = parse_fortran_project_signatures({f: sources[f] for f in ordered_files})
+    signatures = _parse_fortran_project_signatures({f: sources[f] for f in ordered_files})
     types = []
     modules = []
     submodules = []
