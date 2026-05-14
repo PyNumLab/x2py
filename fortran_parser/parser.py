@@ -602,13 +602,7 @@ def _parse_fortran_signature(
     filename: str | None = None,
     macro_defines: set[str] | dict[str, int | bool | str] | None = None,
 ) -> FortranProcedureSignature:
-    """Parse exactly one procedure signature from source or preprocessed lines."""
-    return _expect_single_parse_result(
-        _parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines),
-        parser_name="parse_fortran_signature",
-        entity_name="procedure signature",
-        filename=filename,
-    )
+    return _DEFAULT_PARSER.parse_signature(code, filename=filename, macro_defines=macro_defines)
 
 
 def _parse_fortran_project(
@@ -762,13 +756,7 @@ def _parse_fortran_types(code: _SourceOrLines, filename: str | None = None) -> l
 
 
 def _parse_fortran_derived_type(code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
-    """Parse exactly one derived type from source or preprocessed lines."""
-    return _expect_single_parse_result(
-        _parse_fortran_types(code, filename=filename),
-        parser_name="parse_fortran_derived_type",
-        entity_name="derived type",
-        filename=filename,
-    )
+    return _DEFAULT_PARSER.parse_derived_type(code, filename=filename)
 
 
 def _parse_fortran_modules_impl(
@@ -884,13 +872,7 @@ def _parse_fortran_modules(code: _SourceOrLines, filename: str | None = None) ->
 
 
 def _parse_fortran_module(code: _SourceOrLines, filename: str | None = None) -> FortranModule:
-    """Parse exactly one module from source or preprocessed lines."""
-    return _expect_single_parse_result(
-        _parse_fortran_modules(code, filename=filename),
-        parser_name="parse_fortran_module",
-        entity_name="module",
-        filename=filename,
-    )
+    return _DEFAULT_PARSER.parse_module(code, filename=filename)
 
 
 def _parse_fortran_interfaces(code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
@@ -966,13 +948,7 @@ def _parse_fortran_interfaces(code: _SourceOrLines, filename: str | None = None)
 
 
 def _parse_fortran_interface(code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
-    """Parse exactly one interface block from source or preprocessed lines."""
-    return _expect_single_parse_result(
-        _parse_fortran_interfaces(code, filename=filename),
-        parser_name="parse_fortran_interface",
-        entity_name="interface",
-        filename=filename,
-    )
+    return _DEFAULT_PARSER.parse_interface(code, filename=filename)
 
 
 
@@ -1064,13 +1040,7 @@ def _parse_fortran_submodules(
 
 
 def _parse_fortran_submodule(code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
-    """Parse exactly one submodule from source or preprocessed lines."""
-    return _expect_single_parse_result(
-        _parse_fortran_submodules(code, filename=filename),
-        parser_name="parse_fortran_submodule",
-        entity_name="submodule",
-        filename=filename,
-    )
+    return _DEFAULT_PARSER.parse_submodule(code, filename=filename)
 
 
 def _parse_fortran_programs(code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
@@ -1112,13 +1082,7 @@ def _parse_fortran_programs(code: _SourceOrLines, filename: str | None = None) -
 
 
 def _parse_fortran_program(code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
-    """Parse exactly one program unit from source or preprocessed lines."""
-    return _expect_single_parse_result(
-        _parse_fortran_programs(code, filename=filename),
-        parser_name="parse_fortran_program",
-        entity_name="program",
-        filename=filename,
-    )
+    return _DEFAULT_PARSER.parse_program(code, filename=filename)
 
 
 def _parse_fortran_block_data(code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
@@ -1147,13 +1111,7 @@ def _parse_fortran_block_data(code: _SourceOrLines, filename: str | None = None)
 
 
 def _parse_fortran_block_data_unit(code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
-    """Parse exactly one block data unit from source or preprocessed lines."""
-    return _expect_single_parse_result(
-        _parse_fortran_block_data(code, filename=filename),
-        parser_name="parse_fortran_block_data_unit",
-        entity_name="block data unit",
-        filename=filename,
-    )
+    return _DEFAULT_PARSER.parse_block_data_unit(code, filename=filename)
 
 
 def _visible_import_modules(symbol: str, uses: dict[str, list[str]]) -> list[str]:
