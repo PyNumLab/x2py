@@ -10,7 +10,7 @@ TEST_FILE = Path(__file__).parent / "fcode" / "basic_subroutine.f90"
 
 
 def test_cli_readable_output():
-    cmd = [sys.executable, "-m", "fortran_parser", str(TEST_FILE)]
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--parse"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert f"File: {TEST_FILE}" in res.stdout
     assert "subroutine add1" in res.stdout
@@ -24,8 +24,9 @@ def test_cli_json_out(tmp_path: Path):
     cmd = [
         sys.executable,
         "-m",
-        "fortran_parser",
+        "x2py",
         str(TEST_FILE),
+        "--parse",
         "--json",
         "--json-out",
         str(out),
@@ -55,7 +56,7 @@ end module m
 """.strip()
     )
 
-    cmd = [sys.executable, "-m", "fortran_parser", str(f90)]
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     assert "  Procedures: 1" in res.stdout
@@ -74,7 +75,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "fortran_parser", str(f90), "--no-color"]
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse", "--no-color"]
     res = subprocess.run(cmd, capture_output=True, text=True)
 
     assert res.returncode == 1
@@ -94,7 +95,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "fortran_parser", str(f90), "--debug-traceback"]
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse", "--debug-traceback"]
     res = subprocess.run(cmd, capture_output=True, text=True)
 
     assert res.returncode == 1
@@ -112,7 +113,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "fortran_parser", str(f90)]
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse"]
     res = subprocess.run(
         cmd,
         capture_output=True,
@@ -135,7 +136,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "fortran_parser", str(f90)]
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse"]
     env = {k: v for k, v in os.environ.items() if k != "NO_COLOR"}
     res = subprocess.run(cmd, capture_output=True, text=True, env=env)
 
@@ -154,7 +155,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "fortran_parser", str(f90)]
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse"]
     res = subprocess.run(
         cmd,
         capture_output=True,
@@ -165,3 +166,32 @@ end subroutine bad
     assert res.returncode == 1
     assert "\033[" not in res.stderr
     assert f"{f90}:2:1: error[PARSE001]:" in res.stderr
+
+
+def test_cli_semantics_without_json_output():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--semantics"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+    assert str(TEST_FILE) in payload
+    assert "semantic_modules" in payload[str(TEST_FILE)]
+
+
+def test_cli_semantics_json_requires_parse():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--semantics", "--json"]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    assert res.returncode == 2
+    assert "JSON output currently supports only the parsing stage" in res.stderr
+
+
+def test_cli_pyi_output():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--pyi"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    assert f"File: {TEST_FILE}" in res.stdout
+    assert "def add1(" in res.stdout
+
+
+def test_cli_help_includes_examples():
+    cmd = [sys.executable, "-m", "x2py", "--help"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    assert "Examples:" in res.stdout
+    assert "python -m x2py path/to/file.f90 --parse" in res.stdout

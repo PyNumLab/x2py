@@ -5,7 +5,7 @@ import argparse
 import json
 import os
 import sys
-from dataclasses import fields, is_dataclass
+from dataclasses import asdict, fields, is_dataclass
 from pathlib import Path
 
 from .models import FortranParseError
@@ -78,6 +78,37 @@ def _parse_paths(paths: list[str]) -> dict[str, dict]:
         }
     return out
 
+
+
+def _semantic_report(paths: list[str]) -> dict[str, dict]:
+    """Generate semantic IR and pyi text per parsed file."""
+    from semantics.fortran2ir import fortran_module_to_semantic_module
+    from semantics.pyi_printer import emit_module
+
+    parsed = _parse_paths(paths)
+    semantic_out: dict[str, dict] = {}
+    parser = FortranParser()
+
+    for fname in parsed:
+        code = Path(fname).read_text(encoding="utf-8")
+        fobj = parser.parse_file(code, filename=fname)
+        modules = [fortran_module_to_semantic_module(m) for m in fobj.modules]
+        semantic_out[fname] = {
+            "semantic_modules": [asdict(m) for m in modules],
+            "pyi": "\n\n".join(emit_module(m) for m in modules).strip(),
+        }
+
+    return semantic_out
+
+
+def _format_pyi_report(semantic_report: dict[str, dict]) -> str:
+    lines: list[str] = []
+    for fname, payload in semantic_report.items():
+        lines.append(f"File: {fname}")
+        pyi = payload.get("pyi", "")
+        lines.append(pyi if pyi else "<no module declarations found>")
+        lines.append("")
+    return "\n".join(lines).rstrip()
 
 def _format_blocker_item(code: str, item) -> str:
     """Format one wrap-readiness blocker item for human-readable output."""
@@ -197,6 +228,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Parse Fortran files and print a human-readable report or JSON.")
     parser.add_argument("paths", nargs="+", help="Fortran file(s) or directory path(s)")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
+    parser.add_argument("--semantics", action="store_true", help="Generate semantic IR models from parsed Fortran modules")
+    parser.add_argument("--pyi", action="store_true", help="Print the generated Python .pyi content from semantic models")
     parser.add_argument(
         "--wrap-readiness",
         action="store_true",
@@ -218,19 +251,28 @@ def main() -> int:
 
     try:
         report = _parse_paths(args.paths)
+        semantic = _semantic_report(args.paths) if (args.semantics or args.pyi) else None
     except FortranParseError as exc:
         if args.debug_traceback or _env_flag("FORTRAN_PARSER_DEBUG"):
             raise
         print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
         return 1
 
+    payload = report
+    if semantic is not None:
+        payload = semantic
+
     if args.json_out:
-        args.json_out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        args.json_out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     if args.json:
-        print(json.dumps(report, indent=2))
+        print(json.dumps(payload, indent=2))
+    elif args.pyi:
+        print(_format_pyi_report(semantic or {}))
     elif args.wrap_readiness:
         print(_format_wrap_readiness(report))
+    elif args.semantics:
+        print(json.dumps(payload, indent=2))
     else:
         print(_format_report(report))
 
