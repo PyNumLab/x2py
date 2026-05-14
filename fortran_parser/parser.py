@@ -205,231 +205,7 @@ def _parse_fortran_signatures_impl(
     filename: str | None = None,
     macro_defines: set[str] | dict[str, int | bool | str] | None = None,
 ) -> list[FortranProcedureSignature]:
-    """Parse procedure signatures from a single Fortran source string.
-
-    Produces `FortranProcedureSignature` objects for top-level procedures and
-    module-contained procedures. Internal procedures in a `contains` block are
-    intentionally ignored for the host routine signature.
-
-    Notes
-    -----
-    - Raw source input is normalized by `preprocess_lines`; file/project
-      callers pass already-normalized lines so preprocessing happens once.
-    - Declarations are only applied while the parser is in the specification
-      part; once an executable statement start is detected, later lines are
-      ignored for declaration purposes.
-    - Procedures declared inside `interface ... end interface` are included and
-      flagged with `in_interface=True`.
-    """
-    lines = _preprocessed_lines(code, filename)
-    macro_selection_enabled = macro_defines is not None
-    signatures: list[FortranProcedureSignature] = []
-    interface_memberships: dict[str, set[str]] = {}
-    declared_procedures: dict[tuple[str | None, bool], dict[str, list[frozenset[str]]]] = {}
-    current_module = None
-    current_module_uses: dict[str, list[str]] = {}
-    current_proc = None
-    interface_depth = 0
-    interface_name_stack: list[str | None] = []
-    program_depth = 0
-    macro_names = _normalize_macro_defines(macro_defines)
-    pp_condition_stack: list[tuple[int, int]] = []
-    pp_active_stack: list[bool] = []
-    pp_group_counter = 0
-
-    for line, lineno, source_line in lines:
-        s = line.strip()
-        if not s:
-            continue
-
-        if s.startswith("#"):
-            directive = s[1:].strip()
-            directive_low = directive.lower()
-            if directive_low.startswith("ifdef "):
-                pp_group_counter += 1
-                pp_condition_stack.append((pp_group_counter, 0))
-                expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-                pp_active_stack.append((bool(expr) and expr.lower() in macro_names) if macro_selection_enabled else True)
-                continue
-            if directive_low.startswith("ifndef "):
-                pp_group_counter += 1
-                pp_condition_stack.append((pp_group_counter, 0))
-                expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-                pp_active_stack.append(((not expr) or expr.lower() not in macro_names) if macro_selection_enabled else True)
-                continue
-            if directive_low.startswith("if "):
-                pp_group_counter += 1
-                pp_condition_stack.append((pp_group_counter, 0))
-                expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-                pp_active_stack.append(_eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
-                continue
-            if directive_low.startswith("else"):
-                if pp_condition_stack:
-                    group_id, branch_id = pp_condition_stack.pop()
-                    pp_condition_stack.append((group_id, branch_id + 1))
-                if pp_active_stack:
-                    prev = pp_active_stack.pop()
-                    pp_active_stack.append((not prev) if macro_selection_enabled else True)
-                continue
-            if directive_low.startswith("elif "):
-                if pp_condition_stack:
-                    group_id, branch_id = pp_condition_stack.pop()
-                    pp_condition_stack.append((group_id, branch_id + 1))
-                if pp_active_stack:
-                    pp_active_stack.pop()
-                    expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-                    pp_active_stack.append(_eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
-                continue
-            if directive_low.startswith("endif"):
-                if pp_condition_stack:
-                    pp_condition_stack.pop()
-                if pp_active_stack:
-                    pp_active_stack.pop()
-                continue
-
-        if macro_selection_enabled and pp_active_stack and not all(pp_active_stack):
-            continue
-
-        l = s.lower()
-
-        _enforce_source_form_compatibility(s, filename, lineno, source_line)
-
-        if l.startswith("interface"):
-            interface_depth += 1
-            parts = s.split(maxsplit=1)
-            iface_name = parts[1].strip() if len(parts) > 1 else None
-            interface_name_stack.append(iface_name)
-            continue
-        if l.startswith("end interface"):
-            interface_depth = max(0, interface_depth - 1)
-            if interface_name_stack:
-                interface_name_stack.pop()
-            continue
-
-        submodule_match = _SUBMODULE_RE.match(s)
-        if submodule_match:
-            current_module = submodule_match.group("name")
-            current_module_uses = {}
-            continue
-        if l.startswith("end submodule"):
-            current_module = None
-            current_module_uses = {}
-            continue
-
-        if _PROGRAM_RE.match(s):
-            program_depth += 1
-            continue
-        if l.startswith("end program"):
-            program_depth = max(0, program_depth - 1)
-            continue
-        if program_depth > 0:
-            continue
-
-        if l.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", l):
-            current_module = s.split()[1]
-            current_module_uses = {}
-            continue
-        if l.startswith("end module"):
-            current_module = None
-            current_module_uses = {}
-            continue
-
-        if current_proc is None:
-            m = _USE_RE.match(s)
-            if m and current_module is not None:
-                current_module_uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
-                continue
-
-        if current_proc is None:
-            current_proc = _parse_header(s, current_module, interface_depth > 0)
-            if current_proc:
-                scope_key = (current_module.lower() if current_module else None, interface_depth > 0)
-                seen_in_scope = declared_procedures.setdefault(scope_key, {})
-                proc_name = current_proc["signature"].name.lower()
-                condition_set = frozenset(
-                    f"g{group_id}:b{branch_id}" for group_id, branch_id in pp_condition_stack
-                )
-                existing_conditions = seen_in_scope.setdefault(proc_name, [])
-                if any(_preprocessor_conditions_overlap(existing, condition_set) for existing in existing_conditions):
-                    scope_label = (
-                        f"module '{current_module}'" if current_module is not None else "global scope"
-                    )
-                    raise FortranParseError(
-                        f"Duplicate procedure name '{current_proc['signature'].name}' in {scope_label}.",
-                        filename=filename,
-                        line_number=lineno,
-                        source_line=source_line,
-                    )
-                existing_conditions.append(condition_set)
-                current_proc["uses"].update(current_module_uses)
-                current_proc["filename"] = filename
-                current_proc["header_lineno"] = lineno
-                current_proc["header_source_line"] = source_line
-                current_proc["in_exec_part"] = False
-            continue
-
-        if current_proc is not None and current_proc.get("in_contains"):
-            if l.startswith("end subroutine") or l.startswith("end function") or l.startswith("end procedure"):
-                end_parts = l.split()
-                end_name = end_parts[2] if len(end_parts) > 2 else None
-                if end_name == current_proc["signature"].name.lower():
-                    signatures.append(_finalize_proc(current_proc))
-                    current_proc = None
-            continue
-        if current_proc is not None and interface_depth > 0:
-            if l.startswith("function ") or l.startswith("subroutine "):
-                iface_proc = _parse_header(s, current_module, True)
-                if iface_proc:
-                    iface_name = iface_proc["signature"].name.lower()
-                    current_proc["typed_symbols"].add(iface_name)
-                    arg = current_proc["symbols"].get(iface_name)
-                    if arg is not None:
-                        arg.base_type = "procedure"
-                        arg.kind = None
-            continue
-
-        if l.startswith("end subroutine") or l.startswith("end function") or l.startswith("end procedure") or l == "end":
-            signatures.append(_finalize_proc(current_proc))
-            current_proc = None
-            continue
-        if l == "contains":
-            current_proc["in_contains"] = True
-            continue
-        if current_proc.get("in_contains"):
-            continue
-
-        if re.match(r"^type\s+\w+$", s, flags=re.IGNORECASE):
-            current_proc["local_type_depth"] = current_proc.get("local_type_depth", 0) + 1
-            continue
-        if current_proc.get("local_type_depth", 0) > 0:
-            if re.match(r"^end\s+type\b", s, flags=re.IGNORECASE):
-                current_proc["local_type_depth"] -= 1
-            continue
-
-        m = _USE_RE.match(s)
-        if m:
-            symbols = split_csv(m.group("symbols")) if m.group("symbols") else []
-            current_proc["uses"][m.group("module")] = symbols
-            continue
-
-        if current_proc.get("in_exec_part"):
-            continue
-
-        if _is_executable_statement_start(s):
-            current_proc["in_exec_part"] = True
-            continue
-
-        _parse_declaration(s, current_proc, filename=filename, lineno=lineno, source_line=source_line)
-
-    if current_proc is not None:
-        signatures.append(_finalize_proc(current_proc))
-    for sig in signatures:
-        for iface_name in sorted(interface_memberships.get(sig.name.lower(), set())):
-            iface_attr = f"interface({iface_name})"
-            if iface_attr not in sig.attributes:
-                sig.attributes.append(iface_attr)
-
-    return signatures
+    return _DEFAULT_PARSER._parse_fortran_signatures_impl(code, filename=filename, macro_defines=macro_defines)
 
 
 def _parse_fortran_signatures(
@@ -2076,7 +1852,214 @@ class FortranParser:
         filename: str | None = None,
         macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     ) -> list[FortranProcedureSignature]:
-        return _parse_fortran_signatures_impl(code, filename=filename, macro_defines=macro_defines)
+        lines = _preprocessed_lines(code, filename)
+        macro_selection_enabled = macro_defines is not None
+        signatures: list[FortranProcedureSignature] = []
+        interface_memberships: dict[str, set[str]] = {}
+        declared_procedures: dict[tuple[str | None, bool], dict[str, list[frozenset[str]]]] = {}
+        current_module = None
+        current_module_uses: dict[str, list[str]] = {}
+        current_proc = None
+        interface_depth = 0
+        interface_name_stack: list[str | None] = []
+        program_depth = 0
+        macro_names = _normalize_macro_defines(macro_defines)
+        pp_condition_stack: list[tuple[int, int]] = []
+        pp_active_stack: list[bool] = []
+        pp_group_counter = 0
+
+        for line, lineno, source_line in lines:
+            s = line.strip()
+            if not s:
+                continue
+
+            if s.startswith("#"):
+                directive = s[1:].strip()
+                directive_low = directive.lower()
+                if directive_low.startswith("ifdef "):
+                    pp_group_counter += 1
+                    pp_condition_stack.append((pp_group_counter, 0))
+                    expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
+                    pp_active_stack.append((bool(expr) and expr.lower() in macro_names) if macro_selection_enabled else True)
+                    continue
+                if directive_low.startswith("ifndef "):
+                    pp_group_counter += 1
+                    pp_condition_stack.append((pp_group_counter, 0))
+                    expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
+                    pp_active_stack.append(((not expr) or expr.lower() not in macro_names) if macro_selection_enabled else True)
+                    continue
+                if directive_low.startswith("if "):
+                    pp_group_counter += 1
+                    pp_condition_stack.append((pp_group_counter, 0))
+                    expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
+                    pp_active_stack.append(_eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
+                    continue
+                if directive_low.startswith("else"):
+                    if pp_condition_stack:
+                        group_id, branch_id = pp_condition_stack.pop()
+                        pp_condition_stack.append((group_id, branch_id + 1))
+                    if pp_active_stack:
+                        prev = pp_active_stack.pop()
+                        pp_active_stack.append((not prev) if macro_selection_enabled else True)
+                    continue
+                if directive_low.startswith("elif "):
+                    if pp_condition_stack:
+                        group_id, branch_id = pp_condition_stack.pop()
+                        pp_condition_stack.append((group_id, branch_id + 1))
+                    if pp_active_stack:
+                        pp_active_stack.pop()
+                        expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
+                        pp_active_stack.append(_eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
+                    continue
+                if directive_low.startswith("endif"):
+                    if pp_condition_stack:
+                        pp_condition_stack.pop()
+                    if pp_active_stack:
+                        pp_active_stack.pop()
+                    continue
+
+            if macro_selection_enabled and pp_active_stack and not all(pp_active_stack):
+                continue
+
+            l = s.lower()
+            _enforce_source_form_compatibility(s, filename, lineno, source_line)
+
+            if l.startswith("interface"):
+                interface_depth += 1
+                parts = s.split(maxsplit=1)
+                iface_name = parts[1].strip() if len(parts) > 1 else None
+                interface_name_stack.append(iface_name)
+                continue
+            if l.startswith("end interface"):
+                interface_depth = max(0, interface_depth - 1)
+                if interface_name_stack:
+                    interface_name_stack.pop()
+                continue
+
+            submodule_match = _SUBMODULE_RE.match(s)
+            if submodule_match:
+                current_module = submodule_match.group("name")
+                current_module_uses = {}
+                continue
+            if l.startswith("end submodule"):
+                current_module = None
+                current_module_uses = {}
+                continue
+
+            if _PROGRAM_RE.match(s):
+                program_depth += 1
+                continue
+            if l.startswith("end program"):
+                program_depth = max(0, program_depth - 1)
+                continue
+            if program_depth > 0:
+                continue
+
+            if l.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", l):
+                current_module = s.split()[1]
+                current_module_uses = {}
+                continue
+            if l.startswith("end module"):
+                current_module = None
+                current_module_uses = {}
+                continue
+
+            if current_proc is None:
+                m = _USE_RE.match(s)
+                if m and current_module is not None:
+                    current_module_uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
+                    continue
+
+            if current_proc is None:
+                current_proc = _parse_header(s, current_module, interface_depth > 0)
+                if current_proc:
+                    scope_key = (current_module.lower() if current_module else None, interface_depth > 0)
+                    seen_in_scope = declared_procedures.setdefault(scope_key, {})
+                    proc_name = current_proc["signature"].name.lower()
+                    condition_set = frozenset(
+                        f"g{group_id}:b{branch_id}" for group_id, branch_id in pp_condition_stack
+                    )
+                    existing_conditions = seen_in_scope.setdefault(proc_name, [])
+                    if any(_preprocessor_conditions_overlap(existing, condition_set) for existing in existing_conditions):
+                        scope_label = (
+                            f"module '{current_module}'" if current_module is not None else "global scope"
+                        )
+                        raise FortranParseError(
+                            f"Duplicate procedure name '{current_proc['signature'].name}' in {scope_label}.",
+                            filename=filename,
+                            line_number=lineno,
+                            source_line=source_line,
+                        )
+                    existing_conditions.append(condition_set)
+                    current_proc["uses"].update(current_module_uses)
+                    current_proc["filename"] = filename
+                    current_proc["header_lineno"] = lineno
+                    current_proc["header_source_line"] = source_line
+                    current_proc["in_exec_part"] = False
+                continue
+
+            if current_proc is not None and current_proc.get("in_contains"):
+                if l.startswith("end subroutine") or l.startswith("end function") or l.startswith("end procedure"):
+                    end_parts = l.split()
+                    end_name = end_parts[2] if len(end_parts) > 2 else None
+                    if end_name == current_proc["signature"].name.lower():
+                        signatures.append(_finalize_proc(current_proc))
+                        current_proc = None
+                continue
+            if current_proc is not None and interface_depth > 0:
+                if l.startswith("function ") or l.startswith("subroutine "):
+                    iface_proc = _parse_header(s, current_module, True)
+                    if iface_proc:
+                        iface_name = iface_proc["signature"].name.lower()
+                        current_proc["typed_symbols"].add(iface_name)
+                        arg = current_proc["symbols"].get(iface_name)
+                        if arg is not None:
+                            arg.base_type = "procedure"
+                            arg.kind = None
+                continue
+
+            if l.startswith("end subroutine") or l.startswith("end function") or l.startswith("end procedure") or l == "end":
+                signatures.append(_finalize_proc(current_proc))
+                current_proc = None
+                continue
+            if l == "contains":
+                current_proc["in_contains"] = True
+                continue
+            if current_proc.get("in_contains"):
+                continue
+
+            if re.match(r"^type\s+\w+$", s, flags=re.IGNORECASE):
+                current_proc["local_type_depth"] = current_proc.get("local_type_depth", 0) + 1
+                continue
+            if current_proc.get("local_type_depth", 0) > 0:
+                if re.match(r"^end\s+type\b", s, flags=re.IGNORECASE):
+                    current_proc["local_type_depth"] -= 1
+                continue
+
+            m = _USE_RE.match(s)
+            if m:
+                symbols = split_csv(m.group("symbols")) if m.group("symbols") else []
+                current_proc["uses"][m.group("module")] = symbols
+                continue
+
+            if current_proc.get("in_exec_part"):
+                continue
+
+            if _is_executable_statement_start(s):
+                current_proc["in_exec_part"] = True
+                continue
+
+            _parse_declaration(s, current_proc, filename=filename, lineno=lineno, source_line=source_line)
+
+        if current_proc is not None:
+            signatures.append(_finalize_proc(current_proc))
+        for sig in signatures:
+            for iface_name in sorted(interface_memberships.get(sig.name.lower(), set())):
+                iface_attr = f"interface({iface_name})"
+                if iface_attr not in sig.attributes:
+                    sig.attributes.append(iface_attr)
+
+        return signatures
 
     def _parse_fortran_signatures(
         self,
