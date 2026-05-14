@@ -14,7 +14,7 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["fortran_parser*"]
+include = ["fortran_parser*", "semantics*",]
 
 [project.scripts]
 fortran-parser = "fortran_parser.cli:main"

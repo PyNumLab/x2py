@@ -576,7 +576,7 @@ def parse_fortran_modules(code: str, filename: str | None = None) -> list[Fortra
         if m:
             current.uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
             continue
-        _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
+#        _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
 
     # Attach parsed procedures/types/interfaces to their owning modules.
     signatures = parse_fortran_signatures(code, filename)
