@@ -119,3 +119,18 @@ end module m
 """
     with pytest.raises(FortranParseError, match="Duplicate procedure name"):
         parse_fortran_signatures(code, filename="scope_ifdef_overlap.f90", macro_defines={"USE_A", "USE_B"})
+
+
+def test_fortran_parser_class_entrypoint():
+    from fortran_parser import FortranParser
+
+    source = """
+subroutine touch(x)
+    integer, intent(inout) :: x
+end subroutine
+"""
+
+    signatures = FortranParser().parse_signatures(source)
+
+    assert len(signatures) == 1
+    assert signatures[0].name == "touch"

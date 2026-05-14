@@ -487,3 +487,31 @@ end module
     code2 = generate_pyi(source)
 
     assert code1 == code2
+
+
+def test_printer_class_entrypoint():
+
+    source = """
+module class_print_mod
+
+contains
+
+subroutine touch(x)
+
+    integer, intent(inout) :: x
+
+end subroutine
+
+end module
+"""
+
+    fmod = parse_fortran_source(source)
+
+    smod = fortran_module_to_semantic_module(fmod)
+
+    from semantics.pyi_printer import PyiPrinter
+
+    code = PyiPrinter().emit_module(smod)
+
+    assert "def touch(" in code
+    assert "x: Int32" in code
