@@ -1,58 +1,151 @@
-[
-  {
-    "name": "add1",
-    "kind": "subroutine",
-    "module": "m1",
-    "arguments": [
-      {
-        "name": "n",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "lbound": [],
-        "ubound": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "add1",
-        "intent": "in",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "x",
-        "base_type": "real",
-        "kind": "8",
-        "rank": 1,
-        "shape": [
-          "n"
-        ],
-        "lbound": [
-          "1"
-        ],
-        "ubound": [
-          "n"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "add1",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
+{
+  "filename": "basic_subroutine.f90",
+  "source": "module m1\ncontains\nsubroutine add1(n, x)\n  integer, intent(in) :: n\n  real(kind=8), intent(inout), dimension(n) :: x\nend subroutine add1\nend module m1\n",
+  "encoding": "utf-8",
+  "format": "modern",
+  "modules": [
+    {
+      "name": "m1",
+      "filename": "basic_subroutine.f90",
+      "uses": {},
+      "variables": [],
+      "procedures": [
+        {
+          "name": "add1",
+          "kind": "subroutine",
+          "module": "m1",
+          "arguments": [
+            {
+              "name": "n",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "add1",
+              "intent": "in",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x",
+              "base_type": "real",
+              "kind": "8",
+              "rank": 1,
+              "shape": [
+                "n"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "n"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "add1",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "result": null,
+          "attributes": [],
+          "uses": {},
+          "in_interface": false,
+          "variables": {}
+        }
+      ],
+      "derived_types": [],
+      "interfaces": []
+    }
+  ],
+  "submodules": [],
+  "programs": [],
+  "block_data_units": [],
+  "procedures": [],
+  "interfaces": [],
+  "derived_types": [],
+  "variables": [],
+  "includes": [],
+  "diagnostics": [],
+  "symbols": {
+    "m1": {
+      "name": "m1",
+      "filename": "basic_subroutine.f90",
+      "uses": {},
+      "variables": [],
+      "procedures": [
+        {
+          "name": "add1",
+          "kind": "subroutine",
+          "module": "m1",
+          "arguments": [
+            {
+              "name": "n",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "add1",
+              "intent": "in",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x",
+              "base_type": "real",
+              "kind": "8",
+              "rank": 1,
+              "shape": [
+                "n"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "n"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "add1",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "result": null,
+          "attributes": [],
+          "uses": {},
+          "in_interface": false,
+          "variables": {}
+        }
+      ],
+      "derived_types": [],
+      "interfaces": []
+    }
   }
-]
+}

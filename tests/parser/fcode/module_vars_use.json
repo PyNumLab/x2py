@@ -1,1 +1,137 @@
-[]
+{
+  "filename": "module_vars_use.f90",
+  "source": "module constants_mod\n  use iso_c_binding, only: c_int, c_double\n  integer(kind=c_int), parameter :: nmax = 100\n  real(kind=c_double), dimension(3) :: origin\nend module constants_mod\n",
+  "encoding": "utf-8",
+  "format": "modern",
+  "modules": [
+    {
+      "name": "constants_mod",
+      "filename": "module_vars_use.f90",
+      "uses": {
+        "iso_c_binding": [
+          "c_int",
+          "c_double"
+        ]
+      },
+      "variables": [
+        {
+          "name": "nmax",
+          "base_type": "integer",
+          "kind": "c_int",
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "origin",
+          "base_type": "real",
+          "kind": "c_double",
+          "rank": 1,
+          "shape": [
+            "3"
+          ],
+          "lbound": [
+            "1"
+          ],
+          "ubound": [
+            "3"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "procedures": [],
+      "derived_types": [],
+      "interfaces": []
+    }
+  ],
+  "submodules": [],
+  "programs": [],
+  "block_data_units": [],
+  "procedures": [],
+  "interfaces": [],
+  "derived_types": [],
+  "variables": [],
+  "includes": [],
+  "diagnostics": [],
+  "symbols": {
+    "constants_mod": {
+      "name": "constants_mod",
+      "filename": "module_vars_use.f90",
+      "uses": {
+        "iso_c_binding": [
+          "c_int",
+          "c_double"
+        ]
+      },
+      "variables": [
+        {
+          "name": "nmax",
+          "base_type": "integer",
+          "kind": "c_int",
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "origin",
+          "base_type": "real",
+          "kind": "c_double",
+          "rank": 1,
+          "shape": [
+            "3"
+          ],
+          "lbound": [
+            "1"
+          ],
+          "ubound": [
+            "3"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "procedures": [],
+      "derived_types": [],
+      "interfaces": []
+    }
+  }
+}

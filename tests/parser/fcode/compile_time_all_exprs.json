@@ -1,239 +1,857 @@
-[
-  {
-    "name": "all_exprs",
-    "kind": "subroutine",
-    "module": "expr_mod",
-    "arguments": [
-      {
-        "name": "x1",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          "1:p_add"
-        ],
-        "lbound": [
-          "1"
-        ],
-        "ubound": [
-          "p_add"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "all_exprs",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "x2",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          "1:p_sub"
-        ],
-        "lbound": [
-          "1"
-        ],
-        "ubound": [
-          "p_sub"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "all_exprs",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "x3",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          "1:p_mul"
-        ],
-        "lbound": [
-          "1"
-        ],
-        "ubound": [
-          "p_mul"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "all_exprs",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "x4",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          "1:p_div"
-        ],
-        "lbound": [
-          "1"
-        ],
-        "ubound": [
-          "p_div"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "all_exprs",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "x5",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          "1:p_pow"
-        ],
-        "lbound": [
-          "1"
-        ],
-        "ubound": [
-          "p_pow"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "all_exprs",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "x6",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          "0:p_mix"
-        ],
-        "lbound": [
-          "0"
-        ],
-        "ubound": [
-          "p_mix"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "all_exprs",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "x7",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          "1:-(-a + b)"
-        ],
-        "lbound": [
-          "1"
-        ],
-        "ubound": [
-          "-(-a + b)"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "all_exprs",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "x8",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          "1:(a+b)*(c+1)-1"
-        ],
-        "lbound": [
-          "1"
-        ],
-        "ubound": [
-          "(a+b)*(c+1)-1"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "all_exprs",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "x9",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          "1:(a-b)*(a-c)"
-        ],
-        "lbound": [
-          "1"
-        ],
-        "ubound": [
-          "(a-b)*(a-c)"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "all_exprs",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
+{
+  "filename": "compile_time_all_exprs.f90",
+  "source": "module expr_mod\n  integer, parameter :: a = 8\n  integer, parameter :: b = 3\n  integer, parameter :: c = 2\n  integer, parameter :: p_add = a + b\n  integer, parameter :: p_sub = a - b\n  integer, parameter :: p_mul = b * c\n  integer, parameter :: p_div = a / c\n  integer, parameter :: p_pow = c ** b\n  integer, parameter :: p_mix = (a + b) * c - 1\ncontains\n  subroutine all_exprs(x1, x2, x3, x4, x5, x6, x7, x8, x9)\n    integer, intent(inout) :: x1(1:p_add)\n    integer, intent(inout) :: x2(1:p_sub)\n    integer, intent(inout) :: x3(1:p_mul)\n    integer, intent(inout) :: x4(1:p_div)\n    integer, intent(inout) :: x5(1:p_pow)\n    integer, intent(inout) :: x6(0:p_mix)\n    integer, intent(inout) :: x7(1:-(-a + b))\n    integer, intent(inout) :: x8(1:(a+b)*(c+1)-1)\n    integer, intent(inout) :: x9(1:(a-b)*(a-c))\n  end subroutine all_exprs\nend module expr_mod\n",
+  "encoding": "utf-8",
+  "format": "modern",
+  "modules": [
+    {
+      "name": "expr_mod",
+      "filename": "compile_time_all_exprs.f90",
+      "uses": {},
+      "variables": [
+        {
+          "name": "a",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "b",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "c",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "p_add",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "p_sub",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "p_mul",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "p_div",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "p_pow",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "p_mix",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "procedures": [
+        {
+          "name": "all_exprs",
+          "kind": "subroutine",
+          "module": "expr_mod",
+          "arguments": [
+            {
+              "name": "x1",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:p_add"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "p_add"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x2",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:p_sub"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "p_sub"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x3",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:p_mul"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "p_mul"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x4",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:p_div"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "p_div"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x5",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:p_pow"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "p_pow"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x6",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "0:p_mix"
+              ],
+              "lbound": [
+                "0"
+              ],
+              "ubound": [
+                "p_mix"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x7",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:-(-a + b)"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "-(-a + b)"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x8",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:(a+b)*(c+1)-1"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "(a+b)*(c+1)-1"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x9",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:(a-b)*(a-c)"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "(a-b)*(a-c)"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "result": null,
+          "attributes": [],
+          "uses": {},
+          "in_interface": false,
+          "variables": {}
+        }
+      ],
+      "derived_types": [],
+      "interfaces": []
+    }
+  ],
+  "submodules": [],
+  "programs": [],
+  "block_data_units": [],
+  "procedures": [],
+  "interfaces": [],
+  "derived_types": [],
+  "variables": [],
+  "includes": [],
+  "diagnostics": [],
+  "symbols": {
+    "expr_mod": {
+      "name": "expr_mod",
+      "filename": "compile_time_all_exprs.f90",
+      "uses": {},
+      "variables": [
+        {
+          "name": "a",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "b",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "c",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "p_add",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "p_sub",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "p_mul",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "p_div",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "p_pow",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "p_mix",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "procedures": [
+        {
+          "name": "all_exprs",
+          "kind": "subroutine",
+          "module": "expr_mod",
+          "arguments": [
+            {
+              "name": "x1",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:p_add"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "p_add"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x2",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:p_sub"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "p_sub"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x3",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:p_mul"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "p_mul"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x4",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:p_div"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "p_div"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x5",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:p_pow"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "p_pow"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x6",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "0:p_mix"
+              ],
+              "lbound": [
+                "0"
+              ],
+              "ubound": [
+                "p_mix"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x7",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:-(-a + b)"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "-(-a + b)"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x8",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:(a+b)*(c+1)-1"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "(a+b)*(c+1)-1"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x9",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:(a-b)*(a-c)"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "(a-b)*(a-c)"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "all_exprs",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "result": null,
+          "attributes": [],
+          "uses": {},
+          "in_interface": false,
+          "variables": {}
+        }
+      ],
+      "derived_types": [],
+      "interfaces": []
+    }
   }
-]
+}

@@ -1,102 +1,219 @@
-[
-  {
-    "name": "daxpy",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "n",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "lbound": [],
-        "ubound": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "daxpy",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "a",
-        "base_type": "real",
-        "kind": null,
-        "rank": 0,
-        "shape": [],
-        "lbound": [],
-        "ubound": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "daxpy",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "x",
-        "base_type": "real",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          "n"
-        ],
-        "lbound": [
-          "1"
-        ],
-        "ubound": [
-          "n"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "daxpy",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "y",
-        "base_type": "real",
-        "kind": null,
-        "rank": 1,
-        "shape": [
-          "n"
-        ],
-        "lbound": [
-          "1"
-        ],
-        "ubound": [
-          "n"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "daxpy",
-        "intent": "unknown",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
+{
+  "filename": "f77_subroutine.f",
+  "source": "      subroutine daxpy(n,a,x,y)\n      integer n\n      double precision a,x(n),y(n)\n      do 10 i=1,n\n     1y(i)=y(i)+a*x(i)\n 10   continue\n      return\n      end\n",
+  "encoding": "utf-8",
+  "format": "f77",
+  "modules": [],
+  "submodules": [],
+  "programs": [],
+  "block_data_units": [],
+  "procedures": [
+    {
+      "name": "daxpy",
+      "kind": "subroutine",
+      "module": null,
+      "arguments": [
+        {
+          "name": "n",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "daxpy",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "a",
+          "base_type": "real",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "daxpy",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "x",
+          "base_type": "real",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            "n"
+          ],
+          "lbound": [
+            "1"
+          ],
+          "ubound": [
+            "n"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "daxpy",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "y",
+          "base_type": "real",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            "n"
+          ],
+          "lbound": [
+            "1"
+          ],
+          "ubound": [
+            "n"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "daxpy",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    }
+  ],
+  "interfaces": [],
+  "derived_types": [],
+  "variables": [],
+  "includes": [],
+  "diagnostics": [],
+  "symbols": {
+    "daxpy": {
+      "name": "daxpy",
+      "kind": "subroutine",
+      "module": null,
+      "arguments": [
+        {
+          "name": "n",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "daxpy",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "a",
+          "base_type": "real",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "daxpy",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "x",
+          "base_type": "real",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            "n"
+          ],
+          "lbound": [
+            "1"
+          ],
+          "ubound": [
+            "n"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "daxpy",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "y",
+          "base_type": "real",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            "n"
+          ],
+          "lbound": [
+            "1"
+          ],
+          "ubound": [
+            "n"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "daxpy",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    }
   }
-]
+}
