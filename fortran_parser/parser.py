@@ -2529,9 +2529,13 @@ class FortranParser:
         filename: str | None = None,
         macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     ) -> list[FortranProcedureSignature]:
-        if macro_defines is None:
-            macro_defines = self.macro_defines
-        return _parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
+        parsed = self.parse_file(code, filename=filename, macro_defines=macro_defines)
+        signatures = list(parsed.procedures)
+        for mod in parsed.modules:
+            signatures.extend(mod.procedures)
+        for submod in parsed.submodules:
+            signatures.extend(submod.procedures)
+        return signatures
 
     def _parse_signature(
         self,
@@ -2539,12 +2543,16 @@ class FortranParser:
         filename: str | None = None,
         macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     ) -> FortranProcedureSignature:
-        if macro_defines is None:
-            macro_defines = self.macro_defines
-        return _parse_fortran_signature(code, filename=filename, macro_defines=macro_defines)
+        items = self._parse_signatures(code, filename=filename, macro_defines=macro_defines)
+        if len(items) == 1:
+            return items[0]
+        if not items:
+            raise FortranParseError("parse_signature() expected exactly one signature, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
+        raise FortranParseError(f"parse_signature() expected exactly one signature, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
     def _parse_project_signatures(self, files: dict[str, str]) -> list[FortranProcedureSignature]:
-        return _parse_fortran_project_signatures(files, macro_defines=self.macro_defines)
+        project = self.parse_project(files)
+        return list(project.procedures.values())
 
     def parse_file(
         self,
@@ -2727,7 +2735,7 @@ class FortranParser:
         return self.parse_types(code, filename=filename)
 
     def parse_modules(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
-        items = _parse_fortran_modules_impl(code, filename=filename, require_present=True)
+        items = self.parse_file(code, filename=filename).modules
         if len(items) == 1:
             return items[0]
         if not items:
@@ -2738,7 +2746,7 @@ class FortranParser:
         return self.parse_modules(code, filename=filename)
 
     def parse_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
-        items = _parse_fortran_interfaces(code, filename=filename)
+        items = self.parse_file(code, filename=filename).interfaces
         if len(items) == 1:
             return items[0]
         if not items:
@@ -2749,7 +2757,7 @@ class FortranParser:
         return self.parse_interfaces(code, filename=filename)
 
     def parse_submodules(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
-        items = _parse_fortran_submodules(code, filename=filename)
+        items = self.parse_file(code, filename=filename).submodules
         if len(items) == 1:
             return items[0]
         if not items:
@@ -2760,7 +2768,7 @@ class FortranParser:
         return self.parse_submodules(code, filename=filename)
 
     def parse_programs(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
-        items = _parse_fortran_programs(code, filename=filename)
+        items = self.parse_file(code, filename=filename).programs
         if len(items) == 1:
             return items[0]
         if not items:
@@ -2771,7 +2779,7 @@ class FortranParser:
         return self.parse_programs(code, filename=filename)
 
     def parse_block_data(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
-        items = _parse_fortran_block_data(code, filename=filename)
+        items = self.parse_file(code, filename=filename).block_data_units
         if len(items) == 1:
             return items[0]
         if not items:
