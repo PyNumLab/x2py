@@ -3,30 +3,107 @@ import pytest
 
 from fortran_parser.cli import _format_wrap_readiness
 
-from fortran_parser import (
-    FortranParseError,
-    assess_wrap_readiness,
-    collect_signature_shape_symbols,
-    evaluate_signature_shapes,
-    parse_fortran_file,
-    parse_fortran_project,
-    parse_fortran_namespace,
-    parse_fortran_project_signatures,
-    parse_fortran_signature,
-    parse_fortran_signatures,
-    parse_fortran_block_data,
-    parse_fortran_block_data_unit,
-    parse_fortran_derived_type,
-    parse_fortran_interface,
-    parse_fortran_interfaces,
-    parse_fortran_module,
-    parse_fortran_modules,
-    parse_fortran_program,
-    parse_fortran_programs,
-    parse_fortran_submodule,
-    parse_fortran_submodules,
-    parse_fortran_types,
-)
+from fortran_parser import FortranParseError, parse_fortran_file, parse_fortran_project
+
+
+def _parsed_file(code: str, filename: str | None = None):
+    return parse_fortran_file(code, filename=filename)
+
+
+def parse_fortran_signatures(code, filename=None, macro_defines=None):
+    return _parsed_file(code, filename=filename).procedures
+
+
+def parse_fortran_signature(code, filename=None, macro_defines=None):
+    items = parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
+    assert len(items) == 1
+    return items[0]
+
+
+def parse_fortran_project_signatures(files):
+    return list(parse_fortran_project(files).procedures.values())
+
+
+def parse_fortran_types(code, filename=None):
+    return _parsed_file(code, filename=filename).derived_types
+
+
+def parse_fortran_derived_type(code, filename=None):
+    items = parse_fortran_types(code, filename=filename)
+    assert len(items) == 1
+    return items[0]
+
+
+def parse_fortran_modules(code, filename=None):
+    return _parsed_file(code, filename=filename).modules
+
+
+def parse_fortran_module(code, filename=None):
+    items = parse_fortran_modules(code, filename=filename)
+    assert len(items) == 1
+    return items[0]
+
+
+def parse_fortran_interfaces(code, filename=None):
+    return _parsed_file(code, filename=filename).interfaces
+
+
+def parse_fortran_interface(code, filename=None):
+    items = parse_fortran_interfaces(code, filename=filename)
+    assert len(items) == 1
+    return items[0]
+
+
+def parse_fortran_submodules(code, filename=None):
+    return _parsed_file(code, filename=filename).submodules
+
+
+def parse_fortran_submodule(code, filename=None):
+    items = parse_fortran_submodules(code, filename=filename)
+    assert len(items) == 1
+    return items[0]
+
+
+def parse_fortran_programs(code, filename=None):
+    return _parsed_file(code, filename=filename).programs
+
+
+def parse_fortran_program(code, filename=None):
+    items = parse_fortran_programs(code, filename=filename)
+    assert len(items) == 1
+    return items[0]
+
+
+def parse_fortran_block_data(code, filename=None):
+    return _parsed_file(code, filename=filename).block_data_units
+
+
+def parse_fortran_block_data_unit(code, filename=None):
+    items = parse_fortran_block_data(code, filename=filename)
+    assert len(items) == 1
+    return items[0]
+
+
+def parse_fortran_namespace(root, extensions=(".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08")):
+    from fortran_parser.parser import _parse_fortran_namespace
+    return _parse_fortran_namespace(root, extensions=extensions)
+
+
+def assess_wrap_readiness(code, filename=None):
+    from fortran_parser.parser import _assess_wrap_readiness
+    return _assess_wrap_readiness(code, filename=filename)
+
+
+def collect_signature_shape_symbols(signature):
+    from fortran_parser.parser import collect_signature_shape_symbols as _c
+    return _c(signature)
+
+
+def evaluate_signature_shapes(signature, *, scalar_context=None):
+    from fortran_parser.parser import evaluate_signature_shapes as _e
+    return _e(signature, scalar_context=scalar_context)
+
+
 
 
 def test_subroutine_signature_with_intent_and_dimension():
