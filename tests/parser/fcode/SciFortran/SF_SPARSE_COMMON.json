@@ -13,88 +13,7 @@
           "zeye"
         ]
       },
-      "variables": [
-        {
-          "name": "Nrow",
-          "base_type": "integer",
-          "kind": null,
-          "rank": 0,
-          "shape": [],
-          "lbound": [],
-          "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "public",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        },
-        {
-          "name": "Ncol",
-          "base_type": "integer",
-          "kind": null,
-          "rank": 0,
-          "shape": [],
-          "lbound": [],
-          "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "public",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        },
-        {
-          "name": "Nelements",
-          "base_type": "integer",
-          "kind": null,
-          "rank": 0,
-          "shape": [],
-          "lbound": [],
-          "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "public",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        },
-        {
-          "name": "status",
-          "base_type": "logical",
-          "kind": null,
-          "rank": 0,
-          "shape": [],
-          "lbound": [],
-          "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "public",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        }
-      ],
+      "variables": [],
       "procedures": [
         {
           "name": "shape_matrix",
@@ -501,7 +420,108 @@
           "variables": {}
         }
       ],
-      "derived_types": [],
+      "derived_types": [
+        {
+          "name": "sparse_matrix",
+          "module": "SF_SPARSE_COMMON",
+          "fields": [
+            {
+              "name": "Nrow",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "Ncol",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "Nelements",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "status",
+              "base_type": "logical",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "methods": [
+            "shape     => shape_matrix"
+          ],
+          "extends": null,
+          "attributes": [],
+          "procedure_bindings": [
+            {
+              "name": "shape     => shape_matrix",
+              "attrs": [
+                "pass"
+              ]
+            }
+          ],
+          "generic_bindings": []
+        }
+      ],
       "interfaces": [
         {
           "name": "append",
@@ -538,88 +558,7 @@
           "zeye"
         ]
       },
-      "variables": [
-        {
-          "name": "Nrow",
-          "base_type": "integer",
-          "kind": null,
-          "rank": 0,
-          "shape": [],
-          "lbound": [],
-          "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "public",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        },
-        {
-          "name": "Ncol",
-          "base_type": "integer",
-          "kind": null,
-          "rank": 0,
-          "shape": [],
-          "lbound": [],
-          "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "public",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        },
-        {
-          "name": "Nelements",
-          "base_type": "integer",
-          "kind": null,
-          "rank": 0,
-          "shape": [],
-          "lbound": [],
-          "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "public",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        },
-        {
-          "name": "status",
-          "base_type": "logical",
-          "kind": null,
-          "rank": 0,
-          "shape": [],
-          "lbound": [],
-          "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "public",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        }
-      ],
+      "variables": [],
       "procedures": [
         {
           "name": "shape_matrix",
@@ -1026,7 +965,108 @@
           "variables": {}
         }
       ],
-      "derived_types": [],
+      "derived_types": [
+        {
+          "name": "sparse_matrix",
+          "module": "SF_SPARSE_COMMON",
+          "fields": [
+            {
+              "name": "Nrow",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "Ncol",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "Nelements",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "status",
+              "base_type": "logical",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "methods": [
+            "shape     => shape_matrix"
+          ],
+          "extends": null,
+          "attributes": [],
+          "procedure_bindings": [
+            {
+              "name": "shape     => shape_matrix",
+              "attrs": [
+                "pass"
+              ]
+            }
+          ],
+          "generic_bindings": []
+        }
+      ],
       "interfaces": [
         {
           "name": "append",

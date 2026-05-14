@@ -15,54 +15,7 @@
         "SF_SPARSE_COMMON": [],
         "MPI": []
       },
-      "variables": [
-        {
-          "name": "size",
-          "base_type": "integer",
-          "kind": null,
-          "rank": 0,
-          "shape": [],
-          "lbound": [],
-          "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "private",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        },
-        {
-          "name": "cols",
-          "base_type": "integer",
-          "kind": null,
-          "rank": 1,
-          "shape": [
-            ":"
-          ],
-          "lbound": [
-            null
-          ],
-          "ubound": [
-            null
-          ],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "private",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": true,
-          "pointer": false
-        }
-      ],
+      "variables": [],
       "procedures": [
         {
           "name": "init_dmatrix_csr",
@@ -3797,6 +3750,63 @@
       ],
       "derived_types": [
         {
+          "name": "sparse_row_csr",
+          "module": "SF_SPARSE_ARRAY_CSR",
+          "fields": [
+            {
+              "name": "size",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "cols",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                ":"
+              ],
+              "lbound": [
+                null
+              ],
+              "ubound": [
+                null
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": true,
+              "pointer": false
+            }
+          ],
+          "methods": [],
+          "extends": null,
+          "attributes": [],
+          "procedure_bindings": [],
+          "generic_bindings": []
+        },
+        {
           "name": "sparse_drow_csr",
           "module": "SF_SPARSE_ARRAY_CSR",
           "fields": [
@@ -3828,7 +3838,63 @@
             }
           ],
           "methods": [],
-          "extends": "sparse_row_csr",
+          "extends": {
+            "name": "sparse_row_csr",
+            "module": "SF_SPARSE_ARRAY_CSR",
+            "fields": [
+              {
+                "name": "size",
+                "base_type": "integer",
+                "kind": null,
+                "rank": 0,
+                "shape": [],
+                "lbound": [],
+                "ubound": [],
+                "value": null,
+                "value_type": "unknown",
+                "is_parameter": false,
+                "dimensions": [],
+                "visibility": "public",
+                "procedure": null,
+                "intent": "unknown",
+                "optional": false,
+                "pass_by_value": false,
+                "allocatable": false,
+                "pointer": false
+              },
+              {
+                "name": "cols",
+                "base_type": "integer",
+                "kind": null,
+                "rank": 1,
+                "shape": [
+                  ":"
+                ],
+                "lbound": [
+                  null
+                ],
+                "ubound": [
+                  null
+                ],
+                "value": null,
+                "value_type": "unknown",
+                "is_parameter": false,
+                "dimensions": [],
+                "visibility": "public",
+                "procedure": null,
+                "intent": "unknown",
+                "optional": false,
+                "pass_by_value": false,
+                "allocatable": true,
+                "pointer": false
+              }
+            ],
+            "methods": [],
+            "extends": null,
+            "attributes": [],
+            "procedure_bindings": [],
+            "generic_bindings": []
+          },
           "attributes": [],
           "procedure_bindings": [],
           "generic_bindings": []
@@ -3865,7 +3931,63 @@
             }
           ],
           "methods": [],
-          "extends": "sparse_row_csr",
+          "extends": {
+            "name": "sparse_row_csr",
+            "module": "SF_SPARSE_ARRAY_CSR",
+            "fields": [
+              {
+                "name": "size",
+                "base_type": "integer",
+                "kind": null,
+                "rank": 0,
+                "shape": [],
+                "lbound": [],
+                "ubound": [],
+                "value": null,
+                "value_type": "unknown",
+                "is_parameter": false,
+                "dimensions": [],
+                "visibility": "public",
+                "procedure": null,
+                "intent": "unknown",
+                "optional": false,
+                "pass_by_value": false,
+                "allocatable": false,
+                "pointer": false
+              },
+              {
+                "name": "cols",
+                "base_type": "integer",
+                "kind": null,
+                "rank": 1,
+                "shape": [
+                  ":"
+                ],
+                "lbound": [
+                  null
+                ],
+                "ubound": [
+                  null
+                ],
+                "value": null,
+                "value_type": "unknown",
+                "is_parameter": false,
+                "dimensions": [],
+                "visibility": "public",
+                "procedure": null,
+                "intent": "unknown",
+                "optional": false,
+                "pass_by_value": false,
+                "allocatable": true,
+                "pointer": false
+              }
+            ],
+            "methods": [],
+            "extends": null,
+            "attributes": [],
+            "procedure_bindings": [],
+            "generic_bindings": []
+          },
           "attributes": [],
           "procedure_bindings": [],
           "generic_bindings": []
@@ -4175,54 +4297,7 @@
         "SF_SPARSE_COMMON": [],
         "MPI": []
       },
-      "variables": [
-        {
-          "name": "size",
-          "base_type": "integer",
-          "kind": null,
-          "rank": 0,
-          "shape": [],
-          "lbound": [],
-          "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "private",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        },
-        {
-          "name": "cols",
-          "base_type": "integer",
-          "kind": null,
-          "rank": 1,
-          "shape": [
-            ":"
-          ],
-          "lbound": [
-            null
-          ],
-          "ubound": [
-            null
-          ],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "private",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": true,
-          "pointer": false
-        }
-      ],
+      "variables": [],
       "procedures": [
         {
           "name": "init_dmatrix_csr",
@@ -7957,6 +8032,63 @@
       ],
       "derived_types": [
         {
+          "name": "sparse_row_csr",
+          "module": "SF_SPARSE_ARRAY_CSR",
+          "fields": [
+            {
+              "name": "size",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "cols",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                ":"
+              ],
+              "lbound": [
+                null
+              ],
+              "ubound": [
+                null
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": true,
+              "pointer": false
+            }
+          ],
+          "methods": [],
+          "extends": null,
+          "attributes": [],
+          "procedure_bindings": [],
+          "generic_bindings": []
+        },
+        {
           "name": "sparse_drow_csr",
           "module": "SF_SPARSE_ARRAY_CSR",
           "fields": [
@@ -7988,7 +8120,63 @@
             }
           ],
           "methods": [],
-          "extends": "sparse_row_csr",
+          "extends": {
+            "name": "sparse_row_csr",
+            "module": "SF_SPARSE_ARRAY_CSR",
+            "fields": [
+              {
+                "name": "size",
+                "base_type": "integer",
+                "kind": null,
+                "rank": 0,
+                "shape": [],
+                "lbound": [],
+                "ubound": [],
+                "value": null,
+                "value_type": "unknown",
+                "is_parameter": false,
+                "dimensions": [],
+                "visibility": "public",
+                "procedure": null,
+                "intent": "unknown",
+                "optional": false,
+                "pass_by_value": false,
+                "allocatable": false,
+                "pointer": false
+              },
+              {
+                "name": "cols",
+                "base_type": "integer",
+                "kind": null,
+                "rank": 1,
+                "shape": [
+                  ":"
+                ],
+                "lbound": [
+                  null
+                ],
+                "ubound": [
+                  null
+                ],
+                "value": null,
+                "value_type": "unknown",
+                "is_parameter": false,
+                "dimensions": [],
+                "visibility": "public",
+                "procedure": null,
+                "intent": "unknown",
+                "optional": false,
+                "pass_by_value": false,
+                "allocatable": true,
+                "pointer": false
+              }
+            ],
+            "methods": [],
+            "extends": null,
+            "attributes": [],
+            "procedure_bindings": [],
+            "generic_bindings": []
+          },
           "attributes": [],
           "procedure_bindings": [],
           "generic_bindings": []
@@ -8025,7 +8213,63 @@
             }
           ],
           "methods": [],
-          "extends": "sparse_row_csr",
+          "extends": {
+            "name": "sparse_row_csr",
+            "module": "SF_SPARSE_ARRAY_CSR",
+            "fields": [
+              {
+                "name": "size",
+                "base_type": "integer",
+                "kind": null,
+                "rank": 0,
+                "shape": [],
+                "lbound": [],
+                "ubound": [],
+                "value": null,
+                "value_type": "unknown",
+                "is_parameter": false,
+                "dimensions": [],
+                "visibility": "public",
+                "procedure": null,
+                "intent": "unknown",
+                "optional": false,
+                "pass_by_value": false,
+                "allocatable": false,
+                "pointer": false
+              },
+              {
+                "name": "cols",
+                "base_type": "integer",
+                "kind": null,
+                "rank": 1,
+                "shape": [
+                  ":"
+                ],
+                "lbound": [
+                  null
+                ],
+                "ubound": [
+                  null
+                ],
+                "value": null,
+                "value_type": "unknown",
+                "is_parameter": false,
+                "dimensions": [],
+                "visibility": "public",
+                "procedure": null,
+                "intent": "unknown",
+                "optional": false,
+                "pass_by_value": false,
+                "allocatable": true,
+                "pointer": false
+              }
+            ],
+            "methods": [],
+            "extends": null,
+            "attributes": [],
+            "procedure_bindings": [],
+            "generic_bindings": []
+          },
           "attributes": [],
           "procedure_bindings": [],
           "generic_bindings": []

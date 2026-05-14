@@ -61,6 +61,31 @@ _PreprocessedLines = list[tuple[str, int | None, str | None]]
 _SourceOrLines = str | _PreprocessedLines
 
 
+def _is_derived_type_block_start(line: str) -> bool:
+    stripped = line.strip()
+    lower = stripped.lower()
+    if not lower.startswith("type"):
+        return False
+    if lower.startswith("type("):
+        return False
+    if _DERIVED_TYPE_RE.match(stripped):
+        return True
+    return bool(re.match(r"^type\s+\w+\s*$", stripped, re.IGNORECASE))
+
+
+def _parse_derived_type_start(line: str) -> tuple[str, list[str]] | None:
+    stripped = line.strip()
+    tm = _DERIVED_TYPE_RE.match(stripped)
+    if tm:
+        attr_txt = (tm.group("attrs") or "").strip().lstrip(",").strip()
+        attrs = [a.strip() for a in split_csv(attr_txt)] if attr_txt else []
+        return tm.group("name"), attrs
+    legacy = re.match(r"^type\s+(?P<name>\w+)\s*$", stripped, re.IGNORECASE)
+    if legacy:
+        return legacy.group("name"), []
+    return None
+
+
 def _preprocessed_lines(source: _SourceOrLines, filename: str | None) -> _PreprocessedLines:
     """Return preprocessed source lines, reusing file-level preprocessing when supplied."""
     if isinstance(source, list):
@@ -680,10 +705,9 @@ def _parse_fortran_types(code: _SourceOrLines, filename: str | None = None) -> l
             current_module = None
             continue
         if current_type is None:
-            tm = _DERIVED_TYPE_RE.match(s)
-            if tm:
-                attr_txt = (tm.group("attrs") or "").strip().lstrip(",").strip()
-                attrs = [a.strip() for a in split_csv(attr_txt)] if attr_txt else []
+            parsed_type = _parse_derived_type_start(s)
+            if parsed_type:
+                type_name, attrs = parsed_type
                 extends = None
                 normalized_attrs: list[str] = []
                 for a in attrs:
@@ -693,7 +717,7 @@ def _parse_fortran_types(code: _SourceOrLines, filename: str | None = None) -> l
                     else:
                         normalized_attrs.append(la)
                 current_type = FortranDerivedType(
-                    name=tm.group("name"),
+                    name=type_name,
                     module=current_module,
                     extends=extends,
                     attributes=normalized_attrs,
@@ -799,7 +823,7 @@ def _parse_fortran_modules_impl(
             continue
         if in_contains:
             continue
-        if _DERIVED_TYPE_RE.match(s):
+        if _is_derived_type_block_start(s):
             type_depth += 1
             continue
         if l.startswith("end type"):
@@ -2542,7 +2566,7 @@ def _parse_module_variable_line(line: str, module: FortranModule, filename: str 
         return
     star_kind = _find_legacy_star_kind(left)
     source_form = _source_form(filename)
-    if star_kind and source_form == "modern":
+    if star_kind and source_form == "modern" and star_kind[0] != "character":
         base, kind = star_kind
         raise FortranParseError(
             f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.",
