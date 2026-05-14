@@ -876,75 +876,7 @@ def _parse_fortran_module(code: _SourceOrLines, filename: str | None = None) -> 
 
 
 def _parse_fortran_interfaces(code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
-    """Parse `interface ... end interface` blocks and contained procedures."""
-    lines = _preprocessed_lines(code, filename)
-    current_module = None
-    current_interface: FortranInterface | None = None
-    current_proc = None
-    interfaces: list[FortranInterface] = []
-    for line, lineno, source_line in lines:
-        s = line.strip()
-        if not s:
-            continue
-        l = s.lower()
-        _enforce_source_form_compatibility(s, filename, lineno, source_line)
-        submodule_match = _SUBMODULE_RE.match(s)
-        if submodule_match:
-            current_module = submodule_match.group("name")
-            continue
-        if l.startswith("end submodule"):
-            current_module = None
-            continue
-        if l.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", l):
-            current_module = s.split()[1]
-            continue
-        if l.startswith("end module"):
-            current_module = None
-            continue
-        if l.startswith("interface"):
-            parts = s.split(maxsplit=1)
-            name = parts[1].strip() if len(parts) > 1 else None
-            current_interface = FortranInterface(name=name, module=current_module)
-            current_proc = None
-            continue
-        if l.startswith("end interface"):
-            if current_proc is not None and current_interface is not None:
-                sig = _finalize_proc(current_proc)
-                if current_interface.name:
-                    iface_attr = f"interface({current_interface.name})"
-                    if iface_attr not in sig.attributes:
-                        sig.attributes.append(iface_attr)
-                current_interface.procedures.append(sig)
-                current_proc = None
-            if current_interface is not None:
-                interfaces.append(current_interface)
-            current_interface = None
-            continue
-        if current_interface is None:
-            continue
-
-        if current_proc is None:
-            parsed = _parse_header(s, current_module, True)
-            if parsed:
-                current_proc = parsed
-                current_proc["filename"] = filename
-                current_proc["header_lineno"] = lineno
-                current_proc["header_source_line"] = source_line
-            continue
-
-        if l.startswith("end subroutine") or l.startswith("end function") or l == "end":
-            sig = _finalize_proc(current_proc)
-            if current_interface.name:
-                iface_attr = f"interface({current_interface.name})"
-                if iface_attr not in sig.attributes:
-                    sig.attributes.append(iface_attr)
-            current_interface.procedures.append(sig)
-            current_proc = None
-            continue
-
-        _parse_declaration(s, current_proc, filename=filename, lineno=lineno, source_line=source_line)
-
-    return interfaces
+    return _DEFAULT_PARSER._parse_fortran_interfaces(code, filename=filename)
 
 
 def _parse_fortran_interface(code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
@@ -2782,7 +2714,74 @@ class FortranParser:
         )
 
     def _parse_fortran_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
-        return _parse_fortran_interfaces(code, filename=filename)
+        lines = _preprocessed_lines(code, filename)
+        current_module = None
+        current_interface: FortranInterface | None = None
+        current_proc = None
+        interfaces: list[FortranInterface] = []
+        for line, lineno, source_line in lines:
+            s = line.strip()
+            if not s:
+                continue
+            l = s.lower()
+            _enforce_source_form_compatibility(s, filename, lineno, source_line)
+            submodule_match = _SUBMODULE_RE.match(s)
+            if submodule_match:
+                current_module = submodule_match.group("name")
+                continue
+            if l.startswith("end submodule"):
+                current_module = None
+                continue
+            if l.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", l):
+                current_module = s.split()[1]
+                continue
+            if l.startswith("end module"):
+                current_module = None
+                continue
+            if l.startswith("interface"):
+                parts = s.split(maxsplit=1)
+                name = parts[1].strip() if len(parts) > 1 else None
+                current_interface = FortranInterface(name=name, module=current_module)
+                current_proc = None
+                continue
+            if l.startswith("end interface"):
+                if current_proc is not None and current_interface is not None:
+                    sig = _finalize_proc(current_proc)
+                    if current_interface.name:
+                        iface_attr = f"interface({current_interface.name})"
+                        if iface_attr not in sig.attributes:
+                            sig.attributes.append(iface_attr)
+                    current_interface.procedures.append(sig)
+                    current_proc = None
+                if current_interface is not None:
+                    interfaces.append(current_interface)
+                current_interface = None
+                continue
+            if current_interface is None:
+                continue
+
+            if current_proc is None:
+                parsed = _parse_header(s, current_module, True)
+                if parsed:
+                    current_proc = parsed
+                    current_proc["filename"] = filename
+                    current_proc["header_lineno"] = lineno
+                    current_proc["header_source_line"] = source_line
+                continue
+
+            if l.startswith("end subroutine") or l.startswith("end function") or l == "end":
+                sig = _finalize_proc(current_proc)
+                if current_interface.name:
+                    iface_attr = f"interface({current_interface.name})"
+                    if iface_attr not in sig.attributes:
+                        sig.attributes.append(iface_attr)
+                current_interface.procedures.append(sig)
+                current_proc = None
+                continue
+
+            _parse_declaration(s, current_proc, filename=filename, lineno=lineno, source_line=source_line)
+
+        return interfaces
 
     def _parse_fortran_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
         return _expect_single_parse_result(
