@@ -1,4 +1,4 @@
-# minimal-fortran-parser
+# minimal-x2py
 
 Standalone extraction of the Fortran parser used for wrapper-oriented signature
 extraction.
@@ -72,14 +72,16 @@ models are unchanged.
 
 ### Run from source tree
 
+> Parsing is a stage now, so pass `--parse` when you want parser output.
+
 ```bash
-python -m fortran_parser <path ...>
+python -m x2py <path ...> --parse
 ```
 
 ### Run after installation
 
 ```bash
-fortran-parser <path ...>
+x2py <path ...> --parse
 ```
 
 `<path ...>` can be one or more files and/or directories. Directories are
@@ -103,7 +105,7 @@ end module m1
 ```
 
 ```bash
-python -m fortran_parser tests/fcode/basic_subroutine.f90
+python -m x2py tests/fcode/basic_subroutine.f90
 ```
 
 Expected style of output:
@@ -155,7 +157,7 @@ end module io_ops
 Command:
 
 ```bash
-python -m fortran_parser mixed_example.f90
+python -m x2py mixed_example.f90
 ```
 
 Expected output style:
@@ -182,8 +184,10 @@ Notes:
 
 ### Example 2: JSON output to stdout
 
+> JSON output is currently supported only for the parsing stage (`--parse`).
+
 ```bash
-python -m fortran_parser tests/fcode/basic_subroutine.f90 --json
+python -m x2py tests/fcode/basic_subroutine.f90 --json
 ```
 
 Expected JSON structure (top-level keyed by input path):
@@ -196,7 +200,7 @@ Expected JSON structure (top-level keyed by input path):
 ### Example 3: wrap-readiness summary
 
 ```bash
-python -m fortran_parser tests/fcode/basic_subroutine.f90 --wrap-readiness
+python -m x2py tests/fcode/basic_subroutine.f90 --wrap-readiness
 ```
 
 The summary prints `Wrappable: yes` when no blockers are detected. If the
@@ -204,16 +208,35 @@ answer is `Wrappable: no`, it prints a `Why not wrappable` section with the
 blocking diagnostics, such as unresolved imported derived types or unresolved
 symbolic kinds.
 
+### Example 5: semantic IR JSON output
+
+```bash
+python -m x2py tests/fcode/basic_subroutine.f90 --semantics --json
+```
+
+This prints semantic conversion payload per file, including:
+
+- `semantic_modules`: semantic module/class/function/type metadata
+- `pyi`: generated `.pyi` text associated with those semantic modules
+
+### Example 6: print generated `.pyi` text
+
+```bash
+python -m x2py tests/fcode/basic_subroutine.f90 --pyi
+```
+
+This prints a per-file section followed by the generated Python stub text.
+
 ### Example 4: JSON output written to file
 
 ```bash
-python -m fortran_parser tests/fcode/basic_subroutine.f90 --json-out report.json
+python -m x2py tests/fcode/basic_subroutine.f90 --json-out report.json
 ```
 
 And print + write together:
 
 ```bash
-python -m fortran_parser tests/fcode/basic_subroutine.f90 --json --json-out report.json
+python -m x2py tests/fcode/basic_subroutine.f90 --json --json-out report.json
 ```
 
 ## Python script usage

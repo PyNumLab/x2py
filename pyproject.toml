@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "minimal-fortran-parser"
+name = "x2py"
 version = "0.1.0"
-description = "Minimal Fortran signature parser for wrapper generation"
+description = "x2py: parser + semantic IR + Python stub generation pipeline"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -14,7 +14,7 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["fortran_parser*", "semantics*",]
+include = ["fortran_parser*", "semantics*", "x2py*",]
 
 [project.scripts]
-fortran-parser = "fortran_parser.cli:main"
+x2py = "x2py.cli:main"

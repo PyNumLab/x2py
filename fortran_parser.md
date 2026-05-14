@@ -94,13 +94,13 @@ models are unchanged.
 ### 3.1 Basic CLI invocation
 
 ```bash
-python -m fortran_parser <path ...>
+python -m x2py <path ...> --parse
 ```
 
 or (if installed as a console script):
 
 ```bash
-fortran-parser <path ...>
+x2py <path ...> --parse
 ```
 
 `<path ...>` supports files and directories. Directories are recursively scanned
@@ -126,7 +126,7 @@ end module m1
 Command:
 
 ```bash
-python -m fortran_parser tests/fcode/basic_subroutine.f90
+python -m x2py tests/fcode/basic_subroutine.f90
 ```
 
 Expected output shape:
@@ -185,7 +185,7 @@ end module io_ops
 Command:
 
 ```bash
-python -m fortran_parser mixed_example.f90
+python -m x2py mixed_example.f90
 ```
 
 ```text
@@ -207,19 +207,19 @@ File: mixed_example.f90
 Print JSON:
 
 ```bash
-python -m fortran_parser tests/fcode/basic_subroutine.f90 --json
+python -m x2py tests/fcode/basic_subroutine.f90 --json
 ```
 
 Write JSON:
 
 ```bash
-python -m fortran_parser tests/fcode/basic_subroutine.f90 --json-out report.json
+python -m x2py tests/fcode/basic_subroutine.f90 --json-out report.json
 ```
 
 Print + write:
 
 ```bash
-python -m fortran_parser tests/fcode/basic_subroutine.f90 --json --json-out report.json
+python -m x2py tests/fcode/basic_subroutine.f90 --json --json-out report.json
 ```
 
 Expected JSON layout:
@@ -234,7 +234,7 @@ Expected JSON layout:
 ### 3.4 Wrap-readiness summary
 
 ```bash
-python -m fortran_parser tests/fcode/basic_subroutine.f90 --wrap-readiness
+python -m x2py tests/fcode/basic_subroutine.f90 --wrap-readiness
 ```
 
 This mode prints only the per-file readiness status. A non-wrappable file is
@@ -252,7 +252,7 @@ context, but it does **not** include a Python traceback.
 Example command:
 
 ```bash
-python -m fortran_parser tests/fcode/errors/err_duplicate_argument_name.f90
+python -m x2py tests/fcode/errors/err_duplicate_argument_name.f90
 ```
 
 Example diagnostic shape:
@@ -269,8 +269,8 @@ normal use. To disable color explicitly, pass `--no-color` or set the standard
 `NO_COLOR` environment variable:
 
 ```bash
-python -m fortran_parser bad.f90 --no-color
-NO_COLOR=1 python -m fortran_parser bad.f90
+python -m x2py bad.f90 --no-color
+NO_COLOR=1 python -m x2py bad.f90
 ```
 
 For parser development, use `--debug-traceback` to re-raise
@@ -278,14 +278,14 @@ For parser development, use `--debug-traceback` to re-raise
 error was raised internally:
 
 ```bash
-python -m fortran_parser bad.f90 --debug-traceback
+python -m x2py bad.f90 --debug-traceback
 ```
 
 The same developer mode can be enabled with the environment variable
 `FORTRAN_PARSER_DEBUG=1`:
 
 ```bash
-FORTRAN_PARSER_DEBUG=1 python -m fortran_parser bad.f90
+FORTRAN_PARSER_DEBUG=1 python -m x2py bad.f90
 ```
 
 In debug mode, the traceback's final exception message also includes a
