@@ -10,7 +10,7 @@ another source language.
 - Parse derived types (including inheritance and type-bound procedures).  
 - Parse modules (including module `use` imports and module variables).
 - Parse interfaces and procedures declared inside interfaces.  
-- Parse whole directories/namespaces with dependency-aware ordering.  
+- Parse multi-file projects with dependency-aware ordering.  
 - Resolve compile-time symbols used in type kinds and array shapes, both local
   and cross-file via imported modules.  
 - Produce wrap-readiness diagnostics (`unsupported_constructs`, unknown
@@ -143,12 +143,12 @@ another source language.
 
 ### 4.1 Day-to-day test command
 
-Primary regression command used now:
+Primary regression command:
 
-- `PYTHONPATH=. pytest -q tests/test_fortran_signature_parser.py tests/test_fortran_fixture_suite.py tests/test_cli.py tests/test_error_handling.py`
+- `python -m pytest -q`
 
-This single command runs all parser/unit checks, fixture/golden checks,
-large corpus parse checks (BLAS/LAPACK fixture parsing), and CLI checks.
+This runs the full parser test suite, including fixtures, corpus checks, CLI,
+and error handling coverage.
 
 ### 4.2 Unit-style parser tests (`tests/test_fortran_signature_parser.py`)
 
@@ -187,7 +187,7 @@ fixed/free-form Fortran files without requiring full golden outputs for each.
 - Use when parser behavior is intentionally changed and golden JSON needs
   updating.
 - Optional in-test auto-update flow is also supported:
-  - `FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py --confcutdir=tests/`
+  - `FORTRAN_PARSER_UPDATE_GOLDENS=1 python -m pytest -q tests/test_fortran_fixture_suite.py --confcutdir=tests/`
 
 ### 4.5 CLI tests (`tests/test_cli.py`)
 
@@ -371,7 +371,7 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
 - **Preprocessor-conditional duplicate procedures (guarded allowance):**
   - The parser does **not** run a full C preprocessor stage before parsing.
   - While scanning signatures, simple directive structure is tracked for `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` to model mutually-exclusive branches.
-  - `parse_fortran_signatures(..., macro_defines=...)` can optionally provide a macro decision set/map; when provided, inactive conditional branches are skipped during signature parsing so the parser can select the active code path.
+  - `parse_fortran_file(..., macro_defines=...)` can provide macro decisions; inactive conditional branches are skipped during signature extraction so the active code path is selected.
     - accepted forms: `set[str]` or `dict[str, int|bool|str]`
     - dictionary values are truthy/falsey (`0`, `False`, `"0"`, `"false"` treated as undefined/disabled)
   - Basic `#if` expressions are supported for branch selection (`defined(X)`, `!`, `&&`, `||`, parentheses, `0`/`1`).
