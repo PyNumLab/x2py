@@ -554,9 +554,21 @@ def _parse_fortran_file(
         interfaces=[iface for iface in interfaces if iface.module is None],
         derived_types=[dtype for dtype in derived_types if dtype.module is None],
     )
-    file.symbols.update({m.name.lower(): m for m in modules})
-    file.symbols.update({sm.name.lower(): sm for sm in submodules})
-    file.symbols.update({p.name.lower(): p for p in standalone_procedures})
+    def _add_file_symbol(name: str, symbol: object) -> None:
+        key = name.lower()
+        if key in file.symbols:
+            raise FortranParseError(
+                f"Duplicate symbol '{name}' in file scope.",
+                filename=filename,
+            )
+        file.symbols[key] = symbol
+
+    for m in modules:
+        _add_file_symbol(m.name, m)
+    for sm in submodules:
+        _add_file_symbol(sm.name, sm)
+    for p in standalone_procedures:
+        _add_file_symbol(p.name, p)
     return file
 
 
@@ -586,46 +598,52 @@ def _parse_fortran_project(
         parsed_files = [parse_fortran_file(path, encoding=encoding) for path in files]
 
     project = FortranProject(files=parsed_files)
+
+    def _add_scoped_symbol(scope: dict[str, object], key: str, value: object, *, label: str) -> None:
+        if key in scope:
+            raise FortranParseError(f"Duplicate symbol '{key}' in {label}.")
+        scope[key] = value
+
     for f in parsed_files:
         for module in f.modules:
             module_key = module.name.lower()
-            project.modules[module_key] = module
+            _add_scoped_symbol(project.modules, module_key, module, label="project module scope")
             project.dependencies[module_key] = {name.lower() for name in module.uses}
             for proc in module.procedures:
                 proc_key = f"{module_key}.{proc.name.lower()}"
-                project.procedures[proc_key] = proc
+                _add_scoped_symbol(project.procedures, proc_key, proc, label="project procedure scope")
                 project.procedures.setdefault(proc.name.lower(), proc)
             for dtype in module.derived_types:
                 dtype_key = f"{module_key}.{dtype.name.lower()}"
-                project.derived_types[dtype_key] = dtype
+                _add_scoped_symbol(project.derived_types, dtype_key, dtype, label="project derived-type scope")
                 project.derived_types.setdefault(dtype.name.lower(), dtype)
             for iface in module.interfaces:
                 if iface.name:
                     iface_key = f"{module_key}.{iface.name.lower()}"
-                    project.interfaces[iface_key] = iface
+                    _add_scoped_symbol(project.interfaces, iface_key, iface, label="project interface scope")
                     project.interfaces.setdefault(iface.name.lower(), iface)
         for submodule in f.submodules:
             submodule_key = submodule.name.lower()
-            project.submodules[submodule_key] = submodule
+            _add_scoped_symbol(project.submodules, submodule_key, submodule, label="project submodule scope")
             deps = {submodule.parent.lower(), *(name.lower() for name in submodule.uses)}
             if submodule.ancestor:
                 deps.add(submodule.ancestor.lower())
             project.dependencies[submodule_key] = deps
             for proc in submodule.procedures:
                 proc_key = f"{submodule_key}.{proc.name.lower()}"
-                project.procedures[proc_key] = proc
+                _add_scoped_symbol(project.procedures, proc_key, proc, label="project procedure scope")
                 project.procedures.setdefault(proc.name.lower(), proc)
         for program in f.programs:
             if program.name:
-                project.programs[program.name.lower()] = program
+                _add_scoped_symbol(project.programs, program.name.lower(), program, label="project program scope")
                 project.dependencies[program.name.lower()] = {name.lower() for name in program.uses}
         for proc in f.procedures:
-            project.procedures[proc.name.lower()] = proc
+            _add_scoped_symbol(project.procedures, proc.name.lower(), proc, label="project procedure scope")
         for dtype in f.derived_types:
-            project.derived_types[dtype.name.lower()] = dtype
+            _add_scoped_symbol(project.derived_types, dtype.name.lower(), dtype, label="project derived-type scope")
         for iface in f.interfaces:
             if iface.name:
-                project.interfaces[iface.name.lower()] = iface
+                _add_scoped_symbol(project.interfaces, iface.name.lower(), iface, label="project interface scope")
     return project
 
 
@@ -750,6 +768,8 @@ def _parse_fortran_modules_impl(
     modules: list[FortranModule] = []
     current: FortranModule | None = None
     in_contains = False
+    interface_depth = 0
+    type_depth = 0
     for line, lineno, source_line in lines:
         s = line.strip()
         if not s:
@@ -759,6 +779,8 @@ def _parse_fortran_modules_impl(
         if l.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", l):
             current = FortranModule(name=s.split()[1], filename=filename)
             in_contains = False
+            interface_depth = 0
+            type_depth = 0
             continue
         if l.startswith("end module"):
             if current:
@@ -767,6 +789,8 @@ def _parse_fortran_modules_impl(
                 modules.append(current)
             current = None
             in_contains = False
+            interface_depth = 0
+            type_depth = 0
             continue
         if current is None:
             continue
@@ -774,6 +798,20 @@ def _parse_fortran_modules_impl(
             in_contains = True
             continue
         if in_contains:
+            continue
+        if _DERIVED_TYPE_RE.match(s):
+            type_depth += 1
+            continue
+        if l.startswith("end type"):
+            type_depth = max(0, type_depth - 1)
+            continue
+        if l.startswith("interface"):
+            interface_depth += 1
+            continue
+        if l.startswith("end interface"):
+            interface_depth = max(0, interface_depth - 1)
+            continue
+        if interface_depth > 0 or type_depth > 0:
             continue
         if l == "private":
             current.default_visibility = "private"
@@ -1723,7 +1761,7 @@ def _parse_declaration(line: str, proc_state: dict, filename: str | None = None,
         right = ""
     star_kind = _find_legacy_star_kind(left)
     source_form = _source_form(proc_state.get("filename"))
-    if star_kind and source_form == "modern":
+    if star_kind and source_form == "modern" and star_kind[0] != "character":
         base, kind = star_kind
         raise FortranParseError(
             f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{proc_state.get('filename')}'.",
@@ -1989,11 +2027,25 @@ def _validate_function_result(sig: FortranProcedureSignature, filename: str | No
 
 
 def _validate_module_variables(module: FortranModule, filename: str | None) -> None:
-    seen: set[str] = set()
+    seen: dict[str, FortranArgument] = {}
     for var in module.variables:
-        if var.name.lower() in seen:
+        key = var.name.lower()
+        if not re.match(r"^[a-z_]\w*$", key, re.IGNORECASE):
             continue
-        seen.add(var.name.lower())
+        prev = seen.get(key)
+        if prev is not None:
+            if (
+                prev.base_type != var.base_type
+                or prev.kind != var.kind
+                or prev.rank != var.rank
+                or tuple(prev.shape) != tuple(var.shape)
+            ):
+                raise FortranParseError(
+                    f"Duplicate variable '{var.name}' in module '{module.name}'.",
+                    filename=filename,
+                )
+            continue
+        seen[key] = var
 
 
 def _apply_module_visibility(module: FortranModule) -> None:
@@ -2379,7 +2431,7 @@ def _parse_type_field_line(line: str, dtype: FortranDerivedType, filename: str |
     left, right = [x.strip() for x in line.split("::", 1)]
     star_kind = _find_legacy_star_kind(left)
     source_form = _source_form(filename)
-    if star_kind and source_form == "modern":
+    if star_kind and source_form == "modern" and star_kind[0] != "character":
         base, kind = star_kind
         raise FortranParseError(
             f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.",
@@ -2489,6 +2541,15 @@ def _parse_module_variable_line(line: str, module: FortranModule, filename: str 
     if lower_left == "module procedure":
         return
     star_kind = _find_legacy_star_kind(left)
+    source_form = _source_form(filename)
+    if star_kind and source_form == "modern":
+        base, kind = star_kind
+        raise FortranParseError(
+            f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.",
+            filename=filename,
+            line_number=lineno,
+            source_line=source_line,
+        )
 
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
