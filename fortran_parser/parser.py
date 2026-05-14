@@ -200,26 +200,6 @@ def _enforce_source_form_compatibility(line: str, filename: str | None, lineno: 
             )
 
 
-def _parse_fortran_signatures_impl(
-    code: _SourceOrLines,
-    filename: str | None = None,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
-) -> list[FortranProcedureSignature]:
-    return _DEFAULT_PARSER._parse_fortran_signatures_impl(code, filename=filename, macro_defines=macro_defines)
-
-
-def _parse_fortran_signatures(
-    code: _SourceOrLines,
-    filename: str | None = None,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
-) -> list[FortranProcedureSignature]:
-    return _DEFAULT_PARSER._parse_fortran_signatures_impl(code, filename=filename, macro_defines=macro_defines)
-
-
-def _parse_fortran_project_signatures(files: dict[str, str]) -> list[FortranProcedureSignature]:
-    return _DEFAULT_PARSER._parse_fortran_project_signatures(files)
-
-
 def _preprocessor_conditions_overlap(c1: frozenset[str], c2: frozenset[str]) -> bool:
     """Return True when two preprocessor condition sets may both be active."""
     if not c1 or not c2:
@@ -279,123 +259,12 @@ def _looks_like_existing_source_path(source: str | Path) -> bool:
     return Path(text).is_file()
 
 
-def _parse_fortran_file(
-    source: str | Path,
-    filename: str | None = None,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
-    encoding: str = "utf-8",
-) -> FortranFile:
-    return _DEFAULT_PARSER._parse_fortran_file(
-        source,
-        filename=filename,
-        macro_defines=macro_defines,
-        encoding=encoding,
-    )
-
-
-def _parse_fortran_signature(
-    code: _SourceOrLines,
-    filename: str | None = None,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
-) -> FortranProcedureSignature:
-    return _DEFAULT_PARSER.parse_signature(code, filename=filename, macro_defines=macro_defines)
-
-
-def _parse_fortran_project(
-    files: dict[str, str] | list[str | Path] | tuple[str | Path, ...],
-    *,
-    encoding: str = "utf-8",
-) -> FortranProject:
-    return _DEFAULT_PARSER._parse_fortran_project(files, encoding=encoding)
-
-
-def _parse_fortran_types(code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
-    return _DEFAULT_PARSER._parse_fortran_types(code, filename=filename)
-
-
-def _parse_fortran_derived_type(code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
-    return _DEFAULT_PARSER.parse_derived_type(code, filename=filename)
-
-
-def _parse_fortran_modules_impl(
-    code: _SourceOrLines,
-    filename: str | None = None,
-    *,
-    require_present: bool = False,
-    signatures: list[FortranProcedureSignature] | None = None,
-    types: list[FortranDerivedType] | None = None,
-    interfaces: list[FortranInterface] | None = None,
-) -> list[FortranModule]:
-    return _DEFAULT_PARSER._parse_fortran_modules(
-        code,
-        filename=filename,
-        require_present=require_present,
-        signatures=signatures,
-        types=types,
-        interfaces=interfaces,
-    )
-
-
-def _parse_fortran_modules(code: _SourceOrLines, filename: str | None = None) -> list[FortranModule]:
-    return _DEFAULT_PARSER._parse_fortran_modules(code, filename=filename, require_present=True)
-
-
-def _parse_fortran_module(code: _SourceOrLines, filename: str | None = None) -> FortranModule:
-    return _DEFAULT_PARSER.parse_module(code, filename=filename)
-
-
-def _parse_fortran_interfaces(code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
-    return _DEFAULT_PARSER._parse_fortran_interfaces(code, filename=filename)
-
-
-def _parse_fortran_interface(code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
-    return _DEFAULT_PARSER.parse_interface(code, filename=filename)
-
-
-
 def _split_submodule_parent(parent_spec: str) -> tuple[str, str | None]:
     parts = [p.strip() for p in parent_spec.split(":", 1)]
     if len(parts) == 2:
         ancestor, parent = parts
         return parent, ancestor
     return parts[0], None
-
-
-def _parse_fortran_submodules(
-    code: _SourceOrLines,
-    filename: str | None = None,
-    *,
-    signatures: list[FortranProcedureSignature] | None = None,
-    types: list[FortranDerivedType] | None = None,
-    interfaces: list[FortranInterface] | None = None,
-) -> list[FortranSubmodule]:
-    return _DEFAULT_PARSER._parse_fortran_submodules(
-        code,
-        filename=filename,
-        signatures=signatures,
-        types=types,
-        interfaces=interfaces,
-    )
-
-
-def _parse_fortran_submodule(code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
-    return _DEFAULT_PARSER.parse_submodule(code, filename=filename)
-
-
-def _parse_fortran_programs(code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
-    return _DEFAULT_PARSER._parse_fortran_programs(code, filename=filename)
-
-
-def _parse_fortran_program(code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
-    return _DEFAULT_PARSER.parse_program(code, filename=filename)
-
-
-def _parse_fortran_block_data(code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
-    return _DEFAULT_PARSER._parse_fortran_block_data(code, filename=filename)
-
-
-def _parse_fortran_block_data_unit(code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
-    return _DEFAULT_PARSER.parse_block_data_unit(code, filename=filename)
 
 
 def _visible_import_modules(symbol: str, uses: dict[str, list[str]]) -> list[str]:
@@ -609,98 +478,6 @@ def _build_wrap_blockers(
             "items": unresolved_kind_fields,
         })
     return blockers
-
-def _assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
-    """Heuristically assess whether a source is "wrap-ready".
-
-    This is a diagnostic API: it does not try to be a complete static analysis,
-    but instead surfaces common wrapper blockers:
-    - known unsupported constructs (pattern-based scan)
-    - signature arguments that remain undeclared (`base_type == "unknown"`)
-    - derived-type and symbolic-kind references that require missing imports
-    - basic counts (n_signatures, n_types, n_modules)
-    """
-    lines = _preprocessed_lines(code, filename)
-    signatures = _parse_fortran_signatures(lines, filename)
-    types = _parse_fortran_types(lines, filename)
-    interfaces = _parse_fortran_interfaces(lines, filename)
-    modules = _parse_fortran_modules_impl(
-        lines,
-        filename,
-        require_present=False,
-        signatures=signatures,
-        types=types,
-        interfaces=interfaces,
-    )
-    submodules = _parse_fortran_submodules(
-        lines,
-        filename,
-        signatures=signatures,
-        types=types,
-        interfaces=interfaces,
-    )
-    programs = _parse_fortran_programs(lines, filename)
-    block_data = _parse_fortran_block_data(lines, filename)
-    unsupported: list[dict] = []
-    for line, lineno, source_line in lines:
-        for p in _UNSUPPORTED_PATTERNS:
-            if p.search(line):
-                unsupported.append({"line": lineno, "text": line.strip(), "pattern": p.pattern})
-                break
-
-    missing_decl_args: list[str] = []
-    for sig in signatures:
-        for a in sig.arguments:
-            if a.base_type == "unknown":
-                missing_decl_args.append(f"{sig.name}:{a.name}")
-
-    module_params = _collect_module_parameters(code, filename)
-    unresolved_derived_args, unresolved_derived_fields = _collect_unresolved_derived_type_diagnostics(
-        signatures,
-        types,
-        modules,
-    )
-    unresolved_kind_args, unresolved_kind_fields = _collect_unresolved_kind_diagnostics(
-        signatures,
-        types,
-        modules,
-        module_params,
-    )
-    blockers = _build_wrap_blockers(
-        signatures=signatures,
-        unsupported=unsupported,
-        missing_decl_args=missing_decl_args,
-        unresolved_derived_args=unresolved_derived_args,
-        unresolved_derived_fields=unresolved_derived_fields,
-        unresolved_kind_args=unresolved_kind_args,
-        unresolved_kind_fields=unresolved_kind_fields,
-    )
-
-    return {
-        "n_signatures": len(signatures),
-        "n_types": len(types),
-        "n_modules": len(modules),
-        "n_submodules": len(submodules),
-        "n_programs": len(programs),
-        "n_block_data": len(block_data),
-        "unsupported_constructs": unsupported,
-        "unknown_argument_types": missing_decl_args,
-        "unresolved_derived_type_arguments": unresolved_derived_args,
-        "unresolved_derived_type_fields": unresolved_derived_fields,
-        "unresolved_kind_arguments": unresolved_kind_args,
-        "unresolved_kind_fields": unresolved_kind_fields,
-        "wrappability_blockers": blockers,
-        "why_not_wrappable": [b["message"] for b in blockers],
-        "wrappable": not blockers,
-    }
-
-
-def _parse_fortran_namespace(root: str | Path, extensions: tuple[str, ...] = (".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08")) -> dict:
-    return _DEFAULT_PARSER._parse_fortran_namespace(root, extensions=extensions)
-
-# -----------------------------------------------------------------------------
-# Helper APIs (used by tests / wrapper generators)
-# -----------------------------------------------------------------------------
 
 def collect_signature_shape_symbols(sig: FortranProcedureSignature) -> set[str]:
     """Collect identifier tokens referenced by argument shape expressions.
@@ -2121,10 +1898,10 @@ class FortranParser:
             code = str(source)
 
         lines = preprocess_lines(code, filename)
-        signatures = _parse_fortran_signatures(lines, filename=filename, macro_defines=macro_defines)
-        derived_types = _parse_fortran_types(lines, filename=filename)
-        interfaces = _parse_fortran_interfaces(lines, filename=filename)
-        modules = _parse_fortran_modules_impl(
+        signatures = self._parse_fortran_signatures(lines, filename=filename, macro_defines=macro_defines)
+        derived_types = self._parse_fortran_types(lines, filename=filename)
+        interfaces = self._parse_fortran_interfaces(lines, filename=filename)
+        modules = self._parse_fortran_modules(
             lines,
             filename=filename,
             require_present=False,
@@ -2132,15 +1909,15 @@ class FortranParser:
             types=derived_types,
             interfaces=interfaces,
         )
-        submodules = _parse_fortran_submodules(
+        submodules = self._parse_fortran_submodules(
             lines,
             filename=filename,
             signatures=signatures,
             types=derived_types,
             interfaces=interfaces,
         )
-        programs = _parse_fortran_programs(lines, filename=filename)
-        block_data_units = _parse_fortran_block_data(lines, filename=filename)
+        programs = self._parse_fortran_programs(lines, filename=filename)
+        block_data_units = self._parse_fortran_block_data(lines, filename=filename)
 
         owned_proc_ids = {id(proc) for mod in modules for proc in mod.procedures}
         owned_proc_ids.update(id(proc) for submod in submodules for proc in submod.procedures)
@@ -2752,7 +2529,79 @@ class FortranParser:
         }
 
     def _assess_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
-        return _assess_wrap_readiness(code, filename=filename)
+        lines = _preprocessed_lines(code, filename)
+        signatures = self._parse_fortran_signatures(lines, filename)
+        types = self._parse_fortran_types(lines, filename)
+        interfaces = self._parse_fortran_interfaces(lines, filename)
+        modules = self._parse_fortran_modules(
+            lines,
+            filename,
+            require_present=False,
+            signatures=signatures,
+            types=types,
+            interfaces=interfaces,
+        )
+        submodules = self._parse_fortran_submodules(
+            lines,
+            filename,
+            signatures=signatures,
+            types=types,
+            interfaces=interfaces,
+        )
+        programs = self._parse_fortran_programs(lines, filename)
+        block_data = self._parse_fortran_block_data(lines, filename)
+        unsupported: list[dict] = []
+        for line, lineno, source_line in lines:
+            for p in _UNSUPPORTED_PATTERNS:
+                if p.search(line):
+                    unsupported.append({"line": lineno, "text": line.strip(), "pattern": p.pattern})
+                    break
+
+        missing_decl_args: list[str] = []
+        for sig in signatures:
+            for a in sig.arguments:
+                if a.base_type == "unknown":
+                    missing_decl_args.append(f"{sig.name}:{a.name}")
+
+        module_params = _collect_module_parameters(code, filename)
+        unresolved_derived_args, unresolved_derived_fields = _collect_unresolved_derived_type_diagnostics(
+            signatures,
+            types,
+            modules,
+        )
+        unresolved_kind_args, unresolved_kind_fields = _collect_unresolved_kind_diagnostics(
+            signatures,
+            types,
+            modules,
+            module_params,
+        )
+        blockers = _build_wrap_blockers(
+            signatures=signatures,
+            unsupported=unsupported,
+            missing_decl_args=missing_decl_args,
+            unresolved_derived_args=unresolved_derived_args,
+            unresolved_derived_fields=unresolved_derived_fields,
+            unresolved_kind_args=unresolved_kind_args,
+            unresolved_kind_fields=unresolved_kind_fields,
+        )
+
+        return {
+            "n_signatures": len(signatures),
+            "n_types": len(types),
+            "n_modules": len(modules),
+            "n_submodules": len(submodules),
+            "n_programs": len(programs),
+            "n_block_data": len(block_data),
+            "unsupported_constructs": unsupported,
+            "unknown_argument_types": missing_decl_args,
+            "unresolved_derived_type_arguments": unresolved_derived_args,
+            "unresolved_derived_type_fields": unresolved_derived_fields,
+            "unresolved_kind_arguments": unresolved_kind_args,
+            "unresolved_kind_fields": unresolved_kind_fields,
+            "wrappability_blockers": blockers,
+            "why_not_wrappable": [b["message"] for b in blockers],
+            "wrappable": not blockers,
+        }
     def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):
         self.macro_defines = macro_defines
 
