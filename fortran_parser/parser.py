@@ -37,6 +37,21 @@ Recommended reading order for maintainers:
 - Shared declaration/header helpers
 - File/project assembly and readiness/report helpers
 - Final module-level convenience wrappers using `_DEFAULT_PARSER`
+
+Scoping model used throughout parsing:
+- Module/submodule scope is tracked by current block headers (`module`,
+  `submodule`) and closed on matching `end ...`.
+- Procedure scope opens on `subroutine/function` headers and is finalized at
+  matching `end subroutine/end function/end`.
+- Interface scope is tracked with explicit depth counters, allowing nested
+  procedure declarations to be marked as interface members.
+- Type scope opens on derived-type start and splits into specification-part vs
+  `contains` member-binding region until `end type`.
+- Program/block-data scopes collect declaration sections and stop at block end.
+- `contains` transitions each scope from declaration/spec-part into internal
+  procedure/member regions, changing what is collected.
+- Optional preprocessor scope (`#if/#ifdef/...`) controls active/inactive
+  branches during signature parsing when macro selection is provided.
 """
 
 _TYPE_RE = re.compile(r"^(integer|real|complex|logical|character|double\s+precision)\s*(\([^)]*\))?\s*(.*)$", re.IGNORECASE)
@@ -1085,6 +1100,14 @@ class FortranParser:
     - High-level unit parsing methods next (top-down by Fortran block size).
     - Internal `*_impl` methods after that (full scoped parsing logic).
     - Lower-level declaration/header helpers and assembly utilities last.
+
+    Scope behavior summary:
+    - `current_module` tracks ownership for procedures/types/interfaces.
+    - `interface_depth`/stacks track when declarations belong to interface blocks.
+    - Per-procedure state tracks declaration-part vs executable-part boundaries.
+    - Type parsing tracks `contains` sub-region for bindings/generics vs fields.
+    - Program/module/submodule parsers collect specification-part declarations
+      and stop collecting variable declarations after `contains`.
 
     `parse_project` composes multiple `FortranFile` objects into one
     `FortranProject` registry and validates duplicate symbols by scope.
