@@ -432,6 +432,17 @@ def _parse_fortran_signatures(
     return signatures
 
 
+_parse_fortran_signatures_legacy = _parse_fortran_signatures
+
+
+def _parse_fortran_signatures(
+    code: _SourceOrLines,
+    filename: str | None = None,
+    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+) -> list[FortranProcedureSignature]:
+    return _DEFAULT_PARSER._parse_fortran_signatures_impl(code, filename=filename, macro_defines=macro_defines)
+
+
 def _parse_fortran_project_signatures(files: dict[str, str]) -> list[FortranProcedureSignature]:
     return _DEFAULT_PARSER._parse_fortran_project_signatures(files)
 
@@ -2068,7 +2079,7 @@ class FortranParser:
         filename: str | None = None,
         macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     ) -> list[FortranProcedureSignature]:
-        return _parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
+        return _parse_fortran_signatures_legacy(code, filename=filename, macro_defines=macro_defines)
 
     def _parse_fortran_signatures(
         self,
