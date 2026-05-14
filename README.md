@@ -39,9 +39,10 @@ front-end). Current handled coverage:
 
 ## Public APIs
 
-- `parse_fortran_signatures(code: str, filename: str | None = None)`
-- `parse_fortran_types(code: str)`
-- `parse_fortran_modules(code: str)`
+- `parse_fortran_file(source_or_path, filename=None)` — canonical single-file parser returning `FortranFile`
+- `parse_fortran_project(files)` — multi-file parser returning `FortranProject`
+- Singular strict parsers for one model instance: `parse_fortran_signature`, `parse_fortran_derived_type`, `parse_fortran_module`, `parse_fortran_interface`, `parse_fortran_submodule`, `parse_fortran_program`, `parse_fortran_block_data_unit`
+- Plural collection parsers for file sections that may legally occur more than once: `parse_fortran_signatures`, `parse_fortran_types`, `parse_fortran_modules`, `parse_fortran_interfaces`, `parse_fortran_submodules`, `parse_fortran_programs`, `parse_fortran_block_data`
 - `parse_fortran_project_signatures(files: dict[str, str])`
 - `parse_fortran_namespace(root: str)`
 - `assess_wrap_readiness(code: str, filename: str | None = None)`
@@ -274,3 +275,17 @@ During fixture test runs, you can also auto-update expected JSON in-place:
 ```bash
 FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py --confcutdir=tests/
 ```
+
+## Semantic parser structure
+
+The parser now separates entrypoints by the shape of Fortran unit a caller wants. Raw-source preprocessing is owned by the file/project layer, which then passes normalized lines to lower-level collectors:
+
+- `parse_fortran_file(source_or_path, filename=None)` is the canonical single-file entrypoint and preprocesses source exactly once per file parse. It returns a `FortranFile` object containing modules, submodules, programs, block-data units, standalone procedures, standalone interfaces, standalone derived types, diagnostics, and symbols. When parsing source text, `filename` remains `None` unless explicitly supplied. When passed an existing path without `filename`, the source is read from disk and that path is recorded.
+- `parse_fortran_project(files)` parses multiple sources, preprocessing each source once through `parse_fortran_file`, and returns a `FortranProject` registry. `files` may be a `{filename: source}` mapping or a sequence of paths.
+- `parse_fortran_signature(code, filename=None)` and the other singular parsers enforce exactly one parsed model object and raise `FortranParseError` when the input has zero or many matching objects.
+- `parse_fortran_signatures(code, filename=None)` is intentionally narrow: it extracts all procedure signatures in a source. It is kept as the plural collection helper and for backwards compatibility, but it is not the file parser.
+- Specialized entrypoints such as `parse_fortran_modules`, `parse_fortran_interfaces`, and `parse_fortran_programs` should be called only when that program-unit kind is expected. Calling `parse_fortran_modules` on source containing only standalone procedures raises `FortranParseError` to catch wrong entrypoint usage early.
+
+Module parsing only records declarations from the module specification part. Declarations inside contained procedures remain procedure-local metadata and are not leaked into `FortranModule.variables`.
+
+The semantics layer consumes `FortranFile`/`FortranModule` objects and projects them into language-independent semantic IR (`SemanticModule`, `SemanticFunction`, `SemanticClass`, `SemanticType`). This keeps the semantic API model independent from parser internals, matching the project goal that parser output is a helper and the semantic interface/IR is the source of truth.

@@ -1,8 +1,23 @@
 from .models import *
 from fortran_parser.models import *
 
+
+def _first_module(parsed):
+    """Accept a FortranModule, FortranFile, or legacy signature list in tests."""
+    if hasattr(parsed, "procedures") and hasattr(parsed, "derived_types") and hasattr(parsed, "uses"):
+        return parsed
+    if hasattr(parsed, "modules"):
+        if not parsed.modules:
+            raise ValueError("Expected at least one Fortran module in parsed file")
+        return parsed.modules[0]
+    if isinstance(parsed, list):
+        module_name = next((getattr(sig, "module", None) for sig in parsed if getattr(sig, "module", None)), None)
+        return FortranModule(name=module_name or "", procedures=[sig for sig in parsed if not getattr(sig, "in_interface", False)])
+    raise TypeError(f"Unsupported Fortran parse object: {type(parsed)!r}")
+
 FORTRAN_TYPE_MAP = {
     ("integer", None): "Int32",
+    ("real", None): "Float64",
     ("real", "4"): "Float32",
     ("real", "8"): "Float64",
     ("logical", None): "Bool",
@@ -11,8 +26,9 @@ FORTRAN_TYPE_MAP = {
 
 def fortran_variable_to_semantic_type(var) -> SemanticType:
 
+    kind = str(var.kind).lower() if var.kind is not None else None
     semantic_name = FORTRAN_TYPE_MAP.get(
-        (var.base_type.lower(), var.kind),
+        (var.base_type.lower(), kind),
         "Unknown"
     )
 
@@ -157,6 +173,8 @@ def fortran_derived_type_to_semantic_class(
 def fortran_module_to_semantic_module(
     module
 ) -> SemanticModule:
+
+    module = _first_module(module)
 
     semantic_functions = []
     for proc in module.procedures:
