@@ -1795,13 +1795,6 @@ class FortranParser:
                 k, v = [x.strip() for x in assign.split("=", 1)]
                 output[current_module][k.lower()] = v
         return output
-    """Object-oriented public API for the Fortran parser entrypoints.
-
-    New code should prefer this class so parser configuration, such as
-    preprocessor macro selections, lives on one instance instead of being
-    threaded through separate public functions.
-    """
-
     # ------------------------------------------------------------------
     # File/project orchestration and cross-file resolution
     # ------------------------------------------------------------------
@@ -1813,6 +1806,7 @@ class FortranParser:
         macro_defines: set[str] | dict[str, int | bool | str] | None = None,
         encoding: str = "utf-8",
     ) -> FortranFile:
+        """Parse one source string/path into a `FortranFile` aggregate model."""
         if filename is None and _looks_like_existing_source_path(source):
             path = Path(source)
             filename = str(path)
@@ -1886,6 +1880,7 @@ class FortranParser:
         *,
         encoding: str = "utf-8",
     ) -> FortranProject:
+        """Parse many sources and merge them into one dependency-aware project model."""
         if isinstance(files, dict):
             parsed_files = [self.parse_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
         else:
@@ -1945,6 +1940,7 @@ class FortranParser:
     # ------------------------------------------------------------------
 
     def _parse_fortran_types_impl(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
+        """Parse all derived type declarations present in one source unit."""
         lines = self._preprocessed_lines(code, filename)
         current_module = None
         current_type: FortranDerivedType | None = None
@@ -2149,6 +2145,7 @@ class FortranParser:
         types: list[FortranDerivedType] | None = None,
         interfaces: list[FortranInterface] | None = None,
     ) -> list[FortranModule]:
+        """Parse modules and attach members (procedures/types/interfaces)."""
         lines = self._preprocessed_lines(code, filename)
         modules: list[FortranModule] = []
         current: FortranModule | None = None
@@ -2246,6 +2243,7 @@ class FortranParser:
         )
 
     def _parse_fortran_interfaces_impl(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
+        """Parse all interface blocks in one source unit."""
         lines = self._preprocessed_lines(code, filename)
         current_module = None
         current_interface: FortranInterface | None = None
@@ -2408,6 +2406,7 @@ class FortranParser:
         types: list[FortranDerivedType] | None = None,
         interfaces: list[FortranInterface] | None = None,
     ) -> list[FortranSubmodule]:
+        """Parse submodules and attach parsed members by scope."""
         lines = self._preprocessed_lines(code, filename)
         submodules: list[FortranSubmodule] = []
         current: FortranSubmodule | None = None
@@ -2479,6 +2478,7 @@ class FortranParser:
         )
 
     def _parse_fortran_programs_impl(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
+        """Parse top-level program units and specification-part declarations."""
         lines = self._preprocessed_lines(code, filename)
         programs: list[FortranProgram] = []
         current: FortranProgram | None = None
