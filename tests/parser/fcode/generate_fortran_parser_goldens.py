@@ -8,15 +8,16 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from fortran_parser.parser import parse_fortran_signatures, parse_fortran_types
+from fortran_parser import parse_fortran_file
 
 _TESTS_DIR = Path(__file__).parent
 
 
 def _serialize_fixture(fixture: Path) -> dict | list:
     source = fixture.read_text(encoding="utf-8")
-    signatures = [asdict(s) for s in parse_fortran_signatures(source, filename=fixture.name)]
-    types = [asdict(t) for t in parse_fortran_types(source, filename=fixture.name)]
+    parsed = parse_fortran_file(source, filename=fixture.name)
+    signatures = [asdict(s) for s in parsed.procedures]
+    types = [asdict(t) for t in parsed.derived_types]
     if types:
         return {"signatures": signatures, "types": types}
     return signatures
