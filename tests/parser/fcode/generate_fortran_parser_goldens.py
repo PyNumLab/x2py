@@ -15,8 +15,8 @@ _TESTS_DIR = Path(__file__).parent
 
 def _serialize_fixture(fixture: Path) -> dict | list:
     source = fixture.read_text(encoding="utf-8")
-    signatures = [asdict(s) for s in parse_fortran_signatures(source, filename=fixture.name)]
-    types = [asdict(t) for t in parse_fortran_types(source, filename=fixture.name)]
+    signatures = [asdict(s) for s in FortranParser().parse_file(source, filename=fixture.name)]
+    types = [asdict(t) for t in FortranParser().parse_file(source, filename=fixture.name)]
     if types:
         return {"signatures": signatures, "types": types}
     return signatures

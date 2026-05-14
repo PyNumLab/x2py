@@ -58,8 +58,8 @@ def _run_fixture_comparison(fixture: Path, *, filename_for_parser: str, expected
     source = fixture.read_text(encoding="utf-8")
     assert source.strip(), f"Fixture is empty: {filename_for_parser}"
 
-    parsed_sigs = _to_dict_list(parse_fortran_signatures(source, filename=filename_for_parser))
-    parsed_types = _to_dict_list(parse_fortran_types(source, filename=filename_for_parser))
+    parsed_sigs = _to_dict_list(FortranParser().parse_file(source, filename=filename_for_parser))
+    parsed_types = _to_dict_list(FortranParser().parse_file(source, filename=filename_for_parser))
 
     update_mode = os.getenv("FORTRAN_PARSER_UPDATE_GOLDENS", "0") == "1"
     if update_mode:
@@ -136,7 +136,7 @@ def test_fortran_scifortran_error_manifest_is_in_sync():
         source = fixture.read_text(encoding="utf-8")
 
         with pytest.raises(Exception) as exc_info:
-            parse_fortran_signatures(source, filename=relpath)
+            FortranParser().parse_file(source, filename=relpath)
 
         message = str(exc_info.value)
         for fragment in item.get("message_fragments", []):

@@ -9,7 +9,7 @@ from dataclasses import fields, is_dataclass
 from pathlib import Path
 
 from .models import FortranParseError
-from .parser import assess_wrap_readiness, parse_fortran_block_data, parse_fortran_modules, parse_fortran_programs, parse_fortran_signatures, parse_fortran_submodules, parse_fortran_types
+from .parser import FortranParser, assess_wrap_readiness
 
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
@@ -63,15 +63,17 @@ def _parse_paths(paths: list[str]) -> dict[str, dict]:
         else:
             expanded.append(p)
 
+    parser = FortranParser()
     for p in sorted(set(expanded)):
+        parsed = parser.parse_file(p)
         code = p.read_text(encoding="utf-8")
         out[str(p)] = {
-            "signatures": [_to_dict_no_parent(s) for s in parse_fortran_signatures(code, filename=str(p))],
-            "types": [_to_dict_no_parent(t) for t in parse_fortran_types(code, filename=str(p))],
-            "modules": [_to_dict_no_parent(m) for m in parse_fortran_modules(code, filename=str(p))],
-            "submodules": [_to_dict_no_parent(m) for m in parse_fortran_submodules(code, filename=str(p))],
-            "programs": [_to_dict_no_parent(m) for m in parse_fortran_programs(code, filename=str(p))],
-            "block_data": [_to_dict_no_parent(m) for m in parse_fortran_block_data(code, filename=str(p))],
+            "signatures": [_to_dict_no_parent(s) for s in parsed.signatures],
+            "types": [_to_dict_no_parent(t) for t in parsed.derived_types],
+            "modules": [_to_dict_no_parent(m) for m in parsed.modules],
+            "submodules": [_to_dict_no_parent(m) for m in parsed.submodules],
+            "programs": [_to_dict_no_parent(m) for m in parsed.programs],
+            "block_data": [_to_dict_no_parent(m) for m in parsed.block_data],
             "wrap_readiness": assess_wrap_readiness(code, filename=str(p)),
         }
     return out

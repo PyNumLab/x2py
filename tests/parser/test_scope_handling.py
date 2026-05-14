@@ -16,7 +16,7 @@ subroutine b(x)
   real(8) :: x
 end subroutine b
 """
-    sigs = parse_fortran_signatures(code, filename="scope_args_ok.f90")
+    sigs = FortranParser().parse_file(code, filename="scope_args_ok.f90")
     assert [s.name for s in sigs] == ["a", "b"]
 
 
@@ -33,7 +33,7 @@ subroutine host(func, x)
   real(8) :: x
 end subroutine host
 """
-    sigs = parse_fortran_signatures(code, filename="scope_interface_ok.f90")
+    sigs = FortranParser().parse_file(code, filename="scope_interface_ok.f90")
     assert len(sigs) == 1
     assert sigs[0].name == "host"
 
@@ -57,7 +57,7 @@ contains
   end subroutine host_b
 end module m
 """
-    sigs = parse_fortran_signatures(code, filename="scope_contains_ok.f90")
+    sigs = FortranParser().parse_file(code, filename="scope_contains_ok.f90")
     assert [s.name.lower() for s in sigs] == ["host_a", "host_b"]
 
 
@@ -75,7 +75,7 @@ contains
 end module m
 """
     with pytest.raises(FortranParseError, match="Duplicate procedure name"):
-        parse_fortran_signatures(code, filename="scope_dup_err.f90")
+        FortranParser().parse_file(code, filename="scope_dup_err.f90")
 
 
 def test_same_name_in_mutually_exclusive_ifdef_branches_is_allowed():
@@ -95,7 +95,7 @@ contains
 #endif
 end module m
 """
-    sigs = parse_fortran_signatures(code, filename="scope_ifdef_ok.f90")
+    sigs = FortranParser().parse_file(code, filename="scope_ifdef_ok.f90")
     assert len(sigs) == 2
 
 
@@ -118,7 +118,7 @@ contains
 end module m
 """
     with pytest.raises(FortranParseError, match="Duplicate procedure name"):
-        parse_fortran_signatures(code, filename="scope_ifdef_overlap.f90", macro_defines={"USE_A", "USE_B"})
+        FortranParser().parse_file(code, filename="scope_ifdef_overlap.f90", macro_defines={"USE_A", "USE_B"})
 
 
 def test_fortran_parser_class_entrypoint():
