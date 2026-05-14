@@ -4,16 +4,26 @@ import pytest
 from fortran_parser.cli import _format_wrap_readiness
 
 from fortran_parser import (
+    FortranParseError,
     assess_wrap_readiness,
     collect_signature_shape_symbols,
     evaluate_signature_shapes,
+    parse_fortran_file,
+    parse_fortran_project,
     parse_fortran_namespace,
     parse_fortran_project_signatures,
+    parse_fortran_signature,
     parse_fortran_signatures,
     parse_fortran_block_data,
+    parse_fortran_block_data_unit,
+    parse_fortran_derived_type,
+    parse_fortran_interface,
     parse_fortran_interfaces,
+    parse_fortran_module,
     parse_fortran_modules,
+    parse_fortran_program,
     parse_fortran_programs,
+    parse_fortran_submodule,
     parse_fortran_submodules,
     parse_fortran_types,
 )
@@ -1205,3 +1215,157 @@ end subroutine caller
     cb = next(a for a in sig.arguments if a.name == "cb")
     assert cb.base_type == "procedure"
     assert cb.kind is None
+
+
+def test_parse_fortran_file_returns_file_model_for_source_string():
+    code = """
+module file_mod
+contains
+subroutine ping(x)
+  integer, intent(in) :: x
+end subroutine ping
+end module file_mod
+"""
+    parsed = parse_fortran_file(code)
+    assert parsed.filename is None
+    assert [m.name for m in parsed.modules] == ["file_mod"]
+    assert [p.name for p in parsed.modules[0].procedures] == ["ping"]
+
+
+def test_parse_fortran_modules_rejects_standalone_procedure_entrypoint():
+    code = """
+subroutine lonely(x)
+  integer, intent(in) :: x
+end subroutine lonely
+"""
+    with pytest.raises(FortranParseError, match="expected a module"):
+        parse_fortran_modules(code)
+
+
+def test_module_parser_ignores_procedure_local_variables():
+    code = """
+module no_leak
+  integer :: module_value
+contains
+  subroutine worker(x)
+    integer, intent(in) :: x
+    real :: local_value
+  end subroutine worker
+end module no_leak
+"""
+    mod = parse_fortran_modules(code)[0]
+    assert [v.name for v in mod.variables] == ["module_value"]
+
+
+def test_parse_fortran_project_returns_project_registry():
+    project = parse_fortran_project({
+        "a.f90": """
+module a_mod
+contains
+subroutine step(x)
+  integer, intent(in) :: x
+end subroutine step
+end module a_mod
+""",
+        "b.f90": """
+subroutine free_proc(y)
+  real, intent(in) :: y
+end subroutine free_proc
+""",
+    })
+    assert [f.filename for f in project.files] == ["a.f90", "b.f90"]
+    assert "a_mod" in project.modules
+    assert "a_mod.step" in project.procedures
+    assert "free_proc" in project.procedures
+
+
+def test_parse_fortran_file_preprocesses_source_once(monkeypatch):
+    import fortran_parser.parser as parser_module
+
+    calls = 0
+    original = parser_module.preprocess_lines
+
+    def counting_preprocess(code, filename=None):
+        nonlocal calls
+        calls += 1
+        return original(code, filename)
+
+    monkeypatch.setattr(parser_module, "preprocess_lines", counting_preprocess)
+    parsed = parser_module.parse_fortran_file("""
+module once_mod
+contains
+subroutine ping(x)
+  integer, intent(in) :: x
+end subroutine ping
+end module once_mod
+""")
+
+    assert calls == 1
+    assert parsed.modules[0].procedures[0].name == "ping"
+
+
+
+def test_singular_parse_entrypoints_return_single_models():
+    assert parse_fortran_signature("""
+subroutine one(x)
+  integer, intent(in) :: x
+end subroutine one
+""").name == "one"
+
+    assert parse_fortran_module("""
+module single_mod
+end module single_mod
+""").name == "single_mod"
+
+    assert parse_fortran_derived_type("""
+module type_mod
+  type :: particle
+    integer :: id
+  end type particle
+end module type_mod
+""").name == "particle"
+
+    assert parse_fortran_interface("""
+module iface_mod
+  interface apply
+    subroutine do_apply(x)
+      integer, intent(in) :: x
+    end subroutine do_apply
+  end interface
+end module iface_mod
+""").name == "apply"
+
+    assert parse_fortran_program("""
+program driver
+  integer :: ierr
+end program driver
+""").name == "driver"
+
+    assert parse_fortran_block_data_unit("""
+block data init_data
+  integer :: seed
+end block data init_data
+""").name == "init_data"
+
+    assert parse_fortran_submodule("""
+submodule (parent_mod) child_impl
+end submodule child_impl
+""").name == "child_impl"
+
+
+def test_singular_parse_entrypoint_rejects_ambiguous_sources():
+    with pytest.raises(FortranParseError, match="expected exactly one module"):
+        parse_fortran_module("""
+module first_mod
+end module first_mod
+module second_mod
+end module second_mod
+""")
+
+    with pytest.raises(FortranParseError, match="expected exactly one procedure signature"):
+        parse_fortran_signature("""
+subroutine first()
+end subroutine first
+subroutine second()
+end subroutine second
+""")
