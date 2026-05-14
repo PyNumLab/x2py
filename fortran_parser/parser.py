@@ -683,107 +683,18 @@ def _parse_fortran_modules_impl(
     types: list[FortranDerivedType] | None = None,
     interfaces: list[FortranInterface] | None = None,
 ) -> list[FortranModule]:
-    """Parse module blocks and attach child entities (procedures/types/interfaces).
-
-    The module object includes:
-    - `uses` map from `use` statements in the module specification part
-    - module variables declared in the specification part
-    - procedures/types/interfaces discovered in the same source and associated
-      back to the owning module
-    """
-    lines = _preprocessed_lines(code, filename)
-    modules: list[FortranModule] = []
-    current: FortranModule | None = None
-    in_contains = False
-    interface_depth = 0
-    type_depth = 0
-    for line, lineno, source_line in lines:
-        s = line.strip()
-        if not s:
-            continue
-        l = s.lower()
-        _enforce_source_form_compatibility(s, filename, lineno, source_line)
-        if l.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", l):
-            current = FortranModule(name=s.split()[1], filename=filename)
-            in_contains = False
-            interface_depth = 0
-            type_depth = 0
-            continue
-        if l.startswith("end module"):
-            if current:
-                _validate_module_variables(current, filename)
-                _apply_module_visibility(current)
-                modules.append(current)
-            current = None
-            in_contains = False
-            interface_depth = 0
-            type_depth = 0
-            continue
-        if current is None:
-            continue
-        if l.startswith("contains"):
-            in_contains = True
-            continue
-        if in_contains:
-            continue
-        if _is_derived_type_block_start(s):
-            type_depth += 1
-            continue
-        if l.startswith("end type"):
-            type_depth = max(0, type_depth - 1)
-            continue
-        if l.startswith("interface"):
-            interface_depth += 1
-            continue
-        if l.startswith("end interface"):
-            interface_depth = max(0, interface_depth - 1)
-            continue
-        if interface_depth > 0 or type_depth > 0:
-            continue
-        if l == "private":
-            current.default_visibility = "private"
-            continue
-        if l == "public":
-            current.default_visibility = "public"
-            continue
-        m = _USE_RE.match(s)
-        if m:
-            current.uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
-            continue
-        _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
-
-    # Attach parsed procedures/types/interfaces to their owning modules.
-    signatures = signatures if signatures is not None else _parse_fortran_signatures(code, filename)
-    types = types if types is not None else _parse_fortran_types(code, filename)
-    interfaces = interfaces if interfaces is not None else _parse_fortran_interfaces(code, filename)
-    modules_by_name = {m.name.lower(): m for m in modules}
-    for sig in signatures:
-        if sig.module and not sig.in_interface:
-            mod = modules_by_name.get(sig.module.lower())
-            if mod is not None:
-                mod.procedures.append(sig)
-    for dtype in types:
-        if dtype.module:
-            mod = modules_by_name.get(dtype.module.lower())
-            if mod is not None:
-                mod.derived_types.append(dtype)
-    for iface in interfaces:
-        if iface.module:
-            mod = modules_by_name.get(iface.module.lower())
-            if mod is not None:
-                mod.interfaces.append(iface)
-    if require_present and not modules and signatures:
-        raise FortranParseError(
-            "_parse_fortran_modules() expected a module program unit, but only standalone procedures were found",
-            filename=filename,
-            code="PARSE_WRONG_ENTRYPOINT",
-        )
-    return modules
+    return _DEFAULT_PARSER._parse_fortran_modules(
+        code,
+        filename=filename,
+        require_present=require_present,
+        signatures=signatures,
+        types=types,
+        interfaces=interfaces,
+    )
 
 
 def _parse_fortran_modules(code: _SourceOrLines, filename: str | None = None) -> list[FortranModule]:
-    """Parse module blocks; raise when the source only contains standalone procedures."""
-    return _parse_fortran_modules_impl(code, filename=filename, require_present=True)
+    return _DEFAULT_PARSER._parse_fortran_modules(code, filename=filename, require_present=True)
 
 
 def _parse_fortran_module(code: _SourceOrLines, filename: str | None = None) -> FortranModule:
@@ -2633,12 +2544,107 @@ class FortranParser:
             filename=filename,
         )
 
-    def _parse_fortran_modules(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranModule]:
-        return _parse_fortran_modules(code, filename=filename)
+    def _parse_fortran_modules(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        *,
+        require_present: bool = True,
+        signatures: list[FortranProcedureSignature] | None = None,
+        types: list[FortranDerivedType] | None = None,
+        interfaces: list[FortranInterface] | None = None,
+    ) -> list[FortranModule]:
+        lines = _preprocessed_lines(code, filename)
+        modules: list[FortranModule] = []
+        current: FortranModule | None = None
+        in_contains = False
+        interface_depth = 0
+        type_depth = 0
+        for line, lineno, source_line in lines:
+            s = line.strip()
+            if not s:
+                continue
+            l = s.lower()
+            _enforce_source_form_compatibility(s, filename, lineno, source_line)
+            if l.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", l):
+                current = FortranModule(name=s.split()[1], filename=filename)
+                in_contains = False
+                interface_depth = 0
+                type_depth = 0
+                continue
+            if l.startswith("end module"):
+                if current:
+                    _validate_module_variables(current, filename)
+                    _apply_module_visibility(current)
+                    modules.append(current)
+                current = None
+                in_contains = False
+                interface_depth = 0
+                type_depth = 0
+                continue
+            if current is None:
+                continue
+            if l.startswith("contains"):
+                in_contains = True
+                continue
+            if in_contains:
+                continue
+            if _is_derived_type_block_start(s):
+                type_depth += 1
+                continue
+            if l.startswith("end type"):
+                type_depth = max(0, type_depth - 1)
+                continue
+            if l.startswith("interface"):
+                interface_depth += 1
+                continue
+            if l.startswith("end interface"):
+                interface_depth = max(0, interface_depth - 1)
+                continue
+            if interface_depth > 0 or type_depth > 0:
+                continue
+            if l == "private":
+                current.default_visibility = "private"
+                continue
+            if l == "public":
+                current.default_visibility = "public"
+                continue
+            m = _USE_RE.match(s)
+            if m:
+                current.uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
+                continue
+            _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
+
+        signatures = self._parse_fortran_signatures(code, filename) if signatures is None else signatures
+        types = self._parse_fortran_types(code, filename) if types is None else types
+        interfaces = self._parse_fortran_interfaces(code, filename) if interfaces is None else interfaces
+        modules_by_name = {m.name.lower(): m for m in modules}
+        for sig in signatures:
+            if sig.module and not sig.in_interface:
+                mod = modules_by_name.get(sig.module.lower())
+                if mod is not None:
+                    mod.procedures.append(sig)
+        for dtype in types:
+            if dtype.module:
+                mod = modules_by_name.get(dtype.module.lower())
+                if mod is not None:
+                    mod.derived_types.append(dtype)
+        for iface in interfaces:
+            if iface.module:
+                mod = modules_by_name.get(iface.module.lower())
+                if mod is not None:
+                    mod.interfaces.append(iface)
+        if require_present and not modules and signatures:
+            raise FortranParseError(
+                "_parse_fortran_modules() expected a module program unit, but only standalone procedures were found",
+                filename=filename,
+                code="PARSE_WRONG_ENTRYPOINT",
+            )
+        return modules
 
     def _parse_fortran_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
         return _expect_single_parse_result(
-            self._parse_fortran_modules(code, filename=filename),
+            self._parse_fortran_modules(code, filename=filename, require_present=True),
             parser_name="parse_fortran_module",
             entity_name="module",
             filename=filename,
