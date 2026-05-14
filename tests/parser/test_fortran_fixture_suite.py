@@ -6,40 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from fortran_parser import FortranParseError, parse_fortran_file
-
-def _collect_signatures(parsed):
-    signatures = list(parsed.procedures)
-    for module in parsed.modules:
-        signatures.extend(module.procedures)
-        for interface in module.interfaces:
-            signatures.extend(interface.procedures)
-    for submodule in parsed.submodules:
-        signatures.extend(submodule.procedures)
-        for interface in submodule.interfaces:
-            signatures.extend(interface.procedures)
-    for program in parsed.programs:
-        signatures.extend(program.procedures)
-    for interface in parsed.interfaces:
-        signatures.extend(interface.procedures)
-    return signatures
-
-
-def _collect_types(parsed):
-    types = list(parsed.derived_types)
-    for module in parsed.modules:
-        types.extend(module.derived_types)
-    for submodule in parsed.submodules:
-        types.extend(submodule.derived_types)
-    return types
-
-
-def parse_fortran_signatures(source, filename=None):
-    return _collect_signatures(parse_fortran_file(source, filename=filename))
-
-
-def parse_fortran_types(source, filename=None):
-    return _collect_types(parse_fortran_file(source, filename=filename))
+from fortran_parser import parse_fortran_file
 
 
 def parse_fortran_modules(source, filename=None):
@@ -69,26 +36,27 @@ _SCIFORTRAN_ERROR_EXPECTATIONS = _TESTS_DIR / "SciFortran" / "errors" / "SciFort
 
 def _load_expected(expected_path: Path):
     with expected_path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
-    if isinstance(data, list):
-        return {"signatures": data, "types": []}
-    return {"signatures": data.get("signatures", []), "types": data.get("types", [])}
+        return json.load(f)
 
 
 def _strip_parent_fields(value):
     if isinstance(value, dict):
-        return {k: _strip_parent_fields(v) for k, v in value.items() if k != "parent"}
+        return {
+            k: _strip_parent_fields(v)
+            for k, v in value.items()
+            if k not in {"parent", "source_span", "line", "column", "end_line", "end_column"}
+        }
     if isinstance(value, list):
         return [_strip_parent_fields(v) for v in value]
     return value
 
 
-def _to_dict_list(items):
-    return [_strip_parent_fields(asdict(i)) for i in items]
+def _to_dict(value):
+    return _strip_parent_fields(asdict(value))
 
 
-def _dump_expected(path: Path, signatures: list[dict], types: list[dict]) -> None:
-    payload = signatures if not types else {"signatures": signatures, "types": types}
+def _dump_expected(path: Path, parsed: dict) -> None:
+    payload = parsed
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
@@ -96,20 +64,15 @@ def _run_fixture_comparison(fixture: Path, *, filename_for_parser: str, expected
     source = fixture.read_text(encoding="utf-8")
     assert source.strip(), f"Fixture is empty: {filename_for_parser}"
 
-    try:
-        parsed_sigs = _to_dict_list(parse_fortran_signatures(source, filename=filename_for_parser))
-        parsed_types = _to_dict_list(parse_fortran_types(source, filename=filename_for_parser))
-    except FortranParseError as exc:
-        pytest.skip(f"Fixture not supported by parse_fortran_file API: {exc}")
+    parsed = _to_dict(parse_fortran_file(source, filename=filename_for_parser))
 
     update_mode = os.getenv("FORTRAN_PARSER_UPDATE_GOLDENS", "0") == "1"
     if update_mode:
-        _dump_expected(expected_path, parsed_sigs, parsed_types)
+        _dump_expected(expected_path, parsed)
         return
 
     expected = _load_expected(expected_path)
-    assert parsed_sigs == expected["signatures"], f"Signature mismatch for {fixture.name}"
-    assert parsed_types == expected["types"], f"Derived type mismatch for {fixture.name}"
+    assert parsed == expected, f"FortranFile mismatch for {fixture.name}"
 
 
 def test_fortran_fixture_golden_suite_has_fixtures():
@@ -177,7 +140,7 @@ def test_fortran_scifortran_error_manifest_is_in_sync():
         source = fixture.read_text(encoding="utf-8")
 
         with pytest.raises(Exception) as exc_info:
-            parse_fortran_signatures(source, filename=relpath)
+            parse_fortran_file(source, filename=relpath)
 
         message = str(exc_info.value)
         for fragment in item.get("message_fragments", []):
