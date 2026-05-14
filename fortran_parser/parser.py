@@ -2855,6 +2855,82 @@ class FortranParser:
                 if iface.name:
                     _add_scoped_symbol(project.interfaces, iface.name.lower(), iface, label="project interface scope")
         return project
+
+    def _parse_fortran_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
+        return _parse_fortran_types(code, filename=filename)
+
+    def _parse_fortran_derived_type(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
+        return _expect_single_parse_result(
+            self._parse_fortran_types(code, filename=filename),
+            parser_name="parse_fortran_derived_type",
+            entity_name="derived type",
+            filename=filename,
+        )
+
+    def _parse_fortran_modules(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranModule]:
+        return _parse_fortran_modules(code, filename=filename)
+
+    def _parse_fortran_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
+        return _expect_single_parse_result(
+            self._parse_fortran_modules(code, filename=filename),
+            parser_name="parse_fortran_module",
+            entity_name="module",
+            filename=filename,
+        )
+
+    def _parse_fortran_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
+        return _parse_fortran_interfaces(code, filename=filename)
+
+    def _parse_fortran_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
+        return _expect_single_parse_result(
+            self._parse_fortran_interfaces(code, filename=filename),
+            parser_name="parse_fortran_interface",
+            entity_name="interface",
+            filename=filename,
+        )
+
+    def _parse_fortran_submodules(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranSubmodule]:
+        return _parse_fortran_submodules(code, filename=filename)
+
+    def _parse_fortran_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
+        return _expect_single_parse_result(
+            self._parse_fortran_submodules(code, filename=filename),
+            parser_name="parse_fortran_submodule",
+            entity_name="submodule",
+            filename=filename,
+        )
+
+    def _parse_fortran_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
+        return _parse_fortran_programs(code, filename=filename)
+
+    def _parse_fortran_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
+        return _expect_single_parse_result(
+            self._parse_fortran_programs(code, filename=filename),
+            parser_name="parse_fortran_program",
+            entity_name="program",
+            filename=filename,
+        )
+
+    def _parse_fortran_block_data(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
+        return _parse_fortran_block_data(code, filename=filename)
+
+    def _parse_fortran_block_data_unit(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
+        return _expect_single_parse_result(
+            self._parse_fortran_block_data(code, filename=filename),
+            parser_name="parse_fortran_block_data_unit",
+            entity_name="block data unit",
+            filename=filename,
+        )
+
+    def _parse_fortran_namespace(
+        self,
+        root: str | Path,
+        extensions: tuple[str, ...] = (".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"),
+    ) -> dict:
+        return _parse_fortran_namespace(root, extensions=extensions)
+
+    def _assess_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
+        return _assess_wrap_readiness(code, filename=filename)
     def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):
         self.macro_defines = macro_defines
 
@@ -2899,50 +2975,50 @@ class FortranParser:
         return self._parse_fortran_project(files, encoding=encoding)
 
     def parse_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
-        return _parse_fortran_types(code, filename=filename)
+        return self._parse_fortran_types(code, filename=filename)
 
     def parse_derived_type(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
-        return _parse_fortran_derived_type(code, filename=filename)
+        return self._parse_fortran_derived_type(code, filename=filename)
 
     def parse_modules(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranModule]:
-        return _parse_fortran_modules(code, filename=filename)
+        return self._parse_fortran_modules(code, filename=filename)
 
     def parse_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
-        return _parse_fortran_module(code, filename=filename)
+        return self._parse_fortran_module(code, filename=filename)
 
     def parse_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
-        return _parse_fortran_interfaces(code, filename=filename)
+        return self._parse_fortran_interfaces(code, filename=filename)
 
     def parse_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
-        return _parse_fortran_interface(code, filename=filename)
+        return self._parse_fortran_interface(code, filename=filename)
 
     def parse_submodules(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranSubmodule]:
-        return _parse_fortran_submodules(code, filename=filename)
+        return self._parse_fortran_submodules(code, filename=filename)
 
     def parse_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
-        return _parse_fortran_submodule(code, filename=filename)
+        return self._parse_fortran_submodule(code, filename=filename)
 
     def parse_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
-        return _parse_fortran_programs(code, filename=filename)
+        return self._parse_fortran_programs(code, filename=filename)
 
     def parse_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
-        return _parse_fortran_program(code, filename=filename)
+        return self._parse_fortran_program(code, filename=filename)
 
     def parse_block_data(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
-        return _parse_fortran_block_data(code, filename=filename)
+        return self._parse_fortran_block_data(code, filename=filename)
 
     def parse_block_data_unit(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
-        return _parse_fortran_block_data_unit(code, filename=filename)
+        return self._parse_fortran_block_data_unit(code, filename=filename)
 
     def parse_namespace(
         self,
         root: str | Path,
         extensions: tuple[str, ...] = (".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"),
     ) -> dict:
-        return _parse_fortran_namespace(root, extensions=extensions)
+        return self._parse_fortran_namespace(root, extensions=extensions)
 
     def assess_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
-        return _assess_wrap_readiness(code, filename=filename)
+        return self._assess_wrap_readiness(code, filename=filename)
 
     # Backwards-compatible method spellings that mirror the historical function names.
     parse_fortran_signatures = parse_signatures
