@@ -60,11 +60,14 @@ and practical usage from terminal and Python.
 
 ## 2) Public API surface
 
-- File/project entrypoints: `parse_fortran_file`, `parse_fortran_project`
-- Singular strict entrypoints: `parse_fortran_signature`, `parse_fortran_derived_type`, `parse_fortran_module`, `parse_fortran_interface`, `parse_fortran_submodule`, `parse_fortran_program`, `parse_fortran_block_data_unit`
-- Plural collection entrypoints: `parse_fortran_signatures`, `parse_fortran_types`, `parse_fortran_modules`, `parse_fortran_interfaces`, `parse_fortran_submodules`, `parse_fortran_programs`, `parse_fortran_block_data`
-- Project/diagnostic helpers: `parse_fortran_project_signatures`, `parse_fortran_namespace`, `assess_wrap_readiness`
+Supported public API:
 
+- `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
+- `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
+- `assess_wrap_readiness(code, filename=None) -> dict`
+
+Internal-only parser entrypoints (for signatures/types/modules/interfaces/etc.)
+exist as `FortranParser` methods but are not part of the stable top-level API.
 
 ## Parser organization notes
 
