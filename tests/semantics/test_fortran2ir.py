@@ -505,3 +505,29 @@ end module
     norm = get_function(smod, "compute_norm")
 
     assert norm.return_type.name == "Float64"
+
+
+def test_converter_class_entrypoint():
+
+    source = """
+module class_mod
+
+contains
+
+subroutine touch(x)
+
+    integer, intent(inout) :: x
+
+end subroutine
+
+end module
+"""
+
+    fmod = parse_fortran_source(source)
+
+    from semantics.fortran2ir import FortranToIRConverter
+
+    smod = FortranToIRConverter().module_to_semantic_module(fmod)
+
+    assert smod.name == "class_mod"
+    assert get_function(smod, "touch").arguments[0].semantic_type.name == "Int32"

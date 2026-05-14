@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from .models import FortranArgument, FortranBlockData, FortranDerivedType, FortranFile, FortranInterface, FortranModule, FortranParseError, FortranProcedureSignature, FortranProgram, FortranProject, FortranSubmodule
 from .parser import (
+    FortranParser,
     parse_fortran_file,
     parse_fortran_project,
     parse_fortran_namespace,
@@ -25,6 +26,7 @@ from .parser import (
 )
 
 __all__ = (
+    "FortranParser",
     "FortranArgument",
     "FortranBlockData",
     "FortranDerivedType",
