@@ -21,6 +21,7 @@
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
+          "visibility": "public",
           "procedure": null,
           "intent": "unknown",
           "optional": false,
@@ -46,6 +47,7 @@
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
+          "visibility": "public",
           "procedure": null,
           "intent": "unknown",
           "optional": false,
@@ -72,6 +74,7 @@
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
+              "visibility": "public",
               "procedure": null,
               "intent": "unknown",
               "optional": false,
@@ -97,6 +100,7 @@
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
+              "visibility": "public",
               "procedure": null,
               "intent": "unknown",
               "optional": false,
@@ -134,6 +138,7 @@
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
+              "visibility": "public",
               "procedure": null,
               "intent": "unknown",
               "optional": false,
@@ -159,6 +164,7 @@
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
+              "visibility": "public",
               "procedure": null,
               "intent": "unknown",
               "optional": false,
@@ -186,7 +192,10 @@
           "generic_bindings": []
         }
       ],
-      "interfaces": []
+      "interfaces": [],
+      "default_visibility": "public",
+      "public_symbols": [],
+      "private_symbols": []
     }
   ],
   "submodules": [],
@@ -216,6 +225,7 @@
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
+          "visibility": "public",
           "procedure": null,
           "intent": "unknown",
           "optional": false,
@@ -241,6 +251,7 @@
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
+          "visibility": "public",
           "procedure": null,
           "intent": "unknown",
           "optional": false,
@@ -267,6 +278,7 @@
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
+              "visibility": "public",
               "procedure": null,
               "intent": "unknown",
               "optional": false,
@@ -292,6 +304,7 @@
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
+              "visibility": "public",
               "procedure": null,
               "intent": "unknown",
               "optional": false,
@@ -329,6 +342,7 @@
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
+              "visibility": "public",
               "procedure": null,
               "intent": "unknown",
               "optional": false,
@@ -354,6 +368,7 @@
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
+              "visibility": "public",
               "procedure": null,
               "intent": "unknown",
               "optional": false,
@@ -381,7 +396,10 @@
           "generic_bindings": []
         }
       ],
-      "interfaces": []
+      "interfaces": [],
+      "default_visibility": "public",
+      "public_symbols": [],
+      "private_symbols": []
     }
   }
 }

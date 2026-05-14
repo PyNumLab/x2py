@@ -34,7 +34,10 @@
       "variables": [],
       "procedures": [],
       "derived_types": [],
-      "interfaces": []
+      "interfaces": [],
+      "default_visibility": "public",
+      "public_symbols": [],
+      "private_symbols": []
     }
   ],
   "submodules": [],
@@ -77,7 +80,10 @@
       "variables": [],
       "procedures": [],
       "derived_types": [],
-      "interfaces": []
+      "interfaces": [],
+      "default_visibility": "public",
+      "public_symbols": [],
+      "private_symbols": []
     }
   }
 }

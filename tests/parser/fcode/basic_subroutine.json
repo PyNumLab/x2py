@@ -27,6 +27,7 @@
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
+              "visibility": "public",
               "procedure": "add1",
               "intent": "in",
               "optional": false,
@@ -52,6 +53,7 @@
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
+              "visibility": "public",
               "procedure": "add1",
               "intent": "inout",
               "optional": false,
@@ -68,7 +70,10 @@
         }
       ],
       "derived_types": [],
-      "interfaces": []
+      "interfaces": [],
+      "default_visibility": "public",
+      "public_symbols": [],
+      "private_symbols": []
     }
   ],
   "submodules": [],
@@ -104,6 +109,7 @@
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
+              "visibility": "public",
               "procedure": "add1",
               "intent": "in",
               "optional": false,
@@ -129,6 +135,7 @@
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
+              "visibility": "public",
               "procedure": "add1",
               "intent": "inout",
               "optional": false,
@@ -145,7 +152,10 @@
         }
       ],
       "derived_types": [],
-      "interfaces": []
+      "interfaces": [],
+      "default_visibility": "public",
+      "public_symbols": [],
+      "private_symbols": []
     }
   }
 }
