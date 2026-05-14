@@ -9,7 +9,7 @@ from dataclasses import fields, is_dataclass
 from pathlib import Path
 
 from .models import FortranParseError
-from .parser import assess_wrap_readiness, parse_fortran_block_data, parse_fortran_modules, parse_fortran_programs, parse_fortran_signatures, parse_fortran_submodules, parse_fortran_types
+from . import assess_wrap_readiness, parse_fortran_block_data, parse_fortran_modules, parse_fortran_programs, parse_fortran_signatures, parse_fortran_submodules, parse_fortran_types
 
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}

@@ -2604,7 +2604,7 @@ class FortranParser:
         raise FortranParseError(f"parse_signature() expected exactly one signature, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
     def _parse_project_signatures(self, files: dict[str, str]) -> list[FortranProcedureSignature]:
-        project = self.parse_project(files)
+        project = self.parse_multiple_files(files)
         return list(project.procedures.values())
 
     def parse_file(
@@ -2649,7 +2649,7 @@ class FortranParser:
         file.symbols.update({p.name.lower(): p for p in standalone_procedures})
         return file
 
-    def parse_project(self, files, *, encoding: str = "utf-8") -> FortranProject:
+    def parse_multiple_files(self, files, *, encoding: str = "utf-8") -> FortranProject:
         if isinstance(files, dict):
             parsed_files = [self.parse_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
         else:
@@ -2698,7 +2698,10 @@ class FortranParser:
                     project.interfaces[iface.name.lower()] = iface
         return project
 
-    def parse_types(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
+    
+    def parse_project(self, files, *, encoding: str = "utf-8") -> FortranProject:
+        return self.parse_multiple_files(files, encoding=encoding)
+    def _parse_types(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
         lines = _preprocessed_lines(code, filename)
         current_module = None
         current_type: FortranDerivedType | None = None
@@ -2784,7 +2787,7 @@ class FortranParser:
             raise FortranParseError("parse_types() expected exactly one derived type, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
         raise FortranParseError(f"parse_types() expected exactly one derived type, but found {len(types)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
-    def parse_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
+    def _parse_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
         items = self.parse_file(code, filename=filename).modules
         if len(items) == 1:
             return items[0]
@@ -2792,7 +2795,7 @@ class FortranParser:
             raise FortranParseError("parse_module() expected exactly one module, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
         raise FortranParseError(f"parse_module() expected exactly one module, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
-    def parse_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
+    def _parse_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
         items = self._parse_fortran_interfaces(code, filename=filename)
         if len(items) == 1:
             return items[0]
@@ -2800,7 +2803,7 @@ class FortranParser:
             raise FortranParseError("parse_interface() expected exactly one interface, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
         raise FortranParseError(f"parse_interface() expected exactly one interface, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
-    def parse_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
+    def _parse_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
         items = self._parse_fortran_submodules(code, filename=filename)
         if len(items) == 1:
             return items[0]
@@ -2808,7 +2811,7 @@ class FortranParser:
             raise FortranParseError("parse_submodule() expected exactly one submodule, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
         raise FortranParseError(f"parse_submodule() expected exactly one submodule, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
-    def parse_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
+    def _parse_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
         items = self._parse_fortran_programs(code, filename=filename)
         if len(items) == 1:
             return items[0]
@@ -2816,7 +2819,7 @@ class FortranParser:
             raise FortranParseError("parse_program() expected exactly one program, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
         raise FortranParseError(f"parse_program() expected exactly one program, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
-    def parse_block_data(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
+    def _parse_block_data(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
         items = self.parse_file(code, filename=filename).block_data_units
         if len(items) == 1:
             return items[0]
@@ -2824,15 +2827,15 @@ class FortranParser:
             raise FortranParseError("parse_block_data() expected exactly one block data unit, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
         raise FortranParseError(f"parse_block_data() expected exactly one block data unit, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
-    def parse_block_data_unit(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
+    def _parse_block_data_unit(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
         return self.parse_block_data(code, filename=filename)
 
-    def parse_namespace(
+    def _parse_namespace(
         self,
         root: str | Path,
         extensions: tuple[str, ...] = (".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"),
     ) -> dict:
         return _parse_fortran_namespace(root, extensions=extensions)
 
-    def assess_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
+    def _assess_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
         return _assess_wrap_readiness(code, filename=filename)
