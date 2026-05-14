@@ -2827,3 +2827,7 @@ def parse_fortran_file(
 
 def parse_fortran_project(files, *, encoding: str = "utf-8") -> FortranProject:
     return _DEFAULT_PARSER.parse_project(files, encoding=encoding)
+
+
+def assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
+    return _DEFAULT_PARSER.assess_wrap_readiness(code, filename=filename)

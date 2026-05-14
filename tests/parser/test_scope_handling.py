@@ -241,15 +241,13 @@ end module dup_component_mod
 
 
 def test_fortran_parser_class_entrypoint():
-    from fortran_parser import FortranParser
-
     source = """
 subroutine touch(x)
     integer, intent(inout) :: x
 end subroutine
 """
 
-    signatures = FortranParser().parse_signatures(source)
+    signatures = parse_fortran_file(source).procedures
 
     assert len(signatures) == 1
     assert signatures[0].name == "touch"

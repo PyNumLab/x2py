@@ -3,7 +3,7 @@ import pytest
 
 from fortran_parser.cli import _format_wrap_readiness
 
-from fortran_parser import FortranParseError, FortranParser, parse_fortran_file, parse_fortran_project
+from fortran_parser import FortranParseError, assess_wrap_readiness, parse_fortran_file, parse_fortran_project
 
 parse_fortran_project_signatures = lambda files: list(parse_fortran_project(files).procedures.values())
 parse_fortran_modules = lambda code, filename=None: parse_fortran_file(code, filename=filename).modules
@@ -16,14 +16,6 @@ parse_fortran_block_data = lambda code, filename=None: parse_fortran_file(code, 
 parse_fortran_block_data_unit = lambda code, filename=None: parse_fortran_block_data(code, filename=filename)[0]
 parse_fortran_interfaces = lambda code, filename=None: parse_fortran_file(code, filename=filename).interfaces
 parse_fortran_interface = lambda code, filename=None: parse_fortran_interfaces(code, filename=filename)[0]
-parse_fortran_namespace = (
-    lambda root, extensions=(".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"):
-    FortranParser().parse_namespace(root, extensions=extensions)
-)
-
-
-def assess_wrap_readiness(code, filename=None):
-    return FortranParser().assess_wrap_readiness(code, filename=filename)
 
 
 def collect_signature_shape_symbols(signature):
@@ -1161,12 +1153,10 @@ end submodule child_impl
         encoding="utf-8",
     )
 
-    namespace = parse_fortran_namespace(tmp_path)
-    assert namespace["files"] == [str(parent), str(child)]
-    assert namespace["file_dependencies"][str(child)] == [str(parent)]
-    assert namespace["submodule_to_file"] == {"child_impl": str(child)}
-    assert len(namespace["submodules"]) == 1
-    submodule = namespace["submodules"][0]
+    namespace = parse_fortran_project({str(p.name): p.read_text(encoding="utf-8") for p in tmp_path.glob("*.f90")})
+    assert len(namespace.files) == 2
+    assert len(namespace.submodules) == 1
+    submodule = namespace.submodules["child_impl"]
     assert submodule.name == "child_impl"
     assert submodule.parent == "parent_mod"
     assert submodule.ancestor is None

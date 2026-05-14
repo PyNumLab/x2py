@@ -14,7 +14,7 @@ from fortran_parser import (
     FortranProgram,
     FortranProject,
     FortranSubmodule,
-    FortranParser,
+    assess_wrap_readiness,
     parse_fortran_file,
     parse_fortran_project,
 )
@@ -31,7 +31,7 @@ __all__ = (
     "FortranProgram",
     "FortranProject",
     "FortranSubmodule",
-    "FortranParser",
+    "assess_wrap_readiness",
     "parse_fortran_file",
     "parse_fortran_project",
 )
