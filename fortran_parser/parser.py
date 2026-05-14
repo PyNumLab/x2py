@@ -29,6 +29,14 @@ Recommended reading order for maintainers:
 - Start from `FortranParser.parse_file` / `parse_project`
 - Then read the high-level unit parsers at the top of the class
 - Then drill into `*_impl` implementations and low-level helpers
+
+`FortranParser` class layout (top -> bottom):
+- Public API: `__init__`, `parse_file`, `parse_project`, `assess_wrap_readiness`
+- High-level unit dispatchers: programs/modules/submodules/interfaces/types/signatures
+- Core implementations (`*_impl`) that perform scoped parsing
+- Shared declaration/header helpers
+- File/project assembly and readiness/report helpers
+- Final module-level convenience wrappers using `_DEFAULT_PARSER`
 """
 
 _TYPE_RE = re.compile(r"^(integer|real|complex|logical|character|double\s+precision)\s*(\([^)]*\))?\s*(.*)$", re.IGNORECASE)
@@ -1072,7 +1080,13 @@ class FortranParser:
     3. Attach parsed members to owning module/submodule scopes.
     4. Build `FortranFile` symbol table and standalone entity lists.
 
-    `parse_project` then composes multiple `FortranFile` objects into one
+    Class section map:
+    - Public API methods first (developer discovery).
+    - High-level unit parsing methods next (top-down by Fortran block size).
+    - Internal `*_impl` methods after that (full scoped parsing logic).
+    - Lower-level declaration/header helpers and assembly utilities last.
+
+    `parse_project` composes multiple `FortranFile` objects into one
     `FortranProject` registry and validates duplicate symbols by scope.
     """
     # ------------------------------------------------------------------
