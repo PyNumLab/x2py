@@ -407,7 +407,11 @@ def _parse_fortran_signatures(
     return signatures
 
 
-def _parse_fortran_project_signatures(files: dict[str, str]) -> list[FortranProcedureSignature]:
+def _parse_fortran_project_signatures(
+    files: dict[str, str],
+    *,
+    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+) -> list[FortranProcedureSignature]:
     """Parse signatures for multiple files and resolve cross-file kinds/shapes.
 
     This is a two-pass routine:
@@ -420,7 +424,12 @@ def _parse_fortran_project_signatures(files: dict[str, str]) -> list[FortranProc
     preprocessed_files = {fname: preprocess_lines(code, fname) for fname, code in files.items()}
     for fname, lines in preprocessed_files.items():
         module_params.update(_collect_module_parameters(lines, fname))
-        parsed_files.append((fname, parse_fortran_signatures(lines, filename=fname)))
+        parsed_files.append(
+            (
+                fname,
+                _parse_fortran_signature(lines, filename=fname, macro_defines=macro_defines),
+            )
+        )
 
     for _, signatures in parsed_files:
         for sig in signatures:
@@ -513,9 +522,9 @@ def _parse_fortran_file(
 
     lines = preprocess_lines(code, filename)
 
-    signatures = parse_fortran_signatures(lines, filename=filename, macro_defines=macro_defines)
-    derived_types = parse_fortran_types(lines, filename=filename)
-    interfaces = parse_fortran_interfaces(lines, filename=filename)
+    signatures = _parse_fortran_signatures(lines, filename=filename, macro_defines=macro_defines)
+    derived_types = _parse_fortran_types(lines, filename=filename)
+    interfaces = _parse_fortran_interfaces(lines, filename=filename)
     modules = _parse_fortran_modules_impl(
         lines,
         filename=filename,
@@ -531,8 +540,8 @@ def _parse_fortran_file(
         types=derived_types,
         interfaces=interfaces,
     )
-    programs = parse_fortran_programs(lines, filename=filename)
-    block_data_units = parse_fortran_block_data(lines, filename=filename)
+    programs = _parse_fortran_programs(lines, filename=filename)
+    block_data_units = _parse_fortran_block_data(lines, filename=filename)
 
     owned_proc_ids = {id(proc) for mod in modules for proc in mod.procedures}
     owned_proc_ids.update(id(proc) for submod in submodules for proc in submod.procedures)
@@ -566,67 +575,20 @@ def _parse_fortran_signature(
     macro_defines: set[str] | dict[str, int | bool | str] | None = None,
 ) -> FortranProcedureSignature:
     """Parse exactly one procedure signature from source or preprocessed lines."""
-    return _expect_single_parse_result(
-        parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines),
-        parser_name="parse_fortran_signature",
-        entity_name="procedure signature",
+    items = _parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
+    if len(items) == 1:
+        return items[0]
+    if not items:
+        raise FortranParseError(
+            "parse_fortran_signature() expected exactly one procedure signature, but none were found",
+            filename=filename,
+            code="PARSE_WRONG_ENTRYPOINT",
+        )
+    raise FortranParseError(
+        f"parse_fortran_signature() expected exactly one procedure signature, but found {len(items)}",
         filename=filename,
+        code="PARSE_AMBIGUOUS_ENTRYPOINT",
     )
-
-
-def _parse_fortran_project(
-    files: dict[str, str] | list[str | Path] | tuple[str | Path, ...],
-    *,
-    encoding: str = "utf-8",
-) -> FortranProject:
-    """Parse multiple Fortran files and return a ``FortranProject`` aggregate."""
-    if isinstance(files, dict):
-        parsed_files = [parse_fortran_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
-    else:
-        parsed_files = [parse_fortran_file(path, encoding=encoding) for path in files]
-
-    project = FortranProject(files=parsed_files)
-    for f in parsed_files:
-        for module in f.modules:
-            module_key = module.name.lower()
-            project.modules[module_key] = module
-            project.dependencies[module_key] = {name.lower() for name in module.uses}
-            for proc in module.procedures:
-                proc_key = f"{module_key}.{proc.name.lower()}"
-                project.procedures[proc_key] = proc
-                project.procedures.setdefault(proc.name.lower(), proc)
-            for dtype in module.derived_types:
-                dtype_key = f"{module_key}.{dtype.name.lower()}"
-                project.derived_types[dtype_key] = dtype
-                project.derived_types.setdefault(dtype.name.lower(), dtype)
-            for iface in module.interfaces:
-                if iface.name:
-                    iface_key = f"{module_key}.{iface.name.lower()}"
-                    project.interfaces[iface_key] = iface
-                    project.interfaces.setdefault(iface.name.lower(), iface)
-        for submodule in f.submodules:
-            submodule_key = submodule.name.lower()
-            project.submodules[submodule_key] = submodule
-            deps = {submodule.parent.lower(), *(name.lower() for name in submodule.uses)}
-            if submodule.ancestor:
-                deps.add(submodule.ancestor.lower())
-            project.dependencies[submodule_key] = deps
-            for proc in submodule.procedures:
-                proc_key = f"{submodule_key}.{proc.name.lower()}"
-                project.procedures[proc_key] = proc
-                project.procedures.setdefault(proc.name.lower(), proc)
-        for program in f.programs:
-            if program.name:
-                project.programs[program.name.lower()] = program
-                project.dependencies[program.name.lower()] = {name.lower() for name in program.uses}
-        for proc in f.procedures:
-            project.procedures[proc.name.lower()] = proc
-        for dtype in f.derived_types:
-            project.derived_types[dtype.name.lower()] = dtype
-        for iface in f.interfaces:
-            if iface.name:
-                project.interfaces[iface.name.lower()] = iface
-    return project
 
 
 def _parse_fortran_types(code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
@@ -722,7 +684,7 @@ def _parse_fortran_types(code: _SourceOrLines, filename: str | None = None) -> l
 def _parse_fortran_derived_type(code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
     """Parse exactly one derived type from source or preprocessed lines."""
     return _expect_single_parse_result(
-        parse_fortran_types(code, filename=filename),
+        _parse_fortran_types(code, filename=filename),
         parser_name="parse_fortran_derived_type",
         entity_name="derived type",
         filename=filename,
@@ -781,9 +743,9 @@ def _parse_fortran_modules_impl(
         _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
 
     # Attach parsed procedures/types/interfaces to their owning modules.
-    signatures = signatures if signatures is not None else parse_fortran_signatures(code, filename)
-    types = types if types is not None else parse_fortran_types(code, filename)
-    interfaces = interfaces if interfaces is not None else parse_fortran_interfaces(code, filename)
+    signatures = signatures if signatures is not None else _parse_fortran_signatures(code, filename)
+    types = types if types is not None else _parse_fortran_types(code, filename)
+    interfaces = interfaces if interfaces is not None else _parse_fortran_interfaces(code, filename)
     modules_by_name = {m.name.lower(): m for m in modules}
     for sig in signatures:
         if sig.module and not sig.in_interface:
@@ -802,7 +764,7 @@ def _parse_fortran_modules_impl(
                 mod.interfaces.append(iface)
     if require_present and not modules and signatures:
         raise FortranParseError(
-            "parse_fortran_modules() expected a module program unit, but only standalone procedures were found",
+            "_parse_fortran_modules() expected a module program unit, but only standalone procedures were found",
             filename=filename,
             code="PARSE_WRONG_ENTRYPOINT",
         )
@@ -817,7 +779,7 @@ def _parse_fortran_modules(code: _SourceOrLines, filename: str | None = None) ->
 def _parse_fortran_module(code: _SourceOrLines, filename: str | None = None) -> FortranModule:
     """Parse exactly one module from source or preprocessed lines."""
     return _expect_single_parse_result(
-        parse_fortran_modules(code, filename=filename),
+        _parse_fortran_modules(code, filename=filename),
         parser_name="parse_fortran_module",
         entity_name="module",
         filename=filename,
@@ -899,7 +861,7 @@ def _parse_fortran_interfaces(code: _SourceOrLines, filename: str | None = None)
 def _parse_fortran_interface(code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
     """Parse exactly one interface block from source or preprocessed lines."""
     return _expect_single_parse_result(
-        parse_fortran_interfaces(code, filename=filename),
+        _parse_fortran_interfaces(code, filename=filename),
         parser_name="parse_fortran_interface",
         entity_name="interface",
         filename=filename,
@@ -972,9 +934,9 @@ def _parse_fortran_submodules(
             continue
         _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
 
-    signatures = signatures if signatures is not None else parse_fortran_signatures(code, filename)
-    types = types if types is not None else parse_fortran_types(code, filename)
-    interfaces = interfaces if interfaces is not None else parse_fortran_interfaces(code, filename)
+    signatures = signatures if signatures is not None else _parse_fortran_signatures(code, filename)
+    types = types if types is not None else _parse_fortran_types(code, filename)
+    interfaces = interfaces if interfaces is not None else _parse_fortran_interfaces(code, filename)
     submodules_by_name = {m.name.lower(): m for m in submodules}
     for sig in signatures:
         if sig.module:
@@ -997,7 +959,7 @@ def _parse_fortran_submodules(
 def _parse_fortran_submodule(code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
     """Parse exactly one submodule from source or preprocessed lines."""
     return _expect_single_parse_result(
-        parse_fortran_submodules(code, filename=filename),
+        _parse_fortran_submodules(code, filename=filename),
         parser_name="parse_fortran_submodule",
         entity_name="submodule",
         filename=filename,
@@ -1045,7 +1007,7 @@ def _parse_fortran_programs(code: _SourceOrLines, filename: str | None = None) -
 def _parse_fortran_program(code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
     """Parse exactly one program unit from source or preprocessed lines."""
     return _expect_single_parse_result(
-        parse_fortran_programs(code, filename=filename),
+        _parse_fortran_programs(code, filename=filename),
         parser_name="parse_fortran_program",
         entity_name="program",
         filename=filename,
@@ -1080,7 +1042,7 @@ def _parse_fortran_block_data(code: _SourceOrLines, filename: str | None = None)
 def _parse_fortran_block_data_unit(code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
     """Parse exactly one block data unit from source or preprocessed lines."""
     return _expect_single_parse_result(
-        parse_fortran_block_data(code, filename=filename),
+        _parse_fortran_block_data(code, filename=filename),
         parser_name="parse_fortran_block_data_unit",
         entity_name="block data unit",
         filename=filename,
@@ -1310,9 +1272,9 @@ def _assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
     - basic counts (n_signatures, n_types, n_modules)
     """
     lines = _preprocessed_lines(code, filename)
-    signatures = parse_fortran_signatures(lines, filename)
-    types = parse_fortran_types(lines, filename)
-    interfaces = parse_fortran_interfaces(lines, filename)
+    signatures = _parse_fortran_signatures(lines, filename)
+    types = _parse_fortran_types(lines, filename)
+    interfaces = _parse_fortran_interfaces(lines, filename)
     modules = _parse_fortran_modules_impl(
         lines,
         filename,
@@ -1328,8 +1290,8 @@ def _assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
         types=types,
         interfaces=interfaces,
     )
-    programs = parse_fortran_programs(lines, filename)
-    block_data = parse_fortran_block_data(lines, filename)
+    programs = _parse_fortran_programs(lines, filename)
+    block_data = _parse_fortran_block_data(lines, filename)
     unsupported: list[dict] = []
     for line, lineno, source_line in lines:
         for p in _UNSUPPORTED_PATTERNS:
@@ -1430,7 +1392,7 @@ def _parse_fortran_namespace(root: str | Path, extensions: tuple[str, ...] = (".
         file_dependencies[fname] = deps
 
     ordered_files = _topological_files(file_dependencies)
-    signatures = parse_fortran_project_signatures({f: sources[f] for f in ordered_files})
+    signatures = _parse_fortran_project_signatures({f: sources[f] for f in ordered_files})
     types = []
     modules = []
     submodules = []
@@ -1438,9 +1400,9 @@ def _parse_fortran_namespace(root: str | Path, extensions: tuple[str, ...] = (".
     block_data = []
     for f in ordered_files:
         lines = file_lines[f]
-        file_types = parse_fortran_types(lines, filename=f)
-        file_interfaces = parse_fortran_interfaces(lines, filename=f)
-        file_signatures = parse_fortran_signatures(lines, filename=f)
+        file_types = _parse_fortran_types(lines, filename=f)
+        file_interfaces = _parse_fortran_interfaces(lines, filename=f)
+        file_signatures = _parse_fortran_signature(lines, filename=f)
         types.extend(file_types)
         modules.extend(_parse_fortran_modules_impl(
             lines,
@@ -1457,8 +1419,8 @@ def _parse_fortran_namespace(root: str | Path, extensions: tuple[str, ...] = (".
             types=file_types,
             interfaces=file_interfaces,
         ))
-        programs.extend(parse_fortran_programs(lines, filename=f))
-        block_data.extend(parse_fortran_block_data(lines, filename=f))
+        programs.extend(_parse_fortran_programs(lines, filename=f))
+        block_data.extend(_parse_fortran_block_data(lines, filename=f))
 
     return {
         "files": ordered_files,
@@ -2561,7 +2523,7 @@ class FortranParser:
     def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):
         self.macro_defines = macro_defines
 
-    def parse_signatures(
+    def _parse_signatures(
         self,
         code: _SourceOrLines,
         filename: str | None = None,
@@ -2569,9 +2531,9 @@ class FortranParser:
     ) -> list[FortranProcedureSignature]:
         if macro_defines is None:
             macro_defines = self.macro_defines
-        return _parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
+        return _parse_fortran_signature(code, filename=filename, macro_defines=macro_defines)
 
-    def parse_signature(
+    def _parse_signature(
         self,
         code: _SourceOrLines,
         filename: str | None = None,
@@ -2579,10 +2541,10 @@ class FortranParser:
     ) -> FortranProcedureSignature:
         if macro_defines is None:
             macro_defines = self.macro_defines
-        return _parse_fortran_signature(code, filename=filename, macro_defines=macro_defines)
+        return _parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
 
-    def parse_project_signatures(self, files: dict[str, str]) -> list[FortranProcedureSignature]:
-        return _parse_fortran_project_signatures(files)
+    def _parse_project_signatures(self, files: dict[str, str]) -> list[FortranProcedureSignature]:
+        return _parse_fortran_project_signatures(files, macro_defines=self.macro_defines)
 
     def parse_file(
         self,
@@ -2599,43 +2561,197 @@ class FortranParser:
         )
 
     def parse_project(self, files, *, encoding: str = "utf-8") -> FortranProject:
-        return _parse_fortran_project(files, encoding=encoding)
+        if isinstance(files, dict):
+            parsed_files = [self.parse_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
+        else:
+            parsed_files = [self.parse_file(path, encoding=encoding) for path in files]
 
-    def parse_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
-        return _parse_fortran_types(code, filename=filename)
+        project = FortranProject(files=parsed_files)
+        for f in parsed_files:
+            for module in f.modules:
+                module_key = module.name.lower()
+                project.modules[module_key] = module
+                project.dependencies[module_key] = {name.lower() for name in module.uses}
+                for proc in module.procedures:
+                    proc_key = f"{module_key}.{proc.name.lower()}"
+                    project.procedures[proc_key] = proc
+                    project.procedures.setdefault(proc.name.lower(), proc)
+                for dtype in module.derived_types:
+                    dtype_key = f"{module_key}.{dtype.name.lower()}"
+                    project.derived_types[dtype_key] = dtype
+                    project.derived_types.setdefault(dtype.name.lower(), dtype)
+                for iface in module.interfaces:
+                    if iface.name:
+                        iface_key = f"{module_key}.{iface.name.lower()}"
+                        project.interfaces[iface_key] = iface
+                        project.interfaces.setdefault(iface.name.lower(), iface)
+            for submodule in f.submodules:
+                submodule_key = submodule.name.lower()
+                project.submodules[submodule_key] = submodule
+                deps = {submodule.parent.lower(), *(name.lower() for name in submodule.uses)}
+                if submodule.ancestor:
+                    deps.add(submodule.ancestor.lower())
+                project.dependencies[submodule_key] = deps
+                for proc in submodule.procedures:
+                    proc_key = f"{submodule_key}.{proc.name.lower()}"
+                    project.procedures[proc_key] = proc
+                    project.procedures.setdefault(proc.name.lower(), proc)
+            for program in f.programs:
+                if program.name:
+                    project.programs[program.name.lower()] = program
+                    project.dependencies[program.name.lower()] = {name.lower() for name in program.uses}
+            for proc in f.procedures:
+                project.procedures[proc.name.lower()] = proc
+            for dtype in f.derived_types:
+                project.derived_types[dtype.name.lower()] = dtype
+            for iface in f.interfaces:
+                if iface.name:
+                    project.interfaces[iface.name.lower()] = iface
+        return project
+
+    def parse_types(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
+        lines = _preprocessed_lines(code, filename)
+        current_module = None
+        current_type: FortranDerivedType | None = None
+        in_type_contains = False
+        types: list[FortranDerivedType] = []
+        for line, lineno, source_line in lines:
+            s = line.strip()
+            if not s:
+                continue
+            l = s.lower()
+            _enforce_source_form_compatibility(s, filename, lineno, source_line)
+            submodule_match = _SUBMODULE_RE.match(s)
+            if submodule_match:
+                current_module = submodule_match.group("name")
+                continue
+            if l.startswith("end submodule"):
+                current_module = None
+                continue
+            if l.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", l):
+                current_module = s.split()[1]
+                continue
+            if l.startswith("end module"):
+                current_module = None
+                continue
+            if current_type is None:
+                tm = _DERIVED_TYPE_RE.match(s)
+                if tm:
+                    attr_txt = (tm.group("attrs") or "").strip().lstrip(",").strip()
+                    attrs = [a.strip() for a in split_csv(attr_txt)] if attr_txt else []
+                    extends = None
+                    normalized_attrs: list[str] = []
+                    for a in attrs:
+                        la = a.lower()
+                        if la.startswith("extends(") and la.endswith(")"):
+                            extends = a[a.find("(") + 1 : -1].strip()
+                        else:
+                            normalized_attrs.append(la)
+                    current_type = FortranDerivedType(
+                        name=tm.group("name"),
+                        module=current_module,
+                        extends=extends,
+                        attributes=normalized_attrs,
+                    )
+                    in_type_contains = False
+                continue
+            if l == "contains":
+                in_type_contains = True
+                continue
+            if l.startswith("end type"):
+                _validate_derived_type_fields(current_type, filename)
+                types.append(current_type)
+                current_type = None
+                in_type_contains = False
+                continue
+            if in_type_contains:
+                pm = _PROC_BIND_RE.match(s)
+                if pm:
+                    binding_names = split_csv(pm.group("names"))
+                    current_type.methods.extend(binding_names)
+                    left = s.split("::", 1)[0]
+                    attrs = [a.strip().lower() for a in split_csv(left.split(",", 1)[1] if "," in left else "")]
+                    for n in binding_names:
+                        current_type.procedure_bindings.append({"name": n, "attrs": attrs})
+                    continue
+                if s.lower().startswith("generic") and "::" in s and "=>" in s:
+                    left, right = [x.strip() for x in s.split("::", 1)]
+                    attr_txt = left[len("generic") :].strip().lstrip(",").strip()
+                    attrs = [a.strip().lower() for a in split_csv(attr_txt)] if attr_txt else []
+                    lhs, rhs_txt = [x.strip() for x in right.split("=>", 1)]
+                    rhs = [r.strip() for r in split_csv(rhs_txt)]
+                    current_type.generic_bindings.append({"name": lhs, "targets": rhs, "attrs": attrs})
+                continue
+            _parse_type_field_line(s, current_type, filename, lineno=lineno, source_line=source_line)
+        by_name = {t.name.lower(): t for t in types}
+        for t in types:
+            if isinstance(t.extends, str):
+                parent = by_name.get(t.extends.lower())
+                if parent is not None:
+                    t.extends = parent
+        if len(types) == 1:
+            return types[0]
+        if not types:
+            raise FortranParseError("parse_types() expected exactly one derived type, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
+        raise FortranParseError(f"parse_types() expected exactly one derived type, but found {len(types)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
     def parse_derived_type(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
-        return _parse_fortran_derived_type(code, filename=filename)
+        return self.parse_types(code, filename=filename)
 
-    def parse_modules(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranModule]:
-        return _parse_fortran_modules(code, filename=filename)
+    def parse_modules(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
+        items = _parse_fortran_modules_impl(code, filename=filename, require_present=True)
+        if len(items) == 1:
+            return items[0]
+        if not items:
+            raise FortranParseError("parse_modules() expected exactly one module, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
+        raise FortranParseError(f"parse_modules() expected exactly one module, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
     def parse_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
-        return _parse_fortran_module(code, filename=filename)
+        return self.parse_modules(code, filename=filename)
 
-    def parse_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
-        return _parse_fortran_interfaces(code, filename=filename)
+    def parse_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
+        items = _parse_fortran_interfaces(code, filename=filename)
+        if len(items) == 1:
+            return items[0]
+        if not items:
+            raise FortranParseError("parse_interfaces() expected exactly one interface, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
+        raise FortranParseError(f"parse_interfaces() expected exactly one interface, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
     def parse_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
-        return _parse_fortran_interface(code, filename=filename)
+        return self.parse_interfaces(code, filename=filename)
 
-    def parse_submodules(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranSubmodule]:
-        return _parse_fortran_submodules(code, filename=filename)
+    def parse_submodules(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
+        items = _parse_fortran_submodules(code, filename=filename)
+        if len(items) == 1:
+            return items[0]
+        if not items:
+            raise FortranParseError("parse_submodules() expected exactly one submodule, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
+        raise FortranParseError(f"parse_submodules() expected exactly one submodule, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
     def parse_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
-        return _parse_fortran_submodule(code, filename=filename)
+        return self.parse_submodules(code, filename=filename)
 
-    def parse_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
-        return _parse_fortran_programs(code, filename=filename)
+    def parse_programs(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
+        items = _parse_fortran_programs(code, filename=filename)
+        if len(items) == 1:
+            return items[0]
+        if not items:
+            raise FortranParseError("parse_programs() expected exactly one program, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
+        raise FortranParseError(f"parse_programs() expected exactly one program, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
     def parse_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
-        return _parse_fortran_program(code, filename=filename)
+        return self.parse_programs(code, filename=filename)
 
-    def parse_block_data(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
-        return _parse_fortran_block_data(code, filename=filename)
+    def parse_block_data(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
+        items = _parse_fortran_block_data(code, filename=filename)
+        if len(items) == 1:
+            return items[0]
+        if not items:
+            raise FortranParseError("parse_block_data() expected exactly one block data unit, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
+        raise FortranParseError(f"parse_block_data() expected exactly one block data unit, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
     def parse_block_data_unit(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
-        return _parse_fortran_block_data_unit(code, filename=filename)
+        return self.parse_block_data(code, filename=filename)
 
     def parse_namespace(
         self,
@@ -2646,126 +2762,3 @@ class FortranParser:
 
     def assess_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
         return _assess_wrap_readiness(code, filename=filename)
-
-    # Backwards-compatible method spellings that mirror the historical function names.
-    parse_fortran_signatures = parse_signatures
-    parse_fortran_project_signatures = parse_project_signatures
-    parse_fortran_signature = parse_signature
-    parse_fortran_file = parse_file
-    parse_fortran_project = parse_project
-    parse_fortran_types = parse_types
-    parse_fortran_derived_type = parse_derived_type
-    parse_fortran_modules = parse_modules
-    parse_fortran_module = parse_module
-    parse_fortran_interfaces = parse_interfaces
-    parse_fortran_interface = parse_interface
-    parse_fortran_submodules = parse_submodules
-    parse_fortran_submodule = parse_submodule
-    parse_fortran_programs = parse_programs
-    parse_fortran_program = parse_program
-    parse_fortran_block_data = parse_block_data
-    parse_fortran_block_data_unit = parse_block_data_unit
-    parse_fortran_namespace = parse_namespace
-
-
-_DEFAULT_PARSER = FortranParser()
-
-# Backwards-compatible module functions. Keep these thin so the class remains
-# the primary public API without breaking existing callers.
-
-
-def parse_fortran_signatures(
-    code: _SourceOrLines,
-    filename: str | None = None,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
-) -> list[FortranProcedureSignature]:
-    return _DEFAULT_PARSER.parse_signatures(code, filename=filename, macro_defines=macro_defines)
-
-
-def parse_fortran_project_signatures(files: dict[str, str]) -> list[FortranProcedureSignature]:
-    return _DEFAULT_PARSER.parse_project_signatures(files)
-
-
-def parse_fortran_file(
-    source_or_path: str | Path,
-    filename: str | None = None,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
-    encoding: str = "utf-8",
-) -> FortranFile:
-    return _DEFAULT_PARSER.parse_file(
-        source_or_path,
-        filename=filename,
-        macro_defines=macro_defines,
-        encoding=encoding,
-    )
-
-
-def parse_fortran_project(files, *, encoding: str = "utf-8") -> FortranProject:
-    return _DEFAULT_PARSER.parse_project(files, encoding=encoding)
-
-
-def parse_fortran_signature(
-    code: _SourceOrLines,
-    filename: str | None = None,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
-) -> FortranProcedureSignature:
-    return _DEFAULT_PARSER.parse_signature(code, filename=filename, macro_defines=macro_defines)
-
-
-def parse_fortran_types(code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
-    return _DEFAULT_PARSER.parse_types(code, filename=filename)
-
-
-def parse_fortran_derived_type(code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
-    return _DEFAULT_PARSER.parse_derived_type(code, filename=filename)
-
-
-def parse_fortran_modules(code: _SourceOrLines, filename: str | None = None) -> list[FortranModule]:
-    return _DEFAULT_PARSER.parse_modules(code, filename=filename)
-
-
-def parse_fortran_module(code: _SourceOrLines, filename: str | None = None) -> FortranModule:
-    return _DEFAULT_PARSER.parse_module(code, filename=filename)
-
-
-def parse_fortran_interfaces(code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
-    return _DEFAULT_PARSER.parse_interfaces(code, filename=filename)
-
-
-def parse_fortran_interface(code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
-    return _DEFAULT_PARSER.parse_interface(code, filename=filename)
-
-
-def parse_fortran_submodules(code: _SourceOrLines, filename: str | None = None) -> list[FortranSubmodule]:
-    return _DEFAULT_PARSER.parse_submodules(code, filename=filename)
-
-
-def parse_fortran_submodule(code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
-    return _DEFAULT_PARSER.parse_submodule(code, filename=filename)
-
-
-def parse_fortran_programs(code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
-    return _DEFAULT_PARSER.parse_programs(code, filename=filename)
-
-
-def parse_fortran_program(code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
-    return _DEFAULT_PARSER.parse_program(code, filename=filename)
-
-
-def parse_fortran_block_data(code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
-    return _DEFAULT_PARSER.parse_block_data(code, filename=filename)
-
-
-def parse_fortran_block_data_unit(code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
-    return _DEFAULT_PARSER.parse_block_data_unit(code, filename=filename)
-
-
-def assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
-    return _DEFAULT_PARSER.assess_wrap_readiness(code, filename=filename)
-
-
-def parse_fortran_namespace(
-    root: str | Path,
-    extensions: tuple[str, ...] = (".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"),
-) -> dict:
-    return _DEFAULT_PARSER.parse_namespace(root, extensions=extensions)
