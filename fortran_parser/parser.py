@@ -763,6 +763,7 @@ def _parse_fortran_modules_impl(
         if l.startswith("end module"):
             if current:
                 _validate_module_variables(current, filename)
+                _apply_module_visibility(current)
                 modules.append(current)
             current = None
             in_contains = False
@@ -1993,6 +1994,19 @@ def _validate_module_variables(module: FortranModule, filename: str | None) -> N
         if var.name.lower() in seen:
             continue
         seen.add(var.name.lower())
+
+
+def _apply_module_visibility(module: FortranModule) -> None:
+    public_set = {s.lower() for s in module.public_symbols}
+    private_set = {s.lower() for s in module.private_symbols}
+    for var in module.variables:
+        name = var.name.lower()
+        if name in private_set:
+            var.visibility = "private"
+        elif name in public_set:
+            var.visibility = "public"
+        else:
+            var.visibility = module.default_visibility
         if var.base_type == "unknown":
             raise FortranParseError(
                 f"Unknown type for variable '{var.name}' in module '{module.name}'.",

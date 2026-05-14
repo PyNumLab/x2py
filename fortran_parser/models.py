@@ -137,6 +137,7 @@ class FortranVariable:
     value_type: str = "unknown"
     is_parameter: bool = False
     dimensions: list[int] = field(default_factory=list)
+    visibility: str = "public"
 
     @property
     def shape_info(self) -> list[dict[str, str | None]]:
