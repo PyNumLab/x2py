@@ -2531,7 +2531,7 @@ class FortranParser:
     ) -> list[FortranProcedureSignature]:
         if macro_defines is None:
             macro_defines = self.macro_defines
-        return _parse_fortran_signature(code, filename=filename, macro_defines=macro_defines)
+        return _parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
 
     def _parse_signature(
         self,
@@ -2541,7 +2541,7 @@ class FortranParser:
     ) -> FortranProcedureSignature:
         if macro_defines is None:
             macro_defines = self.macro_defines
-        return _parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
+        return _parse_fortran_signature(code, filename=filename, macro_defines=macro_defines)
 
     def _parse_project_signatures(self, files: dict[str, str]) -> list[FortranProcedureSignature]:
         return _parse_fortran_project_signatures(files, macro_defines=self.macro_defines)
@@ -2553,12 +2553,40 @@ class FortranParser:
         macro_defines: set[str] | dict[str, int | bool | str] | None = None,
         encoding: str = "utf-8",
     ) -> FortranFile:
-        return _parse_fortran_file(
-            source_or_path,
-            filename=filename,
-            macro_defines=macro_defines,
-            encoding=encoding,
+        if filename is None and _looks_like_existing_source_path(source_or_path):
+            path = Path(source_or_path)
+            filename = str(path)
+            code = path.read_text(encoding=encoding)
+        else:
+            code = str(source_or_path)
+
+        lines = preprocess_lines(code, filename)
+        signatures = _parse_fortran_signatures(lines, filename=filename, macro_defines=macro_defines)
+        derived_types = _parse_fortran_types(lines, filename=filename)
+        interfaces = _parse_fortran_interfaces(lines, filename=filename)
+        modules = _parse_fortran_modules_impl(
+            lines, filename=filename, require_present=False, signatures=signatures, types=derived_types, interfaces=interfaces
         )
+        submodules = _parse_fortran_submodules(
+            lines, filename=filename, signatures=signatures, types=derived_types, interfaces=interfaces
+        )
+        programs = _parse_fortran_programs(lines, filename=filename)
+        block_data_units = _parse_fortran_block_data(lines, filename=filename)
+        owned_proc_ids = {id(proc) for mod in modules for proc in mod.procedures}
+        owned_proc_ids.update(id(proc) for submod in submodules for proc in submod.procedures)
+        standalone_procedures = [
+            sig for sig in signatures if sig.module is None and not sig.in_interface and id(sig) not in owned_proc_ids
+        ]
+        file = FortranFile(
+            filename=filename, source=code, encoding=encoding, format=_source_form(filename), modules=modules,
+            submodules=submodules, programs=programs, block_data_units=block_data_units, procedures=standalone_procedures,
+            interfaces=[iface for iface in interfaces if iface.module is None],
+            derived_types=[dtype for dtype in derived_types if dtype.module is None],
+        )
+        file.symbols.update({m.name.lower(): m for m in modules})
+        file.symbols.update({sm.name.lower(): sm for sm in submodules})
+        file.symbols.update({p.name.lower(): p for p in standalone_procedures})
+        return file
 
     def parse_project(self, files, *, encoding: str = "utf-8") -> FortranProject:
         if isinstance(files, dict):
