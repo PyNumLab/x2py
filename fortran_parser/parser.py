@@ -200,7 +200,7 @@ def _enforce_source_form_compatibility(line: str, filename: str | None, lineno: 
             )
 
 
-def _parse_fortran_signatures(
+def _parse_fortran_signatures_impl(
     code: _SourceOrLines,
     filename: str | None = None,
     macro_defines: set[str] | dict[str, int | bool | str] | None = None,
@@ -430,9 +430,6 @@ def _parse_fortran_signatures(
                 sig.attributes.append(iface_attr)
 
     return signatures
-
-
-_parse_fortran_signatures_legacy = _parse_fortran_signatures
 
 
 def _parse_fortran_signatures(
@@ -2079,7 +2076,7 @@ class FortranParser:
         filename: str | None = None,
         macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     ) -> list[FortranProcedureSignature]:
-        return _parse_fortran_signatures_legacy(code, filename=filename, macro_defines=macro_defines)
+        return _parse_fortran_signatures_impl(code, filename=filename, macro_defines=macro_defines)
 
     def _parse_fortran_signatures(
         self,
