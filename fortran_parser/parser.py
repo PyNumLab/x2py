@@ -1985,10 +1985,7 @@ def _validate_module_variables(module: FortranModule, filename: str | None) -> N
     seen: set[str] = set()
     for var in module.variables:
         if var.name.lower() in seen:
-            raise FortranParseError(
-                f"Duplicate variable '{var.name}' in module '{module.name}'.",
-                filename=filename,
-            )
+            continue
         seen.add(var.name.lower())
         if var.base_type == "unknown":
             raise FortranParseError(
@@ -2454,16 +2451,10 @@ def _parse_module_variable_line(line: str, module: FortranModule, filename: str 
     if _DERIVED_TYPE_RE.match(line.strip()):
         return
     left, right = [x.strip() for x in line.split("::", 1)]
+    lower_left = left.lower()
+    if lower_left in {"public", "private", "module procedure"}:
+        return
     star_kind = _find_legacy_star_kind(left)
-    source_form = _source_form(filename)
-    if star_kind and source_form == "modern":
-        base, kind = star_kind
-        raise FortranParseError(
-            f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.",
-            filename=filename,
-            line_number=lineno,
-            source_line=source_line,
-        )
 
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
@@ -2489,6 +2480,35 @@ def _parse_module_variable_line(line: str, module: FortranModule, filename: str 
         meta = {
             "base_type": "derived",
             "kind": decl.group("dtype"),
+            "rank": 0,
+            "shape": [],
+            "intent": "unknown",
+            "optional": False,
+            "value": False,
+            "allocatable": False,
+            "pointer": False,
+        }
+    elif re.match(r"^procedure\s*\(", left, re.IGNORECASE):
+        procm = _PROC_DUMMY_RE.match(left)
+        iface = procm.group("iface").lower() if procm else None
+        attrs = split_csv((procm.group("attrs") if procm else "").strip().lstrip(", "))
+        meta = {
+            "base_type": "procedure",
+            "kind": iface,
+            "rank": 0,
+            "shape": [],
+            "intent": "unknown",
+            "optional": False,
+            "value": False,
+            "allocatable": False,
+            "pointer": False,
+        }
+    elif star_kind:
+        base, kind = star_kind
+        attrs = []
+        meta = {
+            "base_type": base.lower(),
+            "kind": kind,
             "rank": 0,
             "shape": [],
             "intent": "unknown",

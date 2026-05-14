@@ -1,1 +1,179 @@
-[]
+{
+  "filename": "SciFortran/IOREAD.f90",
+  "source": "module IOREAD\n  USE IOFILE\n  implicit none\n  private\n\n  integer            :: unit\n  character(len=128) :: fmt\n  logical            :: control\n\n  interface sread\n     module procedure :: sreadA1_RR\n     module procedure :: sreadA1_RC\n     module procedure :: sreadA2_RR\n     module procedure :: sreadA2_RC\n     module procedure :: sreadA3_RR\n     module procedure :: sreadA3_RC\n     module procedure :: sreadA4_RR\n     module procedure :: sreadA4_RC\n     module procedure :: sreadA5_RR\n     module procedure :: sreadA5_RC\n     module procedure :: sreadA6_RR\n     module procedure :: sreadA6_RC\n     module procedure :: sreadA7_RR\n     module procedure :: sreadA7_RC\n  end interface sread\n\n\n  interface read_array\n     module procedure :: data_readA0_R\n     module procedure :: data_readA0_C\n     module procedure :: data_readA1_R\n     module procedure :: data_readA1_C\n     module procedure :: data_readA2_R\n     module procedure :: data_readA2_C\n     module procedure :: data_readA3_R\n     module procedure :: data_readA3_C\n     module procedure :: data_readA4_R\n     module procedure :: data_readA4_C\n     module procedure :: data_readA5_R\n     module procedure :: data_readA5_C\n     module procedure :: data_readA6_R\n     module procedure :: data_readA6_C\n     module procedure :: data_readA7_R\n     module procedure :: data_readA7_C\n  end interface read_array\n\n\n  public :: sread\n  public :: read_array\n\n\ncontains\n\n\n  ! SPLOT arrays (1--7)\n  include \"ioread_sread.f90\"\n\n  ! READ_ARRAY arrays (0--7)\n  include \"ioread_read_array.f90\"\n\n  ! READ safety utility\n  include \"ioread_control.f90\"\n\n\nend module IOREAD\n",
+  "encoding": "utf-8",
+  "format": "modern",
+  "modules": [
+    {
+      "name": "IOREAD",
+      "filename": "SciFortran/IOREAD.f90",
+      "uses": {
+        "IOFILE": []
+      },
+      "variables": [
+        {
+          "name": "unit",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "fmt",
+          "base_type": "character",
+          "kind": "len=128",
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "control",
+          "base_type": "logical",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "procedures": [],
+      "derived_types": [],
+      "interfaces": [
+        {
+          "name": "sread",
+          "module": "IOREAD",
+          "procedures": []
+        },
+        {
+          "name": "read_array",
+          "module": "IOREAD",
+          "procedures": []
+        }
+      ]
+    }
+  ],
+  "submodules": [],
+  "programs": [],
+  "block_data_units": [],
+  "procedures": [],
+  "interfaces": [],
+  "derived_types": [],
+  "variables": [],
+  "includes": [],
+  "diagnostics": [],
+  "symbols": {
+    "ioread": {
+      "name": "IOREAD",
+      "filename": "SciFortran/IOREAD.f90",
+      "uses": {
+        "IOFILE": []
+      },
+      "variables": [
+        {
+          "name": "unit",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "fmt",
+          "base_type": "character",
+          "kind": "len=128",
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "control",
+          "base_type": "logical",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "procedures": [],
+      "derived_types": [],
+      "interfaces": [
+        {
+          "name": "sread",
+          "module": "IOREAD",
+          "procedures": []
+        },
+        {
+          "name": "read_array",
+          "module": "IOREAD",
+          "procedures": []
+        }
+      ]
+    }
+  }
+}
