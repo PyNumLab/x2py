@@ -2062,13 +2062,21 @@ def _topological_files(file_deps: dict[str, set[str]]) -> list[str]:
 
 
 class FortranParser:
-    def _parse_fortran_signatures(
+    def _parse_fortran_signatures_impl(
         self,
         code: _SourceOrLines,
         filename: str | None = None,
         macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     ) -> list[FortranProcedureSignature]:
         return _parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
+
+    def _parse_fortran_signatures(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+    ) -> list[FortranProcedureSignature]:
+        return self._parse_fortran_signatures_impl(code, filename=filename, macro_defines=macro_defines)
 
     def _parse_fortran_signature(
         self,
