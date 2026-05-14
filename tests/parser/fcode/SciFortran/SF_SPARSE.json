@@ -18,7 +18,26 @@
       "variables": [],
       "procedures": [],
       "derived_types": [],
-      "interfaces": []
+      "interfaces": [],
+      "default_visibility": "private",
+      "public_symbols": [
+        "sparse_dmatrix_csr",
+        "sparse_zmatrix_csr",
+        "sparse_dmatrix_csc",
+        "sparse_zmatrix_csc",
+        "assignment(=)",
+        "operator(+)",
+        "operator(-)",
+        "operator(*)",
+        "operator(/)",
+        "operator(.x.)",
+        "kron",
+        "shape",
+        "transpose",
+        "hconjg",
+        "matmul"
+      ],
+      "private_symbols": []
     }
   ],
   "submodules": [],
@@ -45,7 +64,26 @@
       "variables": [],
       "procedures": [],
       "derived_types": [],
-      "interfaces": []
+      "interfaces": [],
+      "default_visibility": "private",
+      "public_symbols": [
+        "sparse_dmatrix_csr",
+        "sparse_zmatrix_csr",
+        "sparse_dmatrix_csc",
+        "sparse_zmatrix_csc",
+        "assignment(=)",
+        "operator(+)",
+        "operator(-)",
+        "operator(*)",
+        "operator(/)",
+        "operator(.x.)",
+        "kron",
+        "shape",
+        "transpose",
+        "hconjg",
+        "matmul"
+      ],
+      "private_symbols": []
     }
   }
 }

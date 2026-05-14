@@ -23,6 +23,7 @@
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
+          "visibility": "private",
           "procedure": null,
           "intent": "unknown",
           "optional": false,
@@ -42,6 +43,7 @@
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
+          "visibility": "private",
           "procedure": null,
           "intent": "unknown",
           "optional": false,
@@ -68,7 +70,14 @@
           "module": "IOPLOT",
           "procedures": []
         }
-      ]
+      ],
+      "default_visibility": "private",
+      "public_symbols": [
+        "splot",
+        "splot3d",
+        "save_array"
+      ],
+      "private_symbols": []
     }
   ],
   "submodules": [],
@@ -100,6 +109,7 @@
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
+          "visibility": "private",
           "procedure": null,
           "intent": "unknown",
           "optional": false,
@@ -119,6 +129,7 @@
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
+          "visibility": "private",
           "procedure": null,
           "intent": "unknown",
           "optional": false,
@@ -145,7 +156,14 @@
           "module": "IOPLOT",
           "procedures": []
         }
-      ]
+      ],
+      "default_visibility": "private",
+      "public_symbols": [
+        "splot",
+        "splot3d",
+        "save_array"
+      ],
+      "private_symbols": []
     }
   }
 }
