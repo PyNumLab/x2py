@@ -774,6 +774,12 @@ def _parse_fortran_modules_impl(
             continue
         if in_contains:
             continue
+        if l == "private":
+            current.default_visibility = "private"
+            continue
+        if l == "public":
+            current.default_visibility = "public"
+            continue
         m = _USE_RE.match(s)
         if m:
             current.uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
@@ -2452,7 +2458,21 @@ def _parse_module_variable_line(line: str, module: FortranModule, filename: str 
         return
     left, right = [x.strip() for x in line.split("::", 1)]
     lower_left = left.lower()
-    if lower_left in {"public", "private", "module procedure"}:
+    if lower_left == "public":
+        names = [n.strip() for n in split_csv(right) if n.strip()]
+        if names:
+            module.public_symbols.extend(names)
+        else:
+            module.default_visibility = "public"
+        return
+    if lower_left == "private":
+        names = [n.strip() for n in split_csv(right) if n.strip()]
+        if names:
+            module.private_symbols.extend(names)
+        else:
+            module.default_visibility = "private"
+        return
+    if lower_left == "module procedure":
         return
     star_kind = _find_legacy_star_kind(left)
 

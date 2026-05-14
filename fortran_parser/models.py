@@ -203,6 +203,9 @@ class FortranModule:
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
     derived_types: list[FortranDerivedType] = field(default_factory=list)
     interfaces: list[FortranInterface] = field(default_factory=list)
+    default_visibility: str = "public"
+    public_symbols: list[str] = field(default_factory=list)
+    private_symbols: list[str] = field(default_factory=list)
 
 
 @dataclass
