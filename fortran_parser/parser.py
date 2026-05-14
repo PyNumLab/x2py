@@ -433,28 +433,7 @@ def _parse_fortran_signatures(
 
 
 def _parse_fortran_project_signatures(files: dict[str, str]) -> list[FortranProcedureSignature]:
-    """Parse signatures for multiple files and resolve cross-file kinds/shapes.
-
-    This is a two-pass routine:
-    - pass 1: parse each file and collect module-scope `parameter` constants
-    - pass 2: for each signature, resolve kind/shape expressions using imported
-      module parameters (honoring `use, only:` restrictions when present)
-    """
-    module_params: dict[str, dict[str, str]] = {}
-    parsed_files: list[tuple[str, list[FortranProcedureSignature]]] = []
-    preprocessed_files = {fname: preprocess_lines(code, fname) for fname, code in files.items()}
-    for fname, lines in preprocessed_files.items():
-        module_params.update(_collect_module_parameters(lines, fname))
-        parsed_files.append((fname, _parse_fortran_signatures(lines, filename=fname)))
-
-    for _, signatures in parsed_files:
-        for sig in signatures:
-            _resolve_signature_kinds(sig, module_params)
-
-    out: list[FortranProcedureSignature] = []
-    for _, signatures in parsed_files:
-        out.extend(signatures)
-    return out
+    return _DEFAULT_PARSER._parse_fortran_project_signatures(files)
 
 
 def _preprocessor_conditions_overlap(c1: frozenset[str], c2: frozenset[str]) -> bool:
@@ -2311,8 +2290,21 @@ class FortranParser:
         )
 
     def _parse_fortran_project_signatures(self, files: dict[str, str]) -> list[FortranProcedureSignature]:
-        project = self._parse_fortran_project(files)
-        return list(project.procedures.values())
+        module_params: dict[str, dict[str, str]] = {}
+        parsed_files: list[tuple[str, list[FortranProcedureSignature]]] = []
+        preprocessed_files = {fname: preprocess_lines(code, fname) for fname, code in files.items()}
+        for fname, lines in preprocessed_files.items():
+            module_params.update(_collect_module_parameters(lines, fname))
+            parsed_files.append((fname, self._parse_fortran_signatures(lines, filename=fname)))
+
+        for _, signatures in parsed_files:
+            for sig in signatures:
+                _resolve_signature_kinds(sig, module_params)
+
+        out: list[FortranProcedureSignature] = []
+        for _, signatures in parsed_files:
+            out.extend(signatures)
+        return out
 
     """Object-oriented public API for the Fortran parser entrypoints.
 
