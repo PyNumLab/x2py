@@ -39,13 +39,39 @@ front-end). Current handled coverage:
 
 ## Public APIs
 
-- `parse_fortran_file(source_or_path, filename=None)` — canonical single-file parser returning `FortranFile`
-- `parse_fortran_project(files)` — multi-file parser returning `FortranProject`
-- Singular strict parsers for one model instance: `parse_fortran_signature`, `parse_fortran_derived_type`, `parse_fortran_module`, `parse_fortran_interface`, `parse_fortran_submodule`, `parse_fortran_program`, `parse_fortran_block_data_unit`
-- Plural collection parsers for file sections that may legally occur more than once: `parse_fortran_signatures`, `parse_fortran_types`, `parse_fortran_modules`, `parse_fortran_interfaces`, `parse_fortran_submodules`, `parse_fortran_programs`, `parse_fortran_block_data`
-- `parse_fortran_project_signatures(files: dict[str, str])`
-- `parse_fortran_namespace(root: str)`
-- `assess_wrap_readiness(code: str, filename: str | None = None)`
+Current supported public entrypoints are intentionally small:
+
+- `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
+- `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
+- `assess_wrap_readiness(code, filename=None) -> dict`
+
+> Historical parser entrypoints such as `parse_fortran_signatures`,
+> `parse_fortran_modules`, `parse_fortran_types`, and related singular/plural
+> variants are now internal implementation methods on `FortranParser` and are
+> no longer part of the supported top-level API.
+
+## Parser organization notes
+
+`fortran_parser/parser.py` is now intentionally organized into clearly labeled
+sections so maintainers can navigate the file by concern instead of by history:
+
+- Regex/constants and parser-wide type aliases
+- Module-level helper blocks (source-form rules, preprocessor logic,
+  diagnostics, shape evaluation, compile-time expression resolution,
+  dependency ordering)
+- `FortranParser` internals grouped by domain:
+  - signature/declaration parsing
+  - module-variable parsing
+  - file/project orchestration
+  - program-unit parsers (types, modules, interfaces, submodules, programs,
+    block-data)
+  - public API wrappers (`parse_file`, `parse_project`,
+    `assess_wrap_readiness`)
+- Thin module-level convenience wrappers that delegate to a shared parser
+  instance
+
+This was a structural readability refactor only: behavior and public return
+models are unchanged.
 
 ## Terminal usage
 
