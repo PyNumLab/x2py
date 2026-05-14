@@ -1254,5 +1254,795 @@
     "uses": {},
     "in_interface": false,
     "variables": {}
+  },
+  {
+    "name": "funcv",
+    "kind": "function",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "funcv",
+      "base_type": "complex",
+      "kind": null,
+      "rank": 1,
+      "shape": [
+        "size(x)"
+      ],
+      "lbound": [
+        "1"
+      ],
+      "ubound": [
+        "size(x)"
+      ],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "funcv",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": true,
+    "variables": {}
+  },
+  {
+    "name": "funcv",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "y",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(x)"
+        ],
+        "lbound": [
+          "1"
+        ],
+        "ubound": [
+          "size(x)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": true,
+    "variables": {}
+  },
+  {
+    "name": "funcv",
+    "kind": "function",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "funcv",
+      "base_type": "complex",
+      "kind": null,
+      "rank": 1,
+      "shape": [
+        "size(x)"
+      ],
+      "lbound": [
+        "1"
+      ],
+      "ubound": [
+        "size(x)"
+      ],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "funcv",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": true,
+    "variables": {}
+  },
+  {
+    "name": "funcv",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "y",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "size(x)"
+        ],
+        "lbound": [
+          "1"
+        ],
+        "ubound": [
+          "size(x)"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": true,
+    "variables": {}
+  },
+  {
+    "name": "funcv",
+    "kind": "function",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "m",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "lbound": [],
+        "ubound": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "funcv",
+      "base_type": "complex",
+      "kind": null,
+      "rank": 1,
+      "shape": [
+        "m"
+      ],
+      "lbound": [
+        "1"
+      ],
+      "ubound": [
+        "m"
+      ],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "funcv",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": true,
+    "variables": {}
+  },
+  {
+    "name": "funcv",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "m",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "lbound": [],
+        "ubound": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "y",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "m"
+        ],
+        "lbound": [
+          "1"
+        ],
+        "ubound": [
+          "m"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": true,
+    "variables": {}
+  },
+  {
+    "name": "funcv",
+    "kind": "function",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "m",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "lbound": [],
+        "ubound": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "funcv",
+      "base_type": "complex",
+      "kind": null,
+      "rank": 1,
+      "shape": [
+        "m"
+      ],
+      "lbound": [
+        "1"
+      ],
+      "ubound": [
+        "m"
+      ],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "funcv",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": true,
+    "variables": {}
+  },
+  {
+    "name": "funcv",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "m",
+        "base_type": "integer",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "lbound": [],
+        "ubound": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "y",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          "m"
+        ],
+        "lbound": [
+          "1"
+        ],
+        "ubound": [
+          "m"
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": true,
+    "variables": {}
+  },
+  {
+    "name": "funcv",
+    "kind": "function",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "funcv",
+      "base_type": "complex",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "lbound": [],
+      "ubound": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "funcv",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": true,
+    "variables": {}
+  },
+  {
+    "name": "funcv",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "y",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "lbound": [],
+        "ubound": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": true,
+    "variables": {}
+  },
+  {
+    "name": "funcv",
+    "kind": "function",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": {
+      "name": "funcv",
+      "base_type": "complex",
+      "kind": null,
+      "rank": 0,
+      "shape": [],
+      "lbound": [],
+      "ubound": [],
+      "value": null,
+      "value_type": "unknown",
+      "is_parameter": false,
+      "dimensions": [],
+      "procedure": "funcv",
+      "intent": "unknown",
+      "optional": false,
+      "pass_by_value": false,
+      "allocatable": false,
+      "pointer": false
+    },
+    "attributes": [],
+    "uses": {},
+    "in_interface": true,
+    "variables": {}
+  },
+  {
+    "name": "funcv",
+    "kind": "subroutine",
+    "module": null,
+    "arguments": [
+      {
+        "name": "x",
+        "base_type": "real",
+        "kind": null,
+        "rank": 1,
+        "shape": [
+          ":"
+        ],
+        "lbound": [
+          null
+        ],
+        "ubound": [
+          null
+        ],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "in",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      {
+        "name": "y",
+        "base_type": "complex",
+        "kind": null,
+        "rank": 0,
+        "shape": [],
+        "lbound": [],
+        "ubound": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "procedure": "funcv",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      }
+    ],
+    "result": null,
+    "attributes": [],
+    "uses": {},
+    "in_interface": true,
+    "variables": {}
   }
 ]

@@ -1,13 +1,55 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from fortran_parser import (
-    FortranParseError,
-    parse_fortran_interfaces,
-    parse_fortran_modules,
-    parse_fortran_signatures,
-    parse_fortran_types,
-)
+from fortran_parser import FortranParseError, parse_fortran_file
+
+
+def _collect_signatures(parsed):
+    signatures = list(parsed.procedures)
+    for module in parsed.modules:
+        signatures.extend(module.procedures)
+        for interface in module.interfaces:
+            signatures.extend(interface.procedures)
+    for submodule in parsed.submodules:
+        signatures.extend(submodule.procedures)
+        for interface in submodule.interfaces:
+            signatures.extend(interface.procedures)
+    for program in parsed.programs:
+        signatures.extend(program.procedures)
+    for interface in parsed.interfaces:
+        signatures.extend(interface.procedures)
+    return signatures
+
+
+def _collect_types(parsed):
+    types = list(parsed.derived_types)
+    for module in parsed.modules:
+        types.extend(module.derived_types)
+    for submodule in parsed.submodules:
+        types.extend(submodule.derived_types)
+    return types
+
+
+def parse_fortran_signatures(code, filename=None, macro_defines=None):
+    return _collect_signatures(parse_fortran_file(code, filename=filename, macro_defines=macro_defines))
+
+
+def parse_fortran_types(code, filename=None):
+    return _collect_types(parse_fortran_file(code, filename=filename))
+
+
+def parse_fortran_modules(code, filename=None):
+    return parse_fortran_file(code, filename=filename).modules
+
+
+def parse_fortran_interfaces(code, filename=None):
+    parsed = parse_fortran_file(code, filename=filename)
+    interfaces = list(parsed.interfaces)
+    for module in parsed.modules:
+        interfaces.extend(module.interfaces)
+    for submodule in parsed.submodules:
+        interfaces.extend(submodule.interfaces)
+    return interfaces
 
 
 # ---------------------------------------------------------------------------

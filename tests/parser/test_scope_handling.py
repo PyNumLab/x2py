@@ -1,7 +1,37 @@
 import pytest
 
-from fortran_parser import parse_fortran_signatures
+from fortran_parser import parse_fortran_file
 from fortran_parser.models import FortranParseError
+
+def _collect_signatures(parsed):
+    signatures = list(parsed.procedures)
+    for module in parsed.modules:
+        signatures.extend(module.procedures)
+        for interface in module.interfaces:
+            signatures.extend(interface.procedures)
+    for submodule in parsed.submodules:
+        signatures.extend(submodule.procedures)
+        for interface in submodule.interfaces:
+            signatures.extend(interface.procedures)
+    for program in parsed.programs:
+        signatures.extend(program.procedures)
+    for interface in parsed.interfaces:
+        signatures.extend(interface.procedures)
+    return signatures
+
+
+def _collect_types(parsed):
+    types = list(parsed.derived_types)
+    for module in parsed.modules:
+        types.extend(module.derived_types)
+    for submodule in parsed.submodules:
+        types.extend(submodule.derived_types)
+    return types
+
+
+def parse_fortran_signatures(code, filename=None, macro_defines=None):
+    signatures = _collect_signatures(parse_fortran_file(code, filename=filename, macro_defines=macro_defines))
+    return [sig for sig in signatures if not sig.in_interface]
 
 
 def test_same_argument_name_in_different_procedures_is_allowed():

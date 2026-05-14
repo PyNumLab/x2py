@@ -7,7 +7,45 @@ import json
 import sys
 from pathlib import Path
 
-from fortran_parser import FortranParseError, parse_fortran_modules, parse_fortran_signatures, parse_fortran_types
+from fortran_parser import FortranParseError, parse_fortran_file
+
+def _collect_signatures(parsed):
+    signatures = list(parsed.procedures)
+    for module in parsed.modules:
+        signatures.extend(module.procedures)
+        for interface in module.interfaces:
+            signatures.extend(interface.procedures)
+    for submodule in parsed.submodules:
+        signatures.extend(submodule.procedures)
+        for interface in submodule.interfaces:
+            signatures.extend(interface.procedures)
+    for program in parsed.programs:
+        signatures.extend(program.procedures)
+    for interface in parsed.interfaces:
+        signatures.extend(interface.procedures)
+    return signatures
+
+
+def _collect_types(parsed):
+    types = list(parsed.derived_types)
+    for module in parsed.modules:
+        types.extend(module.derived_types)
+    for submodule in parsed.submodules:
+        types.extend(submodule.derived_types)
+    return types
+
+
+def parse_fortran_signatures(source, filename=None):
+    return _collect_signatures(parse_fortran_file(source, filename=filename))
+
+
+def parse_fortran_types(source, filename=None):
+    return _collect_types(parse_fortran_file(source, filename=filename))
+
+
+def parse_fortran_modules(source, filename=None):
+    return parse_fortran_file(source, filename=filename).modules
+
 
 _ERRORS_DIR = Path(__file__).parent
 _PARSER_MAP = {
