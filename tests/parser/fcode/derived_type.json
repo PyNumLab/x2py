@@ -1,0 +1,249 @@
+{
+  "filename": "derived_type.f90",
+  "source": "module particle_mod\n  type :: particle\n    integer :: id\n    real(kind=8), dimension(3) :: x\n  contains\n    procedure :: move, reset\n  end type particle\ncontains\nsubroutine touch(p)\n  type(particle), intent(inout) :: p\nend subroutine touch\nend module particle_mod\n",
+  "encoding": "utf-8",
+  "format": "modern",
+  "modules": [
+    {
+      "name": "particle_mod",
+      "filename": "derived_type.f90",
+      "uses": {},
+      "variables": [],
+      "procedures": [
+        {
+          "name": "touch",
+          "kind": "subroutine",
+          "module": "particle_mod",
+          "arguments": [
+            {
+              "name": "p",
+              "base_type": "derived",
+              "kind": "particle",
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": "touch",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "result": null,
+          "attributes": [],
+          "uses": {},
+          "in_interface": false,
+          "variables": {}
+        }
+      ],
+      "derived_types": [
+        {
+          "name": "particle",
+          "module": "particle_mod",
+          "fields": [
+            {
+              "name": "id",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x",
+              "base_type": "real",
+              "kind": "8",
+              "rank": 1,
+              "shape": [
+                "3"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "3"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "methods": [
+            "move",
+            "reset"
+          ],
+          "extends": null,
+          "attributes": [],
+          "procedure_bindings": [
+            {
+              "name": "move",
+              "attrs": []
+            },
+            {
+              "name": "reset",
+              "attrs": []
+            }
+          ],
+          "generic_bindings": []
+        }
+      ],
+      "interfaces": [],
+      "default_visibility": "public",
+      "public_symbols": [],
+      "private_symbols": []
+    }
+  ],
+  "submodules": [],
+  "programs": [],
+  "block_data_units": [],
+  "procedures": [],
+  "interfaces": [],
+  "derived_types": [],
+  "variables": [],
+  "includes": [],
+  "diagnostics": [],
+  "symbols": {
+    "particle_mod": {
+      "name": "particle_mod",
+      "filename": "derived_type.f90",
+      "uses": {},
+      "variables": [],
+      "procedures": [
+        {
+          "name": "touch",
+          "kind": "subroutine",
+          "module": "particle_mod",
+          "arguments": [
+            {
+              "name": "p",
+              "base_type": "derived",
+              "kind": "particle",
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": "touch",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "result": null,
+          "attributes": [],
+          "uses": {},
+          "in_interface": false,
+          "variables": {}
+        }
+      ],
+      "derived_types": [
+        {
+          "name": "particle",
+          "module": "particle_mod",
+          "fields": [
+            {
+              "name": "id",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x",
+              "base_type": "real",
+              "kind": "8",
+              "rank": 1,
+              "shape": [
+                "3"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "3"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": null,
+              "intent": "unknown",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "methods": [
+            "move",
+            "reset"
+          ],
+          "extends": null,
+          "attributes": [],
+          "procedure_bindings": [
+            {
+              "name": "move",
+              "attrs": []
+            },
+            {
+              "name": "reset",
+              "attrs": []
+            }
+          ],
+          "generic_bindings": []
+        }
+      ],
+      "interfaces": [],
+      "default_visibility": "public",
+      "public_symbols": [],
+      "private_symbols": []
+    }
+  }
+}

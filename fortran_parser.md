@@ -60,15 +60,10 @@ and practical usage from terminal and Python.
 
 ## 2) Public API surface
 
-- `parse_fortran_signatures`
-- `parse_fortran_types`
-- `parse_fortran_modules`
-- `parse_fortran_submodules`
-- `parse_fortran_programs`
-- `parse_fortran_block_data`
-- `parse_fortran_project_signatures`
-- `parse_fortran_namespace`
-- `assess_wrap_readiness`
+- File/project entrypoints: `parse_fortran_file`, `parse_fortran_project`
+- Singular strict entrypoints: `parse_fortran_signature`, `parse_fortran_derived_type`, `parse_fortran_module`, `parse_fortran_interface`, `parse_fortran_submodule`, `parse_fortran_program`, `parse_fortran_block_data_unit`
+- Plural collection entrypoints: `parse_fortran_signatures`, `parse_fortran_types`, `parse_fortran_modules`, `parse_fortran_interfaces`, `parse_fortran_submodules`, `parse_fortran_programs`, `parse_fortran_block_data`
+- Project/diagnostic helpers: `parse_fortran_project_signatures`, `parse_fortran_namespace`, `assess_wrap_readiness`
 
 ## 3) Terminal usage and expected outputs
 
@@ -749,3 +744,18 @@ The parser accepts legacy callback-style declarations inside procedure scopes, i
 - `real, external :: f` / `integer, external :: g` (typed external function dummies)
 
 Under `implicit none`, these declarations count as valid argument declarations, so callback arguments are not reported as missing datatype declarations.
+
+## 8) File, project, and semantic entrypoints
+
+Use the most specific parser entrypoint for the expected source shape. Raw-source preprocessing is owned by file/project-level entrypoints, which pass normalized lines to lower-level collectors instead of re-normalizing the same source repeatedly:
+
+- `parse_fortran_file(source_or_path, filename=None) -> FortranFile` preprocesses once, parses a single source, and aggregates all top-level program units. Source strings have no filename by default; callers can pass `filename=` for diagnostics or provenance. Existing paths are read from disk when no explicit filename is supplied.
+- `parse_fortran_project(files) -> FortranProject` parses many files through `parse_fortran_file`, preprocessing once per file, and builds registries for modules, submodules, programs, standalone procedures, derived types, interfaces, and dependencies.
+- Singular functions such as `parse_fortran_module(code, filename=None)` return one model object and raise `FortranParseError` for zero or multiple matches.
+- Plural functions such as `parse_fortran_modules(code, filename=None)` return all matching objects because a Fortran source file can legally contain multiple modules/program units; these remain useful as collection helpers and for backwards compatibility.
+- `parse_fortran_signatures(code, filename=None)` extracts all procedure signatures only. It is deliberately not used as the canonical file parser.
+- Unit-specific functions (`parse_fortran_modules`, `parse_fortran_interfaces`, `parse_fortran_submodules`, `parse_fortran_programs`, and `parse_fortran_block_data`) model the corresponding Fortran unit. Wrong-entrypoint calls should fail loudly when a source clearly contains a different top-level shape, e.g. `parse_fortran_modules` raises `FortranParseError` for standalone-procedure-only input.
+
+`parse_fortran_modules` reads only module specification-part declarations into `FortranModule.variables`; procedure-local declarations inside `contains` are attached to procedure signatures and do not leak into module variables.
+
+Semantic conversion lives in `semantics/fortran2ir.py`. It accepts the new `FortranFile` structure (or an already selected `FortranModule`) and converts parser metadata into the semantic IR consumed by the `.pyi` printer and later wrapper/runtime stages.

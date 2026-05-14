@@ -137,6 +137,7 @@ class FortranVariable:
     value_type: str = "unknown"
     is_parameter: bool = False
     dimensions: list[int] = field(default_factory=list)
+    visibility: str = "public"
 
     @property
     def shape_info(self) -> list[dict[str, str | None]]:
@@ -203,6 +204,9 @@ class FortranModule:
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
     derived_types: list[FortranDerivedType] = field(default_factory=list)
     interfaces: list[FortranInterface] = field(default_factory=list)
+    default_visibility: str = "public"
+    public_symbols: list[str] = field(default_factory=list)
+    private_symbols: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -232,3 +236,103 @@ class FortranBlockData:
     name: Optional[str] = None
     filename: Optional[str] = None
     variables: list[FortranVariable] = field(default_factory=list)
+
+@dataclass
+class FortranFile:
+
+    # --------------------------------------------------------
+    # File metadata
+    # --------------------------------------------------------
+
+    filename: Optional[str] = None
+
+    source: Optional[str] = None
+
+    encoding: str = "utf-8"
+
+    format: str = "free"
+    # "free" | "fixed"
+
+    # --------------------------------------------------------
+    # Top-level program units
+    # --------------------------------------------------------
+
+    modules: list[FortranModule] = field(default_factory=list)
+
+    submodules: list[FortranSubmodule] = field(default_factory=list)
+
+    programs: list[FortranProgram] = field(default_factory=list)
+
+    block_data_units: list[FortranBlockData] = field(default_factory=list)
+
+    procedures: list[FortranProcedureSignature] = field(default_factory=list)
+    # standalone procedures outside modules
+
+    interfaces: list[FortranInterface] = field(default_factory=list)
+
+    derived_types: list[FortranDerivedType] = field(default_factory=list)
+    # standalone derived types if ever encountered
+
+    variables: list[FortranVariable] = field(default_factory=list)
+    # file-scope declarations if relevant
+
+    # --------------------------------------------------------
+    # Include information
+    # --------------------------------------------------------
+
+    includes: list[str] = field(default_factory=list)
+
+    # --------------------------------------------------------
+    # Diagnostics
+    # --------------------------------------------------------
+
+    diagnostics: list[str] = field(default_factory=list)
+
+    # --------------------------------------------------------
+    # Symbol table (optional later)
+    # --------------------------------------------------------
+
+    symbols: dict[str, object] = field(default_factory=dict)
+
+@dataclass
+class FortranProject:
+
+    # --------------------------------------------------------
+    # Physical files
+    # --------------------------------------------------------
+
+    files: list[FortranFile] = field(default_factory=list)
+
+    # --------------------------------------------------------
+    # Global symbol registries
+    # --------------------------------------------------------
+
+    modules: dict[str, FortranModule] = field(default_factory=dict)
+
+    submodules: dict[str, FortranSubmodule] = field(default_factory=dict)
+
+    programs: dict[str, FortranProgram] = field(default_factory=dict)
+
+    procedures: dict[str, FortranProcedureSignature] = field(default_factory=dict)
+
+    derived_types: dict[str, FortranDerivedType] = field(default_factory=dict)
+
+    interfaces: dict[str, FortranInterface] = field(default_factory=dict)
+
+    # --------------------------------------------------------
+    # Dependency graph
+    # --------------------------------------------------------
+
+    dependencies: dict[str, set[str]] = field(default_factory=dict)
+
+    # --------------------------------------------------------
+    # Include resolution
+    # --------------------------------------------------------
+
+    include_dirs: list[str] = field(default_factory=list)
+
+    # --------------------------------------------------------
+    # Diagnostics
+    # --------------------------------------------------------
+
+    diagnostics: list[str] = field(default_factory=list)

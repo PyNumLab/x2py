@@ -1,0 +1,255 @@
+{
+  "filename": "compile_time_shape_exprs.f90",
+  "source": "module dims_mod\n  integer, parameter :: n0 = 4\n  integer, parameter :: n1 = n0 + 2\ncontains\n  subroutine use_expr(x, y)\n    integer, intent(inout) :: x(0:n1-1)\n    real, intent(inout), dimension(1:n0*2) :: y\n  end subroutine use_expr\nend module dims_mod\n",
+  "encoding": "utf-8",
+  "format": "modern",
+  "modules": [
+    {
+      "name": "dims_mod",
+      "filename": "compile_time_shape_exprs.f90",
+      "uses": {},
+      "variables": [
+        {
+          "name": "n0",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "n1",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "procedures": [
+        {
+          "name": "use_expr",
+          "kind": "subroutine",
+          "module": "dims_mod",
+          "arguments": [
+            {
+              "name": "x",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "0:n1-1"
+              ],
+              "lbound": [
+                "0"
+              ],
+              "ubound": [
+                "n1-1"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": "use_expr",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "y",
+              "base_type": "real",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:n0*2"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "n0*2"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": "use_expr",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "result": null,
+          "attributes": [],
+          "uses": {},
+          "in_interface": false,
+          "variables": {}
+        }
+      ],
+      "derived_types": [],
+      "interfaces": [],
+      "default_visibility": "public",
+      "public_symbols": [],
+      "private_symbols": []
+    }
+  ],
+  "submodules": [],
+  "programs": [],
+  "block_data_units": [],
+  "procedures": [],
+  "interfaces": [],
+  "derived_types": [],
+  "variables": [],
+  "includes": [],
+  "diagnostics": [],
+  "symbols": {
+    "dims_mod": {
+      "name": "dims_mod",
+      "filename": "compile_time_shape_exprs.f90",
+      "uses": {},
+      "variables": [
+        {
+          "name": "n0",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "n1",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": null,
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "procedures": [
+        {
+          "name": "use_expr",
+          "kind": "subroutine",
+          "module": "dims_mod",
+          "arguments": [
+            {
+              "name": "x",
+              "base_type": "integer",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "0:n1-1"
+              ],
+              "lbound": [
+                "0"
+              ],
+              "ubound": [
+                "n1-1"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": "use_expr",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "y",
+              "base_type": "real",
+              "kind": null,
+              "rank": 1,
+              "shape": [
+                "1:n0*2"
+              ],
+              "lbound": [
+                "1"
+              ],
+              "ubound": [
+                "n0*2"
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "visibility": "public",
+              "procedure": "use_expr",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "result": null,
+          "attributes": [],
+          "uses": {},
+          "in_interface": false,
+          "variables": {}
+        }
+      ],
+      "derived_types": [],
+      "interfaces": [],
+      "default_visibility": "public",
+      "public_symbols": [],
+      "private_symbols": []
+    }
+  }
+}
