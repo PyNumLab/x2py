@@ -7,16 +7,9 @@ import pytest
 
 from fortran_parser import FortranParseError, parse_fortran_file
 
-def parse_fortran_signatures(source, filename=None):
-    return parse_fortran_file(source, filename=filename).procedures
-
-
-def parse_fortran_types(source, filename=None):
-    return parse_fortran_file(source, filename=filename).derived_types
-
-
-def parse_fortran_modules(source, filename=None):
-    return parse_fortran_file(source, filename=filename).modules
+parse_fortran_signatures = lambda source, filename=None: parse_fortran_file(source, filename=filename).procedures
+parse_fortran_types = lambda source, filename=None: parse_fortran_file(source, filename=filename).derived_types
+parse_fortran_modules = lambda source, filename=None: parse_fortran_file(source, filename=filename).modules
 
 
 _ERRORS_DIR = Path(__file__).parent / "fcode" / "errors"

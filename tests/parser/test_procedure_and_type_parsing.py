@@ -5,52 +5,21 @@ from fortran_parser.cli import _format_wrap_readiness
 
 from fortran_parser import FortranParseError, FortranParser, parse_fortran_file, parse_fortran_project
 
-def parse_fortran_project_signatures(files):
-    return list(parse_fortran_project(files).procedures.values())
-
-
-def parse_fortran_modules(code, filename=None):
-    return parse_fortran_file(code, filename=filename).modules
-
-
-def parse_fortran_module(code, filename=None):
-    return parse_fortran_modules(code, filename=filename)[0]
-
-
-def parse_fortran_submodules(code, filename=None):
-    return parse_fortran_file(code, filename=filename).submodules
-
-
-def parse_fortran_submodule(code, filename=None):
-    return parse_fortran_submodules(code, filename=filename)[0]
-
-
-def parse_fortran_programs(code, filename=None):
-    return parse_fortran_file(code, filename=filename).programs
-
-
-def parse_fortran_program(code, filename=None):
-    return parse_fortran_programs(code, filename=filename)[0]
-
-
-def parse_fortran_block_data(code, filename=None):
-    return parse_fortran_file(code, filename=filename).block_data_units
-
-
-def parse_fortran_block_data_unit(code, filename=None):
-    return parse_fortran_block_data(code, filename=filename)[0]
-
-
-def parse_fortran_interfaces(code, filename=None):
-    return parse_fortran_file(code, filename=filename).interfaces
-
-
-def parse_fortran_interface(code, filename=None):
-    return parse_fortran_interfaces(code, filename=filename)[0]
-
-
-def parse_fortran_namespace(root, extensions=(".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08")):
-    return FortranParser().parse_namespace(root, extensions=extensions)
+parse_fortran_project_signatures = lambda files: list(parse_fortran_project(files).procedures.values())
+parse_fortran_modules = lambda code, filename=None: parse_fortran_file(code, filename=filename).modules
+parse_fortran_module = lambda code, filename=None: parse_fortran_modules(code, filename=filename)[0]
+parse_fortran_submodules = lambda code, filename=None: parse_fortran_file(code, filename=filename).submodules
+parse_fortran_submodule = lambda code, filename=None: parse_fortran_submodules(code, filename=filename)[0]
+parse_fortran_programs = lambda code, filename=None: parse_fortran_file(code, filename=filename).programs
+parse_fortran_program = lambda code, filename=None: parse_fortran_programs(code, filename=filename)[0]
+parse_fortran_block_data = lambda code, filename=None: parse_fortran_file(code, filename=filename).block_data_units
+parse_fortran_block_data_unit = lambda code, filename=None: parse_fortran_block_data(code, filename=filename)[0]
+parse_fortran_interfaces = lambda code, filename=None: parse_fortran_file(code, filename=filename).interfaces
+parse_fortran_interface = lambda code, filename=None: parse_fortran_interfaces(code, filename=filename)[0]
+parse_fortran_namespace = (
+    lambda root, extensions=(".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"):
+    FortranParser().parse_namespace(root, extensions=extensions)
+)
 
 
 def assess_wrap_readiness(code, filename=None):
