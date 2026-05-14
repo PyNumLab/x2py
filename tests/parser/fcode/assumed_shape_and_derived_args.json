@@ -1,113 +1,241 @@
-[
-  {
-    "name": "fill_grid",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "x",
-        "base_type": "integer",
-        "kind": null,
-        "rank": 2,
-        "shape": [
-          "0:",
-          "0:"
-        ],
-        "lbound": [
-          "0",
-          "0"
-        ],
-        "ubound": [
-          null,
-          null
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "fill_grid",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "update_plane",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "x",
-        "base_type": "real",
-        "kind": null,
-        "rank": 2,
-        "shape": [
-          "0:",
-          "1:n"
-        ],
-        "lbound": [
-          "0",
-          "1"
-        ],
-        "ubound": [
-          null,
-          "n"
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "update_plane",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "step",
-    "kind": "subroutine",
-    "module": null,
-    "arguments": [
-      {
-        "name": "state",
-        "base_type": "derived",
-        "kind": "sim_state",
-        "rank": 0,
-        "shape": [],
-        "lbound": [],
-        "ubound": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "step",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
+{
+  "filename": "assumed_shape_and_derived_args.f90",
+  "source": "subroutine fill_grid(x)\n  integer, intent(inout) :: x(0:,0:)\nend subroutine fill_grid\n\nsubroutine update_plane(x)\n  real, intent(inout), dimension(0:, 1:n) :: x\n  integer, intent(in) :: n\nend subroutine update_plane\n\nsubroutine step(state)\n  type(sim_state), intent(inout) :: state\nend subroutine step\n",
+  "encoding": "utf-8",
+  "format": "modern",
+  "modules": [],
+  "submodules": [],
+  "programs": [],
+  "block_data_units": [],
+  "procedures": [
+    {
+      "name": "fill_grid",
+      "kind": "subroutine",
+      "module": null,
+      "arguments": [
+        {
+          "name": "x",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 2,
+          "shape": [
+            "0:",
+            "0:"
+          ],
+          "lbound": [
+            "0",
+            "0"
+          ],
+          "ubound": [
+            null,
+            null
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "fill_grid",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "update_plane",
+      "kind": "subroutine",
+      "module": null,
+      "arguments": [
+        {
+          "name": "x",
+          "base_type": "real",
+          "kind": null,
+          "rank": 2,
+          "shape": [
+            "0:",
+            "1:n"
+          ],
+          "lbound": [
+            "0",
+            "1"
+          ],
+          "ubound": [
+            null,
+            "n"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "update_plane",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    },
+    {
+      "name": "step",
+      "kind": "subroutine",
+      "module": null,
+      "arguments": [
+        {
+          "name": "state",
+          "base_type": "derived",
+          "kind": "sim_state",
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "step",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    }
+  ],
+  "interfaces": [],
+  "derived_types": [],
+  "variables": [],
+  "includes": [],
+  "diagnostics": [],
+  "symbols": {
+    "fill_grid": {
+      "name": "fill_grid",
+      "kind": "subroutine",
+      "module": null,
+      "arguments": [
+        {
+          "name": "x",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 2,
+          "shape": [
+            "0:",
+            "0:"
+          ],
+          "lbound": [
+            "0",
+            "0"
+          ],
+          "ubound": [
+            null,
+            null
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "fill_grid",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    },
+    "update_plane": {
+      "name": "update_plane",
+      "kind": "subroutine",
+      "module": null,
+      "arguments": [
+        {
+          "name": "x",
+          "base_type": "real",
+          "kind": null,
+          "rank": 2,
+          "shape": [
+            "0:",
+            "1:n"
+          ],
+          "lbound": [
+            "0",
+            "1"
+          ],
+          "ubound": [
+            null,
+            "n"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "update_plane",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    },
+    "step": {
+      "name": "step",
+      "kind": "subroutine",
+      "module": null,
+      "arguments": [
+        {
+          "name": "state",
+          "base_type": "derived",
+          "kind": "sim_state",
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "procedure": "step",
+          "intent": "inout",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": null,
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    }
   }
-]
+}

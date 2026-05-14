@@ -1,113 +1,261 @@
-[
-  {
-    "name": "norm2",
-    "kind": "function",
-    "module": "math_mod",
-    "arguments": [
-      {
-        "name": "x",
-        "base_type": "real",
-        "kind": "8",
-        "rank": 1,
-        "shape": [
-          ":"
-        ],
-        "lbound": [
-          null
-        ],
-        "ubound": [
-          null
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "norm2",
-        "intent": "in",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": {
-      "name": "res",
-      "base_type": "real",
-      "kind": "8",
-      "rank": 0,
-      "shape": [],
-      "lbound": [],
-      "ubound": [],
-      "value": null,
-      "value_type": "unknown",
-      "is_parameter": false,
-      "dimensions": [],
-      "procedure": "norm2",
-      "intent": "unknown",
-      "optional": false,
-      "pass_by_value": false,
-      "allocatable": false,
-      "pointer": false
-    },
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
-  },
-  {
-    "name": "scale",
-    "kind": "subroutine",
-    "module": "math_mod",
-    "arguments": [
-      {
-        "name": "a",
-        "base_type": "real",
-        "kind": "8",
-        "rank": 0,
-        "shape": [],
-        "lbound": [],
-        "ubound": [],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "scale",
-        "intent": "in",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      },
-      {
-        "name": "x",
-        "base_type": "real",
-        "kind": "8",
-        "rank": 1,
-        "shape": [
-          ":"
-        ],
-        "lbound": [
-          null
-        ],
-        "ubound": [
-          null
-        ],
-        "value": null,
-        "value_type": "unknown",
-        "is_parameter": false,
-        "dimensions": [],
-        "procedure": "scale",
-        "intent": "inout",
-        "optional": false,
-        "pass_by_value": false,
-        "allocatable": false,
-        "pointer": false
-      }
-    ],
-    "result": null,
-    "attributes": [],
-    "uses": {},
-    "in_interface": false,
-    "variables": {}
+{
+  "filename": "procedures_and_functions.f90",
+  "source": "module math_mod\ncontains\n  function norm2(x) result(res)\n    real(kind=8), intent(in) :: x(:)\n    real(kind=8) :: res\n  end function norm2\n\n  subroutine scale(a, x)\n    real(kind=8), intent(in) :: a\n    real(kind=8), intent(inout) :: x(:)\n  end subroutine scale\nend module math_mod\n",
+  "encoding": "utf-8",
+  "format": "modern",
+  "modules": [
+    {
+      "name": "math_mod",
+      "filename": "procedures_and_functions.f90",
+      "uses": {},
+      "variables": [],
+      "procedures": [
+        {
+          "name": "norm2",
+          "kind": "function",
+          "module": "math_mod",
+          "arguments": [
+            {
+              "name": "x",
+              "base_type": "real",
+              "kind": "8",
+              "rank": 1,
+              "shape": [
+                ":"
+              ],
+              "lbound": [
+                null
+              ],
+              "ubound": [
+                null
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "norm2",
+              "intent": "in",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "result": {
+            "name": "res",
+            "base_type": "real",
+            "kind": "8",
+            "rank": 0,
+            "shape": [],
+            "lbound": [],
+            "ubound": [],
+            "value": null,
+            "value_type": "unknown",
+            "is_parameter": false,
+            "dimensions": [],
+            "procedure": "norm2",
+            "intent": "unknown",
+            "optional": false,
+            "pass_by_value": false,
+            "allocatable": false,
+            "pointer": false
+          },
+          "attributes": [],
+          "uses": {},
+          "in_interface": false,
+          "variables": {}
+        },
+        {
+          "name": "scale",
+          "kind": "subroutine",
+          "module": "math_mod",
+          "arguments": [
+            {
+              "name": "a",
+              "base_type": "real",
+              "kind": "8",
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "scale",
+              "intent": "in",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x",
+              "base_type": "real",
+              "kind": "8",
+              "rank": 1,
+              "shape": [
+                ":"
+              ],
+              "lbound": [
+                null
+              ],
+              "ubound": [
+                null
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "scale",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "result": null,
+          "attributes": [],
+          "uses": {},
+          "in_interface": false,
+          "variables": {}
+        }
+      ],
+      "derived_types": [],
+      "interfaces": []
+    }
+  ],
+  "submodules": [],
+  "programs": [],
+  "block_data_units": [],
+  "procedures": [],
+  "interfaces": [],
+  "derived_types": [],
+  "variables": [],
+  "includes": [],
+  "diagnostics": [],
+  "symbols": {
+    "math_mod": {
+      "name": "math_mod",
+      "filename": "procedures_and_functions.f90",
+      "uses": {},
+      "variables": [],
+      "procedures": [
+        {
+          "name": "norm2",
+          "kind": "function",
+          "module": "math_mod",
+          "arguments": [
+            {
+              "name": "x",
+              "base_type": "real",
+              "kind": "8",
+              "rank": 1,
+              "shape": [
+                ":"
+              ],
+              "lbound": [
+                null
+              ],
+              "ubound": [
+                null
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "norm2",
+              "intent": "in",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "result": {
+            "name": "res",
+            "base_type": "real",
+            "kind": "8",
+            "rank": 0,
+            "shape": [],
+            "lbound": [],
+            "ubound": [],
+            "value": null,
+            "value_type": "unknown",
+            "is_parameter": false,
+            "dimensions": [],
+            "procedure": "norm2",
+            "intent": "unknown",
+            "optional": false,
+            "pass_by_value": false,
+            "allocatable": false,
+            "pointer": false
+          },
+          "attributes": [],
+          "uses": {},
+          "in_interface": false,
+          "variables": {}
+        },
+        {
+          "name": "scale",
+          "kind": "subroutine",
+          "module": "math_mod",
+          "arguments": [
+            {
+              "name": "a",
+              "base_type": "real",
+              "kind": "8",
+              "rank": 0,
+              "shape": [],
+              "lbound": [],
+              "ubound": [],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "scale",
+              "intent": "in",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            },
+            {
+              "name": "x",
+              "base_type": "real",
+              "kind": "8",
+              "rank": 1,
+              "shape": [
+                ":"
+              ],
+              "lbound": [
+                null
+              ],
+              "ubound": [
+                null
+              ],
+              "value": null,
+              "value_type": "unknown",
+              "is_parameter": false,
+              "dimensions": [],
+              "procedure": "scale",
+              "intent": "inout",
+              "optional": false,
+              "pass_by_value": false,
+              "allocatable": false,
+              "pointer": false
+            }
+          ],
+          "result": null,
+          "attributes": [],
+          "uses": {},
+          "in_interface": false,
+          "variables": {}
+        }
+      ],
+      "derived_types": [],
+      "interfaces": []
+    }
   }
-]
+}
