@@ -108,8 +108,8 @@ def _run_fixture_comparison(fixture: Path, *, filename_for_parser: str, expected
         return
 
     expected = _load_expected(expected_path)
-    if parsed_sigs != expected["signatures"] or parsed_types != expected["types"]:
-        pytest.skip(f"Fixture output differs under parse_fortran_file API: {fixture.name}")
+    assert parsed_sigs == expected["signatures"], f"Signature mismatch for {fixture.name}"
+    assert parsed_types == expected["types"], f"Derived type mismatch for {fixture.name}"
 
 
 def test_fortran_fixture_golden_suite_has_fixtures():

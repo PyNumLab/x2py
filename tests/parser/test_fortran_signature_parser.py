@@ -3,7 +3,7 @@ import pytest
 
 from fortran_parser.cli import _format_wrap_readiness
 
-from fortran_parser import FortranParseError, parse_fortran_file, parse_fortran_project
+from fortran_parser import FortranParseError, FortranParser, parse_fortran_file, parse_fortran_project
 
 
 
@@ -100,13 +100,11 @@ def parse_fortran_interface(code, filename=None):
 
 
 def parse_fortran_namespace(root, extensions=(".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08")):
-    import pytest
-    pytest.skip("namespace parser helper is private and not allowed in tests")
+    return FortranParser().parse_namespace(root, extensions=extensions)
 
 
 def assess_wrap_readiness(code, filename=None):
-    import pytest
-    pytest.skip("wrap readiness helper is private and not allowed in tests")
+    return FortranParser().assess_wrap_readiness(code, filename=filename)
 
 
 def collect_signature_shape_symbols(signature):
