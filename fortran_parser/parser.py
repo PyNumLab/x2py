@@ -1140,6 +1140,16 @@ class FortranParser:
         filename: str | None = None,
         macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     ) -> list[FortranProcedureSignature]:
+        """Parse procedure headers/declarations and build signature models.
+
+        Scope model:
+        - Tracks module/submodule scope (`current_module`).
+        - Tracks interface nesting (`interface_depth`) to mark interface members.
+        - Tracks preprocessor branches and suppresses inactive blocks when macro
+          selection is enabled.
+        - Identifies procedure block boundaries from `subroutine/function` headers
+          to matching `end ...` statements, then finalizes symbols/types/shapes.
+        """
         lines = self._preprocessed_lines(code, filename)
         macro_selection_enabled = macro_defines is not None
         signatures: list[FortranProcedureSignature] = []
@@ -1940,7 +1950,14 @@ class FortranParser:
     # ------------------------------------------------------------------
 
     def _parse_fortran_types_impl(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
-        """Parse all derived type declarations present in one source unit."""
+        """Parse derived-type blocks (`type ... end type`) and their members.
+
+        Scope model:
+        - Tracks containing module/submodule name for type ownership.
+        - Opens a type block when a type-start declaration is found.
+        - Splits specification-part fields from `contains` type-bound procedure
+          bindings and generic bindings until `end type`.
+        """
         lines = self._preprocessed_lines(code, filename)
         current_module = None
         current_type: FortranDerivedType | None = None
@@ -2145,7 +2162,15 @@ class FortranParser:
         types: list[FortranDerivedType] | None = None,
         interfaces: list[FortranInterface] | None = None,
     ) -> list[FortranModule]:
-        """Parse modules and attach members (procedures/types/interfaces)."""
+        """Parse `module ... end module` blocks and collect module scope state.
+
+        Scope model:
+        - Opens module scope at `module <name>` and closes on `end module`.
+        - Reads only specification-part declarations into module variables; once
+          `contains` starts, variable collection stops for that module block.
+        - Attaches already parsed procedures/types/interfaces by matching module
+          names, preserving ownership and visibility rules.
+        """
         lines = self._preprocessed_lines(code, filename)
         modules: list[FortranModule] = []
         current: FortranModule | None = None
@@ -2243,7 +2268,15 @@ class FortranParser:
         )
 
     def _parse_fortran_interfaces_impl(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
-        """Parse all interface blocks in one source unit."""
+        """Parse `interface ... end interface` blocks and their procedure members.
+
+        Scope model:
+        - Tracks containing module/submodule for interface ownership.
+        - Opens interface scope at `interface [name]` and closes at
+          `end interface`.
+        - Parses contained procedure declarations with signature rules and
+          annotates them as interface members.
+        """
         lines = self._preprocessed_lines(code, filename)
         current_module = None
         current_interface: FortranInterface | None = None
@@ -2406,7 +2439,14 @@ class FortranParser:
         types: list[FortranDerivedType] | None = None,
         interfaces: list[FortranInterface] | None = None,
     ) -> list[FortranSubmodule]:
-        """Parse submodules and attach parsed members by scope."""
+        """Parse `submodule(parent) name ... end submodule` units.
+
+        Scope model:
+        - Resolves parent/ancestor from submodule header.
+        - Collects specification-part `use` and declarations before `contains`.
+        - Attaches procedures/types/interfaces whose parsed owner matches the
+          submodule name.
+        """
         lines = self._preprocessed_lines(code, filename)
         submodules: list[FortranSubmodule] = []
         current: FortranSubmodule | None = None
@@ -2478,7 +2518,13 @@ class FortranParser:
         )
 
     def _parse_fortran_programs_impl(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
-        """Parse top-level program units and specification-part declarations."""
+        """Parse `program ... end program` blocks.
+
+        Scope model:
+        - Opens a program unit at `program <name>` and closes at `end program`.
+        - Collects specification-part `use` and declarations until `contains`.
+        - Ignores internal procedures in `contains` for program-variable scope.
+        """
         lines = self._preprocessed_lines(code, filename)
         programs: list[FortranProgram] = []
         current: FortranProgram | None = None
@@ -2523,6 +2569,7 @@ class FortranParser:
         )
 
     def _parse_fortran_block_data(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
+        """Parse `block data` units and their declaration sections."""
         lines = self._preprocessed_lines(code, filename)
         blocks: list[FortranBlockData] = []
         current: FortranBlockData | None = None
