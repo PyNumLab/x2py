@@ -1052,28 +1052,7 @@ def _parse_fortran_program(code: _SourceOrLines, filename: str | None = None) ->
 
 
 def _parse_fortran_block_data(code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
-    """Parse ``block data`` program units and declared common data symbols."""
-    lines = _preprocessed_lines(code, filename)
-    blocks: list[FortranBlockData] = []
-    current: FortranBlockData | None = None
-    for line, lineno, source_line in lines:
-        s = line.strip()
-        if not s:
-            continue
-        l = s.lower()
-        _enforce_source_form_compatibility(s, filename, lineno, source_line)
-        bm = _BLOCK_DATA_RE.match(s)
-        if bm:
-            current = FortranBlockData(name=bm.group("name"), filename=filename)
-            continue
-        if l.startswith("end block data") or (current is not None and l == "end"):
-            blocks.append(current)
-            current = None
-            continue
-        if current is None:
-            continue
-        _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
-    return blocks
+    return _DEFAULT_PARSER._parse_fortran_block_data(code, filename=filename)
 
 
 def _parse_fortran_block_data_unit(code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
@@ -2869,7 +2848,27 @@ class FortranParser:
         )
 
     def _parse_fortran_block_data(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
-        return _parse_fortran_block_data(code, filename=filename)
+        lines = _preprocessed_lines(code, filename)
+        blocks: list[FortranBlockData] = []
+        current: FortranBlockData | None = None
+        for line, lineno, source_line in lines:
+            s = line.strip()
+            if not s:
+                continue
+            l = s.lower()
+            _enforce_source_form_compatibility(s, filename, lineno, source_line)
+            bm = _BLOCK_DATA_RE.match(s)
+            if bm:
+                current = FortranBlockData(name=bm.group("name"), filename=filename)
+                continue
+            if l.startswith("end block data") or (current is not None and l == "end"):
+                blocks.append(current)
+                current = None
+                continue
+            if current is None:
+                continue
+            _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
+        return blocks
 
     def _parse_fortran_block_data_unit(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
         return _expect_single_parse_result(
