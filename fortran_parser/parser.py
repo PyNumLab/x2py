@@ -912,93 +912,7 @@ def _assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
 
 
 def _parse_fortran_namespace(root: str | Path, extensions: tuple[str, ...] = (".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08")) -> dict:
-    """Parse a directory tree as a Fortran namespace with dependency ordering.
-
-    The namespace parse:
-    - discovers sources under `root` with the provided suffixes
-    - builds a file dependency graph from module `use` statements
-    - topologically orders files (best-effort; cycles are appended deterministically)
-    - parses signatures with cross-file kind/shape resolution
-    - returns aggregate modules/types/signatures plus dependency metadata
-    """
-    root_path = Path(root)
-    files = sorted([p for p in root_path.rglob("*") if p.suffix.lower() in extensions])
-    sources = {str(p): p.read_text(encoding="utf-8") for p in files}
-    file_lines = {fname: preprocess_lines(code, fname) for fname, code in sources.items()}
-
-    module_to_file: dict[str, str] = {}
-    submodule_to_file: dict[str, str] = {}
-    file_to_uses: dict[str, set[str]] = {fname: set() for fname in sources}
-    modules_by_file: dict[str, list[str]] = {}
-    submodules_by_file: dict[str, list[str]] = {}
-    for fname, code in sources.items():
-        lines = file_lines[fname]
-        modules = _parse_fortran_modules_impl(lines, filename=fname, require_present=False, signatures=[], types=[], interfaces=[])
-        submodules = _parse_fortran_submodules(lines, filename=fname, signatures=[], types=[], interfaces=[])
-        modules_by_file[fname] = [m.name for m in modules]
-        submodules_by_file[fname] = [m.name for m in submodules]
-        for m in modules:
-            module_to_file[m.name.lower()] = fname
-            file_to_uses[fname].update(u.lower() for u in m.uses)
-        for sm in submodules:
-            submodule_to_file[sm.name.lower()] = fname
-            file_to_uses[fname].add(sm.parent.lower())
-            if sm.ancestor:
-                file_to_uses[fname].add(sm.ancestor.lower())
-            file_to_uses[fname].update(u.lower() for u in sm.uses)
-
-    file_dependencies: dict[str, set[str]] = {}
-    for fname, used_modules in file_to_uses.items():
-        deps = set()
-        for mod in used_modules:
-            dep_file = module_to_file.get(mod) or submodule_to_file.get(mod)
-            if dep_file and dep_file != fname:
-                deps.add(dep_file)
-        file_dependencies[fname] = deps
-
-    ordered_files = _topological_files(file_dependencies)
-    signatures = _parse_fortran_project_signatures({f: sources[f] for f in ordered_files})
-    types = []
-    modules = []
-    submodules = []
-    programs = []
-    block_data = []
-    for f in ordered_files:
-        lines = file_lines[f]
-        file_types = _parse_fortran_types(lines, filename=f)
-        file_interfaces = _parse_fortran_interfaces(lines, filename=f)
-        file_signatures = _parse_fortran_signatures(lines, filename=f)
-        types.extend(file_types)
-        modules.extend(_parse_fortran_modules_impl(
-            lines,
-            filename=f,
-            require_present=False,
-            signatures=file_signatures,
-            types=file_types,
-            interfaces=file_interfaces,
-        ))
-        submodules.extend(_parse_fortran_submodules(
-            lines,
-            filename=f,
-            signatures=file_signatures,
-            types=file_types,
-            interfaces=file_interfaces,
-        ))
-        programs.extend(_parse_fortran_programs(lines, filename=f))
-        block_data.extend(_parse_fortran_block_data(lines, filename=f))
-
-    return {
-        "files": ordered_files,
-        "file_dependencies": {k: sorted(v) for k, v in file_dependencies.items()},
-        "module_to_file": module_to_file,
-        "submodule_to_file": submodule_to_file,
-        "modules": modules,
-        "submodules": submodules,
-        "programs": programs,
-        "block_data": block_data,
-        "types": types,
-        "signatures": signatures,
-    }
+    return _DEFAULT_PARSER._parse_fortran_namespace(root, extensions=extensions)
 
 # -----------------------------------------------------------------------------
 # Helper APIs (used by tests / wrapper generators)
@@ -2759,7 +2673,84 @@ class FortranParser:
         root: str | Path,
         extensions: tuple[str, ...] = (".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"),
     ) -> dict:
-        return _parse_fortran_namespace(root, extensions=extensions)
+        root_path = Path(root)
+        files = sorted([p for p in root_path.rglob("*") if p.suffix.lower() in extensions])
+        sources = {str(p): p.read_text(encoding="utf-8") for p in files}
+        file_lines = {fname: preprocess_lines(code, fname) for fname, code in sources.items()}
+
+        module_to_file: dict[str, str] = {}
+        submodule_to_file: dict[str, str] = {}
+        file_to_uses: dict[str, set[str]] = {fname: set() for fname in sources}
+        modules_by_file: dict[str, list[str]] = {}
+        submodules_by_file: dict[str, list[str]] = {}
+        for fname, _code in sources.items():
+            lines = file_lines[fname]
+            modules = self._parse_fortran_modules(lines, filename=fname, require_present=False, signatures=[], types=[], interfaces=[])
+            submodules = self._parse_fortran_submodules(lines, filename=fname, signatures=[], types=[], interfaces=[])
+            modules_by_file[fname] = [m.name for m in modules]
+            submodules_by_file[fname] = [m.name for m in submodules]
+            for m in modules:
+                module_to_file[m.name.lower()] = fname
+                file_to_uses[fname].update(u.lower() for u in m.uses)
+            for sm in submodules:
+                submodule_to_file[sm.name.lower()] = fname
+                file_to_uses[fname].add(sm.parent.lower())
+                if sm.ancestor:
+                    file_to_uses[fname].add(sm.ancestor.lower())
+                file_to_uses[fname].update(u.lower() for u in sm.uses)
+
+        file_dependencies: dict[str, set[str]] = {}
+        for fname, used_modules in file_to_uses.items():
+            deps = set()
+            for mod in used_modules:
+                dep_file = module_to_file.get(mod) or submodule_to_file.get(mod)
+                if dep_file and dep_file != fname:
+                    deps.add(dep_file)
+            file_dependencies[fname] = deps
+
+        ordered_files = _topological_files(file_dependencies)
+        signatures = self._parse_fortran_project_signatures({f: sources[f] for f in ordered_files})
+        types = []
+        modules = []
+        submodules = []
+        programs = []
+        block_data = []
+        for f in ordered_files:
+            lines = file_lines[f]
+            file_types = self._parse_fortran_types(lines, filename=f)
+            file_interfaces = self._parse_fortran_interfaces(lines, filename=f)
+            file_signatures = self._parse_fortran_signatures(lines, filename=f)
+            types.extend(file_types)
+            modules.extend(self._parse_fortran_modules(
+                lines,
+                filename=f,
+                require_present=False,
+                signatures=file_signatures,
+                types=file_types,
+                interfaces=file_interfaces,
+            ))
+            submodules.extend(self._parse_fortran_submodules(
+                lines,
+                filename=f,
+                signatures=file_signatures,
+                types=file_types,
+                interfaces=file_interfaces,
+            ))
+            programs.extend(self._parse_fortran_programs(lines, filename=f))
+            block_data.extend(self._parse_fortran_block_data(lines, filename=f))
+
+        return {
+            "files": ordered_files,
+            "file_dependencies": {k: sorted(v) for k, v in file_dependencies.items()},
+            "module_to_file": module_to_file,
+            "submodule_to_file": submodule_to_file,
+            "modules": modules,
+            "submodules": submodules,
+            "programs": programs,
+            "block_data": block_data,
+            "types": types,
+            "signatures": signatures,
+        }
 
     def _assess_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
         return _assess_wrap_readiness(code, filename=filename)
