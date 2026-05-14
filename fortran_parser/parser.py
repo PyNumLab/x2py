@@ -900,75 +900,13 @@ def _parse_fortran_submodules(
     types: list[FortranDerivedType] | None = None,
     interfaces: list[FortranInterface] | None = None,
 ) -> list[FortranSubmodule]:
-    """Parse Fortran 2008 ``submodule`` blocks and their owned entities.
-
-    Submodules are returned separately from modules because their header points
-    back to an ancestor module (and optionally a parent submodule) instead of
-    defining a standalone module namespace. Procedures implemented with either
-    ``module subroutine/function`` or ``module procedure`` are attached to the
-    submodule object.
-    """
-    lines = _preprocessed_lines(code, filename)
-    submodules: list[FortranSubmodule] = []
-    current: FortranSubmodule | None = None
-    in_contains = False
-    for line, lineno, source_line in lines:
-        s = line.strip()
-        if not s:
-            continue
-        l = s.lower()
-        _enforce_source_form_compatibility(s, filename, lineno, source_line)
-        sm = _SUBMODULE_RE.match(s)
-        if sm:
-            parent, ancestor = _split_submodule_parent(sm.group("parent"))
-            current = FortranSubmodule(
-                name=sm.group("name"),
-                parent=parent,
-                ancestor=ancestor,
-                filename=filename,
-            )
-            in_contains = False
-            continue
-        if l.startswith("end submodule"):
-            if current is not None:
-                _validate_module_variables(current, filename)
-                submodules.append(current)
-            current = None
-            in_contains = False
-            continue
-        if current is None:
-            continue
-        if l.startswith("contains"):
-            in_contains = True
-            continue
-        if in_contains:
-            continue
-        m = _USE_RE.match(s)
-        if m:
-            current.uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
-            continue
-        _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
-
-    signatures = signatures if signatures is not None else _parse_fortran_signatures(code, filename)
-    types = types if types is not None else _parse_fortran_types(code, filename)
-    interfaces = interfaces if interfaces is not None else _parse_fortran_interfaces(code, filename)
-    submodules_by_name = {m.name.lower(): m for m in submodules}
-    for sig in signatures:
-        if sig.module:
-            submod = submodules_by_name.get(sig.module.lower())
-            if submod is not None and not sig.in_interface:
-                submod.procedures.append(sig)
-    for dtype in types:
-        if dtype.module:
-            submod = submodules_by_name.get(dtype.module.lower())
-            if submod is not None:
-                submod.derived_types.append(dtype)
-    for iface in interfaces:
-        if iface.module:
-            submod = submodules_by_name.get(iface.module.lower())
-            if submod is not None:
-                submod.interfaces.append(iface)
-    return submodules
+    return _DEFAULT_PARSER._parse_fortran_submodules(
+        code,
+        filename=filename,
+        signatures=signatures,
+        types=types,
+        interfaces=interfaces,
+    )
 
 
 def _parse_fortran_submodule(code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
@@ -2791,8 +2729,76 @@ class FortranParser:
             filename=filename,
         )
 
-    def _parse_fortran_submodules(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranSubmodule]:
-        return _parse_fortran_submodules(code, filename=filename)
+    def _parse_fortran_submodules(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        *,
+        signatures: list[FortranProcedureSignature] | None = None,
+        types: list[FortranDerivedType] | None = None,
+        interfaces: list[FortranInterface] | None = None,
+    ) -> list[FortranSubmodule]:
+        lines = _preprocessed_lines(code, filename)
+        submodules: list[FortranSubmodule] = []
+        current: FortranSubmodule | None = None
+        in_contains = False
+        for line, lineno, source_line in lines:
+            s = line.strip()
+            if not s:
+                continue
+            l = s.lower()
+            _enforce_source_form_compatibility(s, filename, lineno, source_line)
+            sm = _SUBMODULE_RE.match(s)
+            if sm:
+                parent, ancestor = _split_submodule_parent(sm.group("parent"))
+                current = FortranSubmodule(
+                    name=sm.group("name"),
+                    parent=parent,
+                    ancestor=ancestor,
+                    filename=filename,
+                )
+                in_contains = False
+                continue
+            if l.startswith("end submodule"):
+                if current is not None:
+                    _validate_module_variables(current, filename)
+                    submodules.append(current)
+                current = None
+                in_contains = False
+                continue
+            if current is None:
+                continue
+            if l.startswith("contains"):
+                in_contains = True
+                continue
+            if in_contains:
+                continue
+            m = _USE_RE.match(s)
+            if m:
+                current.uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
+                continue
+            _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
+
+        signatures = self._parse_fortran_signatures(code, filename) if signatures is None else signatures
+        types = self._parse_fortran_types(code, filename) if types is None else types
+        interfaces = self._parse_fortran_interfaces(code, filename) if interfaces is None else interfaces
+        submodules_by_name = {m.name.lower(): m for m in submodules}
+        for sig in signatures:
+            if sig.module:
+                submod = submodules_by_name.get(sig.module.lower())
+                if submod is not None and not sig.in_interface:
+                    submod.procedures.append(sig)
+        for dtype in types:
+            if dtype.module:
+                submod = submodules_by_name.get(dtype.module.lower())
+                if submod is not None:
+                    submod.derived_types.append(dtype)
+        for iface in interfaces:
+            if iface.module:
+                submod = submodules_by_name.get(iface.module.lower())
+                if submod is not None:
+                    submod.interfaces.append(iface)
+        return submodules
 
     def _parse_fortran_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
         return _expect_single_parse_result(
