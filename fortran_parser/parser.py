@@ -501,79 +501,12 @@ def _parse_fortran_file(
     macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     encoding: str = "utf-8",
 ) -> FortranFile:
-    """Parse one Fortran source unit and return a structured ``FortranFile``.
-
-    ``source`` is treated as source text by default. When ``filename`` is not
-    supplied and ``source`` is an existing filesystem path, the file is read and
-    that path becomes the filename. This keeps string parsing filename-free while
-    preserving a convenient path-based entrypoint.
-    """
-    if filename is None and _looks_like_existing_source_path(source):
-        path = Path(source)
-        filename = str(path)
-        code = path.read_text(encoding=encoding)
-    else:
-        code = str(source)
-
-    lines = preprocess_lines(code, filename)
-
-    signatures = _parse_fortran_signatures(lines, filename=filename, macro_defines=macro_defines)
-    derived_types = _parse_fortran_types(lines, filename=filename)
-    interfaces = _parse_fortran_interfaces(lines, filename=filename)
-    modules = _parse_fortran_modules_impl(
-        lines,
+    return _DEFAULT_PARSER._parse_fortran_file(
+        source,
         filename=filename,
-        require_present=False,
-        signatures=signatures,
-        types=derived_types,
-        interfaces=interfaces,
-    )
-    submodules = _parse_fortran_submodules(
-        lines,
-        filename=filename,
-        signatures=signatures,
-        types=derived_types,
-        interfaces=interfaces,
-    )
-    programs = _parse_fortran_programs(lines, filename=filename)
-    block_data_units = _parse_fortran_block_data(lines, filename=filename)
-
-    owned_proc_ids = {id(proc) for mod in modules for proc in mod.procedures}
-    owned_proc_ids.update(id(proc) for submod in submodules for proc in submod.procedures)
-    standalone_procedures = [
-        sig for sig in signatures
-        if sig.module is None and not sig.in_interface and id(sig) not in owned_proc_ids
-    ]
-
-    file = FortranFile(
-        filename=filename,
-        source=code,
+        macro_defines=macro_defines,
         encoding=encoding,
-        format=_source_form(filename),
-        modules=modules,
-        submodules=submodules,
-        programs=programs,
-        block_data_units=block_data_units,
-        procedures=standalone_procedures,
-        interfaces=[iface for iface in interfaces if iface.module is None],
-        derived_types=[dtype for dtype in derived_types if dtype.module is None],
     )
-    def _add_file_symbol(name: str, symbol: object) -> None:
-        key = name.lower()
-        if key in file.symbols:
-            raise FortranParseError(
-                f"Duplicate symbol '{name}' in file scope.",
-                filename=filename,
-            )
-        file.symbols[key] = symbol
-
-    for m in modules:
-        _add_file_symbol(m.name, m)
-    for sm in submodules:
-        _add_file_symbol(sm.name, sm)
-    for p in standalone_procedures:
-        _add_file_symbol(p.name, p)
-    return file
 
 
 def _parse_fortran_signature(
@@ -589,60 +522,7 @@ def _parse_fortran_project(
     *,
     encoding: str = "utf-8",
 ) -> FortranProject:
-    """Parse multiple Fortran files and return a ``FortranProject`` aggregate."""
-    if isinstance(files, dict):
-        parsed_files = [parse_fortran_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
-    else:
-        parsed_files = [parse_fortran_file(path, encoding=encoding) for path in files]
-
-    project = FortranProject(files=parsed_files)
-
-    def _add_scoped_symbol(scope: dict[str, object], key: str, value: object, *, label: str) -> None:
-        if key in scope:
-            raise FortranParseError(f"Duplicate symbol '{key}' in {label}.")
-        scope[key] = value
-
-    for f in parsed_files:
-        for module in f.modules:
-            module_key = module.name.lower()
-            _add_scoped_symbol(project.modules, module_key, module, label="project module scope")
-            project.dependencies[module_key] = {name.lower() for name in module.uses}
-            for proc in module.procedures:
-                proc_key = f"{module_key}.{proc.name.lower()}"
-                _add_scoped_symbol(project.procedures, proc_key, proc, label="project procedure scope")
-                project.procedures.setdefault(proc.name.lower(), proc)
-            for dtype in module.derived_types:
-                dtype_key = f"{module_key}.{dtype.name.lower()}"
-                _add_scoped_symbol(project.derived_types, dtype_key, dtype, label="project derived-type scope")
-                project.derived_types.setdefault(dtype.name.lower(), dtype)
-            for iface in module.interfaces:
-                if iface.name:
-                    iface_key = f"{module_key}.{iface.name.lower()}"
-                    _add_scoped_symbol(project.interfaces, iface_key, iface, label="project interface scope")
-                    project.interfaces.setdefault(iface.name.lower(), iface)
-        for submodule in f.submodules:
-            submodule_key = submodule.name.lower()
-            _add_scoped_symbol(project.submodules, submodule_key, submodule, label="project submodule scope")
-            deps = {submodule.parent.lower(), *(name.lower() for name in submodule.uses)}
-            if submodule.ancestor:
-                deps.add(submodule.ancestor.lower())
-            project.dependencies[submodule_key] = deps
-            for proc in submodule.procedures:
-                proc_key = f"{submodule_key}.{proc.name.lower()}"
-                _add_scoped_symbol(project.procedures, proc_key, proc, label="project procedure scope")
-                project.procedures.setdefault(proc.name.lower(), proc)
-        for program in f.programs:
-            if program.name:
-                _add_scoped_symbol(project.programs, program.name.lower(), program, label="project program scope")
-                project.dependencies[program.name.lower()] = {name.lower() for name in program.uses}
-        for proc in f.procedures:
-            _add_scoped_symbol(project.procedures, proc.name.lower(), proc, label="project procedure scope")
-        for dtype in f.derived_types:
-            _add_scoped_symbol(project.derived_types, dtype.name.lower(), dtype, label="project derived-type scope")
-        for iface in f.interfaces:
-            if iface.name:
-                _add_scoped_symbol(project.interfaces, iface.name.lower(), iface, label="project interface scope")
-    return project
+    return _DEFAULT_PARSER._parse_fortran_project(files, encoding=encoding)
 
 
 def _parse_fortran_types(code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
