@@ -667,92 +667,7 @@ def _parse_fortran_project(
 
 
 def _parse_fortran_types(code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
-    """Parse `type ... end type` derived type blocks from a source string.
-
-    Captures:
-    - fields (including rank/shape, pointer/allocatable)
-    - `extends(parent)` relationships (linked to same-file parent objects)
-    - type-bound procedures and generic bindings inside the type `contains` part
-    """
-    lines = _preprocessed_lines(code, filename)
-    current_module = None
-    current_type: FortranDerivedType | None = None
-    in_type_contains = False
-    types: list[FortranDerivedType] = []
-    for line, lineno, source_line in lines:
-        s = line.strip()
-        if not s:
-            continue
-        l = s.lower()
-        _enforce_source_form_compatibility(s, filename, lineno, source_line)
-        submodule_match = _SUBMODULE_RE.match(s)
-        if submodule_match:
-            current_module = submodule_match.group("name")
-            continue
-        if l.startswith("end submodule"):
-            current_module = None
-            continue
-        if l.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", l):
-            current_module = s.split()[1]
-            continue
-        if l.startswith("end module"):
-            current_module = None
-            continue
-        if current_type is None:
-            parsed_type = _parse_derived_type_start(s)
-            if parsed_type:
-                type_name, attrs = parsed_type
-                extends = None
-                normalized_attrs: list[str] = []
-                for a in attrs:
-                    la = a.lower()
-                    if la.startswith("extends(") and la.endswith(")"):
-                        extends = a[a.find("(") + 1 : -1].strip()
-                    else:
-                        normalized_attrs.append(la)
-                current_type = FortranDerivedType(
-                    name=type_name,
-                    module=current_module,
-                    extends=extends,
-                    attributes=normalized_attrs,
-                )
-                in_type_contains = False
-            continue
-        if l == "contains":
-            in_type_contains = True
-            continue
-        if l.startswith("end type"):
-            _validate_derived_type_fields(current_type, filename)
-            types.append(current_type)
-            current_type = None
-            in_type_contains = False
-            continue
-        if in_type_contains:
-            pm = _PROC_BIND_RE.match(s)
-            if pm:
-                binding_names = split_csv(pm.group("names"))
-                current_type.methods.extend(binding_names)
-                left = s.split("::", 1)[0]
-                attrs = [a.strip().lower() for a in split_csv(left.split(",", 1)[1] if "," in left else "")]
-                for n in binding_names:
-                    current_type.procedure_bindings.append({"name": n, "attrs": attrs})
-                continue
-            if s.lower().startswith("generic") and "::" in s and "=>" in s:
-                left, right = [x.strip() for x in s.split("::", 1)]
-                attr_txt = left[len("generic") :].strip().lstrip(",").strip()
-                attrs = [a.strip().lower() for a in split_csv(attr_txt)] if attr_txt else []
-                lhs, rhs_txt = [x.strip() for x in right.split("=>", 1)]
-                rhs = [r.strip() for r in split_csv(rhs_txt)]
-                current_type.generic_bindings.append({"name": lhs, "targets": rhs, "attrs": attrs})
-            continue
-        _parse_type_field_line(s, current_type, filename, lineno=lineno, source_line=source_line)
-    by_name = {t.name.lower(): t for t in types}
-    for t in types:
-        if isinstance(t.extends, str):
-            parent = by_name.get(t.extends.lower())
-            if parent is not None:
-                t.extends = parent
-    return types
+    return _DEFAULT_PARSER._parse_fortran_types(code, filename=filename)
 
 
 def _parse_fortran_derived_type(code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
@@ -2630,7 +2545,85 @@ class FortranParser:
         return project
 
     def _parse_fortran_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
-        return _parse_fortran_types(code, filename=filename)
+        lines = _preprocessed_lines(code, filename)
+        current_module = None
+        current_type: FortranDerivedType | None = None
+        in_type_contains = False
+        types: list[FortranDerivedType] = []
+        for line, lineno, source_line in lines:
+            s = line.strip()
+            if not s:
+                continue
+            l = s.lower()
+            _enforce_source_form_compatibility(s, filename, lineno, source_line)
+            submodule_match = _SUBMODULE_RE.match(s)
+            if submodule_match:
+                current_module = submodule_match.group("name")
+                continue
+            if l.startswith("end submodule"):
+                current_module = None
+                continue
+            if l.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", l):
+                current_module = s.split()[1]
+                continue
+            if l.startswith("end module"):
+                current_module = None
+                continue
+            if current_type is None:
+                parsed_type = _parse_derived_type_start(s)
+                if parsed_type:
+                    type_name, attrs = parsed_type
+                    extends = None
+                    normalized_attrs: list[str] = []
+                    for a in attrs:
+                        la = a.lower()
+                        if la.startswith("extends(") and la.endswith(")"):
+                            extends = a[a.find("(") + 1 : -1].strip()
+                        else:
+                            normalized_attrs.append(la)
+                    current_type = FortranDerivedType(
+                        name=type_name,
+                        module=current_module,
+                        extends=extends,
+                        attributes=normalized_attrs,
+                    )
+                    in_type_contains = False
+                continue
+            if l == "contains":
+                in_type_contains = True
+                continue
+            if l.startswith("end type"):
+                _validate_derived_type_fields(current_type, filename)
+                types.append(current_type)
+                current_type = None
+                in_type_contains = False
+                continue
+            if in_type_contains:
+                pm = _PROC_BIND_RE.match(s)
+                if pm:
+                    binding_names = split_csv(pm.group("names"))
+                    current_type.methods.extend(binding_names)
+                    left = s.split("::", 1)[0]
+                    attrs = [a.strip().lower() for a in split_csv(left.split(",", 1)[1] if "," in left else "")]
+                    for n in binding_names:
+                        current_type.procedure_bindings.append({"name": n, "attrs": attrs})
+                    continue
+                if s.lower().startswith("generic") and "::" in s and "=>" in s:
+                    left, right = [x.strip() for x in s.split("::", 1)]
+                    attr_txt = left[len("generic") :].strip().lstrip(",").strip()
+                    attrs = [a.strip().lower() for a in split_csv(attr_txt)] if attr_txt else []
+                    lhs, rhs_txt = [x.strip() for x in right.split("=>", 1)]
+                    rhs = [r.strip() for r in split_csv(rhs_txt)]
+                    current_type.generic_bindings.append({"name": lhs, "targets": rhs, "attrs": attrs})
+                continue
+            _parse_type_field_line(s, current_type, filename, lineno=lineno, source_line=source_line)
+        by_name = {t.name.lower(): t for t in types}
+        for t in types:
+            if isinstance(t.extends, str):
+                parent = by_name.get(t.extends.lower())
+                if parent is not None:
+                    t.extends = parent
+        return types
 
     def _parse_fortran_derived_type(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
         return _expect_single_parse_result(
