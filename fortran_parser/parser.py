@@ -1044,41 +1044,7 @@ def _parse_fortran_submodule(code: _SourceOrLines, filename: str | None = None) 
 
 
 def _parse_fortran_programs(code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
-    """Parse main ``program`` units and specification-part metadata."""
-    lines = _preprocessed_lines(code, filename)
-    programs: list[FortranProgram] = []
-    current: FortranProgram | None = None
-    in_contains = False
-    for line, lineno, source_line in lines:
-        s = line.strip()
-        if not s:
-            continue
-        l = s.lower()
-        _enforce_source_form_compatibility(s, filename, lineno, source_line)
-        pm = _PROGRAM_RE.match(s)
-        if pm:
-            current = FortranProgram(name=pm.group("name"), filename=filename)
-            in_contains = False
-            continue
-        if l.startswith("end program"):
-            if current is not None:
-                programs.append(current)
-            current = None
-            in_contains = False
-            continue
-        if current is None:
-            continue
-        if l.startswith("contains"):
-            in_contains = True
-            continue
-        if in_contains:
-            continue
-        m = _USE_RE.match(s)
-        if m:
-            current.uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
-            continue
-        _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
-    return programs
+    return _DEFAULT_PARSER._parse_fortran_programs(code, filename=filename)
 
 
 def _parse_fortran_program(code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
@@ -2859,7 +2825,40 @@ class FortranParser:
         )
 
     def _parse_fortran_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
-        return _parse_fortran_programs(code, filename=filename)
+        lines = _preprocessed_lines(code, filename)
+        programs: list[FortranProgram] = []
+        current: FortranProgram | None = None
+        in_contains = False
+        for line, lineno, source_line in lines:
+            s = line.strip()
+            if not s:
+                continue
+            l = s.lower()
+            _enforce_source_form_compatibility(s, filename, lineno, source_line)
+            pm = _PROGRAM_RE.match(s)
+            if pm:
+                current = FortranProgram(name=pm.group("name"), filename=filename)
+                in_contains = False
+                continue
+            if l.startswith("end program"):
+                if current is not None:
+                    programs.append(current)
+                current = None
+                in_contains = False
+                continue
+            if current is None:
+                continue
+            if l.startswith("contains"):
+                in_contains = True
+                continue
+            if in_contains:
+                continue
+            m = _USE_RE.match(s)
+            if m:
+                current.uses[m.group("module")] = split_csv(m.group("symbols")) if m.group("symbols") else []
+                continue
+            _parse_module_variable_line(s, current, filename, lineno=lineno, source_line=source_line)
+        return programs
 
     def _parse_fortran_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
         return _expect_single_parse_result(
