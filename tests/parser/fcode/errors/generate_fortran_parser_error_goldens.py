@@ -14,10 +14,7 @@ def parse_fortran_signatures(source, filename=None):
 
 
 def parse_fortran_types(source, filename=None):
-    parsed = parse_fortran_file(source, filename=filename)
-    if parsed.modules:
-        return parsed.modules[0].derived_types
-    return parsed.derived_types
+    return parse_fortran_file(source, filename=filename).derived_types
 
 
 def parse_fortran_modules(source, filename=None):
