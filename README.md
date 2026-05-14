@@ -47,6 +47,30 @@ front-end). Current handled coverage:
 - `parse_fortran_namespace(root: str)`
 - `assess_wrap_readiness(code: str, filename: str | None = None)`
 
+
+## Parser organization notes
+
+`fortran_parser/parser.py` is now intentionally organized into clearly labeled
+sections so maintainers can navigate the file by concern instead of by history:
+
+- Regex/constants and parser-wide type aliases
+- Module-level helper blocks (source-form rules, preprocessor logic,
+  diagnostics, shape evaluation, compile-time expression resolution,
+  dependency ordering)
+- `FortranParser` internals grouped by domain:
+  - signature/declaration parsing
+  - module-variable parsing
+  - file/project orchestration
+  - program-unit parsers (types, modules, interfaces, submodules, programs,
+    block-data)
+  - public API wrappers (`parse_file`, `parse_project`,
+    `assess_wrap_readiness`)
+- Thin module-level convenience wrappers that delegate to a shared parser
+  instance
+
+This was a structural readability refactor only: behavior and public return
+models are unchanged.
+
 ## Terminal usage
 
 ### Run from source tree
