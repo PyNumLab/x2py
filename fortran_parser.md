@@ -66,9 +66,6 @@ Supported public API:
 - `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
 - `assess_wrap_readiness(code, filename=None) -> dict`
 
-Internal-only parser entrypoints (for signatures/types/modules/interfaces/etc.)
-exist as `FortranParser` methods but are not part of the stable top-level API.
-
 ## Parser organization notes
 
 `fortran_parser/parser.py` is now intentionally organized into clearly labeled

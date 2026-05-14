@@ -39,16 +39,11 @@ front-end). Current handled coverage:
 
 ## Public APIs
 
-Current supported public entrypoints are intentionally small:
+Public API:
 
 - `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
 - `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
 - `assess_wrap_readiness(code, filename=None) -> dict`
-
-> Historical parser entrypoints such as `parse_fortran_signatures`,
-> `parse_fortran_modules`, `parse_fortran_types`, and related singular/plural
-> variants are now internal implementation methods on `FortranParser` and are
-> no longer part of the supported top-level API.
 
 ## Parser organization notes
 
@@ -306,14 +301,10 @@ FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixtur
 
 ## Semantic parser structure
 
-The parser uses one stable file-level entrypoint and one project-level entrypoint:
+The parser exposes stable file/project entrypoints:
 
 - `parse_fortran_file(...)` for one source (string or path) returning `FortranFile`.
 - `parse_fortran_project(...)` for many sources returning `FortranProject`.
 - `assess_wrap_readiness(...)` for wrappability diagnostics.
-
-Lower-level unit parsers (signatures/modules/interfaces/submodules/programs/etc.)
-are internal `FortranParser` methods and are intentionally not documented as
-public API.
 
 The semantics layer consumes `FortranFile`/`FortranModule` objects and projects them into language-independent semantic IR (`SemanticModule`, `SemanticFunction`, `SemanticClass`, `SemanticType`). This keeps the semantic API model independent from parser internals, matching the project goal that parser output is a helper and the semantic interface/IR is the source of truth.
