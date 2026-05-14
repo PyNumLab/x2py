@@ -10,26 +10,6 @@
       "uses": {},
       "variables": [
         {
-          "name": "payload",
-          "base_type": "integer",
-          "kind": null,
-          "rank": 0,
-          "shape": [],
-          "lbound": [],
-          "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "public",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        },
-        {
           "name": "same_name_i",
           "base_type": "integer",
           "kind": null,
@@ -505,26 +485,6 @@
       "filename": "scope_name_reuse_combinations.f90",
       "uses": {},
       "variables": [
-        {
-          "name": "payload",
-          "base_type": "integer",
-          "kind": null,
-          "rank": 0,
-          "shape": [],
-          "lbound": [],
-          "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "public",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        },
         {
           "name": "same_name_i",
           "base_type": "integer",
