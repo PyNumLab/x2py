@@ -42,13 +42,7 @@ def parse_fortran_block_data_unit(code, filename=None):
 
 
 def parse_fortran_interfaces(code, filename=None):
-    parsed = parse_fortran_file(code, filename=filename)
-    interfaces = list(parsed.interfaces)
-    for module in parsed.modules:
-        interfaces.extend(module.interfaces)
-    for submodule in parsed.submodules:
-        interfaces.extend(submodule.interfaces)
-    return interfaces
+    return parse_fortran_file(code, filename=filename).interfaces
 
 
 def parse_fortran_interface(code, filename=None):
@@ -271,14 +265,12 @@ module m1
   end interface
 end module m1
 """
-    interfaces = parse_fortran_interfaces(code)
-    assert len(interfaces) == 1
-    iface = interfaces[0]
+    mod = parse_fortran_modules(code)[0]
+    assert len(mod.interfaces) == 1
+    iface = mod.interfaces[0]
     assert iface.name == "apply"
     assert iface.module == "m1"
     assert [p.name for p in iface.procedures] == ["do_apply"]
-    mod = parse_fortran_modules(code)[0]
-    assert len(mod.interfaces) == 1
 
 
 def test_fixed_form_fortran77_continuation():
@@ -1390,7 +1382,7 @@ module type_mod
 end module type_mod
 """).modules[0].derived_types[0].name == "particle"
 
-    assert parse_fortran_interface("""
+    assert parse_fortran_file("""
 module iface_mod
   interface apply
     subroutine do_apply(x)
@@ -1398,7 +1390,7 @@ module iface_mod
     end subroutine do_apply
   end interface
 end module iface_mod
-""").name == "apply"
+""").modules[0].interfaces[0].name == "apply"
 
     assert parse_fortran_program("""
 program driver
