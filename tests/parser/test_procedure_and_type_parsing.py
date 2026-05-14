@@ -5,52 +5,8 @@ from fortran_parser.cli import _format_wrap_readiness
 
 from fortran_parser import FortranParseError, FortranParser, parse_fortran_file, parse_fortran_project
 
-
-
-def _collect_signatures(parsed):
-    signatures = list(parsed.procedures)
-    for module in parsed.modules:
-        signatures.extend(module.procedures)
-        for interface in module.interfaces:
-            signatures.extend(interface.procedures)
-    for submodule in parsed.submodules:
-        signatures.extend(submodule.procedures)
-        for interface in submodule.interfaces:
-            signatures.extend(interface.procedures)
-    for program in parsed.programs:
-        signatures.extend(program.procedures)
-    for interface in parsed.interfaces:
-        signatures.extend(interface.procedures)
-    return signatures
-
-
-def _collect_types(parsed):
-    types = list(parsed.derived_types)
-    for module in parsed.modules:
-        types.extend(module.derived_types)
-    for submodule in parsed.submodules:
-        types.extend(submodule.derived_types)
-    return types
-
-
-def parse_fortran_signatures(code, filename=None, macro_defines=None):
-    return _collect_signatures(parse_fortran_file(code, filename=filename, macro_defines=macro_defines))
-
-
 def parse_fortran_project_signatures(files):
     return list(parse_fortran_project(files).procedures.values())
-
-
-def parse_fortran_signature(code, filename=None, macro_defines=None):
-    return parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)[0]
-
-
-def parse_fortran_types(code, filename=None):
-    return _collect_types(parse_fortran_file(code, filename=filename))
-
-
-def parse_fortran_derived_type(code, filename=None):
-    return parse_fortran_types(code, filename=filename)[0]
 
 
 def parse_fortran_modules(code, filename=None):
@@ -145,7 +101,8 @@ pure subroutine axpy(n, a, x, y)
 end subroutine axpy
 end module linalg_mod
 """
-    signatures = parse_fortran_signatures(code)
+    parsed = parse_fortran_file(code)
+    signatures = parsed.modules[0].procedures
     assert len(signatures) == 1
 
     sig = signatures[0]
@@ -175,7 +132,7 @@ function norm2(x) result(res)
   real(kind=c_double) :: res
 end function norm2
 """
-    signatures = parse_fortran_signatures(code)
+    signatures = parse_fortran_file(code).procedures
     sig = signatures[0]
     assert sig.kind == "function"
     assert sig.result is not None
@@ -198,16 +155,20 @@ def test_fixed_form_and_interface_detection():
         end subroutine cb
       end interface
 """
-    signatures = parse_fortran_signatures(code, filename="legacy.f")
+    parsed = parse_fortran_file(code, filename="legacy.f")
+    signatures = list(parsed.procedures)
+    signatures.extend(parsed.interfaces[0].procedures)
     assert len(signatures) == 2
     assert signatures[0].name == "saxpy"
     assert signatures[0].arguments[1].shape == ["n"]
     assert signatures[1].in_interface is True
 
     with pytest.raises(ValueError, match="Fortran 77"):
-        parse_fortran_signatures(code, filename="legacy.f77")
+        parse_fortran_file(code, filename="legacy.f77").procedures
 
-    signatures = parse_fortran_signatures(code, filename="legacy.f90")
+    parsed = parse_fortran_file(code, filename="legacy.f90")
+    signatures = list(parsed.procedures)
+    signatures.extend(parsed.interfaces[0].procedures)
     assert len(signatures) == 2
     assert signatures[0].name == "saxpy"
     assert signatures[0].arguments[1].shape == ["n"]
@@ -248,7 +209,8 @@ module particle_mod
   end type particle
 end module particle_mod
 """
-    types = parse_fortran_types(code)
+    parsed = parse_fortran_file(code)
+    types = parsed.modules[0].derived_types
     assert len(types) == 1
     t = types[0]
     assert t.name == "particle"
@@ -331,7 +293,7 @@ def test_fixed_form_fortran77_continuation():
  10   continue
       end
 """
-    sigs = parse_fortran_signatures(code, filename="legacy.f")
+    sigs = parse_fortran_file(code, filename="legacy.f").procedures
     assert len(sigs) == 1
     assert sigs[0].name == "saxpy"
     assert sigs[0].arguments[0].base_type == "integer"
@@ -348,7 +310,7 @@ def test_fixed_form_parameter_statement_after_typed_constants():
       a = a + one - zero
       end
 """
-    sigs = parse_fortran_signatures(code, filename="legacy.f")
+    sigs = parse_fortran_file(code, filename="legacy.f").procedures
     assert len(sigs) == 1
     assert sigs[0].variables == {}
 
@@ -361,7 +323,7 @@ subroutine dup(x)
 end subroutine dup
 """
     with pytest.raises(ValueError, match="Duplicate declaration"):
-        parse_fortran_signatures(code, filename="dup.f90")
+        parse_fortran_file(code, filename="dup.f90").procedures
 
 
 def test_fixed_form_character_star_length_is_parsed():
@@ -371,7 +333,7 @@ def test_fixed_form_character_star_length_is_parsed():
       integer info
       end
 """
-    sigs = parse_fortran_signatures(code, filename="legacy.f")
+    sigs = parse_fortran_file(code, filename="legacy.f").procedures
     assert len(sigs) == 1
     assert sigs[0].arguments[0].base_type == "character"
     assert sigs[0].arguments[0].kind == "*"
@@ -385,7 +347,7 @@ real function f(x)
 end function f
 """
     with pytest.raises(ValueError, match="Duplicate declaration"):
-        parse_fortran_signatures(code, filename="dup_result.f90")
+        parse_fortran_file(code, filename="dup_result.f90").procedures
 
 
 def test_duplicate_function_result_with_result_keyword_raises_error():
@@ -396,7 +358,7 @@ real function f(x) result(res)
 end function f
 """
     with pytest.raises(ValueError, match="Duplicate declaration"):
-        parse_fortran_signatures(code, filename="dup_result_kw.f90")
+        parse_fortran_file(code, filename="dup_result_kw.f90").procedures
 
 
 def test_fixed_form_parameter_without_typed_declaration_raises_error():
@@ -408,7 +370,7 @@ def test_fixed_form_parameter_without_typed_declaration_raises_error():
       end
 """
     with pytest.raises(ValueError, match="Unknown datatype for PARAMETER symbol"):
-        parse_fortran_signatures(code, filename="legacy.f")
+        parse_fortran_file(code, filename="legacy.f").procedures
 
 
 def test_fixed_form_parameter_without_typed_declaration_allowed_with_implicit_typing():
@@ -417,7 +379,7 @@ def test_fixed_form_parameter_without_typed_declaration_allowed_with_implicit_ty
       parameter ( one = 1.0e+0 )
       end
 """
-    sigs = parse_fortran_signatures(code, filename="legacy.f")
+    sigs = parse_fortran_file(code, filename="legacy.f").procedures
     assert len(sigs) == 1
     assert sigs[0].variables["one"].base_type == "real"
     assert sigs[0].variables["one"].value == "1"
@@ -429,7 +391,7 @@ subroutine cst()
   parameter (ival = 2)
 end subroutine cst
 """
-    sig = parse_fortran_signatures(code, filename="modern.f90")[0]
+    sig = parse_fortran_file(code, filename="modern.f90").procedures[0]
     assert sig.variables["ival"].base_type == "integer"
     assert sig.variables["ival"].value == "2"
 
@@ -442,7 +404,7 @@ subroutine dup_init()
 end subroutine dup_init
 """
     with pytest.raises(ValueError, match="Duplicate declaration"):
-        parse_fortran_signatures(code, filename="dup_init.f90")
+        parse_fortran_file(code, filename="dup_init.f90").procedures
 
 
 def test_duplicate_procedure_name_same_scope_raises_error():
@@ -457,7 +419,7 @@ function work(n) result(out)
 end function work
 """
     with pytest.raises(ValueError, match="Duplicate procedure name"):
-        parse_fortran_signatures(code, filename="dup_proc.f90")
+        parse_fortran_file(code, filename="dup_proc.f90").procedures
 
 
 def test_duplicate_procedure_name_same_module_scope_raises_error():
@@ -474,7 +436,7 @@ contains
 end module m
 """
     with pytest.raises(ValueError, match="Duplicate procedure name"):
-        parse_fortran_signatures(code, filename="dup_mod_proc.f90")
+        parse_fortran_file(code, filename="dup_mod_proc.f90").procedures
 
 
 def test_legacy_star_kind_parameter_symbol_is_recognized():
@@ -484,7 +446,7 @@ def test_legacy_star_kind_parameter_symbol_is_recognized():
       parameter (one = (1.0d+0,0.0d+0))
       end
 """
-    sig = parse_fortran_signatures(code, filename="legacy.f")[0]
+    sig = parse_fortran_file(code, filename="legacy.f").procedures[0]
     assert sig.variables == {}
 
 
@@ -496,7 +458,7 @@ def test_legacy_star_kind_parameter_list_with_implicit_none_is_recognized():
       parameter ( czero = (0.0d0,0.0d0), cone = (1.0d0,0.0d0) )
       end
 """
-    sig = parse_fortran_signatures(code, filename="legacy.f")[0]
+    sig = parse_fortran_file(code, filename="legacy.f").procedures[0]
     assert sig.variables == {}
 
 
@@ -508,7 +470,7 @@ subroutine fdjac1(fcn, n)
   external :: fcn
 end subroutine fdjac1
 """
-    sig = parse_fortran_signatures(code, filename="fdjac1.f90")[0]
+    sig = parse_fortran_file(code, filename="fdjac1.f90").procedures[0]
     assert sig.arguments[0].name == "fcn"
     assert sig.arguments[0].base_type == "procedure"
 
@@ -520,7 +482,7 @@ subroutine lapack_style(slamch)
   real slamch
 end subroutine lapack_style
 """
-    sig = parse_fortran_signatures(code, filename="lapack_style.f90")[0]
+    sig = parse_fortran_file(code, filename="lapack_style.f90").procedures[0]
     assert sig.arguments[0].name == "slamch"
     assert sig.arguments[0].base_type == "real"
 
@@ -554,7 +516,7 @@ recursive function apply_once(f, x) result(y)
   y = f(x)
 end function apply_once
 """
-    sig = parse_fortran_signatures(code, filename="apply_once.f90")[0]
+    sig = parse_fortran_file(code, filename="apply_once.f90").procedures[0]
     assert sig.kind == "function"
     assert "recursive" in sig.attributes
     assert sig.arguments[0].name == "f"
@@ -571,7 +533,8 @@ interface
   end subroutine driver
 end interface
 """
-    sig = parse_fortran_signatures(code, filename="iface_external.f90")[0]
+    parsed = parse_fortran_file(code, filename="iface_external.f90")
+    sig = parsed.interfaces[0].procedures[0]
     assert sig.in_interface is True
     assert sig.arguments[0].name == "fcn"
     assert sig.arguments[1].name == "x"
@@ -588,7 +551,7 @@ subroutine apply_cb(f, x, y)
   y = f(x)
 end subroutine apply_cb
 """
-    sig = parse_fortran_signatures(code, filename="apply_cb.f90")[0]
+    sig = parse_fortran_file(code, filename="apply_cb.f90").procedures[0]
     f_arg = sig.arguments[0]
     assert f_arg.name == "f"
     assert f_arg.base_type == "real"
@@ -602,7 +565,7 @@ subroutine update(n, x)
   real :: tmp
 end subroutine update
 """
-    sig = parse_fortran_signatures(code)[0]
+    sig = parse_fortran_file(code).procedures[0]
     assert [a.name for a in sig.arguments] == ["n", "x"]
     assert sig.arguments[0].base_type == "integer"
     assert sig.arguments[1].base_type == "real"
@@ -618,7 +581,7 @@ contains
   end subroutine inner
 end subroutine outer
 """
-    sigs = parse_fortran_signatures(code)
+    sigs = parse_fortran_file(code).procedures
     assert len(sigs) == 1
     assert sigs[0].name == "outer"
 
@@ -630,7 +593,7 @@ subroutine saxpy(x)
   real(kind=rk), intent(inout) :: x(:)
 end subroutine saxpy
 """
-    sig = parse_fortran_signatures(code)[0]
+    sig = parse_fortran_file(code).procedures[0]
     assert sig.arguments[0].kind in {"rk", "selected_real_kind(15, 307)"}
 
 
@@ -930,7 +893,7 @@ recursive function fact(n) results(res)
   integer :: res
 end function fact
 """
-    sig = parse_fortran_signatures(code)[0]
+    sig = parse_fortran_file(code).procedures[0]
     assert "recursive" in sig.attributes
     assert sig.result is not None
     assert sig.result.name == "res"
@@ -942,7 +905,7 @@ subroutine fill_grid(x)
   integer, intent(inout) :: x(0:,0:)
 end subroutine fill_grid
 """
-    sig = parse_fortran_signatures(code)[0]
+    sig = parse_fortran_file(code).procedures[0]
     arg = sig.arguments[0]
     assert arg.base_type == "integer"
     assert arg.rank == 2
@@ -955,7 +918,7 @@ subroutine update_plane(x)
   real, intent(inout), dimension(0:, 1:n) :: x
 end subroutine update_plane
 """
-    sig = parse_fortran_signatures(code)[0]
+    sig = parse_fortran_file(code).procedures[0]
     arg = sig.arguments[0]
     assert arg.rank == 2
     assert arg.shape == ["0:", "1:n"]
@@ -975,7 +938,7 @@ subroutine resize(x)
   real, intent(inout) :: x(n)
 end subroutine resize
 """
-    sig = parse_fortran_signatures(code)[0]
+    sig = parse_fortran_file(code).procedures[0]
     arg = sig.arguments[0]
     assert arg.shape_info == [
         {"raw": "n", "lower": "1", "upper": "n"},
@@ -992,7 +955,7 @@ subroutine step(state)
   type(sim_state), intent(inout) :: state
 end subroutine step
 """
-    sig = parse_fortran_signatures(code)[0]
+    sig = parse_fortran_file(code).procedures[0]
     arg = sig.arguments[0]
     assert arg.base_type == "derived"
     assert arg.kind == "sim_state"
@@ -1070,7 +1033,7 @@ subroutine use_local_kind_expr(x)
   real, dimension(1:ip), intent(inout) :: x
 end subroutine use_local_kind_expr
 """
-    sig = parse_fortran_signatures(code)[0]
+    sig = parse_fortran_file(code).procedures[0]
     assert sig.arguments[0].shape == ["1:ip"]
     assert sig.arguments[0].shape == ["1:ip"]
     assert sig.arguments[0].shape == ["1:ip"]
@@ -1103,7 +1066,7 @@ subroutine s(a)
   real, intent(inout) :: a(0:nx-1, 1:ny*2)
 end subroutine s
 """
-    sig = parse_fortran_signatures(code)[0]
+    sig = parse_fortran_file(code).procedures[0]
     assert collect_signature_shape_symbols(sig) == {"nx", "ny"}
 
     evaluated = evaluate_signature_shapes(sig, {"nx": 6, "ny": 4})
@@ -1154,7 +1117,7 @@ module m
   end type child_t
 end module m
 """
-    dt = parse_fortran_types(code)[1]
+    dt = parse_fortran_file(code).modules[0].derived_types[1]
     assert dt.name == "child_t"
     assert dt.extends is not None
     assert getattr(dt.extends, "name", None) == "base_t"
@@ -1168,7 +1131,7 @@ module m
   end type child_t
 end module m
 """
-    dt = parse_fortran_types(code)[0]
+    dt = parse_fortran_file(code).modules[0].derived_types[0]
     assert dt.extends == "external_base_t"
 
 
@@ -1184,7 +1147,7 @@ module m
   end type t
 end module m
 """
-    dt = parse_fortran_types(code)[0]
+    dt = parse_fortran_file(code).modules[0].derived_types[0]
     assert {"name": "init => t_init", "attrs": ["pass(self)"]} in dt.procedure_bindings
     assert {"name": "clear", "attrs": ["nopass"]} in dt.procedure_bindings
     assert {"name": "assignment(=)", "targets": ["init"], "attrs": []} in dt.generic_bindings
@@ -1198,7 +1161,7 @@ subroutine bad(x)
 end subroutine bad
 """
     with pytest.raises(ValueError, match="star-kind"):
-        parse_fortran_signatures(code, filename="bad.f90")
+        parse_fortran_file(code, filename="bad.f90").procedures
 
 
 def test_unknown_datatype_for_argument_crashes_parser():
@@ -1208,7 +1171,7 @@ subroutine bad(x)
 end subroutine bad
 """
     with pytest.raises(ValueError, match="Unknown or unsupported datatype"):
-        parse_fortran_signatures(code, filename="bad.f90")
+        parse_fortran_file(code, filename="bad.f90").procedures
 
 
 def test_submodule_procedures_and_namespace_dependencies(tmp_path):
@@ -1303,7 +1266,7 @@ subroutine caller(cb)
   procedure(local_cb) :: cb
 end subroutine caller
 """
-    sig = parse_fortran_signatures(code)[0]
+    sig = parse_fortran_file(code).procedures[0]
     cb = next(a for a in sig.arguments if a.name == "cb")
     assert cb.base_type == "procedure"
     assert cb.kind == "local_cb"
@@ -1316,7 +1279,7 @@ subroutine caller(cb)
   procedure(ext_cb) :: cb
 end subroutine caller
 """
-    sig = parse_fortran_signatures(code)[0]
+    sig = parse_fortran_file(code).procedures[0]
     cb = next(a for a in sig.arguments if a.name == "cb")
     assert cb.base_type == "procedure"
     assert cb.kind is None
@@ -1410,24 +1373,24 @@ end module once_mod
 
 
 def test_singular_parse_entrypoints_return_single_models():
-    assert parse_fortran_signature("""
+    assert parse_fortran_file("""
 subroutine one(x)
   integer, intent(in) :: x
 end subroutine one
-""").name == "one"
+""").procedures[0].name == "one"
 
     assert parse_fortran_module("""
 module single_mod
 end module single_mod
 """).name == "single_mod"
 
-    assert parse_fortran_derived_type("""
+    assert parse_fortran_file("""
 module type_mod
   type :: particle
     integer :: id
   end type particle
 end module type_mod
-""").name == "particle"
+""").modules[0].derived_types[0].name == "particle"
 
     assert parse_fortran_interface("""
 module iface_mod
@@ -1465,10 +1428,10 @@ module second_mod
 end module second_mod
 """)) == 2
 
-    signatures = parse_fortran_signatures("""
+    parsed = parse_fortran_file("""
 subroutine first()
 end subroutine first
 subroutine second()
 end subroutine second
 """)
-    assert len(signatures) == 2
+    assert len(parsed.procedures) == 2
