@@ -2784,52 +2784,37 @@ class FortranParser:
             raise FortranParseError("parse_types() expected exactly one derived type, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
         raise FortranParseError(f"parse_types() expected exactly one derived type, but found {len(types)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
-    def parse_derived_type(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
-        return self.parse_types(code, filename=filename)
-
-    def parse_modules(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
+    def parse_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
         items = self.parse_file(code, filename=filename).modules
         if len(items) == 1:
             return items[0]
         if not items:
-            raise FortranParseError("parse_modules() expected exactly one module, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
-        raise FortranParseError(f"parse_modules() expected exactly one module, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
-
-    def parse_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
-        return self.parse_modules(code, filename=filename)
-
-    def parse_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
-        items = self.parse_file(code, filename=filename).interfaces
-        if len(items) == 1:
-            return items[0]
-        if not items:
-            raise FortranParseError("parse_interfaces() expected exactly one interface, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
-        raise FortranParseError(f"parse_interfaces() expected exactly one interface, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
+            raise FortranParseError("parse_module() expected exactly one module, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
+        raise FortranParseError(f"parse_module() expected exactly one module, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
     def parse_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
-        return self.parse_interfaces(code, filename=filename)
-
-    def parse_submodules(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
-        items = self.parse_file(code, filename=filename).submodules
+        items = self._parse_fortran_interfaces(code, filename=filename)
         if len(items) == 1:
             return items[0]
         if not items:
-            raise FortranParseError("parse_submodules() expected exactly one submodule, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
-        raise FortranParseError(f"parse_submodules() expected exactly one submodule, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
+            raise FortranParseError("parse_interface() expected exactly one interface, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
+        raise FortranParseError(f"parse_interface() expected exactly one interface, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
     def parse_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
-        return self.parse_submodules(code, filename=filename)
-
-    def parse_programs(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
-        items = self.parse_file(code, filename=filename).programs
+        items = self._parse_fortran_submodules(code, filename=filename)
         if len(items) == 1:
             return items[0]
         if not items:
-            raise FortranParseError("parse_programs() expected exactly one program, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
-        raise FortranParseError(f"parse_programs() expected exactly one program, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
+            raise FortranParseError("parse_submodule() expected exactly one submodule, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
+        raise FortranParseError(f"parse_submodule() expected exactly one submodule, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
     def parse_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
-        return self.parse_programs(code, filename=filename)
+        items = self._parse_fortran_programs(code, filename=filename)
+        if len(items) == 1:
+            return items[0]
+        if not items:
+            raise FortranParseError("parse_program() expected exactly one program, but none were found", filename=filename, code="PARSE_WRONG_ENTRYPOINT")
+        raise FortranParseError(f"parse_program() expected exactly one program, but found {len(items)}", filename=filename, code="PARSE_AMBIGUOUS_ENTRYPOINT")
 
     def parse_block_data(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
         items = self.parse_file(code, filename=filename).block_data_units
