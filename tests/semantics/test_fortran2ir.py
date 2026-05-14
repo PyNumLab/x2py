@@ -1,7 +1,7 @@
 import json
 from dataclasses import asdict
 
-from fortran_parser import parse_fortran_modules as parse_fortran_source
+from fortran_parser import parse_fortran_signatures as parse_fortran_source
 
 from semantics.fortran2ir import (
     fortran_module_to_semantic_module,
@@ -65,7 +65,7 @@ end module
 """
 
     fmod = parse_fortran_source(source)
-    print(fmod)
+
     smod = fortran_module_to_semantic_module(fmod)
 
     assert smod.name == "math_mod"
