@@ -2690,6 +2690,31 @@ def _topological_files(file_deps: dict[str, set[str]]) -> list[str]:
 
 
 class FortranParser:
+    def _parse_fortran_signatures(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+    ) -> list[FortranProcedureSignature]:
+        return _parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
+
+    def _parse_fortran_signature(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+    ) -> FortranProcedureSignature:
+        return _expect_single_parse_result(
+            self._parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines),
+            parser_name="parse_fortran_signature",
+            entity_name="procedure signature",
+            filename=filename,
+        )
+
+    def _parse_fortran_project_signatures(self, files: dict[str, str]) -> list[FortranProcedureSignature]:
+        project = self._parse_fortran_project(files)
+        return list(project.procedures.values())
+
     """Object-oriented public API for the Fortran parser entrypoints.
 
     New code should prefer this class so parser configuration, such as
@@ -2841,7 +2866,7 @@ class FortranParser:
     ) -> list[FortranProcedureSignature]:
         if macro_defines is None:
             macro_defines = self.macro_defines
-        return _parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
+        return self._parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
 
     def parse_signature(
         self,
@@ -2851,10 +2876,10 @@ class FortranParser:
     ) -> FortranProcedureSignature:
         if macro_defines is None:
             macro_defines = self.macro_defines
-        return _parse_fortran_signature(code, filename=filename, macro_defines=macro_defines)
+        return self._parse_fortran_signature(code, filename=filename, macro_defines=macro_defines)
 
     def parse_project_signatures(self, files: dict[str, str]) -> list[FortranProcedureSignature]:
-        return _parse_fortran_project_signatures(files)
+        return self._parse_fortran_project_signatures(files)
 
     def parse_file(
         self,
