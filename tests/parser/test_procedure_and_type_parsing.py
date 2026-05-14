@@ -156,23 +156,21 @@ def test_fixed_form_and_interface_detection():
       end interface
 """
     parsed = parse_fortran_file(code, filename="legacy.f")
-    signatures = list(parsed.procedures)
-    signatures.extend(parsed.interfaces[0].procedures)
-    assert len(signatures) == 2
-    assert signatures[0].name == "saxpy"
-    assert signatures[0].arguments[1].shape == ["n"]
-    assert signatures[1].in_interface is True
+    assert len(parsed.procedures) == 1
+    assert parsed.procedures[0].name == "saxpy"
+    assert parsed.procedures[0].arguments[1].shape == ["n"]
+    assert len(parsed.interfaces) == 1
+    assert parsed.interfaces[0].procedures[0].in_interface is True
 
     with pytest.raises(ValueError, match="Fortran 77"):
         parse_fortran_file(code, filename="legacy.f77").procedures
 
     parsed = parse_fortran_file(code, filename="legacy.f90")
-    signatures = list(parsed.procedures)
-    signatures.extend(parsed.interfaces[0].procedures)
-    assert len(signatures) == 2
-    assert signatures[0].name == "saxpy"
-    assert signatures[0].arguments[1].shape == ["n"]
-    assert signatures[1].in_interface is True
+    assert len(parsed.procedures) == 1
+    assert parsed.procedures[0].name == "saxpy"
+    assert parsed.procedures[0].arguments[1].shape == ["n"]
+    assert len(parsed.interfaces) == 1
+    assert parsed.interfaces[0].procedures[0].in_interface is True
 
 
 def test_kind_resolution_from_imported_module_across_files():
