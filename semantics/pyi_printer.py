@@ -113,26 +113,6 @@ class {cls.name}{bases}:
 _DEFAULT_PRINTER = PyiPrinter()
 
 
-def emit_semantic_type(t: SemanticType) -> str:
-    return _DEFAULT_PRINTER.emit_semantic_type(t)
-
-
-def emit_argument(arg: SemanticArgument) -> str:
-    return _DEFAULT_PRINTER.emit_argument(arg)
-
-
-def emit_function(func: SemanticFunction) -> str:
-    return _DEFAULT_PRINTER.emit_function(func)
-
-
-def emit_method(method: SemanticMethod) -> str:
-    return _DEFAULT_PRINTER.emit_method(method)
-
-
-def emit_class(cls: SemanticClass) -> str:
-    return _DEFAULT_PRINTER.emit_class(cls)
-
-
 def emit_module(module: SemanticModule) -> str:
     return _DEFAULT_PRINTER.emit_module(module)
 

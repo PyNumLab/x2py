@@ -181,29 +181,6 @@ class FortranToIRConverter:
 _DEFAULT_CONVERTER = FortranToIRConverter()
 
 
-def _first_module(parsed):
-    return _DEFAULT_CONVERTER.first_module(parsed)
-
-
-def fortran_variable_to_semantic_type(var) -> SemanticType:
-    return _DEFAULT_CONVERTER.variable_to_semantic_type(var)
-
-
-def fortran_argument_to_semantic_argument(arg) -> SemanticArgument:
-    return _DEFAULT_CONVERTER.argument_to_semantic_argument(arg)
-
-
-def fortran_procedure_to_semantic_function(proc) -> SemanticFunction:
-    return _DEFAULT_CONVERTER.procedure_to_semantic_function(proc)
-
-
-def fortran_derived_type_to_semantic_class(
-    dtype,
-    procedure_lookup: dict[str, SemanticFunction]
-) -> SemanticClass:
-    return _DEFAULT_CONVERTER.derived_type_to_semantic_class(dtype, procedure_lookup)
-
-
 def fortran_module_to_semantic_module(module) -> SemanticModule:
     return _DEFAULT_CONVERTER.module_to_semantic_module(module)
 
