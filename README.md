@@ -226,12 +226,14 @@ python -m fortran_parser tests/fcode/basic_subroutine.f90 --json --json-out repo
 ### Example 1: parse a whole folder namespace
 
 ```python
-from fortran_parser import parse_fortran_namespace
+from fortran_parser import parse_fortran_project
+from pathlib import Path
 
-ns = parse_fortran_namespace("tests/fcode")
-print("signatures:", len(ns["signatures"]))
-print("types:", len(ns["types"]))
-print("modules:", len(ns["modules"]))
+root = Path("tests/fcode")
+files = [str(p) for p in root.rglob("*.f90")][:5]
+project = parse_fortran_project(files)
+print("files:", len(project.files))
+print("modules:", len(project.modules))
 ```
 
 Expected result:
@@ -243,22 +245,22 @@ Expected result:
 
 ```python
 from pathlib import Path
-from fortran_parser import parse_fortran_signatures, assess_wrap_readiness
+from fortran_parser import parse_fortran_file, assess_wrap_readiness
 
 path = Path("tests/fcode/basic_subroutine.f90")
 code = path.read_text()
 
-sigs = parse_fortran_signatures(code, filename=str(path))
+parsed = parse_fortran_file(code, filename=str(path))
 report = assess_wrap_readiness(code, filename=str(path))
 
-print("procedures:", len(sigs))
+print("procedures:", len(parsed.procedures))
 print("wrappable:", report["wrappable"])
 print("unknown args:", report["unknown_argument_types"])
 ```
 
 Expected result:
 
-- `sigs` is a list of normalized procedure signatures.
+- `parsed` is a `FortranFile` aggregate with procedures/modules/types/interfaces/program units.
 - `report` includes counts, unsupported construct hits, unknown argument info,
   unresolved imported derived-type/kind dependencies, and final `wrappable`
   boolean.
@@ -304,14 +306,14 @@ FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixtur
 
 ## Semantic parser structure
 
-The parser now separates entrypoints by the shape of Fortran unit a caller wants. Raw-source preprocessing is owned by the file/project layer, which then passes normalized lines to lower-level collectors:
+The parser uses one stable file-level entrypoint and one project-level entrypoint:
 
-- `parse_fortran_file(source_or_path, filename=None)` is the canonical single-file entrypoint and preprocesses source exactly once per file parse. It returns a `FortranFile` object containing modules, submodules, programs, block-data units, standalone procedures, standalone interfaces, standalone derived types, diagnostics, and symbols. When parsing source text, `filename` remains `None` unless explicitly supplied. When passed an existing path without `filename`, the source is read from disk and that path is recorded.
-- `parse_fortran_project(files)` parses multiple sources, preprocessing each source once through `parse_fortran_file`, and returns a `FortranProject` registry. `files` may be a `{filename: source}` mapping or a sequence of paths.
-- `parse_fortran_signature(code, filename=None)` and the other singular parsers enforce exactly one parsed model object and raise `FortranParseError` when the input has zero or many matching objects.
-- `parse_fortran_signatures(code, filename=None)` is intentionally narrow: it extracts all procedure signatures in a source. It is kept as the plural collection helper and for backwards compatibility, but it is not the file parser.
-- Specialized entrypoints such as `parse_fortran_modules`, `parse_fortran_interfaces`, and `parse_fortran_programs` should be called only when that program-unit kind is expected. Calling `parse_fortran_modules` on source containing only standalone procedures raises `FortranParseError` to catch wrong entrypoint usage early.
+- `parse_fortran_file(...)` for one source (string or path) returning `FortranFile`.
+- `parse_fortran_project(...)` for many sources returning `FortranProject`.
+- `assess_wrap_readiness(...)` for wrappability diagnostics.
 
-Module parsing only records declarations from the module specification part. Declarations inside contained procedures remain procedure-local metadata and are not leaked into `FortranModule.variables`.
+Lower-level unit parsers (signatures/modules/interfaces/submodules/programs/etc.)
+are internal `FortranParser` methods and are intentionally not documented as
+public API.
 
 The semantics layer consumes `FortranFile`/`FortranModule` objects and projects them into language-independent semantic IR (`SemanticModule`, `SemanticFunction`, `SemanticClass`, `SemanticType`). This keeps the semantic API model independent from parser internals, matching the project goal that parser output is a helper and the semantic interface/IR is the source of truth.

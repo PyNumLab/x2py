@@ -300,11 +300,13 @@ function that created the diagnostic.
 ### 4.1 Parse folder namespace
 
 ```python
-from fortran_parser import parse_fortran_namespace
+from fortran_parser import parse_fortran_project
+from pathlib import Path
 
-namespace = parse_fortran_namespace("tests/fcode")
-print(namespace.keys())
-print(len(namespace["signatures"]))
+files = [str(p) for p in Path("tests/fcode").rglob("*.f90")][:5]
+project = parse_fortran_project(files)
+print(len(project.files))
+print(len(project.modules))
 ```
 
 Expected behavior:
@@ -317,22 +319,22 @@ Expected behavior:
 
 ```python
 from pathlib import Path
-from fortran_parser import parse_fortran_signatures, assess_wrap_readiness
+from fortran_parser import parse_fortran_file, assess_wrap_readiness
 
 p = Path("tests/fcode/basic_subroutine.f90")
 code = p.read_text()
 
-signatures = parse_fortran_signatures(code, filename=str(p))
+parsed = parse_fortran_file(code, filename=str(p))
 readiness = assess_wrap_readiness(code, filename=str(p))
 
-print("signatures", len(signatures))
+print("procedures", len(parsed.procedures))
 print("wrappable", readiness["wrappable"])
-print("unsupported", readiness["unsupported_hits"])
+print("unsupported", len(readiness["unsupported_constructs"]))
 ```
 
 Expected behavior:
 
-- `signatures` is a normalized list of callable records.
+- `parsed` is a `FortranFile` aggregate model with parsed units and symbols.
 - `readiness` includes counts, unsupported hits, unknown args, unresolved
   imported derived-type/kind dependencies, and `wrappable`.
 
@@ -774,15 +776,14 @@ Under `implicit none`, these declarations count as valid argument declarations, 
 
 ## 8) File, project, and semantic entrypoints
 
-Use the most specific parser entrypoint for the expected source shape. Raw-source preprocessing is owned by file/project-level entrypoints, which pass normalized lines to lower-level collectors instead of re-normalizing the same source repeatedly:
+Use the stable top-level API:
 
-- `parse_fortran_file(source_or_path, filename=None) -> FortranFile` preprocesses once, parses a single source, and aggregates all top-level program units. Source strings have no filename by default; callers can pass `filename=` for diagnostics or provenance. Existing paths are read from disk when no explicit filename is supplied.
-- `parse_fortran_project(files) -> FortranProject` parses many files through `parse_fortran_file`, preprocessing once per file, and builds registries for modules, submodules, programs, standalone procedures, derived types, interfaces, and dependencies.
-- Singular functions such as `parse_fortran_module(code, filename=None)` return one model object and raise `FortranParseError` for zero or multiple matches.
-- Plural functions such as `parse_fortran_modules(code, filename=None)` return all matching objects because a Fortran source file can legally contain multiple modules/program units; these remain useful as collection helpers and for backwards compatibility.
-- `parse_fortran_signatures(code, filename=None)` extracts all procedure signatures only. It is deliberately not used as the canonical file parser.
-- Unit-specific functions (`parse_fortran_modules`, `parse_fortran_interfaces`, `parse_fortran_submodules`, `parse_fortran_programs`, and `parse_fortran_block_data`) model the corresponding Fortran unit. Wrong-entrypoint calls should fail loudly when a source clearly contains a different top-level shape, e.g. `parse_fortran_modules` raises `FortranParseError` for standalone-procedure-only input.
+- `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
+- `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
+- `assess_wrap_readiness(code, filename=None) -> dict`
 
-`parse_fortran_modules` reads only module specification-part declarations into `FortranModule.variables`; procedure-local declarations inside `contains` are attached to procedure signatures and do not leak into module variables.
+Lower-level unit parsers are internal `FortranParser` methods.
 
-Semantic conversion lives in `semantics/fortran2ir.py`. It accepts the new `FortranFile` structure (or an already selected `FortranModule`) and converts parser metadata into the semantic IR consumed by the `.pyi` printer and later wrapper/runtime stages.
+Semantic conversion lives in `semantics/fortran2ir.py`. It accepts parsed `FortranFile`
+(or selected `FortranModule`) structures and converts metadata into semantic IR
+consumed by the `.pyi` printer and later wrapper/runtime stages.
