@@ -3,37 +3,6 @@ import pytest
 from fortran_parser import parse_fortran_file
 from fortran_parser.models import FortranParseError
 
-def _collect_signatures(parsed):
-    signatures = list(parsed.procedures)
-    for module in parsed.modules:
-        signatures.extend(module.procedures)
-        for interface in module.interfaces:
-            signatures.extend(interface.procedures)
-    for submodule in parsed.submodules:
-        signatures.extend(submodule.procedures)
-        for interface in submodule.interfaces:
-            signatures.extend(interface.procedures)
-    for program in parsed.programs:
-        signatures.extend(program.procedures)
-    for interface in parsed.interfaces:
-        signatures.extend(interface.procedures)
-    return signatures
-
-
-def _collect_types(parsed):
-    types = list(parsed.derived_types)
-    for module in parsed.modules:
-        types.extend(module.derived_types)
-    for submodule in parsed.submodules:
-        types.extend(submodule.derived_types)
-    return types
-
-
-def parse_fortran_signatures(code, filename=None, macro_defines=None):
-    signatures = _collect_signatures(parse_fortran_file(code, filename=filename, macro_defines=macro_defines))
-    return [sig for sig in signatures if not sig.in_interface]
-
-
 def test_same_argument_name_in_different_procedures_is_allowed():
     code = """
 subroutine a(x)
@@ -46,8 +15,8 @@ subroutine b(x)
   real(8) :: x
 end subroutine b
 """
-    sigs = parse_fortran_signatures(code, filename="scope_args_ok.f90")
-    assert [s.name for s in sigs] == ["a", "b"]
+    parsed = parse_fortran_file(code, filename="scope_args_ok.f90")
+    assert [s.name for s in parsed.procedures] == ["a", "b"]
 
 
 def test_interface_argument_names_do_not_conflict_with_host_locals():
@@ -63,9 +32,9 @@ subroutine host(func, x)
   real(8) :: x
 end subroutine host
 """
-    sigs = parse_fortran_signatures(code, filename="scope_interface_ok.f90")
-    assert len(sigs) == 1
-    assert sigs[0].name == "host"
+    parsed = parse_fortran_file(code, filename="scope_interface_ok.f90")
+    assert len(parsed.procedures) == 1
+    assert parsed.procedures[0].name == "host"
 
 
 def test_same_contained_procedure_name_in_different_hosts_is_allowed():
@@ -87,8 +56,9 @@ contains
   end subroutine host_b
 end module m
 """
-    sigs = parse_fortran_signatures(code, filename="scope_contains_ok.f90")
-    assert [s.name.lower() for s in sigs] == ["host_a", "host_b"]
+    parsed = parse_fortran_file(code, filename="scope_contains_ok.f90")
+    module = parsed.modules[0]
+    assert [s.name.lower() for s in module.procedures] == ["host_a", "host_b"]
 
 
 def test_duplicate_procedure_name_in_same_scope_still_errors():
@@ -105,7 +75,7 @@ contains
 end module m
 """
     with pytest.raises(FortranParseError, match="Duplicate procedure name"):
-        parse_fortran_signatures(code, filename="scope_dup_err.f90")
+        parse_fortran_file(code, filename="scope_dup_err.f90")
 
 
 def test_same_name_in_mutually_exclusive_ifdef_branches_is_allowed():
@@ -125,8 +95,9 @@ contains
 #endif
 end module m
 """
-    sigs = parse_fortran_signatures(code, filename="scope_ifdef_ok.f90")
-    assert len(sigs) == 2
+    parsed = parse_fortran_file(code, filename="scope_ifdef_ok.f90")
+    module = parsed.modules[0]
+    assert len(module.procedures) == 2
 
 
 def test_same_name_in_overlapping_ifdef_branches_errors_when_both_active():
@@ -148,7 +119,7 @@ contains
 end module m
 """
     with pytest.raises(FortranParseError, match="Duplicate procedure name"):
-        parse_fortran_signatures(code, filename="scope_ifdef_overlap.f90", macro_defines={"USE_A", "USE_B"})
+        parse_fortran_file(code, filename="scope_ifdef_overlap.f90", macro_defines={"USE_A", "USE_B"})
 
 
 def test_module_symbol_tables_keep_derived_type_fields_scoped_to_type():
@@ -212,8 +183,9 @@ contains
   end subroutine touch
 end module component_vs_local
 """
-    sigs = parse_fortran_signatures(code, filename="scope_component_local_ok.f90")
-    assert [s.name for s in sigs] == ["touch"]
+    parsed = parse_fortran_file(code, filename="scope_component_local_ok.f90")
+    module = parsed.modules[0]
+    assert [s.name for s in module.procedures] == ["touch"]
 
 
 def test_module_variable_and_type_component_same_name_is_allowed():
