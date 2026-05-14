@@ -11,6 +11,26 @@ from .models        import FortranArgument, FortranBlockData, FortranDerivedType
 from .type_resolver import extract_kind_from_type_spec
 from .utils         import split_csv
 
+"""
+Parser architecture quick guide
+===============================
+
+This module is intentionally split into two layers:
+
+1) Module-level helper functions
+   - Pure helpers for lexical checks, declaration parsing utilities,
+     shape/kind resolution, diagnostics, and dependency ordering.
+
+2) `FortranParser`
+   - Stateful orchestration layer that runs block parsers and aggregates
+     file/project models.
+
+Recommended reading order for maintainers:
+- Start from `FortranParser.parse_file` / `parse_project`
+- Then read the high-level unit parsers at the top of the class
+- Then drill into `*_impl` implementations and low-level helpers
+"""
+
 _TYPE_RE = re.compile(r"^(integer|real|complex|logical|character|double\s+precision)\s*(\([^)]*\))?\s*(.*)$", re.IGNORECASE)
 _CHAR_STAR_RE = re.compile(r"^character\s*\*\s*(?P<len>\([^)]*\)|\*|[A-Za-z_]\w*|\d+)\s*(?P<rest>.*)$", re.IGNORECASE)
 _PROC_RE = re.compile(r"^(?P<prefix>(?:\w+\s+)*)subroutine\s+(?P<name>\w+)\s*\((?P<args>[^)]*)\)\s*(?P<tail>.*)$", re.IGNORECASE)
@@ -1040,11 +1060,20 @@ def _topological_files(file_deps: dict[str, set[str]]) -> list[str]:
     return ordered
 
 class FortranParser:
-    """Stateful parser that exposes file/project-level parsing entrypoints.
+    """Stateful parser entrypoint and orchestration object.
 
-    The implementation is intentionally grouped by parsing domain:
-    signatures/declarations, module-like units, project orchestration,
-    and finally thin public wrappers.
+    State carried on the instance:
+    - `macro_defines`: optional macro-selection configuration used by
+      signature parsing when conditional branches are present.
+
+    Parsing pipeline used by `parse_file`:
+    1. Preprocess source into normalized lines (`_preprocessed_lines`).
+    2. Parse signatures/types/interfaces/program units.
+    3. Attach parsed members to owning module/submodule scopes.
+    4. Build `FortranFile` symbol table and standalone entity lists.
+
+    `parse_project` then composes multiple `FortranFile` objects into one
+    `FortranProject` registry and validates duplicate symbols by scope.
     """
     # ------------------------------------------------------------------
     # Public API (kept first for discoverability)
@@ -1360,6 +1389,14 @@ class FortranParser:
         return signatures
 
     def _parse_declaration(self, line: str, proc_state: dict, filename: str | None = None, lineno: int | None = None, source_line: str | None = None) -> None:
+            """Parse one declaration/specification line inside a procedure scope.
+
+            The method mutates `proc_state` in-place by:
+            - registering typed symbols and parameter constants,
+            - annotating argument metadata (type/kind/intent/rank/shape),
+            - recording imports/includes/external callbacks,
+            - transitioning unsupported/unknown declarations into explicit errors.
+            """
             stripped = line.strip()
             # This parser is a subset parser focused on wrapper-relevant metadata.
             # Many Fortran statements are intentionally ignored here because they do not
@@ -1604,6 +1641,12 @@ class FortranParser:
     # ------------------------------------------------------------------
 
     def _parse_module_variable_line(self, line: str, module: FortranModule, filename: str | None, lineno: int | None = None, source_line: str | None = None) -> None:
+        """Parse one specification-part declaration line for a module-like scope.
+
+        Applies to modules/submodules/programs/block-data units that share
+        declaration grammar. Only declaration lines are consumed; executable
+        or contained-procedure sections are handled by caller scope logic.
+        """
         if "::" not in line:
             return
         if _DERIVED_TYPE_RE.match(line.strip()):
