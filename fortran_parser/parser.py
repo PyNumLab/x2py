@@ -2523,6 +2523,59 @@ class FortranParser:
     def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):
         self.macro_defines = macro_defines
 
+    # Internal parser plumbing kept as instance methods so all parse flows are class-owned.
+    def _parse_fortran_signatures(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+    ) -> list[FortranProcedureSignature]:
+        return _parse_fortran_signatures(code, filename=filename, macro_defines=macro_defines)
+
+    def _parse_fortran_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
+        return _parse_fortran_types(code, filename=filename)
+
+    def _parse_fortran_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
+        return _parse_fortran_interfaces(code, filename=filename)
+
+    def _parse_fortran_modules_impl(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        *,
+        require_present: bool = False,
+        signatures: list[FortranProcedureSignature] | None = None,
+        types: list[FortranDerivedType] | None = None,
+        interfaces: list[FortranInterface] | None = None,
+    ) -> list[FortranModule]:
+        return _parse_fortran_modules_impl(
+            code,
+            filename=filename,
+            require_present=require_present,
+            signatures=signatures,
+            types=types,
+            interfaces=interfaces,
+        )
+
+    def _parse_fortran_submodules(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        *,
+        signatures: list[FortranProcedureSignature] | None = None,
+        types: list[FortranDerivedType] | None = None,
+        interfaces: list[FortranInterface] | None = None,
+    ) -> list[FortranSubmodule]:
+        return _parse_fortran_submodules(
+            code, filename=filename, signatures=signatures, types=types, interfaces=interfaces
+        )
+
+    def _parse_fortran_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
+        return _parse_fortran_programs(code, filename=filename)
+
+    def _parse_fortran_block_data(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
+        return _parse_fortran_block_data(code, filename=filename)
+
     def _parse_signatures(
         self,
         code: _SourceOrLines,
@@ -2569,17 +2622,17 @@ class FortranParser:
             code = str(source_or_path)
 
         lines = preprocess_lines(code, filename)
-        signatures = _parse_fortran_signatures(lines, filename=filename, macro_defines=macro_defines)
-        derived_types = _parse_fortran_types(lines, filename=filename)
-        interfaces = _parse_fortran_interfaces(lines, filename=filename)
-        modules = _parse_fortran_modules_impl(
+        signatures = self._parse_fortran_signatures(lines, filename=filename, macro_defines=macro_defines)
+        derived_types = self._parse_fortran_types(lines, filename=filename)
+        interfaces = self._parse_fortran_interfaces(lines, filename=filename)
+        modules = self._parse_fortran_modules_impl(
             lines, filename=filename, require_present=False, signatures=signatures, types=derived_types, interfaces=interfaces
         )
-        submodules = _parse_fortran_submodules(
+        submodules = self._parse_fortran_submodules(
             lines, filename=filename, signatures=signatures, types=derived_types, interfaces=interfaces
         )
-        programs = _parse_fortran_programs(lines, filename=filename)
-        block_data_units = _parse_fortran_block_data(lines, filename=filename)
+        programs = self._parse_fortran_programs(lines, filename=filename)
+        block_data_units = self._parse_fortran_block_data(lines, filename=filename)
         owned_proc_ids = {id(proc) for mod in modules for proc in mod.procedures}
         owned_proc_ids.update(id(proc) for submod in submodules for proc in submod.procedures)
         standalone_procedures = [
