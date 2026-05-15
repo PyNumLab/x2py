@@ -14,7 +14,9 @@ def test_modern_fortran_example_pyi_snapshot():
     pyi = "\n\n".join(emit_module(m) for m in modules).strip()
 
     expected = """class particle:
-    pass
+    id: Int32
+    mass: Float64
+    position: Float64[Shape('3'), FortranContiguous]
 
 def init_particle(
     p: particle,
@@ -47,3 +49,39 @@ def fill_identity3(
 ) -> None: ...""".strip()
 
     assert pyi == expected
+
+
+def test_pyi_visibility_private_public_markers():
+    source = """
+module visibility_mod
+  implicit none
+  private
+  public :: pub_proc, visible_t
+
+  type :: visible_t
+     integer :: a
+     integer :: b
+  end type visible_t
+
+  type :: hidden_t
+     integer :: z
+  end type hidden_t
+
+contains
+  subroutine pub_proc(x)
+    integer, intent(in) :: x
+  end subroutine pub_proc
+
+  subroutine hidden_proc(x)
+    integer, intent(in) :: x
+  end subroutine hidden_proc
+end module visibility_mod
+"""
+    parsed = parse_fortran_file(source, filename="visibility_mod.f90")
+    pyi = emit_module(fortran_module_to_semantic_module(parsed.modules[0])).strip()
+
+    assert "a: Int32" in pyi
+    assert "b: Int32" in pyi
+    assert "@private\nclass hidden_t:" in pyi
+    assert "def pub_proc(" in pyi
+    assert "@private\ndef hidden_proc(" in pyi
