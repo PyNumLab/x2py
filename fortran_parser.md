@@ -94,7 +94,7 @@ models are unchanged.
 ### 3.1 Basic CLI invocation
 
 ```bash
-python -m fortran_parser <path ...>
+python -m x2py <path ...>
 ```
 
 `<path ...>` supports files and directories. Directories are recursively scanned
@@ -120,7 +120,7 @@ end module m1
 Command:
 
 ```bash
-python -m fortran_parser tests/data/fortran/general/basic_subroutine.f90
+python -m x2py tests/data/fortran/general/basic_subroutine.f90
 ```
 
 Expected output shape:
@@ -179,7 +179,7 @@ end module io_ops
 Command:
 
 ```bash
-python -m fortran_parser mixed_example.f90
+python -m x2py mixed_example.f90
 ```
 
 ```text
@@ -201,13 +201,13 @@ File: mixed_example.f90
 Print parser JSON:
 
 ```bash
-python -m fortran_parser tests/data/fortran/general/basic_subroutine.f90 --json
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --json
 ```
 
 Write parser JSON:
 
 ```bash
-python -m fortran_parser tests/data/fortran/general/basic_subroutine.f90 --json-out report.json
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --json-out report.json
 ```
 
 Expected JSON layout:
@@ -226,19 +226,19 @@ Semantic IR JSON uses the same output channels, but the per-file payload is the
 semantic model projection instead of raw parser output:
 
 ```bash
-python -m fortran_parser tests/data/fortran/general/basic_subroutine.f90 --semantics
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
 ```
 
 Generated `.pyi` text is printed with:
 
 ```bash
-python -m fortran_parser tests/data/fortran/general/basic_subroutine.f90 --pyi
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
 ```
 
 ### 3.4 Wrap-readiness summary
 
 ```bash
-python -m fortran_parser tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
 ```
 
 This mode prints only the per-file readiness status. A non-wrappable file is
@@ -256,7 +256,7 @@ context, but it does **not** include a Python traceback.
 Example command:
 
 ```bash
-python -m fortran_parser tests/data/fortran/errors/err_duplicate_argument_name.f90
+python -m x2py tests/data/fortran/errors/err_duplicate_argument_name.f90
 ```
 
 Example diagnostic shape:
@@ -273,8 +273,8 @@ normal use. To disable color explicitly, pass `--no-color` or set the standard
 `NO_COLOR` environment variable:
 
 ```bash
-python -m fortran_parser bad.f90 --no-color
-NO_COLOR=1 python -m fortran_parser bad.f90
+python -m x2py bad.f90 --no-color
+NO_COLOR=1 python -m x2py bad.f90
 ```
 
 For parser development, use `--debug-traceback` to re-raise
@@ -282,14 +282,14 @@ For parser development, use `--debug-traceback` to re-raise
 error was raised internally:
 
 ```bash
-python -m fortran_parser bad.f90 --debug-traceback
+python -m x2py bad.f90 --debug-traceback
 ```
 
 The same developer mode can be enabled with the environment variable
 `FORTRAN_PARSER_DEBUG=1`:
 
 ```bash
-FORTRAN_PARSER_DEBUG=1 python -m fortran_parser bad.f90
+FORTRAN_PARSER_DEBUG=1 python -m x2py bad.f90
 ```
 
 In debug mode, the traceback's final exception message also includes a
@@ -301,7 +301,7 @@ function that created the diagnostic.
 ### 4.1 Parse folder namespace
 
 ```python
-from fortran_parser import parse_fortran_project
+from x2py import parse_fortran_project
 from pathlib import Path
 
 files = [str(p) for p in Path("tests/data/fortran/general").rglob("*.f90")][:5]
@@ -320,7 +320,7 @@ Expected behavior:
 
 ```python
 from pathlib import Path
-from fortran_parser import parse_fortran_file, assess_wrap_readiness
+from x2py import parse_fortran_file, assess_wrap_readiness
 
 p = Path("tests/data/fortran/general/basic_subroutine.f90")
 code = p.read_text()

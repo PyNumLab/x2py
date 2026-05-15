@@ -234,7 +234,7 @@ Dedicated tests for the error handling system:
 - `fortran_parser/cli.py`
   - CLI argument parsing, report formatting, and user-facing parse-error handling.
 - `fortran_parser/__main__.py`
-  - `python -m fortran_parser` entry point.
+  - `python -m x2py` entry point.
 - `tests/parser/test_*.py`
   - focused behavior tests per feature.
 - `tests/parser/test_error_handling.py`

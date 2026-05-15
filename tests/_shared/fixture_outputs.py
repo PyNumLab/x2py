@@ -2,7 +2,7 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
-from fortran_parser import parse_fortran_file
+from x2py import parse_fortran_file
 from semantics.fortran2ir import fortran_module_to_semantic_module
 from semantics.pyi_printer import emit_module
 

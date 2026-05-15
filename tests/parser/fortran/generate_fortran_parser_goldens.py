@@ -8,7 +8,7 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from fortran_parser import parse_fortran_file
+from x2py import parse_fortran_file
 
 _TESTS_DIR = Path(__file__).resolve().parents[2]
 _FORTRAN_DIR = _TESTS_DIR / "data" / "fortran"

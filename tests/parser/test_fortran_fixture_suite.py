@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from fortran_parser import parse_fortran_file
+from x2py import parse_fortran_file
 
 
 def parse_fortran_modules(source, filename=None):

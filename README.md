@@ -369,7 +369,7 @@ source: JSON for `--parse` and `--semantics`, `.pyi` for `--pyi`.
 ### Example 1: parse a whole folder namespace
 
 ```python
-from fortran_parser import parse_fortran_project
+from x2py import parse_fortran_project
 from pathlib import Path
 
 root = Path("tests/data/fortran/general")
@@ -388,7 +388,7 @@ Expected result:
 
 ```python
 from pathlib import Path
-from fortran_parser import parse_fortran_file, assess_wrap_readiness
+from x2py import parse_fortran_file, assess_wrap_readiness
 
 path = Path("tests/data/fortran/general/basic_subroutine.f90")
 code = path.read_text()

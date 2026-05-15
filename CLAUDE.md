@@ -22,8 +22,8 @@ PYTHONPATH=. pytest -q -k "test_name"
 FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py
 
 # Run the CLI
-python -m fortran_parser path/to/file.f90
-python -m fortran_parser path/to/dir/ --json
+python -m x2py path/to/file.f90 --parse
+python -m x2py path/to/dir/ --parse --json
 ```
 
 ## Architecture
@@ -57,7 +57,7 @@ Cross-file kind resolution happens in a second pass after initial signature extr
 ### CI
 
 - `tests.yml` — Runs `pytest -q` on Python 3.10, 3.11, 3.12.
-- `parser-reference-guard` — Fails if `fortran_parser/`, `tests/fcode/`, or `tests/test_fortran_signature_parser.py` are changed without updating `parser_implementation_reference.md`. Bypass by adding the `require-parser-reference-update` label to the PR.
+- `parser-reference-guard` — Fails if `fortran_parser/`, `tests/data/fortran/`, or `tests/parser/test_procedure_and_type_parsing.py` are changed without updating `parser_implementation_reference.md`. Bypass by adding the `require-parser-reference-update` label to the PR.
 
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph
