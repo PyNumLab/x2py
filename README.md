@@ -27,6 +27,7 @@ front-end). Current handled coverage:
   - Module-level variables and `use` dependencies
   - Propagation of module-level `use` into contained procedures
   - Cross-file kind resolution when parsing a namespace/project
+  - Submodules, programs, and block data units
 - **Derived types**
   - `type :: ... end type`
   - Attributes (e.g. `abstract`) and `extends(...)`
@@ -74,9 +75,13 @@ Fortran source inputs live under `tests/data/fortran`. Stage-specific tests and 
 
 ## Terminal usage
 
-### Run from source tree
+`x2py` exposes three stage flags:
 
-> Parsing is a stage now, so pass `--parse` when you want parser output.
+- `--parse` for parser output and parse-stage diagnostics
+- `--semantics` for semantic IR JSON
+- `--pyi` for generated Python stub text
+
+### Run from source tree
 
 ```bash
 python -m x2py <path ...> --parse
@@ -188,8 +193,6 @@ Notes:
 
 ### Example 2: JSON output to stdout
 
-> JSON output is currently supported only for the parsing stage (`--parse`).
-
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --json
 ```
@@ -199,20 +202,12 @@ Expected JSON structure (top-level keyed by input path):
 - `<file>.signatures`: parsed procedures
 - `<file>.types`: parsed derived types
 - `<file>.modules`: parsed modules
+- `<file>.submodules`: parsed submodules
+- `<file>.programs`: parsed programs
+- `<file>.block_data`: parsed block data units
 - `<file>.wrap_readiness`: readiness diagnostics
 
-### Example 3: wrap-readiness summary
-
-```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
-```
-
-The summary prints `Wrappable: yes` when no blockers are detected. If the
-answer is `Wrappable: no`, it prints a `Why not wrappable` section with the
-blocking diagnostics, such as unresolved imported derived types or unresolved
-symbolic kinds.
-
-### Example 5: semantic IR JSON output
+### Example 3: semantic IR JSON output
 
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
@@ -223,7 +218,7 @@ This prints semantic conversion payload per file, including:
 - `semantic_modules`: semantic module/class/function/type metadata
 - `pyi`: generated `.pyi` text associated with those semantic modules
 
-### Example 6: print generated `.pyi` text
+### Example 4: print generated `.pyi` text
 
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
@@ -232,7 +227,7 @@ python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
 This prints a per-file section followed by the generated Python stub text.
 
 
-### Example 7: modern Fortran module -> `.pyi` (reproducible fixture)
+### Example 5: modern Fortran module -> `.pyi` (reproducible fixture)
 
 The repository includes a richer modern-Fortran fixture at:
 
@@ -338,7 +333,7 @@ File: tests/data/fortran/general/modern_pyi_example.f90
         - subroutine hidden_proc(x:integer[0])
 ```
 
-### Example 4: output written to file (`--out`)
+### Example 6: output written to file (`--out`)
 
 When `--out` is provided, x2py writes files and does not print stage payloads to stdout.
 
@@ -366,6 +361,9 @@ Generated `.pyi` to a specific file:
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi --out module.pyi
 ```
 
+Without an explicit filename, `--out` writes adjacent files next to each input
+source: JSON for `--parse` and `--semantics`, `.pyi` for `--pyi`.
+
 ## Python script usage
 
 ### Example 1: parse a whole folder namespace
@@ -383,7 +381,7 @@ print("modules:", len(project.modules))
 
 Expected result:
 
-- Returns a dictionary containing aggregate parser results for the folder.
+- Returns a `FortranProject` aggregate for the folder.
 - Includes dependency-aware ordering and cross-file kind/module resolution.
 
 ### Example 2: parse one file and inspect readiness
