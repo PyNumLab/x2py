@@ -68,6 +68,10 @@ sections so maintainers can navigate the file by concern instead of by history:
 This was a structural readability refactor only: behavior and public return
 models are unchanged.
 
+## Repository layout
+
+Fortran source inputs live under `tests/data/fortran`. Stage-specific tests and expected fixtures live under `tests/parser`, `tests/semantics`, and `tests/pyi`.
+
 ## Terminal usage
 
 ### Run from source tree
@@ -89,7 +93,7 @@ scanned recursively for: `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`, `.f08`.
 
 ### Example 1: human-readable output
 
-Fortran input (`tests/fcode/basic_subroutine.f90`):
+Fortran input (`tests/data/fortran/general/basic_subroutine.f90`):
 
 ```fortran
 module m1
@@ -105,13 +109,13 @@ end module m1
 ```
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --parse
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
 ```
 
 Expected style of output:
 
 ```text
-File: tests/fcode/basic_subroutine.f90
+File: tests/data/fortran/general/basic_subroutine.f90
   Modules: 1
     - module m1 (vars=2, uses=0)
       Procedures: 1
@@ -187,7 +191,7 @@ Notes:
 > JSON output is currently supported only for the parsing stage (`--parse`).
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --parse --json
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --json
 ```
 
 Expected JSON structure (top-level keyed by input path):
@@ -200,7 +204,7 @@ Expected JSON structure (top-level keyed by input path):
 ### Example 3: wrap-readiness summary
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --wrap-readiness
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
 ```
 
 The summary prints `Wrappable: yes` when no blockers are detected. If the
@@ -211,7 +215,7 @@ symbolic kinds.
 ### Example 5: semantic IR JSON output
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --semantics
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
 ```
 
 This prints semantic conversion payload per file, including:
@@ -222,7 +226,7 @@ This prints semantic conversion payload per file, including:
 ### Example 6: print generated `.pyi` text
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --pyi
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
 ```
 
 This prints a per-file section followed by the generated Python stub text.
@@ -232,18 +236,18 @@ This prints a per-file section followed by the generated Python stub text.
 
 The repository includes a richer modern-Fortran fixture at:
 
-- `tests/semantics/fixtures/modern_pyi_example.f90`
+- `tests/data/fortran/general/modern_pyi_example.f90`
 
 Generate its stubs:
 
 ```bash
-python -m x2py tests/semantics/fixtures/modern_pyi_example.f90 --pyi
+python -m x2py tests/data/fortran/general/modern_pyi_example.f90 --pyi
 ```
 
 Current `.pyi` output for this fixture (showing derived types, array annotations, and procedures):
 
 ```python
-File: tests/semantics/fixtures/modern_pyi_example.f90
+File: tests/data/fortran/general/modern_pyi_example.f90
 class particle:
     id: Int32
     mass: Float64
@@ -300,16 +304,16 @@ def hidden_proc(
 ) -> None: ...
 ```
 
-This snapshot is also verified in `tests/semantics/test_pyi_printer_modern_example.py`.
+This snapshot is also verified in `tests/pyi/test_pyi_printer_modern_example.py`.
 
 Parse output for the same fixture now includes the derived type definition and field list:
 
 ```bash
-python -m x2py tests/semantics/fixtures/modern_pyi_example.f90 --parse
+python -m x2py tests/data/fortran/general/modern_pyi_example.f90 --parse
 ```
 
 ```text
-File: tests/semantics/fixtures/modern_pyi_example.f90
+File: tests/data/fortran/general/modern_pyi_example.f90
   Modules: 1
     - module modern_math_physics (vars=2, uses=0)
       Derived types: 3
@@ -341,25 +345,25 @@ When `--out` is provided, x2py writes files and does not print stage payloads to
 Parse JSON to a specific file:
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --parse --out report.json
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --out report.json
 ```
 
 Parse JSON adjacent to source (`basic_subroutine.json`):
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --parse --out
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --out
 ```
 
 Semantic IR JSON to a specific file:
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --semantics --out semantics.json
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics --out semantics.json
 ```
 
 Generated `.pyi` to a specific file:
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --pyi --out module.pyi
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi --out module.pyi
 ```
 
 ## Python script usage
@@ -370,7 +374,7 @@ python -m x2py tests/fcode/basic_subroutine.f90 --pyi --out module.pyi
 from fortran_parser import parse_fortran_project
 from pathlib import Path
 
-root = Path("tests/fcode")
+root = Path("tests/data/fortran/general")
 files = [str(p) for p in root.rglob("*.f90")][:5]
 project = parse_fortran_project(files)
 print("files:", len(project.files))
@@ -388,7 +392,7 @@ Expected result:
 from pathlib import Path
 from fortran_parser import parse_fortran_file, assess_wrap_readiness
 
-path = Path("tests/fcode/basic_subroutine.f90")
+path = Path("tests/data/fortran/general/basic_subroutine.f90")
 code = path.read_text()
 
 parsed = parse_fortran_file(code, filename=str(path))
@@ -422,27 +426,27 @@ This repository uses CI checks to validate parser behavior. As a project policy,
 Run key suites individually:
 
 ```bash
-PYTHONPATH=. pytest -q tests/test_fortran_signature_parser.py
-PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py
-PYTHONPATH=. pytest -q tests/test_cli.py
+PYTHONPATH=. pytest -q tests/parser
+PYTHONPATH=. pytest -q tests/semantics
+PYTHONPATH=. pytest -q tests/pyi
 ```
 
 ### Refresh golden fixture JSON files
 
 ```bash
-python tests/fcode/generate_fortran_parser_goldens.py
+python tests/data/fortran/general/generate_fortran_parser_goldens.py
 ```
 
 Or update only specific fixture files:
 
 ```bash
-python tests/fcode/generate_fortran_parser_goldens.py tests/fcode/basic_subroutine.f90
+python tests/data/fortran/general/generate_fortran_parser_goldens.py tests/data/fortran/general/basic_subroutine.f90
 ```
 
 During fixture test runs, you can also auto-update expected JSON in-place:
 
 ```bash
-FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py --confcutdir=tests/
+FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser --confcutdir=tests/
 ```
 
 ## Semantic parser structure
