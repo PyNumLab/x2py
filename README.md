@@ -241,7 +241,7 @@ python -m x2py tests/semantics/fixtures/modern_pyi_example.f90 --pyi
 ```
 
 Illustrative rich `.pyi` output (showing derived types, module variables, arrays,
-and visibility markers):
+and visibility markers in generated stubs):
 
 ```python
 class particle:
@@ -250,7 +250,8 @@ class particle:
     position: Float64[Shape('3'), FortranContiguous]
 
 counter: Int32
-hidden_scale: Float64  # private
+
+hidden_scale: private[Float64]
 
 def init_particle(
     p: particle,
