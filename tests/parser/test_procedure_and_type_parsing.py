@@ -1232,6 +1232,7 @@ end subroutine caller
     cb = next(a for a in sig.arguments if a.name == "cb")
     assert cb.base_type == "procedure"
     assert cb.kind is None
+    assert "import(ext_cb)" in sig.attributes
 
 
 def test_parse_fortran_file_returns_file_model_for_source_string():

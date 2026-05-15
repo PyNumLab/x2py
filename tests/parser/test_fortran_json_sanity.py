@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-_FCODE_DIR = Path(__file__).parent / "fixtures"
+_FCODE_DIR = Path(__file__).parent / "fortran" / "fixtures"
 _ALLOWLIST_PATH = _FCODE_DIR / "general" / "json_sanity_allowlist.json"
 
 
