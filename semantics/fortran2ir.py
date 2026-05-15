@@ -41,10 +41,15 @@ class FortranToIRConverter:
 
     def variable_to_semantic_type(self, var) -> SemanticType:
         kind = str(var.kind).lower() if var.kind is not None else None
-        semantic_name = self.type_map.get(
-            (var.base_type.lower(), kind),
-            "Unknown"
-        )
+        if var.base_type.lower() == "derived":
+            if not var.kind:
+                raise ValueError(f"Derived type variable '{var.name}' is missing concrete type name")
+            semantic_name = str(var.kind)
+        else:
+            semantic_name = self.type_map.get(
+                (var.base_type.lower(), kind),
+                "Unknown"
+            )
 
         semantic_type = SemanticType(
             name=semantic_name,

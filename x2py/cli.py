@@ -121,6 +121,9 @@ def main() -> int:
     parser.add_argument("--debug-traceback", action="store_true", help="Re-raise parser errors for debug")
     args = parser.parse_args()
 
+    if args.out is not None and not (args.parse or args.semantics or args.pyi):
+        parser.error("--out requires a stage flag: choose one of --parse, --semantics, or --pyi")
+
     if not (args.parse or args.semantics or args.pyi):
         parser.error("Select at least one stage flag: --parse, --semantics, or --pyi")
 
@@ -142,15 +145,6 @@ def main() -> int:
         if args.json and args.pyi:
             parser.error("--out cannot be used with both --json and --pyi")
 
-        out_mode_json = args.json or (args.parse and not args.pyi)
-
-        if out_mode_json:
-            if args.out:
-                Path(args.out).write_text(json.dumps(payload, indent=2), encoding="utf-8")
-            else:
-                for fname, report in (parse_payload or {}).items():
-                    Path(fname).with_suffix(".json").write_text(json.dumps({fname: report}, indent=2), encoding="utf-8")
-
         if args.pyi:
             if args.out:
                 pyi_text = "\n\n".join((report.get("pyi") or "") for report in (semantic_payload or {}).values()).strip()
@@ -158,10 +152,20 @@ def main() -> int:
             else:
                 for fname, report in (semantic_payload or {}).items():
                     Path(fname).with_suffix(".pyi").write_text((report.get("pyi") or "") + "\n", encoding="utf-8")
+        else:
+            if args.out:
+                Path(args.out).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            else:
+                for fname, report in payload.items():
+                    Path(fname).with_suffix(".json").write_text(json.dumps({fname: report}, indent=2), encoding="utf-8")
 
-    if args.pyi and not args.json and args.out is None:
+
+    if args.out is not None:
+        return 0
+
+    if args.pyi and not args.json:
         print(_format_pyi_report(semantic_payload or {}))
-    elif args.parse and not (args.semantics or args.json or args.pyi) and args.out is None:
+    elif args.parse and not (args.semantics or args.json or args.pyi):
         print(_format_report(parse_payload or {}))
     else:
         print(json.dumps(payload, indent=2))
