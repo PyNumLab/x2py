@@ -258,7 +258,7 @@ class hidden_state:
 
 counter: Int32
 
-hidden_scale: Float64  # private
+hidden_scale: private[Float64]
 
 def init_particle(
     p: particle,

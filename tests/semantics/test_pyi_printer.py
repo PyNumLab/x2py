@@ -533,4 +533,4 @@ end module
 """
     code = generate_pyi(source)
     assert "counter: Int32" in code
-    assert "hidden_scale: Float64  # private" in code
+    assert "hidden_scale: private[Float64]" in code

@@ -27,12 +27,14 @@ class PyiPrinter:
         return s
 
     def emit_argument(self, arg: SemanticArgument) -> str:
-        s = f"{arg.name}: {self.emit_semantic_type(arg.semantic_type)}"
+        type_text = self.emit_semantic_type(arg.semantic_type)
+        if getattr(arg, "visibility", "public") == "private":
+            type_text = f"private[{type_text}]"
+
+        s = f"{arg.name}: {type_text}"
 
         if arg.optional:
             s += " = ..."
-        if getattr(arg, "visibility", "public") == "private":
-            s += "  # private"
 
         return s
 
