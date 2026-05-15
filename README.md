@@ -227,6 +227,58 @@ python -m x2py tests/fcode/basic_subroutine.f90 --pyi
 
 This prints a per-file section followed by the generated Python stub text.
 
+
+### Example 7: modern Fortran module -> `.pyi` (reproducible fixture)
+
+The repository includes a richer modern-Fortran fixture at:
+
+- `tests/semantics/fixtures/modern_pyi_example.f90`
+
+Generate its stubs:
+
+```bash
+python -m x2py tests/semantics/fixtures/modern_pyi_example.f90 --pyi
+```
+
+Expected generated `.pyi` output:
+
+```python
+class particle:
+    pass
+
+def init_particle(
+    p: Unknown,
+    pid: Int32,
+    mass: Float64,
+    x: Float64,
+    y: Float64,
+    z: Float64
+) -> None: ...
+
+def kinetic_energy(
+    p: Unknown,
+    vx: Float64,
+    vy: Float64,
+    vz: Float64
+) -> Float64: ...
+
+def scale_vector(
+    v: Float64[Shape(':'), FortranContiguous],
+    alpha: Float64
+) -> None: ...
+
+def dot3(
+    a: Float64[Shape('3'), FortranContiguous],
+    b: Float64[Shape('3'), FortranContiguous]
+) -> Float64: ...
+
+def fill_identity3(
+    a: Float64[Shape('3', '3'), FortranContiguous]
+) -> None: ...
+```
+
+This snapshot is also verified in `tests/semantics/test_pyi_printer_modern_example.py`.
+
 ### Example 4: JSON output written to file
 
 ```bash
