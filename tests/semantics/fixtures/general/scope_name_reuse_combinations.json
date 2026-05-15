@@ -1,0 +1,461 @@
+{
+  "semantic_modules": [
+    {
+      "name": "scope_name_reuse_combinations",
+      "functions": [
+        {
+          "name": "do_work_i",
+          "native_name": "do_work_i",
+          "arguments": [
+            {
+              "name": "same_name",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 0,
+                "dtype": "Int32",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "do_work_r",
+          "native_name": "do_work_r",
+          "arguments": [
+            {
+              "name": "same_name",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "do_work_l",
+          "native_name": "do_work_l",
+          "arguments": [
+            {
+              "name": "same_name",
+              "semantic_type": {
+                "name": "Bool",
+                "rank": 0,
+                "dtype": "Bool",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "host_one",
+          "native_name": "host_one",
+          "arguments": [
+            {
+              "name": "same_name",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 0,
+                "dtype": "Int32",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "host_two",
+          "native_name": "host_two",
+          "arguments": [
+            {
+              "name": "same_name",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "convert_to_complex",
+          "native_name": "convert_to_complex",
+          "arguments": [
+            {
+              "name": "same_name",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 0,
+                "dtype": "Int32",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": {
+            "name": "Unknown",
+            "rank": 0,
+            "dtype": "Unknown",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": false,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "convert_to_char",
+          "native_name": "convert_to_char",
+          "arguments": [
+            {
+              "name": "same_name",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": {
+            "name": "Unknown",
+            "rank": 0,
+            "dtype": "Unknown",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": false,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "convert_to_logical",
+          "native_name": "convert_to_logical",
+          "arguments": [
+            {
+              "name": "same_name",
+              "semantic_type": {
+                "name": "Unknown",
+                "rank": 0,
+                "dtype": "Unknown",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": {
+            "name": "Bool",
+            "rank": 0,
+            "dtype": "Bool",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": false,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        }
+      ],
+      "classes": [
+        {
+          "name": "same_name",
+          "native_name": "same_name",
+          "fields": [
+            {
+              "name": "payload",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 0,
+                "dtype": "Int32",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "unknown",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "methods": [],
+          "base_classes": [],
+          "contracts": [],
+          "metadata": {},
+          "visibility": "public"
+        }
+      ],
+      "variables": [
+        {
+          "name": "same_name_i",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "same_name_r",
+          "semantic_type": {
+            "name": "Float64",
+            "rank": 0,
+            "dtype": "Float64",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "same_name_l",
+          "semantic_type": {
+            "name": "Bool",
+            "rank": 0,
+            "dtype": "Bool",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "same_name_c",
+          "semantic_type": {
+            "name": "Unknown",
+            "rank": 0,
+            "dtype": "Unknown",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "same_name_s",
+          "semantic_type": {
+            "name": "Unknown",
+            "rank": 0,
+            "dtype": "Unknown",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        }
+      ],
+      "imports": [],
+      "metadata": {}
+    }
+  ]
+}

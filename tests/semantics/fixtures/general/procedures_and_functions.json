@@ -1,0 +1,140 @@
+{
+  "semantic_modules": [
+    {
+      "name": "math_mod",
+      "functions": [
+        {
+          "name": "norm2",
+          "native_name": "norm2",
+          "arguments": [
+            {
+              "name": "x",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 1,
+                "dtype": "Float64",
+                "shape": [
+                  ":"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      ":"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": {
+            "name": "Float64",
+            "rank": 0,
+            "dtype": "Float64",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": false,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "scale",
+          "native_name": "scale",
+          "arguments": [
+            {
+              "name": "a",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "x",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 1,
+                "dtype": "Float64",
+                "shape": [
+                  ":"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      ":"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        }
+      ],
+      "classes": [],
+      "variables": [],
+      "imports": [],
+      "metadata": {}
+    }
+  ]
+}

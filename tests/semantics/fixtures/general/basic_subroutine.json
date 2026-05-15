@@ -1,0 +1,81 @@
+{
+  "semantic_modules": [
+    {
+      "name": "m1",
+      "functions": [
+        {
+          "name": "add1",
+          "native_name": "add1",
+          "arguments": [
+            {
+              "name": "n",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 0,
+                "dtype": "Int32",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "x",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 1,
+                "dtype": "Float64",
+                "shape": [
+                  "n"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "n"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        }
+      ],
+      "classes": [],
+      "variables": [],
+      "imports": [],
+      "metadata": {}
+    }
+  ]
+}

@@ -1,8 +1,21 @@
 class particle:
-    pass
+    id: Int32
+    mass: Float64
+    position: Float64[Shape('3'), FortranContiguous]
+
+class vector3:
+    values: Float64[Shape('3'), FortranContiguous]
+
+@private
+class hidden_state:
+    code: Int32
+
+counter: Int32
+
+hidden_scale: private[Float64]
 
 def init_particle(
-    p: Unknown,
+    p: particle,
     pid: Int32,
     mass: Float64,
     x: Float64,
@@ -11,7 +24,7 @@ def init_particle(
 ) -> None: ...
 
 def kinetic_energy(
-    p: Unknown,
+    p: particle,
     vx: Float64,
     vy: Float64,
     vz: Float64
@@ -29,4 +42,13 @@ def dot3(
 
 def fill_identity3(
     a: Float64[Shape('3', '3'), FortranContiguous]
+) -> None: ...
+
+def normalize_particle(
+    p: particle
+) -> None: ...
+
+@private
+def hidden_proc(
+    x: Int32
 ) -> None: ...

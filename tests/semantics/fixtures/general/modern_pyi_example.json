@@ -1,0 +1,759 @@
+{
+  "semantic_modules": [
+    {
+      "name": "modern_math_physics",
+      "functions": [
+        {
+          "name": "init_particle",
+          "native_name": "init_particle",
+          "arguments": [
+            {
+              "name": "p",
+              "semantic_type": {
+                "name": "particle",
+                "rank": 0,
+                "dtype": "particle",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "out",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "pid",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 0,
+                "dtype": "Int32",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "mass",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "x",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "y",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "z",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "kinetic_energy",
+          "native_name": "kinetic_energy",
+          "arguments": [
+            {
+              "name": "p",
+              "semantic_type": {
+                "name": "particle",
+                "rank": 0,
+                "dtype": "particle",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "vx",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "vy",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "vz",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": {
+            "name": "Float64",
+            "rank": 0,
+            "dtype": "Float64",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": false,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "scale_vector",
+          "native_name": "scale_vector",
+          "arguments": [
+            {
+              "name": "v",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 1,
+                "dtype": "Float64",
+                "shape": [
+                  ":"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      ":"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "alpha",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "dot3",
+          "native_name": "dot3",
+          "arguments": [
+            {
+              "name": "a",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 1,
+                "dtype": "Float64",
+                "shape": [
+                  "3"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "3"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "b",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 1,
+                "dtype": "Float64",
+                "shape": [
+                  "3"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "3"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": {
+            "name": "Float64",
+            "rank": 0,
+            "dtype": "Float64",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": false,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "fill_identity3",
+          "native_name": "fill_identity3",
+          "arguments": [
+            {
+              "name": "a",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 2,
+                "dtype": "Float64",
+                "shape": [
+                  "3",
+                  "3"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "3",
+                      "3"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "out",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "normalize_particle",
+          "native_name": "normalize_particle",
+          "arguments": [
+            {
+              "name": "p",
+              "semantic_type": {
+                "name": "particle",
+                "rank": 0,
+                "dtype": "particle",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "hidden_proc",
+          "native_name": "hidden_proc",
+          "arguments": [
+            {
+              "name": "x",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 0,
+                "dtype": "Int32",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": false,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "private"
+        }
+      ],
+      "classes": [
+        {
+          "name": "particle",
+          "native_name": "particle",
+          "fields": [
+            {
+              "name": "id",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 0,
+                "dtype": "Int32",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "unknown",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "mass",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 0,
+                "dtype": "Float64",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "unknown",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "position",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 1,
+                "dtype": "Float64",
+                "shape": [
+                  "3"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "3"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "unknown",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "methods": [],
+          "base_classes": [],
+          "contracts": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "vector3",
+          "native_name": "vector3",
+          "fields": [
+            {
+              "name": "values",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 1,
+                "dtype": "Float64",
+                "shape": [
+                  "3"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "3"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "unknown",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "methods": [],
+          "base_classes": [],
+          "contracts": [],
+          "metadata": {},
+          "visibility": "public"
+        },
+        {
+          "name": "hidden_state",
+          "native_name": "hidden_state",
+          "fields": [
+            {
+              "name": "code",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 0,
+                "dtype": "Int32",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "unknown",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "methods": [],
+          "base_classes": [],
+          "contracts": [],
+          "metadata": {},
+          "visibility": "private"
+        }
+      ],
+      "variables": [
+        {
+          "name": "counter",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "hidden_scale",
+          "semantic_type": {
+            "name": "Float64",
+            "rank": 0,
+            "dtype": "Float64",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "private",
+          "default_value": null,
+          "metadata": {}
+        }
+      ],
+      "imports": [],
+      "metadata": {}
+    }
+  ]
+}

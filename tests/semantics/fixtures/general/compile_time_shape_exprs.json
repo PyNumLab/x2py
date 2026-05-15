@@ -1,0 +1,139 @@
+{
+  "semantic_modules": [
+    {
+      "name": "dims_mod",
+      "functions": [
+        {
+          "name": "use_expr",
+          "native_name": "use_expr",
+          "arguments": [
+            {
+              "name": "x",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 1,
+                "dtype": "Int32",
+                "shape": [
+                  "0:n1-1"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "0:n1-1"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "y",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 1,
+                "dtype": "Float64",
+                "shape": [
+                  "1:n0*2"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "1:n0*2"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        }
+      ],
+      "classes": [],
+      "variables": [
+        {
+          "name": "n0",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "n1",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        }
+      ],
+      "imports": [],
+      "metadata": {}
+    }
+  ]
+}
