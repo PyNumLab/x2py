@@ -7,7 +7,7 @@ import json
 import sys
 from pathlib import Path
 
-from fortran_parser import FortranParseError, parse_fortran_file
+from x2py import FortranParseError, parse_fortran_file
 
 def parse_fortran_signatures(source, filename=None):
     return parse_fortran_file(source, filename=filename).procedures

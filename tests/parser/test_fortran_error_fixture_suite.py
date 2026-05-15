@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from fortran_parser import FortranParseError, parse_fortran_file
+from x2py import FortranParseError, parse_fortran_file
 
 parse_fortran_signatures = lambda source, filename=None: parse_fortran_file(source, filename=filename).procedures
 parse_fortran_types = lambda source, filename=None: parse_fortran_file(source, filename=filename).derived_types

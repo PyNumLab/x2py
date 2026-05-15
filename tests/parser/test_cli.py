@@ -19,6 +19,15 @@ def test_cli_readable_output():
     assert "Wrappable:" not in res.stdout
 
 
+def test_cli_wrap_readiness_output():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--parse", "--wrap-readiness"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    assert f"File: {TEST_FILE}" in res.stdout
+    assert "Wrappable: yes" in res.stdout
+    assert "No wrap-readiness blockers detected." in res.stdout
+    assert "Modules:" not in res.stdout
+
+
 def test_cli_json_out(tmp_path: Path):
     out = tmp_path / "report.json"
     cmd = [

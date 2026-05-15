@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from fortran_parser import FortranParseError, parse_fortran_file
+from x2py import FortranParseError, parse_fortran_file
 
 
 

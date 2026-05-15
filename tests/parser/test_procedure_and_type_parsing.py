@@ -3,7 +3,7 @@ import pytest
 
 from fortran_parser.cli import _format_wrap_readiness
 
-from fortran_parser import FortranParseError, assess_wrap_readiness, parse_fortran_file, parse_fortran_project
+from x2py import FortranParseError, assess_wrap_readiness, parse_fortran_file, parse_fortran_project
 
 parse_fortran_project_signatures = lambda files: list(parse_fortran_project(files).procedures.values())
 parse_fortran_modules = lambda code, filename=None: parse_fortran_file(code, filename=filename).modules

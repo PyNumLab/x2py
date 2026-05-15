@@ -94,13 +94,7 @@ models are unchanged.
 ### 3.1 Basic CLI invocation
 
 ```bash
-python -m x2py <path ...> --parse
-```
-
-or (if installed as a console script):
-
-```bash
-x2py <path ...> --parse
+python -m x2py <path ...>
 ```
 
 `<path ...>` supports files and directories. Directories are recursively scanned
@@ -108,7 +102,7 @@ for `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`, `.f08`.
 
 ### 3.2 Human-readable output example
 
-Input Fortran (`tests/fcode/basic_subroutine.f90`):
+Input Fortran (`tests/data/fortran/general/basic_subroutine.f90`):
 
 ```fortran
 module m1
@@ -126,13 +120,13 @@ end module m1
 Command:
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90
+python -m x2py tests/data/fortran/general/basic_subroutine.f90
 ```
 
 Expected output shape:
 
 ```text
-File: tests/fcode/basic_subroutine.f90
+File: tests/data/fortran/general/basic_subroutine.f90
   Modules: 1
     - module m1 (vars=2, uses=0)
       Procedures: 1
@@ -202,24 +196,18 @@ File: mixed_example.f90
         - subroutine dump(v:real[1])
 ```
 
-### 3.3 JSON output example
+### 3.3 JSON and semantic output
 
-Print JSON:
+Print parser JSON:
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --json
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --json
 ```
 
-Write JSON:
+Write parser JSON:
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --json-out report.json
-```
-
-Print + write:
-
-```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --json --json-out report.json
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --json-out report.json
 ```
 
 Expected JSON layout:
@@ -229,18 +217,34 @@ Expected JSON layout:
   - `signatures`
   - `types`
   - `modules`
+  - `submodules`
+  - `programs`
+  - `block_data`
   - `wrap_readiness`
 
 ### 3.4 Wrap-readiness summary
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --wrap-readiness
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --wrap-readiness
 ```
 
 This mode prints only the per-file readiness status. A non-wrappable file is
 reported as `Wrappable: no` followed by a `Why not wrappable` section listing
 the blocking diagnostics, for example unresolved imported derived-type
 arguments/fields or unresolved symbolic kind arguments/fields.
+
+Semantic IR JSON uses the same output channels, but the per-file payload is the
+semantic model projection instead of raw parser output:
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
+```
+
+Generated `.pyi` text is printed with:
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
+```
 
 ### 3.5 Parse-error diagnostics and debug mode
 
@@ -252,13 +256,13 @@ context, but it does **not** include a Python traceback.
 Example command:
 
 ```bash
-python -m x2py tests/fcode/errors/err_duplicate_argument_name.f90
+python -m x2py tests/data/fortran/errors/err_duplicate_argument_name.f90
 ```
 
 Example diagnostic shape:
 
 ```text
-tests/fcode/errors/err_duplicate_argument_name.f90:1:1: error[PARSE001]: Duplicate argument name 'x' in procedure 'dup'.
+tests/data/fortran/errors/err_duplicate_argument_name.f90:1:1: error[PARSE001]: Duplicate argument name 'x' in procedure 'dup'.
   |
 1 | subroutine dup(x, y, x)
   | ^
@@ -297,10 +301,10 @@ function that created the diagnostic.
 ### 4.1 Parse folder namespace
 
 ```python
-from fortran_parser import parse_fortran_project
+from x2py import parse_fortran_project
 from pathlib import Path
 
-files = [str(p) for p in Path("tests/fcode").rglob("*.f90")][:5]
+files = [str(p) for p in Path("tests/data/fortran/general").rglob("*.f90")][:5]
 project = parse_fortran_project(files)
 print(len(project.files))
 print(len(project.modules))
@@ -316,9 +320,9 @@ Expected behavior:
 
 ```python
 from pathlib import Path
-from fortran_parser import parse_fortran_file, assess_wrap_readiness
+from x2py import parse_fortran_file, assess_wrap_readiness
 
-p = Path("tests/fcode/basic_subroutine.f90")
+p = Path("tests/data/fortran/general/basic_subroutine.f90")
 code = p.read_text()
 
 parsed = parse_fortran_file(code, filename=str(p))
@@ -346,27 +350,27 @@ PYTHONPATH=. pytest -q
 Run parser-focused tests:
 
 ```bash
-PYTHONPATH=. pytest -q tests/test_fortran_signature_parser.py
-PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py
-PYTHONPATH=. pytest -q tests/test_cli.py
+PYTHONPATH=. pytest -q tests/parser/test_procedure_and_type_parsing.py
+PYTHONPATH=. pytest -q tests/parser/test_fortran_fixture_suite.py
+PYTHONPATH=. pytest -q tests/parser/test_cli.py
 ```
 
 Update golden JSON fixtures:
 
 ```bash
-python tests/fcode/generate_fortran_parser_goldens.py
+python tests/parser/fortran/generate_fortran_parser_goldens.py
 ```
 
 Update selected fixture(s):
 
 ```bash
-python tests/fcode/generate_fortran_parser_goldens.py tests/fcode/basic_subroutine.f90
+python tests/parser/fortran/generate_fortran_parser_goldens.py tests/data/fortran/general/basic_subroutine.f90
 ```
 
 In-test auto-update mode:
 
 ```bash
-FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/test_fortran_fixture_suite.py --confcutdir=tests/
+FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser/test_fortran_fixture_suite.py --confcutdir=tests/
 ```
 
 ## 6) Error handling

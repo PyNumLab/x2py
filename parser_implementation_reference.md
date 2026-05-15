@@ -155,6 +155,9 @@ and error handling coverage.
 ### 4.2 Unit-style parser tests (`tests/parser/test_*.py`)
 
 Covers, among others:
+- `tests/parser/test_procedure_and_type_parsing.py`
+- `tests/parser/test_scope_handling.py`
+- `tests/parser/test_error_handling.py`
 - intent/kind/rank extraction for routine arguments
 - function result parsing + `use` extraction
 - fixed-form parsing and interface detection
@@ -194,7 +197,7 @@ fixed/free-form Fortran files without requiring full golden outputs for each.
 - Optional in-test auto-update flow is also supported:
   - `FORTRAN_PARSER_UPDATE_GOLDENS=1 python -m pytest -q tests/parser/test_fortran_fixture_suite.py --confcutdir=tests/`
 
-### 4.5 CLI tests (`tests/test_cli.py`)
+### 4.5 CLI tests (`tests/parser/test_cli.py`)
 
 Validates command-line behavior for:
 - path expansion
@@ -206,7 +209,7 @@ Validates command-line behavior for:
 - developer traceback opt-in through `--debug-traceback` and `FORTRAN_PARSER_DEBUG=1`
 - default ANSI color for diagnostics, with `--no-color` and `NO_COLOR=1` opt-out
 
-### 4.6 Error handling tests (`tests/test_error_handling.py`)
+### 4.6 Error handling tests (`tests/parser/test_error_handling.py`)
 
 Dedicated tests for the error handling system:
 - `FortranParseError` attribute presence (`filename`, `line_number`, `source_line`, `base_message`, `code`)
@@ -231,7 +234,7 @@ Dedicated tests for the error handling system:
 - `fortran_parser/cli.py`
   - CLI argument parsing, report formatting, and user-facing parse-error handling.
 - `fortran_parser/__main__.py`
-  - `python -m fortran_parser` entry point.
+  - `python -m x2py` entry point.
 - `tests/parser/test_*.py`
   - focused behavior tests per feature.
 - `tests/parser/test_error_handling.py`
