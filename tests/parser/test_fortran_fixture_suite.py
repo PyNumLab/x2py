@@ -15,32 +15,49 @@ def parse_fortran_modules(source, filename=None):
 
 _TESTS_DIR = Path(__file__).resolve().parents[1] / "data" / "fortran"
 _FIXTURES_DIR = Path(__file__).parent / "fortran" / "fixtures"
+_SOURCE_SUFFIXES = {".f", ".f90", ".f95", ".f03", ".f08", ".for", ".f77", ".ftn"}
 
 
 def _has_direct_expected_json(fixture: Path) -> bool:
     return (_FIXTURES_DIR / fixture.relative_to(_TESTS_DIR)).with_suffix(".json").exists()
 
 
+def _source_json_relpaths(root: Path) -> set[Path]:
+    return {
+        path.relative_to(root).with_suffix(".json")
+        for path in root.rglob("*")
+        if path.is_file() and path.suffix.lower() in _SOURCE_SUFFIXES
+    }
+
+
+def _fixture_json_relpaths(root: Path) -> set[Path]:
+    return {
+        path.relative_to(root)
+        for path in root.rglob("*.json")
+        if path.is_file()
+    }
+
+
 _GOLDEN_FIXTURES = sorted(
     f for f in (_TESTS_DIR / "general").glob("*")
-    if f.is_file() and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08", ".for"}
+    if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES
     and _has_direct_expected_json(f)
 )
 _BLAS_FIXTURES = sorted(
     f
     for f in (_TESTS_DIR / "blas").rglob("*")
-    if f.is_file() and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08"}
+    if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES
 )
 _LAPACK_FIXTURES = sorted(
     f
     for f in (_TESTS_DIR / "lapack").rglob("*")
-    if f.is_file() and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08"}
+    if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES
 )
 _SCIFORTRAN_FIXTURES = sorted(
     f
     for f in (_TESTS_DIR / "scifortran").glob("*")
     if f.is_file()
-    and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08"}
+    and f.suffix.lower() in _SOURCE_SUFFIXES
     and _has_direct_expected_json(f)
     )
 
@@ -102,6 +119,30 @@ def _run_fixture_comparison(fixture: Path, *, filename_for_parser: str, expected
 
 def test_fortran_fixture_golden_suite_has_fixtures():
     assert _GOLDEN_FIXTURES, "No fixtures found in tests/data/fortran"
+
+
+@pytest.mark.parametrize(
+    ("data_subdir", "fixture_subdir"),
+    [
+        ("general", "general"),
+        ("blas", "blas"),
+        ("lapack", "lapack"),
+        ("scifortran", "scifortran"),
+        ("errors/parser", "errors"),
+    ],
+)
+def test_fortran_parser_fixtures_match_data_files_one_to_one(data_subdir, fixture_subdir):
+    data_root = _TESTS_DIR / data_subdir
+    fixture_root = _FIXTURES_DIR / fixture_subdir
+
+    expected = _source_json_relpaths(data_root)
+    actual = _fixture_json_relpaths(fixture_root)
+
+    missing = sorted(expected - actual)
+    extra = sorted(actual - expected)
+
+    assert not missing, f"Missing parser JSON fixtures for {data_subdir}: {missing[:20]}"
+    assert not extra, f"Parser JSON fixtures without matching data files in {fixture_subdir}: {extra[:20]}"
 
 
 @pytest.mark.parametrize("fixture", _GOLDEN_FIXTURES, ids=lambda f: f.name)

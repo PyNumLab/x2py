@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 _FCODE_DIR = Path(__file__).parent / "fortran" / "fixtures"
-_ALLOWLIST_PATH = _FCODE_DIR / "general" / "json_sanity_allowlist.json"
+_ALLOWLIST_PATH = Path(__file__).parent / "fortran" / "json_sanity_allowlist.json"
 
 
 def _is_external_argument(arg: dict) -> bool:
