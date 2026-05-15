@@ -1,0 +1,115 @@
+{
+  "semantic_modules": [
+    {
+      "name": "particle_mod",
+      "functions": [
+        {
+          "name": "touch",
+          "native_name": "touch",
+          "arguments": [
+            {
+              "name": "p",
+              "semantic_type": {
+                "name": "particle",
+                "rank": 0,
+                "dtype": "particle",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        }
+      ],
+      "classes": [
+        {
+          "name": "particle",
+          "native_name": "particle",
+          "fields": [
+            {
+              "name": "id",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 0,
+                "dtype": "Int32",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "unknown",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "x",
+              "semantic_type": {
+                "name": "Float64",
+                "rank": 1,
+                "dtype": "Float64",
+                "shape": [
+                  "3"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "3"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "unknown",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "methods": [],
+          "base_classes": [],
+          "contracts": [],
+          "metadata": {},
+          "visibility": "public"
+        }
+      ],
+      "variables": [],
+      "imports": [],
+      "metadata": {}
+    }
+  ]
+}

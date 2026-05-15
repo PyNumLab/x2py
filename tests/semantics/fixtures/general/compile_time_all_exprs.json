@@ -1,0 +1,538 @@
+{
+  "semantic_modules": [
+    {
+      "name": "expr_mod",
+      "functions": [
+        {
+          "name": "all_exprs",
+          "native_name": "all_exprs",
+          "arguments": [
+            {
+              "name": "x1",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 1,
+                "dtype": "Int32",
+                "shape": [
+                  "1:p_add"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "1:p_add"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "x2",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 1,
+                "dtype": "Int32",
+                "shape": [
+                  "1:p_sub"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "1:p_sub"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "x3",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 1,
+                "dtype": "Int32",
+                "shape": [
+                  "1:p_mul"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "1:p_mul"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "x4",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 1,
+                "dtype": "Int32",
+                "shape": [
+                  "1:p_div"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "1:p_div"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "x5",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 1,
+                "dtype": "Int32",
+                "shape": [
+                  "1:p_pow"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "1:p_pow"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "x6",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 1,
+                "dtype": "Int32",
+                "shape": [
+                  "0:p_mix"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "0:p_mix"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "x7",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 1,
+                "dtype": "Int32",
+                "shape": [
+                  "1:-(-a + b)"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "1:-(-a + b)"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "x8",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 1,
+                "dtype": "Int32",
+                "shape": [
+                  "1:(a+b)*(c+1)-1"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "1:(a+b)*(c+1)-1"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "x9",
+              "semantic_type": {
+                "name": "Int32",
+                "rank": 1,
+                "dtype": "Int32",
+                "shape": [
+                  "1:(a-b)*(a-c)"
+                ],
+                "constraints": [
+                  {
+                    "name": "Shape",
+                    "arguments": [
+                      "1:(a-b)*(a-c)"
+                    ]
+                  },
+                  {
+                    "name": "FortranContiguous",
+                    "arguments": []
+                  }
+                ],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "inout",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            }
+          ],
+          "return_type": null,
+          "contracts": [],
+          "projection": [],
+          "metadata": {},
+          "visibility": "public"
+        }
+      ],
+      "classes": [],
+      "variables": [
+        {
+          "name": "a",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "b",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "c",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "p_add",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "p_sub",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "p_mul",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "p_div",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "p_pow",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "p_mix",
+          "semantic_type": {
+            "name": "Int32",
+            "rank": 0,
+            "dtype": "Int32",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        }
+      ],
+      "imports": [],
+      "metadata": {}
+    }
+  ]
+}

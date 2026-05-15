@@ -818,7 +818,7 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
         arg.base_type = inferred.get("base_type", arg.base_type)
         arg.kind = inferred.get("kind", arg.kind)
 
-    if implicit_none:
+    if implicit_none and not sig.in_interface:
         _validate_all_args_declared(sig, filename, explicit_result=bool(state.get("explicit_result", False)))
 
     for name, value in relevant_params.items():
@@ -846,6 +846,10 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
             )
     if sig.kind == "function":
         _validate_function_result(sig, filename)
+    for symbol in sorted(state.get("imports", set())):
+        attr = f"import({symbol})"
+        if attr not in sig.attributes:
+            sig.attributes.append(attr)
     sig.uses = dict(state["uses"])
     return replace(sig)
 
@@ -1288,10 +1292,10 @@ class FortranParser:
             l = s.lower()
             _enforce_source_form_compatibility(s, filename, lineno, source_line)
 
-            if l.startswith("interface"):
+            if l.startswith("interface") or l.startswith("abstract interface"):
                 interface_depth += 1
                 parts = s.split(maxsplit=1)
-                iface_name = parts[1].strip() if len(parts) > 1 else None
+                iface_name = parts[1].strip() if len(parts) > 1 and not l.startswith("abstract interface") else None
                 interface_name_stack.append(iface_name)
                 continue
             if l.startswith("end interface"):
@@ -1344,7 +1348,10 @@ class FortranParser:
                         f"g{group_id}:b{branch_id}" for group_id, branch_id in pp_condition_stack
                     )
                     existing_conditions = seen_in_scope.setdefault(proc_name, [])
-                    if any(_preprocessor_conditions_overlap(existing, condition_set) for existing in existing_conditions):
+                    if (
+                        not interface_depth
+                        and any(_preprocessor_conditions_overlap(existing, condition_set) for existing in existing_conditions)
+                    ):
                         scope_label = (
                             f"module '{current_module}'" if current_module is not None else "global scope"
                         )
@@ -1371,6 +1378,17 @@ class FortranParser:
                         current_proc = None
                 continue
             if current_proc is not None and interface_depth > 0:
+                if (
+                    current_proc["signature"].in_interface
+                    and (
+                        l.startswith("end subroutine")
+                        or l.startswith("end function")
+                        or l.startswith("end procedure")
+                    )
+                ):
+                    signatures.append(_finalize_proc(current_proc))
+                    current_proc = None
+                    continue
                 if l.startswith("function ") or l.startswith("subroutine "):
                     iface_proc = self._parse_header(s, current_module, True)
                     if iface_proc:
@@ -1705,6 +1723,8 @@ class FortranParser:
                 module.default_visibility = "private"
             return
         if lower_left == "module procedure":
+            return
+        if lower_left == "import":
             return
         star_kind = _find_legacy_star_kind(left)
         source_form = _source_form(filename)
@@ -2292,7 +2312,7 @@ class FortranParser:
             if l.startswith("end type"):
                 type_depth = max(0, type_depth - 1)
                 continue
-            if l.startswith("interface"):
+            if l.startswith("interface") or l.startswith("abstract interface"):
                 interface_depth += 1
                 continue
             if l.startswith("end interface"):
@@ -2381,9 +2401,9 @@ class FortranParser:
             if l.startswith("end module"):
                 current_module = None
                 continue
-            if l.startswith("interface"):
+            if l.startswith("interface") or l.startswith("abstract interface"):
                 parts = s.split(maxsplit=1)
-                name = parts[1].strip() if len(parts) > 1 else None
+                name = parts[1].strip() if len(parts) > 1 and not l.startswith("abstract interface") else None
                 current_interface = FortranInterface(name=name, module=current_module)
                 current_proc = None
                 continue

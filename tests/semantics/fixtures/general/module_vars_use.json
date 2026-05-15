@@ -1,0 +1,72 @@
+{
+  "semantic_modules": [
+    {
+      "name": "constants_mod",
+      "functions": [],
+      "classes": [],
+      "variables": [
+        {
+          "name": "nmax",
+          "semantic_type": {
+            "name": "Unknown",
+            "rank": 0,
+            "dtype": "Unknown",
+            "shape": [],
+            "constraints": [],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        },
+        {
+          "name": "origin",
+          "semantic_type": {
+            "name": "Unknown",
+            "rank": 1,
+            "dtype": "Unknown",
+            "shape": [
+              "3"
+            ],
+            "constraints": [
+              {
+                "name": "Shape",
+                "arguments": [
+                  "3"
+                ]
+              },
+              {
+                "name": "FortranContiguous",
+                "arguments": []
+              }
+            ],
+            "coercions": [],
+            "ownership": {
+              "ownership": "borrowed",
+              "mutable": true,
+              "aliasing": true
+            },
+            "metadata": {}
+          },
+          "intent": "unknown",
+          "optional": false,
+          "visibility": "public",
+          "default_value": null,
+          "metadata": {}
+        }
+      ],
+      "imports": [
+        "iso_c_binding"
+      ],
+      "metadata": {}
+    }
+  ]
+}

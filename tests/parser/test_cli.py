@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 
-TEST_FILE = Path(__file__).parent / "fcode" / "basic_subroutine.f90"
+TEST_FILE = Path(__file__).parent.parent / "data" / "fortran" / "general" / "basic_subroutine.f90"
 
 
 def test_cli_readable_output():
@@ -266,7 +266,7 @@ def test_cli_help_includes_examples():
 
 
 def test_cli_parse_shows_module_derived_types_and_derived_arg_kinds():
-    fixture = Path(__file__).parent.parent / "semantics" / "fixtures" / "modern_pyi_example.f90"
+    fixture = Path(__file__).parent.parent / "data" / "fortran" / "general" / "modern_pyi_example.f90"
     cmd = [sys.executable, "-m", "x2py", str(fixture), "--parse"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
@@ -280,7 +280,7 @@ def test_cli_parse_shows_module_derived_types_and_derived_arg_kinds():
 
 
 def test_cli_parse_modern_fixture_prints_derived_block_verbatim():
-    fixture = Path(__file__).parent.parent / "semantics" / "fixtures" / "modern_pyi_example.f90"
+    fixture = Path(__file__).parent.parent / "data" / "fortran" / "general" / "modern_pyi_example.f90"
     cmd = [sys.executable, "-m", "x2py", str(fixture), "--parse"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 

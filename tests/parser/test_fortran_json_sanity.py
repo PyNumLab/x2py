@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-_FCODE_DIR = Path(__file__).parent / "fcode"
-_ALLOWLIST_PATH = _FCODE_DIR / "json_sanity_allowlist.json"
+_FCODE_DIR = Path(__file__).parent / "fortran" / "fixtures"
+_ALLOWLIST_PATH = Path(__file__).parent / "fortran" / "json_sanity_allowlist.json"
 
 
 def _is_external_argument(arg: dict) -> bool:
@@ -137,6 +137,10 @@ def test_fortran_json_fixtures_have_sane_types():
 
         payload = _load_fixture_payload(path)
         relpath = str(path.relative_to(_FCODE_DIR))
+        if relpath.startswith("general/"):
+            relpath = relpath[len("general/"): ]
+        if relpath.startswith("scifortran/"):
+            relpath = relpath.replace("scifortran/", "SciFortran/", 1)
 
         for sig in payload["signatures"]:
             arg_names = []
