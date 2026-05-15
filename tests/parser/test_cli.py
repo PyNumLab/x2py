@@ -277,3 +277,18 @@ def test_cli_parse_shows_module_derived_types_and_derived_arg_kinds():
     assert "- mass:real[0]" in res.stdout
     assert "- position:real[1]" in res.stdout
     assert "init_particle(p:type(particle)[0]" in res.stdout
+
+
+def test_cli_parse_modern_fixture_prints_derived_block_verbatim():
+    fixture = Path(__file__).parent.parent / "semantics" / "fixtures" / "modern_pyi_example.f90"
+    cmd = [sys.executable, "-m", "x2py", str(fixture), "--parse"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    expected_block = """      Derived types: 1
+        - type particle (fields=3, methods=0)
+          Fields: 3
+            - id:integer[0]
+            - mass:real[0]
+            - position:real[1]
+"""
+    assert expected_block in res.stdout
