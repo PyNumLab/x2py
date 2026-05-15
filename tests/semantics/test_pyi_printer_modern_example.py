@@ -6,7 +6,7 @@ from semantics.pyi_printer import emit_module
 
 
 def test_modern_fortran_example_pyi_snapshot():
-    fixture = Path(__file__).parent / "fixtures" / "modern_pyi_example.f90"
+    fixture = Path(__file__).resolve().parents[1] / "data" / "fortran" / "general" / "modern_pyi_example.f90"
     source = fixture.read_text(encoding="utf-8")
 
     parsed = parse_fortran_file(source, filename=str(fixture.name))

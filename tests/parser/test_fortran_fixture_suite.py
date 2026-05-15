@@ -13,8 +13,12 @@ def parse_fortran_modules(source, filename=None):
     return parse_fortran_file(source, filename=filename).modules
 
 
-_TESTS_DIR = Path(__file__).parent / "fcode"
-_GOLDEN_FIXTURES = sorted(_TESTS_DIR.glob("*.f*"))
+_TESTS_DIR = Path(__file__).resolve().parents[1] / "data" / "fortran"
+_GOLDEN_FIXTURES = sorted(
+    f for f in (_TESTS_DIR / "general").glob("*")
+    if f.is_file() and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08", ".for"}
+    and (Path(__file__).parent / "fixtures" / f.relative_to(_TESTS_DIR)).with_suffix(".json").exists()
+)
 _BLAS_FIXTURES = sorted(
     f
     for f in (_TESTS_DIR / "blas").rglob("*")
@@ -27,13 +31,31 @@ _LAPACK_FIXTURES = sorted(
 )
 _SCIFORTRAN_FIXTURES = sorted(
     f
-    for f in (_TESTS_DIR / "SciFortran").glob("*")
+    for f in (_TESTS_DIR / "scifortran").glob("*")
     if f.is_file()
     and f.suffix.lower() in {".f", ".f90", ".f95", ".f03", ".f08"}
-    and f.with_suffix(".json").exists()
-)
-_SCIFORTRAN_ERROR_EXPECTATIONS = _TESTS_DIR / "SciFortran" / "errors" / "SciFortran_errors.json"
+    )
+_SCIFORTRAN_ERROR_EXPECTATIONS = Path(__file__).parent / "fixtures" / "scifortran" / "errors" / "SciFortran_errors.json"
 
+
+
+def _expected_json_for_fixture(fixture: Path) -> Path:
+    rel = fixture.relative_to(_TESTS_DIR)
+    direct = (Path(__file__).parent / "fixtures" / rel).with_suffix(".json")
+    if direct.exists():
+        return direct
+    fallback = Path(__file__).parent / "fixtures" / "general" / (fixture.stem + ".json")
+    return fallback
+
+
+def _parser_filename_for_fixture(fixture: Path) -> str:
+    relpath = str(fixture.relative_to(_TESTS_DIR))
+    if relpath.startswith("scifortran/"):
+        direct = (Path(__file__).parent / "fixtures" / Path(relpath)).with_suffix(".json")
+        if direct.exists():
+            return relpath.replace("scifortran/", "SciFortran/", 1)
+        return fixture.name
+    return relpath if "/" in relpath else fixture.name
 def _load_expected(expected_path: Path):
     with expected_path.open("r", encoding="utf-8") as f:
         return json.load(f)
@@ -72,7 +94,7 @@ def _run_fixture_comparison(fixture: Path, *, filename_for_parser: str, expected
 
 
 def test_fortran_fixture_golden_suite_has_fixtures():
-    assert _GOLDEN_FIXTURES, "No fixtures found in tests/fcode"
+    assert _GOLDEN_FIXTURES, "No fixtures found in tests/data/fortran"
 
 
 @pytest.mark.parametrize("fixture", _GOLDEN_FIXTURES, ids=lambda f: f.name)
@@ -80,49 +102,46 @@ def test_fortran_fixture_golden_suite(fixture):
     _run_fixture_comparison(
         fixture,
         filename_for_parser=fixture.name,
-        expected_path=fixture.with_suffix(".json"),
+        expected_path=_expected_json_for_fixture(fixture),
     )
 
 
 def test_fortran_blas_parse_suite_has_fixtures():
-    assert _BLAS_FIXTURES, "No BLAS fixtures found in tests/fcode/blas"
+    assert _BLAS_FIXTURES, "No BLAS fixtures found in tests/data/fortran/blas"
 
 
 @pytest.mark.parametrize("fixture", _BLAS_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
 def test_fortran_blas_parse_suite(fixture):
-    relpath = str(fixture.relative_to(_TESTS_DIR))
     _run_fixture_comparison(
         fixture,
-        filename_for_parser=relpath,
-        expected_path=fixture.with_suffix(".json"),
+        filename_for_parser=_parser_filename_for_fixture(fixture),
+        expected_path=_expected_json_for_fixture(fixture),
     )
 
 
 def test_fortran_lapack_parse_suite_has_fixtures():
-    assert _LAPACK_FIXTURES, "No LAPACK fixtures found in tests/fcode/lapack"
+    assert _LAPACK_FIXTURES, "No LAPACK fixtures found in tests/data/fortran/lapack"
 
 
 @pytest.mark.parametrize("fixture", _LAPACK_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
 def test_fortran_lapack_parse_suite(fixture):
-    relpath = str(fixture.relative_to(_TESTS_DIR))
     _run_fixture_comparison(
         fixture,
-        filename_for_parser=relpath,
-        expected_path=fixture.with_suffix(".json"),
+        filename_for_parser=_parser_filename_for_fixture(fixture),
+        expected_path=_expected_json_for_fixture(fixture),
     )
 
 
 def test_fortran_scifortran_parse_suite_has_fixtures():
-    assert _SCIFORTRAN_FIXTURES, "No SciFortran fixtures found in tests/fcode/SciFortran"
+    assert _SCIFORTRAN_FIXTURES, "No scifortran fixtures found in tests/data/fortran/scifortran"
 
 
 @pytest.mark.parametrize("fixture", _SCIFORTRAN_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
 def test_fortran_scifortran_parse_suite(fixture):
-    relpath = str(fixture.relative_to(_TESTS_DIR))
     _run_fixture_comparison(
         fixture,
-        filename_for_parser=relpath,
-        expected_path=fixture.with_suffix(".json"),
+        filename_for_parser=_parser_filename_for_fixture(fixture),
+        expected_path=_expected_json_for_fixture(fixture),
     )
 
 
@@ -153,11 +172,11 @@ def test_fortran_scifortran_error_manifest_covers_error_directory():
     manifest_paths = {item["fixture"] for item in error_expectations}
     error_dir_paths = {
         str(p.relative_to(_TESTS_DIR))
-        for p in (_TESTS_DIR / "SciFortran" / "errors").glob("*.f90")
+        for p in (_TESTS_DIR / "scifortran" / "errors").glob("*.f90")
     }
 
     assert manifest_paths == error_dir_paths, (
-        "SciFortran error manifest and SciFortran/errors directory are out of sync"
+        "SciFortran error manifest and scifortran/errors directory are out of sync"
     )
 
 
@@ -167,8 +186,8 @@ def test_fortran_scifortran_error_manifest_uses_error_directory_only():
 
     for item in error_expectations:
         relpath = item["fixture"]
-        assert relpath.startswith("SciFortran/errors/"), (
-            f"Error manifest fixture must live in SciFortran/errors: {relpath}"
+        assert relpath.startswith("scifortran/errors/"), (
+            f"Error manifest fixture must live in scifortran/errors: {relpath}"
         )
         assert item.get("message_fragments"), (
             f"Error manifest item must document at least one error fragment: {relpath}"
@@ -182,11 +201,11 @@ def test_fortran_scifortran_main_directory_has_no_error_fixtures():
     manifest_basenames = {Path(item["fixture"]).name for item in error_expectations}
     main_scifortran_fixtures = {
         p.name
-        for p in (_TESTS_DIR / "SciFortran").glob("*.f90")
+        for p in (_TESTS_DIR / "scifortran").glob("*.f90")
     }
 
     overlap = sorted(manifest_basenames & main_scifortran_fixtures)
     assert not overlap, (
-        "Files listed as parse-failing must be moved out of SciFortran/ and into "
-        f"SciFortran/errors first: {overlap[:10]}"
+        "Files listed as parse-failing must be moved out of scifortran/ and into "
+        f"scifortran/errors first: {overlap[:10]}"
     )

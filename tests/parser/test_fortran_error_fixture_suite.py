@@ -12,7 +12,7 @@ parse_fortran_types = lambda source, filename=None: parse_fortran_file(source, f
 parse_fortran_modules = lambda source, filename=None: parse_fortran_file(source, filename=filename).modules
 
 
-_ERRORS_DIR = Path(__file__).parent / "fcode" / "errors"
+_ERRORS_DIR = Path(__file__).resolve().parents[1] / "data" / "fortran" / "general" / "errors"
 _PARSER_MAP = {
     "parse_fortran_signatures": parse_fortran_signatures,
     "parse_fortran_types": parse_fortran_types,
@@ -93,7 +93,7 @@ def _run_error_fixture(fixture: Path, *, filename_for_parser: str, expected_path
 
 
 def test_fortran_error_fixture_suite_has_fixtures():
-    assert _ERROR_FIXTURES, "No error fixtures found in tests/fcode/errors"
+    assert _ERROR_FIXTURES, "No error fixtures found in tests/data/fortran/general/errors"
 
 
 @pytest.mark.parametrize("fixture", _ERROR_FIXTURES, ids=lambda f: f.name)
@@ -101,5 +101,5 @@ def test_fortran_error_fixture_suite(fixture):
     _run_error_fixture(
         fixture,
         filename_for_parser=fixture.name,
-        expected_path=fixture.with_suffix(".json"),
+        expected_path=(Path(__file__).parent / "fixtures" / fixture.relative_to(Path(__file__).resolve().parents[1] / "data" / "fortran")).with_suffix(".json"),
     )

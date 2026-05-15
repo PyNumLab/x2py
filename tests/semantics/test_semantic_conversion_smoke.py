@@ -8,7 +8,7 @@ from _fixture_conversion_utils import FORTRAN_FIXTURES, TESTS_DIR, parse_fixture
 
 
 def test_semantics_fixture_suite_has_fixtures():
-    assert FORTRAN_FIXTURES, "No Fortran fixtures found in tests/parser/fcode"
+    assert FORTRAN_FIXTURES, "No Fortran fixtures found in tests/data/fortran/general"
 
 
 @pytest.mark.parametrize(

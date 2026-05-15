@@ -3,7 +3,7 @@ from pathlib import Path
 from fortran_parser import parse_fortran_file
 
 
-TESTS_DIR = Path(__file__).resolve().parents[1] / "parser" / "fcode"
+TESTS_DIR = Path(__file__).resolve().parents[1] / "data" / "fortran"
 FORTRAN_SUFFIXES = {".f", ".f90", ".f95", ".f03", ".f08"}
 
 
@@ -19,7 +19,7 @@ def iter_fortran_fixtures():
         if relpath.startswith("errors/") or relpath.startswith("SciFortran/errors/"):
             continue
 
-        if not path.with_suffix(".json").exists():
+        if path.parts[-2] != "general":
             continue
 
         yield path
