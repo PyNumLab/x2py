@@ -240,11 +240,17 @@ Generate its stubs:
 python -m x2py tests/semantics/fixtures/modern_pyi_example.f90 --pyi
 ```
 
-Expected generated `.pyi` output:
+Illustrative rich `.pyi` output (showing derived types, module variables, arrays,
+and visibility markers):
 
 ```python
 class particle:
-    pass
+    id: Int32
+    mass: Float64
+    position: Float64[Shape('3'), FortranContiguous]
+
+counter: Int32
+hidden_scale: Float64  # private
 
 def init_particle(
     p: particle,
@@ -274,6 +280,11 @@ def dot3(
 
 def fill_identity3(
     a: Float64[Shape('3', '3'), FortranContiguous]
+) -> None: ...
+
+@private
+def hidden_proc(
+    x: Int32
 ) -> None: ...
 ```
 

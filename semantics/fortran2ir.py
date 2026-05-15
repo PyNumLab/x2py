@@ -91,17 +91,19 @@ class FortranToIRConverter:
                 SemanticConstraint("Pointer")
             )
 
+        intent = getattr(arg, "intent", "in")
         ownership = semantic_type.ownership
-        ownership.mutable = arg.intent.lower() != "in"
+        ownership.mutable = str(intent).lower() != "in"
 
         return SemanticArgument(
             name=arg.name,
             semantic_type=semantic_type,
-            intent=arg.intent,
-            optional=arg.optional,
+            intent=intent,
+            optional=getattr(arg, "optional", False),
+            visibility=getattr(arg, "visibility", "public"),
         )
 
-    def procedure_to_semantic_function(self, proc) -> SemanticFunction:
+    def procedure_to_semantic_function(self, proc, visibility: str = "public") -> SemanticFunction:
         semantic_args = [
             self.argument_to_semantic_argument(a)
             for a in proc.arguments
@@ -116,6 +118,7 @@ class FortranToIRConverter:
             native_name=proc.name,
             arguments=semantic_args,
             return_type=return_type,
+            visibility=visibility,
         )
 
     def derived_type_to_semantic_class(
@@ -139,6 +142,7 @@ class FortranToIRConverter:
                         arguments=proc.arguments,
                         return_type=proc.return_type,
                         contracts=proc.contracts,
+                        visibility=proc.visibility,
                     )
                 )
 
@@ -155,15 +159,30 @@ class FortranToIRConverter:
             fields=fields,
             methods=methods,
             base_classes=bases,
+            visibility=getattr(dtype, "visibility", "public"),
         )
+
+    def _symbol_visibility(self, module, symbol_name: str) -> str:
+        lname = symbol_name.lower()
+        public_set = {s.lower() for s in getattr(module, "public_symbols", [])}
+        private_set = {s.lower() for s in getattr(module, "private_symbols", [])}
+        if lname in private_set:
+            return "private"
+        if lname in public_set:
+            return "public"
+        return getattr(module, "default_visibility", "public")
 
     def module_to_semantic_module(self, module) -> SemanticModule:
         module = self.first_module(module)
 
-        semantic_functions = [
-            self.procedure_to_semantic_function(proc)
-            for proc in module.procedures
-        ]
+        semantic_functions = []
+        for proc in module.procedures:
+            semantic_functions.append(
+                self.procedure_to_semantic_function(
+                    proc,
+                    visibility=self._symbol_visibility(module, proc.name),
+                )
+            )
 
         procedure_lookup = {
             f.name: f
@@ -174,11 +193,19 @@ class FortranToIRConverter:
             self.derived_type_to_semantic_class(dtype, procedure_lookup)
             for dtype in module.derived_types
         ]
+        semantic_variables = [
+            self.argument_to_semantic_argument(var)
+            for var in getattr(module, "variables", [])
+        ]
+
+        for semantic_cls in semantic_classes:
+            semantic_cls.visibility = self._symbol_visibility(module, semantic_cls.name)
 
         return SemanticModule(
             name=module.name,
             functions=semantic_functions,
             classes=semantic_classes,
+            variables=semantic_variables,
             imports=list(module.uses.keys()),
         )
 

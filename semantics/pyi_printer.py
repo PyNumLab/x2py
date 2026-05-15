@@ -31,6 +31,8 @@ class PyiPrinter:
 
         if arg.optional:
             s += " = ..."
+        if getattr(arg, "visibility", "public") == "private":
+            s += "  # private"
 
         return s
 
@@ -45,8 +47,9 @@ class PyiPrinter:
         else:
             ret = "None"
 
+        decorator = "@private\n" if getattr(func, "visibility", "public") == "private" else ""
         return f'''
-def {func.name}(
+{decorator}def {func.name}(
     {args}
 ) -> {ret}: ...
 '''.strip()
@@ -65,8 +68,9 @@ def {func.name}(
         else:
             ret = "None"
 
+        decorator = "    @private\n" if getattr(method, "visibility", "public") == "private" else ""
         return f'''
-    def {method.name}(
+{decorator}    def {method.name}(
         {arg_text}
     ) -> {ret}: ...
 '''.rstrip()
@@ -77,17 +81,30 @@ def {func.name}(
         if cls.base_classes:
             bases = "(" + ", ".join(cls.base_classes) + ")"
 
+        fields = "\n".join(
+            f"    {self.emit_argument(field)}"
+            for field in cls.fields
+        )
+
         methods = "\n\n".join(
             self.emit_method(m)
             for m in cls.methods
         )
 
-        if not methods:
-            methods = "    pass"
+        body_parts = []
+        if fields:
+            body_parts.append(fields)
+        if methods:
+            body_parts.append(methods)
 
+        body = "\n\n".join(body_parts)
+        if not body:
+            body = "    pass"
+
+        decorator = "@private\n" if getattr(cls, "visibility", "public") == "private" else ""
         return f'''
-class {cls.name}{bases}:
-{methods}
+{decorator}class {cls.name}{bases}:
+{body}
 '''.strip()
 
     def emit_module(self, module: SemanticModule) -> str:
@@ -101,6 +118,10 @@ class {cls.name}{bases}:
 
         for cls in module.classes:
             sections.append(self.emit_class(cls))
+            sections.append("")
+
+        for var in module.variables:
+            sections.append(self.emit_argument(var))
             sections.append("")
 
         for func in module.functions:

@@ -515,3 +515,22 @@ end module
 
     assert "def touch(" in code
     assert "x: Int32" in code
+
+
+def test_emit_module_variables_with_visibility():
+    source = """
+module state_mod
+  implicit none
+  private
+  public :: counter
+  integer :: counter
+  real(8) :: hidden_scale
+contains
+  subroutine ping(x)
+    integer, intent(in) :: x
+  end subroutine
+end module
+"""
+    code = generate_pyi(source)
+    assert "counter: Int32" in code
+    assert "hidden_scale: Float64  # private" in code

@@ -73,6 +73,7 @@ class SemanticArgument:
     intent: str = "in"
 
     optional: bool = False
+    visibility: str = "public"
 
     default_value: Optional[str] = None
 
@@ -123,6 +124,7 @@ class SemanticFunction:
     projection: list[ProjectionMapping] = field(default_factory=list)
 
     metadata: dict[str, Any] = field(default_factory=dict)
+    visibility: str = "public"
 
 
 # ============================================================
@@ -153,6 +155,7 @@ class SemanticClass:
     contracts: list[SemanticContract] = field(default_factory=list)
 
     metadata: dict[str, Any] = field(default_factory=dict)
+    visibility: str = "public"
 
 
 # ============================================================
@@ -166,6 +169,7 @@ class SemanticModule:
     functions: list[SemanticFunction] = field(default_factory=list)
 
     classes: list[SemanticClass] = field(default_factory=list)
+    variables: list[SemanticArgument] = field(default_factory=list)
 
     imports: list[str] = field(default_factory=list)
 
