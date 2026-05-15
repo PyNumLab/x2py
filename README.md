@@ -207,7 +207,15 @@ Expected JSON structure (top-level keyed by input path):
 - `<file>.block_data`: parsed block data units
 - `<file>.wrap_readiness`: readiness diagnostics
 
-### Example 3: semantic IR JSON output
+### Example 3: wrap-readiness summary
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --wrap-readiness
+```
+
+This prints the wrappability status and blocker list for each input file.
+
+### Example 4: semantic IR JSON output
 
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
@@ -218,7 +226,7 @@ This prints semantic conversion payload per file, including:
 - `semantic_modules`: semantic module/class/function/type metadata
 - `pyi`: generated `.pyi` text associated with those semantic modules
 
-### Example 4: print generated `.pyi` text
+### Example 5: print generated `.pyi` text
 
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
@@ -227,7 +235,7 @@ python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
 This prints a per-file section followed by the generated Python stub text.
 
 
-### Example 5: modern Fortran module -> `.pyi` (reproducible fixture)
+### Example 6: modern Fortran module -> `.pyi` (reproducible fixture)
 
 The repository includes a richer modern-Fortran fixture at:
 
@@ -333,7 +341,7 @@ File: tests/data/fortran/general/modern_pyi_example.f90
         - subroutine hidden_proc(x:integer[0])
 ```
 
-### Example 6: output written to file (`--out`)
+### Example 7: output written to file (`--out`)
 
 When `--out` is provided, x2py writes files and does not print stage payloads to stdout.
 

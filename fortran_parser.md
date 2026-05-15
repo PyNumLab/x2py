@@ -222,6 +222,17 @@ Expected JSON layout:
   - `block_data`
   - `wrap_readiness`
 
+### 3.4 Wrap-readiness summary
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --wrap-readiness
+```
+
+This mode prints only the per-file readiness status. A non-wrappable file is
+reported as `Wrappable: no` followed by a `Why not wrappable` section listing
+the blocking diagnostics, for example unresolved imported derived-type
+arguments/fields or unresolved symbolic kind arguments/fields.
+
 Semantic IR JSON uses the same output channels, but the per-file payload is the
 semantic model projection instead of raw parser output:
 
@@ -234,17 +245,6 @@ Generated `.pyi` text is printed with:
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
 ```
-
-### 3.4 Wrap-readiness summary
-
-```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
-```
-
-This mode prints only the per-file readiness status. A non-wrappable file is
-reported as `Wrappable: no` followed by a `Why not wrappable` section listing
-the blocking diagnostics, for example unresolved imported derived-type
-arguments/fields or unresolved symbolic kind arguments/fields.
 
 ### 3.5 Parse-error diagnostics and debug mode
 

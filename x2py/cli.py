@@ -9,7 +9,7 @@ from pathlib import Path
 
 from fortran_parser.models import FortranParseError
 from fortran_parser.parser import FortranParser
-from fortran_parser.cli import _format_report
+from fortran_parser.cli import _format_report, _format_wrap_readiness
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
@@ -143,6 +143,11 @@ def main() -> int:
     )
     parser.add_argument("paths", nargs="+", help="Fortran file(s) or directory path(s)")
     parser.add_argument("--parse", action="store_true", help="Run and output parser stage report")
+    parser.add_argument(
+        "--wrap-readiness",
+        action="store_true",
+        help="Show wrap-readiness status and blockers for parsed files",
+    )
     parser.add_argument("--semantics", action="store_true", help="Generate semantic IR models from parsed Fortran modules")
     parser.add_argument("--pyi", action="store_true", help="Generate Python .pyi content")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
@@ -153,6 +158,15 @@ def main() -> int:
 
     if args.out is not None and not (args.parse or args.semantics or args.pyi):
         parser.error("--out requires a stage flag: choose one of --parse, --semantics, or --pyi")
+
+    if args.wrap_readiness and not args.parse:
+        parser.error("--wrap-readiness requires --parse")
+
+    if args.wrap_readiness and args.json:
+        parser.error("--wrap-readiness cannot be combined with --json")
+
+    if args.wrap_readiness and args.out is not None:
+        parser.error("--wrap-readiness cannot be combined with --out")
 
     if not (args.parse or args.semantics or args.pyi):
         parser.error("Select at least one stage flag: --parse, --semantics, or --pyi")
@@ -193,7 +207,9 @@ def main() -> int:
     if args.out is not None:
         return 0
 
-    if args.pyi and not args.json:
+    if args.wrap_readiness:
+        print(_format_wrap_readiness(parse_payload or {}))
+    elif args.pyi and not args.json:
         print_pyi_output(_format_pyi_report(semantic_payload or {}))
     elif args.parse and not (args.semantics or args.json or args.pyi):
         print(_format_report(parse_payload or {}))
