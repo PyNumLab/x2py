@@ -240,13 +240,17 @@ Generate its stubs:
 python -m x2py tests/semantics/fixtures/modern_pyi_example.f90 --pyi
 ```
 
-Expected generated `.pyi` output:
+Illustrative rich `.pyi` output (showing derived types, module variables, arrays,
+and visibility markers):
 
 ```python
 class particle:
     id: Int32
     mass: Float64
     position: Float64[Shape('3'), FortranContiguous]
+
+counter: Int32
+hidden_scale: Float64  # private
 
 def init_particle(
     p: particle,
@@ -277,35 +281,6 @@ def dot3(
 def fill_identity3(
     a: Float64[Shape('3', '3'), FortranContiguous]
 ) -> None: ...
-```
-
-This snapshot is also verified in `tests/semantics/test_pyi_printer_modern_example.py`.
-
-### Example 8: visibility mapping (`public` / `private`) in generated `.pyi`
-
-Fortran module visibility is now propagated into semantic IR and reflected in
-the generated stubs.
-
-- Default/public symbol rules from the module are resolved into semantic
-  `visibility` for functions and derived types.
-- Private functions/classes are emitted with `@private`.
-- Variable-like declarations can be annotated as private with an inline
-  marker (`# private`) when visibility metadata is available.
-
-Illustrative generated output:
-
-```python
-class visible_t:
-    a: Int32
-    b: Int32
-
-@private
-class hidden_t:
-    z: Int32
-
-def pub_proc(
-    x: Int32
-) -> None: ...
 
 @private
 def hidden_proc(
@@ -313,21 +288,7 @@ def hidden_proc(
 ) -> None: ...
 ```
 
-This behavior is covered in
-`tests/semantics/test_pyi_printer_modern_example.py::test_pyi_visibility_private_public_markers`.
-
-### Example 9: module variable visibility in generated `.pyi`
-
-Module-scope variables are emitted in the `.pyi` output and carry visibility
-markers when private:
-
-```python
-counter: Int32
-hidden_scale: Float64  # private
-```
-
-This corresponds to a module with default `private` visibility where
-`counter` is explicitly exported and `hidden_scale` remains private.
+This snapshot is also verified in `tests/semantics/test_pyi_printer_modern_example.py`.
 
 Parse output for the same fixture now includes the derived type definition and field list:
 
