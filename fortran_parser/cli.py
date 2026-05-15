@@ -193,6 +193,10 @@ def _format_report(report: dict[str, dict]) -> str:
                     lines.append(f"      Derived types: {len(mod['derived_types'])}")
                     for t in mod["derived_types"]:
                         lines.append(f"        - type {t['name']} (fields={len(t['fields'])}, methods={len(t['methods'])})")
+                        if t.get("fields"):
+                            lines.append(f"          Fields: {len(t['fields'])}")
+                            for field in t["fields"]:
+                                lines.append(f"            - {field['name']}:{_format_var_type(field)}")
                 if mod.get("procedures"):
                     lines.append(f"      Procedures: {len(mod['procedures'])}")
                     for s in mod["procedures"]:

@@ -272,4 +272,8 @@ def test_cli_parse_shows_module_derived_types_and_derived_arg_kinds():
 
     assert "      Derived types: 1" in res.stdout
     assert "type particle" in res.stdout
+    assert "Fields: 3" in res.stdout
+    assert "- id:integer[0]" in res.stdout
+    assert "- mass:real[0]" in res.stdout
+    assert "- position:real[1]" in res.stdout
     assert "init_particle(p:type(particle)[0]" in res.stdout
