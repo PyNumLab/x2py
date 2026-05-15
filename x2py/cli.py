@@ -98,6 +98,33 @@ def _format_pyi_report(semantic_report: dict[str, dict]) -> str:
         lines.append("")
     return "\n".join(lines).rstrip()
 
+def print_pyi_output(code: str) -> None:
+    # Safe fallback for files, pipes, CI, unsupported terminals, etc.
+    if not sys.stdout.isatty():
+        print(code)
+        return
+
+    try:
+        from rich.console import Console
+        from rich.syntax import Syntax
+    except ImportError:
+        print(code)
+        return
+
+    try:
+        console = Console(force_terminal=True, color_system="auto")
+        syntax = Syntax(
+            code,
+            "python",
+            theme="ansi_dark",   # terminal-friendly
+            background_color="default",
+            line_numbers=False,
+            word_wrap=False,
+        )
+        console.print(syntax)
+    except Exception:
+        # Never let colored output crash the CLI.
+        print(code)
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -108,7 +135,10 @@ def main() -> int:
             "  python -m x2py path/to/file.f90 --parse\n"
             "  python -m x2py path/to/file.f90 --parse --json --out [report.json]\n"
             "  python -m x2py path/to/file.f90 --semantics\n"
-            "  python -m x2py path/to/file.f90 --pyi --out [module.pyi]"
+            "  python -m x2py path/to/file.f90 --pyi --out [module.pyi]\n"
+            "\nOptional:\n"
+            "  Install 'rich' for colored terminal syntax highlighting:\n"
+            "      pip install rich"
         ),
     )
     parser.add_argument("paths", nargs="+", help="Fortran file(s) or directory path(s)")
@@ -164,7 +194,7 @@ def main() -> int:
         return 0
 
     if args.pyi and not args.json:
-        print(_format_pyi_report(semantic_payload or {}))
+        print_pyi_output(_format_pyi_report(semantic_payload or {}))
     elif args.parse and not (args.semantics or args.json or args.pyi):
         print(_format_report(parse_payload or {}))
     else:
