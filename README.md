@@ -249,6 +249,17 @@ class particle:
     mass: Float64
     position: Float64[Shape('3'), FortranContiguous]
 
+class vector3:
+    values: Float64[Shape('3'), FortranContiguous]
+
+@private
+class hidden_state:
+    code: Int32
+
+counter: Int32
+
+hidden_scale: Float64  # private
+
 def init_particle(
     p: particle,
     pid: Int32,
@@ -278,6 +289,15 @@ def dot3(
 def fill_identity3(
     a: Float64[Shape('3', '3'), FortranContiguous]
 ) -> None: ...
+
+def normalize_particle(
+    p: particle
+) -> None: ...
+
+@private
+def hidden_proc(
+    x: Int32
+) -> None: ...
 ```
 
 This snapshot is also verified in `tests/semantics/test_pyi_printer_modern_example.py`.
@@ -291,15 +311,27 @@ python -m x2py tests/semantics/fixtures/modern_pyi_example.f90 --parse
 ```text
 File: tests/semantics/fixtures/modern_pyi_example.f90
   Modules: 1
-    - module modern_math_physics (vars=0, uses=0)
-      Derived types: 1
+    - module modern_math_physics (vars=2, uses=0)
+      Derived types: 3
         - type particle (fields=3, methods=0)
           Fields: 3
             - id:integer[0]
             - mass:real[0]
             - position:real[1]
-      Procedures: 5
+        - type vector3 (fields=1, methods=0)
+          Fields: 1
+            - values:real[1]
+        - type hidden_state (fields=1, methods=0)
+          Fields: 1
+            - code:integer[0]
+      Procedures: 7
         - subroutine init_particle(p:type(particle)[0], pid:integer[0], mass:real[0], x:real[0], y:real[0], z:real[0])
+        - function kinetic_energy(p:type(particle)[0], vx:real[0], vy:real[0], vz:real[0]) -> real[0]
+        - subroutine scale_vector(v:real[1], alpha:real[0])
+        - function dot3(a:real[1], b:real[1]) -> real[0]
+        - subroutine fill_identity3(a:real[2])
+        - subroutine normalize_particle(p:type(particle)[0])
+        - subroutine hidden_proc(x:integer[0])
 ```
 
 ### Example 4: output written to file (`--out`)

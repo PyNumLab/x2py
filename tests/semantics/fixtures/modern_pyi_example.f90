@@ -1,13 +1,24 @@
 module modern_math_physics
   implicit none
   private
-  public :: particle, init_particle, kinetic_energy, scale_vector, dot3, fill_identity3
+  public :: particle, vector3, counter, init_particle, kinetic_energy, scale_vector, dot3, fill_identity3, normalize_particle
+
+  integer :: counter
+  real(8) :: hidden_scale
 
   type :: particle
      integer :: id
      real(8) :: mass
      real(8), dimension(3) :: position
   end type particle
+
+  type :: vector3
+     real(8), dimension(3) :: values
+  end type vector3
+
+  type :: hidden_state
+     integer :: code
+  end type hidden_state
 
 contains
 
@@ -46,5 +57,16 @@ contains
     a(2,2) = 1.0d0
     a(3,3) = 1.0d0
   end subroutine fill_identity3
+
+  subroutine normalize_particle(p)
+    type(particle), intent(inout) :: p
+    real(8) :: n
+    n = sqrt(dot3(p%position, p%position))
+    if (n > 0.0d0) p%position = p%position / n
+  end subroutine normalize_particle
+
+  subroutine hidden_proc(x)
+    integer, intent(in) :: x
+  end subroutine hidden_proc
 
 end module modern_math_physics
