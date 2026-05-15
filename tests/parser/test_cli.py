@@ -28,7 +28,7 @@ def test_cli_json_out(tmp_path: Path):
         str(TEST_FILE),
         "--parse",
         "--json",
-        "--json-out",
+        "--out",
         str(out),
     ]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -39,6 +39,30 @@ def test_cli_json_out(tmp_path: Path):
     assert payload == file_payload
 
 
+
+def test_cli_out_without_filename_uses_source_basename_json(tmp_path: Path):
+    f90 = tmp_path / "mini.f90"
+    f90.write_text("subroutine work(n)\n  integer, intent(in) :: n\nend subroutine work\n", encoding="utf-8")
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse", "--out"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+    assert str(f90) in payload
+    out = tmp_path / "mini.json"
+    assert out.exists()
+
+
+def test_cli_json_output_without_out():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--parse", "--json"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+    assert str(TEST_FILE) in payload
+
+
+def test_cli_pyi_output_without_out():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--pyi"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    assert f"File: {TEST_FILE}" in res.stdout
+    assert "def add1(" in res.stdout
 def test_cli_keeps_free_procedure_when_module_has_same_name(tmp_path: Path):
     f90 = tmp_path / "same_name_scopes.f90"
     f90.write_text(
@@ -189,6 +213,29 @@ def test_cli_pyi_output():
     assert f"File: {TEST_FILE}" in res.stdout
     assert "def add1(" in res.stdout
 
+
+
+def test_cli_pyi_out_writes_adjacent_file(tmp_path: Path):
+    f90 = tmp_path / "mini.f90"
+    f90.write_text(
+        """module m
+contains
+  subroutine add1(x)
+    integer, intent(inout) :: x
+    x = x + 1
+  end subroutine add1
+end module m
+""",
+        encoding="utf-8",
+    )
+
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--pyi", "--out"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    assert str(f90) in res.stdout
+    out = tmp_path / "mini.pyi"
+    assert out.exists()
+    assert "def add1" in out.read_text(encoding="utf-8")
 
 def test_cli_help_includes_examples():
     cmd = [sys.executable, "-m", "x2py", "--help"]

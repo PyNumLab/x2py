@@ -106,17 +106,17 @@ def main() -> int:
         epilog=(
             "Examples:\n"
             "  python -m x2py path/to/file.f90 --parse\n"
-            "  python -m x2py path/to/file.f90 --parse --json --json-out report.json\n"
+            "  python -m x2py path/to/file.f90 --parse --json --out [report.json]\n"
             "  python -m x2py path/to/file.f90 --semantics\n"
-            "  python -m x2py path/to/file.f90 --pyi"
+            "  python -m x2py path/to/file.f90 --pyi --out [module.pyi]"
         ),
     )
     parser.add_argument("paths", nargs="+", help="Fortran file(s) or directory path(s)")
     parser.add_argument("--parse", action="store_true", help="Run and output parser stage report")
     parser.add_argument("--semantics", action="store_true", help="Generate semantic IR models from parsed Fortran modules")
-    parser.add_argument("--pyi", action="store_true", help="Print generated Python .pyi content")
+    parser.add_argument("--pyi", action="store_true", help="Generate Python .pyi content")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
-    parser.add_argument("--json-out", type=Path, help="Write JSON payload to this file")
+    parser.add_argument("--out", nargs="?", const="", type=str, help="Write stage output to file (optional explicit output filename)")
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI color in parse diagnostics")
     parser.add_argument("--debug-traceback", action="store_true", help="Re-raise parser errors for debug")
     args = parser.parse_args()
@@ -124,8 +124,8 @@ def main() -> int:
     if not (args.parse or args.semantics or args.pyi):
         parser.error("Select at least one stage flag: --parse, --semantics, or --pyi")
 
-    if (args.json or args.json_out) and not args.parse:
-        parser.error("JSON output currently supports only the parsing stage. Use --parse with --json/--json-out.")
+    if args.json and not args.parse:
+        parser.error("JSON output currently supports only the parsing stage. Use --parse with --json/--out.")
 
     try:
         parse_payload = _parse_report(args.paths) if args.parse else None
@@ -138,12 +138,30 @@ def main() -> int:
 
     payload = parse_payload or {} if args.parse else semantic_payload or {}
 
-    if args.json_out:
-        args.json_out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    if args.out is not None:
+        if args.json and args.pyi:
+            parser.error("--out cannot be used with both --json and --pyi")
 
-    if args.pyi and not args.json:
+        out_mode_json = args.json or (args.parse and not args.pyi)
+
+        if out_mode_json:
+            if args.out:
+                Path(args.out).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            else:
+                for fname, report in (parse_payload or {}).items():
+                    Path(fname).with_suffix(".json").write_text(json.dumps({fname: report}, indent=2), encoding="utf-8")
+
+        if args.pyi:
+            if args.out:
+                pyi_text = "\n\n".join((report.get("pyi") or "") for report in (semantic_payload or {}).values()).strip()
+                Path(args.out).write_text(pyi_text + "\n", encoding="utf-8")
+            else:
+                for fname, report in (semantic_payload or {}).items():
+                    Path(fname).with_suffix(".pyi").write_text((report.get("pyi") or "") + "\n", encoding="utf-8")
+
+    if args.pyi and not args.json and args.out is None:
         print(_format_pyi_report(semantic_payload or {}))
-    elif args.parse and not (args.semantics or args.json or args.pyi):
+    elif args.parse and not (args.semantics or args.json or args.pyi) and args.out is None:
         print(_format_report(parse_payload or {}))
     else:
         print(json.dumps(payload, indent=2))
