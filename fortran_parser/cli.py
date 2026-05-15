@@ -152,6 +152,20 @@ def _format_wrap_readiness(report: dict[str, dict]) -> str:
     return "\n".join(lines).rstrip()
 
 
+
+
+def _format_var_type(var: dict) -> str:
+    base = var.get("base_type", "unknown")
+    kind = var.get("kind")
+    rank = var.get("rank", 0)
+    if base == "derived" and kind:
+        base_repr = f"type({kind})"
+    elif kind:
+        base_repr = f"{base}({kind})"
+    else:
+        base_repr = base
+    return f"{base_repr}[{rank}]"
+
 def _format_report(report: dict[str, dict]) -> str:
     """Format the per-file parse report as a stable, human-readable tree."""
     lines: list[str] = []
@@ -162,8 +176,8 @@ def _format_report(report: dict[str, dict]) -> str:
         if free_procedures:
             lines.append(f"  Procedures: {len(free_procedures)}")
             for s in free_procedures:
-                args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in s["arguments"])
-                result_txt = f" -> {s['result']['base_type']}[{s['result']['rank']}]" if s.get('result') else ""
+                args = ", ".join(f"{a['name']}:{_format_var_type(a)}" for a in s["arguments"])
+                result_txt = f" -> {_format_var_type(s['result'])}" if s.get('result') else ""
                 lines.append(f"    - {s['kind']} {s['name']}({args}){result_txt}")
 
         if parsed["types"]:
@@ -175,11 +189,19 @@ def _format_report(report: dict[str, dict]) -> str:
             lines.append(f"  Modules: {len(parsed['modules'])}")
             for mod in parsed["modules"]:
                 lines.append(f"    - module {mod['name']} (vars={len(mod['variables'])}, uses={len(mod['uses'])})")
+                if mod.get("derived_types"):
+                    lines.append(f"      Derived types: {len(mod['derived_types'])}")
+                    for t in mod["derived_types"]:
+                        lines.append(f"        - type {t['name']} (fields={len(t['fields'])}, methods={len(t['methods'])})")
+                        if t.get("fields"):
+                            lines.append(f"          Fields: {len(t['fields'])}")
+                            for field in t["fields"]:
+                                lines.append(f"            - {field['name']}:{_format_var_type(field)}")
                 if mod.get("procedures"):
                     lines.append(f"      Procedures: {len(mod['procedures'])}")
                     for s in mod["procedures"]:
-                        args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in s["arguments"])
-                        result_txt = f" -> {s['result']['base_type']}[{s['result']['rank']}]" if s.get('result') else ""
+                        args = ", ".join(f"{a['name']}:{_format_var_type(a)}" for a in s["arguments"])
+                        result_txt = f" -> {_format_var_type(s['result'])}" if s.get('result') else ""
                         lines.append(f"        - {s['kind']} {s['name']}({args}){result_txt}")
 
         if parsed.get("submodules"):
@@ -190,8 +212,8 @@ def _format_report(report: dict[str, dict]) -> str:
                 if submod.get("procedures"):
                     lines.append(f"      Procedures: {len(submod['procedures'])}")
                     for proc in submod["procedures"]:
-                        args = ", ".join(f"{a['name']}:{a['base_type']}[{a['rank']}]" for a in proc["arguments"])
-                        result_txt = f" -> {proc['result']['base_type']}[{proc['result']['rank']}]" if proc.get('result') else ""
+                        args = ", ".join(f"{a['name']}:{_format_var_type(a)}" for a in proc["arguments"])
+                        result_txt = f" -> {_format_var_type(proc['result'])}" if proc.get('result') else ""
                         lines.append(f"        - {proc['kind']} {proc['name']}({args}){result_txt}")
 
         if parsed.get("programs"):

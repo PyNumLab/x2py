@@ -105,7 +105,7 @@ end module m1
 ```
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90
+python -m x2py tests/fcode/basic_subroutine.f90 --parse
 ```
 
 Expected style of output:
@@ -157,7 +157,7 @@ end module io_ops
 Command:
 
 ```bash
-python -m x2py mixed_example.f90
+python -m x2py mixed_example.f90 --parse
 ```
 
 Expected output style:
@@ -187,7 +187,7 @@ Notes:
 > JSON output is currently supported only for the parsing stage (`--parse`).
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --json
+python -m x2py tests/fcode/basic_subroutine.f90 --parse --json
 ```
 
 Expected JSON structure (top-level keyed by input path):
@@ -211,7 +211,7 @@ symbolic kinds.
 ### Example 5: semantic IR JSON output
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --semantics --json
+python -m x2py tests/fcode/basic_subroutine.f90 --semantics
 ```
 
 This prints semantic conversion payload per file, including:
@@ -247,7 +247,7 @@ class particle:
     pass
 
 def init_particle(
-    p: Unknown,
+    p: particle,
     pid: Int32,
     mass: Float64,
     x: Float64,
@@ -256,7 +256,7 @@ def init_particle(
 ) -> None: ...
 
 def kinetic_energy(
-    p: Unknown,
+    p: particle,
     vx: Float64,
     vy: Float64,
     vz: Float64
@@ -279,16 +279,52 @@ def fill_identity3(
 
 This snapshot is also verified in `tests/semantics/test_pyi_printer_modern_example.py`.
 
-### Example 4: JSON output written to file
+Parse output for the same fixture now includes the derived type definition and field list:
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --json-out report.json
+python -m x2py tests/semantics/fixtures/modern_pyi_example.f90 --parse
 ```
 
-And print + write together:
+```text
+File: tests/semantics/fixtures/modern_pyi_example.f90
+  Modules: 1
+    - module modern_math_physics (vars=0, uses=0)
+      Derived types: 1
+        - type particle (fields=3, methods=0)
+          Fields: 3
+            - id:integer[0]
+            - mass:real[0]
+            - position:real[1]
+      Procedures: 5
+        - subroutine init_particle(p:type(particle)[0], pid:integer[0], mass:real[0], x:real[0], y:real[0], z:real[0])
+```
+
+### Example 4: output written to file (`--out`)
+
+When `--out` is provided, x2py writes files and does not print stage payloads to stdout.
+
+Parse JSON to a specific file:
 
 ```bash
-python -m x2py tests/fcode/basic_subroutine.f90 --json --json-out report.json
+python -m x2py tests/fcode/basic_subroutine.f90 --parse --out report.json
+```
+
+Parse JSON adjacent to source (`basic_subroutine.json`):
+
+```bash
+python -m x2py tests/fcode/basic_subroutine.f90 --parse --out
+```
+
+Semantic IR JSON to a specific file:
+
+```bash
+python -m x2py tests/fcode/basic_subroutine.f90 --semantics --out semantics.json
+```
+
+Generated `.pyi` to a specific file:
+
+```bash
+python -m x2py tests/fcode/basic_subroutine.f90 --pyi --out module.pyi
 ```
 
 ## Python script usage

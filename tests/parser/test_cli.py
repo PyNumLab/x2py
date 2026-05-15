@@ -32,11 +32,10 @@ def test_cli_json_out(tmp_path: Path):
         str(out),
     ]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    payload = json.loads(res.stdout)
-    assert str(TEST_FILE) in payload
+    assert res.stdout == ""
     assert out.exists()
     file_payload = json.loads(out.read_text())
-    assert payload == file_payload
+    assert str(TEST_FILE) in file_payload
 
 
 
@@ -45,10 +44,11 @@ def test_cli_out_without_filename_uses_source_basename_json(tmp_path: Path):
     f90.write_text("subroutine work(n)\n  integer, intent(in) :: n\nend subroutine work\n", encoding="utf-8")
     cmd = [sys.executable, "-m", "x2py", str(f90), "--parse", "--out"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    payload = json.loads(res.stdout)
-    assert str(f90) in payload
+    assert res.stdout == ""
     out = tmp_path / "mini.json"
     assert out.exists()
+    file_payload = json.loads(out.read_text())
+    assert str(f90) in file_payload
 
 
 def test_cli_json_output_without_out():
@@ -192,6 +192,19 @@ end subroutine bad
     assert f"{f90}:2:1: error[PARSE001]:" in res.stderr
 
 
+
+
+def test_cli_semantics_out_writes_json_without_stdout(tmp_path: Path):
+    out = tmp_path / "semantics.json"
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--semantics", "--out", str(out)]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    assert res.stdout == ""
+    assert out.exists()
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert str(TEST_FILE) in payload
+    assert "semantic_modules" in payload[str(TEST_FILE)]
+
 def test_cli_semantics_without_json_output():
     cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--semantics"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -232,13 +245,50 @@ end module m
     cmd = [sys.executable, "-m", "x2py", str(f90), "--pyi", "--out"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
-    assert str(f90) in res.stdout
+    assert res.stdout == ""
     out = tmp_path / "mini.pyi"
     assert out.exists()
     assert "def add1" in out.read_text(encoding="utf-8")
+
+
+
+def test_cli_out_requires_stage_flag():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--out"]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    assert res.returncode == 2
+    assert "--out requires a stage flag" in res.stderr
 
 def test_cli_help_includes_examples():
     cmd = [sys.executable, "-m", "x2py", "--help"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert "Examples:" in res.stdout
     assert "python -m x2py path/to/file.f90 --parse" in res.stdout
+
+
+def test_cli_parse_shows_module_derived_types_and_derived_arg_kinds():
+    fixture = Path(__file__).parent.parent / "semantics" / "fixtures" / "modern_pyi_example.f90"
+    cmd = [sys.executable, "-m", "x2py", str(fixture), "--parse"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    assert "      Derived types: 1" in res.stdout
+    assert "type particle" in res.stdout
+    assert "Fields: 3" in res.stdout
+    assert "- id:integer[0]" in res.stdout
+    assert "- mass:real[0]" in res.stdout
+    assert "- position:real[1]" in res.stdout
+    assert "init_particle(p:type(particle)[0]" in res.stdout
+
+
+def test_cli_parse_modern_fixture_prints_derived_block_verbatim():
+    fixture = Path(__file__).parent.parent / "semantics" / "fixtures" / "modern_pyi_example.f90"
+    cmd = [sys.executable, "-m", "x2py", str(fixture), "--parse"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    expected_block = """      Derived types: 1
+        - type particle (fields=3, methods=0)
+          Fields: 3
+            - id:integer[0]
+            - mass:real[0]
+            - position:real[1]
+"""
+    assert expected_block in res.stdout

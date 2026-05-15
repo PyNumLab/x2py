@@ -17,7 +17,7 @@ def test_modern_fortran_example_pyi_snapshot():
     pass
 
 def init_particle(
-    p: Unknown,
+    p: particle,
     pid: Int32,
     mass: Float64,
     x: Float64,
@@ -26,7 +26,7 @@ def init_particle(
 ) -> None: ...
 
 def kinetic_energy(
-    p: Unknown,
+    p: particle,
     vx: Float64,
     vy: Float64,
     vz: Float64
