@@ -270,7 +270,7 @@ def test_cli_parse_shows_module_derived_types_and_derived_arg_kinds():
     cmd = [sys.executable, "-m", "x2py", str(fixture), "--parse"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
-    assert "      Derived types: 1" in res.stdout
+    assert "      Derived types: 3" in res.stdout
     assert "type particle" in res.stdout
     assert "Fields: 3" in res.stdout
     assert "- id:integer[0]" in res.stdout
@@ -284,11 +284,17 @@ def test_cli_parse_modern_fixture_prints_derived_block_verbatim():
     cmd = [sys.executable, "-m", "x2py", str(fixture), "--parse"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
-    expected_block = """      Derived types: 1
+    expected_block = """      Derived types: 3
         - type particle (fields=3, methods=0)
           Fields: 3
             - id:integer[0]
             - mass:real[0]
             - position:real[1]
+        - type vector3 (fields=1, methods=0)
+          Fields: 1
+            - values:real[1]
+        - type hidden_state (fields=1, methods=0)
+          Fields: 1
+            - code:integer[0]
 """
     assert expected_block in res.stdout
