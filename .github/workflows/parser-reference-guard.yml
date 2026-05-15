@@ -64,7 +64,7 @@ jobs:
             exit 0
           fi
 
-          if echo "$CHANGED_FILES" | grep -Eq "^(fortran_parser/|tests/fcode/|tests/test_fortran_signature_parser.py)"; then
+          if echo "$CHANGED_FILES" | grep -Eq "^(fortran_parser/|tests/parser/|tests/data/fortran/)"; then
             echo "Parser-related files changed without updating parser_implementation_reference.md."
             exit 1
           fi

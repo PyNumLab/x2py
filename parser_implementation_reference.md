@@ -38,6 +38,8 @@ another source language.
 - Internal procedures inside `contains` blocks are ignored when parsing a
   parent routine signature.  
 - Interface-contained procedures flagged as `in_interface`.  
+- Procedure-scope `import :: symbol` inside interface bodies is preserved on
+  the parsed interface procedure signature as `import(symbol)`.
 
 ### 2.3 Types, arguments, declarations
 
@@ -150,7 +152,7 @@ Primary regression command:
 This runs the full parser test suite, including fixtures, corpus checks, CLI,
 and error handling coverage.
 
-### 4.2 Unit-style parser tests (`tests/test_fortran_signature_parser.py`)
+### 4.2 Unit-style parser tests (`tests/parser/test_*.py`)
 
 Covers, among others:
 - intent/kind/rank extraction for routine arguments
@@ -169,25 +171,28 @@ Covers, among others:
 - shape symbol collection helpers
 - readiness diagnostics and unsupported detection
 
-### 4.3 Fixture and corpus regression (`tests/test_fortran_fixture_suite.py`)
+### 4.3 Fixture and corpus regression (`tests/parser/test_fortran_fixture_suite.py`)
 
 - Golden fixture tests:
-  - parse curated fixtures under `tests/fcode/*.f90` and `tests/fcode/*.f`
-  - compare normalized parse output against sibling JSON goldens
+  - parse shared Fortran fixtures under `tests/data/fortran/general`
+  - compare normalized parse output against parser JSON goldens under
+    `tests/parser/fortran/fixtures/general`
 - Large corpus parse-only sanity tests:
-  - parse BLAS source fixtures under `tests/fcode/blas`
-  - parse LAPACK source fixtures under `tests/fcode/lapack`
+  - parse BLAS source fixtures under `tests/data/fortran/blas`
+  - parse LAPACK source fixtures under `tests/data/fortran/lapack`
+  - parse SciFortran source fixtures under `tests/data/fortran/scifortran`
+    against direct parser goldens under `tests/parser/fortran/fixtures/scifortran`
 
 The corpus checks provide broad “does it parse?” coverage over many real-world
 fixed/free-form Fortran files without requiring full golden outputs for each.
 
 ### 4.4 Golden regeneration support
 
-- Script provided: `tests/fcode/generate_fortran_parser_goldens.py`.
+- Script provided: `tests/parser/fortran/generate_fortran_parser_goldens.py`.
 - Use when parser behavior is intentionally changed and golden JSON needs
   updating.
 - Optional in-test auto-update flow is also supported:
-  - `FORTRAN_PARSER_UPDATE_GOLDENS=1 python -m pytest -q tests/test_fortran_fixture_suite.py --confcutdir=tests/`
+  - `FORTRAN_PARSER_UPDATE_GOLDENS=1 python -m pytest -q tests/parser/test_fortran_fixture_suite.py --confcutdir=tests/`
 
 ### 4.5 CLI tests (`tests/test_cli.py`)
 
@@ -227,19 +232,19 @@ Dedicated tests for the error handling system:
   - CLI argument parsing, report formatting, and user-facing parse-error handling.
 - `fortran_parser/__main__.py`
   - `python -m fortran_parser` entry point.
-- `tests/test_fortran_signature_parser.py`
+- `tests/parser/test_*.py`
   - focused behavior tests per feature.
-- `tests/test_error_handling.py`
+- `tests/parser/test_error_handling.py`
   - dedicated error handling and `FortranParseError` behavior tests.
-- `tests/test_fortran_fixture_suite.py`
+- `tests/parser/test_fortran_fixture_suite.py`
   - fixture-vs-golden regression checks.
-- `tests/test_cli.py`
+- `tests/parser/test_cli.py`
   - end-user command behavior tests.
-- `tests/fcode/*.f90`, `*.f`
-  - fixture Fortran samples.
-- `tests/fcode/*.json`
-  - fixture golden parse outputs.
-- `tests/fcode/generate_fortran_parser_goldens.py`
+- `tests/data/fortran/`
+  - shared Fortran fixture corpus used by parser, semantics, and pyi tests.
+- `tests/parser/fortran/fixtures/`
+  - parser golden parse outputs.
+- `tests/parser/fortran/generate_fortran_parser_goldens.py`
   - golden regeneration tool.
 
 ## 6) Reimplementation checklist for another language
@@ -276,6 +281,9 @@ implemented today:
   interface` are represented separately and flagged as interface procedures.
   Interface-local argument declarations do not conflict with host declarations;
   callback dummies referenced by interface headers are typed as `procedure`.
+- **Interface import tracking**: `import :: symbol` inside an interface
+  procedure is treated as procedure metadata and emitted as an `import(symbol)`
+  signature attribute, rather than as a module variable declaration.
 - **Internal procedure scope protection**: nested procedures in a host
   `contains` block are not merged into the host routine signature.
 - **Name-reuse safety across scopes**: fixtures/tests cover same identifier
@@ -329,9 +337,8 @@ failing when parser-related files change without a matching update to this
 reference. The guard currently watches these path groups:
 
 - `fortran_parser/`
-- `tests/fcode/`
-- `tests/test_fortran_signature_parser.py`
-- `.github/workflows/`
+- `tests/parser/`
+- `tests/data/fortran/`
 
 If a specific PR is a legitimate exception, either:
 
