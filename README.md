@@ -316,6 +316,19 @@ def hidden_proc(
 This behavior is covered in
 `tests/semantics/test_pyi_printer_modern_example.py::test_pyi_visibility_private_public_markers`.
 
+### Example 9: module variable visibility in generated `.pyi`
+
+Module-scope variables are emitted in the `.pyi` output and carry visibility
+markers when private:
+
+```python
+counter: Int32
+hidden_scale: Float64  # private
+```
+
+This corresponds to a module with default `private` visibility where
+`counter` is explicitly exported and `hidden_scale` remains private.
+
 Parse output for the same fixture now includes the derived type definition and field list:
 
 ```bash

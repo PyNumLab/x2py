@@ -91,14 +91,15 @@ class FortranToIRConverter:
                 SemanticConstraint("Pointer")
             )
 
+        intent = getattr(arg, "intent", "in")
         ownership = semantic_type.ownership
-        ownership.mutable = arg.intent.lower() != "in"
+        ownership.mutable = str(intent).lower() != "in"
 
         return SemanticArgument(
             name=arg.name,
             semantic_type=semantic_type,
-            intent=arg.intent,
-            optional=arg.optional,
+            intent=intent,
+            optional=getattr(arg, "optional", False),
             visibility=getattr(arg, "visibility", "public"),
         )
 
@@ -192,6 +193,10 @@ class FortranToIRConverter:
             self.derived_type_to_semantic_class(dtype, procedure_lookup)
             for dtype in module.derived_types
         ]
+        semantic_variables = [
+            self.argument_to_semantic_argument(var)
+            for var in getattr(module, "variables", [])
+        ]
 
         for semantic_cls in semantic_classes:
             semantic_cls.visibility = self._symbol_visibility(module, semantic_cls.name)
@@ -200,6 +205,7 @@ class FortranToIRConverter:
             name=module.name,
             functions=semantic_functions,
             classes=semantic_classes,
+            variables=semantic_variables,
             imports=list(module.uses.keys()),
         )
 

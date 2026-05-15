@@ -169,6 +169,7 @@ class SemanticModule:
     functions: list[SemanticFunction] = field(default_factory=list)
 
     classes: list[SemanticClass] = field(default_factory=list)
+    variables: list[SemanticArgument] = field(default_factory=list)
 
     imports: list[str] = field(default_factory=list)
 

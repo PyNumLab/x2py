@@ -120,6 +120,10 @@ class PyiPrinter:
             sections.append(self.emit_class(cls))
             sections.append("")
 
+        for var in module.variables:
+            sections.append(self.emit_argument(var))
+            sections.append("")
+
         for func in module.functions:
             sections.append(self.emit_function(func))
             sections.append("")
