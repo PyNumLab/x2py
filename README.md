@@ -244,7 +244,9 @@ Expected generated `.pyi` output:
 
 ```python
 class particle:
-    pass
+    id: Int32
+    mass: Float64
+    position: Float64[Shape('3'), FortranContiguous]
 
 def init_particle(
     p: particle,
@@ -278,6 +280,41 @@ def fill_identity3(
 ```
 
 This snapshot is also verified in `tests/semantics/test_pyi_printer_modern_example.py`.
+
+### Example 8: visibility mapping (`public` / `private`) in generated `.pyi`
+
+Fortran module visibility is now propagated into semantic IR and reflected in
+the generated stubs.
+
+- Default/public symbol rules from the module are resolved into semantic
+  `visibility` for functions and derived types.
+- Private functions/classes are emitted with `@private`.
+- Variable-like declarations can be annotated as private with an inline
+  marker (`# private`) when visibility metadata is available.
+
+Illustrative generated output:
+
+```python
+class visible_t:
+    a: Int32
+    b: Int32
+
+@private
+class hidden_t:
+    z: Int32
+
+def pub_proc(
+    x: Int32
+) -> None: ...
+
+@private
+def hidden_proc(
+    x: Int32
+) -> None: ...
+```
+
+This behavior is covered in
+`tests/semantics/test_pyi_printer_modern_example.py::test_pyi_visibility_private_public_markers`.
 
 Parse output for the same fixture now includes the derived type definition and field list:
 
