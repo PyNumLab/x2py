@@ -15,13 +15,12 @@ counter: Int32
 hidden_scale: private[Float64]
 
 def init_particle(
-    p: particle,
     pid: Int32,
     mass: Float64,
     x: Float64,
     y: Float64,
     z: Float64
-) -> None: ...
+) -> particle: ...
 
 def kinetic_energy(
     p: particle,
@@ -33,20 +32,18 @@ def kinetic_energy(
 def scale_vector(
     v: Float64[Shape(':'), FortranContiguous],
     alpha: Float64
-) -> None: ...
+) -> Returns["v", Float64[Shape(':'), FortranContiguous]]: ...
 
 def dot3(
     a: Float64[Shape('3'), FortranContiguous],
     b: Float64[Shape('3'), FortranContiguous]
 ) -> Float64: ...
 
-def fill_identity3(
-    a: Float64[Shape('3', '3'), FortranContiguous]
-) -> None: ...
+def fill_identity3() -> Float64[Shape('3', '3'), FortranContiguous]: ...
 
 def normalize_particle(
     p: particle
-) -> None: ...
+) -> Returns["p", particle]: ...
 
 @private
 def hidden_proc(

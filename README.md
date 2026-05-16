@@ -73,6 +73,9 @@ models are unchanged.
 
 Fortran source inputs live under `tests/data/fortran`. Stage-specific tests and expected fixtures live under `tests/parser`, `tests/semantics`, and `tests/pyi`.
 
+The editable wrapper `.pyi` format is documented in
+[`docs/pyi_format.md`](docs/pyi_format.md).
+
 ## Terminal usage
 
 `x2py` exposes three stage flags:

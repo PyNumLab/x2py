@@ -1,5 +1,5 @@
 {
-  "parser": "parse_fortran_signatures",
+  "parser": "parse_fortran_procedures",
   "error_type": "FortranParseError",
   "message_contains": [
     "Function result variable 'res' in function 'f' shadows an argument name."

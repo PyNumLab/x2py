@@ -9,7 +9,7 @@ from pathlib import Path
 
 from x2py import FortranParseError, parse_fortran_file
 
-def parse_fortran_signatures(source, filename=None):
+def parse_fortran_procedures(source, filename=None):
     return parse_fortran_file(source, filename=filename).procedures
 
 
@@ -25,11 +25,11 @@ _TESTS_DIR = Path(__file__).resolve().parents[3]
 _ERRORS_DIR = _TESTS_DIR / "data" / "fortran" / "errors" / "parser"
 _EXPECTED_ERRORS_DIR = _TESTS_DIR / "parser" / "fortran" / "fixtures" / "errors"
 _PARSER_MAP = {
-    "parse_fortran_signatures": parse_fortran_signatures,
+    "parse_fortran_procedures": parse_fortran_procedures,
     "parse_fortran_types": parse_fortran_types,
     "parse_fortran_modules": parse_fortran_modules,
 }
-_DEFAULT_PARSER = "parse_fortran_signatures"
+_DEFAULT_PARSER = "parse_fortran_procedures"
 
 
 def _get_parser_for_fixture(fixture: Path) -> str:

@@ -323,12 +323,12 @@
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
-                  "mutable": true,
+                  "mutable": false,
                   "aliasing": true
                 },
                 "metadata": {}
               },
-              "intent": "unknown",
+              "intent": "in",
               "optional": false,
               "visibility": "public",
               "default_value": null,
@@ -354,12 +354,12 @@
             "coercions": [],
             "ownership": {
               "ownership": "borrowed",
-              "mutable": true,
+              "mutable": false,
               "aliasing": true
             },
             "metadata": {}
           },
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
@@ -376,12 +376,12 @@
             "coercions": [],
             "ownership": {
               "ownership": "borrowed",
-              "mutable": true,
+              "mutable": false,
               "aliasing": true
             },
             "metadata": {}
           },
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
@@ -398,12 +398,12 @@
             "coercions": [],
             "ownership": {
               "ownership": "borrowed",
-              "mutable": true,
+              "mutable": false,
               "aliasing": true
             },
             "metadata": {}
           },
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
@@ -420,12 +420,12 @@
             "coercions": [],
             "ownership": {
               "ownership": "borrowed",
-              "mutable": true,
+              "mutable": false,
               "aliasing": true
             },
             "metadata": {}
           },
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
@@ -442,12 +442,12 @@
             "coercions": [],
             "ownership": {
               "ownership": "borrowed",
-              "mutable": true,
+              "mutable": false,
               "aliasing": true
             },
             "metadata": {}
           },
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,

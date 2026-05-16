@@ -8,28 +8,6 @@
           "native_name": "init_particle",
           "arguments": [
             {
-              "name": "p",
-              "semantic_type": {
-                "name": "particle",
-                "rank": 0,
-                "dtype": "particle",
-                "shape": [],
-                "constraints": [],
-                "coercions": [],
-                "ownership": {
-                  "ownership": "borrowed",
-                  "mutable": true,
-                  "aliasing": true
-                },
-                "metadata": {}
-              },
-              "intent": "out",
-              "optional": false,
-              "visibility": "public",
-              "default_value": null,
-              "metadata": {}
-            },
-            {
               "name": "pid",
               "semantic_type": {
                 "name": "Int32",
@@ -134,6 +112,28 @@
                 "metadata": {}
               },
               "intent": "in",
+              "optional": false,
+              "visibility": "public",
+              "default_value": null,
+              "metadata": {}
+            },
+            {
+              "name": "p",
+              "semantic_type": {
+                "name": "particle",
+                "rank": 0,
+                "dtype": "particle",
+                "shape": [],
+                "constraints": [],
+                "coercions": [],
+                "ownership": {
+                  "ownership": "borrowed",
+                  "mutable": true,
+                  "aliasing": true
+                },
+                "metadata": {}
+              },
+              "intent": "out",
               "optional": false,
               "visibility": "public",
               "default_value": null,
@@ -551,12 +551,12 @@
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
-                  "mutable": true,
+                  "mutable": false,
                   "aliasing": true
                 },
                 "metadata": {}
               },
-              "intent": "unknown",
+              "intent": "in",
               "optional": false,
               "visibility": "public",
               "default_value": null,
@@ -573,12 +573,12 @@
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
-                  "mutable": true,
+                  "mutable": false,
                   "aliasing": true
                 },
                 "metadata": {}
               },
-              "intent": "unknown",
+              "intent": "in",
               "optional": false,
               "visibility": "public",
               "default_value": null,
@@ -608,12 +608,12 @@
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
-                  "mutable": true,
+                  "mutable": false,
                   "aliasing": true
                 },
                 "metadata": {}
               },
-              "intent": "unknown",
+              "intent": "in",
               "optional": false,
               "visibility": "public",
               "default_value": null,
@@ -654,12 +654,12 @@
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
-                  "mutable": true,
+                  "mutable": false,
                   "aliasing": true
                 },
                 "metadata": {}
               },
-              "intent": "unknown",
+              "intent": "in",
               "optional": false,
               "visibility": "public",
               "default_value": null,
@@ -687,12 +687,12 @@
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
-                  "mutable": true,
+                  "mutable": false,
                   "aliasing": true
                 },
                 "metadata": {}
               },
-              "intent": "unknown",
+              "intent": "in",
               "optional": false,
               "visibility": "public",
               "default_value": null,
@@ -718,12 +718,12 @@
             "coercions": [],
             "ownership": {
               "ownership": "borrowed",
-              "mutable": true,
+              "mutable": false,
               "aliasing": true
             },
             "metadata": {}
           },
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
@@ -740,12 +740,12 @@
             "coercions": [],
             "ownership": {
               "ownership": "borrowed",
-              "mutable": true,
+              "mutable": false,
               "aliasing": true
             },
             "metadata": {}
           },
-          "intent": "unknown",
+          "intent": "in",
           "optional": false,
           "visibility": "private",
           "default_value": null,

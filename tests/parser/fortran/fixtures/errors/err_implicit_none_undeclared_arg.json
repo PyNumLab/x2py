@@ -1,5 +1,5 @@
 {
-  "parser": "parse_fortran_signatures",
+  "parser": "parse_fortran_procedures",
   "error_type": "FortranParseError",
   "message_contains": [
     "Argument 'y' in procedure 'foo' has no type declaration (implicit none is active)."

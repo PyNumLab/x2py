@@ -692,3 +692,25 @@ end module m
 """
     parsed = parse_fortran_file(code, filename="ok.f90")
     assert len(parsed.modules[0].variables) == 3
+
+
+def test_duplicate_variable_in_program_raises_parse_error():
+    code = """
+program main
+  integer n
+  real n
+end program main
+"""
+    with pytest.raises(FortranParseError, match="Duplicate variable.*program"):
+        parse_fortran_file(code, filename="dup_program_var.f90")
+
+
+def test_duplicate_variable_in_block_data_raises_parse_error():
+    code = """
+      block data init_data
+      integer n
+      real n
+      end
+"""
+    with pytest.raises(FortranParseError, match="Duplicate variable.*block data"):
+        parse_fortran_file(code, filename="dup_block_data_var.f")

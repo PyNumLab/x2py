@@ -5,7 +5,7 @@ from fortran_parser.cli import _format_wrap_readiness
 
 from x2py import FortranParseError, assess_wrap_readiness, parse_fortran_file, parse_fortran_project
 
-parse_fortran_project_signatures = lambda files: list(parse_fortran_project(files).procedures.values())
+collect_project_procedure_signatures = lambda files: list(parse_fortran_project(files).procedures.values())
 parse_fortran_modules = lambda code, filename=None: parse_fortran_file(code, filename=filename).modules
 parse_fortran_module = lambda code, filename=None: parse_fortran_modules(code, filename=filename)[0]
 parse_fortran_submodules = lambda code, filename=None: parse_fortran_file(code, filename=filename).submodules
@@ -145,7 +145,7 @@ end subroutine step
 end module solver
 """,
     }
-    signatures = parse_fortran_project_signatures(files)
+    signatures = collect_project_procedure_signatures(files)
     step = [s for s in signatures if s.name == "step"][0]
     assert step.arguments[0].kind == "rk"
 
@@ -563,7 +563,7 @@ subroutine step(x)
 end subroutine step
 """,
     }
-    sig = parse_fortran_project_signatures(files)[0]
+    sig = collect_project_procedure_signatures(files)[0]
     assert sig.arguments[0].shape == ["m*2"]
 
 
@@ -927,7 +927,7 @@ contains
 end module dims_mod
 """
     }
-    sig = parse_fortran_project_signatures(files)[0]
+    sig = collect_project_procedure_signatures(files)[0]
     assert sig.arguments[0].shape == ["0:n1-1"]
     assert sig.arguments[1].shape == ["1:n0*2"]
 
@@ -949,9 +949,9 @@ end module dims_mod
 """
     }
 
-    sig = parse_fortran_project_signatures(files)[0]
+    sig = collect_project_procedure_signatures(files)[0]
     assert sig.name == "a"
-    sig_b = parse_fortran_project_signatures(files)[1]
+    sig_b = collect_project_procedure_signatures(files)[1]
     assert sig_b.name in {"a", "b"}
     if sig_b.name == "b":
         assert sig_b.arguments[0].shape == ["1:n"]
@@ -971,7 +971,7 @@ contains
 end module kinds_mod
 """
     }
-    sig = parse_fortran_project_signatures(files)[0]
+    sig = collect_project_procedure_signatures(files)[0]
     assert sig.arguments[0].shape == ["1:ip"]
     assert sig.arguments[0].shape == ["1:ip"]
     assert sig.arguments[0].shape == ["1:ip"]
@@ -1007,7 +1007,7 @@ contains
 end module dims_mod
 """
     }
-    sig = parse_fortran_project_signatures(files)[0]
+    sig = collect_project_procedure_signatures(files)[0]
     assert sig.arguments[0].shape[0].startswith("1:")
 
 
@@ -1052,7 +1052,7 @@ contains
 end module expr_mod
 """
     }
-    sig = parse_fortran_project_signatures(files)[0]
+    sig = collect_project_procedure_signatures(files)[0]
     assert [a.shape[0] for a in sig.arguments] == ["1:p_add", "1:p_sub", "1:p_mul", "1:p_div", "1:p_pow", "0:p_mix", "1:-(-a + b)", "1:(a+b)*(c+1)-1", "1:(a-b)*(a-c)"]
 
 

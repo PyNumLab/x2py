@@ -7,7 +7,7 @@ import pytest
 
 from x2py import FortranParseError, parse_fortran_file
 
-parse_fortran_signatures = lambda source, filename=None: parse_fortran_file(source, filename=filename).procedures
+parse_fortran_procedures = lambda source, filename=None: parse_fortran_file(source, filename=filename).procedures
 parse_fortran_types = lambda source, filename=None: parse_fortran_file(source, filename=filename).derived_types
 parse_fortran_modules = lambda source, filename=None: parse_fortran_file(source, filename=filename).modules
 
@@ -16,7 +16,7 @@ _TESTS_DIR = Path(__file__).resolve().parents[1]
 _ERRORS_DIR = _TESTS_DIR / "data" / "fortran" / "errors" / "parser"
 _EXPECTED_ERRORS_DIR = Path(__file__).parent / "fortran" / "fixtures" / "errors"
 _PARSER_MAP = {
-    "parse_fortran_signatures": parse_fortran_signatures,
+    "parse_fortran_procedures": parse_fortran_procedures,
     "parse_fortran_types": parse_fortran_types,
     "parse_fortran_modules": parse_fortran_modules,
 }
@@ -54,7 +54,7 @@ def _run_error_fixture(fixture: Path, *, filename_for_parser: str, expected_path
 
     if update_mode:
         expected = _load_expected_error(expected_path)
-        parser_name = expected.get("parser", "parse_fortran_signatures")
+        parser_name = expected.get("parser", "parse_fortran_procedures")
         parser_fn = _PARSER_MAP[parser_name]
         try:
             parser_fn(source, filename=filename_for_parser)

@@ -13,7 +13,7 @@ same_name_s: Unknown
 
 def do_work_i(
     same_name: Int32
-) -> None: ...
+) -> Returns["same_name", Int32]: ...
 
 def do_work_r(
     same_name: Float64
@@ -25,11 +25,11 @@ def do_work_l(
 
 def host_one(
     same_name: Int32
-) -> None: ...
+) -> Returns["same_name", Int32]: ...
 
 def host_two(
     same_name: Float64
-) -> None: ...
+) -> Returns["same_name", Float64]: ...
 
 def convert_to_complex(
     same_name: Int32
