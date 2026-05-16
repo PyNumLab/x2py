@@ -9,9 +9,13 @@ from semantics.pyi_printer import (
     PyiPrinter,
 )
 from semantics.models import (
+    ProjectionMapping,
+    SemanticArgument,
     SemanticClass,
     SemanticMethod,
     SemanticModule,
+    SemanticFunction,
+    SemanticType,
 )
 
 
@@ -601,3 +605,43 @@ end module
     code = generate_pyi(source)
     assert "counter: Int32" in code
     assert "hidden_scale: private[Float64]" in code
+
+
+def test_emit_module_with_projection_helpers_and_private_function():
+    module = SemanticModule(
+        name="projection_mod",
+        functions=[
+            SemanticFunction(
+                name="wrapper",
+                native_name="wrapper",
+                arguments=[
+                    SemanticArgument("x", SemanticType("Float64", dtype="Float64")),
+                    SemanticArgument("b", SemanticType("Int32", dtype="Int32"), optional=True),
+                ],
+                projection=[
+                    ProjectionMapping(native_position=0, python_position=0),
+                    ProjectionMapping(native_position=1, value_kind="const", value=1),
+                    ProjectionMapping(
+                        native_position=2,
+                        value_kind="len",
+                        value={"kind": "arg", "position": 0},
+                    ),
+                    ProjectionMapping(
+                        native_position=3,
+                        value_kind="shape",
+                        value={"value": {"kind": "arg", "position": 0}, "dim": 0},
+                    ),
+                    ProjectionMapping(
+                        native_position=4,
+                        value_kind="is_present",
+                        value={"kind": "arg", "position": 1},
+                    ),
+                    ProjectionMapping(native_position=5, value_kind="work", value="tmp"),
+                ],
+            )
+        ],
+    )
+
+    code = emit_module(module)
+
+    assert "@native_call([Arg(0), Const(1), Len(Arg(0)), Shape(Arg(0), 0), IsPresent(Arg(1)), Work('tmp')])" in code

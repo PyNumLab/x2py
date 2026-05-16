@@ -4,14 +4,26 @@ from dataclasses import asdict
 from x2py import parse_fortran_file as parse_fortran_source
 
 from semantics.fortran2ir import (
+    FortranToIRConverter,
     fortran_module_to_semantic_module,
 )
 
 from semantics.models import (
+    ProjectionMapping,
+    SemanticArgument,
     SemanticModule,
     SemanticClass,
     SemanticFunction,
     SemanticConstraint,
+    SemanticType,
+)
+from fortran_parser.models import (
+    FortranArgument,
+    FortranDerivedType,
+    FortranFile,
+    FortranModule,
+    FortranProcedureSignature,
+    FortranVariable,
 )
 
 
@@ -531,3 +543,64 @@ end module
 
     assert smod.name == "class_mod"
     assert get_function(smod, "touch").arguments[0].semantic_type.name == "Int32"
+
+
+def test_fortran_to_ir_converter_helpers():
+    converter = FortranToIRConverter()
+    var = FortranVariable(name="x", base_type="integer", rank=1, shape=[":"], is_parameter=True)
+    arg = FortranArgument(name="x", base_type="integer", rank=1, shape=[":"], allocatable=True)
+    proc = FortranProcedureSignature(name="doit", kind="subroutine", arguments=[arg])
+    dtype = FortranDerivedType(name="thing", fields=[arg], methods=["doit"], extends="base")
+    module = FortranModule(
+        name="m",
+        procedures=[proc],
+        derived_types=[dtype],
+        uses={"iso_c_binding": []},
+        public_symbols=["doit"],
+        private_symbols=["thing"],
+        variables=[var],
+    )
+    parsed = FortranFile(filename="m.f90", modules=[module], procedures=[proc])
+
+    semantic_var = converter.visit(var)
+    semantic_arg = converter.visit_argument(arg)
+    semantic_proc = converter.visit_procedure(proc)
+    semantic_dtype = converter.visit_derived_type(dtype, procedure_lookup={"doit": semantic_proc})
+    semantic_module = converter.visit_module(module)
+    semantic_file_modules = converter.visit_file_modules(parsed, standalone_module_name="standalone")
+
+    assert semantic_var.constraints[-1].name == "Constant"
+    assert semantic_arg.semantic_type.constraints[-1].name == "Allocatable"
+    assert semantic_proc.projection[0].python_position == 0
+    assert semantic_dtype.base_classes == ["base"]
+    assert semantic_module.imports == ["iso_c_binding"]
+    assert semantic_file_modules[1].name == "standalone"
+    assert converter._standalone_module_name(parsed) == "m"
+    assert converter._symbol_visibility(module, "thing") == "private"
+    assert converter._symbol_visibility(module, "doit") == "public"
+    assert converter.first_module(parsed) is module
+    assert converter._base_classes(dtype) == ["base"]
+    assert converter._projected_procedure_arguments(proc)[0].name == "x"
+
+
+def test_semantic_function_projection_equality_and_placeholders():
+    left = SemanticFunction(
+        name="f",
+        native_name="f",
+        arguments=[
+            SemanticArgument("x", SemanticType("Int32", dtype="Int32")),
+            SemanticArgument("y", SemanticType("Float64", dtype="Float64"), intent="out"),
+        ],
+        projection=[ProjectionMapping(native_position=1, result_position=0, intent="out")],
+    )
+    right = SemanticFunction(
+        name="f",
+        native_name="f",
+        arguments=[
+            SemanticArgument("a", SemanticType("Int32", dtype="Int32")),
+            SemanticArgument("b", SemanticType("Float64", dtype="Float64"), intent="out"),
+        ],
+        projection=[ProjectionMapping(native_position=1, result_position=0, intent="out")],
+    )
+
+    assert left == right
