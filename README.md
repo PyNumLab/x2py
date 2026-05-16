@@ -3,15 +3,9 @@
 Standalone extraction of the Fortran parser used for wrapper-oriented signature
 extraction.
 
-## Status
+[![Tests](https://github.com/saidctb/pyccel-x2py/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/saidctb/pyccel-x2py/actions/workflows/tests.yml)
+[![Coverage](https://codecov.io/gh/saidctb/pyccel-x2py/branch/main/graph/badge.svg)](https://codecov.io/gh/saidctb/pyccel-x2py)
 
-- Coverage: the parser, semantic IR, and `.pyi` projection pipeline are covered
-  by fixture-based tests under `tests/parser`, `tests/semantics`, and
-  `tests/pyi`.
-- Test status: last verified on `2026-05-16` with `python3 -m pytest -q`
-  passing `2800` tests.
-- Docs status: [`docs/pyi_format.md`](docs/pyi_format.md) matches the current
-  `@native_call([...])` syntax and the projection examples in this README.
 
 ## What the parser handles
 
