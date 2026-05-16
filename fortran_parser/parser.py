@@ -1341,6 +1341,137 @@ class FortranParser:
         return self._assess_wrap_readiness(code, filename=filename)
 
     # ------------------------------------------------------------------
+    # Scope symbol-table helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _scope_key(name: str) -> str:
+        return name.lower()
+
+    def _new_procedure_scope_state(
+        self,
+        signature: FortranProcedureSignature,
+        *,
+        symbols: dict[str, FortranArgument],
+        typed_symbols: set[str] | None = None,
+        explicit_result: bool = False,
+    ) -> dict:
+        state = {
+            "signature": signature,
+            "symbols": symbols,
+            "typed_symbols": typed_symbols or set(),
+            "uses": {},
+            "in_contains": False,
+            "local_params": {},
+            "legacy_local_params": set(),
+            "implicit_typed_symbols": {},
+            "declared_local_types": {},
+            "implicit_none": False,
+            "imports": set(),
+            "external_symbols": set(),
+            "includes": [],
+            "filename": None,
+            "local_type_depth": 0,
+        }
+        if explicit_result:
+            state["explicit_result"] = True
+        return state
+
+    def _proc_scope_get_symbol(self, proc_state: dict, name: str) -> FortranArgument | None:
+        return proc_state["symbols"].get(self._scope_key(name))
+
+    def _proc_scope_symbol_is_declared(self, proc_state: dict, name: str) -> bool:
+        return self._scope_key(name) in proc_state["typed_symbols"]
+
+    def _proc_scope_mark_declared_symbol(
+        self,
+        proc_state: dict,
+        name: str,
+        *,
+        filename: str | None = None,
+        line_number: int | None = None,
+        source_line: str | None = None,
+    ) -> str:
+        key = self._scope_key(name)
+        if key in proc_state["typed_symbols"]:
+            raise FortranParseError(
+                f"Duplicate declaration of symbol '{name}' in procedure '{proc_state['signature'].name}'.",
+                filename=filename,
+                line_number=line_number,
+                source_line=source_line,
+            )
+        proc_state["typed_symbols"].add(key)
+        return key
+
+    def _proc_scope_add_external_symbol(self, proc_state: dict, name: str) -> str:
+        key = self._scope_key(name)
+        proc_state.setdefault("external_symbols", set()).add(key)
+        arg = self._proc_scope_get_symbol(proc_state, key)
+        if arg is not None and arg.base_type == "unknown":
+            arg.base_type = "procedure"
+        return key
+
+    def _proc_scope_add_include(self, proc_state: dict, include_path: str) -> None:
+        proc_state.setdefault("includes", []).append(include_path)
+
+    def _proc_scope_add_imports(self, proc_state: dict, names: list[str]) -> None:
+        proc_state.setdefault("imports", set()).update(self._scope_key(n) for n in names if n.strip())
+
+    def _proc_scope_set_declared_local_type(self, proc_state: dict, name: str, meta: dict) -> None:
+        key = self._scope_key(name)
+        proc_state["declared_local_types"][key] = {
+            "base_type": meta["base_type"],
+            "kind": meta["kind"],
+        }
+
+    def _proc_scope_add_local_parameter(
+        self,
+        proc_state: dict,
+        name: str,
+        value: str,
+        *,
+        filename: str | None = None,
+        line_number: int | None = None,
+        source_line: str | None = None,
+        require_declared: bool = False,
+        register_implicit_if_missing: bool = False,
+        legacy: bool = False,
+    ) -> None:
+        key = self._scope_key(name)
+        if require_declared and not self._proc_scope_symbol_is_declared(proc_state, key):
+            raise FortranParseError(
+                f"Unknown datatype for PARAMETER symbol '{name}' in procedure '{proc_state['signature'].name}'.",
+                filename=filename,
+                line_number=line_number,
+                source_line=source_line,
+            )
+        if key in proc_state["local_params"]:
+            raise FortranParseError(
+                f"Duplicate PARAMETER declaration of symbol '{name}' in procedure '{proc_state['signature'].name}'.",
+                filename=filename,
+                line_number=line_number,
+                source_line=source_line,
+            )
+        proc_state["local_params"][key] = value
+        if register_implicit_if_missing and not self._proc_scope_symbol_is_declared(proc_state, key):
+            proc_state["implicit_typed_symbols"][key] = _infer_implicit_base_type(name)
+        if legacy:
+            proc_state["legacy_local_params"].add(key)
+
+    @staticmethod
+    def _insert_unique_scope_symbol(
+        scope: dict[str, object],
+        key: str,
+        value: object,
+        *,
+        label: str,
+        filename: str | None = None,
+    ) -> None:
+        if key in scope:
+            raise FortranParseError(f"Duplicate symbol '{key}' in {label}.", filename=filename)
+        scope[key] = value
+
+    # ------------------------------------------------------------------
     # High-level unit parsing (largest scopes first)
     # ------------------------------------------------------------------
 
@@ -1590,8 +1721,14 @@ class FortranParser:
                     iface_proc = self._parse_header(s, current_module, True)
                     if iface_proc:
                         iface_name = iface_proc["signature"].name.lower()
-                        current_proc["typed_symbols"].add(iface_name)
-                        arg = current_proc["symbols"].get(iface_name)
+                        self._proc_scope_mark_declared_symbol(
+                            current_proc,
+                            iface_name,
+                            filename=filename,
+                            line_number=lineno,
+                            source_line=source_line,
+                        )
+                        arg = self._proc_scope_get_symbol(current_proc, iface_name)
                         if arg is not None:
                             arg.base_type = "procedure"
                             arg.kind = None
@@ -1663,10 +1800,7 @@ class FortranParser:
         if external_match:
             names = [n.strip().lower() for n in split_csv(external_match.group("names") or "") if n.strip()]
             for name in names:
-                proc_state.setdefault("external_symbols", set()).add(name)
-                arg = proc_state["symbols"].get(name)
-                if arg is not None and arg.base_type == "unknown":
-                    arg.base_type = "procedure"
+                self._proc_scope_add_external_symbol(proc_state, name)
             return
         if re.match(r"^(function|subroutine)\b", stripped, flags=re.IGNORECASE):
             # Legacy callback declarations often appear as bare:
@@ -1691,12 +1825,12 @@ class FortranParser:
             return
         include_match = _INCLUDE_RE.match(stripped)
         if include_match:
-            proc_state.setdefault("includes", []).append(include_match.group("path"))
+            self._proc_scope_add_include(proc_state, include_match.group("path"))
             return
         import_match = _IMPORT_RE.match(stripped)
         if import_match:
             symbols = [s.strip().lower() for s in split_csv(import_match.group("symbols") or "") if s.strip()]
-            proc_state.setdefault("imports", set()).update(symbols)
+            self._proc_scope_add_imports(proc_state, symbols)
             return
 
         pm = _PARAM_RE.match(stripped)
@@ -1705,14 +1839,14 @@ class FortranParser:
                 if "=" not in assign:
                     continue
                 k, v = [x.strip() for x in assign.split("=", 1)]
-                if k.lower() in proc_state["local_params"]:
-                    raise FortranParseError(
-                        f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'.",
-                        filename=filename,
-                        line_number=lineno,
-                        source_line=source_line,
-                    )
-                proc_state["local_params"][k.lower()] = v
+                self._proc_scope_add_local_parameter(
+                    proc_state,
+                    k,
+                    v,
+                    filename=filename,
+                    line_number=lineno,
+                    source_line=source_line,
+                )
             return
         legacy_pm = _LEGACY_PARAM_STMT_RE.match(stripped)
         if legacy_pm:
@@ -1720,26 +1854,18 @@ class FortranParser:
                 if "=" not in assign:
                     continue
                 k, v = [x.strip() for x in assign.split("=", 1)]
-                if k.lower() not in proc_state["typed_symbols"] and proc_state.get("implicit_none", False):
-                    raise FortranParseError(
-                        f"Unknown datatype for PARAMETER symbol '{k}' in procedure '{proc_state['signature'].name}'.",
-                        filename=filename,
-                        line_number=lineno,
-                        source_line=source_line,
-                    )
-                if k.lower() not in proc_state["typed_symbols"]:
-                    proc_state["local_params"][k.lower()] = v
-                    proc_state["implicit_typed_symbols"][k.lower()] = _infer_implicit_base_type(k)
-                    continue
-                if k.lower() in proc_state["local_params"]:
-                    raise FortranParseError(
-                        f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'.",
-                        filename=filename,
-                        line_number=lineno,
-                        source_line=source_line,
-                    )
-                proc_state["local_params"][k.lower()] = v
-                proc_state["legacy_local_params"].add(k.lower())
+                declared = self._proc_scope_symbol_is_declared(proc_state, k)
+                self._proc_scope_add_local_parameter(
+                    proc_state,
+                    k,
+                    v,
+                    filename=filename,
+                    line_number=lineno,
+                    source_line=source_line,
+                    require_declared=proc_state.get("implicit_none", False),
+                    register_implicit_if_missing=not declared,
+                    legacy=declared,
+                )
             return
 
         parsed_decl = _parse_common_declaration_line(
@@ -1778,31 +1904,24 @@ class FortranParser:
             normalized_name = _normalize_declared_name(raw_name, meta)
             if not normalized_name:
                 continue
-            declared = proc_state["typed_symbols"]
-            lowered_name = normalized_name.lower()
-            if lowered_name in declared:
-                raise FortranParseError(
-                    f"Duplicate declaration of symbol '{normalized_name}' in procedure '{proc_state['signature'].name}'.",
-                    filename=filename,
-                    line_number=lineno,
-                    source_line=source_line,
-                )
-            declared.add(lowered_name)
+            lowered_name = self._proc_scope_mark_declared_symbol(
+                proc_state,
+                normalized_name,
+                filename=filename,
+                line_number=lineno,
+                source_line=source_line,
+            )
             if meta.get("external"):
-                proc_state.setdefault("external_symbols", set()).add(lowered_name)
-            symbols = proc_state["symbols"]
+                self._proc_scope_add_external_symbol(proc_state, lowered_name)
             # Legacy star-kind declarations can appear as:
             #   COMPLEX*16 AP(*), X(*)
             # In this case the first parsed entity may carry the `*16` token
             # in `raw_name`; always resolve symbols using the normalized name so
             # all listed variables receive the declaration metadata.
             lookup_name = lowered_name
-            arg = symbols.get(lookup_name)
+            arg = self._proc_scope_get_symbol(proc_state, lookup_name)
             if arg is None:
-                proc_state["declared_local_types"][lookup_name] = {
-                    "base_type": meta["base_type"],
-                    "kind": meta["kind"],
-                }
+                self._proc_scope_set_declared_local_type(proc_state, lookup_name, meta)
                 continue
             _apply(arg, meta, shape)
 
@@ -2012,21 +2131,12 @@ class FortranParser:
             derived_types=[dtype for dtype in derived_types if dtype.module is None],
         )
 
-        def _add_file_symbol(name: str, symbol: object) -> None:
-            key = name.lower()
-            if key in file.symbols:
-                raise FortranParseError(
-                    f"Duplicate symbol '{name}' in file scope.",
-                    filename=filename,
-                )
-            file.symbols[key] = symbol
-
         for m in modules:
-            _add_file_symbol(m.name, m)
+            self._insert_unique_scope_symbol(file.symbols, m.name.lower(), m, label="file scope", filename=filename)
         for sm in submodules:
-            _add_file_symbol(sm.name, sm)
+            self._insert_unique_scope_symbol(file.symbols, sm.name.lower(), sm, label="file scope", filename=filename)
         for p in standalone_procedures:
-            _add_file_symbol(p.name, p)
+            self._insert_unique_scope_symbol(file.symbols, p.name.lower(), p, label="file scope", filename=filename)
         return file
 
     def _parse_fortran_project(
@@ -2043,51 +2153,46 @@ class FortranParser:
 
         project = FortranProject(files=parsed_files)
 
-        def _add_scoped_symbol(scope: dict[str, object], key: str, value: object, *, label: str) -> None:
-            if key in scope:
-                raise FortranParseError(f"Duplicate symbol '{key}' in {label}.")
-            scope[key] = value
-
         for f in parsed_files:
             for module in f.modules:
                 module_key = module.name.lower()
-                _add_scoped_symbol(project.modules, module_key, module, label="project module scope")
+                self._insert_unique_scope_symbol(project.modules, module_key, module, label="project module scope")
                 project.dependencies[module_key] = {name.lower() for name in module.uses}
                 for proc in module.procedures:
                     proc_key = f"{module_key}.{proc.name.lower()}"
-                    _add_scoped_symbol(project.procedures, proc_key, proc, label="project procedure scope")
+                    self._insert_unique_scope_symbol(project.procedures, proc_key, proc, label="project procedure scope")
                     project.procedures.setdefault(proc.name.lower(), proc)
                 for dtype in module.derived_types:
                     dtype_key = f"{module_key}.{dtype.name.lower()}"
-                    _add_scoped_symbol(project.derived_types, dtype_key, dtype, label="project derived-type scope")
+                    self._insert_unique_scope_symbol(project.derived_types, dtype_key, dtype, label="project derived-type scope")
                     project.derived_types.setdefault(dtype.name.lower(), dtype)
                 for iface in module.interfaces:
                     if iface.name:
                         iface_key = f"{module_key}.{iface.name.lower()}"
-                        _add_scoped_symbol(project.interfaces, iface_key, iface, label="project interface scope")
+                        self._insert_unique_scope_symbol(project.interfaces, iface_key, iface, label="project interface scope")
                         project.interfaces.setdefault(iface.name.lower(), iface)
             for submodule in f.submodules:
                 submodule_key = submodule.name.lower()
-                _add_scoped_symbol(project.submodules, submodule_key, submodule, label="project submodule scope")
+                self._insert_unique_scope_symbol(project.submodules, submodule_key, submodule, label="project submodule scope")
                 deps = {submodule.parent.lower(), *(name.lower() for name in submodule.uses)}
                 if submodule.ancestor:
                     deps.add(submodule.ancestor.lower())
                 project.dependencies[submodule_key] = deps
                 for proc in submodule.procedures:
                     proc_key = f"{submodule_key}.{proc.name.lower()}"
-                    _add_scoped_symbol(project.procedures, proc_key, proc, label="project procedure scope")
+                    self._insert_unique_scope_symbol(project.procedures, proc_key, proc, label="project procedure scope")
                     project.procedures.setdefault(proc.name.lower(), proc)
             for program in f.programs:
                 if program.name:
-                    _add_scoped_symbol(project.programs, program.name.lower(), program, label="project program scope")
+                    self._insert_unique_scope_symbol(project.programs, program.name.lower(), program, label="project program scope")
                     project.dependencies[program.name.lower()] = {name.lower() for name in program.uses}
             for proc in f.procedures:
-                _add_scoped_symbol(project.procedures, proc.name.lower(), proc, label="project procedure scope")
+                self._insert_unique_scope_symbol(project.procedures, proc.name.lower(), proc, label="project procedure scope")
             for dtype in f.derived_types:
-                _add_scoped_symbol(project.derived_types, dtype.name.lower(), dtype, label="project derived-type scope")
+                self._insert_unique_scope_symbol(project.derived_types, dtype.name.lower(), dtype, label="project derived-type scope")
             for iface in f.interfaces:
                 if iface.name:
-                    _add_scoped_symbol(project.interfaces, iface.name.lower(), iface, label="project interface scope")
+                    self._insert_unique_scope_symbol(project.interfaces, iface.name.lower(), iface, label="project interface scope")
         return project
 
     # ------------------------------------------------------------------
@@ -2432,44 +2537,30 @@ class FortranParser:
         module_proc = _MOD_PROC_IMPL_RE.match(line)
         if module_proc and not in_interface:
             name = module_proc.group("name")
-            return {
-                "signature": FortranProcedureSignature(name=name, kind="module procedure", module=module, attributes=["module procedure"], in_interface=in_interface),
-                "symbols": {},
-                "typed_symbols": set(),
-                "uses": {},
-                "in_contains": False,
-                "local_params": {},
-                "legacy_local_params": set(),
-                "implicit_typed_symbols": {},
-                "declared_local_types": {},
-                "implicit_none": False,
-                "imports": set(),
-                "external_symbols": set(),
-                "includes": [],
-                "filename": None,
-                "local_type_depth": 0,
-            }
+            sig = FortranProcedureSignature(
+                name=name,
+                kind="module procedure",
+                module=module,
+                attributes=["module procedure"],
+                in_interface=in_interface,
+            )
+            return self._new_procedure_scope_state(sig, symbols={})
 
         m = _PROC_RE.match(line)
         if m:
             args = [FortranArgument(name=a, procedure=m.group("name")) for a in split_csv(m.group("args"))]
-            return {
-                "signature": FortranProcedureSignature(name=m.group("name"), kind="subroutine", module=module, arguments=args, attributes=_attrs(m.group("prefix"), m.group("tail")), in_interface=in_interface),
-                "symbols": {a.name.lower(): a for a in args},
-                "typed_symbols": set(),
-                "uses": {},
-                "in_contains": False,
-                "local_params": {},
-                "legacy_local_params": set(),
-                "implicit_typed_symbols": {},
-                "declared_local_types": {},
-                "implicit_none": False,
-                "imports": set(),
-                "external_symbols": set(),
-                "includes": [],
-                "filename": None,
-                "local_type_depth": 0,
-            }
+            sig = FortranProcedureSignature(
+                name=m.group("name"),
+                kind="subroutine",
+                module=module,
+                arguments=args,
+                attributes=_attrs(m.group("prefix"), m.group("tail")),
+                in_interface=in_interface,
+            )
+            return self._new_procedure_scope_state(
+                sig,
+                symbols={a.name.lower(): a for a in args},
+            )
         m = _FUNC_RE.match(line)
         if not m:
             return None
@@ -2486,23 +2577,21 @@ class FortranParser:
         if parsed_prefix:
             result.base_type, result.kind = parsed_prefix
 
-        return {
-            "signature": FortranProcedureSignature(name=m.group("name"), kind="function", module=module, arguments=args, result=result, attributes=_attrs(m.group("prefix"), m.group("tail")), in_interface=in_interface),
-            "symbols": {**{a.name.lower(): a for a in args}, result_name.lower(): result},
-            "typed_symbols": {result_name.lower()} if parsed_prefix else set(),
-            "explicit_result": explicit_result,
-            "uses": {},
-            "in_contains": False,
-            "local_params": {},
-            "legacy_local_params": set(),
-            "implicit_typed_symbols": {},
-            "declared_local_types": {},
-            "implicit_none": False,
-            "imports": set(),
-            "external_symbols": set(),
-            "includes": [],
-            "filename": None,
-        }
+        sig = FortranProcedureSignature(
+            name=m.group("name"),
+            kind="function",
+            module=module,
+            arguments=args,
+            result=result,
+            attributes=_attrs(m.group("prefix"), m.group("tail")),
+            in_interface=in_interface,
+        )
+        return self._new_procedure_scope_state(
+            sig,
+            symbols={**{a.name.lower(): a for a in args}, result_name.lower(): result},
+            typed_symbols={result_name.lower()} if parsed_prefix else set(),
+            explicit_result=explicit_result,
+        )
 
     def _parse_fortran_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
         return _expect_single_parse_result(
