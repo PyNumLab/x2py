@@ -32,7 +32,18 @@
           ],
           "return_type": null,
           "contracts": [],
-          "projection": [],
+          "projection": [
+            {
+              "python_name": "p",
+              "native_name": "p",
+              "native_position": 0,
+              "python_position": 0,
+              "result_position": 0,
+              "value_kind": "",
+              "value": null,
+              "intent": "inout"
+            }
+          ],
           "metadata": {},
           "visibility": "public"
         }
@@ -81,7 +92,7 @@
                     ]
                   },
                   {
-                    "name": "FortranContiguous",
+                    "name": "ORDER_F",
                     "arguments": []
                   }
                 ],

@@ -116,7 +116,7 @@ end module
 
     assert "Shape" in code
 
-    assert "FortranContiguous" in code
+    assert "ORDER_F" in code
 
 
 # ============================================================
@@ -465,15 +465,15 @@ end module
     expected = normalize(
         '''
 def scale(
-    x: Float64[Shape(':'), FortranContiguous]
-) -> Returns["x", Float64[Shape(':'), FortranContiguous]]: ...
+    x: Float64[Shape(':'), ORDER_F]
+) -> Returns["x", Float64[Shape(':'), ORDER_F]]: ...
 '''
     )
 
     assert expected in code
 
 
-def test_roundtrip_mode_keeps_output_argument_name():
+def test_output_argument_uses_plain_return_annotation():
     source = """
 module output_name_mod
 
@@ -493,9 +493,10 @@ end module
     fmod = parse_fortran_source(source)
     smod = fortran_module_to_semantic_module(fmod)
 
-    code = PyiPrinter(roundtrip=True).emit_module(smod)
+    code = PyiPrinter().emit_module(smod)
 
-    assert 'Returns["c", Float64]' in code
+    assert "-> Float64" in code
+    assert 'Returns["c", Float64]' not in code
 
 
 # ============================================================

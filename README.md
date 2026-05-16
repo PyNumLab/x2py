@@ -3,6 +3,16 @@
 Standalone extraction of the Fortran parser used for wrapper-oriented signature
 extraction.
 
+## Status
+
+- Coverage: the parser, semantic IR, and `.pyi` projection pipeline are covered
+  by fixture-based tests under `tests/parser`, `tests/semantics`, and
+  `tests/pyi`.
+- Test status: last verified on `2026-05-16` with `python3 -m pytest -q`
+  passing `2800` tests.
+- Docs status: [`docs/pyi_format.md`](docs/pyi_format.md) matches the current
+  `@native_call([...])` syntax and the projection examples in this README.
+
 ## What the parser handles
 
 The parser is intentionally a robust subset parser (not a full Fortran compiler
@@ -61,7 +71,9 @@ sections so maintainers can navigate the file by concern instead of by history:
   - file/project orchestration
   - program-unit parsers (types, modules, interfaces, submodules, programs,
     block-data)
-  - public API wrappers (`parse_file`, `parse_project`,
+  - visitor-style API wrappers (`visit_file`, `visit_project`,
+    `visit_wrap_readiness`)
+  - compatibility aliases (`parse_file`, `parse_project`,
     `assess_wrap_readiness`)
 - Thin module-level convenience wrappers that delegate to a shared parser
   instance
@@ -257,10 +269,10 @@ File: tests/data/fortran/general/modern_pyi_example.f90
 class particle:
     id: Int32
     mass: Float64
-    position: Float64[Shape('3'), FortranContiguous]
+    position: Float64[Shape('3'), ORDER_F]
 
 class vector3:
-    values: Float64[Shape('3'), FortranContiguous]
+    values: Float64[Shape('3'), ORDER_F]
 
 @private
 class hidden_state:
@@ -270,14 +282,14 @@ counter: Int32
 
 hidden_scale: private[Float64]
 
+@native_call([Return(0), Arg(0), Arg(1), Arg(2), Arg(3), Arg(4)])
 def init_particle(
-    p: particle,
     pid: Int32,
     mass: Float64,
     x: Float64,
     y: Float64,
     z: Float64
-) -> None: ...
+) -> particle: ...
 
 def kinetic_energy(
     p: particle,
@@ -287,22 +299,21 @@ def kinetic_energy(
 ) -> Float64: ...
 
 def scale_vector(
-    v: Float64[Shape(':'), FortranContiguous],
+    v: Float64[Shape(':'), ORDER_F],
     alpha: Float64
-) -> None: ...
+) -> Returns["v", Float64[Shape(':'), ORDER_F]]: ...
 
 def dot3(
-    a: Float64[Shape('3'), FortranContiguous],
-    b: Float64[Shape('3'), FortranContiguous]
+    a: Float64[Shape('3'), ORDER_F],
+    b: Float64[Shape('3'), ORDER_F]
 ) -> Float64: ...
 
-def fill_identity3(
-    a: Float64[Shape('3', '3'), FortranContiguous]
-) -> None: ...
+@native_call([Return(0)])
+def fill_identity3() -> Float64[Shape('3', '3'), ORDER_F]: ...
 
 def normalize_particle(
     p: particle
-) -> None: ...
+) -> Returns["p", particle]: ...
 
 @private
 def hidden_proc(

@@ -1320,6 +1320,26 @@ class FortranParser:
     def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):
         self.macro_defines = macro_defines
 
+    def visit_file(
+        self,
+        source_or_path: str | Path,
+        filename: str | None = None,
+        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+        encoding: str = "utf-8",
+    ) -> FortranFile:
+        return self.visit_fortran_file(
+            source_or_path,
+            filename=filename,
+            macro_defines=macro_defines,
+            encoding=encoding,
+        )
+
+    def visit_project(self, files, *, encoding: str = "utf-8") -> FortranProject:
+        return self.visit_fortran_project(files, encoding=encoding)
+
+    def visit_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
+        return self.visit_fortran_wrap_readiness(code, filename=filename)
+
     def parse_file(
         self,
         source_or_path: str | Path,
@@ -1327,7 +1347,7 @@ class FortranParser:
         macro_defines: set[str] | dict[str, int | bool | str] | None = None,
         encoding: str = "utf-8",
     ) -> FortranFile:
-        return self._parse_fortran_file(
+        return self.visit_file(
             source_or_path,
             filename=filename,
             macro_defines=macro_defines,
@@ -1335,10 +1355,10 @@ class FortranParser:
         )
 
     def parse_project(self, files, *, encoding: str = "utf-8") -> FortranProject:
-        return self._parse_fortran_project(files, encoding=encoding)
+        return self.visit_project(files, encoding=encoding)
 
     def assess_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
-        return self._assess_wrap_readiness(code, filename=filename)
+        return self.visit_wrap_readiness(code, filename=filename)
 
     # ------------------------------------------------------------------
     # Scope symbol-table helpers
@@ -1677,10 +1697,154 @@ class FortranParser:
     # High-level unit parsing (largest scopes first)
     # ------------------------------------------------------------------
 
-    def _parse_fortran_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
-        return self._parse_fortran_programs_impl(code, filename=filename)
+    def visit_fortran_modules(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        *,
+        require_present: bool = True,
+        signatures: list[FortranProcedureSignature] | None = None,
+        types: list[FortranDerivedType] | None = None,
+        interfaces: list[FortranInterface] | None = None,
+    ) -> list[FortranModule]:
+        return self._visit_fortran_modules_impl(
+            code,
+            filename=filename,
+            require_present=require_present,
+            signatures=signatures,
+            types=types,
+            interfaces=interfaces,
+        )
+
+    def visit_fortran_submodules(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        *,
+        signatures: list[FortranProcedureSignature] | None = None,
+        types: list[FortranDerivedType] | None = None,
+        interfaces: list[FortranInterface] | None = None,
+    ) -> list[FortranSubmodule]:
+        return self._visit_fortran_submodules_impl(
+            code,
+            filename=filename,
+            signatures=signatures,
+            types=types,
+            interfaces=interfaces,
+        )
+
+    def visit_fortran_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
+        return self._visit_fortran_interfaces_impl(code, filename=filename)
+
+    def visit_fortran_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
+        return self._visit_fortran_types_impl(code, filename=filename)
+
+    def visit_fortran_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
+        return _expect_single_parse_result(
+            self.visit_fortran_modules(code, filename=filename, require_present=True),
+            parser_name="visit_fortran_module",
+            entity_name="module",
+            filename=filename,
+        )
+
+    def visit_fortran_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
+        return _expect_single_parse_result(
+            self.visit_fortran_submodules(code, filename=filename),
+            parser_name="visit_fortran_submodule",
+            entity_name="submodule",
+            filename=filename,
+        )
+
+    def visit_fortran_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
+        return _expect_single_parse_result(
+            self.visit_fortran_interfaces(code, filename=filename),
+            parser_name="visit_fortran_interface",
+            entity_name="interface",
+            filename=filename,
+        )
+
+    def visit_fortran_derived_type(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
+        return _expect_single_parse_result(
+            self.visit_fortran_types(code, filename=filename),
+            parser_name="visit_fortran_derived_type",
+            entity_name="derived type",
+            filename=filename,
+        )
+
+    def visit_fortran_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
+        return self._visit_fortran_programs_impl(code, filename=filename)
+
+    def visit_fortran_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
+        return _expect_single_parse_result(
+            self.visit_fortran_programs(code, filename=filename),
+            parser_name="visit_fortran_program",
+            entity_name="program",
+            filename=filename,
+        )
+
+    def visit_fortran_block_data(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
+        return self._visit_fortran_block_data(code, filename=filename)
+
+    def visit_fortran_block_data_unit(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
+        return _expect_single_parse_result(
+            self.visit_fortran_block_data(code, filename=filename),
+            parser_name="visit_fortran_block_data_unit",
+            entity_name="block data unit",
+            filename=filename,
+        )
+
+    def _parse_fortran_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
+        return self.visit_fortran_types(code, filename=filename)
 
     def _parse_fortran_modules(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        *,
+        require_present: bool = True,
+        signatures: list[FortranProcedureSignature] | None = None,
+        types: list[FortranDerivedType] | None = None,
+        interfaces: list[FortranInterface] | None = None,
+    ) -> list[FortranModule]:
+        return self.visit_fortran_modules(
+            code,
+            filename=filename,
+            require_present=require_present,
+            signatures=signatures,
+            types=types,
+            interfaces=interfaces,
+        )
+
+    def _parse_fortran_submodules(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        *,
+        signatures: list[FortranProcedureSignature] | None = None,
+        types: list[FortranDerivedType] | None = None,
+        interfaces: list[FortranInterface] | None = None,
+    ) -> list[FortranSubmodule]:
+        return self.visit_fortran_submodules(
+            code,
+            filename=filename,
+            signatures=signatures,
+            types=types,
+            interfaces=interfaces,
+        )
+
+    def _parse_fortran_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
+        return self.visit_fortran_interfaces(code, filename=filename)
+
+    def _parse_fortran_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
+        return self.visit_fortran_programs(code, filename=filename)
+
+    def _parse_fortran_block_data(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
+        return self.visit_fortran_block_data(code, filename=filename)
+
+    def _visit_fortran_types_impl(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
+        return self._parse_fortran_types_impl(code, filename=filename)
+
+    def _visit_fortran_modules_impl(
         self,
         code: _SourceOrLines,
         filename: str | None = None,
@@ -1699,7 +1863,7 @@ class FortranParser:
             interfaces=interfaces,
         )
 
-    def _parse_fortran_submodules(
+    def _visit_fortran_submodules_impl(
         self,
         code: _SourceOrLines,
         filename: str | None = None,
@@ -1716,11 +1880,14 @@ class FortranParser:
             interfaces=interfaces,
         )
 
-    def _parse_fortran_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
+    def _visit_fortran_interfaces_impl(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
         return self._parse_fortran_interfaces_impl(code, filename=filename)
 
-    def _parse_fortran_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
-        return self._parse_fortran_types_impl(code, filename=filename)
+    def _visit_fortran_programs_impl(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
+        return self._parse_fortran_programs_impl(code, filename=filename)
+
+    def _visit_fortran_block_data(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
+        return self._parse_fortran_block_data(code, filename=filename)
 
     # ------------------------------------------------------------------
     # Procedure collection lifecycle helpers
@@ -2481,7 +2648,7 @@ class FortranParser:
     # File/project orchestration and cross-file resolution
     # ------------------------------------------------------------------
 
-    def _parse_fortran_file(
+    def visit_fortran_file(
         self,
         source: str | Path,
         filename: str | None = None,
@@ -2498,9 +2665,9 @@ class FortranParser:
 
         lines = preprocess_lines(code, filename)
         signatures = self._collect_procedure_signatures(lines, filename=filename, macro_defines=macro_defines)
-        derived_types = self._parse_fortran_types(lines, filename=filename)
-        interfaces = self._parse_fortran_interfaces(lines, filename=filename)
-        modules = self._parse_fortran_modules(
+        derived_types = self.visit_fortran_types(lines, filename=filename)
+        interfaces = self.visit_fortran_interfaces(lines, filename=filename)
+        modules = self.visit_fortran_modules(
             lines,
             filename=filename,
             require_present=False,
@@ -2508,15 +2675,15 @@ class FortranParser:
             types=derived_types,
             interfaces=interfaces,
         )
-        submodules = self._parse_fortran_submodules(
+        submodules = self.visit_fortran_submodules(
             lines,
             filename=filename,
             signatures=signatures,
             types=derived_types,
             interfaces=interfaces,
         )
-        programs = self._parse_fortran_programs(lines, filename=filename)
-        block_data_units = self._parse_fortran_block_data(lines, filename=filename)
+        programs = self.visit_fortran_programs(lines, filename=filename)
+        block_data_units = self.visit_fortran_block_data(lines, filename=filename)
 
         owned_proc_ids = {id(proc) for mod in modules for proc in mod.procedures}
         owned_proc_ids.update(id(proc) for submod in submodules for proc in submod.procedures)
@@ -2547,7 +2714,21 @@ class FortranParser:
             self._insert_unique_scope_symbol(file.symbols, p.name.lower(), p, label="file scope", filename=filename)
         return file
 
-    def _parse_fortran_project(
+    def parse_fortran_file(
+        self,
+        source: str | Path,
+        filename: str | None = None,
+        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+        encoding: str = "utf-8",
+    ) -> FortranFile:
+        return self.visit_fortran_file(
+            source,
+            filename=filename,
+            macro_defines=macro_defines,
+            encoding=encoding,
+        )
+
+    def visit_fortran_project(
         self,
         files: dict[str, str] | list[str | Path] | tuple[str | Path, ...],
         *,
@@ -2555,9 +2736,9 @@ class FortranParser:
     ) -> FortranProject:
         """Parse many sources and merge them into one dependency-aware project model."""
         if isinstance(files, dict):
-            parsed_files = [self.parse_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
+            parsed_files = [self.visit_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
         else:
-            parsed_files = [self.parse_file(path, encoding=encoding) for path in files]
+            parsed_files = [self.visit_file(path, encoding=encoding) for path in files]
 
         project = FortranProject(files=parsed_files)
 
@@ -2602,6 +2783,9 @@ class FortranParser:
                 if iface.name:
                     self._insert_unique_scope_symbol(project.interfaces, iface.name.lower(), iface, label="project interface scope")
         return project
+
+    def parse_fortran_project(self, files, *, encoding: str = "utf-8") -> FortranProject:
+        return self.visit_fortran_project(files, encoding=encoding)
 
     # ------------------------------------------------------------------
     # Derived types, modules, interfaces, and other program units
@@ -3306,12 +3490,12 @@ class FortranParser:
             "signatures": signatures,
         }
 
-    def _assess_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
+    def visit_fortran_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
         lines = self._preprocessed_lines(code, filename)
         signatures = self._collect_procedure_signatures(lines, filename)
-        types = self._parse_fortran_types(lines, filename)
-        interfaces = self._parse_fortran_interfaces(lines, filename)
-        modules = self._parse_fortran_modules(
+        types = self.visit_fortran_types(lines, filename)
+        interfaces = self.visit_fortran_interfaces(lines, filename)
+        modules = self.visit_fortran_modules(
             lines,
             filename,
             require_present=False,
@@ -3319,15 +3503,15 @@ class FortranParser:
             types=types,
             interfaces=interfaces,
         )
-        submodules = self._parse_fortran_submodules(
+        submodules = self.visit_fortran_submodules(
             lines,
             filename,
             signatures=signatures,
             types=types,
             interfaces=interfaces,
         )
-        programs = self._parse_fortran_programs(lines, filename)
-        block_data = self._parse_fortran_block_data(lines, filename)
+        programs = self.visit_fortran_programs(lines, filename)
+        block_data = self.visit_fortran_block_data(lines, filename)
         unsupported: list[dict] = []
         for line, lineno, source_line in lines:
             for p in _UNSUPPORTED_PATTERNS:
@@ -3380,6 +3564,9 @@ class FortranParser:
             "why_not_wrappable": [b["message"] for b in blockers],
             "wrappable": not blockers,
         }
+
+    def assess_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
+        return self.visit_fortran_wrap_readiness(code, filename=filename)
 
     def _preprocessed_lines(self, source: _SourceOrLines, filename: str | None) -> _PreprocessedLines:
         """Return preprocessed source lines, reusing file-level preprocessing when supplied."""

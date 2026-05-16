@@ -19,6 +19,7 @@ from .models import (
     SemanticMethod,
     SemanticModule,
     SemanticType,
+    ProjectionMapping,
 )
 
 
@@ -118,11 +119,13 @@ class FortranToIRConverter:
         proc: FortranProcedureSignature,
         visibility: str = "public",
     ) -> SemanticFunction:
+        arguments = [self.visit_argument(arg) for arg in self._projected_procedure_arguments(proc)]
         return SemanticFunction(
             name=proc.name,
             native_name=proc.name,
-            arguments=[self.visit_argument(arg) for arg in self._projected_procedure_arguments(proc)],
+            arguments=arguments,
             return_type=self.visit_variable(proc.result) if proc.result else None,
+            projection=self._procedure_projection(proc, arguments),
             visibility=visibility,
         )
 
@@ -242,7 +245,7 @@ class FortranToIRConverter:
                 arguments=list(semantic_type.shape),
             )
         )
-        semantic_type.constraints.append(SemanticConstraint(name="FortranContiguous"))
+        semantic_type.constraints.append(SemanticConstraint(name="ORDER_F"))
 
     @staticmethod
     def _add_variable_constraints(semantic_type: SemanticType, var: FortranVariable) -> None:
@@ -298,6 +301,38 @@ class FortranToIRConverter:
             ],
             *[arg for arg in args if getattr(arg, "intent", "in") == "out"],
         ]
+
+    @staticmethod
+    def _procedure_projection(
+        proc: FortranProcedureSignature,
+        arguments: list[SemanticArgument],
+    ) -> list[ProjectionMapping]:
+        by_name = {arg.name: arg for arg in arguments}
+        call_positions = {
+            arg.name: index
+            for index, arg in enumerate(arg for arg in arguments if getattr(arg, "intent", "in") != "out")
+        }
+        result_offset = 1 if proc.result is not None else 0
+        result_positions = {
+            arg.name: result_offset + index
+            for index, arg in enumerate(arg for arg in arguments if getattr(arg, "intent", "in") in {"out", "inout"})
+        }
+
+        projection: list[ProjectionMapping] = []
+        for native_position, native_arg in enumerate(proc.arguments):
+            arg = by_name[native_arg.name]
+            intent = getattr(arg, "intent", "in")
+            projection.append(
+                ProjectionMapping(
+                    python_name=arg.name if intent != "out" else None,
+                    native_name=native_arg.name,
+                    native_position=native_position,
+                    python_position=call_positions.get(arg.name),
+                    result_position=result_positions.get(arg.name),
+                    intent=intent,
+                )
+            )
+        return projection
 
     @staticmethod
     def _base_classes(dtype: FortranDerivedType) -> list[str]:

@@ -11,6 +11,7 @@ from .models import (
     SemanticMethod,
     SemanticModule,
     SemanticType,
+    ProjectionMapping,
 )
 
 
@@ -20,9 +21,6 @@ class PyiPrinter:
     The printer is a lightweight visitor. `emit()` dispatches by semantic model
     type, while the `emit_*` methods remain explicit compatibility entrypoints.
     """
-
-    def __init__(self, *, roundtrip: bool = False):
-        self.roundtrip = roundtrip
 
     def emit(self, node) -> str:
         if isinstance(node, SemanticModule):
@@ -85,7 +83,7 @@ class PyiPrinter:
 
     def emit_function(self, func: SemanticFunction) -> str:
         return_type = self._projected_return_annotation(func)
-        decorator = "@private\n" if self._is_private(func) else ""
+        decorator = self._decorators(func)
         return self._emit_callable(
             name=func.name,
             arguments=[self.emit_argument(arg) for arg in self._call_arguments(func)],
@@ -97,7 +95,7 @@ class PyiPrinter:
 
     def emit_method(self, method: SemanticMethod) -> str:
         return_type = self._projected_return_annotation(method)
-        decorator = "    @private\n" if self._is_private(method) else ""
+        decorator = self._decorators(method, indent="    ")
         return self._emit_callable(
             name=method.name,
             arguments=["self", *[self.emit_argument(arg) for arg in self._call_arguments(method)]],
@@ -183,7 +181,7 @@ class PyiPrinter:
             if getattr(arg, "intent", "in") in {"out", "inout"}
         ]
         returns.extend(
-            self._projected_argument_return(arg, func, returned_args)
+            self._projected_argument_return(arg)
             for arg in returned_args
         )
 
@@ -193,35 +191,85 @@ class PyiPrinter:
             return returns[0]
         return "tuple[" + ", ".join(returns) + "]"
 
-    def _projected_argument_return(
-        self,
-        arg: SemanticArgument,
-        func: SemanticFunction,
-        returned_args: list[SemanticArgument],
-    ) -> str:
-        if self._requires_named_return(arg, func, returned_args):
+    def _projected_argument_return(self, arg: SemanticArgument) -> str:
+        if self._requires_named_return(arg):
             return self._named_return(arg)
         return self.emit_semantic_type(arg.semantic_type)
 
-    def _requires_named_return(
-        self,
-        arg: SemanticArgument,
-        func: SemanticFunction,
-        returned_args: list[SemanticArgument],
-    ) -> bool:
-        if self.roundtrip:
-            return True
-        if getattr(arg, "intent", "in") == "inout":
-            return True
-        if arg.optional:
-            return True
-        if func.return_type is not None:
-            return True
-        return len(returned_args) != 1
+    def _requires_named_return(self, arg: SemanticArgument) -> bool:
+        return getattr(arg, "intent", "in") == "inout"
 
     def _named_return(self, arg: SemanticArgument) -> str:
         optional = ", Optional" if arg.optional else ""
         return f'Returns["{arg.name}", {self.emit_semantic_type(arg.semantic_type)}{optional}]'
+
+    def _decorators(self, func: SemanticFunction, *, indent: str = "") -> str:
+        decorators = []
+        if self._is_private(func):
+            decorators.append(f"{indent}@private")
+        if self._requires_native_call(func):
+            decorators.append(f"{indent}{self._native_call(func.projection)}")
+        if not decorators:
+            return ""
+        return "\n".join(decorators) + "\n"
+
+    def _native_call(self, projection: list[ProjectionMapping]) -> str:
+        entries = ", ".join(
+            self._native_projection_entry(mapping)
+            for mapping in sorted(projection, key=lambda item: item.native_position if item.native_position is not None else -1)
+        )
+        return f"@native_call([{entries}])"
+
+    @staticmethod
+    def _native_projection_entry(mapping: ProjectionMapping) -> str:
+        if mapping.value_kind:
+            return PyiPrinter._native_projection_value(mapping)
+        if mapping.python_position is not None:
+            return f"Arg({mapping.python_position})"
+        if mapping.result_position is not None:
+            return f"Return({mapping.result_position})"
+        raise ValueError("native_call cannot represent a native-only projection entry")
+
+    @staticmethod
+    def _native_projection_value(mapping: ProjectionMapping) -> str:
+        if mapping.value_kind == "const":
+            return f"Const({mapping.value!r})"
+        if mapping.value_kind == "len":
+            return f"Len({PyiPrinter._native_value_ref(mapping.value)})"
+        if mapping.value_kind == "shape":
+            return f"Shape({PyiPrinter._native_value_ref(mapping.value['value'])}, {mapping.value['dim']})"
+        if mapping.value_kind == "is_present":
+            return f"IsPresent({PyiPrinter._native_value_ref(mapping.value)})"
+        if mapping.value_kind == "work":
+            return f"Work({mapping.value!r})"
+        raise ValueError(f"Unsupported native_call projection entry: {mapping.value_kind!r}")
+
+    @staticmethod
+    def _native_value_ref(value: dict[str, int | str]) -> str:
+        kind = value.get("kind")
+        if kind == "arg":
+            return f"Arg({value['position']})"
+        if kind == "return":
+            return f"Return({value['position']})"
+        if kind == "work":
+            return f"Work({value['name']!r})"
+        raise ValueError(f"Unsupported native_call value reference: {kind!r}")
+
+    @staticmethod
+    def _requires_native_call(func: SemanticFunction) -> bool:
+        return any(PyiPrinter._requires_explicit_projection_mapping(mapping) for mapping in func.projection)
+
+    @staticmethod
+    def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
+        if mapping.intent == "inout":
+            return mapping.python_position != mapping.native_position
+        if mapping.intent != "in":
+            return mapping.python_position is None
+        if mapping.result_position is not None:
+            return True
+        if mapping.python_position is None:
+            return True
+        return mapping.native_position is not None and mapping.python_position != mapping.native_position
 
     @staticmethod
     def _call_arguments(func: SemanticFunction) -> list[SemanticArgument]:
@@ -256,12 +304,10 @@ class PyiPrinter:
 
 
 _DEFAULT_PRINTER = PyiPrinter()
-_ROUNDTRIP_PRINTER = PyiPrinter(roundtrip=True)
 
 
-def emit_module(module: SemanticModule, *, roundtrip: bool = False) -> str:
-    printer = _ROUNDTRIP_PRINTER if roundtrip else _DEFAULT_PRINTER
-    return printer.emit_module(module)
+def emit_module(module: SemanticModule) -> str:
+    return _DEFAULT_PRINTER.emit_module(module)
 
 
 if __name__ == "__main__":

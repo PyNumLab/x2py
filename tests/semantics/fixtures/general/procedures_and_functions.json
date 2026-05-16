@@ -24,7 +24,7 @@
                     ]
                   },
                   {
-                    "name": "FortranContiguous",
+                    "name": "ORDER_F",
                     "arguments": []
                   }
                 ],
@@ -58,7 +58,18 @@
             "metadata": {}
           },
           "contracts": [],
-          "projection": [],
+          "projection": [
+            {
+              "python_name": "x",
+              "native_name": "x",
+              "native_position": 0,
+              "python_position": 0,
+              "result_position": null,
+              "value_kind": "",
+              "value": null,
+              "intent": "in"
+            }
+          ],
           "metadata": {},
           "visibility": "public"
         },
@@ -105,7 +116,7 @@
                     ]
                   },
                   {
-                    "name": "FortranContiguous",
+                    "name": "ORDER_F",
                     "arguments": []
                   }
                 ],
@@ -126,7 +137,28 @@
           ],
           "return_type": null,
           "contracts": [],
-          "projection": [],
+          "projection": [
+            {
+              "python_name": "a",
+              "native_name": "a",
+              "native_position": 0,
+              "python_position": 0,
+              "result_position": null,
+              "value_kind": "",
+              "value": null,
+              "intent": "in"
+            },
+            {
+              "python_name": "x",
+              "native_name": "x",
+              "native_position": 1,
+              "python_position": 1,
+              "result_position": 0,
+              "value_kind": "",
+              "value": null,
+              "intent": "inout"
+            }
+          ],
           "metadata": {},
           "visibility": "public"
         }

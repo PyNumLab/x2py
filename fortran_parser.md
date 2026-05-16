@@ -81,7 +81,9 @@ sections so maintainers can navigate the file by concern instead of by history:
   - file/project orchestration
   - program-unit parsers (types, modules, interfaces, submodules, programs,
     block-data)
-  - public API wrappers (`parse_file`, `parse_project`,
+  - visitor-style API wrappers (`visit_file`, `visit_project`,
+    `visit_wrap_readiness`)
+  - compatibility aliases (`parse_file`, `parse_project`,
     `assess_wrap_readiness`)
 - Thin module-level convenience wrappers that delegate to a shared parser
   instance
