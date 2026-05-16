@@ -381,7 +381,7 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
 - **Preprocessor-conditional duplicate procedures (guarded allowance):**
   - The parser does **not** run a full C preprocessor stage before parsing.
   - While scanning signatures, simple directive structure is tracked for `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` to model mutually-exclusive branches.
-  - `parse_fortran_file(..., macro_defines=...)` can provide macro decisions; inactive conditional branches are skipped during signature extraction so the active code path is selected.
+  - `visit_fortran_file(..., macro_defines=...)` can provide macro decisions; inactive conditional branches are skipped during signature extraction so the active code path is selected. The legacy `parse_fortran_file(...)` alias remains for compatibility.
     - accepted forms: `set[str]` or `dict[str, int|bool|str]`
     - dictionary values are truthy/falsey (`0`, `False`, `"0"`, `"false"` treated as undefined/disabled)
   - Basic `#if` expressions are supported for branch selection (`defined(X)`, `!`, `&&`, `||`, parentheses, `0`/`1`).
