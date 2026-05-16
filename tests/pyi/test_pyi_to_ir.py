@@ -1,4 +1,5 @@
 from pathlib import Path
+import pytest
 
 from semantics.fortran2ir import fortran_file_to_semantic_modules
 from semantics.models import ProjectionMapping, SemanticArgument, SemanticFunction, SemanticModule, SemanticType
@@ -357,6 +358,55 @@ class vector:
 """,
         module_name="edited",
     )
+
+
+@pytest.mark.parametrize(
+    "source, message",
+    [
+        ("value: Int32[foo.bar]\n", "Unsupported semantic type constraint"),
+        ("foo.bar: Int32\n", "Unsupported annotation target"),
+        ("value: Annotated[Int32, Name('x', 'y')]\n", "Name metadata expects one argument"),
+        ("def f(x: Int32): ...\n", "Unsupported function header"),
+        ("def f(\n    x: Int32,\n): ...\n", "Unterminated callable starting at line 1"),
+        ("@native_call_bad([])\ndef f(x: Int32) -> None: ...\n", "Unsupported native call decorator"),
+        ("@native_call(Arg(0))\ndef f(x: Int32) -> None: ...\n", "native_call expects a list of projection entries"),
+        ("@native_call([Arg(0)], foo=1)\ndef f(x: Int32) -> None: ...\n", "native_call expects a single list argument"),
+        ("@native_call([1])\ndef f(x: Int32) -> None: ...\n", "projection entry calls"),
+        ("@native_call([Arg()])\ndef f(x: Int32) -> None: ...\n", "Arg expects one positional index"),
+        ("@native_call([Return()])\ndef f(x: Int32) -> None: ...\n", "Return expects one positional index"),
+        ("@native_call([Const()])\ndef f(x: Int32) -> None: ...\n", "Const expects one value"),
+        ("@native_call([Len()])\ndef f(x: Int32) -> None: ...\n", "Len expects one value reference"),
+        ("@native_call([Shape(Arg(0))])\ndef f(x: Int32) -> None: ...\n", "Shape expects a value reference and dimension"),
+        ("@native_call([IsPresent()])\ndef f(x: Int32) -> None: ...\n", "IsPresent expects one value reference"),
+        ("@native_call([Work()])\ndef f(x: Int32) -> None: ...\n", "Work expects one workspace name"),
+        ("@native_call([Len(1)])\ndef f(x: Int32) -> None: ...\n", "Expected Arg"),
+        ("@native_call([Len(Arg(0, 1))])\ndef f(x: Int32) -> None: ...\n", "value reference expects one positional argument"),
+        ("def f(x: Int32) -> Returns['x']: ...\n", "Returns expects a name and type"),
+    ],
+)
+def test_parse_pyi_text_rejects_invalid_projection_and_type_forms(source: str, message: str):
+    with pytest.raises(ValueError, match=message):
+        parse_pyi_text(source, module_name="edited")
+
+
+def test_parse_pyi_text_accepts_multiline_native_call_decorator():
+    module = parse_pyi_text(
+        """
+@native_call([
+    Arg(0),
+    Return(0),
+])
+def wrapper(
+    x: Int32
+) -> Float64: ...
+""",
+        module_name="edited",
+    )
+
+    func = module.functions[0]
+    assert func.name == "wrapper"
+    assert func.projection[0].python_position == 0
+    assert func.projection[1].result_position == 0
 
 
 def test_parse_pyi_text_accepts_c_and_fortran_order_constraints():
