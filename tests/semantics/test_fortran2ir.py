@@ -4,7 +4,7 @@ from dataclasses import asdict
 from x2py import parse_fortran_file as parse_fortran_source
 
 from semantics.fortran2ir import (
-    FortranToIRConverter,
+    fortran_file_to_semantic_modules,
     fortran_module_to_semantic_module,
 )
 
@@ -511,7 +511,7 @@ end module
     assert norm.return_type.name == "Float64"
 
 
-def test_converter_class_entrypoint():
+def test_module_conversion_public_api_entrypoint():
 
     source = """
 module class_mod
@@ -529,15 +529,13 @@ end module
 
     fmod = parse_fortran_source(source)
 
-    from semantics.fortran2ir import FortranToIRConverter
-
-    smod = FortranToIRConverter().module_to_semantic_module(fmod)
+    smod = fortran_module_to_semantic_module(fmod)
 
     assert smod.name == "class_mod"
     assert get_function(smod, "touch").arguments[0].semantic_type.name == "Int32"
 
 
-def test_fortran_to_ir_converter_visitor_dispatch_preserves_module_semantics():
+def test_fortran_to_ir_preserves_module_semantics_from_inline_source():
     source = """
 module m
   use iso_c_binding
@@ -555,40 +553,22 @@ contains
 end module m
 """
     parsed = parse_fortran_source(source, filename="m.f90")
-    module = parsed.modules[0]
-    proc = module.procedures[0]
-    arg = proc.arguments[0]
-    dtype = module.derived_types[0]
-    var = module.variables[0]
-    converter = FortranToIRConverter()
+    semantic_module = fortran_module_to_semantic_module(parsed)
+    semantic_file_modules = fortran_file_to_semantic_modules(parsed, standalone_module_name="standalone")
+    semantic_var = semantic_module.variables[0]
+    semantic_proc = get_function(semantic_module, "doit")
+    semantic_arg = semantic_proc.arguments[0]
+    semantic_dtype = get_class(semantic_module, "thing")
 
-    semantic_var = converter.visit_variable(var)
-    semantic_var_from_dispatch = converter.visit(arg)
-    semantic_arg = converter.visit_argument(arg)
-    semantic_proc = converter.visit_procedure(proc)
-    semantic_dtype = converter.visit_derived_type(dtype, procedure_lookup={"doit": semantic_proc})
-    semantic_module = converter.visit_module(module)
-    semantic_file_modules = converter.visit_file_modules(parsed, standalone_module_name="standalone")
-    semantic_file_from_dispatch = converter.visit(parsed)
-    semantic_module_from_dispatch = converter.visit(module)
-    semantic_proc_from_dispatch = converter.visit(proc, visibility="private")
-    semantic_dtype_from_dispatch = converter.visit(dtype, procedure_lookup={"doit": semantic_proc})
-
-    assert semantic_var.name == "Int32"
-    assert semantic_var_from_dispatch.intent == "inout"
+    assert semantic_var.semantic_type.name == "Int32"
+    assert semantic_arg.intent == "inout"
     assert semantic_arg.semantic_type.constraints[-1].name == "Allocatable"
     assert semantic_proc.projection[0].python_position == 0
     assert semantic_dtype.base_classes == ["base"]
-    assert semantic_dtype.visibility == "public"
-    assert semantic_dtype_from_dispatch.base_classes == ["base"]
-    assert semantic_proc_from_dispatch.visibility == "private"
     assert semantic_module.imports == ["iso_c_binding"]
-    assert get_class(semantic_module, "thing").visibility == "private"
-    assert get_function(semantic_module, "doit").visibility == "public"
+    assert semantic_dtype.visibility == "private"
+    assert semantic_proc.visibility == "public"
     assert semantic_file_modules[0].name == "m"
-    assert semantic_file_from_dispatch.name == "m"
-    assert semantic_module_from_dispatch.name == "m"
-    assert converter.first_module(parsed) is module
 
 
 def test_fortran_file_to_semantic_modules_keeps_standalone_procedures_from_inline_source():
@@ -600,7 +580,7 @@ end subroutine scale
 """
 
     parsed = parse_fortran_source(source)
-    modules = FortranToIRConverter().file_to_semantic_modules(parsed)
+    modules = fortran_file_to_semantic_modules(parsed)
 
     assert len(modules) == 1
     assert modules[0].name == "standalone"

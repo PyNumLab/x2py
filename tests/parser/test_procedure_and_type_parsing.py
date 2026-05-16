@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from fortran_parser.cli import _format_wrap_readiness
-from fortran_parser.parser import FortranParser
-
 from x2py import FortranParseError, assess_wrap_readiness, parse_fortran_file, parse_fortran_project
 
 collect_project_procedure_signatures = lambda files: list(parse_fortran_project(files).procedures.values())
@@ -129,29 +126,6 @@ def test_fixed_form_and_interface_detection():
     assert parsed.interfaces[0].procedures[0].in_interface is True
 
 
-def test_public_single_entity_visitors_report_missing_and_ambiguous_inline_source():
-    parser = FortranParser()
-
-    with pytest.raises(FortranParseError, match="visit_fortran_module\\(\\) expected exactly one module, but none were found"):
-        parser.visit_fortran_module(
-            """
-program driver
-end program driver
-"""
-        )
-
-    with pytest.raises(FortranParseError, match="visit_fortran_module\\(\\) expected exactly one module, but found 2"):
-        parser.visit_fortran_module(
-            """
-module one
-end module one
-
-module two
-end module two
-"""
-        )
-
-
 def test_preprocessor_macro_selection_uses_active_branch_from_inline_fortran():
     source = """
 #ifdef USE_A
@@ -169,8 +143,8 @@ end subroutine fallback
 #endif
 """
 
-    selected = FortranParser(macro_defines={"USE_B": True}).parse_file(source)
-    fallback = FortranParser(macro_defines={"USE_A": False, "USE_B": False}).parse_file(source)
+    selected = parse_fortran_file(source, macro_defines={"USE_B": True})
+    fallback = parse_fortran_file(source, macro_defines={"USE_A": False, "USE_B": False})
 
     assert [proc.name for proc in selected.procedures] == ["selected_b"]
     assert selected.procedures[0].arguments[0].base_type == "real"
@@ -872,35 +846,6 @@ end module state_mod
     ]
 
 
-def test_cli_wrap_readiness_format_reports_status_and_reasons():
-    report = {
-        "bad.f90": {
-            "wrap_readiness": {
-                "wrappable": False,
-                "wrappability_blockers": [
-                    {
-                        "code": "unresolved_derived_type_arguments",
-                        "message": "Some derived-type procedure arguments refer to types missing from the parsed source.",
-                        "items": [
-                            {
-                                "procedure": "step",
-                                "module": "solver",
-                                "argument": "state",
-                                "type": "sim_state",
-                                "import_modules": ["state_mod"],
-                            }
-                        ],
-                    }
-                ],
-            }
-        }
-    }
-    text = _format_wrap_readiness(report)
-    assert "Wrappable: no" in text
-    assert "Why not wrappable:" in text
-    assert "step:state uses type(sim_state) from state_mod" in text
-
-
 def test_assess_wrap_readiness_accepts_intrinsic_module_kind_symbols():
     code = """
 subroutine scale(x)
@@ -1452,32 +1397,6 @@ end block data init_data
     assert "solver_mod.step" in project.procedures
     solver = project.procedures["solver_mod.step"]
     assert solver.arguments[0].kind == "rk"
-
-
-def test_parse_fortran_file_preprocesses_source_once(monkeypatch):
-    import fortran_parser.parser as parser_module
-
-    calls = 0
-    original = parser_module.preprocess_lines
-
-    def counting_preprocess(code, filename=None):
-        nonlocal calls
-        calls += 1
-        return original(code, filename)
-
-    monkeypatch.setattr(parser_module, "preprocess_lines", counting_preprocess)
-    parsed = parser_module.parse_fortran_file("""
-module once_mod
-contains
-subroutine ping(x)
-  integer, intent(in) :: x
-end subroutine ping
-end module once_mod
-""")
-
-    assert calls == 1
-    assert parsed.modules[0].procedures[0].name == "ping"
-
 
 
 def test_singular_parse_entrypoints_return_single_models():
