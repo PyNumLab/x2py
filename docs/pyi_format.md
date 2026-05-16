@@ -83,13 +83,18 @@ arguments, use a native call projection.
 
 ## Native Calls
 
-`@native_call([...])` records the native Fortran argument order from left to
-right when the Python signature is not the same as the Fortran call signature.
-Identity mappings are omitted by skipping the decorator entirely when the
-Python signature already describes the native layout.
+`@native_call([...])` records the exact native Fortran argument vector from
+left to right when the Python signature is not the same as the Fortran call
+signature. Identity mappings are omitted by skipping the decorator entirely
+when the Python signature already describes the native layout.
 
-Entries are either `Arg(i)` for Python argument position `i`, or `Return(i)` for
-Python return value position `i`.
+Each entry describes the value inserted into the native call.
+
+Core entries:
+
+- `Arg(i)` inserts Python argument position `i`.
+- `Return(i)` inserts Python return value position `i`; this is used for
+  projected `intent(out)` values.
 
 For an `intent(out)` argument projected as a Python return:
 
@@ -100,6 +105,33 @@ def make_vector(n: Int32) -> Float64[Shape("n"), ORDER_F]: ...
 
 This means native argument `0` is Python argument `0`, and native argument `1`
 is Python return value `0`.
+
+In Fortran terms, this describes a native call like:
+
+```text
+make_vector(n, x)
+```
+
+with a Python API:
+
+```python
+make_vector(n) -> x
+```
+
+For mixed input and output layouts:
+
+```python
+@native_call([Arg(0), Return(0), Arg(1)])
+def solve(a: Matrix, b: Vector) -> Vector: ...
+```
+
+This describes a native call like:
+
+```text
+solve(a, x, b)
+```
+
+where `x` is returned to Python.
 
 For an `intent(inout)` argument with the same name in the argument and return
 projection, no explicit decorator is required:
@@ -115,6 +147,114 @@ For argument reordering:
 ```python
 @native_call([Arg(1), Arg(0)])
 def f(b: Float64, a: Int32) -> None: ...
+```
+
+This describes a native call `f(a, b)` while exposing the Python signature
+`f(b, a)`.
+
+Hidden or derived native arguments can also be represented. These values are
+not visible in the Python signature, but are needed to reconstruct the native
+call.
+
+Use `Const(value)` to insert a fixed native value:
+
+```python
+@native_call([Arg(0), Const(1)])
+def step(x: Float64) -> None: ...
+```
+
+This describes a native call like:
+
+```text
+step(x, mode=1)
+```
+
+Use `Len(value)` for hidden string length arguments:
+
+```python
+@native_call([Arg(0), Len(Arg(0))])
+def print_name(name: String) -> None: ...
+```
+
+This describes:
+
+```text
+print_name(name, len(name))
+```
+
+Use `Shape(value, dim)` for hidden array extents. Dimensions are zero-based in
+the projection:
+
+```python
+@native_call([
+    Arg(0),
+    Shape(Arg(0), 0),
+])
+def sum_vector(
+    x: Float64[Shape("n"), ORDER_F]
+) -> Float64: ...
+```
+
+This describes:
+
+```text
+sum_vector(x, n)
+```
+
+Use `IsPresent(value)` when a native call receives an explicit optional
+presence flag:
+
+```python
+@native_call([
+    Arg(0),
+    Arg(1),
+    IsPresent(Arg(1)),
+])
+def solve(
+    a: Matrix,
+    b: Vector | None = None,
+) -> None: ...
+```
+
+Calling `solve(a)` describes a native call like:
+
+```text
+solve(a, NULL, .false.)
+```
+
+Calling `solve(a, b)` describes:
+
+```text
+solve(a, b, .true.)
+```
+
+Use `Work(name)` for wrapper-generated temporaries or workspace values:
+
+```python
+@native_call([
+    Arg(0),
+    Work("tmp"),
+])
+def transform(x: Float64[Shape("n"), ORDER_F]) -> None: ...
+```
+
+This records that the wrapper allocates `tmp` internally and passes it to the
+native call. This is useful for BLAS/LAPACK workspace arrays and other
+compiler- or wrapper-generated temporaries.
+
+Use `@native_call` only for non-obvious projections:
+
+- projected `intent(out)` returns
+- argument reordering
+- inserted hidden metadata
+- generated workspace arguments
+- wrapper-generated constants
+- mixed input/output layouts
+
+The mental model is:
+
+```text
+Construct the native Fortran call using this exact argument vector.
 ```
 
 ## Type Constraints

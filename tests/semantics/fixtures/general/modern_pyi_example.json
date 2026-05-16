@@ -149,6 +149,8 @@
               "native_position": 0,
               "python_position": null,
               "result_position": 0,
+              "value_kind": "",
+              "value": null,
               "intent": "out"
             },
             {
@@ -157,6 +159,8 @@
               "native_position": 1,
               "python_position": 0,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             },
             {
@@ -165,6 +169,8 @@
               "native_position": 2,
               "python_position": 1,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             },
             {
@@ -173,6 +179,8 @@
               "native_position": 3,
               "python_position": 2,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             },
             {
@@ -181,6 +189,8 @@
               "native_position": 4,
               "python_position": 3,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             },
             {
@@ -189,6 +199,8 @@
               "native_position": 5,
               "python_position": 4,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             }
           ],
@@ -310,6 +322,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             },
             {
@@ -318,6 +332,8 @@
               "native_position": 1,
               "python_position": 1,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             },
             {
@@ -326,6 +342,8 @@
               "native_position": 2,
               "python_position": 2,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             },
             {
@@ -334,6 +352,8 @@
               "native_position": 3,
               "python_position": 3,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             }
           ],
@@ -411,6 +431,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": 0,
+              "value_kind": "",
+              "value": null,
               "intent": "inout"
             },
             {
@@ -419,6 +441,8 @@
               "native_position": 1,
               "python_position": 1,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             }
           ],
@@ -522,6 +546,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             },
             {
@@ -530,6 +556,8 @@
               "native_position": 1,
               "python_position": 1,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             }
           ],
@@ -587,6 +615,8 @@
               "native_position": 0,
               "python_position": null,
               "result_position": 0,
+              "value_kind": "",
+              "value": null,
               "intent": "out"
             }
           ],
@@ -629,6 +659,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": 0,
+              "value_kind": "",
+              "value": null,
               "intent": "inout"
             }
           ],
@@ -671,6 +703,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             }
           ],

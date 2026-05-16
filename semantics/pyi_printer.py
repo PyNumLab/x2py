@@ -222,11 +222,38 @@ class PyiPrinter:
 
     @staticmethod
     def _native_projection_entry(mapping: ProjectionMapping) -> str:
+        if mapping.value_kind:
+            return PyiPrinter._native_projection_value(mapping)
         if mapping.python_position is not None:
             return f"Arg({mapping.python_position})"
         if mapping.result_position is not None:
             return f"Return({mapping.result_position})"
         raise ValueError("native_call cannot represent a native-only projection entry")
+
+    @staticmethod
+    def _native_projection_value(mapping: ProjectionMapping) -> str:
+        if mapping.value_kind == "const":
+            return f"Const({mapping.value!r})"
+        if mapping.value_kind == "len":
+            return f"Len({PyiPrinter._native_value_ref(mapping.value)})"
+        if mapping.value_kind == "shape":
+            return f"Shape({PyiPrinter._native_value_ref(mapping.value['value'])}, {mapping.value['dim']})"
+        if mapping.value_kind == "is_present":
+            return f"IsPresent({PyiPrinter._native_value_ref(mapping.value)})"
+        if mapping.value_kind == "work":
+            return f"Work({mapping.value!r})"
+        raise ValueError(f"Unsupported native_call projection entry: {mapping.value_kind!r}")
+
+    @staticmethod
+    def _native_value_ref(value: dict[str, int | str]) -> str:
+        kind = value.get("kind")
+        if kind == "arg":
+            return f"Arg({value['position']})"
+        if kind == "return":
+            return f"Return({value['position']})"
+        if kind == "work":
+            return f"Work({value['name']!r})"
+        raise ValueError(f"Unsupported native_call value reference: {kind!r}")
 
     @staticmethod
     def _requires_native_call(func: SemanticFunction) -> bool:

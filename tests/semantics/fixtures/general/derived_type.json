@@ -39,6 +39,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": 0,
+              "value_kind": "",
+              "value": null,
               "intent": "inout"
             }
           ],

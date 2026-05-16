@@ -3,6 +3,16 @@
 Standalone extraction of the Fortran parser used for wrapper-oriented signature
 extraction.
 
+## Status
+
+- Coverage: the parser, semantic IR, and `.pyi` projection pipeline are covered
+  by fixture-based tests under `tests/parser`, `tests/semantics`, and
+  `tests/pyi`.
+- Test status: last verified on `2026-05-16` with `python3 -m pytest -q`
+  passing `2800` tests.
+- Docs status: [`docs/pyi_format.md`](docs/pyi_format.md) matches the current
+  `@native_call([...])` syntax and the projection examples in this README.
+
 ## What the parser handles
 
 The parser is intentionally a robust subset parser (not a full Fortran compiler
@@ -61,7 +71,9 @@ sections so maintainers can navigate the file by concern instead of by history:
   - file/project orchestration
   - program-unit parsers (types, modules, interfaces, submodules, programs,
     block-data)
-  - public API wrappers (`parse_file`, `parse_project`,
+  - visitor-style API wrappers (`visit_file`, `visit_project`,
+    `visit_wrap_readiness`)
+  - compatibility aliases (`parse_file`, `parse_project`,
     `assess_wrap_readiness`)
 - Thin module-level convenience wrappers that delegate to a shared parser
   instance

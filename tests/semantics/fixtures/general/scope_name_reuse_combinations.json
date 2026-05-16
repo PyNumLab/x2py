@@ -39,6 +39,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": 0,
+              "value_kind": "",
+              "value": null,
               "intent": "inout"
             }
           ],
@@ -81,6 +83,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             }
           ],
@@ -123,6 +127,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             }
           ],
@@ -165,6 +171,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": 0,
+              "value_kind": "",
+              "value": null,
               "intent": "inout"
             }
           ],
@@ -207,6 +215,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": 0,
+              "value_kind": "",
+              "value": null,
               "intent": "inout"
             }
           ],
@@ -262,6 +272,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             }
           ],
@@ -317,6 +329,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             }
           ],
@@ -372,6 +386,8 @@
               "native_position": 0,
               "python_position": 0,
               "result_position": null,
+              "value_kind": "",
+              "value": null,
               "intent": "in"
             }
           ],

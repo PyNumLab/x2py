@@ -66,8 +66,8 @@ class PyiToIRParser:
                 self.index += 1
                 continue
             if stripped.startswith("@native_call"):
-                pending_projection = self._parse_native_call_decorator(stripped)
-                self.index += 1
+                decorator, self.index = self._collect_decorator(self.index)
+                pending_projection = self._parse_native_call_decorator(decorator)
                 continue
             if stripped.startswith("import "):
                 module.imports.append(stripped.split(None, 1)[1].strip())
@@ -124,8 +124,8 @@ class PyiToIRParser:
                 index += 1
                 continue
             if stripped.startswith("@native_call"):
-                pending_projection = self._parse_native_call_decorator(stripped)
-                index += 1
+                decorator, index = self._collect_decorator(index)
+                pending_projection = self._parse_native_call_decorator(decorator)
                 continue
             if stripped.startswith("def "):
                 method, index = self._parse_method(
@@ -249,6 +249,9 @@ class PyiToIRParser:
         if type_text.endswith("= ..."):
             optional = True
             type_text = type_text[:-5].rstrip()
+        elif type_text.endswith("= None"):
+            optional = True
+            type_text = type_text[:-6].rstrip()
 
         visibility, semantic_type, original_name = self._parse_visible_type(type_text)
         if original_name is not None:
@@ -407,7 +410,7 @@ class PyiToIRParser:
             raise ValueError("native_call expects a single list argument")
         entries = expr.args[0]
         if not isinstance(entries, ast.List):
-            raise ValueError("native_call expects a list of Arg(...) and Return(...) entries")
+            raise ValueError("native_call expects a list of projection entries")
         return [
             self._parse_native_projection_entry(entry, native_position)
             for native_position, entry in enumerate(entries.elts)
@@ -415,22 +418,109 @@ class PyiToIRParser:
 
     def _parse_native_projection_entry(self, expr: ast.AST, native_position: int) -> ProjectionMapping:
         if not isinstance(expr, ast.Call) or not isinstance(expr.func, ast.Name):
-            raise ValueError("native_call expects Arg(...) or Return(...) entries")
-        if len(expr.args) != 1 or expr.keywords:
-            raise ValueError(f"{expr.func.id} expects one positional index")
-        position = int(ast.literal_eval(expr.args[0]))
+            raise ValueError("native_call expects projection entry calls")
+        if expr.keywords:
+            raise ValueError(f"{expr.func.id} expects positional arguments only")
         if expr.func.id == "Arg":
+            if len(expr.args) != 1:
+                raise ValueError("Arg expects one positional index")
+            position = int(ast.literal_eval(expr.args[0]))
             return ProjectionMapping(
                 native_position=native_position,
                 python_position=position,
             )
         if expr.func.id == "Return":
+            if len(expr.args) != 1:
+                raise ValueError("Return expects one positional index")
+            position = int(ast.literal_eval(expr.args[0]))
             return ProjectionMapping(
                 native_position=native_position,
                 result_position=position,
                 intent="out",
             )
-        raise ValueError("native_call expects Arg(...) or Return(...) entries")
+        if expr.func.id == "Const":
+            if len(expr.args) != 1:
+                raise ValueError("Const expects one value")
+            return ProjectionMapping(
+                native_position=native_position,
+                value_kind="const",
+                value=ast.literal_eval(expr.args[0]),
+            )
+        if expr.func.id == "Len":
+            if len(expr.args) != 1:
+                raise ValueError("Len expects one value reference")
+            return ProjectionMapping(
+                native_position=native_position,
+                value_kind="len",
+                value=self._parse_native_value_ref(expr.args[0]),
+            )
+        if expr.func.id == "Shape":
+            if len(expr.args) != 2:
+                raise ValueError("Shape expects a value reference and dimension")
+            return ProjectionMapping(
+                native_position=native_position,
+                value_kind="shape",
+                value={
+                    "value": self._parse_native_value_ref(expr.args[0]),
+                    "dim": int(ast.literal_eval(expr.args[1])),
+                },
+            )
+        if expr.func.id == "IsPresent":
+            if len(expr.args) != 1:
+                raise ValueError("IsPresent expects one value reference")
+            return ProjectionMapping(
+                native_position=native_position,
+                value_kind="is_present",
+                value=self._parse_native_value_ref(expr.args[0]),
+            )
+        if expr.func.id == "Work":
+            if len(expr.args) != 1:
+                raise ValueError("Work expects one workspace name")
+            return ProjectionMapping(
+                native_position=native_position,
+                value_kind="work",
+                value=str(ast.literal_eval(expr.args[0])),
+            )
+        raise ValueError(f"Unsupported native_call projection entry: {expr.func.id}")
+
+    def _parse_native_value_ref(self, expr: ast.AST) -> dict[str, int | str]:
+        if not isinstance(expr, ast.Call) or not isinstance(expr.func, ast.Name):
+            raise ValueError("Expected Arg(...), Return(...), or Work(...) value reference")
+        if expr.keywords or len(expr.args) != 1:
+            raise ValueError(f"{expr.func.id} value reference expects one positional argument")
+        if expr.func.id == "Arg":
+            return {"kind": "arg", "position": int(ast.literal_eval(expr.args[0]))}
+        if expr.func.id == "Return":
+            return {"kind": "return", "position": int(ast.literal_eval(expr.args[0]))}
+        if expr.func.id == "Work":
+            return {"kind": "work", "name": str(ast.literal_eval(expr.args[0]))}
+        raise ValueError("Expected Arg(...), Return(...), or Work(...) value reference")
+
+    def _collect_decorator(self, start: int) -> tuple[str, int]:
+        parts: list[str] = []
+        depth = 0
+        quote: str | None = None
+        index = start
+        while index < len(self.lines):
+            line = self.lines[index].strip()
+            parts.append(line)
+            for char in line:
+                if quote:
+                    if char == quote:
+                        quote = None
+                    continue
+                if char in {"'", '"'}:
+                    quote = char
+                    continue
+                if char in "([{":
+                    depth += 1
+                    continue
+                if char in ")]}":
+                    depth -= 1
+            index += 1
+            if depth <= 0:
+                break
+        return " ".join(parts), index
 
     def _parse_return_projection(self, text: str) -> tuple[SemanticType | None, list[SemanticArgument]]:
         text = text.strip()

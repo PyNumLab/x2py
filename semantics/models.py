@@ -107,6 +107,8 @@ class ProjectionMapping:
     native_position: Optional[int] = None
     python_position: Optional[int] = None
     result_position: Optional[int] = None
+    value_kind: str = ""
+    value: Any = None
     intent: str = "in"
 
 
@@ -246,6 +248,8 @@ def _projection_key(
             mapping.native_position,
             mapping.python_position,
             mapping.result_position,
+            mapping.value_kind,
+            _native_projection_value_key(mapping.value, name_map),
             mapping.intent,
         )
         for mapping in projection
@@ -254,6 +258,8 @@ def _projection_key(
 
 
 def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
+    if mapping.value_kind:
+        return True
     if mapping.intent == "inout":
         return mapping.python_position != mapping.native_position
     if mapping.intent != "in":
@@ -263,6 +269,19 @@ def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
     if mapping.python_position is None:
         return True
     return mapping.native_position is not None and mapping.python_position != mapping.native_position
+
+
+def _native_projection_value_key(value: Any, name_map: dict[str, str]) -> Any:
+    if isinstance(value, dict):
+        return tuple(
+            sorted(
+                (key, _native_projection_value_key(item, name_map))
+                for key, item in value.items()
+            )
+        )
+    if isinstance(value, (list, tuple)):
+        return tuple(_native_projection_value_key(item, name_map) for item in value)
+    return _canonical_expression(value, name_map)
 
 
 def _constraint_key(

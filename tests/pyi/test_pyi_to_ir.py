@@ -163,6 +163,80 @@ def add(
     assert from_pyi.functions[0].projection[2].native_position == 2
 
 
+def test_native_call_accepts_hidden_native_values():
+    module = parse_pyi_text(
+        """
+@native_call([
+    Arg(0),
+    Const(1),
+    Len(Arg(0)),
+    Shape(Arg(0), 0),
+    IsPresent(Arg(1)),
+    Work("tmp"),
+])
+def wrapper(
+    x: Float64[Shape("n"), ORDER_F],
+    b: Vector | None = None
+) -> None: ...
+""",
+        module_name="edited",
+    )
+
+    projection = module.functions[0].projection
+
+    assert projection[1].value_kind == "const"
+    assert projection[1].value == 1
+    assert projection[2].value_kind == "len"
+    assert projection[2].value == {"kind": "arg", "position": 0}
+    assert projection[3].value_kind == "shape"
+    assert projection[3].value == {"value": {"kind": "arg", "position": 0}, "dim": 0}
+    assert projection[4].value_kind == "is_present"
+    assert projection[4].value == {"kind": "arg", "position": 1}
+    assert projection[5].value_kind == "work"
+    assert projection[5].value == "tmp"
+    assert module.functions[0].arguments[1].optional
+
+
+def test_emit_native_call_hidden_native_values():
+    module = SemanticModule(
+        name="edited",
+        functions=[
+            SemanticFunction(
+                name="wrapper",
+                native_name="wrapper",
+                arguments=[
+                    SemanticArgument("x", SemanticType("Float64", dtype="Float64")),
+                    SemanticArgument("b", SemanticType("Vector", dtype="Vector"), optional=True),
+                ],
+                projection=[
+                    ProjectionMapping(native_position=0, python_position=0),
+                    ProjectionMapping(native_position=1, value_kind="const", value=1),
+                    ProjectionMapping(
+                        native_position=2,
+                        value_kind="len",
+                        value={"kind": "arg", "position": 0},
+                    ),
+                    ProjectionMapping(
+                        native_position=3,
+                        value_kind="shape",
+                        value={"value": {"kind": "arg", "position": 0}, "dim": 0},
+                    ),
+                    ProjectionMapping(
+                        native_position=4,
+                        value_kind="is_present",
+                        value={"kind": "arg", "position": 1},
+                    ),
+                    ProjectionMapping(native_position=5, value_kind="work", value="tmp"),
+                ],
+            )
+        ],
+    )
+
+    pyi = emit_module(module)
+
+    assert "@native_call([Arg(0), Const(1), Len(Arg(0)), Shape(Arg(0), 0), IsPresent(Arg(1)), Work('tmp')])" in pyi
+
+
 def test_plain_return_without_native_call_does_not_preserve_native_output_position():
     from_pyi = parse_pyi_text(
         """
