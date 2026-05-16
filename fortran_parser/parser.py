@@ -2663,8 +2663,9 @@ class FortranParser:
         else:
             code = str(source)
 
+        effective_macro_defines = self.macro_defines if macro_defines is None else macro_defines
         lines = preprocess_lines(code, filename)
-        signatures = self._collect_procedure_signatures(lines, filename=filename, macro_defines=macro_defines)
+        signatures = self._collect_procedure_signatures(lines, filename=filename, macro_defines=effective_macro_defines)
         derived_types = self.visit_fortran_types(lines, filename=filename)
         interfaces = self.visit_fortran_interfaces(lines, filename=filename)
         modules = self.visit_fortran_modules(
@@ -2730,13 +2731,16 @@ class FortranParser:
 
     def visit_fortran_project(
         self,
-        files: dict[str, str] | list[str | Path] | tuple[str | Path, ...],
+        files: dict[str, str] | list[str | Path] | tuple[str | Path, ...] | str | Path,
         *,
         encoding: str = "utf-8",
     ) -> FortranProject:
         """Parse many sources and merge them into one dependency-aware project model."""
         if isinstance(files, dict):
             parsed_files = [self.visit_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
+        elif isinstance(files, (str, Path)):
+            namespace = self._parse_fortran_namespace(files)
+            parsed_files = [self.visit_file(path, encoding=encoding) for path in namespace["files"]]
         else:
             parsed_files = [self.visit_file(path, encoding=encoding) for path in files]
 

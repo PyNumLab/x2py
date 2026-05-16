@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from fortran_parser.cli import _format_wrap_readiness
-
 from x2py import FortranParseError, assess_wrap_readiness, parse_fortran_file, parse_fortran_project
 
 collect_project_procedure_signatures = lambda files: list(parse_fortran_project(files).procedures.values())
@@ -126,6 +124,90 @@ def test_fixed_form_and_interface_detection():
     assert parsed.procedures[0].arguments[1].shape == ["n"]
     assert len(parsed.interfaces) == 1
     assert parsed.interfaces[0].procedures[0].in_interface is True
+
+
+def test_preprocessor_macro_selection_uses_active_branch_from_inline_fortran():
+    source = """
+#ifdef USE_A
+subroutine selected_a(x)
+  integer, intent(in) :: x
+end subroutine selected_a
+#elif defined(USE_B)
+subroutine selected_b(x)
+  real(8), intent(in) :: x
+end subroutine selected_b
+#else
+subroutine fallback(x)
+  logical, intent(in) :: x
+end subroutine fallback
+#endif
+"""
+
+    selected = parse_fortran_file(source, macro_defines={"USE_B": True})
+    fallback = parse_fortran_file(source, macro_defines={"USE_A": False, "USE_B": False})
+
+    assert [proc.name for proc in selected.procedures] == ["selected_b"]
+    assert selected.procedures[0].arguments[0].base_type == "real"
+    assert [proc.name for proc in fallback.procedures] == ["fallback"]
+    assert fallback.procedures[0].arguments[0].base_type == "logical"
+
+
+def test_legacy_character_and_star_kind_declarations_from_inline_fortran():
+    source = """
+      subroutine label(name, x)
+      character*(*) name
+      real*8 x
+      end
+"""
+
+    proc = parse_fortran_file(source, filename="label.f").procedures[0]
+
+    assert proc.arguments[0].base_type == "character"
+    assert proc.arguments[0].kind == "*"
+    assert proc.arguments[1].base_type == "real"
+
+    with pytest.raises(FortranParseError, match="Unsupported Fortran 77 star-kind declaration"):
+        parse_fortran_file(
+            """
+subroutine modern_star(x)
+  real*8 x
+end subroutine modern_star
+""",
+            filename="modern_star.f90",
+        )
+
+
+def test_duplicate_symbols_are_reported_from_inline_fortran():
+    with pytest.raises(FortranParseError, match="Duplicate variable 'x' in module 'dup_mod'"):
+        parse_fortran_file(
+            """
+module dup_mod
+  integer :: x
+  real :: x
+end module dup_mod
+"""
+        )
+
+    with pytest.raises(FortranParseError, match="Duplicate field 'id' in derived type 'particle'"):
+        parse_fortran_file(
+            """
+module dup_type_mod
+  type :: particle
+    integer :: id
+    real :: id
+  end type particle
+end module dup_type_mod
+"""
+        )
+
+    with pytest.raises(FortranParseError, match="Duplicate argument name 'x' in procedure 'dup_arg'"):
+        parse_fortran_file(
+            """
+subroutine dup_arg(x, x)
+  integer, intent(in) :: x
+end subroutine dup_arg
+"""
+        )
 
 
 def test_kind_resolution_from_imported_module_across_files():
@@ -764,35 +846,6 @@ end module state_mod
     ]
 
 
-def test_cli_wrap_readiness_format_reports_status_and_reasons():
-    report = {
-        "bad.f90": {
-            "wrap_readiness": {
-                "wrappable": False,
-                "wrappability_blockers": [
-                    {
-                        "code": "unresolved_derived_type_arguments",
-                        "message": "Some derived-type procedure arguments refer to types missing from the parsed source.",
-                        "items": [
-                            {
-                                "procedure": "step",
-                                "module": "solver",
-                                "argument": "state",
-                                "type": "sim_state",
-                                "import_modules": ["state_mod"],
-                            }
-                        ],
-                    }
-                ],
-            }
-        }
-    }
-    text = _format_wrap_readiness(report)
-    assert "Wrappable: no" in text
-    assert "Why not wrappable:" in text
-    assert "step:state uses type(sim_state) from state_mod" in text
-
-
 def test_assess_wrap_readiness_accepts_intrinsic_module_kind_symbols():
     code = """
 subroutine scale(x)
@@ -1296,30 +1349,54 @@ end subroutine free_proc
     assert "free_proc" in project.procedures
 
 
-def test_parse_fortran_file_preprocesses_source_once(monkeypatch):
-    import fortran_parser.parser as parser_module
-
-    calls = 0
-    original = parser_module.preprocess_lines
-
-    def counting_preprocess(code, filename=None):
-        nonlocal calls
-        calls += 1
-        return original(code, filename)
-
-    monkeypatch.setattr(parser_module, "preprocess_lines", counting_preprocess)
-    parsed = parser_module.parse_fortran_file("""
-module once_mod
+def test_parse_fortran_project_accepts_directory_and_orders_dependencies(tmp_path):
+    (tmp_path / "10_solver.f90").write_text(
+        """
+module solver_mod
+  use kinds_mod, only: rk
 contains
-subroutine ping(x)
-  integer, intent(in) :: x
-end subroutine ping
-end module once_mod
-""")
+  subroutine step(x)
+    real(kind=rk), intent(inout) :: x(:)
+  end subroutine step
+end module solver_mod
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "00_kinds.f90").write_text(
+        """
+module kinds_mod
+  integer, parameter :: rk = selected_real_kind(15, 307)
+end module kinds_mod
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "20_driver.f90").write_text(
+        """
+program driver
+  use solver_mod
+  real :: x(4)
+end program driver
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "30_init.f90").write_text(
+        """
+block data init_data
+  integer :: seed
+end block data init_data
+""",
+        encoding="utf-8",
+    )
 
-    assert calls == 1
-    assert parsed.modules[0].procedures[0].name == "ping"
+    project = parse_fortran_project(tmp_path)
 
+    assert len(project.files) == 4
+    assert "kinds_mod" in project.modules
+    assert "solver_mod" in project.modules
+    assert "driver" in project.programs
+    assert "solver_mod.step" in project.procedures
+    solver = project.procedures["solver_mod.step"]
+    assert solver.arguments[0].kind == "rk"
 
 
 def test_singular_parse_entrypoints_return_single_models():

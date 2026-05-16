@@ -35,9 +35,10 @@ def _to_dict_no_parent(obj):
     if is_dataclass(obj):
         out = {}
         for f in fields(obj):
-            if f.name == "parent":
+            value = getattr(obj, f.name)
+            if f.name == "parent" and not isinstance(value, (str, type(None))):
                 continue
-            out[f.name] = _to_dict_no_parent(getattr(obj, f.name))
+            out[f.name] = _to_dict_no_parent(value)
         return out
     if isinstance(obj, list):
         return [_to_dict_no_parent(v) for v in obj]
