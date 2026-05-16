@@ -46,7 +46,7 @@
                     ]
                   },
                   {
-                    "name": "FortranContiguous",
+                    "name": "ORDER_F",
                     "arguments": []
                   }
                 ],
@@ -67,7 +67,24 @@
           ],
           "return_type": null,
           "contracts": [],
-          "projection": [],
+          "projection": [
+            {
+              "python_name": "n",
+              "native_name": "n",
+              "native_position": 0,
+              "python_position": 0,
+              "result_position": null,
+              "intent": "in"
+            },
+            {
+              "python_name": "x",
+              "native_name": "x",
+              "native_position": 1,
+              "python_position": 1,
+              "result_position": 0,
+              "intent": "inout"
+            }
+          ],
           "metadata": {},
           "visibility": "public"
         }

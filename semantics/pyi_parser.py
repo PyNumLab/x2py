@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from .models import (
+    ProjectionMapping,
     SemanticArgument,
     SemanticClass,
     SemanticConstraint,
@@ -50,6 +51,7 @@ class PyiToIRParser:
         self.index = 0
         module = SemanticModule(name=self.module_name)
         pending_visibility = "public"
+        pending_projection: list[ProjectionMapping] = []
 
         while self.index < len(self.lines):
             line = self.lines[self.index]
@@ -63,6 +65,10 @@ class PyiToIRParser:
                 pending_visibility = "private"
                 self.index += 1
                 continue
+            if stripped.startswith("@call_map"):
+                pending_projection = self._parse_call_map_decorator(stripped)
+                self.index += 1
+                continue
             if stripped.startswith("import "):
                 module.imports.append(stripped.split(None, 1)[1].strip())
                 self.index += 1
@@ -73,9 +79,14 @@ class PyiToIRParser:
                 pending_visibility = "public"
                 continue
             if stripped.startswith("def "):
-                func, self.index = self._parse_function(self.index, visibility=pending_visibility)
+                func, self.index = self._parse_function(
+                    self.index,
+                    visibility=pending_visibility,
+                    projection=pending_projection,
+                )
                 module.functions.append(func)
                 pending_visibility = "public"
+                pending_projection = []
                 continue
             if ":" in stripped:
                 module.variables.append(self._parse_argument_line(stripped, default_intent="in"))
@@ -95,6 +106,7 @@ class PyiToIRParser:
         fields: list[SemanticArgument] = []
         methods: list[SemanticMethod] = []
         pending_visibility = "public"
+        pending_projection: list[ProjectionMapping] = []
         index = start + 1
         while index < len(self.lines):
             line = self.lines[index]
@@ -111,10 +123,19 @@ class PyiToIRParser:
                 pending_visibility = "private"
                 index += 1
                 continue
+            if stripped.startswith("@call_map"):
+                pending_projection = self._parse_call_map_decorator(stripped)
+                index += 1
+                continue
             if stripped.startswith("def "):
-                method, index = self._parse_method(index, visibility=pending_visibility)
+                method, index = self._parse_method(
+                    index,
+                    visibility=pending_visibility,
+                    projection=pending_projection,
+                )
                 methods.append(method)
                 pending_visibility = "public"
+                pending_projection = []
                 continue
             if ":" in stripped:
                 fields.append(self._parse_argument_line(stripped, default_intent="in"))
@@ -135,32 +156,50 @@ class PyiToIRParser:
             index,
         )
 
-    def _parse_function(self, start: int, *, visibility: str) -> tuple[SemanticFunction, int]:
+    def _parse_function(
+        self,
+        start: int,
+        *,
+        visibility: str,
+        projection: list[ProjectionMapping] | None = None,
+    ) -> tuple[SemanticFunction, int]:
         name, args, return_type, returned_args, index = self._parse_callable(start)
         semantic_args = [self._parse_argument_line(arg, default_intent="in") for arg in args]
+        return_type, returned_args = self._apply_call_map_returns(return_type, returned_args, projection or [])
         self._apply_projected_returns(semantic_args, returned_args)
+        self._apply_call_map_argument_names(semantic_args, projection or [])
         return (
             SemanticFunction(
                 name=name,
                 native_name=name,
                 arguments=semantic_args,
                 return_type=return_type,
+                projection=projection or [],
                 visibility=visibility,
             ),
             index,
         )
 
-    def _parse_method(self, start: int, *, visibility: str) -> tuple[SemanticMethod, int]:
+    def _parse_method(
+        self,
+        start: int,
+        *,
+        visibility: str,
+        projection: list[ProjectionMapping] | None = None,
+    ) -> tuple[SemanticMethod, int]:
         name, args, return_type, returned_args, index = self._parse_callable(start)
         args = args[1:] if args and args[0].strip() == "self" else args
         semantic_args = [self._parse_argument_line(arg, default_intent="in") for arg in args]
+        return_type, returned_args = self._apply_call_map_returns(return_type, returned_args, projection or [])
         self._apply_projected_returns(semantic_args, returned_args)
+        self._apply_call_map_argument_names(semantic_args, projection or [])
         return (
             SemanticMethod(
                 name=name,
                 native_name=name,
                 arguments=semantic_args,
                 return_type=return_type,
+                projection=projection or [],
                 visibility=visibility,
             ),
             index,
@@ -238,6 +277,51 @@ class PyiToIRParser:
             existing.intent = "inout"
             existing.semantic_type.ownership.mutable = True
 
+    def _apply_call_map_returns(
+        self,
+        return_type: SemanticType | None,
+        returned_args: list[SemanticArgument],
+        projection: list[ProjectionMapping],
+    ) -> tuple[SemanticType | None, list[SemanticArgument]]:
+        output_by_result = {
+            mapping.result_position: mapping
+            for mapping in projection
+            if mapping.result_position is not None and mapping.python_position is None
+        }
+        if return_type is not None and 0 in output_by_result:
+            mapping = output_by_result[0]
+            return_type.ownership.mutable = True
+            returned_args.insert(
+                0,
+                SemanticArgument(
+                    name=mapping.native_name,
+                    semantic_type=return_type,
+                    intent=mapping.intent,
+                ),
+            )
+            return_type = None
+
+        for returned in returned_args:
+            position = returned.metadata.pop("return_position", None)
+            mapping = output_by_result.get(position)
+            if mapping is not None:
+                returned.name = mapping.native_name
+                returned.intent = mapping.intent
+                returned.semantic_type.ownership.mutable = True
+        return return_type, returned_args
+
+    @staticmethod
+    def _apply_call_map_argument_names(
+        semantic_args: list[SemanticArgument],
+        projection: list[ProjectionMapping],
+    ) -> None:
+        for mapping in projection:
+            if mapping.python_position is None:
+                continue
+            if not 0 <= mapping.python_position < len(semantic_args):
+                raise ValueError(f"call_map argument position is out of range: {mapping.python_position}")
+            mapping.python_name = semantic_args[mapping.python_position].name
+
     def _parse_visible_type(self, type_text: str) -> tuple[str, SemanticType, str | None]:
         if type_text.startswith("private[") and type_text.endswith("]"):
             semantic_type, original_name = self._parse_semantic_type_annotation(type_text[len("private[") : -1])
@@ -297,20 +381,59 @@ class PyiToIRParser:
             )
         raise ValueError(f"Unsupported semantic type constraint: {token!r}")
 
+    def _parse_call_map_decorator(self, text: str) -> list[ProjectionMapping]:
+        expr = ast.parse(text[1:], mode="eval").body
+        if not isinstance(expr, ast.Call) or not isinstance(expr.func, ast.Name) or expr.func.id != "call_map":
+            raise ValueError(f"Unsupported call map decorator: {text!r}")
+        return [self._parse_native_arg_mapping(arg) for arg in expr.args]
+
+    def _parse_native_arg_mapping(self, expr: ast.AST) -> ProjectionMapping:
+        if not isinstance(expr, ast.Call) or not isinstance(expr.func, ast.Name) or expr.func.id != "NativeArg":
+            raise ValueError("call_map expects NativeArg(...) entries")
+        if len(expr.args) != 2:
+            raise ValueError("NativeArg expects a native name and native position")
+        native_name = str(ast.literal_eval(expr.args[0]))
+        native_position = int(ast.literal_eval(expr.args[1]))
+        keywords = {kw.arg: ast.literal_eval(kw.value) for kw in expr.keywords if kw.arg is not None}
+        source = str(keywords.get("source", "arg"))
+        position = keywords.get("position")
+        result = keywords.get("result")
+        return ProjectionMapping(
+            native_name=native_name,
+            native_position=native_position,
+            python_position=int(position) if source == "arg" and position is not None else None,
+            result_position=int(result if result is not None else position) if source == "return" and position is not None else (
+                int(result) if result is not None else None
+            ),
+            intent=str(keywords.get("intent", "in")),
+        )
+
     def _parse_return_projection(self, text: str) -> tuple[SemanticType | None, list[SemanticArgument]]:
         text = text.strip()
         if text == "None":
             return None, []
         return_type: SemanticType | None = None
         returned_args: list[SemanticArgument] = []
-        for item in self._return_items(text):
+        plain_return_index = 0
+        for item_index, item in enumerate(self._return_items(text)):
             returned = self._parse_returned_argument(item)
             if returned is not None:
+                returned.metadata["return_position"] = item_index
                 returned_args.append(returned)
             else:
-                if return_type is not None:
-                    raise ValueError(f"Multiple non-Returns return annotations are not supported: {text!r}")
-                return_type = self._parse_semantic_type(item)
+                semantic_type = self._parse_semantic_type(item)
+                if item_index == 0:
+                    return_type = semantic_type
+                else:
+                    returned_args.append(
+                        SemanticArgument(
+                            name=f"__return_{plain_return_index}",
+                            semantic_type=semantic_type,
+                            intent="out",
+                            metadata={"return_position": item_index},
+                        )
+                    )
+                plain_return_index += 1
         return return_type, returned_args
 
     def _return_items(self, text: str) -> list[str]:

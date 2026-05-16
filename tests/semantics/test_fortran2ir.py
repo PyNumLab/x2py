@@ -128,7 +128,7 @@ end module
 
     assert has_constraint(
         x.semantic_type,
-        "FortranContiguous",
+        "ORDER_F",
     )
 
     assert x.semantic_type.shape == [":"]
@@ -175,7 +175,7 @@ end module
 
     assert has_constraint(
         A.semantic_type,
-        "FortranContiguous",
+        "ORDER_F",
     )
 
 
@@ -491,7 +491,7 @@ end module
 
     assert has_constraint(
         K.semantic_type,
-        "FortranContiguous",
+        "ORDER_F",
     )
 
     connectivity = next(arg for arg in assemble.arguments if arg.name == "connectivity")

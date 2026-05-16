@@ -325,7 +325,7 @@ is an allowed coercion for `alpha`.
 def solve(
     A: Float64Matrix[
         From(np.ndarray),
-        FortranContiguous,
+        ORDER_F,
         Writable,
         Shape("N", "N"),
     ],
@@ -343,7 +343,7 @@ This means:
 * allowed coercion for `A`:
   * `np.ndarray -> Float64Matrix`
 * required constraints for `A`:
-  * Fortran contiguous
+  * Fortran-contiguous (`ORDER_F`)
   * writable
   * square shape
 * cross-argument contract:
@@ -363,7 +363,8 @@ Examples:
 
 * `Positive`
 * `Writable`
-* `FortranContiguous`
+* `ORDER_F`
+* `ORDER_C`
 * `CPUResident`
 * `Shape(N, N)`
 * `Aligned(64)`
@@ -414,7 +415,7 @@ Example validation error:
 ```text
 ValidationError in solve(A, b)
   parameter: A
-  failed: FortranContiguous
+  failed: ORDER_F
   observed: order='C', shape=(10, 10), dtype=float64
   hint: declare From(np.ndarray, copy=True) or pass np.asfortranarray(A)
 ```
@@ -771,7 +772,7 @@ class Solver:
     @contract(pre=square_linear_system)
     def solve(
         self,
-        A: Float64Matrix[From(np.ndarray), FortranContiguous],
+        A: Float64Matrix[From(np.ndarray), ORDER_F],
         b: Float64Vector[From(np.ndarray)],
     ) -> Float64Vector: ...
 

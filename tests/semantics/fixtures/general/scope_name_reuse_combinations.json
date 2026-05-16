@@ -32,7 +32,16 @@
           ],
           "return_type": null,
           "contracts": [],
-          "projection": [],
+          "projection": [
+            {
+              "python_name": "same_name",
+              "native_name": "same_name",
+              "native_position": 0,
+              "python_position": 0,
+              "result_position": 0,
+              "intent": "inout"
+            }
+          ],
           "metadata": {},
           "visibility": "public"
         },
@@ -65,7 +74,16 @@
           ],
           "return_type": null,
           "contracts": [],
-          "projection": [],
+          "projection": [
+            {
+              "python_name": "same_name",
+              "native_name": "same_name",
+              "native_position": 0,
+              "python_position": 0,
+              "result_position": null,
+              "intent": "in"
+            }
+          ],
           "metadata": {},
           "visibility": "public"
         },
@@ -98,7 +116,16 @@
           ],
           "return_type": null,
           "contracts": [],
-          "projection": [],
+          "projection": [
+            {
+              "python_name": "same_name",
+              "native_name": "same_name",
+              "native_position": 0,
+              "python_position": 0,
+              "result_position": null,
+              "intent": "in"
+            }
+          ],
           "metadata": {},
           "visibility": "public"
         },
@@ -131,7 +158,16 @@
           ],
           "return_type": null,
           "contracts": [],
-          "projection": [],
+          "projection": [
+            {
+              "python_name": "same_name",
+              "native_name": "same_name",
+              "native_position": 0,
+              "python_position": 0,
+              "result_position": 0,
+              "intent": "inout"
+            }
+          ],
           "metadata": {},
           "visibility": "public"
         },
@@ -164,7 +200,16 @@
           ],
           "return_type": null,
           "contracts": [],
-          "projection": [],
+          "projection": [
+            {
+              "python_name": "same_name",
+              "native_name": "same_name",
+              "native_position": 0,
+              "python_position": 0,
+              "result_position": 0,
+              "intent": "inout"
+            }
+          ],
           "metadata": {},
           "visibility": "public"
         },
@@ -210,7 +255,16 @@
             "metadata": {}
           },
           "contracts": [],
-          "projection": [],
+          "projection": [
+            {
+              "python_name": "same_name",
+              "native_name": "same_name",
+              "native_position": 0,
+              "python_position": 0,
+              "result_position": null,
+              "intent": "in"
+            }
+          ],
           "metadata": {},
           "visibility": "public"
         },
@@ -256,7 +310,16 @@
             "metadata": {}
           },
           "contracts": [],
-          "projection": [],
+          "projection": [
+            {
+              "python_name": "same_name",
+              "native_name": "same_name",
+              "native_position": 0,
+              "python_position": 0,
+              "result_position": null,
+              "intent": "in"
+            }
+          ],
           "metadata": {},
           "visibility": "public"
         },
@@ -302,7 +365,16 @@
             "metadata": {}
           },
           "contracts": [],
-          "projection": [],
+          "projection": [
+            {
+              "python_name": "same_name",
+              "native_name": "same_name",
+              "native_position": 0,
+              "python_position": 0,
+              "result_position": null,
+              "intent": "in"
+            }
+          ],
           "metadata": {},
           "visibility": "public"
         }
