@@ -665,6 +665,176 @@ def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
         arg.rank = meta["rank"]
     arg.lbound, arg.ubound = _extract_bounds(arg.shape)
 
+
+def _new_decl_meta(base_type: str, kind: str | None) -> dict:
+    return {
+        "base_type": base_type,
+        "kind": kind,
+        "rank": 0,
+        "shape": [],
+        "intent": "unknown",
+        "optional": False,
+        "value": False,
+        "allocatable": False,
+        "pointer": False,
+        "external": False,
+    }
+
+
+def _apply_decl_attrs(meta: dict, attrs: list[str], *, include_intent: bool = False) -> None:
+    for a in attrs:
+        la = a.lower()
+        if include_intent and la.startswith("intent") and "(" in la and ")" in la:
+            meta["intent"] = la.split("(", 1)[1].rsplit(")", 1)[0].strip()
+        elif la == "optional":
+            meta["optional"] = True
+        elif la == "value":
+            meta["value"] = True
+        elif la == "allocatable":
+            meta["allocatable"] = True
+        elif la == "pointer":
+            meta["pointer"] = True
+        elif la == "external":
+            meta["external"] = True
+        elif la.startswith("dimension") and "(" in a and ")" in a:
+            shape = split_csv(a[a.find("(") + 1 : a.rfind(")")])
+            meta["shape"] = shape
+            meta["rank"] = len(shape)
+
+
+def _normalize_declared_name(name: str, meta: dict) -> str:
+    normalized_name = re.sub(r"^\*\s*[0-9]+\s*", "", name).strip()
+    if meta["base_type"] == "character" and "*" in normalized_name:
+        # Legacy CHARACTER declarations may carry entity-local length
+        # specifiers (e.g. NAME*(*) or SUBNAM*6). Strip the `*len`
+        # suffix so symbol lookup matches procedure arguments.
+        normalized_name = normalized_name.split("*", 1)[0].strip()
+    return normalized_name
+
+
+def _strip_legacy_star_kind_prefix(left: str) -> str:
+    return re.sub(
+        r"^(integer|real|complex|logical)\s*\*\s*[0-9]+\s*",
+        "",
+        left,
+        flags=re.IGNORECASE,
+    ).strip()
+
+
+def _legacy_declaration_entities(left: str, meta: dict) -> str | None:
+    """Return the entity-list tail from a declaration without `::`."""
+    char_star = _CHAR_STAR_RE.match(left)
+    if char_star:
+        return (char_star.group("rest") or "").strip().lstrip(", ")
+
+    star_kind = _find_legacy_star_kind(left)
+    if star_kind and meta["base_type"] != "character":
+        return _strip_legacy_star_kind_prefix(left).lstrip(", ")
+
+    tm = _TYPE_RE.match(left)
+    if tm:
+        return tm.group(3).strip().lstrip(", ")
+
+    derived = _TYPE_FIELD_RE.match(left) or _CLASS_FIELD_RE.match(left)
+    if derived:
+        return (derived.group("attrs") or "").strip().lstrip(", ")
+
+    procm = _PROC_DUMMY_RE.match(left)
+    if procm:
+        tail = (procm.group("attrs") or "").strip()
+        if tail and not tail.startswith(","):
+            return tail
+    return None
+
+
+def _parse_common_declaration_left(
+    left: str,
+    *,
+    filename: str | None,
+    line_number: int | None = None,
+    source_line: str | None = None,
+    parse_character_star: bool = True,
+) -> tuple[dict, list[str]] | None:
+    star_kind = _find_legacy_star_kind(left)
+    source_form = _source_form(filename)
+    if star_kind and source_form == "modern" and star_kind[0] != "character":
+        base, kind = star_kind
+        raise FortranParseError(
+            f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.",
+            filename=filename,
+            line_number=line_number,
+            source_line=source_line,
+        )
+
+    char_star = _CHAR_STAR_RE.match(left) if parse_character_star else None
+    if char_star:
+        kind = char_star.group("len").strip()
+        if kind.startswith("(") and kind.endswith(")"):
+            kind = kind[1:-1].strip()
+        trailing = (char_star.group("rest") or "").strip().lstrip(", ")
+        return _new_decl_meta("character", kind), split_csv(trailing)
+
+    tm = _TYPE_RE.match(left)
+    derived = _TYPE_FIELD_RE.match(left)
+    class_derived = _CLASS_FIELD_RE.match(left)
+    if tm:
+        base = tm.group(1).lower()
+        if base == "double precision":
+            base = "real"
+        type_spec = (tm.group(2) or "").strip()
+        return _new_decl_meta(base, extract_kind_from_type_spec(base, type_spec)), split_csv(tm.group(3).strip().lstrip(", "))
+    if derived or class_derived:
+        decl = derived or class_derived
+        return _new_decl_meta("derived", decl.group("dtype")), split_csv((decl.group("attrs") or "").strip().lstrip(", "))
+    if re.match(r"^procedure\s*\(", left, re.IGNORECASE):
+        procm = _PROC_DUMMY_RE.match(left)
+        iface = procm.group("iface").lower() if procm else None
+        return _new_decl_meta("procedure", iface), split_csv((procm.group("attrs") if procm else "").strip().lstrip(", "))
+    if star_kind:
+        base, kind = star_kind
+        tail = _strip_legacy_star_kind_prefix(left)
+        attrs = split_csv(tail.lstrip(", ")) if tail.startswith(",") else []
+        return _new_decl_meta(base.lower(), kind), attrs
+    return None
+
+
+def _parse_common_declaration_line(
+    line: str,
+    *,
+    filename: str | None,
+    line_number: int | None = None,
+    source_line: str | None = None,
+    include_intent: bool = False,
+    parse_character_star: bool = True,
+) -> tuple[dict, str] | None:
+    if "::" in line:
+        left, right = [x.strip() for x in line.split("::", 1)]
+        has_separator = True
+    else:
+        left = line.strip()
+        right = ""
+        has_separator = False
+
+    parsed_decl = _parse_common_declaration_left(
+        left,
+        filename=filename,
+        line_number=line_number,
+        source_line=source_line,
+        parse_character_star=parse_character_star,
+    )
+    if parsed_decl is None:
+        return None
+
+    meta, attrs = parsed_decl
+    if not has_separator:
+        legacy_right = _legacy_declaration_entities(left, meta)
+        if legacy_right is not None:
+            right = legacy_right
+            attrs = []
+
+    _apply_decl_attrs(meta, attrs, include_intent=include_intent)
+    return meta, right
+
 # -----------------------------------------------------------------------------
 # Validation and finalization
 # -----------------------------------------------------------------------------
@@ -705,9 +875,16 @@ def _validate_function_result(sig: FortranProcedureSignature, filename: str | No
             )
 
 
-def _validate_module_variables(module: FortranModule, filename: str | None) -> None:
+def _validate_variable_declarations(
+    variables: list[FortranVariable],
+    *,
+    owner_kind: str,
+    owner_name: str | None,
+    filename: str | None,
+) -> None:
     seen: dict[str, FortranArgument] = {}
-    for var in module.variables:
+    display_name = owner_name or "<unnamed>"
+    for var in variables:
         key = var.name.lower()
         if not re.match(r"^[a-z_]\w*$", key, re.IGNORECASE):
             continue
@@ -720,14 +897,34 @@ def _validate_module_variables(module: FortranModule, filename: str | None) -> N
                 or tuple(prev.shape) != tuple(var.shape)
             ):
                 raise FortranParseError(
-                    f"Duplicate variable '{var.name}' in module '{module.name}'.",
+                    f"Duplicate variable '{var.name}' in {owner_kind} '{display_name}'.",
                     filename=filename,
                 )
             continue
         seen[key] = var
 
 
-def _apply_module_visibility(module: FortranModule) -> None:
+def _variable_scope_label(scope) -> tuple[str, str | None]:
+    if isinstance(scope, FortranSubmodule):
+        return "submodule", scope.name
+    if isinstance(scope, FortranProgram):
+        return "program", scope.name
+    if isinstance(scope, FortranBlockData):
+        return "block data", scope.name
+    return "module", scope.name
+
+
+def _validate_module_variables(module: FortranModule | FortranSubmodule, filename: str | None) -> None:
+    owner_kind, owner_name = _variable_scope_label(module)
+    _validate_variable_declarations(
+        module.variables,
+        owner_kind=owner_kind,
+        owner_name=owner_name,
+        filename=filename,
+    )
+
+
+def _apply_module_visibility(module: FortranModule, filename: str | None) -> None:
     public_set = {s.lower() for s in module.public_symbols}
     private_set = {s.lower() for s in module.private_symbols}
     for var in module.variables:
@@ -1444,396 +1641,244 @@ class FortranParser:
         return signatures
 
     def _parse_declaration(self, line: str, proc_state: dict, filename: str | None = None, lineno: int | None = None, source_line: str | None = None) -> None:
-            """Parse one declaration/specification line inside a procedure scope.
+        """Parse one declaration/specification line inside a procedure scope.
 
-            The method mutates `proc_state` in-place by:
-            - registering typed symbols and parameter constants,
-            - annotating argument metadata (type/kind/intent/rank/shape),
-            - recording imports/includes/external callbacks,
-            - transitioning unsupported/unknown declarations into explicit errors.
-            """
-            stripped = line.strip()
-            # This parser is a subset parser focused on wrapper-relevant metadata.
-            # Many Fortran statements are intentionally ignored here because they do not
-            # affect signature typing/shapes (or because we only support them at the
-            # module/project resolution layer).
-            if re.match(r"^implicit\b", stripped, flags=re.IGNORECASE):
-                if re.match(r"^implicit\s+none\b", stripped, flags=re.IGNORECASE):
-                    proc_state["implicit_none"] = True
-                return
+        The method mutates `proc_state` in-place by:
+        - registering typed symbols and parameter constants,
+        - annotating argument metadata (type/kind/intent/rank/shape),
+        - recording imports/includes/external callbacks,
+        - transitioning unsupported/unknown declarations into explicit errors.
+        """
+        stripped = line.strip()
+        # This parser is a subset parser focused on wrapper-relevant metadata.
+        # Many Fortran statements are intentionally ignored here because they do not
+        # affect signature typing/shapes (or because we only support them at the
+        # module/project resolution layer).
+        if re.match(r"^implicit\b", stripped, flags=re.IGNORECASE):
+            if re.match(r"^implicit\s+none\b", stripped, flags=re.IGNORECASE):
+                proc_state["implicit_none"] = True
+            return
 
-            external_match = re.match(r"^external\b\s*(?:::)?\s*(?P<names>.*)$", stripped, flags=re.IGNORECASE)
-            if external_match:
-                names = [n.strip().lower() for n in split_csv(external_match.group("names") or "") if n.strip()]
-                for name in names:
-                    proc_state.setdefault("external_symbols", set()).add(name)
-                    arg = proc_state["symbols"].get(name)
-                    if arg is not None and arg.base_type == "unknown":
-                        arg.base_type = "procedure"
-                return
-            if re.match(r"^(function|subroutine)\b", stripped, flags=re.IGNORECASE):
-                # Legacy callback declarations often appear as bare:
-                #   function f(x)
-                # inside a procedure declaration section.
-                return
-            if re.match(r"^intrinsic\b", stripped, flags=re.IGNORECASE):
-                return
-            if re.match(r"^data\b", stripped, flags=re.IGNORECASE):
-                return
-            if re.match(r"^equivalence\b", stripped, flags=re.IGNORECASE):
-                return
-            if re.match(r"^format\s*\(", stripped, flags=re.IGNORECASE):
-                return
-            if re.match(r"^go\s*to\b", stripped, flags=re.IGNORECASE):
-                return
-            if re.match(r"^use\b", stripped, flags=re.IGNORECASE):
-                return
-            if re.match(r"^save\b", stripped, flags=re.IGNORECASE):
-                return
-            if re.match(r"^common\b", stripped, flags=re.IGNORECASE):
-                return
-            include_match = _INCLUDE_RE.match(stripped)
-            if include_match:
-                proc_state.setdefault("includes", []).append(include_match.group("path"))
-                return
-            import_match = _IMPORT_RE.match(stripped)
-            if import_match:
-                symbols = [s.strip().lower() for s in split_csv(import_match.group("symbols") or "") if s.strip()]
-                proc_state.setdefault("imports", set()).update(symbols)
-                return
+        external_match = re.match(r"^external\b\s*(?:::)?\s*(?P<names>.*)$", stripped, flags=re.IGNORECASE)
+        if external_match:
+            names = [n.strip().lower() for n in split_csv(external_match.group("names") or "") if n.strip()]
+            for name in names:
+                proc_state.setdefault("external_symbols", set()).add(name)
+                arg = proc_state["symbols"].get(name)
+                if arg is not None and arg.base_type == "unknown":
+                    arg.base_type = "procedure"
+            return
+        if re.match(r"^(function|subroutine)\b", stripped, flags=re.IGNORECASE):
+            # Legacy callback declarations often appear as bare:
+            #   function f(x)
+            # inside a procedure declaration section.
+            return
+        if re.match(r"^intrinsic\b", stripped, flags=re.IGNORECASE):
+            return
+        if re.match(r"^data\b", stripped, flags=re.IGNORECASE):
+            return
+        if re.match(r"^equivalence\b", stripped, flags=re.IGNORECASE):
+            return
+        if re.match(r"^format\s*\(", stripped, flags=re.IGNORECASE):
+            return
+        if re.match(r"^go\s*to\b", stripped, flags=re.IGNORECASE):
+            return
+        if re.match(r"^use\b", stripped, flags=re.IGNORECASE):
+            return
+        if re.match(r"^save\b", stripped, flags=re.IGNORECASE):
+            return
+        if re.match(r"^common\b", stripped, flags=re.IGNORECASE):
+            return
+        include_match = _INCLUDE_RE.match(stripped)
+        if include_match:
+            proc_state.setdefault("includes", []).append(include_match.group("path"))
+            return
+        import_match = _IMPORT_RE.match(stripped)
+        if import_match:
+            symbols = [s.strip().lower() for s in split_csv(import_match.group("symbols") or "") if s.strip()]
+            proc_state.setdefault("imports", set()).update(symbols)
+            return
 
-            pm = _PARAM_RE.match(stripped)
-            if pm:
-                for assign in split_csv(pm.group("body")):
-                    if "=" not in assign:
-                        continue
-                    k, v = [x.strip() for x in assign.split("=", 1)]
-                    if k.lower() in proc_state["local_params"]:
-                        raise FortranParseError(
-                            f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'.",
-                            filename=filename,
-                            line_number=lineno,
-                            source_line=source_line,
-                        )
+        pm = _PARAM_RE.match(stripped)
+        if pm:
+            for assign in split_csv(pm.group("body")):
+                if "=" not in assign:
+                    continue
+                k, v = [x.strip() for x in assign.split("=", 1)]
+                if k.lower() in proc_state["local_params"]:
+                    raise FortranParseError(
+                        f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'.",
+                        filename=filename,
+                        line_number=lineno,
+                        source_line=source_line,
+                    )
+                proc_state["local_params"][k.lower()] = v
+            return
+        legacy_pm = _LEGACY_PARAM_STMT_RE.match(stripped)
+        if legacy_pm:
+            for assign in split_csv(legacy_pm.group("body")):
+                if "=" not in assign:
+                    continue
+                k, v = [x.strip() for x in assign.split("=", 1)]
+                if k.lower() not in proc_state["typed_symbols"] and proc_state.get("implicit_none", False):
+                    raise FortranParseError(
+                        f"Unknown datatype for PARAMETER symbol '{k}' in procedure '{proc_state['signature'].name}'.",
+                        filename=filename,
+                        line_number=lineno,
+                        source_line=source_line,
+                    )
+                if k.lower() not in proc_state["typed_symbols"]:
                     proc_state["local_params"][k.lower()] = v
+                    proc_state["implicit_typed_symbols"][k.lower()] = _infer_implicit_base_type(k)
+                    continue
+                if k.lower() in proc_state["local_params"]:
+                    raise FortranParseError(
+                        f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'.",
+                        filename=filename,
+                        line_number=lineno,
+                        source_line=source_line,
+                    )
+                proc_state["local_params"][k.lower()] = v
+                proc_state["legacy_local_params"].add(k.lower())
+            return
+
+        parsed_decl = _parse_common_declaration_line(
+            stripped,
+            filename=proc_state.get("filename") or filename,
+            line_number=lineno,
+            source_line=source_line,
+            include_intent=True,
+        )
+        if parsed_decl is None:
+            m_first = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)", line.strip())
+            first_word = m_first.group(1).lower() if m_first else ""
+            non_decl_starts = {"do", "if", "where", "call", "select", "case", "allocate", "deallocate", "print", "write", "read", "return", "stop", "cycle", "exit", "continue", "end", "else", "elseif", "contains", "goto", "go", "data", "format", "use", "save", "common"}
+            if "=" in line and "::" not in line:
                 return
-            legacy_pm = _LEGACY_PARAM_STMT_RE.match(stripped)
-            if legacy_pm:
-                for assign in split_csv(legacy_pm.group("body")):
-                    if "=" not in assign:
-                        continue
-                    k, v = [x.strip() for x in assign.split("=", 1)]
-                    if k.lower() not in proc_state["typed_symbols"] and proc_state.get("implicit_none", False):
-                        raise FortranParseError(
-                            f"Unknown datatype for PARAMETER symbol '{k}' in procedure '{proc_state['signature'].name}'.",
-                            filename=filename,
-                            line_number=lineno,
-                            source_line=source_line,
-                        )
-                    if k.lower() not in proc_state["typed_symbols"]:
-                        proc_state["local_params"][k.lower()] = v
-                        proc_state["implicit_typed_symbols"][k.lower()] = _infer_implicit_base_type(k)
-                        continue
-                    if k.lower() in proc_state["local_params"]:
-                        raise FortranParseError(
-                            f"Duplicate PARAMETER declaration of symbol '{k}' in procedure '{proc_state['signature'].name}'.",
-                            filename=filename,
-                            line_number=lineno,
-                            source_line=source_line,
-                        )
-                    proc_state["local_params"][k.lower()] = v
-                    proc_state["legacy_local_params"].add(k.lower())
-                return
-            if "::" in line:
-                left, right = [x.strip() for x in line.split("::", 1)]
-            else:
-                left = line.strip()
-                right = ""
-            star_kind = _find_legacy_star_kind(left)
-            source_form = _source_form(proc_state.get("filename"))
-            if star_kind and source_form == "modern" and star_kind[0] != "character":
-                base, kind = star_kind
+            looks_like_decl = bool(re.match(r"^[A-Za-z]", line.strip())) and first_word not in non_decl_starts and ("::" in line or "," in line or " " in line.strip())
+            if looks_like_decl:
+                if any(p.search(line) for p in _UNSUPPORTED_PATTERNS):
+                    return
                 raise FortranParseError(
-                    f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{proc_state.get('filename')}'.",
+                    f"Unknown or unsupported datatype declaration for procedure '{proc_state['signature'].name}': {line.strip()}",
                     filename=filename,
                     line_number=lineno,
                     source_line=source_line,
                 )
+            return
 
-            char_star = _CHAR_STAR_RE.match(left)
-            tm = _TYPE_RE.match(left)
-            derived = _TYPE_FIELD_RE.match(left)
-            class_derived = _CLASS_FIELD_RE.match(left)
-            if char_star:
-                base = "character"
-                kind = char_star.group("len").strip()
-                if kind.startswith("(") and kind.endswith(")"):
-                    kind = kind[1:-1].strip()
-                trailing = (char_star.group("rest") or "").strip().lstrip(", ")
-                if "::" in line:
-                    attrs = split_csv(trailing)
-                else:
-                    attrs = []
-                    right = trailing
-            elif tm:
-                base = tm.group(1).lower()
-                if base == "double precision":
-                    base = "real"
-                type_spec = (tm.group(2) or "").strip()
-                trailing = tm.group(3).strip().lstrip(", ")
-                kind = extract_kind_from_type_spec(base, type_spec)
-                if "::" in line:
-                    attrs = split_csv(trailing)
-                else:
-                    attrs = []
-                    right = trailing
-            elif derived or class_derived:
-                base = "derived"
-                kind = (derived or class_derived).group("dtype")
-                decl = derived or class_derived
-                attrs = split_csv((decl.group("attrs") or "").strip().lstrip(", "))
-            elif re.match(r"^procedure\s*\(", left, flags=re.IGNORECASE):
-                # Support procedure dummy declarations, e.g.
-                #   procedure(my_iface) :: f
-                #   procedure(my_iface), pointer :: f
-                procm = _PROC_DUMMY_RE.match(left)
-                iface = procm.group("iface").lower() if procm else None
-                base = "procedure"
-                imported = proc_state.get("imports", set())
-                kind = None if iface in imported else iface
-                attrs = split_csv((procm.group("attrs") if procm else "").strip().lstrip(", "))
-            else:
-                m_first = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)", line.strip())
-                first_word = m_first.group(1).lower() if m_first else ""
-                non_decl_starts = {"do", "if", "where", "call", "select", "case", "allocate", "deallocate", "print", "write", "read", "return", "stop", "cycle", "exit", "continue", "end", "else", "elseif", "contains", "goto", "go", "data", "format", "use", "save", "common"}
-                if "=" in line and "::" not in line:
-                    return
-                looks_like_decl = bool(re.match(r"^[A-Za-z]", line.strip())) and first_word not in non_decl_starts and ("::" in line or "," in line or " " in line.strip())
-                if looks_like_decl:
-                    if any(p.search(line) for p in _UNSUPPORTED_PATTERNS):
-                        return
-                    raise FortranParseError(
-                        f"Unknown or unsupported datatype declaration for procedure '{proc_state['signature'].name}': {line.strip()}",
-                        filename=filename,
-                        line_number=lineno,
-                        source_line=source_line,
-                    )
-                return
-            meta = {
-                "base_type": base,
-                "kind": kind,
-                "rank": 0,
-                "shape": [],
-                "intent": "unknown",
-                "optional": False,
-                "value": False,
-                "allocatable": False,
-                "pointer": False,
-                "external": False,
-            }
-            for a in attrs:
-                la = a.lower()
-                if la.startswith("intent") and "(" in la and ")" in la:
-                    meta["intent"] = la.split("(", 1)[1].rsplit(")", 1)[0].strip()
-                elif la == "optional":
-                    meta["optional"] = True
-                elif la == "value":
-                    meta["value"] = True
-                elif la == "allocatable":
-                    meta["allocatable"] = True
-                elif la == "pointer":
-                    meta["pointer"] = True
-                elif la == "external":
-                    meta["external"] = True
-                elif la.startswith("dimension") and "(" in a and ")" in a:
-                    shape = split_csv(a[a.find("(")+1:a.rfind(")")])
-                    meta["shape"] = shape
-                    meta["rank"] = len(shape)
+        meta, right = parsed_decl
+        if meta["base_type"] == "procedure" and meta["kind"] in proc_state.get("imports", set()):
+            meta["kind"] = None
 
-            for v in split_csv(right):
-                raw_name, shape = _var(v)
-                if not raw_name:
-                    continue
-                normalized_name = re.sub(r"^\*\s*[0-9]+\s*", "", raw_name).strip()
-                if meta["base_type"] == "character" and "*" in normalized_name:
-                    # Legacy CHARACTER declarations may carry entity-local length
-                    # specifiers (e.g. NAME*(*) or SUBNAM*6). Strip the `*len`
-                    # suffix so symbol lookup matches procedure arguments.
-                    normalized_name = normalized_name.split("*", 1)[0].strip()
-                if not normalized_name:
-                    continue
-                declared = proc_state["typed_symbols"]
-                lowered_name = normalized_name.lower()
-                if lowered_name in declared:
-                    raise FortranParseError(
-                        f"Duplicate declaration of symbol '{normalized_name}' in procedure '{proc_state['signature'].name}'.",
-                        filename=filename,
-                        line_number=lineno,
-                        source_line=source_line,
-                    )
-                declared.add(lowered_name)
-                if meta.get("external"):
-                    proc_state.setdefault("external_symbols", set()).add(lowered_name)
-                symbols = proc_state["symbols"]
-                # Legacy star-kind declarations can appear as:
-                #   COMPLEX*16 AP(*), X(*)
-                # In this case the first parsed entity may carry the `*16` token
-                # in `raw_name`; always resolve symbols using the normalized name so
-                # all listed variables receive the declaration metadata.
-                lookup_name = lowered_name
-                arg = symbols.get(lookup_name)
-                if arg is None:
-                    proc_state["declared_local_types"][lookup_name] = {
-                        "base_type": meta["base_type"],
-                        "kind": meta["kind"],
-                    }
-                    continue
-                _apply(arg, meta, shape)
+        for v in split_csv(right):
+            raw_name, shape = _var(v)
+            if not raw_name:
+                continue
+            normalized_name = _normalize_declared_name(raw_name, meta)
+            if not normalized_name:
+                continue
+            declared = proc_state["typed_symbols"]
+            lowered_name = normalized_name.lower()
+            if lowered_name in declared:
+                raise FortranParseError(
+                    f"Duplicate declaration of symbol '{normalized_name}' in procedure '{proc_state['signature'].name}'.",
+                    filename=filename,
+                    line_number=lineno,
+                    source_line=source_line,
+                )
+            declared.add(lowered_name)
+            if meta.get("external"):
+                proc_state.setdefault("external_symbols", set()).add(lowered_name)
+            symbols = proc_state["symbols"]
+            # Legacy star-kind declarations can appear as:
+            #   COMPLEX*16 AP(*), X(*)
+            # In this case the first parsed entity may carry the `*16` token
+            # in `raw_name`; always resolve symbols using the normalized name so
+            # all listed variables receive the declaration metadata.
+            lookup_name = lowered_name
+            arg = symbols.get(lookup_name)
+            if arg is None:
+                proc_state["declared_local_types"][lookup_name] = {
+                    "base_type": meta["base_type"],
+                    "kind": meta["kind"],
+                }
+                continue
+            _apply(arg, meta, shape)
 
 
     # ------------------------------------------------------------------
     # Module/submodule/program/block-data variable declarations
     # ------------------------------------------------------------------
 
-    def _parse_module_variable_line(self, line: str, module: FortranModule, filename: str | None, lineno: int | None = None, source_line: str | None = None) -> None:
+    def _parse_module_variable_line(self, line: str, module: FortranModule | FortranSubmodule | FortranProgram | FortranBlockData, filename: str | None, lineno: int | None = None, source_line: str | None = None) -> None:
         """Parse one specification-part declaration line for a module-like scope.
 
         Applies to modules/submodules/programs/block-data units that share
         declaration grammar. Only declaration lines are consumed; executable
         or contained-procedure sections are handled by caller scope logic.
         """
-        if "::" not in line:
+        stripped = line.strip()
+        if not stripped:
             return
-        if _DERIVED_TYPE_RE.match(line.strip()):
+        if _DERIVED_TYPE_RE.match(stripped):
             return
-        left, right = [x.strip() for x in line.split("::", 1)]
-        lower_left = left.lower()
-        if lower_left == "public":
-            names = [n.strip() for n in split_csv(right) if n.strip()]
-            if names:
-                module.public_symbols.extend(names)
-            else:
-                module.default_visibility = "public"
+        if "::" not in stripped and isinstance(module, (FortranModule, FortranSubmodule)):
             return
-        if lower_left == "private":
-            names = [n.strip() for n in split_csv(right) if n.strip()]
-            if names:
-                module.private_symbols.extend(names)
-            else:
-                module.default_visibility = "private"
+        if "::" in stripped:
+            left, right = [x.strip() for x in stripped.split("::", 1)]
+            lower_left = left.lower()
+            if lower_left == "public":
+                names = [n.strip() for n in split_csv(right) if n.strip()]
+                if names:
+                    module.public_symbols.extend(names)
+                else:
+                    module.default_visibility = "public"
+                return
+            if lower_left == "private":
+                names = [n.strip() for n in split_csv(right) if n.strip()]
+                if names:
+                    module.private_symbols.extend(names)
+                else:
+                    module.default_visibility = "private"
+                return
+            if lower_left == "module procedure":
+                return
+            if lower_left == "import":
+                return
+        elif _is_executable_statement_start(stripped) or re.match(
+            r"^(implicit|save|common|data|equivalence|external|intrinsic|parameter)\b",
+            stripped,
+            flags=re.IGNORECASE,
+        ):
             return
-        if lower_left == "module procedure":
-            return
-        if lower_left == "import":
-            return
-        star_kind = _find_legacy_star_kind(left)
-        source_form = _source_form(filename)
-        if star_kind and source_form == "modern" and star_kind[0] != "character":
-            base, kind = star_kind
+
+        parsed_decl = _parse_common_declaration_line(
+            stripped,
+            filename=filename,
+            line_number=lineno,
+            source_line=source_line,
+            parse_character_star=not isinstance(module, (FortranModule, FortranSubmodule)),
+        )
+        if parsed_decl is None:
+            if "::" not in stripped:
+                return
+            owner_kind, owner_name = _variable_scope_label(module)
             raise FortranParseError(
-                f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.",
+                f"Unknown or unsupported datatype declaration in {owner_kind} '{owner_name or '<unnamed>'}': {line.strip()}",
                 filename=filename,
                 line_number=lineno,
                 source_line=source_line,
             )
-
-        tm = _TYPE_RE.match(left)
-        derived = _TYPE_FIELD_RE.match(left)
-        class_derived = _CLASS_FIELD_RE.match(left)
-        if tm:
-            base = tm.group(1).lower()
-            type_spec = (tm.group(2) or "").strip()
-            attrs = split_csv(tm.group(3).strip().lstrip(", "))
-            meta = {
-                "base_type": base,
-                "kind": extract_kind_from_type_spec(base, type_spec),
-                "rank": 0,
-                "shape": [],
-                "intent": "unknown",
-                "optional": False,
-                "value": False,
-                "allocatable": False,
-                "pointer": False,
-            }
-        elif derived or class_derived:
-            decl = derived or class_derived
-            attrs = split_csv((decl.group("attrs") or "").strip().lstrip(", "))
-            meta = {
-                "base_type": "derived",
-                "kind": decl.group("dtype"),
-                "rank": 0,
-                "shape": [],
-                "intent": "unknown",
-                "optional": False,
-                "value": False,
-                "allocatable": False,
-                "pointer": False,
-            }
-        elif re.match(r"^procedure\s*\(", left, re.IGNORECASE):
-            procm = _PROC_DUMMY_RE.match(left)
-            iface = procm.group("iface").lower() if procm else None
-            attrs = split_csv((procm.group("attrs") if procm else "").strip().lstrip(", "))
-            meta = {
-                "base_type": "procedure",
-                "kind": iface,
-                "rank": 0,
-                "shape": [],
-                "intent": "unknown",
-                "optional": False,
-                "value": False,
-                "allocatable": False,
-                "pointer": False,
-            }
-        elif star_kind:
-            base, kind = star_kind
-            attrs = []
-            meta = {
-                "base_type": base.lower(),
-                "kind": kind,
-                "rank": 0,
-                "shape": [],
-                "intent": "unknown",
-                "optional": False,
-                "value": False,
-                "allocatable": False,
-                "pointer": False,
-            }
-        else:
-            raise FortranParseError(
-                f"Unknown or unsupported datatype declaration in module '{module.name}': {line.strip()}",
-                filename=filename,
-                line_number=lineno,
-                source_line=source_line,
-            )
-
-        for a in attrs:
-            la = a.lower()
-            if la == "allocatable":
-                meta["allocatable"] = True
-            elif la == "pointer":
-                meta["pointer"] = True
-            elif la == "external":
-                meta["external"] = True
-            elif la.startswith("dimension") and "(" in a and ")" in a:
-                shape = split_csv(a[a.find("(") + 1 : a.rfind(")")])
-                meta["shape"] = shape
-                meta["rank"] = len(shape)
+        meta, right = parsed_decl
 
         for v in split_csv(right):
             name, shape = _var(v)
             if not name:
                 continue
-            var = FortranArgument(name=name)
+            var = FortranArgument(name=_normalize_declared_name(name, meta))
             _apply(var, meta, shape)
             module.variables.append(var)
-    def _parse_fortran_signatures(
-        self,
-        code: _SourceOrLines,
-        filename: str | None = None,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
-    ) -> list[FortranProcedureSignature]:
-        return self._parse_fortran_signatures_impl(code, filename=filename, macro_defines=macro_defines)
-
     def _parse_fortran_signature(
         self,
         code: _SourceOrLines,
@@ -2140,95 +2185,32 @@ class FortranParser:
 
 
     def _parse_type_field_line(self, line: str, dtype: FortranDerivedType, filename: str | None, lineno: int | None = None, source_line: str | None = None) -> None:
-        if "::" not in line:
+        stripped = line.strip()
+        if re.match(r"^type\s*::\s*\w+$", stripped, re.IGNORECASE):
             return
-        if re.match(r"^type\s*::\s*\w+$", line.strip(), re.IGNORECASE):
-            return
-        left, right = [x.strip() for x in line.split("::", 1)]
-        star_kind = _find_legacy_star_kind(left)
-        source_form = _source_form(filename)
-        if star_kind and source_form == "modern" and star_kind[0] != "character":
-            base, kind = star_kind
-            raise FortranParseError(
-                f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.",
-                filename=filename,
-                line_number=lineno,
-                source_line=source_line,
-            )
-
-        tm = _TYPE_RE.match(left)
-        derived = _TYPE_FIELD_RE.match(left)
-        class_derived = _CLASS_FIELD_RE.match(left)
-        if tm:
-            base = tm.group(1).lower()
-            type_spec = (tm.group(2) or "").strip()
-            attrs = split_csv(tm.group(3).strip().lstrip(", "))
-            meta = {
-                "base_type": base,
-                "kind": extract_kind_from_type_spec(base, type_spec),
-                "rank": 0,
-                "shape": [],
-                "intent": "unknown",
-                "optional": False,
-                "value": False,
-                "allocatable": False,
-                "pointer": False,
-            }
-        elif derived or class_derived:
-            decl = derived or class_derived
-            attrs = split_csv((decl.group("attrs") or "").strip().lstrip(", "))
-            meta = {
-                "base_type": "derived",
-                "kind": decl.group("dtype"),
-                "rank": 0,
-                "shape": [],
-                "intent": "unknown",
-                "optional": False,
-                "value": False,
-                "allocatable": False,
-                "pointer": False,
-            }
-        elif re.match(r"^procedure\s*\(", left, re.IGNORECASE):
-            procm = _PROC_DUMMY_RE.match(left)
-            iface = procm.group("iface").lower() if procm else None
-            attrs = split_csv((procm.group("attrs") if procm else "").strip().lstrip(", "))
-            meta = {
-                "base_type": "procedure",
-                "kind": iface,
-                "rank": 0,
-                "shape": [],
-                "intent": "unknown",
-                "optional": False,
-                "value": False,
-                "allocatable": False,
-                "pointer": False,
-            }
-        else:
+        parsed_decl = _parse_common_declaration_line(
+            stripped,
+            filename=filename,
+            line_number=lineno,
+            source_line=source_line,
+            parse_character_star=False,
+        )
+        if parsed_decl is None:
+            if "::" not in stripped:
+                return
             raise FortranParseError(
                 f"Unknown or unsupported datatype declaration in type '{dtype.name}': {line.strip()}",
                 filename=filename,
                 line_number=lineno,
                 source_line=source_line,
             )
-
-        for a in attrs:
-            la = a.lower()
-            if la == "allocatable":
-                meta["allocatable"] = True
-            elif la == "pointer":
-                meta["pointer"] = True
-            elif la == "external":
-                meta["external"] = True
-            elif la.startswith("dimension") and "(" in a and ")" in a:
-                shape = split_csv(a[a.find("(") + 1 : a.rfind(")")])
-                meta["shape"] = shape
-                meta["rank"] = len(shape)
+        meta, right = parsed_decl
 
         for v in split_csv(right):
             name, shape = _var(v)
             if not name:
                 continue
-            field = FortranArgument(name=name)
+            field = FortranArgument(name=_normalize_declared_name(name, meta))
             _apply(field, meta, shape)
             dtype.fields.append(field)
 
@@ -2292,7 +2274,7 @@ class FortranParser:
             if l.startswith("end module"):
                 if current:
                     _validate_module_variables(current, filename)
-                    _apply_module_visibility(current)
+                    _apply_module_visibility(current, filename)
                     modules.append(current)
                 current = None
                 in_contains = False
@@ -2642,6 +2624,12 @@ class FortranParser:
                 continue
             if l.startswith("end program"):
                 if current is not None:
+                    _validate_variable_declarations(
+                        current.variables,
+                        owner_kind="program",
+                        owner_name=current.name,
+                        filename=filename,
+                    )
                     programs.append(current)
                 current = None
                 in_contains = False
@@ -2683,7 +2671,13 @@ class FortranParser:
             if bm:
                 current = FortranBlockData(name=bm.group("name"), filename=filename)
                 continue
-            if l.startswith("end block data") or (current is not None and l == "end"):
+            if current is not None and (l.startswith("end block data") or l == "end"):
+                _validate_variable_declarations(
+                    current.variables,
+                    owner_kind="block data",
+                    owner_name=current.name,
+                    filename=filename,
+                )
                 blocks.append(current)
                 current = None
                 continue
