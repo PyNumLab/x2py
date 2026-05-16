@@ -16,7 +16,6 @@ p_pow: Int32
 
 p_mix: Int32
 
-@call_map(NativeArg('x1', 0, source='arg', position=0, result=0, intent='inout'), NativeArg('x2', 1, source='arg', position=1, result=1, intent='inout'), NativeArg('x3', 2, source='arg', position=2, result=2, intent='inout'), NativeArg('x4', 3, source='arg', position=3, result=3, intent='inout'), NativeArg('x5', 4, source='arg', position=4, result=4, intent='inout'), NativeArg('x6', 5, source='arg', position=5, result=5, intent='inout'), NativeArg('x7', 6, source='arg', position=6, result=6, intent='inout'), NativeArg('x8', 7, source='arg', position=7, result=7, intent='inout'), NativeArg('x9', 8, source='arg', position=8, result=8, intent='inout'))
 def all_exprs(
     x1: Int32[Shape('1:p_add'), ORDER_F],
     x2: Int32[Shape('1:p_sub'), ORDER_F],

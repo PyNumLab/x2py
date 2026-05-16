@@ -207,38 +207,37 @@ class PyiPrinter:
         decorators = []
         if self._is_private(func):
             decorators.append(f"{indent}@private")
-        explicit_projection = [mapping for mapping in func.projection if self._requires_explicit_projection_mapping(mapping)]
-        if explicit_projection:
-            decorators.append(f"{indent}{self._call_map(explicit_projection)}")
+        if self._requires_native_call(func):
+            decorators.append(f"{indent}{self._native_call(func.projection)}")
         if not decorators:
             return ""
         return "\n".join(decorators) + "\n"
 
-    def _call_map(self, projection: list[ProjectionMapping]) -> str:
-        entries = ", ".join(self._native_arg_mapping(mapping) for mapping in projection)
-        return f"@call_map({entries})"
+    def _native_call(self, projection: list[ProjectionMapping]) -> str:
+        entries = ", ".join(
+            self._native_projection_entry(mapping)
+            for mapping in sorted(projection, key=lambda item: item.native_position if item.native_position is not None else -1)
+        )
+        return f"@native_call([{entries}])"
 
     @staticmethod
-    def _native_arg_mapping(mapping: ProjectionMapping) -> str:
-        args = [repr(mapping.native_name), str(mapping.native_position)]
+    def _native_projection_entry(mapping: ProjectionMapping) -> str:
         if mapping.python_position is not None:
-            args.append(f"source='arg'")
-            args.append(f"position={mapping.python_position}")
-        elif mapping.result_position is not None:
-            args.append(f"source='return'")
-            args.append(f"position={mapping.result_position}")
-        else:
-            args.append(f"source='native'")
-        if mapping.result_position is not None and mapping.python_position is not None:
-            args.append(f"result={mapping.result_position}")
-        if mapping.intent != "in":
-            args.append(f"intent={mapping.intent!r}")
-        return f"NativeArg({', '.join(args)})"
+            return f"Arg({mapping.python_position})"
+        if mapping.result_position is not None:
+            return f"Return({mapping.result_position})"
+        raise ValueError("native_call cannot represent a native-only projection entry")
+
+    @staticmethod
+    def _requires_native_call(func: SemanticFunction) -> bool:
+        return any(PyiPrinter._requires_explicit_projection_mapping(mapping) for mapping in func.projection)
 
     @staticmethod
     def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
+        if mapping.intent == "inout":
+            return mapping.python_position != mapping.native_position
         if mapping.intent != "in":
-            return True
+            return mapping.python_position is None
         if mapping.result_position is not None:
             return True
         if mapping.python_position is None:

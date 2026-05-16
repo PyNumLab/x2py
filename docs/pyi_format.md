@@ -79,28 +79,32 @@ def split(
 ```
 
 When the stub must preserve how Python values map back to native Fortran
-arguments, use a call map.
+arguments, use a native call projection.
 
-## Call Maps
+## Native Calls
 
-`@call_map(...)` records the native call projection when the Python signature is
-not the same as the Fortran call signature. Identity mappings are omitted.
+`@native_call([...])` records the native Fortran argument order from left to
+right when the Python signature is not the same as the Fortran call signature.
+Identity mappings are omitted by skipping the decorator entirely when the
+Python signature already describes the native layout.
+
+Entries are either `Arg(i)` for Python argument position `i`, or `Return(i)` for
+Python return value position `i`.
 
 For an `intent(out)` argument projected as a Python return:
 
 ```python
-@call_map(NativeArg("x", 1, source="return", position=0, intent="out"))
+@native_call([Arg(0), Return(0)])
 def make_vector(n: Int32) -> Float64[Shape("n"), ORDER_F]: ...
 ```
 
-This means native argument `x` is at Fortran position `1`, but Python receives it
-as return value `0`.
+This means native argument `0` is Python argument `0`, and native argument `1`
+is Python return value `0`.
 
-For an `intent(inout)` argument, the value is both a Python argument and a Python
-return:
+For an `intent(inout)` argument with the same name in the argument and return
+projection, no explicit decorator is required:
 
 ```python
-@call_map(NativeArg("x", 0, source="arg", position=0, result=0, intent="inout"))
 def scale(
     x: Float64[Shape(":"), ORDER_F]
 ) -> Returns["x", Float64[Shape(":"), ORDER_F]]: ...
@@ -109,12 +113,9 @@ def scale(
 For argument reordering:
 
 ```python
-@call_map(NativeArg("a", 0, source="arg", position=1), NativeArg("b", 1, source="arg", position=0))
+@native_call([Arg(1), Arg(0)])
 def f(b: Float64, a: Int32) -> None: ...
 ```
-
-The fields are `native_name`, `native_position`, `source`, Python `position`,
-optional `result`, and `intent`.
 
 ## Type Constraints
 

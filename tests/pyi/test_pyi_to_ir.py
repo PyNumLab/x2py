@@ -120,10 +120,10 @@ def add(
     assert from_pyi == from_ir
 
 
-def test_call_map_preserves_unnamed_output_argument_position():
+def test_native_call_preserves_unnamed_output_argument_position():
     from_pyi = parse_pyi_text(
         """
-@call_map(NativeArg("c", 2, source="return", position=0, intent="out"))
+@native_call([Arg(0), Arg(1), Return(0)])
 def add(
     a: Float64,
     b: Float64
@@ -159,11 +159,11 @@ def add(
     )
 
     assert from_pyi == from_ir
-    assert from_pyi.functions[0].arguments[2].name == "c"
-    assert from_pyi.functions[0].projection[0].native_position == 2
+    assert from_pyi.functions[0].arguments[2].intent == "out"
+    assert from_pyi.functions[0].projection[2].native_position == 2
 
 
-def test_plain_return_without_call_map_does_not_preserve_native_output_position():
+def test_plain_return_without_native_call_does_not_preserve_native_output_position():
     from_pyi = parse_pyi_text(
         """
 def add(
@@ -173,7 +173,7 @@ def add(
 """,
         module_name="edited",
     )
-    with_call_map = SemanticModule(
+    with_native_call = SemanticModule(
         name="edited",
         functions=[
             SemanticFunction(
@@ -200,7 +200,7 @@ def add(
         ],
     )
 
-    assert from_pyi != with_call_map
+    assert from_pyi != with_native_call
 
 
 def test_plain_tuple_return_types_compare_equal_to_unnamed_output_arguments():

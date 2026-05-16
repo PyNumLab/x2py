@@ -243,8 +243,6 @@ def _projection_key(
 ) -> tuple[tuple[Any, ...], ...]:
     return tuple(
         (
-            _canonical_expression(mapping.python_name, name_map),
-            mapping.native_name,
             mapping.native_position,
             mapping.python_position,
             mapping.result_position,
@@ -256,8 +254,10 @@ def _projection_key(
 
 
 def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
+    if mapping.intent == "inout":
+        return mapping.python_position != mapping.native_position
     if mapping.intent != "in":
-        return True
+        return mapping.python_position is None
     if mapping.result_position is not None:
         return True
     if mapping.python_position is None:
