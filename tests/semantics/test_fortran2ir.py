@@ -483,7 +483,7 @@ end module
 
     assert len(assemble.arguments) == 3
 
-    K = assemble.arguments[0]
+    K = next(arg for arg in assemble.arguments if arg.name == "K")
 
     assert K.intent == "out"
 
@@ -494,7 +494,7 @@ end module
         "FortranContiguous",
     )
 
-    connectivity = assemble.arguments[2]
+    connectivity = next(arg for arg in assemble.arguments if arg.name == "connectivity")
 
     assert connectivity.semantic_type.name == "Int32"
 

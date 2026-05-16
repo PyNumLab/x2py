@@ -1,7 +1,25 @@
 from __future__ import annotations
 
-from .models import *
-from fortran_parser.models import *
+from pathlib import Path
+
+from fortran_parser.models import (
+    FortranArgument,
+    FortranDerivedType,
+    FortranFile,
+    FortranModule,
+    FortranProcedureSignature,
+    FortranVariable,
+)
+
+from .models import (
+    SemanticArgument,
+    SemanticClass,
+    SemanticConstraint,
+    SemanticFunction,
+    SemanticMethod,
+    SemanticModule,
+    SemanticType,
+)
 
 
 FORTRAN_TYPE_MAP = {
@@ -15,154 +33,288 @@ FORTRAN_TYPE_MAP = {
 
 
 class FortranToIRConverter:
-    """Convert parsed Fortran models into the semantic IR.
+    """Convert parsed Fortran models into semantic IR models.
 
-    The converter keeps the transformation logic together so callers can use a
-    configurable object instead of coordinating several standalone conversion
-    functions.  Module-level functions below delegate to a default converter for
-    backwards compatibility.
+    The converter is intentionally a small visitor: public compatibility methods
+    delegate to explicit `visit_*` methods, and each visitor method converts one
+    parser model type into the corresponding semantic model type.
     """
 
     def __init__(self, type_map: dict[tuple[str, str | None], str] | None = None):
         self.type_map = FORTRAN_TYPE_MAP if type_map is None else type_map
 
+    def visit(self, node, **context):
+        """Dispatch one parsed Fortran model to the matching conversion method."""
+        if isinstance(node, FortranFile):
+            return self.visit_file(node)
+        if isinstance(node, FortranModule):
+            return self.visit_module(node)
+        if isinstance(node, FortranProcedureSignature):
+            return self.visit_procedure(node, visibility=context.get("visibility", "public"))
+        if isinstance(node, FortranDerivedType):
+            return self.visit_derived_type(
+                node,
+                procedure_lookup=context.get("procedure_lookup", {}),
+            )
+        if isinstance(node, FortranArgument):
+            return self.visit_argument(node)
+        if isinstance(node, FortranVariable):
+            return self.visit_variable(node)
+        raise TypeError(f"Unsupported Fortran parse object: {type(node)!r}")
+
     def first_module(self, parsed):
         """Accept a FortranModule, FortranFile, or legacy signature list in tests."""
-        if hasattr(parsed, "procedures") and hasattr(parsed, "derived_types") and hasattr(parsed, "uses"):
+        if isinstance(parsed, FortranModule):
             return parsed
-        if hasattr(parsed, "modules"):
+        if isinstance(parsed, FortranFile):
             if not parsed.modules:
                 raise ValueError("Expected at least one Fortran module in parsed file")
             return parsed.modules[0]
         if isinstance(parsed, list):
             module_name = next((getattr(sig, "module", None) for sig in parsed if getattr(sig, "module", None)), None)
-            return FortranModule(name=module_name or "", procedures=[sig for sig in parsed if not getattr(sig, "in_interface", False)])
+            procedures = [sig for sig in parsed if not getattr(sig, "in_interface", False)]
+            return FortranModule(name=module_name or "", procedures=procedures)
         raise TypeError(f"Unsupported Fortran parse object: {type(parsed)!r}")
 
-    def variable_to_semantic_type(self, var) -> SemanticType:
-        kind = str(var.kind).lower() if var.kind is not None else None
-        if var.base_type.lower() == "derived":
-            if not var.kind:
-                raise ValueError(f"Derived type variable '{var.name}' is missing concrete type name")
-            semantic_name = str(var.kind)
-        else:
-            semantic_name = self.type_map.get(
-                (var.base_type.lower(), kind),
-                "Unknown"
-            )
+    def visit_file(self, parsed_file: FortranFile) -> SemanticModule:
+        return self.visit_module(self.first_module(parsed_file))
 
+    def visit_variable(self, var: FortranVariable) -> SemanticType:
+        semantic_name = self._semantic_type_name(var)
         semantic_type = SemanticType(
             name=semantic_name,
             rank=var.rank,
             dtype=semantic_name,
             shape=list(var.shape),
         )
-
-        if var.rank > 0:
-            semantic_type.constraints.append(
-                SemanticConstraint(
-                    name="Shape",
-                    arguments=list(var.shape),
-                )
-            )
-            semantic_type.constraints.append(
-                SemanticConstraint(
-                    name="FortranContiguous"
-                )
-            )
-
-        if getattr(var, "is_parameter", False):
-            semantic_type.constraints.append(
-                SemanticConstraint("Constant")
-            )
-
+        self._add_shape_constraints(semantic_type)
+        self._add_variable_constraints(semantic_type, var)
         return semantic_type
 
-    def argument_to_semantic_argument(self, arg) -> SemanticArgument:
-        semantic_type = self.variable_to_semantic_type(arg)
-
-        if arg.allocatable:
-            semantic_type.constraints.append(
-                SemanticConstraint("Allocatable")
-            )
-
-        if arg.pointer:
-            semantic_type.constraints.append(
-                SemanticConstraint("Pointer")
-            )
-
-        intent = getattr(arg, "intent", "in")
-        ownership = semantic_type.ownership
-        ownership.mutable = str(intent).lower() != "in"
+    def visit_argument(
+        self,
+        arg: FortranArgument | FortranVariable,
+        *,
+        intent: str | None = None,
+    ) -> SemanticArgument:
+        semantic_type = self.visit_variable(arg)
+        self._add_argument_constraints(semantic_type, arg)
+        resolved_intent = intent if intent is not None else getattr(arg, "intent", "in")
+        resolved_intent = str(resolved_intent).lower().replace(" ", "")
+        if resolved_intent == "unknown":
+            resolved_intent = "inout"
+        self._apply_argument_ownership(semantic_type, resolved_intent)
 
         return SemanticArgument(
             name=arg.name,
             semantic_type=semantic_type,
-            intent=intent,
+            intent=resolved_intent,
             optional=getattr(arg, "optional", False),
             visibility=getattr(arg, "visibility", "public"),
         )
 
-    def procedure_to_semantic_function(self, proc, visibility: str = "public") -> SemanticFunction:
-        semantic_args = [
-            self.argument_to_semantic_argument(a)
-            for a in proc.arguments
-        ]
-
-        return_type = None
-        if proc.result:
-            return_type = self.variable_to_semantic_type(proc.result)
-
+    def visit_procedure(
+        self,
+        proc: FortranProcedureSignature,
+        visibility: str = "public",
+    ) -> SemanticFunction:
         return SemanticFunction(
             name=proc.name,
             native_name=proc.name,
-            arguments=semantic_args,
-            return_type=return_type,
+            arguments=[self.visit_argument(arg) for arg in self._projected_procedure_arguments(proc)],
+            return_type=self.visit_variable(proc.result) if proc.result else None,
             visibility=visibility,
         )
+
+    def visit_derived_type(
+        self,
+        dtype: FortranDerivedType,
+        procedure_lookup: dict[str, SemanticFunction] | None = None,
+    ) -> SemanticClass:
+        lookup = procedure_lookup or {}
+        return SemanticClass(
+            name=dtype.name,
+            native_name=dtype.name,
+            fields=[self.visit_argument(field, intent="in") for field in dtype.fields],
+            methods=self._bound_methods(dtype, lookup),
+            base_classes=self._base_classes(dtype),
+            visibility=getattr(dtype, "visibility", "public"),
+        )
+
+    def visit_module(self, module: FortranModule) -> SemanticModule:
+        semantic_functions = [
+            self.visit_procedure(
+                proc,
+                visibility=self._symbol_visibility(module, proc.name),
+            )
+            for proc in module.procedures
+        ]
+        procedure_lookup = {func.name: func for func in semantic_functions}
+
+        semantic_classes = [
+            self.visit_derived_type(dtype, procedure_lookup=procedure_lookup)
+            for dtype in module.derived_types
+        ]
+        for semantic_cls in semantic_classes:
+            semantic_cls.visibility = self._symbol_visibility(module, semantic_cls.name)
+
+        return SemanticModule(
+            name=module.name,
+            functions=semantic_functions,
+            classes=semantic_classes,
+            variables=[self.visit_argument(var, intent="in") for var in getattr(module, "variables", [])],
+            imports=list(module.uses.keys()),
+        )
+
+    def visit_file_modules(
+        self,
+        parsed_file: FortranFile,
+        *,
+        standalone_module_name: str | None = None,
+    ) -> list[SemanticModule]:
+        modules = [self.visit_module(module) for module in parsed_file.modules]
+        if parsed_file.procedures:
+            modules.append(
+                self.procedures_to_semantic_module(
+                    parsed_file.procedures,
+                    name=standalone_module_name or self._standalone_module_name(parsed_file),
+                )
+            )
+        return modules
+
+    def procedures_to_semantic_module(
+        self,
+        procedures: list[FortranProcedureSignature],
+        *,
+        name: str,
+    ) -> SemanticModule:
+        return SemanticModule(
+            name=name,
+            functions=[self.visit_procedure(proc) for proc in procedures],
+        )
+
+    def variable_to_semantic_type(self, var) -> SemanticType:
+        return self.visit_variable(var)
+
+    def argument_to_semantic_argument(self, arg) -> SemanticArgument:
+        return self.visit_argument(arg)
+
+    def procedure_to_semantic_function(self, proc, visibility: str = "public") -> SemanticFunction:
+        return self.visit_procedure(proc, visibility=visibility)
 
     def derived_type_to_semantic_class(
         self,
         dtype,
-        procedure_lookup: dict[str, SemanticFunction]
+        procedure_lookup: dict[str, SemanticFunction],
     ) -> SemanticClass:
-        fields = [
-            self.argument_to_semantic_argument(f)
-            for f in dtype.fields
-        ]
+        return self.visit_derived_type(dtype, procedure_lookup=procedure_lookup)
 
-        methods = []
-        for method_name in dtype.methods:
-            if method_name in procedure_lookup:
-                proc = procedure_lookup[method_name]
-                methods.append(
-                    SemanticMethod(
-                        name=proc.name,
-                        native_name=proc.native_name,
-                        arguments=proc.arguments,
-                        return_type=proc.return_type,
-                        contracts=proc.contracts,
-                        visibility=proc.visibility,
-                    )
-                )
+    def module_to_semantic_module(self, module) -> SemanticModule:
+        return self.visit_module(self.first_module(module))
 
-        bases = []
-        if dtype.extends:
-            if isinstance(dtype.extends, str):
-                bases.append(dtype.extends)
-            else:
-                bases.append(dtype.extends.name)
-
-        return SemanticClass(
-            name=dtype.name,
-            native_name=dtype.name,
-            fields=fields,
-            methods=methods,
-            base_classes=bases,
-            visibility=getattr(dtype, "visibility", "public"),
+    def file_to_semantic_modules(
+        self,
+        parsed_file: FortranFile,
+        *,
+        standalone_module_name: str | None = None,
+    ) -> list[SemanticModule]:
+        return self.visit_file_modules(
+            parsed_file,
+            standalone_module_name=standalone_module_name,
         )
 
-    def _symbol_visibility(self, module, symbol_name: str) -> str:
+    def _semantic_type_name(self, var: FortranVariable) -> str:
+        if var.base_type.lower() == "derived":
+            if not var.kind:
+                raise ValueError(f"Derived type variable '{var.name}' is missing concrete type name")
+            return str(var.kind)
+
+        kind = str(var.kind).lower() if var.kind is not None else None
+        return self.type_map.get((var.base_type.lower(), kind), "Unknown")
+
+    @staticmethod
+    def _add_shape_constraints(semantic_type: SemanticType) -> None:
+        if semantic_type.rank <= 0:
+            return
+        semantic_type.constraints.append(
+            SemanticConstraint(
+                name="Shape",
+                arguments=list(semantic_type.shape),
+            )
+        )
+        semantic_type.constraints.append(SemanticConstraint(name="FortranContiguous"))
+
+    @staticmethod
+    def _add_variable_constraints(semantic_type: SemanticType, var: FortranVariable) -> None:
+        if getattr(var, "is_parameter", False):
+            semantic_type.constraints.append(SemanticConstraint("Constant"))
+
+    @staticmethod
+    def _add_argument_constraints(semantic_type: SemanticType, arg: FortranArgument | FortranVariable) -> None:
+        if getattr(arg, "allocatable", False):
+            semantic_type.constraints.append(SemanticConstraint("Allocatable"))
+        if getattr(arg, "pointer", False):
+            semantic_type.constraints.append(SemanticConstraint("Pointer"))
+
+    @staticmethod
+    def _apply_argument_ownership(semantic_type: SemanticType, intent: str) -> None:
+        semantic_type.ownership.mutable = str(intent).lower() != "in"
+
+    def _bound_methods(
+        self,
+        dtype: FortranDerivedType,
+        procedure_lookup: dict[str, SemanticFunction],
+    ) -> list[SemanticMethod]:
+        methods: list[SemanticMethod] = []
+        for method_name in dtype.methods:
+            proc = procedure_lookup.get(method_name)
+            if proc is None:
+                continue
+            methods.append(
+                SemanticMethod(
+                    name=proc.name,
+                    native_name=proc.native_name,
+                    arguments=proc.arguments,
+                    return_type=proc.return_type,
+                    contracts=proc.contracts,
+                    visibility=proc.visibility,
+                )
+            )
+        return methods
+
+    @staticmethod
+    def _projected_procedure_arguments(proc: FortranProcedureSignature) -> list[FortranArgument]:
+        args = list(proc.arguments)
+        return [
+            *[
+                arg
+                for arg in args
+                if getattr(arg, "intent", "in") != "out" and not getattr(arg, "optional", False)
+            ],
+            *[
+                arg
+                for arg in args
+                if getattr(arg, "intent", "in") != "out" and getattr(arg, "optional", False)
+            ],
+            *[arg for arg in args if getattr(arg, "intent", "in") == "out"],
+        ]
+
+    @staticmethod
+    def _base_classes(dtype: FortranDerivedType) -> list[str]:
+        if not dtype.extends:
+            return []
+        if isinstance(dtype.extends, str):
+            return [dtype.extends]
+        return [dtype.extends.name]
+
+    @staticmethod
+    def _standalone_module_name(parsed_file: FortranFile) -> str:
+        if parsed_file.filename:
+            return Path(parsed_file.filename).stem
+        return "standalone"
+
+    @staticmethod
+    def _symbol_visibility(module: FortranModule, symbol_name: str) -> str:
         lname = symbol_name.lower()
         public_set = {s.lower() for s in getattr(module, "public_symbols", [])}
         private_set = {s.lower() for s in getattr(module, "private_symbols", [])}
@@ -172,49 +324,23 @@ class FortranToIRConverter:
             return "public"
         return getattr(module, "default_visibility", "public")
 
-    def module_to_semantic_module(self, module) -> SemanticModule:
-        module = self.first_module(module)
-
-        semantic_functions = []
-        for proc in module.procedures:
-            semantic_functions.append(
-                self.procedure_to_semantic_function(
-                    proc,
-                    visibility=self._symbol_visibility(module, proc.name),
-                )
-            )
-
-        procedure_lookup = {
-            f.name: f
-            for f in semantic_functions
-        }
-
-        semantic_classes = [
-            self.derived_type_to_semantic_class(dtype, procedure_lookup)
-            for dtype in module.derived_types
-        ]
-        semantic_variables = [
-            self.argument_to_semantic_argument(var)
-            for var in getattr(module, "variables", [])
-        ]
-
-        for semantic_cls in semantic_classes:
-            semantic_cls.visibility = self._symbol_visibility(module, semantic_cls.name)
-
-        return SemanticModule(
-            name=module.name,
-            functions=semantic_functions,
-            classes=semantic_classes,
-            variables=semantic_variables,
-            imports=list(module.uses.keys()),
-        )
-
 
 _DEFAULT_CONVERTER = FortranToIRConverter()
 
 
 def fortran_module_to_semantic_module(module) -> SemanticModule:
     return _DEFAULT_CONVERTER.module_to_semantic_module(module)
+
+
+def fortran_file_to_semantic_modules(
+    parsed_file: FortranFile,
+    *,
+    standalone_module_name: str | None = None,
+) -> list[SemanticModule]:
+    return _DEFAULT_CONVERTER.file_to_semantic_modules(
+        parsed_file,
+        standalone_module_name=standalone_module_name,
+    )
 
 
 if __name__ == "__main__":

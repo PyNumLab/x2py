@@ -1,5 +1,5 @@
 {
-  "parser": "parse_fortran_signatures",
+  "parser": "parse_fortran_procedures",
   "error_type": "FortranParseError",
   "message_contains": [
     "Unsupported syntax for Fortran 77 source 'err_f77_modern_syntax.f77': module bad_module"

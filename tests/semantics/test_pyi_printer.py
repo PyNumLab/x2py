@@ -6,6 +6,12 @@ from semantics.fortran2ir import (
 
 from semantics.pyi_printer import (
     emit_module,
+    PyiPrinter,
+)
+from semantics.models import (
+    SemanticClass,
+    SemanticMethod,
+    SemanticModule,
 )
 
 
@@ -58,9 +64,28 @@ end module
 
     assert "a: Float64" in code
     assert "b: Float64" in code
-    assert "c: Float64" in code
+    assert "-> Float64" in code
+    assert 'Returns["c", Float64]' not in code
 
-    assert "-> None" in code
+    assert "-> None" not in code
+
+
+def test_emit_no_argument_subroutine_is_single_line_signature():
+    source = """
+module no_arg_mod
+
+contains
+
+subroutine ping()
+end subroutine
+
+end module
+"""
+
+    code = generate_pyi(source)
+
+    assert "def ping() -> None: ..." in code
+    assert "def ping(\n    \n)" not in code
 
 
 # ============================================================
@@ -124,7 +149,8 @@ end module
 
     assert "x: Float64[" in code
 
-    assert "y: Float64[" in code
+    assert "-> Float64[" in code
+    assert 'Returns["y", Float64[' not in code
 
 
 # ============================================================
@@ -400,7 +426,8 @@ end module
     # Matrix annotations
     # --------------------------------------------------------
 
-    assert "K: Float64[" in code
+    assert "-> Float64[" in code
+    assert 'Returns["K", Float64[' not in code
 
     assert "coords: Float64[" in code
 
@@ -439,11 +466,36 @@ end module
         '''
 def scale(
     x: Float64[Shape(':'), FortranContiguous]
-) -> None: ...
+) -> Returns["x", Float64[Shape(':'), FortranContiguous]]: ...
 '''
     )
 
     assert expected in code
+
+
+def test_roundtrip_mode_keeps_output_argument_name():
+    source = """
+module output_name_mod
+
+contains
+
+subroutine add(a, b, c)
+
+    real(8), intent(in) :: a
+    real(8), intent(in) :: b
+    real(8), intent(out) :: c
+
+end subroutine
+
+end module
+"""
+
+    fmod = parse_fortran_source(source)
+    smod = fortran_module_to_semantic_module(fmod)
+
+    code = PyiPrinter(roundtrip=True).emit_module(smod)
+
+    assert 'Returns["c", Float64]' in code
 
 
 # ============================================================
@@ -509,12 +561,26 @@ end module
 
     smod = fortran_module_to_semantic_module(fmod)
 
-    from semantics.pyi_printer import PyiPrinter
-
     code = PyiPrinter().emit_module(smod)
 
     assert "def touch(" in code
     assert "x: Int32" in code
+
+
+def test_emit_class_method_keeps_method_indentation():
+    module = SemanticModule(
+        name="method_mod",
+        classes=[
+            SemanticClass(
+                name="thing",
+                methods=[SemanticMethod(name="reset")],
+            )
+        ],
+    )
+
+    code = emit_module(module)
+
+    assert "class thing:\n    def reset(self) -> None: ..." in code
 
 
 def test_emit_module_variables_with_visibility():
