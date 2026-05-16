@@ -409,6 +409,32 @@ def wrapper(
     assert func.projection[1].result_position == 0
 
 
+def test_fortran_to_pyi_and_back_preserves_mixed_input_output_projection():
+    source = """
+module solver_mod
+contains
+  subroutine solve(a, x, b)
+    real(8), intent(in) :: a
+    real(8), intent(out) :: x
+    real(8), intent(in) :: b
+  end subroutine solve
+end module solver_mod
+"""
+
+    parsed = parse_fortran_file(source)
+    modules = fortran_file_to_semantic_modules(parsed)
+    pyi = "\n\n".join(emit_module(module) for module in modules)
+    reparsed = parse_pyi_text(pyi, module_name="solver_mod")
+
+    assert "@native_call([Arg(0), Return(0), Arg(1)])" in pyi
+    func = reparsed.functions[0]
+    assert func.name == "solve"
+    assert [m.native_position for m in func.projection] == [0, 1, 2]
+    assert func.projection[0].python_position == 0
+    assert func.projection[1].result_position == 0
+    assert func.projection[2].python_position == 1
+
+
 def test_parse_pyi_text_accepts_c_and_fortran_order_constraints():
     module = parse_pyi_text(
         """

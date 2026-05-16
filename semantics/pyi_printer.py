@@ -98,7 +98,10 @@ class PyiPrinter:
         decorator = self._decorators(method, indent="    ")
         return self._emit_callable(
             name=method.name,
-            arguments=["self", *[self.emit_argument(arg) for arg in self._call_arguments(method)]],
+            arguments=[
+                "self",
+                *[self.emit_argument(arg) for arg in self._method_call_arguments(method)],
+            ],
             return_type=return_type,
             decorator=decorator,
             def_indent="    ",
@@ -278,6 +281,13 @@ class PyiPrinter:
             for arg in func.arguments
             if getattr(arg, "intent", "in") != "out"
         ]
+
+    @classmethod
+    def _method_call_arguments(cls, method: SemanticMethod) -> list[SemanticArgument]:
+        args = cls._call_arguments(method)
+        if args and args[0].name == "self":
+            return args[1:]
+        return args
 
     @staticmethod
     def _is_private(node) -> bool:

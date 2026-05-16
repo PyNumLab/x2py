@@ -1,3 +1,5 @@
+import pytest
+
 from x2py import parse_fortran_file as parse_fortran_source
 
 from semantics.fortran2ir import (
@@ -12,6 +14,7 @@ from semantics.models import (
     ProjectionMapping,
     SemanticArgument,
     SemanticClass,
+    SemanticConstraint,
     SemanticMethod,
     SemanticModule,
     SemanticFunction,
@@ -572,6 +575,34 @@ end module
     assert "x: Int32" in code
 
 
+def test_printer_emit_visitor_dispatches_semantic_models():
+    printer = PyiPrinter()
+    constraint = SemanticConstraint("Shape", [":"])
+    semantic_type = SemanticType("Float64", dtype="Float64", constraints=[constraint])
+    argument = SemanticArgument("class", semantic_type, optional=True)
+    method = SemanticMethod(name="reset")
+    cls = SemanticClass(
+        name="thing",
+        fields=[SemanticArgument("bad-name", semantic_type)],
+        methods=[method],
+        visibility="private",
+    )
+    func = SemanticFunction(name="wrap", arguments=[argument])
+    module = SemanticModule(name="visitor_mod", classes=[cls], functions=[func])
+
+    assert printer.emit(constraint) == "Shape(':')"
+    assert printer.emit(semantic_type) == "Float64[Shape(':')]"
+    assert printer.emit(argument) == 'class_: Annotated[Float64[Shape(\':\')], Name("class")] = ...'
+    assert "def reset(self) -> None: ..." in printer.emit(method)
+    assert "@private\nclass thing:" in printer.emit(cls)
+    assert "var['bad-name']: Float64[Shape(':')]" in printer.emit(cls)
+    assert "def wrap(" in printer.emit(func)
+    assert "class thing:" in printer.emit(module)
+
+    with pytest.raises(TypeError, match="Unsupported semantic model"):
+        printer.emit(object())
+
+
 def test_emit_class_method_keeps_method_indentation():
     module = SemanticModule(
         name="method_mod",
@@ -586,6 +617,34 @@ def test_emit_class_method_keeps_method_indentation():
     code = emit_module(module)
 
     assert "class thing:\n    def reset(self) -> None: ..." in code
+
+
+def test_emit_type_bound_procedure_as_python_method_without_duplicate_self():
+    source = """
+module vector_mod
+  private
+  public :: vector
+
+  type :: vector
+    real(8), allocatable :: values(:)
+  contains
+    procedure :: scale
+  end type vector
+
+contains
+  subroutine scale(self, alpha)
+    type(vector), intent(inout) :: self
+    real(8), intent(in) :: alpha
+  end subroutine scale
+end module vector_mod
+"""
+
+    code = generate_pyi(source)
+
+    assert "class vector:" in code
+    assert "values: Float64[Shape(':'), ORDER_F, Allocatable]" in code
+    assert "    def scale(\n        self,\n        alpha: Float64\n    ) -> Returns[\"self\", vector]: ..." in code
+    assert "        self: vector" not in code
 
 
 def test_emit_module_variables_with_visibility():
@@ -645,3 +704,72 @@ def test_emit_module_with_projection_helpers_and_private_function():
     code = emit_module(module)
 
     assert "@native_call([Arg(0), Const(1), Len(Arg(0)), Shape(Arg(0), 0), IsPresent(Arg(1)), Work('tmp')])" in code
+
+
+def test_emit_native_call_supports_return_and_work_value_references():
+    module = SemanticModule(
+        name="projection_refs_mod",
+        functions=[
+            SemanticFunction(
+                name="wrapper",
+                native_name="wrapper",
+                return_type=SemanticType("Float64", dtype="Float64"),
+                projection=[
+                    ProjectionMapping(
+                        native_position=0,
+                        value_kind="len",
+                        value={"kind": "return", "position": 0},
+                    ),
+                    ProjectionMapping(
+                        native_position=1,
+                        value_kind="shape",
+                        value={"value": {"kind": "work", "name": "tmp"}, "dim": 1},
+                    ),
+                ],
+            )
+        ],
+    )
+
+    code = emit_module(module)
+
+    assert "@native_call([Len(Return(0)), Shape(Work('tmp'), 1)])" in code
+    assert "def wrapper() -> Float64: ..." in code
+
+
+@pytest.mark.parametrize(
+    "projection, message",
+    [
+        (
+            [ProjectionMapping(native_position=0)],
+            "native-only projection entry",
+        ),
+        (
+            [ProjectionMapping(native_position=0, value_kind="unknown", value=None)],
+            "Unsupported native_call projection entry",
+        ),
+        (
+            [
+                ProjectionMapping(
+                    native_position=0,
+                    value_kind="len",
+                    value={"kind": "unknown"},
+                )
+            ],
+            "Unsupported native_call value reference",
+        ),
+    ],
+)
+def test_emit_native_call_rejects_unrepresentable_projection_entries(projection, message):
+    module = SemanticModule(
+        name="bad_projection_mod",
+        functions=[
+            SemanticFunction(
+                name="wrapper",
+                native_name="wrapper",
+                projection=projection,
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match=message):
+        emit_module(module)

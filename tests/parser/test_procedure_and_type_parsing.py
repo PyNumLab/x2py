@@ -2,6 +2,7 @@
 import pytest
 
 from fortran_parser.cli import _format_wrap_readiness
+from fortran_parser.parser import FortranParser
 
 from x2py import FortranParseError, assess_wrap_readiness, parse_fortran_file, parse_fortran_project
 
@@ -126,6 +127,113 @@ def test_fixed_form_and_interface_detection():
     assert parsed.procedures[0].arguments[1].shape == ["n"]
     assert len(parsed.interfaces) == 1
     assert parsed.interfaces[0].procedures[0].in_interface is True
+
+
+def test_public_single_entity_visitors_report_missing_and_ambiguous_inline_source():
+    parser = FortranParser()
+
+    with pytest.raises(FortranParseError, match="visit_fortran_module\\(\\) expected exactly one module, but none were found"):
+        parser.visit_fortran_module(
+            """
+program driver
+end program driver
+"""
+        )
+
+    with pytest.raises(FortranParseError, match="visit_fortran_module\\(\\) expected exactly one module, but found 2"):
+        parser.visit_fortran_module(
+            """
+module one
+end module one
+
+module two
+end module two
+"""
+        )
+
+
+def test_preprocessor_macro_selection_uses_active_branch_from_inline_fortran():
+    source = """
+#ifdef USE_A
+subroutine selected_a(x)
+  integer, intent(in) :: x
+end subroutine selected_a
+#elif defined(USE_B)
+subroutine selected_b(x)
+  real(8), intent(in) :: x
+end subroutine selected_b
+#else
+subroutine fallback(x)
+  logical, intent(in) :: x
+end subroutine fallback
+#endif
+"""
+
+    selected = FortranParser(macro_defines={"USE_B": True}).parse_file(source)
+    fallback = FortranParser(macro_defines={"USE_A": False, "USE_B": False}).parse_file(source)
+
+    assert [proc.name for proc in selected.procedures] == ["selected_b"]
+    assert selected.procedures[0].arguments[0].base_type == "real"
+    assert [proc.name for proc in fallback.procedures] == ["fallback"]
+    assert fallback.procedures[0].arguments[0].base_type == "logical"
+
+
+def test_legacy_character_and_star_kind_declarations_from_inline_fortran():
+    source = """
+      subroutine label(name, x)
+      character*(*) name
+      real*8 x
+      end
+"""
+
+    proc = parse_fortran_file(source, filename="label.f").procedures[0]
+
+    assert proc.arguments[0].base_type == "character"
+    assert proc.arguments[0].kind == "*"
+    assert proc.arguments[1].base_type == "real"
+
+    with pytest.raises(FortranParseError, match="Unsupported Fortran 77 star-kind declaration"):
+        parse_fortran_file(
+            """
+subroutine modern_star(x)
+  real*8 x
+end subroutine modern_star
+""",
+            filename="modern_star.f90",
+        )
+
+
+def test_duplicate_symbols_are_reported_from_inline_fortran():
+    with pytest.raises(FortranParseError, match="Duplicate variable 'x' in module 'dup_mod'"):
+        parse_fortran_file(
+            """
+module dup_mod
+  integer :: x
+  real :: x
+end module dup_mod
+"""
+        )
+
+    with pytest.raises(FortranParseError, match="Duplicate field 'id' in derived type 'particle'"):
+        parse_fortran_file(
+            """
+module dup_type_mod
+  type :: particle
+    integer :: id
+    real :: id
+  end type particle
+end module dup_type_mod
+"""
+        )
+
+    with pytest.raises(FortranParseError, match="Duplicate argument name 'x' in procedure 'dup_arg'"):
+        parse_fortran_file(
+            """
+subroutine dup_arg(x, x)
+  integer, intent(in) :: x
+end subroutine dup_arg
+"""
+        )
 
 
 def test_kind_resolution_from_imported_module_across_files():
@@ -1294,6 +1402,56 @@ end subroutine free_proc
     assert "a_mod" in project.modules
     assert "a_mod.step" in project.procedures
     assert "free_proc" in project.procedures
+
+
+def test_parse_fortran_project_accepts_directory_and_orders_dependencies(tmp_path):
+    (tmp_path / "10_solver.f90").write_text(
+        """
+module solver_mod
+  use kinds_mod, only: rk
+contains
+  subroutine step(x)
+    real(kind=rk), intent(inout) :: x(:)
+  end subroutine step
+end module solver_mod
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "00_kinds.f90").write_text(
+        """
+module kinds_mod
+  integer, parameter :: rk = selected_real_kind(15, 307)
+end module kinds_mod
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "20_driver.f90").write_text(
+        """
+program driver
+  use solver_mod
+  real :: x(4)
+end program driver
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "30_init.f90").write_text(
+        """
+block data init_data
+  integer :: seed
+end block data init_data
+""",
+        encoding="utf-8",
+    )
+
+    project = parse_fortran_project(tmp_path)
+
+    assert len(project.files) == 4
+    assert "kinds_mod" in project.modules
+    assert "solver_mod" in project.modules
+    assert "driver" in project.programs
+    assert "solver_mod.step" in project.procedures
+    solver = project.procedures["solver_mod.step"]
+    assert solver.arguments[0].kind == "rk"
 
 
 def test_parse_fortran_file_preprocesses_source_once(monkeypatch):
