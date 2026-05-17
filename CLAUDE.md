@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`pyccel-f2py` is a minimal Fortran signature parser that extracts procedure signatures, derived types, and module definitions from Fortran source files for Python wrapper generation. It is a robust subset parser — not a full Fortran compiler front-end — designed to produce clean, serializable data models.
+`x2py` is a minimal Fortran signature parser that extracts procedure signatures, derived types, and module definitions from Fortran source files for Python wrapper generation. It is a robust subset parser — not a full Fortran compiler front-end — designed to produce clean, serializable data models.
 
 ## Commands
 
