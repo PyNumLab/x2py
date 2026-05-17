@@ -4,7 +4,7 @@ Standalone extraction of the Fortran parser used for wrapper-oriented signature
 extraction.
 
 [![Tests](https://github.com/PyNumLab/x2py/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/PyNumLab/x2py/actions/workflows/tests.yml)
-[![codecov](https://codecov.io/gh/PyNumLab/x2py/branch/main/graph/badge.svg)](https://codecov.io/gh/PyNumLab/x2py)
+[![codecov](https://codecov.io/gh/PyNumLab/x2py/graph/badge.svg?token=QZRRCS5YO6)](https://codecov.io/gh/PyNumLab/x2py)
 
 
 ## What the parser handles
