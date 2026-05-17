@@ -685,3 +685,113 @@ def test_x2py_cli_rejects_invalid_stage_combinations(extra_args, message):
     res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 2
     assert message in res.stderr
+
+
+def test_fortran_parser_cli_debug_traceback_flag_reraises_parse_errors(tmp_path: Path):
+    f90 = tmp_path / "bad.f90"
+    f90.write_text(
+        """subroutine bad(x)
+  weirdtype :: x
+end subroutine bad
+""",
+        encoding="utf-8",
+    )
+
+    cmd = [sys.executable, "-m", "fortran_parser", str(f90), "--debug-traceback"]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+
+    assert res.returncode == 1
+    assert "Traceback" in res.stderr
+    assert "FortranParseError" in res.stderr
+
+
+def test_fortran_parser_cli_debug_traceback_env_reraises_parse_errors(tmp_path: Path):
+    f90 = tmp_path / "bad.f90"
+    f90.write_text(
+        """subroutine bad(x)
+  weirdtype :: x
+end subroutine bad
+""",
+        encoding="utf-8",
+    )
+
+    cmd = [sys.executable, "-m", "fortran_parser", str(f90)]
+    res = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "FORTRAN_PARSER_DEBUG": "1"},
+    )
+
+    assert res.returncode == 1
+    assert "Traceback" in res.stderr
+    assert "note: parser raised at" in res.stderr
+
+
+def test_fortran_parser_main_public_api_modes_from_inline_source(tmp_path: Path, monkeypatch, capsys):
+    f90 = tmp_path / "mini.f90"
+    f90.write_text(
+        """module m
+contains
+  subroutine work(n)
+    integer, intent(in) :: n
+  end subroutine work
+end module m
+""",
+        encoding="utf-8",
+    )
+    json_out = tmp_path / "report.json"
+
+    monkeypatch.setattr(sys, "argv", ["fortran_parser", str(f90), "--json-out", str(json_out), "--json"])
+    assert fortran_parser_cli.main() == 0
+    stdout_payload = json.loads(capsys.readouterr().out)
+    assert str(f90) in stdout_payload
+    assert json_out.exists()
+
+    monkeypatch.setattr(sys, "argv", ["fortran_parser", str(f90), "--pyi"])
+    assert fortran_parser_cli.main() == 0
+    pyi_out = capsys.readouterr().out
+    assert "File:" in pyi_out
+    assert "def work(" in pyi_out
+
+    monkeypatch.setattr(sys, "argv", ["fortran_parser", str(f90), "--wrap-readiness"])
+    assert fortran_parser_cli.main() == 0
+    wrap_out = capsys.readouterr().out
+    assert "Wrappable: yes" in wrap_out
+
+    monkeypatch.setattr(sys, "argv", ["fortran_parser", str(f90)])
+    assert fortran_parser_cli.main() == 0
+    readable = capsys.readouterr().out
+    assert "module m" in readable
+
+
+def test_x2py_main_public_api_modes_from_inline_source(tmp_path: Path, monkeypatch, capsys):
+    f90 = tmp_path / "mini.f90"
+    f90.write_text(
+        """module m
+contains
+  subroutine work(n)
+    integer, intent(in) :: n
+  end subroutine work
+end module m
+""",
+        encoding="utf-8",
+    )
+    json_out = tmp_path / "parse.json"
+
+    monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--parse", "--json", "--out", str(json_out)])
+    assert x2py_cli.main() == 0
+    assert capsys.readouterr().out == ""
+    assert json.loads(json_out.read_text(encoding="utf-8")).get(str(f90)) is not None
+
+    monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--parse", "--wrap-readiness"])
+    assert x2py_cli.main() == 0
+    assert "Wrappable: yes" in capsys.readouterr().out
+
+    monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--pyi"])
+    assert x2py_cli.main() == 0
+    assert "def work(" in capsys.readouterr().out
+
+    monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--parse"])
+    assert x2py_cli.main() == 0
+    assert "module m" in capsys.readouterr().out
