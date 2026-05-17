@@ -118,12 +118,12 @@
       "attributes": [],
       "uses": {
         "LA_CONSTANTS": [
-          "wp=>sp",
-          "zero=>szero",
-          "half=>shalf",
-          "one=>sone",
-          "safmin=>ssafmin",
-          "safmax=>ssafmax"
+          "wp",
+          "zero",
+          "half",
+          "one",
+          "safmin",
+          "safmax"
         ]
       },
       "in_interface": false,
@@ -246,12 +246,12 @@
       "attributes": [],
       "uses": {
         "LA_CONSTANTS": [
-          "wp=>sp",
-          "zero=>szero",
-          "half=>shalf",
-          "one=>sone",
-          "safmin=>ssafmin",
-          "safmax=>ssafmax"
+          "wp",
+          "zero",
+          "half",
+          "one",
+          "safmin",
+          "safmax"
         ]
       },
       "in_interface": false,

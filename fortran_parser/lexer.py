@@ -12,6 +12,12 @@ def strip_comment(line: str, form: str) -> str:
     - **Free form**: ``!`` starts an inline comment *unless* it occurs inside a
       quoted string literal (single or double quotes).
     """
+    omp = line.lstrip()
+    omp_lower = omp.lower()
+    if omp_lower.startswith("!$omp"):
+        return omp
+    if form == "fixed" and line[:5].lower() in {"c$omp", "*$omp"}:
+        return "!$omp" + line[5:]
     if line.lstrip().startswith("#"):
         return line
     if form == "fixed" and line and line[0] in ("c", "C", "*", "!"):
@@ -62,6 +68,15 @@ def preprocess_lines(code: str, filename: str | None = None) -> list[tuple[str, 
     continuing = False
     for stripped_line, lineno, original_line in raw:
         if form == "fixed":
+            if stripped_line.lstrip().lower().startswith("!$omp"):
+                if pending:
+                    folded.append((pending, pending_lineno, pending_raw))
+                    pending = ""
+                    pending_lineno = 0
+                    pending_raw = ""
+                    continuing = False
+                folded.append((stripped_line.strip(), lineno, original_line))
+                continue
             cont = len(stripped_line) >= 6 and stripped_line[5:6].strip() != ""
             text = stripped_line[6:] if len(stripped_line) > 6 else ""
             if not text.strip() and not continuing:
