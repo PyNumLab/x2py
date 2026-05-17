@@ -60,6 +60,12 @@ another source language.
   - `shape_info`: per-dimension `{raw, lower, upper}`
   - `lower_bounds` / `upper_bounds` convenience accessors
   - For extent-only forms like `x(n)`, bounds normalize to lower=`1`, upper=`n`
+- Typed shape/specification helpers are available without changing serialized
+  JSON:
+  - `FortranShape` for the full parsed shape
+  - `FortranSlice` for `lower:upper[:stride]` dimensions
+  - `FortranFunctionCall` for whole-expression calls such as `ubound(x, 1)`
+  - `kind_expression` / `value_expression` for non-shape specs
 - `kind=...` extraction and assignment into argument/result metadata.  
 
 ### 2.4 Compile-time symbol and expression resolution
@@ -140,6 +146,9 @@ another source language.
   `source` is the imported provider-side symbol. `target` is the local name
   for renamed imports, or `None` when the local name is the same as `source`.
   `local_name` returns `target or source`.
+- `FortranShape`, `FortranSlice`, and `FortranFunctionCall` provide typed
+  views over argument/variable specification strings. They are exposed through
+  properties, so existing parser JSON remains stable.
 - Namespace parse returns aggregate dictionary with:
   - ordered file list
   - file dependency graph

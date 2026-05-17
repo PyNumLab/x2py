@@ -380,6 +380,32 @@ Expected behavior:
 - `readiness` includes counts, unsupported hits, unknown args, unresolved
   imported derived-type/kind dependencies, and `wrappable`.
 
+### 4.3 Structured argument specifications
+
+Compatibility fields such as `FortranArgument.shape`, `lbound`, `ubound`, and
+`kind` remain serialized as strings/lists. For callers that need typed access,
+argument and variable models also expose structured helpers:
+
+- `structured_shape` returns a `FortranShape` containing parsed dimensions.
+- Slice-like dimensions such as `1:n:2` are represented as `FortranSlice`.
+- Whole-expression function calls such as `lbound(x, 1)` are represented as
+  `FortranFunctionCall`.
+- `kind_expression` and `value_expression` parse `kind` and `value` strings
+  using the same lightweight expression model.
+
+Example:
+
+```python
+arg.shape
+# ["lbound(src, 2):ubound(src, 2)"]
+
+dim = arg.structured_shape.dimensions[0]
+dim.lower.name
+# "lbound"
+dim.upper.name
+# "ubound"
+```
+
 ## 5) Running tests
 
 Run all tests:

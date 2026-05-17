@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import inspect
 import os
+import re
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
@@ -28,6 +29,79 @@ def _parse_shape_dim(dim: str) -> dict[str, str | None]:
     lo = lo.strip() or None
     hi = hi.strip() or None
     return {"raw": token, "lower": lo, "upper": hi}
+
+
+def _split_top_level(text: str, delimiter: str) -> list[str]:
+    parts: list[str] = []
+    current: list[str] = []
+    depth = 0
+    for char in text:
+        if char == "(":
+            depth += 1
+        elif char == ")" and depth > 0:
+            depth -= 1
+        if char == delimiter and depth == 0:
+            parts.append("".join(current).strip())
+            current = []
+            continue
+        current.append(char)
+    parts.append("".join(current).strip())
+    return parts
+
+
+def _split_top_level_csv(text: str) -> list[str]:
+    return [part for part in _split_top_level(text, ",") if part]
+
+
+def _parse_fortran_expression(text: str | None) -> Any:
+    token = (text or "").strip()
+    if not token:
+        return None
+
+    slice_parts = _split_top_level(token, ":")
+    if len(slice_parts) > 1:
+        while len(slice_parts) < 3:
+            slice_parts.append("")
+        return FortranSlice(
+            lower=_parse_fortran_expression(slice_parts[0]),
+            upper=_parse_fortran_expression(slice_parts[1]),
+            stride=_parse_fortran_expression(slice_parts[2]),
+            raw=token,
+        )
+
+    match = re.fullmatch(r"(?P<name>[A-Za-z_]\w*)\s*\((?P<args>.*)\)", token)
+    if match:
+        return FortranFunctionCall(
+            name=match.group("name"),
+            arguments=[
+                _parse_fortran_expression(arg)
+                for arg in _split_top_level_csv(match.group("args"))
+            ],
+            raw=token,
+        )
+
+    return token
+
+
+@dataclass
+class FortranSlice:
+    lower: Any = None
+    upper: Any = None
+    stride: Any = None
+    raw: str = ""
+
+
+@dataclass
+class FortranFunctionCall:
+    name: str
+    arguments: list[Any] = field(default_factory=list)
+    raw: str = ""
+
+
+@dataclass
+class FortranShape:
+    dimensions: list[Any] = field(default_factory=list)
+    raw: list[str] = field(default_factory=list)
 
 
 def _env_flag(name: str) -> bool:
@@ -145,12 +219,33 @@ class FortranVariable:
         return [_parse_shape_dim(dim) for dim in self.shape]
 
     @property
+    def structured_shape(self) -> FortranShape:
+        """Typed representation of shape tokens.
+
+        The serialized `shape` field remains the compatibility source of truth.
+        This helper exposes slices and function-call dimensions without
+        changing existing JSON output.
+        """
+        return FortranShape(
+            dimensions=[_parse_fortran_expression(dim) for dim in self.shape],
+            raw=list(self.shape),
+        )
+
+    @property
     def lower_bounds(self) -> list[str | None]:
         return [d["lower"] for d in self.shape_info]
 
     @property
     def upper_bounds(self) -> list[str | None]:
         return [d["upper"] for d in self.shape_info]
+
+    @property
+    def kind_expression(self) -> Any:
+        return _parse_fortran_expression(self.kind)
+
+    @property
+    def value_expression(self) -> Any:
+        return _parse_fortran_expression(self.value)
 
 
 @dataclass
