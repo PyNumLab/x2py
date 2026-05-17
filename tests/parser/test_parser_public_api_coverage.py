@@ -598,7 +598,13 @@ end module use_forms
     module = parse_fortran_file(code).modules[0]
 
     assert module.uses["list_input"] == ["delete_input"]
+    assert module.uses["list_input"][0].source == "delete_input_list"
+    assert module.uses["list_input"][0].target == "delete_input"
     assert module.uses["iso_c_binding"] == ["c_int", "c_double"]
+    assert [(item.source, item.target) for item in module.uses["iso_c_binding"]] == [
+        ("c_int", None),
+        ("c_double", None),
+    ]
 
 
 def test_unknown_no_colon_declarations_raise_in_metadata_scopes():

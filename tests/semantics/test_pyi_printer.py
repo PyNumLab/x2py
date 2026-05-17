@@ -341,6 +341,21 @@ end module
     assert "import iso_c_binding" in code
 
 
+def test_emit_import_renames():
+
+    source = """
+module user_mod
+
+use list_input, delete_input => delete_input_list
+
+end module
+"""
+
+    code = generate_pyi(source)
+
+    assert "from list_input import delete_input_list as delete_input" in code
+
+
 # ============================================================
 # Multiple procedures
 # ============================================================

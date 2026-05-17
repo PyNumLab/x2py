@@ -9,8 +9,14 @@
       "filename": "SciFortran/SF_SPARSE.f90",
       "uses": {
         "SF_LINALG": [
-          "deye",
-          "zeye"
+          {
+            "source": "deye",
+            "target": null
+          },
+          {
+            "source": "zeye",
+            "target": null
+          }
         ],
         "SF_SPARSE_ARRAY_CSR": [],
         "SF_SPARSE_ARRAY_CSC": []
@@ -55,8 +61,14 @@
       "filename": "SciFortran/SF_SPARSE.f90",
       "uses": {
         "SF_LINALG": [
-          "deye",
-          "zeye"
+          {
+            "source": "deye",
+            "target": null
+          },
+          {
+            "source": "zeye",
+            "target": null
+          }
         ],
         "SF_SPARSE_ARRAY_CSR": [],
         "SF_SPARSE_ARRAY_CSC": []

@@ -9,8 +9,14 @@
       "filename": "module_vars_use.f90",
       "uses": {
         "iso_c_binding": [
-          "c_int",
-          "c_double"
+          {
+            "source": "c_int",
+            "target": null
+          },
+          {
+            "source": "c_double",
+            "target": null
+          }
         ]
       },
       "variables": [
@@ -84,8 +90,14 @@
       "filename": "module_vars_use.f90",
       "uses": {
         "iso_c_binding": [
-          "c_int",
-          "c_double"
+          {
+            "source": "c_int",
+            "target": null
+          },
+          {
+            "source": "c_double",
+            "target": null
+          }
         ]
       },
       "variables": [

@@ -10,6 +10,8 @@ from .models import (
     SemanticClass,
     SemanticConstraint,
     SemanticFunction,
+    SemanticImport,
+    SemanticImportItem,
     SemanticMethod,
     SemanticModule,
     SemanticType,
@@ -73,6 +75,10 @@ class PyiToIRParser:
                 module.imports.append(stripped.split(None, 1)[1].strip())
                 self.index += 1
                 continue
+            if stripped.startswith("from "):
+                module.imports.append(self._parse_import_from(stripped))
+                self.index += 1
+                continue
             if stripped.startswith("class "):
                 cls, self.index = self._parse_class(self.index, visibility=pending_visibility)
                 module.classes.append(cls)
@@ -96,6 +102,23 @@ class PyiToIRParser:
             raise ValueError(f"Unsupported .pyi line: {line!r}")
 
         return module
+
+    @staticmethod
+    def _parse_import_from(line: str) -> SemanticImport:
+        match = re.match(r"^from\s+(?P<module>\S+)\s+import\s+(?P<items>.+)$", line)
+        if not match:
+            raise ValueError(f"Unsupported import line: {line!r}")
+        items: list[SemanticImportItem] = []
+        for item in match.group("items").split(","):
+            text = item.strip()
+            if not text:
+                continue
+            alias_match = re.match(r"^(?P<source>\S+)\s+as\s+(?P<target>\S+)$", text)
+            if alias_match:
+                items.append(SemanticImportItem(source=alias_match.group("source"), target=alias_match.group("target")))
+            else:
+                items.append(SemanticImportItem(source=text))
+        return SemanticImport(module=match.group("module"), items=items)
 
     def _parse_class(self, start: int, *, visibility: str) -> tuple[SemanticClass, int]:
         header = self.lines[start].strip()

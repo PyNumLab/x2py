@@ -12,7 +12,10 @@
         "BROYDEN_ROUTINES": [],
         "SF_CONSTANTS": [],
         "SF_LINALG": [
-          "inv_sym"
+          {
+            "source": "inv_sym",
+            "target": null
+          }
         ]
       },
       "variables": [
@@ -169,7 +172,10 @@
             "BROYDEN_ROUTINES": [],
             "SF_CONSTANTS": [],
             "SF_LINALG": [
-              "inv_sym"
+              {
+                "source": "inv_sym",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -279,7 +285,10 @@
             "BROYDEN_ROUTINES": [],
             "SF_CONSTANTS": [],
             "SF_LINALG": [
-              "inv_sym"
+              {
+                "source": "inv_sym",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -513,7 +522,10 @@
         "BROYDEN_ROUTINES": [],
         "SF_CONSTANTS": [],
         "SF_LINALG": [
-          "inv_sym"
+          {
+            "source": "inv_sym",
+            "target": null
+          }
         ]
       },
       "variables": [
@@ -670,7 +682,10 @@
             "BROYDEN_ROUTINES": [],
             "SF_CONSTANTS": [],
             "SF_LINALG": [
-              "inv_sym"
+              {
+                "source": "inv_sym",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -780,7 +795,10 @@
             "BROYDEN_ROUTINES": [],
             "SF_CONSTANTS": [],
             "SF_LINALG": [
-              "inv_sym"
+              {
+                "source": "inv_sym",
+                "target": null
+              }
             ]
           },
           "in_interface": false,

@@ -118,12 +118,30 @@
       "attributes": [],
       "uses": {
         "LA_CONSTANTS": [
-          "wp",
-          "zero",
-          "half",
-          "one",
-          "safmin",
-          "safmax"
+          {
+            "source": "dp",
+            "target": "wp"
+          },
+          {
+            "source": "dzero",
+            "target": "zero"
+          },
+          {
+            "source": "dhalf",
+            "target": "half"
+          },
+          {
+            "source": "done",
+            "target": "one"
+          },
+          {
+            "source": "dsafmin",
+            "target": "safmin"
+          },
+          {
+            "source": "dsafmax",
+            "target": "safmax"
+          }
         ]
       },
       "in_interface": false,
@@ -246,12 +264,30 @@
       "attributes": [],
       "uses": {
         "LA_CONSTANTS": [
-          "wp",
-          "zero",
-          "half",
-          "one",
-          "safmin",
-          "safmax"
+          {
+            "source": "dp",
+            "target": "wp"
+          },
+          {
+            "source": "dzero",
+            "target": "zero"
+          },
+          {
+            "source": "dhalf",
+            "target": "half"
+          },
+          {
+            "source": "done",
+            "target": "one"
+          },
+          {
+            "source": "dsafmin",
+            "target": "safmin"
+          },
+          {
+            "source": "dsafmax",
+            "target": "safmax"
+          }
         ]
       },
       "in_interface": false,

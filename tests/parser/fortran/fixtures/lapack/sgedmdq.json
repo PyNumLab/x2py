@@ -791,7 +791,10 @@
       "attributes": [],
       "uses": {
         "iso_fortran_env": [
-          "real32"
+          {
+            "source": "real32",
+            "target": null
+          }
         ]
       },
       "in_interface": false,
@@ -1587,7 +1590,10 @@
       "attributes": [],
       "uses": {
         "iso_fortran_env": [
-          "real32"
+          {
+            "source": "real32",
+            "target": null
+          }
         ]
       },
       "in_interface": false,

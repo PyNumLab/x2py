@@ -11,8 +11,14 @@
       "filename": "SciFortran/01_test_sf_parsing.f90",
       "uses": {
         "SCIFOR": [
-          "parse_cmd_variable",
-          "parse_input_variable"
+          {
+            "source": "parse_cmd_variable",
+            "target": null
+          },
+          {
+            "source": "parse_input_variable",
+            "target": null
+          }
         ],
         "ASSERTING": []
       },

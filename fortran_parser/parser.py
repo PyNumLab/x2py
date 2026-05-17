@@ -7,7 +7,7 @@ from pathlib     import Path
 from dataclasses import replace
 
 from .lexer         import preprocess_lines
-from .models        import FortranArgument, FortranBlockData, FortranDerivedType, FortranFile, FortranInterface, FortranModule, FortranParseError, FortranProcedureSignature, FortranProgram, FortranProject, FortranSubmodule, FortranVariable
+from .models        import FortranArgument, FortranBlockData, FortranDerivedType, FortranFile, FortranInterface, FortranModule, FortranParseError, FortranProcedureSignature, FortranProgram, FortranProject, FortranSubmodule, FortranUseMapping, FortranVariable
 from .type_resolver import extract_kind_from_type_spec
 from .utils         import split_csv
 
@@ -321,12 +321,12 @@ def _split_submodule_parent(parent_spec: str) -> tuple[str, str | None]:
     return parts[0], None
 
 
-def _visible_import_modules(symbol: str, uses: dict[str, list[str]]) -> list[str]:
+def _visible_import_modules(symbol: str, uses: dict[str, list[FortranUseMapping]]) -> list[str]:
     """Return imported modules that could provide ``symbol`` under Fortran USE rules."""
     wanted = symbol.lower()
     providers: list[str] = []
     for module_name, only_symbols in uses.items():
-        normalized_only = [str(sym).lower() for sym in only_symbols]
+        normalized_only = [sym.local_name.lower() for sym in only_symbols]
         if not normalized_only or wanted in normalized_only:
             providers.append(module_name)
     return providers
@@ -658,7 +658,7 @@ def _is_ignored_spec_statement(line: str) -> bool:
     )
 
 
-def _parse_use_statement(line: str) -> tuple[str, list[str]] | None:
+def _parse_use_statement(line: str) -> tuple[str, list[FortranUseMapping]] | None:
     match = _USE_RE.match(line)
     if not match:
         return None
@@ -669,15 +669,18 @@ def _parse_use_statement(line: str) -> tuple[str, list[str]] | None:
     only_match = re.match(r"^only\s*:\s*(?P<symbols>.*)$", payload, re.IGNORECASE)
     if only_match:
         payload = only_match.group("symbols")
-    symbols: list[str] = []
+    mappings: list[FortranUseMapping] = []
     for item in split_csv(payload):
         token = item.strip()
         if not token:
             continue
         if "=>" in token:
-            token = token.split("=>", 1)[0].strip()
-        symbols.append(token)
-    return match.group("module"), symbols
+            target, source = [part.strip() for part in token.split("=>", 1)]
+        else:
+            source = token
+            target = None
+        mappings.append(FortranUseMapping(source=source, target=target))
+    return match.group("module"), mappings
 
 def _is_executable_statement_start(line: str) -> bool:
     stripped = line.strip()
@@ -1158,7 +1161,7 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
 # -----------------------------------------------------------------------------
 
 def _resolve_signature_kinds(sig: FortranProcedureSignature, module_params: dict[str, dict[str, str]]) -> None:
-    use_map = {k.lower(): [s.lower() for s in v] for k, v in sig.uses.items()}
+    use_map = {k.lower(): [s.local_name.lower() for s in v] for k, v in sig.uses.items()}
     symbol_to_value: dict[str, str] = {}
     if sig.module:
         symbol_to_value.update(module_params.get(sig.module.lower(), {}))
@@ -1649,8 +1652,8 @@ class FortranParser:
             return
         parsed_use = _parse_use_statement(line)
         if parsed_use:
-            module_name, symbols = parsed_use
-            module.uses[module_name] = symbols
+            module_name, mappings = parsed_use
+            module.uses[module_name] = mappings
             return
         self._parse_module_variable_line(line, module, filename, lineno=lineno, source_line=source_line)
 
@@ -1707,8 +1710,8 @@ class FortranParser:
     ) -> None:
         parsed_use = _parse_use_statement(line)
         if parsed_use:
-            module_name, symbols = parsed_use
-            submodule.uses[module_name] = symbols
+            module_name, mappings = parsed_use
+            submodule.uses[module_name] = mappings
             return
         self._parse_module_variable_line(line, submodule, filename, lineno=lineno, source_line=source_line)
 
@@ -1763,8 +1766,8 @@ class FortranParser:
     ) -> None:
         parsed_use = _parse_use_statement(line)
         if parsed_use:
-            module_name, symbols = parsed_use
-            program.uses[module_name] = symbols
+            module_name, mappings = parsed_use
+            program.uses[module_name] = mappings
             return
         self._parse_module_variable_line(line, program, filename, lineno=lineno, source_line=source_line)
 
@@ -2095,9 +2098,9 @@ class FortranParser:
         line: str,
         *,
         current_module: str | None,
-        current_module_uses: dict[str, list[str]],
+        current_module_uses: dict[str, list[FortranUseMapping]],
         program_depth: int,
-    ) -> tuple[str | None, dict[str, list[str]], int, bool]:
+    ) -> tuple[str | None, dict[str, list[FortranUseMapping]], int, bool]:
         lower = line.lower()
         submodule_match = _SUBMODULE_RE.match(line)
         if submodule_match:
@@ -2149,7 +2152,7 @@ class FortranParser:
         line: str,
         *,
         current_module: str | None,
-        current_module_uses: dict[str, list[str]],
+        current_module_uses: dict[str, list[FortranUseMapping]],
         interface_depth: int,
         declared_procedures: dict[tuple[str | None, bool], dict[str, list[frozenset[str]]]],
         pp_condition_stack: list[tuple[int, int]],
@@ -2484,7 +2487,7 @@ class FortranParser:
         signatures: list[FortranProcedureSignature] = []
         declared_procedures: dict[tuple[str | None, bool], dict[str, list[frozenset[str]]]] = {}
         current_module = None
-        current_module_uses: dict[str, list[str]] = {}
+        current_module_uses: dict[str, list[FortranUseMapping]] = {}
         current_proc = None
         interface_depth = 0
         interface_name_stack: list[str | None] = []
@@ -2538,8 +2541,8 @@ class FortranParser:
             if current_proc is None:
                 parsed_use = _parse_use_statement(s)
                 if parsed_use and current_module is not None:
-                    module_name, symbols = parsed_use
-                    current_module_uses[module_name] = symbols
+                    module_name, mappings = parsed_use
+                    current_module_uses[module_name] = mappings
                     continue
 
             if current_proc is None:
@@ -2595,8 +2598,8 @@ class FortranParser:
 
             parsed_use = _parse_use_statement(s)
             if parsed_use:
-                module_name, symbols = parsed_use
-                current_proc["uses"][module_name] = symbols
+                module_name, mappings = parsed_use
+                current_proc["uses"][module_name] = mappings
                 continue
 
             if current_proc.get("in_exec_part"):

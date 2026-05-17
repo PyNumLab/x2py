@@ -118,13 +118,34 @@
       "attributes": [],
       "uses": {
         "LA_CONSTANTS": [
-          "wp",
-          "zero",
-          "one",
-          "two",
-          "czero",
-          "safmin",
-          "safmax"
+          {
+            "source": "sp",
+            "target": "wp"
+          },
+          {
+            "source": "szero",
+            "target": "zero"
+          },
+          {
+            "source": "sone",
+            "target": "one"
+          },
+          {
+            "source": "stwo",
+            "target": "two"
+          },
+          {
+            "source": "czero",
+            "target": null
+          },
+          {
+            "source": "ssafmin",
+            "target": "safmin"
+          },
+          {
+            "source": "ssafmax",
+            "target": "safmax"
+          }
         ]
       },
       "in_interface": false,
@@ -247,13 +268,34 @@
       "attributes": [],
       "uses": {
         "LA_CONSTANTS": [
-          "wp",
-          "zero",
-          "one",
-          "two",
-          "czero",
-          "safmin",
-          "safmax"
+          {
+            "source": "sp",
+            "target": "wp"
+          },
+          {
+            "source": "szero",
+            "target": "zero"
+          },
+          {
+            "source": "sone",
+            "target": "one"
+          },
+          {
+            "source": "stwo",
+            "target": "two"
+          },
+          {
+            "source": "czero",
+            "target": null
+          },
+          {
+            "source": "ssafmin",
+            "target": "safmin"
+          },
+          {
+            "source": "ssafmax",
+            "target": "safmax"
+          }
         ]
       },
       "in_interface": false,

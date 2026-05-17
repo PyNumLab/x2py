@@ -2,7 +2,7 @@ from pathlib import Path
 import pytest
 
 from semantics.fortran2ir import fortran_file_to_semantic_modules
-from semantics.models import ProjectionMapping, SemanticArgument, SemanticFunction, SemanticModule, SemanticType
+from semantics.models import ProjectionMapping, SemanticArgument, SemanticFunction, SemanticImport, SemanticImportItem, SemanticModule, SemanticType
 from semantics.pyi_parser import load_pyi_file, parse_pyi_text
 from semantics.pyi_printer import emit_module
 from tests._shared.fixture_outputs import FORTRAN_DATA_DIR, FORTRAN_SUFFIXES
@@ -48,6 +48,20 @@ def touch(
     assert module.variables[0].name == "scale"
     assert module.variables[0].visibility == "private"
     assert module.functions[0].arguments[0].intent == "inout"
+
+
+def test_parse_pyi_text_accepts_import_aliases():
+    module = parse_pyi_text(
+        "from list_input import delete_input_list as delete_input\n",
+        module_name="edited",
+    )
+
+    assert module.imports == [
+        SemanticImport(
+            module="list_input",
+            items=[SemanticImportItem(source="delete_input_list", target="delete_input")],
+        )
+    ]
 
 
 def test_parse_pyi_text_accepts_plain_return_type():

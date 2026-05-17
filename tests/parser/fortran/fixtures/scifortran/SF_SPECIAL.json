@@ -9,7 +9,10 @@
       "filename": "SciFortran/SF_SPECIAL.f90",
       "uses": {
         "SF_INTEGRATE": [
-          "quad"
+          {
+            "source": "quad",
+            "target": null
+          }
         ]
       },
       "variables": [
@@ -306,7 +309,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -383,7 +389,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -480,7 +489,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -577,7 +589,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -674,7 +689,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -731,7 +749,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -788,7 +809,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -843,7 +867,10 @@
           "attributes": [],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -920,7 +947,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -995,7 +1025,10 @@
           "attributes": [],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -1070,7 +1103,10 @@
           "attributes": [],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -1125,7 +1161,10 @@
           "attributes": [],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -1200,7 +1239,10 @@
           "attributes": [],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -1295,7 +1337,10 @@
           "attributes": [],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -1514,7 +1559,10 @@
       "filename": "SciFortran/SF_SPECIAL.f90",
       "uses": {
         "SF_INTEGRATE": [
-          "quad"
+          {
+            "source": "quad",
+            "target": null
+          }
         ]
       },
       "variables": [
@@ -1811,7 +1859,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -1888,7 +1939,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -1985,7 +2039,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -2082,7 +2139,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -2179,7 +2239,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -2236,7 +2299,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -2293,7 +2359,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -2348,7 +2417,10 @@
           "attributes": [],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -2425,7 +2497,10 @@
           ],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -2500,7 +2575,10 @@
           "attributes": [],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -2575,7 +2653,10 @@
           "attributes": [],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -2630,7 +2711,10 @@
           "attributes": [],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -2705,7 +2789,10 @@
           "attributes": [],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -2800,7 +2887,10 @@
           "attributes": [],
           "uses": {
             "SF_INTEGRATE": [
-              "quad"
+              {
+                "source": "quad",
+                "target": null
+              }
             ]
           },
           "in_interface": false,

@@ -163,6 +163,23 @@ class FortranArgument(FortranVariable):
     pointer: bool = False
 
 
+@dataclass(eq=False)
+class FortranUseMapping:
+    source: str
+    target: Optional[str] = None
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, str):
+            return self.local_name == other
+        if not isinstance(other, FortranUseMapping):
+            return False
+        return (self.source, self.target) == (other.source, other.target)
+
+    @property
+    def local_name(self) -> str:
+        return self.target or self.source
+
+
 @dataclass
 class FortranProcedureSignature:
     name: str
@@ -171,7 +188,7 @@ class FortranProcedureSignature:
     arguments: list[FortranArgument] = field(default_factory=list)
     result: Optional[FortranArgument] = None
     attributes: list[str] = field(default_factory=list)
-    uses: dict[str, list[str]] = field(default_factory=dict)
+    uses: dict[str, list[FortranUseMapping]] = field(default_factory=dict)
     in_interface: bool = False
     variables: dict[str, FortranVariable] = field(default_factory=dict)
 
@@ -199,7 +216,7 @@ class FortranInterface:
 class FortranModule:
     name: str
     filename: Optional[str] = None
-    uses: dict[str, list[str]] = field(default_factory=dict)
+    uses: dict[str, list[FortranUseMapping]] = field(default_factory=dict)
     variables: list[FortranVariable] = field(default_factory=list)
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
     derived_types: list[FortranDerivedType] = field(default_factory=list)
@@ -215,7 +232,7 @@ class FortranSubmodule:
     parent: str
     ancestor: Optional[str] = None
     filename: Optional[str] = None
-    uses: dict[str, list[str]] = field(default_factory=dict)
+    uses: dict[str, list[FortranUseMapping]] = field(default_factory=dict)
     variables: list[FortranVariable] = field(default_factory=list)
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
     derived_types: list[FortranDerivedType] = field(default_factory=list)
@@ -226,7 +243,7 @@ class FortranSubmodule:
 class FortranProgram:
     name: Optional[str] = None
     filename: Optional[str] = None
-    uses: dict[str, list[str]] = field(default_factory=dict)
+    uses: dict[str, list[FortranUseMapping]] = field(default_factory=dict)
     variables: list[FortranVariable] = field(default_factory=list)
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
 

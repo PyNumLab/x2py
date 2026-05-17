@@ -124,13 +124,34 @@
       "attributes": [],
       "uses": {
         "LA_CONSTANTS": [
-          "wp",
-          "zero",
-          "one",
-          "sbig",
-          "ssml",
-          "tbig",
-          "tsml"
+          {
+            "source": "dp",
+            "target": "wp"
+          },
+          {
+            "source": "dzero",
+            "target": "zero"
+          },
+          {
+            "source": "done",
+            "target": "one"
+          },
+          {
+            "source": "dsbig",
+            "target": "sbig"
+          },
+          {
+            "source": "dssml",
+            "target": "ssml"
+          },
+          {
+            "source": "dtbig",
+            "target": "tbig"
+          },
+          {
+            "source": "dtsml",
+            "target": "tsml"
+          }
         ],
         "LA_XISNAN": []
       },
@@ -260,13 +281,34 @@
       "attributes": [],
       "uses": {
         "LA_CONSTANTS": [
-          "wp",
-          "zero",
-          "one",
-          "sbig",
-          "ssml",
-          "tbig",
-          "tsml"
+          {
+            "source": "dp",
+            "target": "wp"
+          },
+          {
+            "source": "dzero",
+            "target": "zero"
+          },
+          {
+            "source": "done",
+            "target": "one"
+          },
+          {
+            "source": "dsbig",
+            "target": "sbig"
+          },
+          {
+            "source": "dssml",
+            "target": "ssml"
+          },
+          {
+            "source": "dtbig",
+            "target": "tbig"
+          },
+          {
+            "source": "dtsml",
+            "target": "tsml"
+          }
         ],
         "LA_XISNAN": []
       },

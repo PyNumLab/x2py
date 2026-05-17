@@ -16,6 +16,8 @@ from .models import (
     SemanticClass,
     SemanticConstraint,
     SemanticFunction,
+    SemanticImport,
+    SemanticImportItem,
     SemanticMethod,
     SemanticModule,
     SemanticType,
@@ -166,7 +168,7 @@ class FortranToIRConverter:
             functions=semantic_functions,
             classes=semantic_classes,
             variables=[self.visit_argument(var, intent="in") for var in getattr(module, "variables", [])],
-            imports=list(module.uses.keys()),
+            imports=self._module_imports(module),
         )
 
     def visit_file_modules(
@@ -214,6 +216,24 @@ class FortranToIRConverter:
 
     def module_to_semantic_module(self, module) -> SemanticModule:
         return self.visit_module(self.first_module(module))
+
+    @staticmethod
+    def _module_imports(module: FortranModule) -> list[str | SemanticImport]:
+        imports: list[str | SemanticImport] = []
+        for module_name, mappings in module.uses.items():
+            if not mappings:
+                imports.append(module_name)
+            else:
+                imports.append(
+                    SemanticImport(
+                        module=module_name,
+                        items=[
+                            SemanticImportItem(source=item.source, target=item.target)
+                            for item in mappings
+                        ],
+                    )
+                )
+        return imports
 
     def file_to_semantic_modules(
         self,

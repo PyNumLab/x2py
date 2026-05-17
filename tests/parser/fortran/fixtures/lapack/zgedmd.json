@@ -722,7 +722,10 @@
       "attributes": [],
       "uses": {
         "iso_fortran_env": [
-          "real64"
+          {
+            "source": "real64",
+            "target": null
+          }
         ]
       },
       "in_interface": false,
@@ -1449,7 +1452,10 @@
       "attributes": [],
       "uses": {
         "iso_fortran_env": [
-          "real64"
+          {
+            "source": "real64",
+            "target": null
+          }
         ]
       },
       "in_interface": false,
