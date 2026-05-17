@@ -29,6 +29,8 @@ front-end). Current handled coverage:
 - **Modules and project context**
   - Module discovery
   - Module-level variables and `use` dependencies
+  - `use ... only:` symbol mappings preserve both imported source names and
+    local target names for renamed imports
   - Propagation of module-level `use` into contained procedures
   - Cross-file kind resolution when parsing a namespace/project
   - Submodules, programs, and block data units
@@ -72,8 +74,9 @@ sections so maintainers can navigate the file by concern instead of by history:
 - Thin module-level convenience wrappers that delegate to a shared parser
   instance
 
-This was a structural readability refactor only: behavior and public return
-models are unchanged.
+Most parser organization changes are structural, but parser reference updates
+should still accompany behavior, model-schema, fixture, or coverage changes so
+the public subset stays documented.
 
 ## Repository layout
 
@@ -448,13 +451,13 @@ PYTHONPATH=. pytest -q tests/pyi
 ### Refresh golden fixture JSON files
 
 ```bash
-python tests/data/fortran/general/generate_fortran_parser_goldens.py
+python tests/parser/fortran/generate_fortran_parser_goldens.py
 ```
 
 Or update only specific fixture files:
 
 ```bash
-python tests/data/fortran/general/generate_fortran_parser_goldens.py tests/data/fortran/general/basic_subroutine.f90
+python tests/parser/fortran/generate_fortran_parser_goldens.py tests/data/fortran/general/basic_subroutine.f90
 ```
 
 During fixture test runs, you can also auto-update expected JSON in-place:
@@ -462,6 +465,11 @@ During fixture test runs, you can also auto-update expected JSON in-place:
 ```bash
 FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser --confcutdir=tests/
 ```
+
+When parser model output changes, include the regenerated parser goldens and a
+short explanation in the PR. For `.pyi` or semantic IR behavior changes, update
+the corresponding fixtures under `tests/pyi/fixtures` or
+`tests/semantics/fixtures`.
 
 ## Semantic parser structure
 
@@ -472,3 +480,11 @@ The parser exposes stable file/project entrypoints:
 - `assess_wrap_readiness(...)` for wrappability diagnostics.
 
 The semantics layer consumes `FortranFile`/`FortranModule` objects and projects them into language-independent semantic IR (`SemanticModule`, `SemanticFunction`, `SemanticClass`, `SemanticType`). This keeps the semantic API model independent from parser internals, matching the project goal that parser output is a helper and the semantic interface/IR is the source of truth.
+
+For Fortran `use` imports, the parser stores each explicit imported symbol as a
+source/target mapping. A non-renamed `use iso_c_binding, only: c_int` maps
+`source="c_int"` and `target=None`; a renamed
+`use list_input, delete_input => delete_input_list` maps
+`source="delete_input_list"` and `target="delete_input"`. The semantic layer
+uses that information to emit Python stub imports such as
+`from list_input import delete_input_list as delete_input`.
