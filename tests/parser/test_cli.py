@@ -685,3 +685,44 @@ def test_x2py_cli_rejects_invalid_stage_combinations(extra_args, message):
     res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 2
     assert message in res.stderr
+
+
+def test_fortran_parser_cli_debug_traceback_flag_reraises_parse_errors(tmp_path: Path):
+    f90 = tmp_path / "bad.f90"
+    f90.write_text(
+        """subroutine bad(x)
+  weirdtype :: x
+end subroutine bad
+""",
+        encoding="utf-8",
+    )
+
+    cmd = [sys.executable, "-m", "fortran_parser", str(f90), "--debug-traceback"]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+
+    assert res.returncode == 1
+    assert "Traceback" in res.stderr
+    assert "FortranParseError" in res.stderr
+
+
+def test_fortran_parser_cli_debug_traceback_env_reraises_parse_errors(tmp_path: Path):
+    f90 = tmp_path / "bad.f90"
+    f90.write_text(
+        """subroutine bad(x)
+  weirdtype :: x
+end subroutine bad
+""",
+        encoding="utf-8",
+    )
+
+    cmd = [sys.executable, "-m", "fortran_parser", str(f90)]
+    res = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "FORTRAN_PARSER_DEBUG": "1"},
+    )
+
+    assert res.returncode == 1
+    assert "Traceback" in res.stderr
+    assert "note: parser raised at" in res.stderr
