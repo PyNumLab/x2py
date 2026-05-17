@@ -435,7 +435,9 @@
       "attributes": [
         "bind(c)"
       ],
-      "uses": {},
+      "uses": {
+        "iso_c_binding": []
+      },
       "in_interface": false,
       "variables": {}
     },
@@ -1039,7 +1041,9 @@
       "attributes": [
         "bind(c)"
       ],
-      "uses": {},
+      "uses": {
+        "iso_c_binding": []
+      },
       "in_interface": false,
       "variables": {}
     }
@@ -1477,7 +1481,9 @@
       "attributes": [
         "bind(c)"
       ],
-      "uses": {},
+      "uses": {
+        "iso_c_binding": []
+      },
       "in_interface": false,
       "variables": {}
     },
@@ -2081,7 +2087,9 @@
       "attributes": [
         "bind(c)"
       ],
-      "uses": {},
+      "uses": {
+        "iso_c_binding": []
+      },
       "in_interface": false,
       "variables": {}
     }

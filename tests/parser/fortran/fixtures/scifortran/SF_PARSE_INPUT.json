@@ -7,7 +7,11 @@
     {
       "name": "SF_PARSE_INPUT",
       "filename": "SciFortran/SF_PARSE_INPUT.f90",
-      "uses": {},
+      "uses": {
+        "LIST_INPUT": [
+          "delete_input"
+        ]
+      },
       "variables": [
         {
           "name": "IOinput",
@@ -139,7 +143,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -251,7 +259,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -363,7 +375,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -487,7 +503,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -611,7 +631,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -735,7 +759,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -847,7 +875,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -919,7 +951,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -991,7 +1027,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1063,7 +1103,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1147,7 +1191,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1231,7 +1279,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1315,7 +1367,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1387,7 +1443,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1419,7 +1479,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1470,7 +1534,11 @@
             "pointer": false
           },
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1521,7 +1589,11 @@
             "pointer": false
           },
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1572,7 +1644,11 @@
             "pointer": false
           },
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1643,7 +1719,11 @@
             "pointer": false
           },
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1675,7 +1755,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1707,7 +1791,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1739,7 +1827,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1771,7 +1863,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1803,7 +1899,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -1833,7 +1933,11 @@
             "pointer": false
           },
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         }
@@ -1964,7 +2068,11 @@
     "sf_parse_input": {
       "name": "SF_PARSE_INPUT",
       "filename": "SciFortran/SF_PARSE_INPUT.f90",
-      "uses": {},
+      "uses": {
+        "LIST_INPUT": [
+          "delete_input"
+        ]
+      },
       "variables": [
         {
           "name": "IOinput",
@@ -2096,7 +2204,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -2208,7 +2320,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -2320,7 +2436,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -2444,7 +2564,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -2568,7 +2692,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -2692,7 +2820,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -2804,7 +2936,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -2876,7 +3012,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -2948,7 +3088,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3020,7 +3164,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3104,7 +3252,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3188,7 +3340,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3272,7 +3428,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3344,7 +3504,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3376,7 +3540,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3427,7 +3595,11 @@
             "pointer": false
           },
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3478,7 +3650,11 @@
             "pointer": false
           },
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3529,7 +3705,11 @@
             "pointer": false
           },
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3600,7 +3780,11 @@
             "pointer": false
           },
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3632,7 +3816,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3664,7 +3852,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3696,7 +3888,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3728,7 +3924,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3760,7 +3960,11 @@
           ],
           "result": null,
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         },
@@ -3790,7 +3994,11 @@
             "pointer": false
           },
           "attributes": [],
-          "uses": {},
+          "uses": {
+            "LIST_INPUT": [
+              "delete_input"
+            ]
+          },
           "in_interface": false,
           "variables": {}
         }

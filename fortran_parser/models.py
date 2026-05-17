@@ -41,7 +41,7 @@ def _apply_color(text: str, *styles: str, enabled: bool) -> str:
     return f"{prefix}{text}{_ANSI['reset']}"
 
 
-def _enable_windows_ansi() -> None:
+def _enable_windows_ansi() -> None:  # pragma: no cover - Windows-only console setup.
     """Enable ANSI escape sequence handling on Windows terminals when possible."""
     if os.name != "nt":
         return

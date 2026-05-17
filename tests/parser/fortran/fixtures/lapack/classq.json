@@ -124,13 +124,13 @@
       "attributes": [],
       "uses": {
         "LA_CONSTANTS": [
-          "wp=>sp",
-          "zero=>szero",
-          "one=>sone",
-          "sbig=>ssbig",
-          "ssml=>sssml",
-          "tbig=>stbig",
-          "tsml=>stsml"
+          "wp",
+          "zero",
+          "one",
+          "sbig",
+          "ssml",
+          "tbig",
+          "tsml"
         ],
         "LA_XISNAN": []
       },
@@ -260,13 +260,13 @@
       "attributes": [],
       "uses": {
         "LA_CONSTANTS": [
-          "wp=>sp",
-          "zero=>szero",
-          "one=>sone",
-          "sbig=>ssbig",
-          "ssml=>sssml",
-          "tbig=>stbig",
-          "tsml=>stsml"
+          "wp",
+          "zero",
+          "one",
+          "sbig",
+          "ssml",
+          "tbig",
+          "tsml"
         ],
         "LA_XISNAN": []
       },

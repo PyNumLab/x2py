@@ -809,7 +809,11 @@
       ],
       "result": null,
       "attributes": [],
-      "uses": {},
+      "uses": {
+        "iso_fortran_env": [
+          "real32"
+        ]
+      },
       "in_interface": false,
       "variables": {}
     }
@@ -1621,7 +1625,11 @@
       ],
       "result": null,
       "attributes": [],
-      "uses": {},
+      "uses": {
+        "iso_fortran_env": [
+          "real32"
+        ]
+      },
       "in_interface": false,
       "variables": {}
     }

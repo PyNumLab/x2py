@@ -7,11 +7,115 @@
   "submodules": [],
   "programs": [],
   "block_data_units": [],
-  "procedures": [],
+  "procedures": [
+    {
+      "name": "CHLA_TRANSTYPE",
+      "kind": "function",
+      "module": null,
+      "arguments": [
+        {
+          "name": "TRANS",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": "CHLA_TRANSTYPE",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "CHLA_TRANSTYPE",
+        "base_type": "character",
+        "kind": "1",
+        "rank": 0,
+        "shape": [],
+        "lbound": [],
+        "ubound": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "visibility": "public",
+        "procedure": "CHLA_TRANSTYPE",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    }
+  ],
   "interfaces": [],
   "derived_types": [],
   "variables": [],
   "includes": [],
   "diagnostics": [],
-  "symbols": {}
+  "symbols": {
+    "chla_transtype": {
+      "name": "CHLA_TRANSTYPE",
+      "kind": "function",
+      "module": null,
+      "arguments": [
+        {
+          "name": "TRANS",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": "CHLA_TRANSTYPE",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "CHLA_TRANSTYPE",
+        "base_type": "character",
+        "kind": "1",
+        "rank": 0,
+        "shape": [],
+        "lbound": [],
+        "ubound": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "visibility": "public",
+        "procedure": "CHLA_TRANSTYPE",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    }
+  }
 }

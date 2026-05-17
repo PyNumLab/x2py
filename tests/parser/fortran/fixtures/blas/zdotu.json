@@ -7,11 +7,299 @@
   "submodules": [],
   "programs": [],
   "block_data_units": [],
-  "procedures": [],
+  "procedures": [
+    {
+      "name": "ZDOTU",
+      "kind": "function",
+      "module": null,
+      "arguments": [
+        {
+          "name": "N",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": "ZDOTU",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "ZX",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            "*"
+          ],
+          "lbound": [
+            "1"
+          ],
+          "ubound": [
+            "*"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": "ZDOTU",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "INCX",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": "ZDOTU",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "ZY",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            "*"
+          ],
+          "lbound": [
+            "1"
+          ],
+          "ubound": [
+            "*"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": "ZDOTU",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "INCY",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": "ZDOTU",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "ZDOTU",
+        "base_type": "complex",
+        "kind": "16",
+        "rank": 0,
+        "shape": [],
+        "lbound": [],
+        "ubound": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "visibility": "public",
+        "procedure": "ZDOTU",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    }
+  ],
   "interfaces": [],
   "derived_types": [],
   "variables": [],
   "includes": [],
   "diagnostics": [],
-  "symbols": {}
+  "symbols": {
+    "zdotu": {
+      "name": "ZDOTU",
+      "kind": "function",
+      "module": null,
+      "arguments": [
+        {
+          "name": "N",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": "ZDOTU",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "ZX",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            "*"
+          ],
+          "lbound": [
+            "1"
+          ],
+          "ubound": [
+            "*"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": "ZDOTU",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "INCX",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": "ZDOTU",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "ZY",
+          "base_type": "complex",
+          "kind": null,
+          "rank": 1,
+          "shape": [
+            "*"
+          ],
+          "lbound": [
+            "1"
+          ],
+          "ubound": [
+            "*"
+          ],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": "ZDOTU",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        },
+        {
+          "name": "INCY",
+          "base_type": "integer",
+          "kind": null,
+          "rank": 0,
+          "shape": [],
+          "lbound": [],
+          "ubound": [],
+          "value": null,
+          "value_type": "unknown",
+          "is_parameter": false,
+          "dimensions": [],
+          "visibility": "public",
+          "procedure": "ZDOTU",
+          "intent": "unknown",
+          "optional": false,
+          "pass_by_value": false,
+          "allocatable": false,
+          "pointer": false
+        }
+      ],
+      "result": {
+        "name": "ZDOTU",
+        "base_type": "complex",
+        "kind": "16",
+        "rank": 0,
+        "shape": [],
+        "lbound": [],
+        "ubound": [],
+        "value": null,
+        "value_type": "unknown",
+        "is_parameter": false,
+        "dimensions": [],
+        "visibility": "public",
+        "procedure": "ZDOTU",
+        "intent": "unknown",
+        "optional": false,
+        "pass_by_value": false,
+        "allocatable": false,
+        "pointer": false
+      },
+      "attributes": [],
+      "uses": {},
+      "in_interface": false,
+      "variables": {}
+    }
+  }
 }
