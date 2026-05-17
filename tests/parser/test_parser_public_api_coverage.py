@@ -966,3 +966,370 @@ end subroutine arithmetic_shapes
         "1:8",
     ]
     assert sig.variables["one"].value == "1"
+
+
+def test_readiness_accepts_procedure_local_kind_parameter():
+    code = """
+subroutine scale(x)
+  integer, parameter :: rk = 8
+  real(kind=rk), intent(inout) :: x
+end subroutine scale
+"""
+
+    report = assess_wrap_readiness(code, filename="local_kind.f90")
+
+    assert report["wrappable"] is True
+    assert report["unresolved_kind_arguments"] == []
+
+
+def test_preprocessor_boolean_identifiers_and_stray_directives_from_public_parse():
+    code = """
+#if USE_FAST && !USE_SLOW
+subroutine selected_fast()
+end subroutine selected_fast
+#else
+subroutine selected_slow()
+end subroutine selected_slow
+#endif
+
+#else
+#elif USE_OTHER
+#endif
+
+subroutine after_stray_directives()
+end subroutine after_stray_directives
+"""
+
+    parsed = parse_fortran_file(code, filename="cpp_edges.f90", macro_defines={"USE_FAST": True})
+
+    assert [proc.name for proc in parsed.procedures] == [
+        "selected_fast",
+        "after_stray_directives",
+    ]
+
+
+def test_malformed_public_procedure_headers_raise_from_source_lines():
+    with pytest.raises(FortranParseError, match="Unsupported or malformed module procedure header"):
+        parse_fortran_file(
+            """
+submodule (parent_mod) child_mod
+contains
+  module procedure reset(x)
+end submodule child_mod
+""",
+            filename="bad_module_proc.f90",
+        )
+
+    with pytest.raises(FortranParseError, match="Unsupported or malformed procedure header"):
+        parse_fortran_file(
+            """
+recursive, pure subroutine broken_header(x)
+  integer :: x
+end subroutine broken_header
+""",
+            filename="bad_proc_header.f90",
+        )
+
+
+def test_implicit_mapping_parameter_noise_and_assignment_lines_do_not_break_procedure_parse():
+    code = """
+subroutine declaration_noise(x)
+  implicit real(a-h,o-z)
+  integer, parameter :: n = 3, ignored_token
+  parameter (m = 4, malformed_token)
+  x = 1.0
+  real x
+end subroutine declaration_noise
+"""
+
+    sig = parse_fortran_file(code, filename="declaration_noise.f90").procedures[0]
+
+    assert sig.arguments[0].name == "x"
+    assert sig.arguments[0].base_type == "real"
+
+
+def test_type_contains_ignores_executable_like_lines_and_rejects_bad_declarations():
+    ok_code = """
+module type_contains_ok_mod
+  type :: state
+  contains
+    call ignored_statement()
+  end type state
+end module type_contains_ok_mod
+"""
+    bad_code = """
+module type_contains_bad_mod
+  type :: state
+  contains
+!$omp declare target
+  end type state
+end module type_contains_bad_mod
+"""
+    comma_bad_code = """
+module type_contains_comma_bad_mod
+  type :: state
+  contains
+    integer, public :: bad_binding
+  end type state
+end module type_contains_comma_bad_mod
+"""
+
+    parsed = parse_fortran_file(ok_code, filename="type_contains_ok.f90")
+    assert parsed.modules[0].derived_types[0].methods == []
+
+    with pytest.raises(FortranParseError, match="Unsupported or malformed type-bound declaration"):
+        parse_fortran_file(bad_code, filename="type_contains_omp.f90")
+    with pytest.raises(FortranParseError, match="Unsupported or malformed type-bound declaration"):
+        parse_fortran_file(comma_bad_code, filename="type_contains_comma.f90")
+
+
+def test_public_models_finalize_program_block_data_and_file_level_types_interfaces():
+    project = parse_fortran_project(
+        {
+            "units_a.f90": """
+type :: file_state
+  integer :: id
+end type file_state
+
+interface file_callback
+  subroutine cb()
+  end subroutine cb
+end interface file_callback
+
+program driver
+  integer :: status
+end program driver
+
+block data init_data
+  integer seed
+end block data init_data
+""",
+            "units_b.f90": """
+program worker
+  integer :: status
+end program worker
+""",
+        }
+    )
+
+    assert "file_state" in project.derived_types
+    assert "file_callback" in project.interfaces
+    assert "driver" in project.programs
+    assert "worker" in project.programs
+
+
+def test_duplicate_program_and_block_data_variables_report_scope_labels():
+    with pytest.raises(FortranParseError, match="Duplicate variable 'status' in program 'driver'"):
+        parse_fortran_file(
+            """
+program driver
+  integer :: status
+  real :: status
+end program driver
+""",
+            filename="dup_program_var.f90",
+        )
+
+    with pytest.raises(FortranParseError, match="Duplicate variable 'seed' in block data 'init_data'"):
+        parse_fortran_file(
+            """
+block data init_data
+  integer seed
+  real seed
+end block data init_data
+""",
+            filename="dup_block_var.f90",
+        )
+
+
+def test_use_statement_empty_only_items_are_ignored():
+    code = """
+module use_empty_items_mod
+  use constants_mod, only: rk, , ik
+  integer :: value
+end module use_empty_items_mod
+"""
+
+    module = parse_fortran_file(code, filename="use_empty_items.f90").modules[0]
+
+    assert [item.local_name for item in module.uses["constants_mod"]] == ["rk", "ik"]
+
+
+def test_public_instance_compatibility_aliases_use_source_strings():
+    parser = FortranParser()
+
+    assert parser.parse_fortran_file(
+        """
+subroutine alias_proc()
+end subroutine alias_proc
+"""
+    ).procedures[0].name == "alias_proc"
+    assert "alias_mod" in parser.parse_fortran_project(
+        {
+            "alias_mod.f90": """
+module alias_mod
+end module alias_mod
+"""
+        }
+    ).modules
+
+    with pytest.raises(FortranParseError, match="only standalone procedures were found"):
+        parser.visit_fortran_module(
+            """
+subroutine lone_proc()
+end subroutine lone_proc
+"""
+        )
+
+
+def test_directory_project_resolves_module_kinds_and_orders_dependencies(tmp_path):
+    (tmp_path / "kinds.f90").write_text(
+        """
+module kinds_mod
+  integer, parameter :: rk = 8
+end module kinds_mod
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "solver.f90").write_text(
+        """
+module solver_mod
+  use kinds_mod, only: rk
+contains
+  function make_value(x) result(value)
+    real(kind=rk), intent(in) :: x(1:rk)
+    real(kind=rk) :: value
+  end function make_value
+end module solver_mod
+""",
+        encoding="utf-8",
+    )
+
+    project = parse_fortran_project(tmp_path)
+    proc = project.procedures["solver_mod.make_value"]
+
+    assert proc.arguments[0].kind == "rk"
+    assert proc.arguments[0].shape == ["1:rk"]
+    assert proc.result.kind == "rk"
+    assert project.dependencies["solver_mod"] == {"kinds_mod"}
+
+
+def test_type_field_spec_variants_and_empty_entities_from_public_source():
+    code = """
+module type_field_edges_mod
+  type :: state
+    type :: nested_marker
+    sequence
+    private
+    call ignored_in_type_spec()
+    integer :: first, , second
+  end type state
+end module type_field_edges_mod
+"""
+
+    dtype = parse_fortran_file(code, filename="type_field_edges.f90").modules[0].derived_types[0]
+
+    assert [field.name for field in dtype.fields] == ["first", "second"]
+
+
+def test_module_like_declaration_edges_from_program_and_module_sources():
+    module_code = """
+module module_spec_edges_mod
+  module procedure :: ignored_impl
+  integer :: first, , second
+end module module_spec_edges_mod
+"""
+
+    program_code = """
+program type_stmt_program
+  type :: local_state
+  integer :: kept
+end program type_stmt_program
+"""
+
+    module = FortranParser().visit_fortran_modules(
+        module_code,
+        filename="module_like_edges.f90",
+        signatures=[],
+        types=[],
+        interfaces=[],
+    )[0]
+    program = parse_fortran_file(program_code, filename="module_like_edges.f90").programs[0]
+
+    assert [var.name for var in module.variables] == ["first", "second"]
+    assert [var.name for var in program.variables] == ["kept"]
+
+
+def test_interface_finalizes_pending_procedure_at_end_interface_and_import_attrs():
+    code = """
+interface named_callback
+  subroutine cb(x)
+    import :: c_int
+    integer(c_int), intent(in) :: x
+end interface named_callback
+"""
+
+    iface = parse_fortran_file(code, filename="pending_interface.f90").interfaces[0]
+    proc = iface.procedures[0]
+
+    assert proc.name == "cb"
+    assert "interface(named_callback)" in proc.attributes
+    assert "import(c_int)" in proc.attributes
+
+
+def test_wrap_readiness_infers_interface_argument_types_for_readiness():
+    code = """
+interface
+  subroutine cb(x)
+    implicit none
+  end subroutine cb
+end interface
+"""
+
+    report = assess_wrap_readiness(code, filename="unknown_interface_arg.f90")
+
+    assert report["wrappable"] is True
+    assert report["unknown_argument_types"] == []
+
+
+def test_stray_end_unit_lines_are_ignored_by_public_file_parse():
+    parsed = parse_fortran_file(
+        """
+end module stray_mod
+end submodule stray_submod
+end program stray_program
+end interface
+
+subroutine kept()
+end subroutine kept
+""",
+        filename="stray_ends.f90",
+    )
+
+    assert [proc.name for proc in parsed.procedures] == ["kept"]
+
+
+def test_directory_namespace_records_missing_and_parent_only_submodule_dependencies(tmp_path):
+    (tmp_path / "parent.f90").write_text(
+        """
+module parent_mod
+end module parent_mod
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "child.f90").write_text(
+        """
+submodule (parent_mod) child_mod
+  use missing_mod
+contains
+  module procedure reset
+  end procedure reset
+end submodule child_mod
+""",
+        encoding="utf-8",
+    )
+
+    project = parse_fortran_project(tmp_path)
+
+    assert project.dependencies["child_mod"] == {"parent_mod", "missing_mod"}
+
