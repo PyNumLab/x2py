@@ -3,7 +3,7 @@ import pytest
 
 from semantics.fortran2ir import fortran_file_to_semantic_modules
 from semantics.models import ProjectionMapping, SemanticArgument, SemanticFunction, SemanticImport, SemanticImportItem, SemanticModule, SemanticType
-from semantics.pyi_parser import load_pyi_file, parse_pyi_text
+from semantics.pyi_parser import PyiToIRParser, convert_pyi_to_ir, load_pyi_file, parse_pyi_text
 from semantics.pyi_printer import emit_module
 from tests._shared.fixture_outputs import FORTRAN_DATA_DIR, FORTRAN_SUFFIXES
 from x2py import parse_fortran_file
@@ -62,6 +62,76 @@ def test_parse_pyi_text_accepts_import_aliases():
             items=[SemanticImportItem(source="delete_input_list", target="delete_input")],
         )
     ]
+
+
+def test_convert_pyi_to_ir_and_import_parser_edge_cases():
+    module = convert_pyi_to_ir("from m import a\n", module_name="edited")
+    assert module.imports == [
+        SemanticImport(
+            module="m",
+            items=[SemanticImportItem(source="a")],
+        )
+    ]
+
+    parser = PyiToIRParser(module_name="edited")
+    assert parser._parse_import_from("from m import a, , b as c") == SemanticImport(
+        module="m",
+        items=[
+            SemanticImportItem(source="a"),
+            SemanticImportItem(source="b", target="c"),
+        ],
+    )
+    with pytest.raises(ValueError, match="Unsupported import line"):
+        parser._parse_import_from("from m import")
+
+
+def test_parse_pyi_text_class_body_visibility_and_native_call():
+    module = parse_pyi_text(
+        """
+class wrapper:
+    pass
+
+class particle:
+    @private
+    @native_call([Arg(0)])
+    def reset(self: particle) -> None: ...
+""",
+        module_name="edited",
+    )
+
+    empty_cls, particle_cls = module.classes
+    assert empty_cls.name == "wrapper"
+    assert particle_cls.methods[0].visibility == "private"
+    assert particle_cls.methods[0].projection[0].python_position == 0
+
+
+def test_pyi_parser_reports_unsupported_lines_and_invalid_helpers():
+    parser = PyiToIRParser(module_name="edited")
+
+    with pytest.raises(ValueError, match="Unsupported .pyi line"):
+        parse_pyi_text("bare_name\n", module_name="edited")
+
+    with pytest.raises(ValueError, match="Unsupported class body line"):
+        parse_pyi_text("class C:\n    bare_name\n", module_name="edited")
+
+    with pytest.raises(ValueError, match="Expected typed argument"):
+        parser._parse_argument_line("x", default_intent="in")
+
+    with pytest.raises(ValueError, match="expects positional arguments only"):
+        parse_pyi_text("@native_call([Arg(0, name='x')])\ndef f(x: Int32) -> None: ...\n", module_name="edited")
+
+    with pytest.raises(ValueError, match="Unsupported native_call projection entry"):
+        parse_pyi_text("@native_call([Unknown(0)])\ndef f(x: Int32) -> None: ...\n", module_name="edited")
+
+    with pytest.raises(ValueError, match="Expected Arg"):
+        parse_pyi_text("@native_call([Len(Unknown(0))])\ndef f(x: Int32) -> None: ...\n", module_name="edited")
+
+    assert parser._parse_returned_argument("Result['x', Int32]") is None
+    assert parser._parse_name_metadata("Other('x')") is None
+    assert parser._split_argument_text("") == []
+    with pytest.raises(ValueError, match="Unsupported type annotation"):
+        parser._split_type_subscript("Int32")
+    assert parser._split_annotation_line("not annotated") is None
 
 
 def test_parse_pyi_text_accepts_plain_return_type():

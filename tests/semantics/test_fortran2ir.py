@@ -1,16 +1,30 @@
 import json
 from dataclasses import asdict
 
+import pytest
+
+from fortran_parser.models import (
+    FortranArgument,
+    FortranDerivedType,
+    FortranFile,
+    FortranModule,
+    FortranProcedureSignature,
+    FortranUseMapping,
+    FortranVariable,
+)
 from x2py import parse_fortran_file as parse_fortran_source
 
 from semantics.fortran2ir import (
+    FortranToIRConverter,
     fortran_file_to_semantic_modules,
     fortran_module_to_semantic_module,
 )
+from semantics import models as semantic_models
 
 from semantics.models import (
     ProjectionMapping,
     SemanticArgument,
+    SemanticMethod,
     SemanticModule,
     SemanticClass,
     SemanticFunction,
@@ -44,6 +58,115 @@ def get_class(module: SemanticModule, name: str) -> SemanticClass:
 def has_constraint(obj, name: str) -> bool:
 
     return any(c.name == name for c in obj.constraints)
+
+
+def test_converter_visitor_and_compatibility_methods_cover_public_paths():
+    converter = FortranToIRConverter()
+    scale = FortranVariable(name="scale", base_type="real", kind="8", is_parameter=True)
+    arg = FortranArgument(
+        name="x",
+        base_type="real",
+        kind="8",
+        intent="unknown",
+        allocatable=True,
+        pointer=True,
+    )
+    proc = FortranProcedureSignature(name="work", kind="subroutine", arguments=[arg])
+    base = FortranDerivedType(name="base_t")
+    dtype = FortranDerivedType(
+        name="child_t",
+        fields=[FortranArgument(name="payload", base_type="derived", kind="base_t")],
+        extends=base,
+    )
+    module = FortranModule(
+        name="m",
+        uses={
+            "iso_c_binding": [FortranUseMapping(source="c_int", target="i32")],
+            "plain_import": [],
+        },
+        variables=[scale],
+        procedures=[proc],
+        derived_types=[dtype],
+        private_symbols=["work"],
+    )
+    parsed = FortranFile(filename="/tmp/standalone_source.f90", modules=[module], procedures=[proc])
+
+    assert converter.visit(parsed).name == "m"
+    assert converter.visit(module).functions[0].visibility == "private"
+    assert converter.visit(proc, visibility="private").visibility == "private"
+
+    semantic_arg = converter.visit(arg)
+    assert semantic_arg.intent == "inout"
+    assert has_constraint(semantic_arg.semantic_type, "Allocatable")
+    assert has_constraint(semantic_arg.semantic_type, "Pointer")
+
+    semantic_var = converter.variable_to_semantic_type(scale)
+    assert semantic_var.name == "Float64"
+    assert has_constraint(semantic_var, "Constant")
+    assert converter.argument_to_semantic_argument(arg).name == "x"
+    assert converter.procedure_to_semantic_function(proc).name == "work"
+    assert converter.derived_type_to_semantic_class(dtype, procedure_lookup={}).base_classes == ["base_t"]
+    assert converter.module_to_semantic_module(module).imports[0].items[0].target == "i32"
+
+    modules = converter.file_to_semantic_modules(parsed)
+    assert [module.name for module in modules] == ["m", "standalone_source"]
+
+
+def test_converter_rejects_unsupported_inputs_and_missing_derived_type_names():
+    converter = FortranToIRConverter()
+
+    with pytest.raises(TypeError, match="Unsupported Fortran parse object"):
+        converter.visit(object())
+
+    with pytest.raises(TypeError, match="Unsupported Fortran parse object"):
+        converter.first_module(object())
+
+    with pytest.raises(ValueError, match="Expected at least one Fortran module"):
+        converter.first_module(FortranFile())
+
+    from_list = converter.first_module(
+        [
+            FortranProcedureSignature(
+                name="inside",
+                kind="subroutine",
+                module="legacy_mod",
+                in_interface=True,
+            ),
+            FortranProcedureSignature(name="outside", kind="subroutine"),
+        ]
+    )
+    assert from_list.name == "legacy_mod"
+    assert [proc.name for proc in from_list.procedures] == ["outside"]
+
+    with pytest.raises(ValueError, match="missing concrete type name"):
+        converter.visit_variable(FortranVariable(name="state", base_type="derived"))
+
+
+def test_semantic_model_helpers_cover_projection_and_canonical_edge_cases():
+    assert SemanticFunction("f") != SemanticMethod("f")
+    assert semantic_models._semantic_type_key(None, {}) is None
+    assert semantic_models._canonical_expression(
+        ["n", ("m",), {"extent": "n + m"}],
+        {"n": "$0", "m": "$1"},
+    ) == ["$0", ("$1",), {"extent": "$0 + $1"}]
+
+    projection = [
+        ProjectionMapping(native_position=0, python_position=1, intent="inout"),
+        ProjectionMapping(native_position=1, python_position=None, intent="out"),
+        ProjectionMapping(native_position=2, result_position=0, intent="in"),
+        ProjectionMapping(native_position=3, python_position=None, intent="in"),
+        ProjectionMapping(
+            native_position=4,
+            value_kind="shape",
+            value={"value": ["n", ("m",)], "dim": {"extent": "n + m"}},
+            intent="in",
+        ),
+    ]
+
+    key = semantic_models._projection_key(projection, {"n": "$0", "m": "$1"})
+
+    assert len(key) == len(projection)
+    assert key[-1][4] == (("dim", (("extent", "$0 + $1"),)), ("value", ("$0", ("$1",))))
 
 
 # ============================================================

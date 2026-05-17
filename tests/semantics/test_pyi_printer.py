@@ -15,6 +15,7 @@ from semantics.models import (
     SemanticArgument,
     SemanticClass,
     SemanticConstraint,
+    SemanticImport,
     SemanticMethod,
     SemanticModule,
     SemanticFunction,
@@ -354,6 +355,27 @@ end module
     code = generate_pyi(source)
 
     assert "from list_input import delete_input_list as delete_input" in code
+
+
+def test_emit_structured_import_without_items_as_plain_import():
+    module = SemanticModule(
+        name="imports",
+        imports=[SemanticImport(module="iso_c_binding")],
+    )
+
+    code = emit_module(module)
+
+    assert "import iso_c_binding" in code
+
+
+def test_parameter_target_sanitizes_non_identifier_names():
+    assert PyiPrinter._parameter_target("has-dash") == "has_dash"
+    assert PyiPrinter._parameter_target("1value") == "arg_1value"
+    assert PyiPrinter._parameter_target("class!") == "class_"
+    assert PyiPrinter._parameter_target("!!!") == "arg"
+    assert PyiPrinter._requires_explicit_projection_mapping(
+        ProjectionMapping(native_position=1, result_position=0)
+    )
 
 
 # ============================================================

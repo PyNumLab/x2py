@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from fortran_parser.models import FortranFunctionCall, FortranSlice, FortranVariable
+from fortran_parser.models import FortranFunctionCall, FortranSlice, FortranUseMapping, FortranVariable
 from x2py import FortranParseError, assess_wrap_readiness, parse_fortran_file, parse_fortran_project
 
 collect_project_procedure_signatures = lambda files: list(parse_fortran_project(files).procedures.values())
@@ -996,6 +996,19 @@ def test_fortran_variable_spec_expressions_parse_function_calls():
     assert isinstance(var.value_expression, FortranFunctionCall)
     assert var.value_expression.name == "size"
     assert var.value_expression.arguments == ["work", "1"]
+
+
+def test_structured_shape_handles_empty_dimensions_and_use_mapping_equality():
+    var = FortranVariable(name="empty", shape=[""])
+    shape = var.structured_shape
+    assert shape.raw == [""]
+    assert shape.dimensions == [None]
+
+    renamed = FortranUseMapping(source="delete_input_list", target="delete_input")
+    assert renamed == "delete_input"
+    assert renamed == FortranUseMapping(source="delete_input_list", target="delete_input")
+    assert renamed != FortranUseMapping(source="delete_input_list")
+    assert renamed != object()
 
 
 def test_subroutine_derived_type_arguments_are_parsed():
