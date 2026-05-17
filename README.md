@@ -1,4 +1,4 @@
-# minimal-x2py
+# x2py
 
 Standalone extraction of the Fortran parser used for wrapper-oriented signature
 extraction.
@@ -51,32 +51,6 @@ Public API:
 - `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
 - `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
 - `assess_wrap_readiness(code, filename=None) -> dict`
-
-## Parser organization notes
-
-`fortran_parser/parser.py` is now intentionally organized into clearly labeled
-sections so maintainers can navigate the file by concern instead of by history:
-
-- Regex/constants and parser-wide type aliases
-- Module-level helper blocks (source-form rules, preprocessor logic,
-  diagnostics, shape evaluation, compile-time expression resolution,
-  dependency ordering)
-- `FortranParser` internals grouped by domain:
-  - signature/declaration parsing
-  - module-variable parsing
-  - file/project orchestration
-  - program-unit parsers (types, modules, interfaces, submodules, programs,
-    block-data)
-  - visitor-style API wrappers (`visit_file`, `visit_project`,
-    `visit_wrap_readiness`)
-  - compatibility aliases (`parse_file`, `parse_project`,
-    `assess_wrap_readiness`)
-- Thin module-level convenience wrappers that delegate to a shared parser
-  instance
-
-Most parser organization changes are structural, but parser reference updates
-should still accompany behavior, model-schema, fixture, or coverage changes so
-the public subset stays documented.
 
 ## Repository layout
 
