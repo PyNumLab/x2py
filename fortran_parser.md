@@ -38,6 +38,8 @@ and practical usage from terminal and Python.
 - Module discovery
 - Module variable extraction
 - `use` extraction at module and procedure scope
+- Explicit `use` symbol mappings preserve imported `source` names and local
+  `target` names for renamed imports
 - Propagation of module-level `use` imports into contained procedures
 - Folder/project parsing with dependency-aware ordering
 - Cross-file kind constant resolution (e.g., kinds modules)
@@ -88,8 +90,8 @@ sections so maintainers can navigate the file by concern instead of by history:
 - Thin module-level convenience wrappers that delegate to a shared parser
   instance
 
-This was a structural readability refactor only: behavior and public return
-models are unchanged.
+Most parser organization changes are structural, but behavior, model-schema,
+coverage, or fixture changes should be reflected in this reference.
 
 ## 3) Terminal usage and expected outputs
 
@@ -224,6 +226,43 @@ Expected JSON layout:
   - `block_data`
   - `wrap_readiness`
 
+`use` import shape:
+
+- A bare module import such as `use iso_c_binding` is serialized as an empty
+  symbol list for that module.
+- An explicit import such as `use iso_c_binding, only: c_int` is serialized as
+  a list of mapping objects:
+
+```json
+"uses": {
+  "iso_c_binding": [
+    {
+      "source": "c_int",
+      "target": null
+    }
+  ]
+}
+```
+
+- A renamed import such as
+  `use list_input, delete_input => delete_input_list` records both sides:
+
+```json
+"uses": {
+  "list_input": [
+    {
+      "source": "delete_input_list",
+      "target": "delete_input"
+    }
+  ]
+}
+```
+
+For compatibility in Python tests and simple consumers, `FortranUseMapping`
+entries compare equal to their local name, so
+`module.uses["iso_c_binding"] == ["c_int"]` remains true for direct equality
+checks. Prefer reading `source`, `target`, or `local_name` in new code.
+
 ### 3.4 Wrap-readiness summary
 
 ```bash
@@ -341,6 +380,32 @@ Expected behavior:
 - `readiness` includes counts, unsupported hits, unknown args, unresolved
   imported derived-type/kind dependencies, and `wrappable`.
 
+### 4.3 Structured argument specifications
+
+Compatibility fields such as `FortranArgument.shape`, `lbound`, `ubound`, and
+`kind` remain serialized as strings/lists. For callers that need typed access,
+argument and variable models also expose structured helpers:
+
+- `structured_shape` returns a `FortranShape` containing parsed dimensions.
+- Slice-like dimensions such as `1:n:2` are represented as `FortranSlice`.
+- Whole-expression function calls such as `lbound(x, 1)` are represented as
+  `FortranFunctionCall`.
+- `kind_expression` and `value_expression` parse `kind` and `value` strings
+  using the same lightweight expression model.
+
+Example:
+
+```python
+arg.shape
+# ["lbound(src, 2):ubound(src, 2)"]
+
+dim = arg.structured_shape.dimensions[0]
+dim.lower.name
+# "lbound"
+dim.upper.name
+# "ubound"
+```
+
 ## 5) Running tests
 
 Run all tests:
@@ -373,6 +438,13 @@ In-test auto-update mode:
 
 ```bash
 FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser/test_fortran_fixture_suite.py --confcutdir=tests/
+```
+
+Semantic and `.pyi` fixtures have separate generators:
+
+```bash
+python tests/semantics/generate_semantic_fixtures.py
+python tests/pyi/generate_pyi_fixtures.py
 ```
 
 ## 6) Error handling

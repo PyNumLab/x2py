@@ -12,8 +12,14 @@
       "uses": {
         "SF_SPIN": [],
         "SF_LINALG": [
-          "diag",
-          "kron"
+          {
+            "source": "diag",
+            "target": null
+          },
+          {
+            "source": "kron",
+            "target": null
+          }
         ],
         "ASSERTING": []
       },

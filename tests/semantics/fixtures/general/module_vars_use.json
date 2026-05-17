@@ -64,7 +64,19 @@
         }
       ],
       "imports": [
-        "iso_c_binding"
+        {
+          "module": "iso_c_binding",
+          "items": [
+            {
+              "source": "c_int",
+              "target": null
+            },
+            {
+              "source": "c_double",
+              "target": null
+            }
+          ]
+        }
       ],
       "metadata": {}
     }

@@ -289,6 +289,36 @@ Private module variables and fields use `private[...]`:
 hidden_scale: private[Float64]
 ```
 
+## Imports
+
+Plain module imports are emitted for bare Fortran `use` statements:
+
+```python
+import iso_c_binding
+```
+
+For explicit `use ... only:` lists, the printer emits Python `from` imports so
+the imported symbols remain visible in the stub:
+
+```python
+from iso_c_binding import c_int, c_double
+```
+
+For renamed Fortran imports, both sides are preserved with Python alias syntax:
+
+```fortran
+use list_input, delete_input => delete_input_list
+```
+
+```python
+from list_input import delete_input_list as delete_input
+```
+
+The `.pyi` parser accepts both `import module` and
+`from module import source as target`. In semantic IR, `source` is the
+provider-side name and `target` is the local alias; when there is no alias,
+`target` is `None`.
+
 ## Fortran Names That Are Not Python Identifiers
 
 If a parameter name is not usable as Python syntax, the printer uses a safe

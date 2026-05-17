@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import pytest
 
+from fortran_parser.models import FortranFunctionCall, FortranSlice, FortranUseMapping, FortranVariable
 from x2py import FortranParseError, assess_wrap_readiness, parse_fortran_file, parse_fortran_project
 
 collect_project_procedure_signatures = lambda files: list(parse_fortran_project(files).procedures.values())
@@ -951,6 +952,63 @@ end subroutine resize
     assert arg.upper_bounds == ["n"]
     assert arg.lbound == ["1"]
     assert arg.ubound == ["n"]
+
+
+def test_structured_shape_preserves_slices_and_function_calls():
+    code = """
+subroutine derived_shape(src, x, y)
+  real, intent(in) :: src(:,:)
+  real, intent(inout), dimension(0:size(src, 1)-1, lbound(src, 2):ubound(src, 2)) :: x
+  real, intent(inout) :: y(1:n:2)
+end subroutine derived_shape
+"""
+    sig = parse_fortran_file(code).procedures[0]
+    args = {arg.name: arg for arg in sig.arguments}
+
+    assert args["x"].shape == ["0:size(src, 1)-1", "lbound(src, 2):ubound(src, 2)"]
+    shape = args["x"].structured_shape
+    assert shape.raw == args["x"].shape
+    assert isinstance(shape.dimensions[0], FortranSlice)
+    assert shape.dimensions[0].lower == "0"
+    assert shape.dimensions[0].upper == "size(src, 1)-1"
+    assert isinstance(shape.dimensions[1], FortranSlice)
+    assert isinstance(shape.dimensions[1].lower, FortranFunctionCall)
+    assert shape.dimensions[1].lower.name == "lbound"
+    assert shape.dimensions[1].lower.arguments == ["src", "2"]
+    assert isinstance(shape.dimensions[1].upper, FortranFunctionCall)
+    assert shape.dimensions[1].upper.name == "ubound"
+
+    y_dim = args["y"].structured_shape.dimensions[0]
+    assert isinstance(y_dim, FortranSlice)
+    assert (y_dim.lower, y_dim.upper, y_dim.stride) == ("1", "n", "2")
+
+
+def test_fortran_variable_spec_expressions_parse_function_calls():
+    var = FortranVariable(
+        name="work",
+        kind="selected_real_kind(15)",
+        value="size(work, 1)",
+    )
+
+    assert isinstance(var.kind_expression, FortranFunctionCall)
+    assert var.kind_expression.name == "selected_real_kind"
+    assert var.kind_expression.arguments == ["15"]
+    assert isinstance(var.value_expression, FortranFunctionCall)
+    assert var.value_expression.name == "size"
+    assert var.value_expression.arguments == ["work", "1"]
+
+
+def test_structured_shape_handles_empty_dimensions_and_use_mapping_equality():
+    var = FortranVariable(name="empty", shape=[""])
+    shape = var.structured_shape
+    assert shape.raw == [""]
+    assert shape.dimensions == [None]
+
+    renamed = FortranUseMapping(source="delete_input_list", target="delete_input")
+    assert renamed == "delete_input"
+    assert renamed == FortranUseMapping(source="delete_input_list", target="delete_input")
+    assert renamed != FortranUseMapping(source="delete_input_list")
+    assert renamed != object()
 
 
 def test_subroutine_derived_type_arguments_are_parsed():

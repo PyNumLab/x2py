@@ -8,6 +8,8 @@ from .models import (
     SemanticClass,
     SemanticConstraint,
     SemanticFunction,
+    SemanticImport,
+    SemanticImportItem,
     SemanticMethod,
     SemanticModule,
     SemanticType,
@@ -164,9 +166,24 @@ class PyiPrinter:
 
     def _append_imports(self, sections: list[str], module: SemanticModule) -> None:
         for imp in module.imports:
-            sections.append(f"import {imp}")
+            sections.append(self._emit_import(imp))
         if module.imports:
             sections.append("")
+
+    @staticmethod
+    def _emit_import(imp: str | SemanticImport) -> str:
+        if isinstance(imp, str):
+            return f"import {imp}"
+        if not imp.items:
+            return f"import {imp.module}"
+        items = ", ".join(PyiPrinter._emit_import_item(item) for item in imp.items)
+        return f"from {imp.module} import {items}"
+
+    @staticmethod
+    def _emit_import_item(item: SemanticImportItem) -> str:
+        if item.target and item.target != item.source:
+            return f"{item.source} as {item.target}"
+        return item.source
 
     def _append_items(self, sections: list[str], items: list, emit_item) -> None:
         for item in items:

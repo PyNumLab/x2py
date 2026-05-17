@@ -1,4 +1,4 @@
-import iso_c_binding
+from iso_c_binding import c_int, c_double
 
 nmax: Unknown
 

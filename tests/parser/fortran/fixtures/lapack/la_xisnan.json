@@ -59,7 +59,10 @@
           "attributes": [],
           "uses": {
             "LA_CONSTANTS": [
-              "wp"
+              {
+                "source": "sp",
+                "target": "wp"
+              }
             ],
             "ieee_arithmetic": []
           },
@@ -115,7 +118,10 @@
           "attributes": [],
           "uses": {
             "LA_CONSTANTS": [
-              "wp"
+              {
+                "source": "dp",
+                "target": "wp"
+              }
             ],
             "ieee_arithmetic": []
           },
@@ -201,7 +207,10 @@
           "attributes": [],
           "uses": {
             "LA_CONSTANTS": [
-              "wp"
+              {
+                "source": "sp",
+                "target": "wp"
+              }
             ],
             "ieee_arithmetic": []
           },
@@ -257,7 +266,10 @@
           "attributes": [],
           "uses": {
             "LA_CONSTANTS": [
-              "wp"
+              {
+                "source": "dp",
+                "target": "wp"
+              }
             ],
             "ieee_arithmetic": []
           },

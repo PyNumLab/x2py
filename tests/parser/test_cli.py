@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
+import builtins
+from dataclasses import dataclass
 import json
 import os
 import subprocess
 import sys
+import types
 from pathlib import Path
+
+import pytest
+
+from fortran_parser import cli as fortran_parser_cli
+from x2py import cli as x2py_cli
 
 
 TEST_FILE = Path(__file__).parent.parent / "data" / "fortran" / "general" / "basic_subroutine.f90"
@@ -456,3 +464,224 @@ def test_cli_parse_modern_fixture_prints_derived_block_verbatim():
             - code:integer[0]
 """
     assert expected_block in res.stdout
+
+
+def test_fortran_parser_cli_helper_branches(tmp_path: Path, monkeypatch):
+    @dataclass
+    class Node:
+        name: str
+        parent: object = None
+
+    monkeypatch.setenv("FORTRAN_PARSER_TEST_FLAG", " yes ")
+    assert fortran_parser_cli._env_flag("FORTRAN_PARSER_TEST_FLAG") is True
+    monkeypatch.delenv("FORTRAN_PARSER_TEST_FLAG")
+    assert fortran_parser_cli._env_flag("FORTRAN_PARSER_TEST_FLAG") is False
+
+    assert fortran_parser_cli._diagnostic_color_enabled(disabled=True) is False
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert fortran_parser_cli._diagnostic_color_enabled(disabled=False) is False
+    monkeypatch.delenv("NO_COLOR")
+    assert fortran_parser_cli._diagnostic_color_enabled(disabled=False) is True
+
+    parent = Node("root")
+    assert fortran_parser_cli._to_dict_no_parent(Node("child", parent=parent)) == {"name": "child"}
+    assert fortran_parser_cli._to_dict_no_parent(Node("child", parent="root")) == {
+        "name": "child",
+        "parent": "root",
+    }
+
+    source = tmp_path / "nested" / "mini.f90"
+    source.parent.mkdir()
+    source.write_text("subroutine work(n)\n  integer, intent(in) :: n\nend subroutine work\n", encoding="utf-8")
+    (source.parent / "notes.txt").write_text("ignore", encoding="utf-8")
+
+    assert fortran_parser_cli._collect_extensions(tmp_path) == [source]
+    report = fortran_parser_cli._parse_paths([str(tmp_path)])
+    assert list(report) == [str(source)]
+    assert report[str(source)]["signatures"][0]["name"] == "work"
+
+
+def test_fortran_parser_cli_formatting_branches():
+    blocker_items = [
+        (
+            "unsupported_constructs",
+            {"line": 3, "text": "common /blk/ x"},
+            "line 3: common /blk/ x",
+        ),
+        ("unknown_argument_types", {"arg": "x"}, "{'arg': 'x'}"),
+        (
+            "unresolved_derived_type_arguments",
+            {"procedure": "step", "argument": "state", "type": "state_t", "import_modules": ["state_mod"]},
+            "step:state uses type(state_t) from state_mod",
+        ),
+        (
+            "unresolved_derived_type_fields",
+            {"type_owner": "state_t", "field": "grid", "type": "grid_t", "import_modules": []},
+            "state_t:grid uses type(grid_t) from <not imported>",
+        ),
+        (
+            "unresolved_kind_arguments",
+            {"procedure": "scale", "argument": "x", "kind": "rk", "import_modules": ["kinds"]},
+            "scale:x uses kind rk from kinds",
+        ),
+        (
+            "unresolved_kind_fields",
+            {"type_owner": "state_t", "field": "value", "kind": "rk", "import_modules": []},
+            "state_t:value uses kind rk from <not imported>",
+        ),
+        ("other", {"payload": 1}, "{'payload': 1}"),
+    ]
+
+    for code, item, expected in blocker_items:
+        assert fortran_parser_cli._format_blocker_item(code, item) == expected
+
+    readiness = fortran_parser_cli._format_wrap_readiness(
+        {
+            "bad.f90": {
+                "wrap_readiness": {
+                    "wrappable": False,
+                    "wrappability_blockers": [
+                        {
+                            "code": "unsupported_constructs",
+                            "message": "Unsupported constructs were found.",
+                            "items": [{"line": 3, "text": "common /blk/ x"}],
+                        }
+                    ],
+                }
+            }
+        }
+    )
+    assert "Wrappable: no" in readiness
+    assert "Why not wrappable:" in readiness
+    assert "* line 3: common /blk/ x" in readiness
+
+    report = fortran_parser_cli._format_report(
+        {
+            "types.f90": {
+                "signatures": [],
+                "types": [{"name": "particle", "fields": [], "methods": []}],
+                "modules": [],
+                "submodules": [],
+                "programs": [],
+                "block_data": [],
+                "wrap_readiness": {"wrappable": True, "wrappability_blockers": []},
+            }
+        }
+    )
+    assert "Derived types: 1" in report
+    assert "- type particle (fields=0, methods=0)" in report
+    assert fortran_parser_cli._format_var_type({"base_type": "derived", "kind": "particle", "rank": 0}) == "type(particle)[0]"
+    assert fortran_parser_cli._format_var_type({"base_type": "real", "kind": "4", "rank": 2}) == "real(4)[2]"
+
+
+def test_fortran_parser_cli_json_wrap_readiness_and_parse_errors(tmp_path: Path):
+    good = tmp_path / "good.f90"
+    good.write_text("subroutine work(n)\n  integer, intent(in) :: n\nend subroutine work\n", encoding="utf-8")
+
+    json_cmd = [sys.executable, "-m", "fortran_parser", str(good), "--json"]
+    json_res = subprocess.run(json_cmd, capture_output=True, text=True, check=True)
+    assert str(good) in json.loads(json_res.stdout)
+
+    wrap_cmd = [sys.executable, "-m", "fortran_parser", str(good), "--wrap-readiness"]
+    wrap_res = subprocess.run(wrap_cmd, capture_output=True, text=True, check=True)
+    assert "Wrappable: yes" in wrap_res.stdout
+
+    bad = tmp_path / "bad.f90"
+    bad.write_text("subroutine bad(x)\n  weirdtype :: x\nend subroutine bad\n", encoding="utf-8")
+    bad_cmd = [sys.executable, "-m", "fortran_parser", str(bad), "--no-color"]
+    bad_res = subprocess.run(bad_cmd, capture_output=True, text=True)
+    assert bad_res.returncode == 1
+    assert bad_res.stdout == ""
+    assert "Traceback" not in bad_res.stderr
+    assert "Unknown or unsupported datatype" in bad_res.stderr
+
+
+def test_x2py_cli_helper_branches(tmp_path: Path, monkeypatch, capsys):
+    @dataclass
+    class Node:
+        name: str
+        parent: object = None
+
+    monkeypatch.setenv("X2PY_TEST_FLAG", "ON")
+    assert x2py_cli._env_flag("X2PY_TEST_FLAG") is True
+    monkeypatch.delenv("X2PY_TEST_FLAG")
+    assert x2py_cli._env_flag("X2PY_TEST_FLAG") is False
+
+    assert x2py_cli._diagnostic_color_enabled(disabled=True) is False
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert x2py_cli._diagnostic_color_enabled(disabled=False) is False
+    monkeypatch.delenv("NO_COLOR")
+
+    assert x2py_cli._to_dict_no_parent(Node("child", parent=Node("root"))) == {"name": "child"}
+
+    source = tmp_path / "mini.f90"
+    source.write_text("subroutine work(n)\n  integer, intent(in) :: n\nend subroutine work\n", encoding="utf-8")
+    assert x2py_cli._collect_extensions(tmp_path) == [source]
+    assert x2py_cli._expand_paths([str(tmp_path)]) == [source]
+
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+    real_import = builtins.__import__
+
+    def fail_rich_import(name, *args, **kwargs):
+        if name.startswith("rich"):
+            raise ImportError("rich disabled for test")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fail_rich_import)
+    x2py_cli.print_pyi_output("def f() -> None: ...")
+    assert "def f() -> None: ..." in capsys.readouterr().out
+
+
+def test_x2py_print_pyi_output_uses_rich_and_falls_back(monkeypatch, capsys):
+    calls = []
+
+    class FakeSyntax:
+        def __init__(self, code, lexer, **options):
+            self.code = code
+            self.lexer = lexer
+            self.options = options
+
+    class FakeConsole:
+        def __init__(self, **options):
+            self.options = options
+
+        def print(self, syntax):
+            calls.append((syntax.code, syntax.lexer, self.options))
+
+    rich_module = types.ModuleType("rich")
+    console_module = types.ModuleType("rich.console")
+    syntax_module = types.ModuleType("rich.syntax")
+    console_module.Console = FakeConsole
+    syntax_module.Syntax = FakeSyntax
+    monkeypatch.setitem(sys.modules, "rich", rich_module)
+    monkeypatch.setitem(sys.modules, "rich.console", console_module)
+    monkeypatch.setitem(sys.modules, "rich.syntax", syntax_module)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+
+    x2py_cli.print_pyi_output("def f() -> None: ...")
+    assert calls == [("def f() -> None: ...", "python", {"force_terminal": True, "color_system": "auto"})]
+    assert capsys.readouterr().out == ""
+
+    class RaisingConsole(FakeConsole):
+        def print(self, syntax):
+            raise RuntimeError("terminal failed")
+
+    console_module.Console = RaisingConsole
+    x2py_cli.print_pyi_output("def g() -> None: ...")
+    assert "def g() -> None: ..." in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "message"),
+    [
+        (["--wrap-readiness"], "--wrap-readiness requires --parse"),
+        (["--parse", "--wrap-readiness", "--json"], "--wrap-readiness cannot be combined with --json"),
+        (["--parse", "--wrap-readiness", "--out"], "--wrap-readiness cannot be combined with --out"),
+        ([], "Select at least one stage flag"),
+    ],
+)
+def test_x2py_cli_rejects_invalid_stage_combinations(extra_args, message):
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), *extra_args]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    assert res.returncode == 2
+    assert message in res.stderr

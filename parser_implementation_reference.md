@@ -8,7 +8,8 @@ another source language.
 
 - Parse individual Fortran sources into normalized callable signatures.  
 - Parse derived types (including inheritance and type-bound procedures).  
-- Parse modules (including module `use` imports and module variables).
+- Parse modules (including module `use` imports, renamed import mappings, and
+  module variables).
 - Parse interfaces and procedures declared inside interfaces.  
 - Parse multi-file projects with dependency-aware ordering.  
 - Resolve compile-time symbols used in type kinds and array shapes, both local
@@ -59,6 +60,12 @@ another source language.
   - `shape_info`: per-dimension `{raw, lower, upper}`
   - `lower_bounds` / `upper_bounds` convenience accessors
   - For extent-only forms like `x(n)`, bounds normalize to lower=`1`, upper=`n`
+- Typed shape/specification helpers are available without changing serialized
+  JSON:
+  - `FortranShape` for the full parsed shape
+  - `FortranSlice` for `lower:upper[:stride]` dimensions
+  - `FortranFunctionCall` for whole-expression calls such as `ubound(x, 1)`
+  - `kind_expression` / `value_expression` for non-shape specs
 - `kind=...` extraction and assignment into argument/result metadata.  
 
 ### 2.4 Compile-time symbol and expression resolution
@@ -66,7 +73,9 @@ another source language.
 - Local `parameter` constants collected inside procedure scope.  
 - Module-scope `parameter` constants collected in module specification part.  
 - `use <module>, only: ...` symbol import maps collected and attached to
-  procedures/modules.  
+  procedures/modules. Each explicit import records the imported `source` name
+  and optional local `target` name so renamed imports survive JSON,
+  semantic conversion, and `.pyi` printing.  
 - Signature kind expressions resolved transitively (symbol -> symbol -> value).  
 - Shape expressions resolved using available symbol dictionary.  
 - Namespace/project parsing resolves cross-file kinds and dimensions after
@@ -75,7 +84,8 @@ another source language.
 ### 2.5 Modules
 
 - Module discovery with module context assignment to contained entities.  
-- Module-level `use` dependencies parsed (including `only` symbol lists).  
+- Module-level `use` dependencies parsed (including `only` symbol lists and
+  rename forms such as `local => remote`).  
 - Module variables extracted from specification part declarations.  
 - Module records enriched with child entities:
   - contained procedures
@@ -132,6 +142,13 @@ another source language.
 
 - Core parsing APIs return typed model objects (procedures, arguments, modules,
   submodules, programs, block data, types, interfaces, variables).
+- `FortranUseMapping(source, target)` represents explicit `use` symbols.
+  `source` is the imported provider-side symbol. `target` is the local name
+  for renamed imports, or `None` when the local name is the same as `source`.
+  `local_name` returns `target or source`.
+- `FortranShape`, `FortranSlice`, and `FortranFunctionCall` provide typed
+  views over argument/variable specification strings. They are exposed through
+  properties, so existing parser JSON remains stable.
 - Namespace parse returns aggregate dictionary with:
   - ordered file list
   - file dependency graph
@@ -140,6 +157,14 @@ another source language.
 - CLI JSON output emits per-file buckets for signatures, types, modules,
   readiness report.  
 - CLI human output prints tree-like structure grouped by file/module/procedure.  
+- Parser JSON serializes explicit `use` symbols as objects containing
+  `source` and `target`. Bare imports still use an empty list.
+- Semantic IR imports use structured `SemanticImport` / `SemanticImportItem`
+  entries when a Fortran `use` has an explicit symbol list; bare imports remain
+  plain module names for compatibility.
+- The `.pyi` printer emits structured imports as `from module import name` or
+  `from module import source as target`; the `.pyi` parser accepts the same
+  syntax and restores the semantic import mapping.
 
 ## 4) Test strategy implemented (current workflow)
 
@@ -158,8 +183,11 @@ Covers, among others:
 - `tests/parser/test_procedure_and_type_parsing.py`
 - `tests/parser/test_scope_handling.py`
 - `tests/parser/test_error_handling.py`
+- `tests/parser/test_parser_public_api_coverage.py`
 - intent/kind/rank extraction for routine arguments
 - function result parsing + `use` extraction
+- `use` rename preservation, intrinsic/non-intrinsic import forms, and parser
+  public API coverage for less common constructs
 - fixed-form parsing and interface detection
 - cross-file kind resolution from imported module parameters
 - derived type fields and method detection
@@ -188,6 +216,9 @@ Covers, among others:
 
 The corpus checks provide broad “does it parse?” coverage over many real-world
 fixed/free-form Fortran files without requiring full golden outputs for each.
+Several real-world corpus files also have direct parser goldens. When parser
+JSON schema changes, those fixtures should be regenerated so broad coverage
+continues to validate the serialized model shape.
 
 ### 4.4 Golden regeneration support
 
@@ -196,6 +227,9 @@ fixed/free-form Fortran files without requiring full golden outputs for each.
   updating.
 - Optional in-test auto-update flow is also supported:
   - `FORTRAN_PARSER_UPDATE_GOLDENS=1 python -m pytest -q tests/parser/test_fortran_fixture_suite.py --confcutdir=tests/`
+- Semantic and `.pyi` fixture generators are separate:
+  - `python tests/semantics/generate_semantic_fixtures.py`
+  - `python tests/pyi/generate_pyi_fixtures.py`
 
 ### 4.5 CLI tests (`tests/parser/test_cli.py`)
 
@@ -241,6 +275,9 @@ Dedicated tests for the error handling system:
   - dedicated error handling and `FortranParseError` behavior tests.
 - `tests/parser/test_fortran_fixture_suite.py`
   - fixture-vs-golden regression checks.
+- `tests/parser/test_parser_public_api_coverage.py`
+  - targeted coverage for parser public API behavior that is easy to miss in
+    fixture-only tests.
 - `tests/parser/test_cli.py`
   - end-user command behavior tests.
 - `tests/data/fortran/`
@@ -303,6 +340,10 @@ implemented today:
 - **Imported constant merge policy**: local/module/imported constants are merged
   into a single symbol-value dictionary with precedence that preserves explicit
   procedure-local definitions.
+- **Use rename mapping policy**: explicit `use` imports are represented as
+  source/target pairs. A missing target means the local name equals the source;
+  renamed imports preserve both names for downstream semantic IR and `.pyi`
+  `import as` emission.
 
 ## 8) Implementation timeline highlights from repository history
 
@@ -327,6 +368,9 @@ A condensed history of important parser capabilities added over time (from
 - Refined CLI tree output (omit empty/internal sections; stable module
   procedure grouping).
 - Added tests/fixtures for same-name reuse across different scopes.
+- Added parser public API coverage for less common module/import forms and
+  preserved `use` rename source/target mappings through JSON, semantic IR, and
+  `.pyi` import aliases.
 
 ## 9) Pull-request maintenance policy for this reference
 

@@ -9,14 +9,26 @@
       "filename": "SciFortran/SF_SP_LINALG.f90",
       "uses": {
         "SF_MISC": [
-          "assert_shape"
+          {
+            "source": "assert_shape",
+            "target": null
+          }
         ],
         "SF_RANDOM": [
-          "mt_random"
+          {
+            "source": "mt_random",
+            "target": null
+          }
         ],
         "SF_LINALG": [
-          "eye",
-          "eigh"
+          {
+            "source": "eye",
+            "target": null
+          },
+          {
+            "source": "eigh",
+            "target": null
+          }
         ],
         "SF_MPI": []
       },
@@ -237,14 +249,26 @@
       "filename": "SciFortran/SF_SP_LINALG.f90",
       "uses": {
         "SF_MISC": [
-          "assert_shape"
+          {
+            "source": "assert_shape",
+            "target": null
+          }
         ],
         "SF_RANDOM": [
-          "mt_random"
+          {
+            "source": "mt_random",
+            "target": null
+          }
         ],
         "SF_LINALG": [
-          "eye",
-          "eigh"
+          {
+            "source": "eye",
+            "target": null
+          },
+          {
+            "source": "eigh",
+            "target": null
+          }
         ],
         "SF_MPI": []
       },

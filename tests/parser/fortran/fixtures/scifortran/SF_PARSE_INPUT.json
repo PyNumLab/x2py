@@ -9,7 +9,10 @@
       "filename": "SciFortran/SF_PARSE_INPUT.f90",
       "uses": {
         "LIST_INPUT": [
-          "delete_input"
+          {
+            "source": "delete_input_list",
+            "target": "delete_input"
+          }
         ]
       },
       "variables": [
@@ -145,7 +148,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -261,7 +267,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -377,7 +386,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -505,7 +517,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -633,7 +648,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -761,7 +779,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -877,7 +898,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -953,7 +977,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1029,7 +1056,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1105,7 +1135,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1193,7 +1226,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1281,7 +1317,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1369,7 +1408,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1445,7 +1487,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1481,7 +1526,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1536,7 +1584,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1591,7 +1642,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1646,7 +1700,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1721,7 +1778,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1757,7 +1817,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1793,7 +1856,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1829,7 +1895,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1865,7 +1934,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1901,7 +1973,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -1935,7 +2010,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -2070,7 +2148,10 @@
       "filename": "SciFortran/SF_PARSE_INPUT.f90",
       "uses": {
         "LIST_INPUT": [
-          "delete_input"
+          {
+            "source": "delete_input_list",
+            "target": "delete_input"
+          }
         ]
       },
       "variables": [
@@ -2206,7 +2287,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -2322,7 +2406,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -2438,7 +2525,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -2566,7 +2656,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -2694,7 +2787,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -2822,7 +2918,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -2938,7 +3037,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3014,7 +3116,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3090,7 +3195,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3166,7 +3274,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3254,7 +3365,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3342,7 +3456,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3430,7 +3547,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3506,7 +3626,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3542,7 +3665,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3597,7 +3723,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3652,7 +3781,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3707,7 +3839,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3782,7 +3917,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3818,7 +3956,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3854,7 +3995,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3890,7 +4034,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3926,7 +4073,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3962,7 +4112,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,
@@ -3996,7 +4149,10 @@
           "attributes": [],
           "uses": {
             "LIST_INPUT": [
-              "delete_input"
+              {
+                "source": "delete_input_list",
+                "target": "delete_input"
+              }
             ]
           },
           "in_interface": false,

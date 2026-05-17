@@ -9,3 +9,4 @@ Ignore:
 - *.json
 
 Do not spend context window or analysis on those files unless explicitly requested.
+When you create a commit add this prefix to the message to know that you did push the commit "codex: ..."

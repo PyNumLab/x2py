@@ -345,6 +345,18 @@ class SemanticClass:
 # ============================================================
 
 @dataclass
+class SemanticImportItem:
+    source: str
+    target: Optional[str] = None
+
+
+@dataclass
+class SemanticImport:
+    module: str
+    items: list[SemanticImportItem] = field(default_factory=list)
+
+
+@dataclass
 class SemanticModule:
     name: str
 
@@ -353,6 +365,6 @@ class SemanticModule:
     classes: list[SemanticClass] = field(default_factory=list)
     variables: list[SemanticArgument] = field(default_factory=list)
 
-    imports: list[str] = field(default_factory=list)
+    imports: list[str | SemanticImport] = field(default_factory=list)
 
     metadata: dict[str, Any] = field(default_factory=dict)

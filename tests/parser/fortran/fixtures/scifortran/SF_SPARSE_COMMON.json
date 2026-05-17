@@ -9,8 +9,14 @@
       "filename": "SciFortran/SF_SPARSE_COMMON.f90",
       "uses": {
         "SF_LINALG": [
-          "deye",
-          "zeye"
+          {
+            "source": "deye",
+            "target": null
+          },
+          {
+            "source": "zeye",
+            "target": null
+          }
         ]
       },
       "variables": [],
@@ -70,8 +76,14 @@
           "attributes": [],
           "uses": {
             "SF_LINALG": [
-              "deye",
-              "zeye"
+              {
+                "source": "deye",
+                "target": null
+              },
+              {
+                "source": "zeye",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -139,8 +151,14 @@
           "attributes": [],
           "uses": {
             "SF_LINALG": [
-              "deye",
-              "zeye"
+              {
+                "source": "deye",
+                "target": null
+              },
+              {
+                "source": "zeye",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -223,8 +241,14 @@
           ],
           "uses": {
             "SF_LINALG": [
-              "deye",
-              "zeye"
+              {
+                "source": "deye",
+                "target": null
+              },
+              {
+                "source": "zeye",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -286,8 +310,14 @@
           "attributes": [],
           "uses": {
             "SF_LINALG": [
-              "deye",
-              "zeye"
+              {
+                "source": "deye",
+                "target": null
+              },
+              {
+                "source": "zeye",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -349,8 +379,14 @@
           "attributes": [],
           "uses": {
             "SF_LINALG": [
-              "deye",
-              "zeye"
+              {
+                "source": "deye",
+                "target": null
+              },
+              {
+                "source": "zeye",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -412,8 +448,14 @@
           "attributes": [],
           "uses": {
             "SF_LINALG": [
-              "deye",
-              "zeye"
+              {
+                "source": "deye",
+                "target": null
+              },
+              {
+                "source": "zeye",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -554,8 +596,14 @@
       "filename": "SciFortran/SF_SPARSE_COMMON.f90",
       "uses": {
         "SF_LINALG": [
-          "deye",
-          "zeye"
+          {
+            "source": "deye",
+            "target": null
+          },
+          {
+            "source": "zeye",
+            "target": null
+          }
         ]
       },
       "variables": [],
@@ -615,8 +663,14 @@
           "attributes": [],
           "uses": {
             "SF_LINALG": [
-              "deye",
-              "zeye"
+              {
+                "source": "deye",
+                "target": null
+              },
+              {
+                "source": "zeye",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -684,8 +738,14 @@
           "attributes": [],
           "uses": {
             "SF_LINALG": [
-              "deye",
-              "zeye"
+              {
+                "source": "deye",
+                "target": null
+              },
+              {
+                "source": "zeye",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -768,8 +828,14 @@
           ],
           "uses": {
             "SF_LINALG": [
-              "deye",
-              "zeye"
+              {
+                "source": "deye",
+                "target": null
+              },
+              {
+                "source": "zeye",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -831,8 +897,14 @@
           "attributes": [],
           "uses": {
             "SF_LINALG": [
-              "deye",
-              "zeye"
+              {
+                "source": "deye",
+                "target": null
+              },
+              {
+                "source": "zeye",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -894,8 +966,14 @@
           "attributes": [],
           "uses": {
             "SF_LINALG": [
-              "deye",
-              "zeye"
+              {
+                "source": "deye",
+                "target": null
+              },
+              {
+                "source": "zeye",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
@@ -957,8 +1035,14 @@
           "attributes": [],
           "uses": {
             "SF_LINALG": [
-              "deye",
-              "zeye"
+              {
+                "source": "deye",
+                "target": null
+              },
+              {
+                "source": "zeye",
+                "target": null
+              }
             ]
           },
           "in_interface": false,
