@@ -1333,3 +1333,166 @@ end submodule child_mod
 
     assert project.dependencies["child_mod"] == {"parent_mod", "missing_mod"}
 
+
+def test_program_and_block_data_scope_errors_use_public_parse_paths():
+    with pytest.raises(FortranParseError, match="Unsupported OpenMP declarative directive in program 'driver'"):
+        parse_fortran_file(
+            """
+program driver
+!$omp threadprivate(counter)
+end program driver
+""",
+            filename="program_omp_decl.f90",
+        )
+
+    with pytest.raises(FortranParseError, match="Unsupported OpenMP declarative directive in block data 'init_data'"):
+        parse_fortran_file(
+            """
+block data init_data
+!$omp threadprivate(seed)
+end block data init_data
+""",
+            filename="block_omp_decl.f90",
+        )
+
+    with pytest.raises(FortranParseError, match="Unknown or unsupported datatype declaration in program 'driver'"):
+        parse_fortran_file(
+            """
+program driver
+  weirdtype state
+end program driver
+""",
+            filename="program_unknown_decl.f90",
+        )
+
+    with pytest.raises(FortranParseError, match="Unknown or unsupported datatype declaration in block data 'init_data'"):
+        parse_fortran_file(
+            """
+block data init_data
+  weirdtype seed
+end block data init_data
+""",
+            filename="block_unknown_decl.f90",
+        )
+
+
+def test_public_assess_wrap_readiness_alias_and_module_parameter_noise(tmp_path):
+    parser = FortranParser()
+    code = """
+module noisy_params_mod
+  integer, parameter :: rk = 8, ignored_token
+contains
+  subroutine scale(x)
+    real(kind=rk), intent(inout) :: x
+  end subroutine scale
+end module noisy_params_mod
+"""
+
+    report = parser.assess_wrap_readiness(code, filename="noisy_params.f90")
+
+    assert report["wrappable"] is True
+
+    source_path = tmp_path / "listed_project.f90"
+    source_path.write_text(
+        """
+module listed_project_mod
+contains
+  subroutine work()
+  end subroutine work
+end module listed_project_mod
+""",
+        encoding="utf-8",
+    )
+
+    project = parse_fortran_project([source_path])
+
+    assert "listed_project_mod" in project.modules
+    assert "listed_project_mod.work" in project.procedures
+
+
+def test_project_resolution_keeps_relevant_local_parameter_variables():
+    project = parse_fortran_project(
+        {
+            "local_params.f90": """
+subroutine use_relevant_local_param(e)
+  integer, parameter :: n = 8
+  integer, parameter :: one = 1.0d+0
+  real, intent(inout) :: e(1:+n-one)
+end subroutine use_relevant_local_param
+"""
+        }
+    )
+
+    proc = project.procedures["use_relevant_local_param"]
+
+    assert proc.arguments[0].shape == ["1:+(8)-one"]
+    assert proc.variables["one"].value == "1"
+
+
+def test_project_resolution_uses_file_level_use_only_and_local_parameters(tmp_path):
+    (tmp_path / "params.f90").write_text(
+        """
+module public_params_mod
+  integer, parameter :: rk = selected_real_kind(12)
+  integer, parameter :: n = 4
+end module public_params_mod
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "worker.f90").write_text(
+        """
+subroutine file_level_worker(x, y)
+  use public_params_mod, only: rk, , n
+  integer, parameter :: local_rk = selected_real_kind(6)
+  real(kind=rk), intent(inout) :: x(1:n)
+  real(kind=local_rk), intent(out) :: y
+end subroutine file_level_worker
+""",
+        encoding="utf-8",
+    )
+    project = parse_fortran_project(tmp_path)
+
+    proc = project.procedures["file_level_worker"]
+    args = {arg.name: arg for arg in proc.arguments}
+
+    assert args["x"].kind == "rk"
+    assert args["x"].shape == ["1:n"]
+    assert args["y"].kind == "selected_real_kind(6)"
+    assert [mapping.local_name for mapping in proc.uses["public_params_mod"]] == ["rk", "n"]
+
+
+def test_public_parse_paths_ignore_empty_declaration_entities():
+    parsed = parse_fortran_file(
+        """
+module empty_entity_mod
+  integer :: kept, , also_kept
+
+  type :: state
+    real :: x, , y
+  end type state
+end module empty_entity_mod
+""",
+        filename="empty_entities.f90",
+    )
+
+    module = parsed.modules[0]
+
+    assert [var.name for var in module.variables] == ["kept", "also_kept"]
+    assert [field.name for field in module.derived_types[0].fields] == ["x", "y"]
+
+
+def test_nested_interface_procedure_without_matching_dummy_stays_publicly_parseable():
+    sig = parse_fortran_file(
+        """
+subroutine caller()
+  interface
+    subroutine helper(x)
+      integer, intent(in) :: x
+    end subroutine helper
+  end interface
+end subroutine caller
+"""
+    ).procedures[0]
+
+    assert sig.name == "caller"
+    assert sig.arguments == []
