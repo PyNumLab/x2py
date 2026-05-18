@@ -87,17 +87,15 @@ _SUBMODULE_RE = re.compile(r"^submodule\s*\(\s*(?P<parent>[^)]+?)\s*\)\s*(?P<nam
 _MOD_PROC_IMPL_RE = re.compile(r"^module\s+procedure\s+(?P<name>\w+)\s*$", re.IGNORECASE)
 _PROGRAM_RE = re.compile(r"^program\s+(?P<name>\w+)\s*$", re.IGNORECASE)
 _BLOCK_DATA_RE = re.compile(r"^block\s+data(?:\s+(?P<name>\w+))?\s*$", re.IGNORECASE)
-_INTRINSIC_KIND_SYMBOLS = {
-    "int8", "int16", "int32", "int64",
-    "real32", "real64", "real128",
-    "c_signed_char", "c_short", "c_int", "c_long", "c_long_long",
-    "c_size_t", "c_int8_t", "c_int16_t", "c_int32_t", "c_int64_t",
-    "c_int_least8_t", "c_int_least16_t", "c_int_least32_t", "c_int_least64_t",
-    "c_int_fast8_t", "c_int_fast16_t", "c_int_fast32_t", "c_int_fast64_t",
-    "c_float", "c_double", "c_long_double",
-    "c_float_complex", "c_double_complex", "c_long_double_complex",
-    "c_bool", "c_char",
+_INTRINSIC_KIND_MODULES = {"iso_c_binding", "iso_fortran_env"}
+_KIND_EXPRESSION_INTRINSICS = {
+    "kind",
+    "len",
+    "selected_char_kind",
+    "selected_int_kind",
+    "selected_real_kind",
 }
+_KIND_EXPRESSION_KEYWORDS = {"and", "or", "not", "true", "false"}
 
 _UNSUPPORTED_PATTERNS = (
     re.compile(r"\bclass\s*\(\s*\*\s*\)", re.IGNORECASE),
@@ -302,35 +300,85 @@ def _visible_import_modules(symbol: str, uses: dict[str, list[FortranUseMapping]
     return providers
 
 
-def _is_plain_symbol_reference(expr: str | None) -> bool:
-    """Return True for simple kind symbols, excluding literals and expressions."""
+def _kind_expression_symbols(expr: str | None) -> set[str]:
+    """Return identifier symbols referenced by a kind/len expression."""
     if expr is None:
-        return False
+        return set()
     text = expr.strip()
-    if not text or text == "*":  # pragma: no cover - non-symbol kind sentinels are intentionally ignored.
-        return False
-    return bool(re.fullmatch(r"[A-Za-z_]\w*", text))
+    if not text or text == "*":
+        return set()
+    parts: list[str] = []
+    for item in split_csv(text):
+        token = item.strip()
+        if not token:
+            continue
+        key, sep, value = token.partition("=")
+        if sep and key.strip().lower() in {"kind", "len"}:
+            parts.append(value.strip())
+        else:
+            parts.append(token)
+    normalized = " ".join(parts)
+    normalized = re.sub(
+        r"(?<![A-Za-z_])(?:\d+(?:\.\d*)?|\.\d+)(?:[deDE][+-]?\d+)?",
+        " ",
+        normalized,
+    )
+    ignored = _KIND_EXPRESSION_INTRINSICS | _KIND_EXPRESSION_KEYWORDS
+    return {
+        token.lower()
+        for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", normalized)
+        if token.lower() not in ignored
+    }
+
+
+def _kind_symbol_visible_from_intrinsic_use(symbol: str, uses: dict[str, list[FortranUseMapping]]) -> bool:
+    lowered = symbol.lower()
+    for module_name, mappings in uses.items():
+        if module_name.lower() not in _INTRINSIC_KIND_MODULES:
+            continue
+        if not mappings or lowered in {mapping.local_name.lower() for mapping in mappings}:
+            return True
+    return False
+
+
+def _kind_symbol_visible_from_module_params(
+    symbol: str,
+    uses: dict[str, list[FortranUseMapping]],
+    module_params: dict[str, dict[str, str]],
+) -> bool:
+    lowered = symbol.lower()
+    for module_name, mappings in uses.items():
+        params = module_params.get(module_name.lower(), {})
+        if not params:
+            continue
+        if not mappings and lowered in params:
+            return True
+        for mapping in mappings:
+            if mapping.local_name.lower() != lowered:
+                continue
+            if mapping.source.lower() in params:
+                return True
+    return False
 
 
 def _kind_symbol_is_known(
     symbol: str,
     *,
     owning_module: str | None,
-    uses: dict[str, list[str]],
+    uses: dict[str, list[FortranUseMapping]],
     local_symbols: set[str],
     module_params: dict[str, dict[str, str]],
 ) -> bool:
     """Check whether a symbolic kind is declared locally or in parsed imports."""
     lowered = symbol.lower()
-    if lowered in _INTRINSIC_KIND_SYMBOLS:
-        return True
     if lowered in local_symbols:
         return True
     if owning_module and lowered in module_params.get(owning_module.lower(), {}):
         return True
-    for provider in _visible_import_modules(symbol, uses):
-        if lowered in module_params.get(provider.lower(), {}):
-            return True
+    if _kind_symbol_visible_from_module_params(symbol, uses, module_params):
+        return True
+    if _kind_symbol_visible_from_intrinsic_use(symbol, uses):
+        return True
     return False
 
 
@@ -395,54 +443,59 @@ def _collect_unresolved_kind_diagnostics(
 
     for sig in signatures:
         local_symbols = {name.lower() for name, var in sig.variables.items() if var.value is not None}
-        for arg in sig.arguments:
-            if arg.base_type != "derived" and _is_plain_symbol_reference(arg.kind) and not _kind_symbol_is_known(
-                arg.kind or "",
-                owning_module=sig.module,
-                uses=sig.uses,
-                local_symbols=local_symbols,
-                module_params=module_params,
-            ):
-                unresolved_args.append({
+
+        def _append_unresolved_arg(arg: FortranArgument) -> None:
+            for symbol in sorted(_kind_expression_symbols(arg.kind)):
+                if _kind_symbol_is_known(
+                    symbol,
+                    owning_module=sig.module,
+                    uses=sig.uses,
+                    local_symbols=local_symbols,
+                    module_params=module_params,
+                ):
+                    continue
+                item = {
                     "procedure": sig.name,
                     "module": sig.module,
                     "argument": arg.name,
-                    "kind": arg.kind,
-                    "import_modules": _visible_import_modules(arg.kind or "", sig.uses),
-                })
-        if sig.result and sig.result.base_type != "derived" and _is_plain_symbol_reference(sig.result.kind) and not _kind_symbol_is_known(
-            sig.result.kind or "",
-            owning_module=sig.module,
-            uses=sig.uses,
-            local_symbols=local_symbols,
-            module_params=module_params,
-        ):
-            unresolved_args.append({
-                "procedure": sig.name,
-                "module": sig.module,
-                "argument": sig.result.name,
-                "kind": sig.result.kind,
-                "import_modules": _visible_import_modules(sig.result.kind or "", sig.uses),
-            })
+                    "kind": symbol,
+                    "import_modules": _visible_import_modules(symbol, sig.uses),
+                }
+                if (arg.kind or "").strip().lower() != symbol:
+                    item["kind_expression"] = arg.kind
+                unresolved_args.append(item)
+
+        for arg in sig.arguments:
+            if arg.base_type != "derived":
+                _append_unresolved_arg(arg)
+        if sig.result and sig.result.base_type != "derived":
+            _append_unresolved_arg(sig.result)
 
     for dtype in types:
         uses = module_uses.get(dtype.module.lower(), {}) if dtype.module else {}
         local_symbols: set[str] = set()
         for field in dtype.fields:
-            if field.base_type != "derived" and _is_plain_symbol_reference(field.kind) and not _kind_symbol_is_known(
-                field.kind or "",
-                owning_module=dtype.module,
-                uses=uses,
-                local_symbols=local_symbols,
-                module_params=module_params,
-            ):
-                unresolved_fields.append({
+            if field.base_type == "derived":
+                continue
+            for symbol in sorted(_kind_expression_symbols(field.kind)):
+                if _kind_symbol_is_known(
+                    symbol,
+                    owning_module=dtype.module,
+                    uses=uses,
+                    local_symbols=local_symbols,
+                    module_params=module_params,
+                ):
+                    continue
+                item = {
                     "type_owner": dtype.name,
                     "module": dtype.module,
                     "field": field.name,
-                    "kind": field.kind,
-                    "import_modules": _visible_import_modules(field.kind or "", uses),
-                })
+                    "kind": symbol,
+                    "import_modules": _visible_import_modules(symbol, uses),
+                }
+                if (field.kind or "").strip().lower() != symbol:
+                    item["kind_expression"] = field.kind
+                unresolved_fields.append(item)
 
     return unresolved_args, unresolved_fields
 
@@ -1121,18 +1174,21 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
 # -----------------------------------------------------------------------------
 
 def _resolve_signature_kinds(sig: FortranProcedureSignature, module_params: dict[str, dict[str, str]]) -> None:
-    use_map = {k.lower(): [s.local_name.lower() for s in v] for k, v in sig.uses.items()}
     symbol_to_value: dict[str, str] = {}
     if sig.module:
         symbol_to_value.update(module_params.get(sig.module.lower(), {}))
-    for mod, only_symbols in use_map.items():
+    for mod, mappings in sig.uses.items():
         params = module_params.get(mod.lower(), {})
-        if only_symbols:
-            for sym in only_symbols:
-                if sym in params:
-                    symbol_to_value[sym] = params[sym]
-        else:
+        if not params:
+            continue
+        if not mappings:
             symbol_to_value.update(params)
+            continue
+        for mapping in mappings:
+            source = mapping.source.lower()
+            local = mapping.local_name.lower()
+            if source in params:
+                symbol_to_value[local] = params[source]
     for name, var in sig.variables.items():
         if var.value is not None:
             symbol_to_value.setdefault(name.lower(), var.value)

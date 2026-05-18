@@ -87,6 +87,11 @@ another source language.
   Numeric, symbolic, and expression-like kind tokens are preserved when the
   declaration grammar can recognize the surrounding datatype. This is not "any
   datatype"; unknown base datatypes still fail fast as unsupported declarations.
+- Symbolic kind/length references are validated generically for wrap readiness:
+  they must be local parameters, module parameters, resolved from parsed
+  `use`-associated module parameters, or explicitly visible through an
+  intrinsic kind module such as `iso_c_binding` or `iso_fortran_env`. Intrinsic
+  kind names are not globally accepted without a visible `use` import.
 
 ### 2.4 Compile-time symbol and expression resolution
 
@@ -96,7 +101,8 @@ another source language.
   procedures/modules. Each explicit import records the imported `source` name
   and optional local `target` name so renamed imports survive JSON,
   semantic conversion, and `.pyi` printing.  
-- Signature kind expressions resolved transitively (symbol -> symbol -> value).  
+- Signature kind expressions resolved transitively (symbol -> symbol -> value),
+  including renamed imports from parsed modules.  
 - Shape expressions resolved using available symbol dictionary.  
 - Namespace/project parsing resolves cross-file kinds and dimensions after
   dependency ordering.  
@@ -451,6 +457,9 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
     character `len=...` specs, combined character length/kind specs, legacy
     star-kind forms covered by tests, and symbolic/expression tokens that can
     later be resolved from local or imported parameters.
+  - Symbolic kind names from intrinsic modules must be made visible by a `use`
+    statement; names such as `c_double`, `real64`, or aliases introduced through
+    `only: local => remote` are not hard-coded as globally available.
   - Unresolved but syntactically valid kind symbols are not parser errors by
     themselves; wrap-readiness reports them as `unresolved_kind_arguments` or
     `unresolved_kind_fields` when they cannot be found in the parsed source or

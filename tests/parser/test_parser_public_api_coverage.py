@@ -365,6 +365,88 @@ end module solver_mod
     assert report["unresolved_kind_arguments"] == []
 
 
+def test_wrap_readiness_requires_intrinsic_kind_symbols_to_be_imported():
+    missing_import = """
+subroutine scale(x)
+  real(kind=c_double), intent(inout) :: x
+end subroutine scale
+"""
+    report = assess_wrap_readiness(missing_import)
+
+    assert report["wrappable"] is False
+    assert report["unresolved_kind_arguments"] == [
+        {
+            "procedure": "scale",
+            "module": None,
+            "argument": "x",
+            "kind": "c_double",
+            "import_modules": [],
+        }
+    ]
+
+    imported = """
+subroutine scale(x, y)
+  use, intrinsic :: iso_c_binding, only: c_double, cd => c_float
+  real(kind=c_double), intent(inout) :: x
+  real(kind=cd), intent(inout) :: y
+end subroutine scale
+"""
+    report = assess_wrap_readiness(imported)
+
+    assert report["wrappable"] is True
+    assert report["unresolved_kind_arguments"] == []
+
+
+def test_wrap_readiness_accepts_arbitrary_imported_kind_symbols_and_expressions():
+    code = """
+module kinds_mod
+  integer, parameter :: wp = selected_real_kind(12)
+  integer, parameter :: extra = 1
+end module kinds_mod
+
+module solver_mod
+contains
+  subroutine scale(x, name)
+    use kinds_mod, only: local_wp => wp, extra
+    real(kind=local_wp + extra), intent(inout) :: x
+    character(len=extra, kind=local_wp), intent(out) :: name
+  end subroutine scale
+end module solver_mod
+"""
+
+    report = assess_wrap_readiness(code)
+
+    assert report["wrappable"] is True
+    assert report["unresolved_kind_arguments"] == []
+
+
+def test_wrap_readiness_reports_missing_symbols_inside_kind_expressions():
+    code = """
+module kinds_mod
+  integer, parameter :: wp = selected_real_kind(12)
+end module kinds_mod
+
+subroutine scale(x)
+  use kinds_mod, only: wp
+  real(kind=wp + missing_offset), intent(inout) :: x
+end subroutine scale
+"""
+
+    report = assess_wrap_readiness(code)
+
+    assert report["wrappable"] is False
+    assert report["unresolved_kind_arguments"] == [
+        {
+            "procedure": "scale",
+            "module": None,
+            "argument": "x",
+            "kind": "missing_offset",
+            "import_modules": [],
+            "kind_expression": "wp + missing_offset",
+        }
+    ]
+
+
 def test_signature_shape_helpers_evaluate_publicly_parsed_signature():
     code = """
 subroutine fill(a)
@@ -1212,6 +1294,44 @@ end module solver_mod
     assert proc.arguments[0].shape == ["1:rk"]
     assert proc.result.kind == "rk"
     assert project.dependencies["solver_mod"] == {"kinds_mod"}
+
+
+def test_directory_project_tracks_renamed_kind_imports_from_other_files(tmp_path):
+    (tmp_path / "precision.f90").write_text(
+        """
+module precision_mod
+  integer, parameter :: wp = selected_real_kind(12)
+  integer, parameter :: stride = 2
+end module precision_mod
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "solver.f90").write_text(
+        """
+module solver_mod
+  use precision_mod, only: local_wp => wp, stride
+contains
+  subroutine consume(x, y)
+    real(kind=local_wp), intent(in) :: x(1:stride)
+    real(kind=local_wp + stride), intent(out) :: y
+  end subroutine consume
+end module solver_mod
+""",
+        encoding="utf-8",
+    )
+
+    project = parse_fortran_project(tmp_path)
+    proc = project.procedures["solver_mod.consume"]
+    args = {arg.name: arg for arg in proc.arguments}
+
+    assert args["x"].kind == "local_wp"
+    assert args["x"].shape == ["1:stride"]
+    assert args["y"].kind == "local_wp + stride"
+    assert [(mapping.source, mapping.target) for mapping in proc.uses["precision_mod"]] == [
+        ("wp", "local_wp"),
+        ("stride", None),
+    ]
+    assert project.dependencies["solver_mod"] == {"precision_mod"}
 
 
 def test_type_field_spec_variants_and_empty_entities_from_public_source():
