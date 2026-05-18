@@ -2,8 +2,16 @@ from pathlib import Path
 import pytest
 
 from semantics.fortran2ir import fortran_file_to_semantic_modules
-from semantics.models import ProjectionMapping, SemanticArgument, SemanticFunction, SemanticImport, SemanticImportItem, SemanticModule, SemanticType
-from semantics.pyi_parser import PyiToIRParser, convert_pyi_to_ir, load_pyi_file, parse_pyi_text
+from semantics.models import (
+    ProjectionMapping,
+    SemanticArgument,
+    SemanticFunction,
+    SemanticImport,
+    SemanticImportItem,
+    SemanticModule,
+    SemanticType,
+)
+from semantics.pyi_parser import convert_pyi_to_ir, load_pyi_file, parse_pyi_text
 from semantics.pyi_printer import emit_module
 from tests._shared.fixture_outputs import FORTRAN_DATA_DIR, FORTRAN_SUFFIXES
 from x2py import parse_fortran_file
@@ -65,24 +73,19 @@ def test_parse_pyi_text_accepts_import_aliases():
 
 
 def test_convert_pyi_to_ir_and_import_parser_edge_cases():
-    module = convert_pyi_to_ir("from m import a\n", module_name="edited")
+    module = convert_pyi_to_ir("from m import a, b as c\n", module_name="edited")
     assert module.imports == [
         SemanticImport(
             module="m",
-            items=[SemanticImportItem(source="a")],
-        )
+            items=[
+                SemanticImportItem(source="a"),
+                SemanticImportItem(source="b", target="c"),
+            ],
+        ),
     ]
 
-    parser = PyiToIRParser(module_name="edited")
-    assert parser._parse_import_from("from m import a, , b as c") == SemanticImport(
-        module="m",
-        items=[
-            SemanticImportItem(source="a"),
-            SemanticImportItem(source="b", target="c"),
-        ],
-    )
-    with pytest.raises(ValueError, match="Unsupported import line"):
-        parser._parse_import_from("from m import")
+    with pytest.raises(SyntaxError):
+        convert_pyi_to_ir("from m import\n", module_name="edited")
 
 
 def test_parse_pyi_text_class_body_visibility_and_native_call():
@@ -106,16 +109,14 @@ class particle:
 
 
 def test_pyi_parser_reports_unsupported_lines_and_invalid_helpers():
-    parser = PyiToIRParser(module_name="edited")
-
-    with pytest.raises(ValueError, match="Unsupported .pyi line"):
+    with pytest.raises(ValueError, match="Unsupported .pyi node"):
         parse_pyi_text("bare_name\n", module_name="edited")
 
-    with pytest.raises(ValueError, match="Unsupported class body line"):
+    with pytest.raises(ValueError, match="Unsupported class body node"):
         parse_pyi_text("class C:\n    bare_name\n", module_name="edited")
 
     with pytest.raises(ValueError, match="Expected typed argument"):
-        parser._parse_argument_line("x", default_intent="in")
+        parse_pyi_text("def f(x) -> None: ...\n", module_name="edited")
 
     with pytest.raises(ValueError, match="expects positional arguments only"):
         parse_pyi_text("@native_call([Arg(0, name='x')])\ndef f(x: Int32) -> None: ...\n", module_name="edited")
@@ -126,12 +127,32 @@ def test_pyi_parser_reports_unsupported_lines_and_invalid_helpers():
     with pytest.raises(ValueError, match="Expected Arg"):
         parse_pyi_text("@native_call([Len(Unknown(0))])\ndef f(x: Int32) -> None: ...\n", module_name="edited")
 
-    assert parser._parse_returned_argument("Result['x', Int32]") is None
-    assert parser._parse_name_metadata("Other('x')") is None
-    assert parser._split_argument_text("") == []
-    with pytest.raises(ValueError, match="Unsupported type annotation"):
-        parser._split_type_subscript("Int32")
-    assert parser._split_annotation_line("not annotated") is None
+
+def test_pyi_parser_ignores_unknown_annotation_metadata():
+    module = parse_pyi_text(
+        """
+value: Annotated[Int32, Other("native_value")]
+alias: Annotated[Int32, Name("native_alias")]
+""",
+        module_name="edited",
+    )
+
+    assert module.variables[0].name == "value"
+    assert module.variables[1].name == "native_alias"
+
+
+def test_parse_pyi_text_accepts_ast_only_projection_value_refs():
+    module = parse_pyi_text(
+        """
+@native_call([Return(0), Len(Return(0)), Shape(Work("tmp"), 0)])
+def f() -> Float64: ...
+""",
+        module_name="edited",
+    )
+
+    projection = module.functions[0].projection
+    assert projection[1].value == {"kind": "return", "position": 0}
+    assert projection[2].value == {"value": {"kind": "work", "name": "tmp"}, "dim": 0}
 
 
 def test_parse_pyi_text_accepts_plain_return_type():
@@ -452,19 +473,30 @@ class vector:
         ("value: Annotated[Int32, Name('x', 'y')]\n", "Name metadata expects one argument"),
         ("def f(x: Int32): ...\n", "Unsupported function header"),
         ("def f(\n    x: Int32,\n): ...\n", "Unterminated callable starting at line 1"),
-        ("@native_call_bad([])\ndef f(x: Int32) -> None: ...\n", "Unsupported native call decorator"),
+        ("def f(*x: Int32) -> None: ...\n", "Unsupported function header"),
+        ("def f() -> None:\n    ...\n    ...\n", "Unsupported function header"),
+        ("def f() -> None: pass\n", "Unsupported function header"),
+        ("@native_call_bad([])\ndef f(x: Int32) -> None: ...\n", "Unsupported .pyi decorator"),
+        ("@native_call([])\nclass C:\n    pass\n", "Unsupported class decorator"),
         ("@native_call(Arg(0))\ndef f(x: Int32) -> None: ...\n", "native_call expects a list of projection entries"),
         ("@native_call([Arg(0)], foo=1)\ndef f(x: Int32) -> None: ...\n", "native_call expects a single list argument"),
         ("@native_call([1])\ndef f(x: Int32) -> None: ...\n", "projection entry calls"),
+        ("@native_call([Arg(1)])\ndef f(x: Int32) -> None: ...\n", "native_call argument position is out of range"),
         ("@native_call([Arg()])\ndef f(x: Int32) -> None: ...\n", "Arg expects one positional index"),
         ("@native_call([Return()])\ndef f(x: Int32) -> None: ...\n", "Return expects one positional index"),
         ("@native_call([Const()])\ndef f(x: Int32) -> None: ...\n", "Const expects one value"),
         ("@native_call([Len()])\ndef f(x: Int32) -> None: ...\n", "Len expects one value reference"),
-        ("@native_call([Shape(Arg(0))])\ndef f(x: Int32) -> None: ...\n", "Shape expects a value reference and dimension"),
+        (
+            "@native_call([Shape(Arg(0))])\ndef f(x: Int32) -> None: ...\n",
+            "Shape expects a value reference and dimension",
+        ),
         ("@native_call([IsPresent()])\ndef f(x: Int32) -> None: ...\n", "IsPresent expects one value reference"),
         ("@native_call([Work()])\ndef f(x: Int32) -> None: ...\n", "Work expects one workspace name"),
         ("@native_call([Len(1)])\ndef f(x: Int32) -> None: ...\n", "Expected Arg"),
-        ("@native_call([Len(Arg(0, 1))])\ndef f(x: Int32) -> None: ...\n", "value reference expects one positional argument"),
+        (
+            "@native_call([Len(Arg(0, 1))])\ndef f(x: Int32) -> None: ...\n",
+            "value reference expects one positional argument",
+        ),
         ("def f(x: Int32) -> Returns['x']: ...\n", "Returns expects a name and type"),
     ],
 )

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ast
-import re
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .models import (
@@ -17,12 +17,15 @@ from .models import (
     SemanticType,
 )
 
+__all__ = ("convert_pyi_to_ir", "load_pyi_file", "parse_pyi_text")
+
 
 def load_pyi_file(path: str | Path, *, module_name: str | None = None, encoding: str = "utf-8") -> SemanticModule:
     pyi_path = Path(path)
     return parse_pyi_text(
         pyi_path.read_text(encoding=encoding),
         module_name=module_name or pyi_path.stem,
+        filename=str(pyi_path),
     )
 
 
@@ -30,270 +33,430 @@ def convert_pyi_to_ir(source: str, *, module_name: str = "<pyi>") -> SemanticMod
     return parse_pyi_text(source, module_name=module_name)
 
 
-def parse_pyi_text(source: str, *, module_name: str = "<pyi>") -> SemanticModule:
-    return PyiToIRParser(module_name=module_name).parse(source)
+def parse_pyi_text(source: str, *, module_name: str = "<pyi>", filename: str = "<pyi>") -> SemanticModule:
+    tree = ast.parse(source or "\n", filename=filename)
+    return _PyiAstParser(module_name=module_name).parse(tree)
 
 
-class PyiToIRParser:
-    """Parse the wrapper-oriented `.pyi` dialect emitted by `PyiPrinter`.
+@dataclass
+class _Decorators:
+    visibility: str = "public"
+    projection: list[ProjectionMapping] = field(default_factory=list)
+    has_native_call: bool = False
 
-    The parser intentionally targets the generated, editable stub format rather
-    than the full Python typing grammar. It validates input with Python's AST
-    parser and interprets wrapper projection helpers such as `Returns["x", T]`.
-    """
 
+class _PyiAstParser:
     def __init__(self, *, module_name: str):
-        self.module_name = module_name
-        self.lines: list[str] = []
-        self.index = 0
+        self.module = SemanticModule(name=module_name)
 
-    def parse(self, source: str) -> SemanticModule:
-        ast.parse(source or "\n")
-        self.lines = source.splitlines()
-        self.index = 0
-        module = SemanticModule(name=self.module_name)
-        pending_visibility = "public"
-        pending_projection: list[ProjectionMapping] = []
+    def parse(self, tree: ast.Module) -> SemanticModule:
+        _ModuleVisitor(self).visit(tree)
+        return self.module
 
-        while self.index < len(self.lines):
-            line = self.lines[self.index]
-            stripped = line.strip()
-            if not stripped:
-                self.index += 1
-                continue
-            if self._indent(line) != 0:
-                raise ValueError(f"Unexpected indented top-level line: {line!r}")
-            if stripped == "@private":
-                pending_visibility = "private"
-                self.index += 1
-                continue
-            if stripped.startswith("@native_call"):
-                decorator, self.index = self._collect_decorator(self.index)
-                pending_projection = self._parse_native_call_decorator(decorator)
-                continue
-            if stripped.startswith("import "):
-                module.imports.append(stripped.split(None, 1)[1].strip())
-                self.index += 1
-                continue
-            if stripped.startswith("from "):
-                module.imports.append(self._parse_import_from(stripped))
-                self.index += 1
-                continue
-            if stripped.startswith("class "):
-                cls, self.index = self._parse_class(self.index, visibility=pending_visibility)
-                module.classes.append(cls)
-                pending_visibility = "public"
-                continue
-            if stripped.startswith("def "):
-                func, self.index = self._parse_function(
-                    self.index,
-                    visibility=pending_visibility,
-                    projection=pending_projection,
-                )
-                module.functions.append(func)
-                pending_visibility = "public"
-                pending_projection = []
-                continue
-            if ":" in stripped:
-                module.variables.append(self._parse_argument_line(stripped, default_intent="in"))
-                pending_visibility = "public"
-                self.index += 1
-                continue
-            raise ValueError(f"Unsupported .pyi line: {line!r}")
+    def import_from(self, node: ast.ImportFrom) -> SemanticImport:
+        module_name = "." * node.level + (node.module or "")
+        return SemanticImport(
+            module=module_name,
+            items=[SemanticImportItem(source=alias.name, target=alias.asname) for alias in node.names],
+        )
 
-        return module
+    def import_name(self, node: ast.Import) -> str:
+        return ", ".join(
+            f"{alias.name} as {alias.asname}" if alias.asname else alias.name
+            for alias in node.names
+        )
 
-    @staticmethod
-    def _parse_import_from(line: str) -> SemanticImport:
-        match = re.match(r"^from\s+(?P<module>\S+)\s+import\s+(?P<items>.+)$", line)
-        if not match:
-            raise ValueError(f"Unsupported import line: {line!r}")
-        items: list[SemanticImportItem] = []
-        for item in match.group("items").split(","):
-            text = item.strip()
-            if not text:
-                continue
-            alias_match = re.match(r"^(?P<source>\S+)\s+as\s+(?P<target>\S+)$", text)
-            if alias_match:
-                items.append(SemanticImportItem(source=alias_match.group("source"), target=alias_match.group("target")))
-            else:
-                items.append(SemanticImportItem(source=text))
-        return SemanticImport(module=match.group("module"), items=items)
-
-    def _parse_class(self, start: int, *, visibility: str) -> tuple[SemanticClass, int]:
-        header = self.lines[start].strip()
-        match = re.match(r"^class\s+(?P<name>\w+)(?:\((?P<bases>[^)]*)\))?:\s*$", header)
-        if not match:
-            raise ValueError(f"Unsupported class header: {header!r}")
-
+    def class_def(self, node: ast.ClassDef, *, visibility: str) -> SemanticClass:
         fields: list[SemanticArgument] = []
         methods: list[SemanticMethod] = []
-        pending_visibility = "public"
-        pending_projection: list[ProjectionMapping] = []
-        index = start + 1
-        while index < len(self.lines):
-            line = self.lines[index]
-            stripped = line.strip()
-            if not stripped:
-                index += 1
+
+        for item in node.body:
+            if isinstance(item, ast.Pass):
                 continue
-            if self._indent(line) == 0:
-                break
-            if stripped == "pass":
-                index += 1
+            if isinstance(item, ast.AnnAssign):
+                fields.append(self.ann_assign(item, default_intent="in"))
                 continue
-            if stripped == "@private":
-                pending_visibility = "private"
-                index += 1
-                continue
-            if stripped.startswith("@native_call"):
-                decorator, index = self._collect_decorator(index)
-                pending_projection = self._parse_native_call_decorator(decorator)
-                continue
-            if stripped.startswith("def "):
-                method, index = self._parse_method(
-                    index,
-                    visibility=pending_visibility,
-                    projection=pending_projection,
+            if isinstance(item, ast.FunctionDef):
+                decorators = self.decorators(item.decorator_list, context="class body")
+                methods.append(
+                    self.method_def(
+                        item,
+                        visibility=decorators.visibility,
+                        projection=decorators.projection,
+                    )
                 )
-                methods.append(method)
-                pending_visibility = "public"
-                pending_projection = []
                 continue
-            if ":" in stripped:
-                fields.append(self._parse_argument_line(stripped, default_intent="in"))
-                index += 1
-                continue
-            raise ValueError(f"Unsupported class body line: {line!r}")
+            raise ValueError(f"Unsupported class body node: {_node_text(item)!r}")
 
-        bases = [base.strip() for base in (match.group("bases") or "").split(",") if base.strip()]
-        return (
-            SemanticClass(
-                name=match.group("name"),
-                native_name=match.group("name"),
-                fields=fields,
-                methods=methods,
-                base_classes=bases,
-                visibility=visibility,
-            ),
-            index,
-        )
-
-    def _parse_function(
-        self,
-        start: int,
-        *,
-        visibility: str,
-        projection: list[ProjectionMapping] | None = None,
-    ) -> tuple[SemanticFunction, int]:
-        name, args, return_type, returned_args, index = self._parse_callable(start)
-        semantic_args = [self._parse_argument_line(arg, default_intent="in") for arg in args]
-        return_type, returned_args = self._apply_native_call_returns(return_type, returned_args, projection or [])
-        return_positions = self._return_positions_by_name(returned_args)
-        self._apply_projected_returns(semantic_args, returned_args)
-        self._apply_native_call_argument_names(semantic_args, return_positions, projection or [])
-        return (
-            SemanticFunction(
-                name=name,
-                native_name=name,
-                arguments=semantic_args,
-                return_type=return_type,
-                projection=projection or [],
-                visibility=visibility,
-            ),
-            index,
-        )
-
-    def _parse_method(
-        self,
-        start: int,
-        *,
-        visibility: str,
-        projection: list[ProjectionMapping] | None = None,
-    ) -> tuple[SemanticMethod, int]:
-        name, args, return_type, returned_args, index = self._parse_callable(start)
-        args = args[1:] if args and args[0].strip() == "self" else args
-        semantic_args = [self._parse_argument_line(arg, default_intent="in") for arg in args]
-        return_type, returned_args = self._apply_native_call_returns(return_type, returned_args, projection or [])
-        return_positions = self._return_positions_by_name(returned_args)
-        self._apply_projected_returns(semantic_args, returned_args)
-        self._apply_native_call_argument_names(semantic_args, return_positions, projection or [])
-        return (
-            SemanticMethod(
-                name=name,
-                native_name=name,
-                arguments=semantic_args,
-                return_type=return_type,
-                projection=projection or [],
-                visibility=visibility,
-            ),
-            index,
-        )
-
-    def _parse_callable(self, start: int) -> tuple[str, list[str], SemanticType | None, list[SemanticArgument], int]:
-        first = self.lines[start].strip()
-        single = re.match(r"^def\s+(?P<name>\w+)\((?P<args>.*)\)\s*->\s*(?P<ret>.+?):\s*\.\.\.\s*$", first)
-        if single:
-            return_type, returned_args = self._parse_return_projection(single.group("ret"))
-            return (
-                single.group("name"),
-                self._split_argument_text(single.group("args")),
-                return_type,
-                returned_args,
-                start + 1,
-            )
-
-        header = re.match(r"^def\s+(?P<name>\w+)\(\s*$", first)
-        if not header:
-            raise ValueError(f"Unsupported function header: {first!r}")
-
-        args: list[str] = []
-        index = start + 1
-        while index < len(self.lines):
-            stripped = self.lines[index].strip()
-            close = re.match(r"^\)\s*->\s*(?P<ret>.+?):\s*\.\.\.\s*$", stripped)
-            if close:
-                return_type, returned_args = self._parse_return_projection(close.group("ret"))
-                return header.group("name"), args, return_type, returned_args, index + 1
-            if stripped:
-                args.append(stripped.rstrip(","))
-            index += 1
-        raise ValueError(f"Unterminated callable starting at line {start + 1}")
-
-    def _parse_argument_line(self, text: str, *, default_intent: str) -> SemanticArgument:
-        text = text.rstrip(",").rstrip()
-        split = self._split_annotation_line(text)
-        if split is None:
-            raise ValueError(f"Expected typed argument or variable line: {text!r}")
-
-        raw_name, type_text = split
-        name = self._parse_annotation_target(raw_name)
-        optional = False
-        if type_text.endswith("= ..."):
-            optional = True
-            type_text = type_text[:-5].rstrip()
-        elif type_text.endswith("= None"):
-            optional = True
-            type_text = type_text[:-6].rstrip()
-
-        visibility, semantic_type, original_name = self._parse_visible_type(type_text)
-        if original_name is not None:
-            name = original_name
-        intent = default_intent
-        semantic_type.ownership.mutable = intent.lower() != "in"
-        return SemanticArgument(
-            name=name,
-            semantic_type=semantic_type,
-            intent=intent,
-            optional=optional,
+        return SemanticClass(
+            name=node.name,
+            native_name=node.name,
+            fields=fields,
+            methods=methods,
+            base_classes=[ast.unparse(base) for base in node.bases],
             visibility=visibility,
         )
 
-    def _apply_projected_returns(
+    def function_def(
         self,
-        semantic_args: list[SemanticArgument],
-        returned_args: list[SemanticArgument],
-    ) -> None:
+        node: ast.FunctionDef,
+        *,
+        visibility: str,
+        projection: list[ProjectionMapping] | None = None,
+    ) -> SemanticFunction:
+        semantic_args, return_type = self._callable_parts(node, projection=projection or [])
+        return SemanticFunction(
+            name=node.name,
+            native_name=node.name,
+            arguments=semantic_args,
+            return_type=return_type,
+            projection=projection or [],
+            visibility=visibility,
+        )
+
+    def method_def(
+        self,
+        node: ast.FunctionDef,
+        *,
+        visibility: str,
+        projection: list[ProjectionMapping] | None = None,
+    ) -> SemanticMethod:
+        semantic_args, return_type = self._callable_parts(
+            node,
+            projection=projection or [],
+            drop_untyped_self=True,
+        )
+        return SemanticMethod(
+            name=node.name,
+            native_name=node.name,
+            arguments=semantic_args,
+            return_type=return_type,
+            projection=projection or [],
+            visibility=visibility,
+        )
+
+    def ann_assign(self, node: ast.AnnAssign, *, default_intent: str) -> SemanticArgument:
+        name = self.annotation_target(node.target)
+        visibility, semantic_type, original_name = self.visible_type(node.annotation)
+        if original_name is not None:
+            name = original_name
+        semantic_type.ownership.mutable = default_intent.lower() != "in"
+        return SemanticArgument(
+            name=name,
+            semantic_type=semantic_type,
+            intent=default_intent,
+            optional=self.default_marks_optional(node.value),
+            visibility=visibility,
+        )
+
+    def decorators(self, nodes: list[ast.expr], *, context: str) -> _Decorators:
+        parsed = _Decorators()
+        for node in nodes:
+            if isinstance(node, ast.Name) and node.id == "private":
+                parsed.visibility = "private"
+                continue
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "native_call":
+                parsed.has_native_call = True
+                parsed.projection = self.native_call(node)
+                continue
+            raise ValueError(f"Unsupported {context} decorator: {ast.unparse(node)!r}")
+        return parsed
+
+    def native_call(self, node: ast.Call) -> list[ProjectionMapping]:
+        if len(node.args) != 1 or node.keywords:
+            raise ValueError("native_call expects a single list argument")
+        entries = node.args[0]
+        if not isinstance(entries, ast.List):
+            raise ValueError("native_call expects a list of projection entries")
+        return [
+            self.native_projection_entry(entry, native_position)
+            for native_position, entry in enumerate(entries.elts)
+        ]
+
+    def native_projection_entry(self, node: ast.AST, native_position: int) -> ProjectionMapping:
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+            raise ValueError("native_call expects projection entry calls")
+        if node.keywords:
+            raise ValueError(f"{node.func.id} expects positional arguments only")
+
+        helper = node.func.id
+        if helper == "Arg":
+            if len(node.args) != 1:
+                raise ValueError("Arg expects one positional index")
+            return ProjectionMapping(
+                native_position=native_position,
+                python_position=int(ast.literal_eval(node.args[0])),
+            )
+        if helper == "Return":
+            if len(node.args) != 1:
+                raise ValueError("Return expects one positional index")
+            return ProjectionMapping(
+                native_position=native_position,
+                result_position=int(ast.literal_eval(node.args[0])),
+                intent="out",
+            )
+        if helper == "Const":
+            if len(node.args) != 1:
+                raise ValueError("Const expects one value")
+            return ProjectionMapping(
+                native_position=native_position,
+                value_kind="const",
+                value=ast.literal_eval(node.args[0]),
+            )
+        if helper == "Len":
+            if len(node.args) != 1:
+                raise ValueError("Len expects one value reference")
+            return ProjectionMapping(
+                native_position=native_position,
+                value_kind="len",
+                value=self.native_value_ref(node.args[0]),
+            )
+        if helper == "Shape":
+            if len(node.args) != 2:
+                raise ValueError("Shape expects a value reference and dimension")
+            return ProjectionMapping(
+                native_position=native_position,
+                value_kind="shape",
+                value={"value": self.native_value_ref(node.args[0]), "dim": int(ast.literal_eval(node.args[1]))},
+            )
+        if helper == "IsPresent":
+            if len(node.args) != 1:
+                raise ValueError("IsPresent expects one value reference")
+            return ProjectionMapping(
+                native_position=native_position,
+                value_kind="is_present",
+                value=self.native_value_ref(node.args[0]),
+            )
+        if helper == "Work":
+            if len(node.args) != 1:
+                raise ValueError("Work expects one workspace name")
+            return ProjectionMapping(
+                native_position=native_position,
+                value_kind="work",
+                value=str(ast.literal_eval(node.args[0])),
+            )
+
+        raise ValueError(f"Unsupported native_call projection entry: {helper}")
+
+    def native_value_ref(self, node: ast.AST) -> dict[str, int | str]:
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+            raise ValueError("Expected Arg(...), Return(...), or Work(...) value reference")
+        if node.keywords or len(node.args) != 1:
+            raise ValueError(f"{node.func.id} value reference expects one positional argument")
+        if node.func.id == "Arg":
+            return {"kind": "arg", "position": int(ast.literal_eval(node.args[0]))}
+        if node.func.id == "Return":
+            return {"kind": "return", "position": int(ast.literal_eval(node.args[0]))}
+        if node.func.id == "Work":
+            return {"kind": "work", "name": str(ast.literal_eval(node.args[0]))}
+        raise ValueError("Expected Arg(...), Return(...), or Work(...) value reference")
+
+    def visible_type(self, node: ast.expr) -> tuple[str, SemanticType, str | None]:
+        if self.subscript_name(node) == "private":
+            semantic_type, original_name = self.semantic_type_annotation(self.subscript_slice(node))
+            return "private", semantic_type, original_name
+        semantic_type, original_name = self.semantic_type_annotation(node)
+        return "public", semantic_type, original_name
+
+    def semantic_type_annotation(self, node: ast.expr) -> tuple[SemanticType, str | None]:
+        if self.subscript_name(node) != "Annotated":
+            return self.semantic_type(node), None
+
+        items = self.subscript_items(node)
+        if not items:
+            raise ValueError(f"Annotated type is empty: {ast.unparse(node)!r}")
+
+        original_name = None
+        for item in items[1:]:
+            parsed_name = self.name_metadata(item)
+            if parsed_name is not None:
+                original_name = parsed_name
+        return self.semantic_type(items[0]), original_name
+
+    def semantic_type(self, node: ast.expr) -> SemanticType:
+        if self.subscript_name(node) == "Annotated":
+            semantic_type, _ = self.semantic_type_annotation(node)
+            return semantic_type
+
+        name = self.type_name(node)
+        if not isinstance(node, ast.Subscript):
+            return SemanticType(name=name, dtype=name)
+
+        constraints = [self.constraint(item) for item in self.subscript_items(node)]
+        shape = []
+        for constraint in constraints:
+            if constraint.name == "Shape":
+                shape = [str(arg) for arg in constraint.arguments]
+                break
+        return SemanticType(
+            name=name,
+            rank=len(shape),
+            dtype=name,
+            shape=shape,
+            constraints=constraints,
+        )
+
+    def constraint(self, node: ast.expr) -> SemanticConstraint:
+        if isinstance(node, ast.Name):
+            return SemanticConstraint(node.id)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            return SemanticConstraint(
+                name=node.func.id,
+                arguments=[ast.literal_eval(arg) for arg in node.args],
+            )
+        raise ValueError(f"Unsupported semantic type constraint: {ast.unparse(node)!r}")
+
+    def return_projection(self, node: ast.expr) -> tuple[SemanticType | None, list[SemanticArgument]]:
+        if isinstance(node, ast.Constant) and node.value is None:
+            return None, []
+
+        return_type: SemanticType | None = None
+        returned_args: list[SemanticArgument] = []
+        plain_return_index = 0
+
+        for item_index, item in enumerate(self.return_items(node)):
+            returned = self.returned_argument(item)
+            if returned is not None:
+                returned.metadata["return_position"] = item_index
+                returned_args.append(returned)
+                continue
+
+            semantic_type = self.semantic_type(item)
+            if item_index == 0:
+                return_type = semantic_type
+            else:
+                returned_args.append(
+                    SemanticArgument(
+                        name=f"__return_{plain_return_index}",
+                        semantic_type=semantic_type,
+                        intent="out",
+                        metadata={"return_position": item_index},
+                    )
+                )
+            plain_return_index += 1
+
+        return return_type, returned_args
+
+    def returned_argument(self, node: ast.expr) -> SemanticArgument | None:
+        if self.subscript_name(node) != "Returns":
+            return None
+        items = self.subscript_items(node)
+        if len(items) not in {2, 3}:
+            raise ValueError(f"Returns expects a name and type: {ast.unparse(node)!r}")
+
+        semantic_type = self.semantic_type(items[1])
+        semantic_type.ownership.mutable = True
+        return SemanticArgument(
+            name=str(ast.literal_eval(items[0])),
+            semantic_type=semantic_type,
+            intent="out",
+            optional=len(items) == 3 and isinstance(items[2], ast.Name) and items[2].id == "Optional",
+        )
+
+    @staticmethod
+    def name_metadata(node: ast.expr) -> str | None:
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "Name":
+            if len(node.args) != 1:
+                raise ValueError(f"Name metadata expects one argument: {ast.unparse(node)!r}")
+            return str(ast.literal_eval(node.args[0]))
+        return None
+
+    @staticmethod
+    def annotation_target(node: ast.AST) -> str:
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) and node.value.id == "var":
+            return str(ast.literal_eval(node.slice))
+        raise ValueError(f"Unsupported annotation target: {ast.unparse(node)!r}")
+
+    @staticmethod
+    def default_marks_optional(node: ast.expr | None) -> bool:
+        return isinstance(node, ast.Constant) and node.value in {Ellipsis, None}
+
+    @staticmethod
+    def subscript_name(node: ast.AST) -> str:
+        if isinstance(node, ast.Subscript):
+            return ast.unparse(node.value)
+        return ""
+
+    @staticmethod
+    def subscript_slice(node: ast.AST) -> ast.expr:
+        if not isinstance(node, ast.Subscript):
+            raise ValueError(f"Unsupported type annotation: {ast.unparse(node)!r}")
+        return node.slice
+
+    def subscript_items(self, node: ast.AST) -> list[ast.expr]:
+        value = self.subscript_slice(node)
+        if isinstance(value, ast.Tuple):
+            return list(value.elts)
+        return [value]
+
+    @staticmethod
+    def type_name(node: ast.AST) -> str:
+        if isinstance(node, ast.Subscript):
+            return ast.unparse(node.value)
+        return ast.unparse(node)
+
+    def _callable_parts(
+        self,
+        node: ast.FunctionDef,
+        *,
+        projection: list[ProjectionMapping],
+        drop_untyped_self: bool = False,
+    ) -> tuple[list[SemanticArgument], SemanticType | None]:
+        self._validate_stub_callable(node)
+        if node.returns is None:
+            if getattr(node, "end_lineno", node.lineno) != node.lineno:
+                raise ValueError(f"Unterminated callable starting at line {node.lineno}")
+            raise ValueError(f"Unsupported function header: {_node_text(node)!r}")
+        if node.args.vararg or node.args.kwarg or node.args.kwonlyargs or node.args.posonlyargs:
+            raise ValueError(f"Unsupported function header: {_node_text(node)!r}")
+
+        args = list(zip(node.args.args, self._argument_defaults(node)))
+        if drop_untyped_self and args and args[0][0].arg == "self" and args[0][0].annotation is None:
+            args = args[1:]
+
+        semantic_args = [self._callable_argument(arg, default) for arg, default in args]
+        return_type, returned_args = self.return_projection(node.returns)
+        return_type, returned_args = self._apply_native_call_returns(return_type, returned_args, projection)
+        return_positions = self._return_positions_by_name(returned_args)
+        self._apply_projected_returns(semantic_args, returned_args)
+        self._apply_native_call_argument_names(semantic_args, return_positions, projection)
+        return semantic_args, return_type
+
+    def _callable_argument(self, arg: ast.arg, default: ast.expr | None) -> SemanticArgument:
+        if arg.annotation is None:
+            raise ValueError(f"Expected typed argument: {arg.arg!r}")
+        visibility, semantic_type, original_name = self.visible_type(arg.annotation)
+        semantic_type.ownership.mutable = False
+        return SemanticArgument(
+            name=original_name or arg.arg,
+            semantic_type=semantic_type,
+            intent="in",
+            optional=self.default_marks_optional(default),
+            visibility=visibility,
+        )
+
+    @staticmethod
+    def _argument_defaults(node: ast.FunctionDef) -> list[ast.expr | None]:
+        defaults: list[ast.expr | None] = [None] * (len(node.args.args) - len(node.args.defaults))
+        defaults.extend(node.args.defaults)
+        return defaults
+
+    @staticmethod
+    def _validate_stub_callable(node: ast.FunctionDef) -> None:
+        if len(node.body) != 1:
+            raise ValueError(f"Unsupported function header: {_node_text(node)!r}")
+        body = node.body[0]
+        if not (
+            isinstance(body, ast.Expr)
+            and isinstance(body.value, ast.Constant)
+            and body.value.value is Ellipsis
+        ):
+            raise ValueError(f"Unsupported function header: {_node_text(node)!r}")
+
+    @staticmethod
+    def _apply_projected_returns(semantic_args: list[SemanticArgument], returned_args: list[SemanticArgument]) -> None:
         by_name = {arg.name: arg for arg in semantic_args}
         for returned in returned_args:
             existing = by_name.get(returned.name)
@@ -306,8 +469,8 @@ class PyiToIRParser:
             existing.intent = "inout"
             existing.semantic_type.ownership.mutable = True
 
+    @staticmethod
     def _apply_native_call_returns(
-        self,
         return_type: SemanticType | None,
         returned_args: list[SemanticArgument],
         projection: list[ProjectionMapping],
@@ -342,10 +505,7 @@ class PyiToIRParser:
 
     @staticmethod
     def _return_positions_by_name(returned_args: list[SemanticArgument]) -> dict[str, int | None]:
-        return {
-            returned.name: returned.metadata.get("return_position")
-            for returned in returned_args
-        }
+        return {returned.name: returned.metadata.get("return_position") for returned in returned_args}
 
     @staticmethod
     def _apply_native_call_argument_names(
@@ -366,315 +526,49 @@ class PyiToIRParser:
             if arg.intent == "inout" and mapping.result_position is None:
                 mapping.result_position = return_positions.get(arg.name)
 
-    def _parse_visible_type(self, type_text: str) -> tuple[str, SemanticType, str | None]:
-        if type_text.startswith("private[") and type_text.endswith("]"):
-            semantic_type, original_name = self._parse_semantic_type_annotation(type_text[len("private[") : -1])
-            return "private", semantic_type, original_name
-        semantic_type, original_name = self._parse_semantic_type_annotation(type_text)
-        return "public", semantic_type, original_name
+    def return_items(self, node: ast.expr) -> list[ast.expr]:
+        if self.subscript_name(node) == "tuple":
+            return self.subscript_items(node)
+        return [node]
 
-    def _parse_semantic_type_annotation(self, type_text: str) -> tuple[SemanticType, str | None]:
-        type_text = type_text.strip()
-        if type_text.startswith("Annotated[") and type_text.endswith("]"):
-            name, inner = self._split_type_subscript(type_text)
-            if name == "Annotated":
-                items = self._split_top_level(inner)
-                if not items:
-                    raise ValueError(f"Annotated type is empty: {type_text!r}")
-                semantic_type = self._parse_semantic_type(items[0])
-                original_name = None
-                for item in items[1:]:
-                    parsed_name = self._parse_name_metadata(item)
-                    if parsed_name is not None:
-                        original_name = parsed_name
-                return semantic_type, original_name
-        return self._parse_semantic_type(type_text), None
 
-    def _parse_semantic_type(self, type_text: str) -> SemanticType:
-        type_text = type_text.strip()
-        if type_text.startswith("Annotated[") and type_text.endswith("]"):
-            semantic_type, _ = self._parse_semantic_type_annotation(type_text)
-            return semantic_type
-        if "[" not in type_text:
-            return SemanticType(name=type_text, dtype=type_text)
+class _ModuleVisitor(ast.NodeVisitor):
+    def __init__(self, parser: _PyiAstParser):
+        self.parser = parser
 
-        name, inner = self._split_type_subscript(type_text)
-        constraints = [self._parse_constraint(token) for token in self._split_top_level(inner)]
-        shape = []
-        for constraint in constraints:
-            if constraint.name == "Shape":
-                shape = [str(arg) for arg in constraint.arguments]
-                break
-        return SemanticType(
-            name=name,
-            rank=len(shape),
-            dtype=name,
-            shape=shape,
-            constraints=constraints,
+    def visit_Module(self, node: ast.Module) -> None:
+        for item in node.body:
+            self.visit(item)
+
+    def visit_Import(self, node: ast.Import) -> None:
+        self.parser.module.imports.append(self.parser.import_name(node))
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        self.parser.module.imports.append(self.parser.import_from(node))
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        self.parser.module.variables.append(self.parser.ann_assign(node, default_intent="in"))
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        decorators = self.parser.decorators(node.decorator_list, context="class")
+        if decorators.has_native_call:
+            raise ValueError(f"Unsupported class decorator: {ast.unparse(node.decorator_list[-1])!r}")
+        self.parser.module.classes.append(self.parser.class_def(node, visibility=decorators.visibility))
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        decorators = self.parser.decorators(node.decorator_list, context=".pyi")
+        self.parser.module.functions.append(
+            self.parser.function_def(
+                node,
+                visibility=decorators.visibility,
+                projection=decorators.projection,
+            )
         )
 
-    def _parse_constraint(self, token: str) -> SemanticConstraint:
-        token = token.strip()
-        expr = ast.parse(token, mode="eval").body
-        if isinstance(expr, ast.Name):
-            return SemanticConstraint(expr.id)
-        if isinstance(expr, ast.Call) and isinstance(expr.func, ast.Name):
-            return SemanticConstraint(
-                name=expr.func.id,
-                arguments=[ast.literal_eval(arg) for arg in expr.args],
-            )
-        raise ValueError(f"Unsupported semantic type constraint: {token!r}")
+    def generic_visit(self, node: ast.AST) -> None:
+        raise ValueError(f"Unsupported .pyi node: {_node_text(node)!r}")
 
-    def _parse_native_call_decorator(self, text: str) -> list[ProjectionMapping]:
-        expr = ast.parse(text[1:], mode="eval").body
-        if not isinstance(expr, ast.Call) or not isinstance(expr.func, ast.Name) or expr.func.id != "native_call":
-            raise ValueError(f"Unsupported native call decorator: {text!r}")
-        if len(expr.args) != 1 or expr.keywords:
-            raise ValueError("native_call expects a single list argument")
-        entries = expr.args[0]
-        if not isinstance(entries, ast.List):
-            raise ValueError("native_call expects a list of projection entries")
-        return [
-            self._parse_native_projection_entry(entry, native_position)
-            for native_position, entry in enumerate(entries.elts)
-        ]
 
-    def _parse_native_projection_entry(self, expr: ast.AST, native_position: int) -> ProjectionMapping:
-        if not isinstance(expr, ast.Call) or not isinstance(expr.func, ast.Name):
-            raise ValueError("native_call expects projection entry calls")
-        if expr.keywords:
-            raise ValueError(f"{expr.func.id} expects positional arguments only")
-        if expr.func.id == "Arg":
-            if len(expr.args) != 1:
-                raise ValueError("Arg expects one positional index")
-            position = int(ast.literal_eval(expr.args[0]))
-            return ProjectionMapping(
-                native_position=native_position,
-                python_position=position,
-            )
-        if expr.func.id == "Return":
-            if len(expr.args) != 1:
-                raise ValueError("Return expects one positional index")
-            position = int(ast.literal_eval(expr.args[0]))
-            return ProjectionMapping(
-                native_position=native_position,
-                result_position=position,
-                intent="out",
-            )
-        if expr.func.id == "Const":
-            if len(expr.args) != 1:
-                raise ValueError("Const expects one value")
-            return ProjectionMapping(
-                native_position=native_position,
-                value_kind="const",
-                value=ast.literal_eval(expr.args[0]),
-            )
-        if expr.func.id == "Len":
-            if len(expr.args) != 1:
-                raise ValueError("Len expects one value reference")
-            return ProjectionMapping(
-                native_position=native_position,
-                value_kind="len",
-                value=self._parse_native_value_ref(expr.args[0]),
-            )
-        if expr.func.id == "Shape":
-            if len(expr.args) != 2:
-                raise ValueError("Shape expects a value reference and dimension")
-            return ProjectionMapping(
-                native_position=native_position,
-                value_kind="shape",
-                value={
-                    "value": self._parse_native_value_ref(expr.args[0]),
-                    "dim": int(ast.literal_eval(expr.args[1])),
-                },
-            )
-        if expr.func.id == "IsPresent":
-            if len(expr.args) != 1:
-                raise ValueError("IsPresent expects one value reference")
-            return ProjectionMapping(
-                native_position=native_position,
-                value_kind="is_present",
-                value=self._parse_native_value_ref(expr.args[0]),
-            )
-        if expr.func.id == "Work":
-            if len(expr.args) != 1:
-                raise ValueError("Work expects one workspace name")
-            return ProjectionMapping(
-                native_position=native_position,
-                value_kind="work",
-                value=str(ast.literal_eval(expr.args[0])),
-            )
-        raise ValueError(f"Unsupported native_call projection entry: {expr.func.id}")
-
-    def _parse_native_value_ref(self, expr: ast.AST) -> dict[str, int | str]:
-        if not isinstance(expr, ast.Call) or not isinstance(expr.func, ast.Name):
-            raise ValueError("Expected Arg(...), Return(...), or Work(...) value reference")
-        if expr.keywords or len(expr.args) != 1:
-            raise ValueError(f"{expr.func.id} value reference expects one positional argument")
-        if expr.func.id == "Arg":
-            return {"kind": "arg", "position": int(ast.literal_eval(expr.args[0]))}
-        if expr.func.id == "Return":
-            return {"kind": "return", "position": int(ast.literal_eval(expr.args[0]))}
-        if expr.func.id == "Work":
-            return {"kind": "work", "name": str(ast.literal_eval(expr.args[0]))}
-        raise ValueError("Expected Arg(...), Return(...), or Work(...) value reference")
-
-    def _collect_decorator(self, start: int) -> tuple[str, int]:
-        parts: list[str] = []
-        depth = 0
-        quote: str | None = None
-        index = start
-        while index < len(self.lines):
-            line = self.lines[index].strip()
-            parts.append(line)
-            for char in line:
-                if quote:
-                    if char == quote:
-                        quote = None
-                    continue
-                if char in {"'", '"'}:
-                    quote = char
-                    continue
-                if char in "([{":
-                    depth += 1
-                    continue
-                if char in ")]}":
-                    depth -= 1
-            index += 1
-            if depth <= 0:
-                break
-        return " ".join(parts), index
-
-    def _parse_return_projection(self, text: str) -> tuple[SemanticType | None, list[SemanticArgument]]:
-        text = text.strip()
-        if text == "None":
-            return None, []
-        return_type: SemanticType | None = None
-        returned_args: list[SemanticArgument] = []
-        plain_return_index = 0
-        for item_index, item in enumerate(self._return_items(text)):
-            returned = self._parse_returned_argument(item)
-            if returned is not None:
-                returned.metadata["return_position"] = item_index
-                returned_args.append(returned)
-            else:
-                semantic_type = self._parse_semantic_type(item)
-                if item_index == 0:
-                    return_type = semantic_type
-                else:
-                    returned_args.append(
-                        SemanticArgument(
-                            name=f"__return_{plain_return_index}",
-                            semantic_type=semantic_type,
-                            intent="out",
-                            metadata={"return_position": item_index},
-                        )
-                    )
-                plain_return_index += 1
-        return return_type, returned_args
-
-    def _return_items(self, text: str) -> list[str]:
-        if text.startswith("tuple[") and text.endswith("]"):
-            _, inner = self._split_type_subscript(text)
-            return self._split_top_level(inner)
-        return [text]
-
-    def _parse_returned_argument(self, text: str) -> SemanticArgument | None:
-        if not text.startswith("Returns["):
-            return None
-        name, inner = self._split_type_subscript(text)
-        if name != "Returns":
-            return None
-        items = self._split_top_level(inner)
-        if len(items) not in {2, 3}:
-            raise ValueError(f"Returns expects a name and type: {text!r}")
-        arg_name = ast.literal_eval(items[0])
-        semantic_type = self._parse_semantic_type(items[1])
-        semantic_type.ownership.mutable = True
-        return SemanticArgument(
-            name=str(arg_name),
-            semantic_type=semantic_type,
-            intent="out",
-            optional=len(items) == 3 and items[2] == "Optional",
-        )
-
-    def _parse_name_metadata(self, text: str) -> str | None:
-        expr = ast.parse(text, mode="eval").body
-        if isinstance(expr, ast.Call) and isinstance(expr.func, ast.Name) and expr.func.id == "Name":
-            if len(expr.args) != 1:
-                raise ValueError(f"Name metadata expects one argument: {text!r}")
-            return str(ast.literal_eval(expr.args[0]))
-        return None
-
-    def _split_argument_text(self, text: str) -> list[str]:
-        if not text.strip():
-            return []
-        return self._split_top_level(text)
-
-    def _split_type_subscript(self, text: str) -> tuple[str, str]:
-        start = text.find("[")
-        if start < 0 or not text.endswith("]"):
-            raise ValueError(f"Unsupported type annotation: {text!r}")
-        return text[:start].strip(), text[start + 1 : -1].strip()
-
-    def _split_annotation_line(self, text: str) -> tuple[str, str] | None:
-        depth = 0
-        quote: str | None = None
-        for i, char in enumerate(text):
-            if quote:
-                if char == quote:
-                    quote = None
-                continue
-            if char in {"'", '"'}:
-                quote = char
-                continue
-            if char in "([{":
-                depth += 1
-                continue
-            if char in ")]}":
-                depth -= 1
-                continue
-            if char == ":" and depth == 0:
-                return text[:i].strip(), text[i + 1 :].strip()
-        return None
-
-    def _parse_annotation_target(self, text: str) -> str:
-        if re.match(r"^[A-Za-z_]\w*$", text):
-            return text
-        expr = ast.parse(text, mode="eval").body
-        if isinstance(expr, ast.Subscript) and isinstance(expr.value, ast.Name) and expr.value.id == "var":
-            return str(ast.literal_eval(expr.slice))
-        raise ValueError(f"Unsupported annotation target: {text!r}")
-
-    def _split_top_level(self, text: str) -> list[str]:
-        items: list[str] = []
-        start = 0
-        depth = 0
-        quote: str | None = None
-        for i, char in enumerate(text):
-            if quote:
-                if char == quote:
-                    quote = None
-                continue
-            if char in {"'", '"'}:
-                quote = char
-                continue
-            if char in "([{":
-                depth += 1
-                continue
-            if char in ")]}":
-                depth -= 1
-                continue
-            if char == "," and depth == 0:
-                item = text[start:i].strip()
-                if item:
-                    items.append(item)
-                start = i + 1
-        item = text[start:].strip()
-        if item:
-            items.append(item)
-        return items
-
-    @staticmethod
-    def _indent(line: str) -> int:
-        return len(line) - len(line.lstrip(" "))
+def _node_text(node: ast.AST) -> str:
+    text = ast.unparse(node)
+    return text.splitlines()[0] if text else type(node).__name__
