@@ -16,7 +16,7 @@
         {
           "name": "M",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -45,7 +45,7 @@
         {
           "name": "Mloc",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -134,7 +134,7 @@
         {
           "name": "M",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -163,7 +163,7 @@
         {
           "name": "Mloc",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -252,7 +252,7 @@
         {
           "name": "Mloc",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -281,7 +281,7 @@
         {
           "name": "M",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -370,7 +370,7 @@
         {
           "name": "Mloc",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -399,7 +399,7 @@
         {
           "name": "M",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -495,7 +495,7 @@
         {
           "name": "M",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -524,7 +524,7 @@
         {
           "name": "Mloc",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -613,7 +613,7 @@
         {
           "name": "M",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -642,7 +642,7 @@
         {
           "name": "Mloc",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -731,7 +731,7 @@
         {
           "name": "Mloc",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -760,7 +760,7 @@
         {
           "name": "M",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -849,7 +849,7 @@
         {
           "name": "Mloc",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -878,7 +878,7 @@
         {
           "name": "M",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",

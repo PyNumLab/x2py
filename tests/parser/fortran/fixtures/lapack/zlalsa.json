@@ -96,7 +96,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDB",
@@ -145,7 +145,7 @@
         {
           "name": "BX",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDBX",
@@ -770,7 +770,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDB",
@@ -819,7 +819,7 @@
         {
           "name": "BX",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDBX",

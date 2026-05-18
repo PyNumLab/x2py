@@ -136,7 +136,7 @@
         {
           "name": "H",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDH",
@@ -185,7 +185,7 @@
         {
           "name": "T",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDT",
@@ -234,7 +234,7 @@
         {
           "name": "ALPHA",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -260,7 +260,7 @@
         {
           "name": "BETA",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -286,7 +286,7 @@
         {
           "name": "Q",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDQ",
@@ -335,7 +335,7 @@
         {
           "name": "Z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDZ",
@@ -384,7 +384,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -615,7 +615,7 @@
         {
           "name": "H",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDH",
@@ -664,7 +664,7 @@
         {
           "name": "T",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDT",
@@ -713,7 +713,7 @@
         {
           "name": "ALPHA",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -739,7 +739,7 @@
         {
           "name": "BETA",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -765,7 +765,7 @@
         {
           "name": "Q",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDQ",
@@ -814,7 +814,7 @@
         {
           "name": "Z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDZ",
@@ -863,7 +863,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"

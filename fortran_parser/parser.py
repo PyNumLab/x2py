@@ -837,8 +837,8 @@ def _parse_common_declaration_left(
     if star_kind:
         base, kind = star_kind
         tail = _strip_legacy_star_kind_prefix(left)
-        if not tail and _source_form(filename) == "modern":
-            return _new_decl_meta(base.lower(), kind), []
+        attrs = split_csv(tail.lstrip(", ")) if tail.startswith(",") else []
+        return _new_decl_meta(base.lower(), kind), attrs
 
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)

@@ -136,7 +136,7 @@
         {
           "name": "X11",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX11",
@@ -185,7 +185,7 @@
         {
           "name": "X21",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX21",
@@ -260,7 +260,7 @@
         {
           "name": "U1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDU1",
@@ -309,7 +309,7 @@
         {
           "name": "U2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDU2",
@@ -358,7 +358,7 @@
         {
           "name": "V1T",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDV1T",
@@ -407,7 +407,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -684,7 +684,7 @@
         {
           "name": "X11",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX11",
@@ -733,7 +733,7 @@
         {
           "name": "X21",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX21",
@@ -808,7 +808,7 @@
         {
           "name": "U1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDU1",
@@ -857,7 +857,7 @@
         {
           "name": "U2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDU2",
@@ -906,7 +906,7 @@
         {
           "name": "V1T",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDV1T",
@@ -955,7 +955,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"

@@ -51,7 +51,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -77,7 +77,7 @@
             {
               "name": "ave",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -97,7 +97,7 @@
             {
               "name": "sdev",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -117,7 +117,7 @@
             {
               "name": "var",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -137,7 +137,7 @@
             {
               "name": "skew",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -157,7 +157,7 @@
             {
               "name": "curt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -222,7 +222,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -249,7 +249,7 @@
           "result": {
             "name": "mean",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -312,7 +312,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -339,7 +339,7 @@
           "result": {
             "name": "sd",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -402,7 +402,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -429,7 +429,7 @@
           "result": {
             "name": "var",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -492,7 +492,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -519,7 +519,7 @@
           "result": {
             "name": "skew",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -582,7 +582,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -609,7 +609,7 @@
           "result": {
             "name": "curt",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -672,7 +672,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -701,7 +701,7 @@
             {
               "name": "mean",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(data,1)"
@@ -728,7 +728,7 @@
           "result": {
             "name": "covariance",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 2,
             "shape": [
               "size(data,1)",
@@ -821,7 +821,7 @@
             {
               "name": "range",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -847,7 +847,7 @@
             {
               "name": "bin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -906,7 +906,7 @@
             {
               "name": "xmin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -926,7 +926,7 @@
             {
               "name": "xmax",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -946,7 +946,7 @@
             {
               "name": "dx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -986,7 +986,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1012,7 +1012,7 @@
             {
               "name": "pdf",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1038,7 +1038,7 @@
             {
               "name": "sigma",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1157,7 +1157,7 @@
             {
               "name": "xmin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "2"
@@ -1183,7 +1183,7 @@
             {
               "name": "xmax",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "2"
@@ -1209,7 +1209,7 @@
             {
               "name": "dx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "2"
@@ -1255,7 +1255,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1281,7 +1281,7 @@
             {
               "name": "y",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1307,7 +1307,7 @@
             {
               "name": "pdf",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -1336,7 +1336,7 @@
             {
               "name": "Sigma",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "2",
@@ -1624,7 +1624,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1650,7 +1650,7 @@
             {
               "name": "ave",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1670,7 +1670,7 @@
             {
               "name": "sdev",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1690,7 +1690,7 @@
             {
               "name": "var",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1710,7 +1710,7 @@
             {
               "name": "skew",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1730,7 +1730,7 @@
             {
               "name": "curt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1795,7 +1795,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1822,7 +1822,7 @@
           "result": {
             "name": "mean",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1885,7 +1885,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1912,7 +1912,7 @@
           "result": {
             "name": "sd",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1975,7 +1975,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2002,7 +2002,7 @@
           "result": {
             "name": "var",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2065,7 +2065,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2092,7 +2092,7 @@
           "result": {
             "name": "skew",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2155,7 +2155,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2182,7 +2182,7 @@
           "result": {
             "name": "curt",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2245,7 +2245,7 @@
             {
               "name": "data",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2274,7 +2274,7 @@
             {
               "name": "mean",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(data,1)"
@@ -2301,7 +2301,7 @@
           "result": {
             "name": "covariance",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 2,
             "shape": [
               "size(data,1)",
@@ -2394,7 +2394,7 @@
             {
               "name": "range",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2420,7 +2420,7 @@
             {
               "name": "bin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2479,7 +2479,7 @@
             {
               "name": "xmin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2499,7 +2499,7 @@
             {
               "name": "xmax",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2519,7 +2519,7 @@
             {
               "name": "dx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2559,7 +2559,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2585,7 +2585,7 @@
             {
               "name": "pdf",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2611,7 +2611,7 @@
             {
               "name": "sigma",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2730,7 +2730,7 @@
             {
               "name": "xmin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "2"
@@ -2756,7 +2756,7 @@
             {
               "name": "xmax",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "2"
@@ -2782,7 +2782,7 @@
             {
               "name": "dx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "2"
@@ -2828,7 +2828,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2854,7 +2854,7 @@
             {
               "name": "y",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2880,7 +2880,7 @@
             {
               "name": "pdf",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2909,7 +2909,7 @@
             {
               "name": "Sigma",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "2",

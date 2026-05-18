@@ -165,7 +165,7 @@
             {
               "name": "variable",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -225,7 +225,7 @@
             {
               "name": "default",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -534,7 +534,7 @@
             {
               "name": "variable",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -600,7 +600,7 @@
             {
               "name": "default",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(variable)"
@@ -994,7 +994,7 @@
             {
               "name": "variable",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1034,7 +1034,7 @@
             {
               "name": "default",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1243,7 +1243,7 @@
             {
               "name": "variable",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1289,7 +1289,7 @@
             {
               "name": "default",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(variable)"
@@ -2304,7 +2304,7 @@
             {
               "name": "variable",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2364,7 +2364,7 @@
             {
               "name": "default",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2673,7 +2673,7 @@
             {
               "name": "variable",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2739,7 +2739,7 @@
             {
               "name": "default",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(variable)"
@@ -3133,7 +3133,7 @@
             {
               "name": "variable",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3173,7 +3173,7 @@
             {
               "name": "default",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3382,7 +3382,7 @@
             {
               "name": "variable",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3428,7 +3428,7 @@
             {
               "name": "default",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(variable)"

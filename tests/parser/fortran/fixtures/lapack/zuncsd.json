@@ -196,7 +196,7 @@
         {
           "name": "X11",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX11",
@@ -245,7 +245,7 @@
         {
           "name": "X12",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX12",
@@ -294,7 +294,7 @@
         {
           "name": "X21",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX21",
@@ -343,7 +343,7 @@
         {
           "name": "X22",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX22",
@@ -418,7 +418,7 @@
         {
           "name": "U1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDU1",
@@ -467,7 +467,7 @@
         {
           "name": "U2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDU2",
@@ -516,7 +516,7 @@
         {
           "name": "V1T",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDV1T",
@@ -565,7 +565,7 @@
         {
           "name": "V2T",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDV2T",
@@ -614,7 +614,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -953,7 +953,7 @@
         {
           "name": "X11",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX11",
@@ -1002,7 +1002,7 @@
         {
           "name": "X12",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX12",
@@ -1051,7 +1051,7 @@
         {
           "name": "X21",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX21",
@@ -1100,7 +1100,7 @@
         {
           "name": "X22",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX22",
@@ -1175,7 +1175,7 @@
         {
           "name": "U1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDU1",
@@ -1224,7 +1224,7 @@
         {
           "name": "U2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDU2",
@@ -1273,7 +1273,7 @@
         {
           "name": "V1T",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDV1T",
@@ -1322,7 +1322,7 @@
         {
           "name": "V2T",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDV2T",
@@ -1371,7 +1371,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"

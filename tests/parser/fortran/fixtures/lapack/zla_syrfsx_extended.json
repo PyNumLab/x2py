@@ -96,7 +96,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDA",
@@ -145,7 +145,7 @@
         {
           "name": "AF",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDAF",
@@ -266,7 +266,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDB",
@@ -315,7 +315,7 @@
         {
           "name": "Y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDY",
@@ -468,7 +468,7 @@
         {
           "name": "RES",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -520,7 +520,7 @@
         {
           "name": "DY",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -546,7 +546,7 @@
         {
           "name": "Y_TAIL",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -791,7 +791,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDA",
@@ -840,7 +840,7 @@
         {
           "name": "AF",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDAF",
@@ -961,7 +961,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDB",
@@ -1010,7 +1010,7 @@
         {
           "name": "Y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDY",
@@ -1163,7 +1163,7 @@
         {
           "name": "RES",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -1215,7 +1215,7 @@
         {
           "name": "DY",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -1241,7 +1241,7 @@
         {
           "name": "Y_TAIL",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"

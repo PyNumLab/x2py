@@ -136,7 +136,7 @@
         {
           "name": "AB",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDAB",
@@ -185,7 +185,7 @@
         {
           "name": "AFB",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDAFB",
@@ -332,7 +332,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDB",
@@ -381,7 +381,7 @@
         {
           "name": "X",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX",
@@ -620,7 +620,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -831,7 +831,7 @@
         {
           "name": "AB",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDAB",
@@ -880,7 +880,7 @@
         {
           "name": "AFB",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDAFB",
@@ -1027,7 +1027,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDB",
@@ -1076,7 +1076,7 @@
         {
           "name": "X",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX",
@@ -1315,7 +1315,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"

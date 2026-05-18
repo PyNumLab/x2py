@@ -20,7 +20,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -46,7 +46,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -72,7 +72,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -92,7 +92,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -126,7 +126,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -152,7 +152,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -178,7 +178,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -204,7 +204,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xout)"
@@ -244,7 +244,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -270,7 +270,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -296,7 +296,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -316,7 +316,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -350,7 +350,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -376,7 +376,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -402,7 +402,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -428,7 +428,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xout)"
@@ -468,7 +468,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -494,7 +494,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -520,7 +520,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -540,7 +540,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -594,7 +594,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -620,7 +620,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -646,7 +646,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -672,7 +672,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xout)"
@@ -732,7 +732,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -758,7 +758,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -784,7 +784,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -804,7 +804,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -858,7 +858,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -884,7 +884,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -910,7 +910,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -936,7 +936,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xout)"
@@ -996,7 +996,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1022,7 +1022,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -1048,7 +1048,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1068,7 +1068,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1102,7 +1102,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1128,7 +1128,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -1154,7 +1154,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1180,7 +1180,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xout)"
@@ -1220,7 +1220,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1246,7 +1246,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -1272,7 +1272,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1292,7 +1292,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1326,7 +1326,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1352,7 +1352,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -1378,7 +1378,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1404,7 +1404,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xout)"
@@ -1444,7 +1444,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1470,7 +1470,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1496,7 +1496,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -1525,7 +1525,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1545,7 +1545,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1565,7 +1565,7 @@
             {
               "name": "fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1599,7 +1599,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1625,7 +1625,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1651,7 +1651,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -1680,7 +1680,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1706,7 +1706,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1732,7 +1732,7 @@
             {
               "name": "fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xout)",
@@ -1775,7 +1775,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1801,7 +1801,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1827,7 +1827,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -1856,7 +1856,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1876,7 +1876,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1896,7 +1896,7 @@
             {
               "name": "fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1930,7 +1930,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1956,7 +1956,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1982,7 +1982,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -2011,7 +2011,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2037,7 +2037,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2063,7 +2063,7 @@
             {
               "name": "fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xout)",
@@ -2106,7 +2106,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2132,7 +2132,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2158,7 +2158,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -2187,7 +2187,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2207,7 +2207,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2227,7 +2227,7 @@
             {
               "name": "fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2281,7 +2281,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2307,7 +2307,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2333,7 +2333,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -2362,7 +2362,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2388,7 +2388,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2414,7 +2414,7 @@
             {
               "name": "fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xout)",
@@ -2477,7 +2477,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2503,7 +2503,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2529,7 +2529,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -2558,7 +2558,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2578,7 +2578,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2598,7 +2598,7 @@
             {
               "name": "fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2652,7 +2652,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2678,7 +2678,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2704,7 +2704,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -2733,7 +2733,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2759,7 +2759,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2785,7 +2785,7 @@
             {
               "name": "fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xout)",
@@ -2848,7 +2848,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2874,7 +2874,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2900,7 +2900,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(xin)"
@@ -2926,7 +2926,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(xin)"
@@ -2966,7 +2966,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2992,7 +2992,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3018,7 +3018,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(xin)"
@@ -3044,7 +3044,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(xin)"
@@ -3084,7 +3084,7 @@
             {
               "name": "xgrid",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3110,7 +3110,7 @@
             {
               "name": "ygrid",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3136,7 +3136,7 @@
             {
               "name": "fgrid",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xgrid)",
@@ -3165,7 +3165,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3185,7 +3185,7 @@
             {
               "name": "y",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3205,7 +3205,7 @@
             {
               "name": "delta",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3226,7 +3226,7 @@
           "result": {
             "name": "finterpolate",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -3259,7 +3259,7 @@
             {
               "name": "X",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3285,7 +3285,7 @@
             {
               "name": "F",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3311,7 +3311,7 @@
             {
               "name": "G",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3428,7 +3428,7 @@
             {
               "name": "X",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3454,7 +3454,7 @@
             {
               "name": "Y",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3480,7 +3480,7 @@
             {
               "name": "F",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -3703,7 +3703,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3729,7 +3729,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -3755,7 +3755,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3775,7 +3775,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3809,7 +3809,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3835,7 +3835,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -3861,7 +3861,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3887,7 +3887,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xout)"
@@ -3927,7 +3927,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3953,7 +3953,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -3979,7 +3979,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3999,7 +3999,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4033,7 +4033,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4059,7 +4059,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -4085,7 +4085,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4111,7 +4111,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xout)"
@@ -4151,7 +4151,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4177,7 +4177,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -4203,7 +4203,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4223,7 +4223,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4277,7 +4277,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4303,7 +4303,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -4329,7 +4329,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4355,7 +4355,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xout)"
@@ -4415,7 +4415,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4441,7 +4441,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -4467,7 +4467,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4487,7 +4487,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4541,7 +4541,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4567,7 +4567,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -4593,7 +4593,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4619,7 +4619,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xout)"
@@ -4679,7 +4679,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4705,7 +4705,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -4731,7 +4731,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4751,7 +4751,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4785,7 +4785,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4811,7 +4811,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -4837,7 +4837,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4863,7 +4863,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xout)"
@@ -4903,7 +4903,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4929,7 +4929,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -4955,7 +4955,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4975,7 +4975,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5009,7 +5009,7 @@
             {
               "name": "Xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5035,7 +5035,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xin)"
@@ -5061,7 +5061,7 @@
             {
               "name": "Xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5087,7 +5087,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(Xout)"
@@ -5127,7 +5127,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5153,7 +5153,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5179,7 +5179,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -5208,7 +5208,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5228,7 +5228,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5248,7 +5248,7 @@
             {
               "name": "fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5282,7 +5282,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5308,7 +5308,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5334,7 +5334,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -5363,7 +5363,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5389,7 +5389,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5415,7 +5415,7 @@
             {
               "name": "fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xout)",
@@ -5458,7 +5458,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5484,7 +5484,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5510,7 +5510,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -5539,7 +5539,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5559,7 +5559,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5579,7 +5579,7 @@
             {
               "name": "fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5613,7 +5613,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5639,7 +5639,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5665,7 +5665,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -5694,7 +5694,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5720,7 +5720,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5746,7 +5746,7 @@
             {
               "name": "fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xout)",
@@ -5789,7 +5789,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5815,7 +5815,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5841,7 +5841,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -5870,7 +5870,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5890,7 +5890,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5910,7 +5910,7 @@
             {
               "name": "fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5964,7 +5964,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5990,7 +5990,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6016,7 +6016,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -6045,7 +6045,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6071,7 +6071,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6097,7 +6097,7 @@
             {
               "name": "fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xout)",
@@ -6160,7 +6160,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6186,7 +6186,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6212,7 +6212,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -6241,7 +6241,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6261,7 +6261,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6281,7 +6281,7 @@
             {
               "name": "fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6335,7 +6335,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6361,7 +6361,7 @@
             {
               "name": "yin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6387,7 +6387,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xin)",
@@ -6416,7 +6416,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6442,7 +6442,7 @@
             {
               "name": "yout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6468,7 +6468,7 @@
             {
               "name": "fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xout)",
@@ -6531,7 +6531,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6557,7 +6557,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6583,7 +6583,7 @@
             {
               "name": "Fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(xin)"
@@ -6609,7 +6609,7 @@
             {
               "name": "Fout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(xin)"
@@ -6649,7 +6649,7 @@
             {
               "name": "xin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6675,7 +6675,7 @@
             {
               "name": "xout",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6701,7 +6701,7 @@
             {
               "name": "Fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(xin)"
@@ -6727,7 +6727,7 @@
             {
               "name": "Fout",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(xin)"
@@ -6767,7 +6767,7 @@
             {
               "name": "xgrid",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6793,7 +6793,7 @@
             {
               "name": "ygrid",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6819,7 +6819,7 @@
             {
               "name": "fgrid",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(xgrid)",
@@ -6848,7 +6848,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6868,7 +6868,7 @@
             {
               "name": "y",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6888,7 +6888,7 @@
             {
               "name": "delta",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6909,7 +6909,7 @@
           "result": {
             "name": "finterpolate",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -6942,7 +6942,7 @@
             {
               "name": "X",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6968,7 +6968,7 @@
             {
               "name": "F",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6994,7 +6994,7 @@
             {
               "name": "G",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7111,7 +7111,7 @@
             {
               "name": "X",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7137,7 +7137,7 @@
             {
               "name": "Y",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7163,7 +7163,7 @@
             {
               "name": "F",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",

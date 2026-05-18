@@ -96,7 +96,7 @@
         {
           "name": "AB",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDAB",
@@ -289,7 +289,7 @@
         {
           "name": "AB",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDAB",

@@ -36,7 +36,7 @@
         {
           "name": "Xin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -62,7 +62,7 @@
         {
           "name": "Fin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(xin)"
@@ -140,7 +140,7 @@
         {
           "name": "Xin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -166,7 +166,7 @@
         {
           "name": "Fin",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(xin)"
@@ -276,7 +276,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -297,7 +297,7 @@
       "result": {
         "name": "finter",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -347,7 +347,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -368,7 +368,7 @@
       "result": {
         "name": "cinter",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -425,7 +425,7 @@
         {
           "name": "Xin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -451,7 +451,7 @@
         {
           "name": "Fin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(xin)"
@@ -529,7 +529,7 @@
         {
           "name": "Xin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -555,7 +555,7 @@
         {
           "name": "Fin",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(xin)"
@@ -665,7 +665,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -686,7 +686,7 @@
       "result": {
         "name": "finter",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -736,7 +736,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -757,7 +757,7 @@
       "result": {
         "name": "cinter",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],

@@ -76,7 +76,7 @@
         {
           "name": "Q",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDQ",
@@ -243,7 +243,7 @@
         {
           "name": "Q2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDQ2",
@@ -599,7 +599,7 @@
         {
           "name": "Q",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDQ",
@@ -766,7 +766,7 @@
         {
           "name": "Q2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDQ2",

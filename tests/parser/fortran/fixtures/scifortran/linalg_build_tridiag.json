@@ -16,7 +16,7 @@
         {
           "name": "sub",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(diag)-1"
@@ -42,7 +42,7 @@
         {
           "name": "diag",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -68,7 +68,7 @@
         {
           "name": "over",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(diag)-1"
@@ -95,7 +95,7 @@
       "result": {
         "name": "Amat",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 2,
         "shape": [
           "size(diag)",
@@ -134,7 +134,7 @@
         {
           "name": "sub",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(diag)-1"
@@ -160,7 +160,7 @@
         {
           "name": "diag",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -186,7 +186,7 @@
         {
           "name": "over",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(diag)-1"
@@ -213,7 +213,7 @@
       "result": {
         "name": "Amat",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 2,
         "shape": [
           "size(diag)",
@@ -292,7 +292,7 @@
         {
           "name": "sub",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nblock-1",
@@ -324,7 +324,7 @@
         {
           "name": "diag",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nblock",
@@ -356,7 +356,7 @@
         {
           "name": "over",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nblock-1",
@@ -389,7 +389,7 @@
       "result": {
         "name": "Amat",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 2,
         "shape": [
           "Nblock*Nsize",
@@ -468,7 +468,7 @@
         {
           "name": "sub",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nblock-1",
@@ -500,7 +500,7 @@
         {
           "name": "diag",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nblock",
@@ -532,7 +532,7 @@
         {
           "name": "over",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nblock-1",
@@ -565,7 +565,7 @@
       "result": {
         "name": "Amat",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 2,
         "shape": [
           "Nblock*Nsize",
@@ -611,7 +611,7 @@
         {
           "name": "sub",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(diag)-1"
@@ -637,7 +637,7 @@
         {
           "name": "diag",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -663,7 +663,7 @@
         {
           "name": "over",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(diag)-1"
@@ -690,7 +690,7 @@
       "result": {
         "name": "Amat",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 2,
         "shape": [
           "size(diag)",
@@ -729,7 +729,7 @@
         {
           "name": "sub",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(diag)-1"
@@ -755,7 +755,7 @@
         {
           "name": "diag",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -781,7 +781,7 @@
         {
           "name": "over",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(diag)-1"
@@ -808,7 +808,7 @@
       "result": {
         "name": "Amat",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 2,
         "shape": [
           "size(diag)",
@@ -887,7 +887,7 @@
         {
           "name": "sub",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nblock-1",
@@ -919,7 +919,7 @@
         {
           "name": "diag",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nblock",
@@ -951,7 +951,7 @@
         {
           "name": "over",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nblock-1",
@@ -984,7 +984,7 @@
       "result": {
         "name": "Amat",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 2,
         "shape": [
           "Nblock*Nsize",
@@ -1063,7 +1063,7 @@
         {
           "name": "sub",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nblock-1",
@@ -1095,7 +1095,7 @@
         {
           "name": "diag",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nblock",
@@ -1127,7 +1127,7 @@
         {
           "name": "over",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nblock-1",
@@ -1160,7 +1160,7 @@
       "result": {
         "name": "Amat",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 2,
         "shape": [
           "Nblock*Nsize",

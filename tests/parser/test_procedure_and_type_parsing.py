@@ -96,6 +96,76 @@ end function norm2
     assert sig.arguments[0].shape == [":"]
 
 
+def test_builtin_datatypes_preserve_positional_and_keyword_kinds():
+    code = """
+subroutine builtin_kinds(i1, i2, r1, r2, c1, c2, l1, l2, ch1, ch2)
+  integer(4), intent(in) :: i1
+  integer(kind=8), intent(in) :: i2
+  real(8), intent(in) :: r1
+  real(kind=c_double), intent(in) :: r2
+  complex(16), intent(in) :: c1
+  complex(kind=c_double_complex), intent(in) :: c2
+  logical(1), intent(in) :: l1
+  logical(kind=c_bool), intent(in) :: l2
+  character(1), intent(in) :: ch1
+  character(len=1, kind=c_char), intent(in) :: ch2
+end subroutine builtin_kinds
+"""
+
+    args = {arg.name: arg for arg in parse_fortran_file(code, filename="builtin_kinds.f90").procedures[0].arguments}
+
+    assert args["i1"].base_type == "integer"
+    assert args["i1"].kind == "4"
+    assert args["i2"].kind == "8"
+    assert args["r1"].base_type == "real"
+    assert args["r1"].kind == "8"
+    assert args["r2"].kind == "c_double"
+    assert args["c1"].base_type == "complex"
+    assert args["c1"].kind == "16"
+    assert args["c2"].kind == "c_double_complex"
+    assert args["l1"].base_type == "logical"
+    assert args["l1"].kind == "1"
+    assert args["l2"].kind == "c_bool"
+    assert args["ch1"].base_type == "character"
+    assert args["ch1"].kind == "1"
+    assert args["ch2"].kind == "len=1, kind=c_char"
+
+
+def test_builtin_star_kind_declarations_preserve_all_intrinsic_kinds():
+    code = """
+subroutine star_kinds(i1, i2, r1, r2, c1, c2, l1, l2, ch1, ch2)
+  integer*4 i1
+  integer*8 :: i2
+  real*4 r1
+  real*8 :: r2
+  complex*8 c1
+  complex*16 :: c2
+  logical*1 l1
+  logical*4 :: l2
+  character*8 ch1
+  character*(*) :: ch2
+end subroutine star_kinds
+"""
+
+    args = {arg.name: arg for arg in parse_fortran_file(code, filename="star_kinds.f90").procedures[0].arguments}
+
+    assert args["i1"].base_type == "integer"
+    assert args["i1"].kind == "4"
+    assert args["i2"].kind == "8"
+    assert args["r1"].base_type == "real"
+    assert args["r1"].kind == "4"
+    assert args["r2"].kind == "8"
+    assert args["c1"].base_type == "complex"
+    assert args["c1"].kind == "8"
+    assert args["c2"].kind == "16"
+    assert args["l1"].base_type == "logical"
+    assert args["l1"].kind == "1"
+    assert args["l2"].kind == "4"
+    assert args["ch1"].base_type == "character"
+    assert args["ch1"].kind == "8"
+    assert args["ch2"].kind == "*"
+
+
 def test_fixed_form_and_interface_detection():
     code = """
       subroutine saxpy(n,x,y)
@@ -178,7 +248,7 @@ end subroutine modern_star
         filename="modern_star.f90",
     ).procedures[0]
     assert modern_proc.arguments[0].base_type == "real"
-    assert modern_proc.arguments[0].kind is None
+    assert modern_proc.arguments[0].kind == "8"
 
 
 def test_duplicate_symbols_are_reported_from_inline_fortran():

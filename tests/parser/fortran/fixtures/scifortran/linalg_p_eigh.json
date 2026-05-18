@@ -16,7 +16,7 @@
         {
           "name": "A",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -45,7 +45,7 @@
         {
           "name": "W",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(A,2)"
@@ -151,7 +151,7 @@
         {
           "name": "vl",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -171,7 +171,7 @@
         {
           "name": "vu",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -231,7 +231,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -263,7 +263,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -292,7 +292,7 @@
         {
           "name": "W",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(A,2)"
@@ -398,7 +398,7 @@
         {
           "name": "vl",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -418,7 +418,7 @@
         {
           "name": "vu",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -478,7 +478,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -517,7 +517,7 @@
         {
           "name": "A",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -546,7 +546,7 @@
         {
           "name": "W",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(A,2)"
@@ -652,7 +652,7 @@
         {
           "name": "vl",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -672,7 +672,7 @@
         {
           "name": "vu",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -732,7 +732,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -764,7 +764,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -793,7 +793,7 @@
         {
           "name": "W",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(A,2)"
@@ -899,7 +899,7 @@
         {
           "name": "vl",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -919,7 +919,7 @@
         {
           "name": "vu",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -979,7 +979,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],

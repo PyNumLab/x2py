@@ -57,7 +57,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "L"
@@ -83,7 +83,7 @@
         {
           "name": "X_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "L"
@@ -109,7 +109,7 @@
         {
           "name": "A1",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "L"
@@ -135,7 +135,7 @@
         {
           "name": "A1_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "L"
@@ -161,7 +161,7 @@
         {
           "name": "A2",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "L",
@@ -190,7 +190,7 @@
         {
           "name": "A2_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "L",
@@ -219,7 +219,7 @@
         {
           "name": "A3",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "L",
@@ -251,7 +251,7 @@
         {
           "name": "A3_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "L",
@@ -283,7 +283,7 @@
         {
           "name": "A4",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 4,
           "shape": [
             "L",
@@ -318,7 +318,7 @@
         {
           "name": "A4_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 4,
           "shape": [
             "L",
@@ -353,7 +353,7 @@
         {
           "name": "A5",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 5,
           "shape": [
             "L",
@@ -391,7 +391,7 @@
         {
           "name": "A5_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 5,
           "shape": [
             "L",
@@ -429,7 +429,7 @@
         {
           "name": "A6",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 6,
           "shape": [
             "L",
@@ -470,7 +470,7 @@
         {
           "name": "A6_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 6,
           "shape": [
             "L",
@@ -511,7 +511,7 @@
         {
           "name": "A7",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 7,
           "shape": [
             "L",
@@ -555,7 +555,7 @@
         {
           "name": "A7_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 7,
           "shape": [
             "L",
@@ -599,7 +599,7 @@
         {
           "name": "B1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "L"
@@ -625,7 +625,7 @@
         {
           "name": "B1_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "L"
@@ -651,7 +651,7 @@
         {
           "name": "B2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "L",
@@ -680,7 +680,7 @@
         {
           "name": "B2_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "L",
@@ -709,7 +709,7 @@
         {
           "name": "B3",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "L",
@@ -741,7 +741,7 @@
         {
           "name": "B3_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "L",
@@ -773,7 +773,7 @@
         {
           "name": "B4",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 4,
           "shape": [
             "L",
@@ -808,7 +808,7 @@
         {
           "name": "B4_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 4,
           "shape": [
             "L",
@@ -843,7 +843,7 @@
         {
           "name": "B5",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 5,
           "shape": [
             "L",
@@ -881,7 +881,7 @@
         {
           "name": "B5_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 5,
           "shape": [
             "L",
@@ -919,7 +919,7 @@
         {
           "name": "B6",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 6,
           "shape": [
             "L",
@@ -960,7 +960,7 @@
         {
           "name": "B6_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 6,
           "shape": [
             "L",
@@ -1001,7 +1001,7 @@
         {
           "name": "B7",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 7,
           "shape": [
             "L",
@@ -1045,7 +1045,7 @@
         {
           "name": "B7_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 7,
           "shape": [
             "L",
@@ -1089,7 +1089,7 @@
         {
           "name": "const",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],

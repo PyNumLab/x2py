@@ -123,7 +123,7 @@
         {
           "name": "grid",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "L"
@@ -149,7 +149,7 @@
         {
           "name": "upmgrid",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N"
@@ -175,7 +175,7 @@
         {
           "name": "upmint",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2*P*Q+1"
@@ -201,7 +201,7 @@
         {
           "name": "fmesh",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],

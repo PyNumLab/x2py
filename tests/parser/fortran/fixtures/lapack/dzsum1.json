@@ -36,7 +36,7 @@
         {
           "name": "CX",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -140,7 +140,7 @@
         {
           "name": "CX",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"

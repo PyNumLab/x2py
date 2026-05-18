@@ -117,7 +117,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -137,7 +137,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "n"
@@ -163,7 +163,7 @@
         {
           "name": "x0",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "n"
@@ -189,7 +189,7 @@
         {
           "name": "y",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "n"
@@ -215,7 +215,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "npar"
@@ -241,7 +241,7 @@
         {
           "name": "xdata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "m"
@@ -267,7 +267,7 @@
         {
           "name": "ydata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "m"
@@ -293,7 +293,7 @@
         {
           "name": "ynoise",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "m"
@@ -319,7 +319,7 @@
         {
           "name": "xwork",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "m"
@@ -345,7 +345,7 @@
         {
           "name": "ywork",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "m"
@@ -371,7 +371,7 @@
         {
           "name": "fvec",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "m"

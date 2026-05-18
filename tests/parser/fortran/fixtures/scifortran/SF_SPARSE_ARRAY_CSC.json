@@ -118,7 +118,7 @@
             {
               "name": "matrix",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -211,7 +211,7 @@
             {
               "name": "matrix",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -352,7 +352,7 @@
             {
               "name": "matrix",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -445,7 +445,7 @@
             {
               "name": "matrix",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -613,7 +613,7 @@
             {
               "name": "value",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -718,7 +718,7 @@
             {
               "name": "value",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -864,7 +864,7 @@
           "result": {
             "name": "value",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -968,7 +968,7 @@
           "result": {
             "name": "value",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1031,7 +1031,7 @@
             {
               "name": "matrix",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -1105,7 +1105,7 @@
             {
               "name": "matrix",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -1180,7 +1180,7 @@
           "result": {
             "name": "matrix",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 2,
             "shape": [
               "sparse%Nrow",
@@ -1253,7 +1253,7 @@
           "result": {
             "name": "matrix",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 2,
             "shape": [
               "sparse%Nrow",
@@ -1906,7 +1906,7 @@
             {
               "name": "c",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2203,7 +2203,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2391,7 +2391,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2559,7 +2559,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2900,7 +2900,7 @@
             {
               "name": "c",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3197,7 +3197,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3281,7 +3281,7 @@
             {
               "name": "C",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3469,7 +3469,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3553,7 +3553,7 @@
             {
               "name": "C",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3721,7 +3721,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3805,7 +3805,7 @@
             {
               "name": "C",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3869,7 +3869,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3916,7 +3916,7 @@
           "result": {
             "name": "B",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(C)"
@@ -3965,7 +3965,7 @@
             {
               "name": "C",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4012,7 +4012,7 @@
           "result": {
             "name": "B",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(C)"
@@ -4119,7 +4119,7 @@
             {
               "name": "vals",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4212,7 +4212,7 @@
             {
               "name": "vals",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4706,7 +4706,7 @@
             {
               "name": "matrix",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -4799,7 +4799,7 @@
             {
               "name": "matrix",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -4940,7 +4940,7 @@
             {
               "name": "matrix",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -5033,7 +5033,7 @@
             {
               "name": "matrix",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -5201,7 +5201,7 @@
             {
               "name": "value",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5306,7 +5306,7 @@
             {
               "name": "value",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5452,7 +5452,7 @@
           "result": {
             "name": "value",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -5556,7 +5556,7 @@
           "result": {
             "name": "value",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -5619,7 +5619,7 @@
             {
               "name": "matrix",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -5693,7 +5693,7 @@
             {
               "name": "matrix",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -5768,7 +5768,7 @@
           "result": {
             "name": "matrix",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 2,
             "shape": [
               "sparse%Nrow",
@@ -5841,7 +5841,7 @@
           "result": {
             "name": "matrix",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 2,
             "shape": [
               "sparse%Nrow",
@@ -6494,7 +6494,7 @@
             {
               "name": "c",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6791,7 +6791,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6979,7 +6979,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7147,7 +7147,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7488,7 +7488,7 @@
             {
               "name": "c",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7785,7 +7785,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7869,7 +7869,7 @@
             {
               "name": "C",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -8057,7 +8057,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -8141,7 +8141,7 @@
             {
               "name": "C",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -8309,7 +8309,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -8393,7 +8393,7 @@
             {
               "name": "C",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -8457,7 +8457,7 @@
             {
               "name": "C",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -8504,7 +8504,7 @@
           "result": {
             "name": "B",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(C)"
@@ -8553,7 +8553,7 @@
             {
               "name": "C",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -8600,7 +8600,7 @@
           "result": {
             "name": "B",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(C)"
@@ -8707,7 +8707,7 @@
             {
               "name": "vals",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -8800,7 +8800,7 @@
             {
               "name": "vals",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"

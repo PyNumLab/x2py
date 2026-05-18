@@ -36,7 +36,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -62,7 +62,7 @@
         {
           "name": "xdata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -88,7 +88,7 @@
         {
           "name": "ydata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(xdata)"
@@ -114,7 +114,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -186,7 +186,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -212,7 +212,7 @@
         {
           "name": "xdata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -238,7 +238,7 @@
         {
           "name": "ydata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(xdata)"
@@ -264,7 +264,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -356,7 +356,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -382,7 +382,7 @@
         {
           "name": "xdata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -408,7 +408,7 @@
         {
           "name": "ydata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(xdata)"
@@ -434,7 +434,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -526,7 +526,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -552,7 +552,7 @@
         {
           "name": "xdata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -578,7 +578,7 @@
         {
           "name": "ydata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(xdata)"
@@ -604,7 +604,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -662,7 +662,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -688,7 +688,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -715,7 +715,7 @@
           "result": {
             "name": "model_func",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(x)"
@@ -757,7 +757,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -783,7 +783,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -809,7 +809,7 @@
             {
               "name": "f",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(x)"
@@ -853,7 +853,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -879,7 +879,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -906,7 +906,7 @@
           "result": {
             "name": "model_func",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(x)"
@@ -942,7 +942,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -968,7 +968,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -995,7 +995,7 @@
           "result": {
             "name": "model_dfunc",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 2,
             "shape": [
               "size(x)",
@@ -1040,7 +1040,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1066,7 +1066,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1092,7 +1092,7 @@
             {
               "name": "f",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(x)"
@@ -1130,7 +1130,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1156,7 +1156,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1182,7 +1182,7 @@
             {
               "name": "df",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 "size(x)",
@@ -1251,7 +1251,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1277,7 +1277,7 @@
         {
           "name": "xdata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1303,7 +1303,7 @@
         {
           "name": "ydata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(xdata)"
@@ -1329,7 +1329,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1401,7 +1401,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1427,7 +1427,7 @@
         {
           "name": "xdata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1453,7 +1453,7 @@
         {
           "name": "ydata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(xdata)"
@@ -1479,7 +1479,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1571,7 +1571,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1597,7 +1597,7 @@
         {
           "name": "xdata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1623,7 +1623,7 @@
         {
           "name": "ydata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(xdata)"
@@ -1649,7 +1649,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1741,7 +1741,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1767,7 +1767,7 @@
         {
           "name": "xdata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1793,7 +1793,7 @@
         {
           "name": "ydata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(xdata)"
@@ -1819,7 +1819,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],

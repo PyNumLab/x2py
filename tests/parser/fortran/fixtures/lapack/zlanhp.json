@@ -76,7 +76,7 @@
         {
           "name": "AP",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -226,7 +226,7 @@
         {
           "name": "AP",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"

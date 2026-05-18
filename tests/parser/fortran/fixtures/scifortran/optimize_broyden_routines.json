@@ -24,7 +24,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 1,
                   "shape": [
                     ":"
@@ -51,7 +51,7 @@
               "result": {
                 "name": "broydn_func",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 1,
                 "shape": [
                   "size(x)"
@@ -163,7 +163,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -189,7 +189,7 @@
             {
               "name": "fvec",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -215,7 +215,7 @@
             {
               "name": "df",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -258,7 +258,7 @@
             {
               "name": "xold",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -284,7 +284,7 @@
             {
               "name": "fold",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -304,7 +304,7 @@
             {
               "name": "g",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -330,7 +330,7 @@
             {
               "name": "p",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -356,7 +356,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -382,7 +382,7 @@
             {
               "name": "f",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -402,7 +402,7 @@
             {
               "name": "stpmax",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -476,7 +476,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -505,7 +505,7 @@
             {
               "name": "c",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -531,7 +531,7 @@
             {
               "name": "d",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -591,7 +591,7 @@
             {
               "name": "r",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -620,7 +620,7 @@
             {
               "name": "qt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -649,7 +649,7 @@
             {
               "name": "u",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -675,7 +675,7 @@
             {
               "name": "v",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -715,7 +715,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -744,7 +744,7 @@
             {
               "name": "d",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -770,7 +770,7 @@
             {
               "name": "b",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -810,7 +810,7 @@
             {
               "name": "mat",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -840,7 +840,7 @@
           "result": {
             "name": "get_diag_dv",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(mat,1)"
@@ -1379,7 +1379,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1405,7 +1405,7 @@
             {
               "name": "b",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1432,7 +1432,7 @@
           "result": {
             "name": "outerprod_d",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 2,
             "shape": [
               "size(a)",
@@ -1473,7 +1473,7 @@
             {
               "name": "diagv",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1499,7 +1499,7 @@
             {
               "name": "mat",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -1542,7 +1542,7 @@
             {
               "name": "mat",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -1585,7 +1585,7 @@
             {
               "name": "v",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1612,7 +1612,7 @@
           "result": {
             "name": "vabs",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1710,7 +1710,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 1,
                   "shape": [
                     ":"
@@ -1737,7 +1737,7 @@
               "result": {
                 "name": "func",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -1797,7 +1797,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 1,
                   "shape": [
                     ":"
@@ -1824,7 +1824,7 @@
               "result": {
                 "name": "broydn_func",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 1,
                 "shape": [
                   "size(x)"
@@ -1936,7 +1936,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1962,7 +1962,7 @@
             {
               "name": "fvec",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1988,7 +1988,7 @@
             {
               "name": "df",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2031,7 +2031,7 @@
             {
               "name": "xold",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2057,7 +2057,7 @@
             {
               "name": "fold",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2077,7 +2077,7 @@
             {
               "name": "g",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2103,7 +2103,7 @@
             {
               "name": "p",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2129,7 +2129,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2155,7 +2155,7 @@
             {
               "name": "f",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2175,7 +2175,7 @@
             {
               "name": "stpmax",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2249,7 +2249,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2278,7 +2278,7 @@
             {
               "name": "c",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2304,7 +2304,7 @@
             {
               "name": "d",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2364,7 +2364,7 @@
             {
               "name": "r",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2393,7 +2393,7 @@
             {
               "name": "qt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2422,7 +2422,7 @@
             {
               "name": "u",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2448,7 +2448,7 @@
             {
               "name": "v",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2488,7 +2488,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2517,7 +2517,7 @@
             {
               "name": "d",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2543,7 +2543,7 @@
             {
               "name": "b",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2583,7 +2583,7 @@
             {
               "name": "mat",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2613,7 +2613,7 @@
           "result": {
             "name": "get_diag_dv",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(mat,1)"
@@ -3152,7 +3152,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3178,7 +3178,7 @@
             {
               "name": "b",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3205,7 +3205,7 @@
           "result": {
             "name": "outerprod_d",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 2,
             "shape": [
               "size(a)",
@@ -3246,7 +3246,7 @@
             {
               "name": "diagv",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3272,7 +3272,7 @@
             {
               "name": "mat",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -3315,7 +3315,7 @@
             {
               "name": "mat",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -3358,7 +3358,7 @@
             {
               "name": "v",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3385,7 +3385,7 @@
           "result": {
             "name": "vabs",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -3483,7 +3483,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 1,
                   "shape": [
                     ":"
@@ -3510,7 +3510,7 @@
               "result": {
                 "name": "func",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],

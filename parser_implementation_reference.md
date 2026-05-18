@@ -48,13 +48,14 @@ another source language.
 
 ### 2.3 Types, arguments, declarations
 
-- Intrinsic bases: `integer`, `real`, `complex`, `logical`, `character`.  
+- Intrinsic bases: `integer`, `real`, `complex`, `logical`, `character`,
+  and `double precision` (normalized as `real`).  
 - Derived argument declarations through `type(<name>)`.  
 - Procedure dummy declarations through `procedure(<interface>)`.  
 - Legacy star-kind forms are accepted where represented by the declaration
   grammar. Modern declarations such as `real*8 :: x` preserve kind metadata;
-  old fixed-form declarations without `::`, such as `real*8 x`, remain
-  compatible with existing fixture behavior.
+  old fixed-form declarations without `::`, such as `real*8 x`, preserve kind
+  metadata too.
 - Declaration attributes extracted:
   - `intent(in|out|inout)`
   - `optional`
@@ -75,10 +76,17 @@ another source language.
   - `FortranSlice` for `lower:upper[:stride]` dimensions
   - `FortranFunctionCall` for whole-expression calls such as `ubound(x, 1)`
   - `kind_expression` / `value_expression` for non-shape specs
-- `kind=...` extraction and assignment into argument/result metadata. Numeric,
-  symbolic, and expression-like kind tokens are preserved when the declaration
-  grammar can recognize the surrounding datatype. This is not "any datatype";
-  unknown base datatypes still fail fast as unsupported declarations.
+- Builtin kind extraction and assignment into argument/result metadata:
+  - positional forms such as `integer(4)`, `real(8)`, `complex(16)`,
+    `logical(1)`, and `character(1)`
+  - keyword forms such as `integer(kind=c_int)`, `real(kind=rk)`, and
+    `complex(kind=c_double_complex)`
+  - character length forms such as `character(len=8)` and combined character
+    specs such as `character(len=1, kind=c_char)`
+  - legacy star-kind forms covered by tests
+  Numeric, symbolic, and expression-like kind tokens are preserved when the
+  declaration grammar can recognize the surrounding datatype. This is not "any
+  datatype"; unknown base datatypes still fail fast as unsupported declarations.
 
 ### 2.4 Compile-time symbol and expression resolution
 
@@ -439,7 +447,8 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
   - Supported base declaration families include intrinsic scalar bases,
     `type(...)`/`class(...)` derived types, and `procedure(...)` dummy
     procedure declarations.
-  - Supported kind forms include parenthesized kind specs, `kind=...`, legacy
+  - Supported kind forms include parenthesized positional specs, `kind=...`,
+    character `len=...` specs, combined character length/kind specs, legacy
     star-kind forms covered by tests, and symbolic/expression tokens that can
     later be resolved from local or imported parameters.
   - Unresolved but syntactically valid kind symbols are not parser errors by

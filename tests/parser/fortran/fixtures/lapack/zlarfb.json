@@ -156,7 +156,7 @@
         {
           "name": "V",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDV",
@@ -205,7 +205,7 @@
         {
           "name": "T",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDT",
@@ -254,7 +254,7 @@
         {
           "name": "C",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDC",
@@ -303,7 +303,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDWORK",
@@ -511,7 +511,7 @@
         {
           "name": "V",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDV",
@@ -560,7 +560,7 @@
         {
           "name": "T",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDT",
@@ -609,7 +609,7 @@
         {
           "name": "C",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDC",
@@ -658,7 +658,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDWORK",

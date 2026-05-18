@@ -36,7 +36,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "kind(1.e0)",
           "rank": 1,
           "shape": [
             "*"
@@ -83,7 +83,7 @@
       "result": {
         "name": "SNRM2",
         "base_type": "real",
-        "kind": null,
+        "kind": "kind(1.e0)",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -140,7 +140,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "kind(1.e0)",
           "rank": 1,
           "shape": [
             "*"
@@ -187,7 +187,7 @@
       "result": {
         "name": "SNRM2",
         "base_type": "real",
-        "kind": null,
+        "kind": "kind(1.e0)",
         "rank": 0,
         "shape": [],
         "lbound": [],

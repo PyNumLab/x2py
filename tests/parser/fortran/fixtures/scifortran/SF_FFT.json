@@ -45,7 +45,7 @@
             {
               "name": "ft",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -71,7 +71,7 @@
             {
               "name": "t",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(ft)"
@@ -97,7 +97,7 @@
             {
               "name": "w",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -124,7 +124,7 @@
           "result": {
             "name": "fw",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(w)"
@@ -187,7 +187,7 @@
             {
               "name": "ft",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -213,7 +213,7 @@
             {
               "name": "t",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(ft)"
@@ -239,7 +239,7 @@
             {
               "name": "w",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -266,7 +266,7 @@
           "result": {
             "name": "fw",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(w)"
@@ -329,7 +329,7 @@
             {
               "name": "fw",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -355,7 +355,7 @@
             {
               "name": "t",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -381,7 +381,7 @@
             {
               "name": "w",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(fw)"
@@ -408,7 +408,7 @@
           "result": {
             "name": "ft",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(t)"
@@ -471,7 +471,7 @@
             {
               "name": "fw",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -497,7 +497,7 @@
             {
               "name": "t",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -523,7 +523,7 @@
             {
               "name": "w",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(fw)"
@@ -550,7 +550,7 @@
           "result": {
             "name": "ft",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(t)"
@@ -613,7 +613,7 @@
             {
               "name": "ft",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -639,7 +639,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -660,7 +660,7 @@
           "result": {
             "name": "fw",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(ft)"
@@ -723,7 +723,7 @@
             {
               "name": "ft",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -749,7 +749,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -770,7 +770,7 @@
           "result": {
             "name": "fw",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(ft)"
@@ -833,7 +833,7 @@
             {
               "name": "fw",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -859,7 +859,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -880,7 +880,7 @@
           "result": {
             "name": "ft",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fw)"
@@ -943,7 +943,7 @@
             {
               "name": "fw",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -969,7 +969,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -990,7 +990,7 @@
           "result": {
             "name": "ft",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fw)"
@@ -1053,7 +1053,7 @@
             {
               "name": "func_in",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1079,7 +1079,7 @@
             {
               "name": "func_out",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -1144,7 +1144,7 @@
             {
               "name": "func_in",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1170,7 +1170,7 @@
             {
               "name": "func_out",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -1235,7 +1235,7 @@
             {
               "name": "func_in",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1261,7 +1261,7 @@
             {
               "name": "func_out",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -1326,7 +1326,7 @@
             {
               "name": "func_in",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1352,7 +1352,7 @@
             {
               "name": "func_out",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -1417,7 +1417,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1482,7 +1482,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1547,7 +1547,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -1615,7 +1615,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -1683,7 +1683,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1788,7 +1788,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1893,7 +1893,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1958,7 +1958,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2023,7 +2023,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2128,7 +2128,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2233,7 +2233,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2298,7 +2298,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2363,7 +2363,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2431,7 +2431,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2499,7 +2499,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2604,7 +2604,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2709,7 +2709,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2774,7 +2774,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2839,7 +2839,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2944,7 +2944,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3049,7 +3049,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3076,7 +3076,7 @@
           "result": {
             "name": "fout",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -3139,7 +3139,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3166,7 +3166,7 @@
           "result": {
             "name": "fout",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -3229,7 +3229,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3256,7 +3256,7 @@
           "result": {
             "name": "fout",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -3319,7 +3319,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3346,7 +3346,7 @@
           "result": {
             "name": "fout",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -3409,7 +3409,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3474,7 +3474,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3559,7 +3559,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3580,7 +3580,7 @@
           "result": {
             "name": "fft_tmax",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -3657,7 +3657,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3678,7 +3678,7 @@
           "result": {
             "name": "fft_fmax",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -3755,7 +3755,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3776,7 +3776,7 @@
           "result": {
             "name": "time",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "L"
@@ -3859,7 +3859,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3879,7 +3879,7 @@
             {
               "name": "df",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3900,7 +3900,7 @@
           "result": {
             "name": "freq",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "L"
@@ -4184,7 +4184,7 @@
             {
               "name": "ft",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4210,7 +4210,7 @@
             {
               "name": "t",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(ft)"
@@ -4236,7 +4236,7 @@
             {
               "name": "w",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4263,7 +4263,7 @@
           "result": {
             "name": "fw",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(w)"
@@ -4326,7 +4326,7 @@
             {
               "name": "ft",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4352,7 +4352,7 @@
             {
               "name": "t",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(ft)"
@@ -4378,7 +4378,7 @@
             {
               "name": "w",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4405,7 +4405,7 @@
           "result": {
             "name": "fw",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(w)"
@@ -4468,7 +4468,7 @@
             {
               "name": "fw",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4494,7 +4494,7 @@
             {
               "name": "t",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4520,7 +4520,7 @@
             {
               "name": "w",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(fw)"
@@ -4547,7 +4547,7 @@
           "result": {
             "name": "ft",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(t)"
@@ -4610,7 +4610,7 @@
             {
               "name": "fw",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4636,7 +4636,7 @@
             {
               "name": "t",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4662,7 +4662,7 @@
             {
               "name": "w",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(fw)"
@@ -4689,7 +4689,7 @@
           "result": {
             "name": "ft",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(t)"
@@ -4752,7 +4752,7 @@
             {
               "name": "ft",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4778,7 +4778,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4799,7 +4799,7 @@
           "result": {
             "name": "fw",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(ft)"
@@ -4862,7 +4862,7 @@
             {
               "name": "ft",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4888,7 +4888,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4909,7 +4909,7 @@
           "result": {
             "name": "fw",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(ft)"
@@ -4972,7 +4972,7 @@
             {
               "name": "fw",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -4998,7 +4998,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5019,7 +5019,7 @@
           "result": {
             "name": "ft",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fw)"
@@ -5082,7 +5082,7 @@
             {
               "name": "fw",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5108,7 +5108,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5129,7 +5129,7 @@
           "result": {
             "name": "ft",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fw)"
@@ -5192,7 +5192,7 @@
             {
               "name": "func_in",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5218,7 +5218,7 @@
             {
               "name": "func_out",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -5283,7 +5283,7 @@
             {
               "name": "func_in",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5309,7 +5309,7 @@
             {
               "name": "func_out",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -5374,7 +5374,7 @@
             {
               "name": "func_in",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5400,7 +5400,7 @@
             {
               "name": "func_out",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -5465,7 +5465,7 @@
             {
               "name": "func_in",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5491,7 +5491,7 @@
             {
               "name": "func_out",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -5556,7 +5556,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5621,7 +5621,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5686,7 +5686,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -5754,7 +5754,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -5822,7 +5822,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5927,7 +5927,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6032,7 +6032,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6097,7 +6097,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6162,7 +6162,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6267,7 +6267,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6372,7 +6372,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6437,7 +6437,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6502,7 +6502,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -6570,7 +6570,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -6638,7 +6638,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6743,7 +6743,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6848,7 +6848,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6913,7 +6913,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6978,7 +6978,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7083,7 +7083,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7188,7 +7188,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7215,7 +7215,7 @@
           "result": {
             "name": "fout",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -7278,7 +7278,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7305,7 +7305,7 @@
           "result": {
             "name": "fout",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -7368,7 +7368,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7395,7 +7395,7 @@
           "result": {
             "name": "fout",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -7458,7 +7458,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7485,7 +7485,7 @@
           "result": {
             "name": "fout",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -7548,7 +7548,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7613,7 +7613,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7698,7 +7698,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7719,7 +7719,7 @@
           "result": {
             "name": "fft_tmax",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -7796,7 +7796,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7817,7 +7817,7 @@
           "result": {
             "name": "fft_fmax",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -7894,7 +7894,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7915,7 +7915,7 @@
           "result": {
             "name": "time",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "L"
@@ -7998,7 +7998,7 @@
             {
               "name": "dt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -8018,7 +8018,7 @@
             {
               "name": "df",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -8039,7 +8039,7 @@
           "result": {
             "name": "freq",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "L"

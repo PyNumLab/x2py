@@ -94,7 +94,7 @@
         {
           "name": "Y1",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -152,7 +152,7 @@
         {
           "name": "Y1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -239,7 +239,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(Y1,2)"
@@ -297,7 +297,7 @@
         {
           "name": "Y1",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -326,7 +326,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(Y1,2)"
@@ -384,7 +384,7 @@
         {
           "name": "Y1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -413,7 +413,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(Y1,2)"
@@ -503,7 +503,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(Y1,3)"
@@ -561,7 +561,7 @@
         {
           "name": "Y1",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             ":",
@@ -593,7 +593,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(Y1,3)"
@@ -651,7 +651,7 @@
         {
           "name": "Y1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             ":",
@@ -683,7 +683,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(Y1,3)"
@@ -806,7 +806,7 @@
         {
           "name": "Y1",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -864,7 +864,7 @@
         {
           "name": "Y1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -951,7 +951,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(Y1,2)"
@@ -1009,7 +1009,7 @@
         {
           "name": "Y1",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -1038,7 +1038,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(Y1,2)"
@@ -1096,7 +1096,7 @@
         {
           "name": "Y1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -1125,7 +1125,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(Y1,2)"
@@ -1215,7 +1215,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(Y1,3)"
@@ -1273,7 +1273,7 @@
         {
           "name": "Y1",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             ":",
@@ -1305,7 +1305,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(Y1,3)"
@@ -1363,7 +1363,7 @@
         {
           "name": "Y1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             ":",
@@ -1395,7 +1395,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "size(Y1,3)"

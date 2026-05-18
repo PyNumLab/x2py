@@ -36,7 +36,7 @@
         {
           "name": "H",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDH",
@@ -85,7 +85,7 @@
         {
           "name": "S1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -105,7 +105,7 @@
         {
           "name": "S2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -125,7 +125,7 @@
         {
           "name": "V",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -190,7 +190,7 @@
         {
           "name": "H",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDH",
@@ -239,7 +239,7 @@
         {
           "name": "S1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -259,7 +259,7 @@
         {
           "name": "S2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -279,7 +279,7 @@
         {
           "name": "V",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"

@@ -82,7 +82,7 @@
         {
           "name": "X",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX",
@@ -216,7 +216,7 @@
         {
           "name": "X",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDX",

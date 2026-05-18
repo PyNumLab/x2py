@@ -12,7 +12,7 @@
         {
           "name": "zero",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -32,7 +32,7 @@
         {
           "name": "xi",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -52,7 +52,7 @@
         {
           "name": "one",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -72,7 +72,7 @@
         {
           "name": "sqrt2",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -92,7 +92,7 @@
         {
           "name": "sqrt3",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -112,7 +112,7 @@
         {
           "name": "pauli_0",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -141,7 +141,7 @@
         {
           "name": "pauli_x",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -170,7 +170,7 @@
         {
           "name": "pauli_y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -199,7 +199,7 @@
         {
           "name": "pauli_z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -228,7 +228,7 @@
         {
           "name": "pauli_1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -257,7 +257,7 @@
         {
           "name": "pauli_2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -286,7 +286,7 @@
         {
           "name": "pauli_3",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -315,7 +315,7 @@
         {
           "name": "pauli_tau_0",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -344,7 +344,7 @@
         {
           "name": "pauli_tau_x",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -373,7 +373,7 @@
         {
           "name": "pauli_tau_y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -402,7 +402,7 @@
         {
           "name": "pauli_tau_z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -431,7 +431,7 @@
         {
           "name": "pauli_tau_1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -460,7 +460,7 @@
         {
           "name": "pauli_tau_2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -489,7 +489,7 @@
         {
           "name": "pauli_tau_3",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -518,7 +518,7 @@
         {
           "name": "pauli_sigma_0",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -547,7 +547,7 @@
         {
           "name": "pauli_sigma_x",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -576,7 +576,7 @@
         {
           "name": "pauli_sigma_y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -605,7 +605,7 @@
         {
           "name": "pauli_sigma_z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -634,7 +634,7 @@
         {
           "name": "pauli_sigma_1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -663,7 +663,7 @@
         {
           "name": "pauli_sigma_2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -692,7 +692,7 @@
         {
           "name": "pauli_sigma_3",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -721,7 +721,7 @@
         {
           "name": "pauli_sigma_plus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -750,7 +750,7 @@
         {
           "name": "pauli_sigma_minus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -779,7 +779,7 @@
         {
           "name": "pauli_tau_plus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -808,7 +808,7 @@
         {
           "name": "pauli_tau_minus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -837,7 +837,7 @@
         {
           "name": "spin1_0",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "3",
@@ -866,7 +866,7 @@
         {
           "name": "spin1_x",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "3",
@@ -895,7 +895,7 @@
         {
           "name": "spin1_y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "3",
@@ -924,7 +924,7 @@
         {
           "name": "spin1_z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "3",
@@ -953,7 +953,7 @@
         {
           "name": "spin1_plus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "3",
@@ -982,7 +982,7 @@
         {
           "name": "spin1_minus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "3",
@@ -1011,7 +1011,7 @@
         {
           "name": "two",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1031,7 +1031,7 @@
         {
           "name": "c2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1051,7 +1051,7 @@
         {
           "name": "s3",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1071,7 +1071,7 @@
         {
           "name": "c3",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1091,7 +1091,7 @@
         {
           "name": "h12",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1111,7 +1111,7 @@
         {
           "name": "h32",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1131,7 +1131,7 @@
         {
           "name": "spin3half_0",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "4",
@@ -1160,7 +1160,7 @@
         {
           "name": "spin3half_x",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "4",
@@ -1189,7 +1189,7 @@
         {
           "name": "spin3half_y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "4",
@@ -1218,7 +1218,7 @@
         {
           "name": "spin3half_z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "4",
@@ -1247,7 +1247,7 @@
         {
           "name": "spin3Half_plus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "4",
@@ -1276,7 +1276,7 @@
         {
           "name": "spin3Half_minus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "4",
@@ -1329,7 +1329,7 @@
         {
           "name": "zero",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1349,7 +1349,7 @@
         {
           "name": "xi",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1369,7 +1369,7 @@
         {
           "name": "one",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1389,7 +1389,7 @@
         {
           "name": "sqrt2",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1409,7 +1409,7 @@
         {
           "name": "sqrt3",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1429,7 +1429,7 @@
         {
           "name": "pauli_0",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1458,7 +1458,7 @@
         {
           "name": "pauli_x",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1487,7 +1487,7 @@
         {
           "name": "pauli_y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1516,7 +1516,7 @@
         {
           "name": "pauli_z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1545,7 +1545,7 @@
         {
           "name": "pauli_1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1574,7 +1574,7 @@
         {
           "name": "pauli_2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1603,7 +1603,7 @@
         {
           "name": "pauli_3",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1632,7 +1632,7 @@
         {
           "name": "pauli_tau_0",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1661,7 +1661,7 @@
         {
           "name": "pauli_tau_x",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1690,7 +1690,7 @@
         {
           "name": "pauli_tau_y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1719,7 +1719,7 @@
         {
           "name": "pauli_tau_z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1748,7 +1748,7 @@
         {
           "name": "pauli_tau_1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1777,7 +1777,7 @@
         {
           "name": "pauli_tau_2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1806,7 +1806,7 @@
         {
           "name": "pauli_tau_3",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1835,7 +1835,7 @@
         {
           "name": "pauli_sigma_0",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1864,7 +1864,7 @@
         {
           "name": "pauli_sigma_x",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1893,7 +1893,7 @@
         {
           "name": "pauli_sigma_y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1922,7 +1922,7 @@
         {
           "name": "pauli_sigma_z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1951,7 +1951,7 @@
         {
           "name": "pauli_sigma_1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1980,7 +1980,7 @@
         {
           "name": "pauli_sigma_2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -2009,7 +2009,7 @@
         {
           "name": "pauli_sigma_3",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -2038,7 +2038,7 @@
         {
           "name": "pauli_sigma_plus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -2067,7 +2067,7 @@
         {
           "name": "pauli_sigma_minus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -2096,7 +2096,7 @@
         {
           "name": "pauli_tau_plus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -2125,7 +2125,7 @@
         {
           "name": "pauli_tau_minus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -2154,7 +2154,7 @@
         {
           "name": "spin1_0",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "3",
@@ -2183,7 +2183,7 @@
         {
           "name": "spin1_x",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "3",
@@ -2212,7 +2212,7 @@
         {
           "name": "spin1_y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "3",
@@ -2241,7 +2241,7 @@
         {
           "name": "spin1_z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "3",
@@ -2270,7 +2270,7 @@
         {
           "name": "spin1_plus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "3",
@@ -2299,7 +2299,7 @@
         {
           "name": "spin1_minus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "3",
@@ -2328,7 +2328,7 @@
         {
           "name": "two",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2348,7 +2348,7 @@
         {
           "name": "c2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2368,7 +2368,7 @@
         {
           "name": "s3",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2388,7 +2388,7 @@
         {
           "name": "c3",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2408,7 +2408,7 @@
         {
           "name": "h12",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2428,7 +2428,7 @@
         {
           "name": "h32",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2448,7 +2448,7 @@
         {
           "name": "spin3half_0",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "4",
@@ -2477,7 +2477,7 @@
         {
           "name": "spin3half_x",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "4",
@@ -2506,7 +2506,7 @@
         {
           "name": "spin3half_y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "4",
@@ -2535,7 +2535,7 @@
         {
           "name": "spin3half_z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "4",
@@ -2564,7 +2564,7 @@
         {
           "name": "spin3Half_plus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "4",
@@ -2593,7 +2593,7 @@
         {
           "name": "spin3Half_minus",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "4",

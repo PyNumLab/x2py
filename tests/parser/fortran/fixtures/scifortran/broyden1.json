@@ -36,7 +36,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -102,7 +102,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -122,7 +122,7 @@
         {
           "name": "tol1",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -142,7 +142,7 @@
         {
           "name": "tolmin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -162,7 +162,7 @@
         {
           "name": "stpmx",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -214,7 +214,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -241,7 +241,7 @@
       "result": {
         "name": "fmin",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -298,7 +298,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -364,7 +364,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -384,7 +384,7 @@
         {
           "name": "tol1",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -404,7 +404,7 @@
         {
           "name": "tolmin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -424,7 +424,7 @@
         {
           "name": "stpmx",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -476,7 +476,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -503,7 +503,7 @@
       "result": {
         "name": "fmin",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],

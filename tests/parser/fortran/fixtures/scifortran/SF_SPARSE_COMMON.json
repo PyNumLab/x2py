@@ -331,7 +331,7 @@
             {
               "name": "vec",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -357,7 +357,7 @@
             {
               "name": "val",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -400,7 +400,7 @@
             {
               "name": "vec",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -426,7 +426,7 @@
             {
               "name": "val",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -918,7 +918,7 @@
             {
               "name": "vec",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -944,7 +944,7 @@
             {
               "name": "val",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -987,7 +987,7 @@
             {
               "name": "vec",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1013,7 +1013,7 @@
             {
               "name": "val",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],

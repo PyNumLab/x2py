@@ -77,7 +77,7 @@
         {
           "name": "dt",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -97,7 +97,7 @@
         {
           "name": "xin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Lin"
@@ -123,7 +123,7 @@
         {
           "name": "yin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Lin"
@@ -149,7 +149,7 @@
         {
           "name": "xfin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Lin"
@@ -175,7 +175,7 @@
         {
           "name": "cxfin",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Lin"
@@ -201,7 +201,7 @@
         {
           "name": "fin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "Lin",
@@ -230,7 +230,7 @@
         {
           "name": "cfin",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "Lin",
@@ -259,7 +259,7 @@
         {
           "name": "xout",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Lout"
@@ -285,7 +285,7 @@
         {
           "name": "yout",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Lout"
@@ -311,7 +311,7 @@
         {
           "name": "xfout",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Lout"
@@ -337,7 +337,7 @@
         {
           "name": "cxfout",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Lout"
@@ -363,7 +363,7 @@
         {
           "name": "fout",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "Lout",
@@ -392,7 +392,7 @@
         {
           "name": "cfout",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "Lout",
@@ -421,7 +421,7 @@
         {
           "name": "xmax",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],

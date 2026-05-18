@@ -1022,7 +1022,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "dp",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1043,7 +1043,7 @@
       "result": {
         "name": "fn_val",
         "base_type": "real",
-        "kind": null,
+        "kind": "dp",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -1366,7 +1366,7 @@
         {
           "name": "dk",
           "base_type": "real",
-          "kind": null,
+          "kind": "dp",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2441,7 +2441,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "dp",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2462,7 +2462,7 @@
       "result": {
         "name": "fn_val",
         "base_type": "real",
-        "kind": null,
+        "kind": "dp",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -2785,7 +2785,7 @@
         {
           "name": "dk",
           "base_type": "real",
-          "kind": null,
+          "kind": "dp",
           "rank": 0,
           "shape": [],
           "lbound": [],

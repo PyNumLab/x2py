@@ -16,7 +16,7 @@
         {
           "name": "p",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -102,7 +102,7 @@
         {
           "name": "fret",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -122,7 +122,7 @@
         {
           "name": "ftol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -234,7 +234,7 @@
         {
           "name": "p",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -300,7 +300,7 @@
         {
           "name": "fret",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -320,7 +320,7 @@
         {
           "name": "ftol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -380,7 +380,7 @@
         {
           "name": "deps",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -452,7 +452,7 @@
         {
           "name": "p",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -479,7 +479,7 @@
       "result": {
         "name": "dfcn",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 1,
         "shape": [
           "size(p)"
@@ -521,7 +521,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -548,7 +548,7 @@
           "result": {
             "name": "func",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -578,7 +578,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -605,7 +605,7 @@
           "result": {
             "name": "fjac",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(a)"
@@ -649,7 +649,7 @@
         {
           "name": "p",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -735,7 +735,7 @@
         {
           "name": "fret",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -755,7 +755,7 @@
         {
           "name": "ftol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -867,7 +867,7 @@
         {
           "name": "p",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -933,7 +933,7 @@
         {
           "name": "fret",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -953,7 +953,7 @@
         {
           "name": "ftol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1013,7 +1013,7 @@
         {
           "name": "deps",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1085,7 +1085,7 @@
         {
           "name": "p",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1112,7 +1112,7 @@
       "result": {
         "name": "dfcn",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 1,
         "shape": [
           "size(p)"

@@ -36,7 +36,7 @@
         {
           "name": "x",
           "base_type": "complex",
-          "kind": null,
+          "kind": "wp",
           "rank": 1,
           "shape": [
             "*"
@@ -82,7 +82,7 @@
         {
           "name": "scale",
           "base_type": "real",
-          "kind": null,
+          "kind": "wp",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -102,7 +102,7 @@
         {
           "name": "sumsq",
           "base_type": "real",
-          "kind": null,
+          "kind": "wp",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -193,7 +193,7 @@
         {
           "name": "x",
           "base_type": "complex",
-          "kind": null,
+          "kind": "wp",
           "rank": 1,
           "shape": [
             "*"
@@ -239,7 +239,7 @@
         {
           "name": "scale",
           "base_type": "real",
-          "kind": null,
+          "kind": "wp",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -259,7 +259,7 @@
         {
           "name": "sumsq",
           "base_type": "real",
-          "kind": null,
+          "kind": "wp",
           "rank": 0,
           "shape": [],
           "lbound": [],

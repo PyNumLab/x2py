@@ -76,7 +76,7 @@
         {
           "name": "V",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -102,7 +102,7 @@
         {
           "name": "TAU",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -122,7 +122,7 @@
         {
           "name": "C",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDC",
@@ -171,7 +171,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -276,7 +276,7 @@
         {
           "name": "V",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -302,7 +302,7 @@
         {
           "name": "TAU",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -322,7 +322,7 @@
         {
           "name": "C",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDC",
@@ -371,7 +371,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"

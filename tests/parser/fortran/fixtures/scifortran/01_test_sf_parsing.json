@@ -66,7 +66,7 @@
         {
           "name": "dble",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -86,7 +86,7 @@
         {
           "name": "dble_r",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -106,7 +106,7 @@
         {
           "name": "dble_vec",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "3"
@@ -132,7 +132,7 @@
         {
           "name": "dble_vec_r",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "3"
@@ -158,7 +158,7 @@
         {
           "name": "1d0",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "3"
@@ -184,7 +184,7 @@
         {
           "name": "0d0]",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "3"

@@ -168,7 +168,7 @@
         {
           "name": "VT",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDVT",
@@ -217,7 +217,7 @@
         {
           "name": "U",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDU",
@@ -266,7 +266,7 @@
         {
           "name": "C",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDC",
@@ -532,7 +532,7 @@
         {
           "name": "VT",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDVT",
@@ -581,7 +581,7 @@
         {
           "name": "U",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDU",
@@ -630,7 +630,7 @@
         {
           "name": "C",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDC",

@@ -1336,7 +1336,7 @@
             {
               "name": "r8",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1427,7 +1427,7 @@
             {
               "name": "c",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1620,7 +1620,7 @@
             {
               "name": "r8",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1763,7 +1763,7 @@
             {
               "name": "r8",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1959,7 +1959,7 @@
             {
               "name": "M",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2060,7 +2060,7 @@
             {
               "name": "M",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -3562,7 +3562,7 @@
             {
               "name": "r8",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3653,7 +3653,7 @@
             {
               "name": "c",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3846,7 +3846,7 @@
             {
               "name": "r8",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3989,7 +3989,7 @@
             {
               "name": "r8",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4185,7 +4185,7 @@
             {
               "name": "M",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -4286,7 +4286,7 @@
             {
               "name": "M",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",

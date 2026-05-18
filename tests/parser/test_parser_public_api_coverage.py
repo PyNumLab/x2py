@@ -190,9 +190,9 @@ def test_legacy_star_kind_and_declarations_without_double_colon_are_resolved():
     args = {arg.name: arg for arg in sig.arguments}
 
     assert args["x"].base_type == "real"
-    assert args["x"].kind is None
+    assert args["x"].kind == "8"
     assert args["z"].base_type == "complex"
-    assert args["z"].kind is None
+    assert args["z"].kind == "16"
     assert args["p"].base_type == "derived"
     assert args["p"].kind == "point"
     assert args["c"].base_type == "derived"

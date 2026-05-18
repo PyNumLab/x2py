@@ -16,7 +16,7 @@
         {
           "name": "dos",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Lk"
@@ -42,7 +42,7 @@
         {
           "name": "ome",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Lk"
@@ -88,7 +88,7 @@
         {
           "name": "D",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -120,7 +120,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -140,7 +140,7 @@
         {
           "name": "D",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -161,7 +161,7 @@
       "result": {
         "name": "dens_bethe",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -193,7 +193,7 @@
         {
           "name": "w",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -213,7 +213,7 @@
         {
           "name": "zeta",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -233,7 +233,7 @@
         {
           "name": "d",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -254,7 +254,7 @@
       "result": {
         "name": "gfbethe",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -286,7 +286,7 @@
         {
           "name": "w",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -306,7 +306,7 @@
         {
           "name": "zeta",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -326,7 +326,7 @@
         {
           "name": "d",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -347,7 +347,7 @@
       "result": {
         "name": "gfbether",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -377,7 +377,7 @@
         {
           "name": "g0",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -403,7 +403,7 @@
         {
           "name": "d",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -423,7 +423,7 @@
         {
           "name": "beta",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -443,7 +443,7 @@
         {
           "name": "hloc",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -482,7 +482,7 @@
         {
           "name": "dos",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Lk"
@@ -508,7 +508,7 @@
         {
           "name": "ome",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Lk"
@@ -554,7 +554,7 @@
         {
           "name": "D",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -586,7 +586,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -606,7 +606,7 @@
         {
           "name": "D",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -627,7 +627,7 @@
       "result": {
         "name": "dens_bethe",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -659,7 +659,7 @@
         {
           "name": "w",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -679,7 +679,7 @@
         {
           "name": "zeta",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -699,7 +699,7 @@
         {
           "name": "d",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -720,7 +720,7 @@
       "result": {
         "name": "gfbethe",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -752,7 +752,7 @@
         {
           "name": "w",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -772,7 +772,7 @@
         {
           "name": "zeta",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -792,7 +792,7 @@
         {
           "name": "d",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -813,7 +813,7 @@
       "result": {
         "name": "gfbether",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -843,7 +843,7 @@
         {
           "name": "g0",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -869,7 +869,7 @@
         {
           "name": "d",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -889,7 +889,7 @@
         {
           "name": "beta",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -909,7 +909,7 @@
         {
           "name": "hloc",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],

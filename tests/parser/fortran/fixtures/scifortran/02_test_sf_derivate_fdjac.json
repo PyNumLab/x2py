@@ -57,7 +57,7 @@
         {
           "name": "xc",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Ndim"
@@ -83,7 +83,7 @@
         {
           "name": "fc",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Ndim"
@@ -109,7 +109,7 @@
         {
           "name": "fjac",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "Ndim",
@@ -138,7 +138,7 @@
         {
           "name": "exact_fjac",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "Ndim",
@@ -167,7 +167,7 @@
         {
           "name": "fgrad",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Ndim"
@@ -193,7 +193,7 @@
         {
           "name": "exact_fgrad",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "Ndim"
@@ -219,7 +219,7 @@
         {
           "name": "gjac",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "Mdim",
@@ -248,7 +248,7 @@
         {
           "name": "exact_gjac",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "Mdim",

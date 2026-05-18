@@ -16,7 +16,7 @@
         {
           "name": "Z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -74,7 +74,7 @@
         {
           "name": "Z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],

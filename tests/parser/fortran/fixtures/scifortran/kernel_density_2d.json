@@ -230,7 +230,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -256,7 +256,7 @@
         {
           "name": "b",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -314,7 +314,7 @@
         {
           "name": "sigma",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -375,7 +375,7 @@
         {
           "name": "sigma",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -436,7 +436,7 @@
         {
           "name": "data",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -465,7 +465,7 @@
         {
           "name": "h",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -526,7 +526,7 @@
         {
           "name": "sdev",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -578,7 +578,7 @@
         {
           "name": "h",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -639,7 +639,7 @@
         {
           "name": "data",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -665,7 +665,7 @@
         {
           "name": "sigma",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -706,7 +706,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -732,7 +732,7 @@
         {
           "name": "y",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -758,7 +758,7 @@
         {
           "name": "mean",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -784,7 +784,7 @@
         {
           "name": "sigma",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -814,7 +814,7 @@
       "result": {
         "name": "gaussian_kernel",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 2,
         "shape": [
           "size(x)",
@@ -1178,7 +1178,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -1204,7 +1204,7 @@
         {
           "name": "b",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -1262,7 +1262,7 @@
         {
           "name": "sigma",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1323,7 +1323,7 @@
         {
           "name": "sigma",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1384,7 +1384,7 @@
         {
           "name": "data",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -1413,7 +1413,7 @@
         {
           "name": "h",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1474,7 +1474,7 @@
         {
           "name": "sdev",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -1526,7 +1526,7 @@
         {
           "name": "h",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1587,7 +1587,7 @@
         {
           "name": "data",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -1613,7 +1613,7 @@
         {
           "name": "sigma",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1654,7 +1654,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1680,7 +1680,7 @@
         {
           "name": "y",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1706,7 +1706,7 @@
         {
           "name": "mean",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -1732,7 +1732,7 @@
         {
           "name": "sigma",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "2",
@@ -1762,7 +1762,7 @@
       "result": {
         "name": "gaussian_kernel",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 2,
         "shape": [
           "size(x)",

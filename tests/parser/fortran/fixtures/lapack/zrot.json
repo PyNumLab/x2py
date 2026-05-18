@@ -36,7 +36,7 @@
         {
           "name": "CX",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -82,7 +82,7 @@
         {
           "name": "CY",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -148,7 +148,7 @@
         {
           "name": "S",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -207,7 +207,7 @@
         {
           "name": "CX",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -253,7 +253,7 @@
         {
           "name": "CY",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -319,7 +319,7 @@
         {
           "name": "S",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
