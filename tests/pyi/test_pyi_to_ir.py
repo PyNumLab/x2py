@@ -141,6 +141,26 @@ alias: Annotated[Int32, Name("native_alias")]
     assert module.variables[1].name == "native_alias"
 
 
+def test_parse_pyi_text_accepts_qualified_ast_wrapper_names():
+    module = parse_pyi_text(
+        """
+import typing
+
+alias: typing.Annotated[Float64[typing.Shape("1:n")], typing.Name("native_alias")]
+
+def f() -> typing.Tuple[Float64, typing.Returns["y", Float64]]: ...
+""",
+        module_name="edited",
+    )
+
+    assert module.variables[0].name == "native_alias"
+    assert module.variables[0].semantic_type.shape == ["1:n"]
+    assert module.functions[0].return_type is not None
+    assert module.functions[0].return_type.name == "Float64"
+    assert module.functions[0].arguments[0].name == "y"
+    assert module.functions[0].arguments[0].intent == "out"
+
+
 def test_parse_pyi_text_accepts_ast_only_projection_value_refs():
     module = parse_pyi_text(
         """
