@@ -23,9 +23,13 @@ another source language.
 ### 2.1 Source forms, lexing, and preprocessing
 
 - Free-form Fortran suffixes: `.f90`, `.f95`, `.f03`, `.f08`.  
-- Fixed-form suffixes: `.f`, `.for`, `.ftn`.  
+- Fixed-form suffixes: `.f`, `.for`, `.ftn`, `.f77`.  
 - Comment stripping and continuation folding via preprocessing stage.  
 - Fortran-77 fixed-form continuation support validated by tests.  
+- Source-form suffixes are preprocessing hints, not language-era gates:
+  parseable modern constructs are not rejected solely because the filename uses
+  a legacy suffix, and parseable legacy constructs are not rejected solely
+  because the filename uses a modern suffix.
 
 ### 2.2 Procedures
 
@@ -46,6 +50,11 @@ another source language.
 
 - Intrinsic bases: `integer`, `real`, `complex`, `logical`, `character`.  
 - Derived argument declarations through `type(<name>)`.  
+- Procedure dummy declarations through `procedure(<interface>)`.  
+- Legacy star-kind forms are accepted where represented by the declaration
+  grammar. Modern declarations such as `real*8 :: x` preserve kind metadata;
+  old fixed-form declarations without `::`, such as `real*8 x`, remain
+  compatible with existing fixture behavior.
 - Declaration attributes extracted:
   - `intent(in|out|inout)`
   - `optional`
@@ -66,7 +75,10 @@ another source language.
   - `FortranSlice` for `lower:upper[:stride]` dimensions
   - `FortranFunctionCall` for whole-expression calls such as `ubound(x, 1)`
   - `kind_expression` / `value_expression` for non-shape specs
-- `kind=...` extraction and assignment into argument/result metadata.  
+- `kind=...` extraction and assignment into argument/result metadata. Numeric,
+  symbolic, and expression-like kind tokens are preserved when the declaration
+  grammar can recognize the surrounding datatype. This is not "any datatype";
+  unknown base datatypes still fail fast as unsupported declarations.
 
 ### 2.4 Compile-time symbol and expression resolution
 
@@ -409,19 +421,42 @@ the reference drifting from actual parser behavior.
 
 When updating parser behavior, keep this fail-fast contract aligned with tests:
 
-- **Version/source-form mismatch (hard error):**
-  - For files detected as Fortran 77 (`.f`, `.for`, `.ftn`, `.f77`), modern-only syntax raises `FortranParseError` (for example: `::`, `intent(...)`, `module`, `contains`, `interface`, `use`, `class(...)`).
-  - For files detected as modern (`.f90`, `.f95`, `.f03`, `.f08`), legacy star-kind declarations (e.g. `real*8`) raise `FortranParseError`.
+- **Source-form is not a language-era hard gate:**
+  - Filename suffixes choose preprocessing behavior and compatibility metadata.
+    Fixed-form suffixes (`.f`, `.for`, `.ftn`, `.f77`) use fixed-form
+    continuation/comment handling; modern suffixes (`.f90`, `.f95`, `.f03`,
+    `.f08`) use free-form handling.
+  - The parser does not reject mixed-era constructs solely because of suffix.
+    For example, `module`/`interface` syntax in a `.f77` file is parsed if the
+    fixed-form preprocessor produces valid logical lines, and legacy star-kind
+    syntax in `.f90` is parsed when the declaration grammar recognizes it.
+  - Wrapper generation/readiness should decide whether a parsed feature is safe
+    to wrap. Parser errors should be about unsupported grammar/metadata, not
+    about a filename implying an older or newer language standard.
 - **Unknown datatype declaration (hard error):**
   - Procedure declarations, derived-type fields, and module-variable declarations raise `FortranParseError` when the datatype declaration is unknown/unsupported instead of silently skipping.
+- **Datatype and kind support is bounded by the declaration grammar:**
+  - Supported base declaration families include intrinsic scalar bases,
+    `type(...)`/`class(...)` derived types, and `procedure(...)` dummy
+    procedure declarations.
+  - Supported kind forms include parenthesized kind specs, `kind=...`, legacy
+    star-kind forms covered by tests, and symbolic/expression tokens that can
+    later be resolved from local or imported parameters.
+  - Unresolved but syntactically valid kind symbols are not parser errors by
+    themselves; wrap-readiness reports them as `unresolved_kind_arguments` or
+    `unresolved_kind_fields` when they cannot be found in the parsed source or
+    imports.
 - **Post-scope validation (hard error):**
   - After parsing each module, derived type, or procedure scope, a validation pass checks that all declared variables/fields/arguments have a known (non-`"unknown"`) base type; failures raise `FortranParseError`.
   - Under `implicit none`, missing declarations are treated as hard errors. For functions:
     - if the header uses an explicit `result(name)`, an undeclared result raises an "Unknown datatype for function result ..." error for that result symbol
     - otherwise the result is implicitly the function name and the usual "has no type declaration (implicit none is active)" wording is used
 - **Design intent:**
-  - The parser is intentionally strict at parse time to avoid mixed-standard inputs producing ambiguous metadata.
-  - "Unsupported but recognized" constructs are still surfaced via readiness diagnostics where appropriate; truly invalid-for-version or unknown datatype syntax should crash early.
+  - The parser is intentionally strict about unknown declarations and internal
+    metadata consistency, but permissive about mixed-era Fortran syntax that can
+    be parsed unambiguously.
+  - "Unsupported but recognized" constructs are still surfaced via readiness
+    diagnostics where appropriate; unknown datatype syntax should crash early.
 - **Preprocessor-conditional duplicate procedures (guarded allowance):**
   - The parser does **not** run a full C preprocessor stage before parsing.
   - While scanning signatures, simple directive structure is tracked for `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` to model mutually-exclusive branches.
