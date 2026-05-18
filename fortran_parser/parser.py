@@ -216,36 +216,6 @@ def _parse_type_prefix(prefix: str) -> tuple[str, str | None] | None:
     return None  # pragma: no cover - unsupported prefixes are rejected by public grammar.
 
 
-def _enforce_source_form_compatibility(line: str, filename: str | None, lineno: int | None = None, source_line: str | None = None) -> None:
-    """Raise `FortranParseError` if a file's dialect/source-form is violated.
-
-    This guard enforces a strict contract used throughout the parser:
-
-    - Files recognized as **Fortran 77** (by suffix) must not contain modern-only
-      constructs such as `module`, `contains`, or `interface`.
-
-    The goal is to fail fast on mixed-standard inputs that would otherwise
-    produce ambiguous metadata.
-    """
-    if not filename or Path(filename).suffix.lower() != ".f77":
-        return
-    forbidden = (
-        r"\bmodule\b",
-        r"\bsubmodule\b",
-        r"\bcontains\b",
-        r"\binterface\b",
-        r"\bclass\s*\(",
-    )
-    for pat in forbidden:
-        if re.search(pat, line, re.IGNORECASE):
-            raise FortranParseError(
-                f"Unsupported syntax for Fortran 77 source '{filename}': {line.strip()}",
-                filename=filename,
-                line_number=lineno,
-                source_line=source_line,
-            )
-
-
 # -----------------------------------------------------------------------------
 # Preprocessor and conditional-compilation helpers
 # -----------------------------------------------------------------------------
@@ -857,16 +827,6 @@ def _parse_common_declaration_left(
     parse_character_star: bool = True,
 ) -> tuple[dict, list[str]] | None:
     star_kind = _find_legacy_star_kind(left)
-    source_form = _source_form(filename)
-    if star_kind and source_form == "modern" and star_kind[0] != "character":
-        base, kind = star_kind
-        raise FortranParseError(
-            f"Unsupported Fortran 77 star-kind declaration '{base}*{kind}' in modern source '{filename}'.",
-            filename=filename,
-            line_number=line_number,
-            source_line=source_line,
-        )
-
     char_star = _CHAR_STAR_RE.match(left) if parse_character_star else None
     if char_star:
         kind = char_star.group("len").strip()
@@ -874,6 +834,11 @@ def _parse_common_declaration_left(
             kind = kind[1:-1].strip()
         trailing = (char_star.group("rest") or "").strip().lstrip(", ")
         return _new_decl_meta("character", kind), split_csv(trailing)
+    if star_kind:
+        base, kind = star_kind
+        tail = _strip_legacy_star_kind_prefix(left)
+        if not tail and _source_form(filename) == "modern":
+            return _new_decl_meta(base.lower(), kind), []
 
     tm = _TYPE_RE.match(left)
     derived = _TYPE_FIELD_RE.match(left)
@@ -891,11 +856,6 @@ def _parse_common_declaration_left(
         procm = _PROC_DUMMY_RE.match(left)
         iface = procm.group("iface").lower() if procm else None
         return _new_decl_meta("procedure", iface), split_csv((procm.group("attrs") if procm else "").strip().lstrip(", "))
-    if star_kind:  # pragma: no cover - retained for legacy fallback forms not emitted by public parser paths.
-        base, kind = star_kind
-        tail = _strip_legacy_star_kind_prefix(left)
-        attrs = split_csv(tail.lstrip(", ")) if tail.startswith(",") else []
-        return _new_decl_meta(base.lower(), kind), attrs
     return None
 
 
@@ -2517,7 +2477,6 @@ class FortranParser:
                 continue
 
             l = s.lower()
-            _enforce_source_form_compatibility(s, filename, lineno, source_line)
 
             interface_depth, handled_interface = self._handle_procedure_interface_boundary(
                 s,
@@ -2802,7 +2761,6 @@ class FortranParser:
             if not s:
                 continue
             l = s.lower()
-            _enforce_source_form_compatibility(s, filename, lineno, source_line)
             if l.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", l):
                 current_module = s.split()[1].lower()
                 in_module_spec_part = True
@@ -3083,7 +3041,6 @@ class FortranParser:
             if not s:
                 continue
             l = s.lower()
-            _enforce_source_form_compatibility(s, filename, lineno, source_line)
 
             current_module, handled_scope = self._track_containing_module_scope(current_module, s)
             if handled_scope:
@@ -3211,7 +3168,6 @@ class FortranParser:
             if not s:
                 continue
             l = s.lower()
-            _enforce_source_form_compatibility(s, filename, lineno, source_line)
 
             module = self._parse_module_header(s, filename, lineno=lineno, source_line=source_line)
             if module is not None:
@@ -3338,7 +3294,6 @@ class FortranParser:
             if not s:
                 continue
             l = s.lower()
-            _enforce_source_form_compatibility(s, filename, lineno, source_line)
 
             current_module, handled_scope = self._track_containing_module_scope(current_module, s)
             if handled_scope:
@@ -3523,7 +3478,6 @@ class FortranParser:
             if not s:
                 continue
             l = s.lower()
-            _enforce_source_form_compatibility(s, filename, lineno, source_line)
 
             submodule = self._parse_submodule_header(s, filename)
             if submodule is not None:
@@ -3612,7 +3566,6 @@ class FortranParser:
             if not s:
                 continue
             l = s.lower()
-            _enforce_source_form_compatibility(s, filename, lineno, source_line)
 
             program = self._parse_program_header(s, filename)
             if program is not None:
@@ -3672,7 +3625,6 @@ class FortranParser:
             if not s:
                 continue
             l = s.lower()
-            _enforce_source_form_compatibility(s, filename, lineno, source_line)
 
             block_data = self._parse_block_data_header(s, filename)
             if block_data is not None:

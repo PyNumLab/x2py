@@ -116,8 +116,10 @@ def test_fixed_form_and_interface_detection():
     assert len(parsed.interfaces) == 1
     assert parsed.interfaces[0].procedures[0].in_interface is True
 
-    with pytest.raises(ValueError, match="Fortran 77"):
-        parse_fortran_file(code, filename="legacy.f77").procedures
+    parsed = parse_fortran_file(code, filename="legacy.f77")
+    assert len(parsed.procedures) == 1
+    assert parsed.procedures[0].name == "saxpy"
+    assert len(parsed.interfaces) == 1
 
     parsed = parse_fortran_file(code, filename="legacy.f90")
     assert len(parsed.procedures) == 1
@@ -167,15 +169,16 @@ def test_legacy_character_and_star_kind_declarations_from_inline_fortran():
     assert proc.arguments[0].kind == "*"
     assert proc.arguments[1].base_type == "real"
 
-    with pytest.raises(FortranParseError, match="Unsupported Fortran 77 star-kind declaration"):
-        parse_fortran_file(
-            """
+    modern_proc = parse_fortran_file(
+        """
 subroutine modern_star(x)
   real*8 x
 end subroutine modern_star
 """,
-            filename="modern_star.f90",
-        )
+        filename="modern_star.f90",
+    ).procedures[0]
+    assert modern_proc.arguments[0].base_type == "real"
+    assert modern_proc.arguments[0].kind is None
 
 
 def test_duplicate_symbols_are_reported_from_inline_fortran():
@@ -1216,14 +1219,15 @@ end module m
     assert {"name": "setup", "targets": ["init", "clear"], "attrs": ["public"]} in dt.generic_bindings
 
 
-def test_star_kind_is_rejected_in_modern_fortran_file():
+def test_star_kind_is_parsed_in_modern_fortran_file():
     code = """
 subroutine bad(x)
   real*8 :: x
 end subroutine bad
 """
-    with pytest.raises(ValueError, match="star-kind"):
-        parse_fortran_file(code, filename="bad.f90").procedures
+    proc = parse_fortran_file(code, filename="bad.f90").procedures[0]
+    assert proc.arguments[0].base_type == "real"
+    assert proc.arguments[0].kind == "8"
 
 
 def test_unknown_datatype_for_argument_crashes_parser():

@@ -321,20 +321,21 @@ end subroutine work
 
 
 # ---------------------------------------------------------------------------
-# Star-kind errors
+# Star-kind declarations
 # ---------------------------------------------------------------------------
 
-def test_star_kind_in_modern_source_raises_parse_error():
+def test_star_kind_in_modern_source_is_parsed():
     code = """
 subroutine bad(x)
   real*8 :: x
 end subroutine bad
 """
-    with pytest.raises(FortranParseError, match="star-kind"):
-        parse_fortran_file(code, filename="bad.f90")
+    proc = parse_fortran_file(code, filename="bad.f90").procedures[0]
+    assert proc.arguments[0].base_type == "real"
+    assert proc.arguments[0].kind == "8"
 
 
-def test_star_kind_error_in_derived_type_field():
+def test_star_kind_in_derived_type_field_is_parsed():
     code = """
 module m
   type :: t
@@ -342,18 +343,20 @@ module m
   end type t
 end module m
 """
-    with pytest.raises(FortranParseError, match="star-kind"):
-        parse_fortran_file(code, filename="bad.f90")
+    field = parse_fortran_file(code, filename="bad.f90").modules[0].derived_types[0].fields[0]
+    assert field.base_type == "real"
+    assert field.kind == "8"
 
 
-def test_star_kind_error_in_module_variable():
+def test_star_kind_in_module_variable_is_parsed():
     code = """
 module m
   real*8 :: x
 end module m
 """
-    with pytest.raises(FortranParseError, match="star-kind"):
-        parse_fortran_file(code, filename="bad.f90")
+    var = parse_fortran_file(code, filename="bad.f90").modules[0].variables[0]
+    assert var.base_type == "real"
+    assert var.kind == "8"
 
 
 # ---------------------------------------------------------------------------
@@ -482,27 +485,26 @@ end subroutine dup_param
 
 
 # ---------------------------------------------------------------------------
-# Fortran 77 source form errors
+# Mixed-era source forms
 # ---------------------------------------------------------------------------
 
-def test_f77_source_with_module_keyword_raises_parse_error():
+def test_f77_source_with_module_keyword_is_parsed():
     code = """
       module bad_module
       end module bad_module
 """
-    with pytest.raises(FortranParseError, match="Fortran 77"):
-        parse_fortran_file(code, filename="legacy.f77")
+    parsed = parse_fortran_file(code, filename="legacy.f77")
+    assert parsed.format == "f77"
+    assert parsed.modules[0].name == "bad_module"
 
 
-def test_f77_source_error_carries_filename():
+def test_f77_source_file_metadata_is_preserved():
     code = """
       module bad_module
       end module bad_module
 """
-    with pytest.raises(FortranParseError) as exc_info:
-        parse_fortran_file(code, filename="legacy.f77")
-    err = exc_info.value
-    assert err.filename == "legacy.f77"
+    parsed = parse_fortran_file(code, filename="legacy.f77")
+    assert parsed.filename == "legacy.f77"
 
 
 # ---------------------------------------------------------------------------
