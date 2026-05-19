@@ -42,6 +42,8 @@ class particle:
     id: Int32
 
 scale: private[Float64]
+answer: Final[Int32]
+hidden_answer: private[Final[Int32]]
 
 def touch(
     p: particle
@@ -55,6 +57,11 @@ def touch(
     assert module.classes[0].name == "particle"
     assert module.variables[0].name == "scale"
     assert module.variables[0].visibility == "private"
+    assert module.variables[1].name == "answer"
+    assert [c.name for c in module.variables[1].semantic_type.constraints] == ["Constant"]
+    assert module.variables[2].name == "hidden_answer"
+    assert module.variables[2].visibility == "private"
+    assert [c.name for c in module.variables[2].semantic_type.constraints] == ["Constant"]
     assert module.functions[0].arguments[0].intent == "inout"
 
 
@@ -518,6 +525,7 @@ class vector:
             "value reference expects one positional argument",
         ),
         ("def f(x: Int32) -> Returns['x']: ...\n", "Returns expects a name and type"),
+        ("value: Final[Int32, Float64]\n", "Final expects exactly one type"),
     ],
 )
 def test_parse_pyi_text_rejects_invalid_projection_and_type_forms(source: str, message: str):

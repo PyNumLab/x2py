@@ -24,7 +24,7 @@
           "ubound": [],
           "value": null,
           "value_type": "unknown",
-          "is_parameter": false,
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,

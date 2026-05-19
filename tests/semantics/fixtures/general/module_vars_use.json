@@ -12,7 +12,12 @@
             "rank": 0,
             "dtype": "Unknown",
             "shape": [],
-            "constraints": [],
+            "constraints": [
+              {
+                "name": "Constant",
+                "arguments": []
+              }
+            ],
             "coercions": [],
             "ownership": {
               "ownership": "borrowed",

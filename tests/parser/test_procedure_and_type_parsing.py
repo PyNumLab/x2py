@@ -335,7 +335,7 @@ def test_module_variables_and_use_statements():
     code = """
 module cfg
   use iso_c_binding, only: c_int
-  integer(kind=c_int) :: nmax
+  integer(kind=c_int), parameter :: nmax = 32
   real(kind=8), dimension(3) :: origin
 end module cfg
 """
@@ -345,6 +345,8 @@ end module cfg
     assert mod.name == "cfg"
     assert mod.uses["iso_c_binding"] == ["c_int"]
     assert [v.name for v in mod.variables] == ["nmax", "origin"]
+    assert mod.variables[0].is_parameter is True
+    assert mod.variables[1].is_parameter is False
     assert mod.variables[1].shape == ["3"]
 
 

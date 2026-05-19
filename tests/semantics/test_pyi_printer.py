@@ -690,6 +690,7 @@ module state_mod
   implicit none
   private
   public :: counter
+  integer, parameter :: answer = 42
   integer :: counter
   real(8) :: hidden_scale
 contains
@@ -699,6 +700,8 @@ contains
 end module
 """
     code = generate_pyi(source)
+    assert "answer: private[Final[Int32]]" in code
+    assert "answer: private[Int32[Constant]]" not in code
     assert "counter: Int32" in code
     assert "hidden_scale: private[Float64]" in code
 

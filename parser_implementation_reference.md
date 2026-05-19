@@ -193,6 +193,9 @@ another source language.
 - The `.pyi` printer emits structured imports as `from module import name` or
   `from module import source as target`; the `.pyi` parser accepts the same
   syntax and restores the semantic import mapping.
+- Fortran `parameter` values are represented in semantic IR with the existing
+  `Constant` constraint. The `.pyi` printer renders those as `Final[...]`, and
+  the `.pyi` parser maps `Final[...]` back to the `Constant` constraint.
 
 ## 4) Test strategy implemented (current workflow)
 

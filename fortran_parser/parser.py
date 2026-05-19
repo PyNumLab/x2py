@@ -781,6 +781,7 @@ def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
     arg.pass_by_value = meta["value"]
     arg.allocatable = meta["allocatable"]
     arg.pointer = meta["pointer"]
+    arg.is_parameter = meta["parameter"]
     if shape:
         arg.shape = shape
         arg.rank = len(shape)
@@ -802,6 +803,7 @@ def _new_decl_meta(base_type: str, kind: str | None) -> dict:
         "allocatable": False,
         "pointer": False,
         "external": False,
+        "parameter": False,
     }
 
 
@@ -820,6 +822,8 @@ def _apply_decl_attrs(meta: dict, attrs: list[str], *, include_intent: bool = Fa
             meta["pointer"] = True
         elif la == "external":
             meta["external"] = True
+        elif la == "parameter":
+            meta["parameter"] = True
         elif la.startswith("dimension") and "(" in a and ")" in a:
             shape = split_csv(a[a.find("(") + 1 : a.rfind(")")])
             meta["shape"] = shape
