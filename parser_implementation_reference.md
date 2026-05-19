@@ -102,7 +102,9 @@ another source language.
   and optional local `target` name so renamed imports survive JSON,
   semantic conversion, and `.pyi` printing.  
 - Signature kind expressions resolved transitively (symbol -> symbol -> value),
-  including renamed imports from parsed modules.  
+  including renamed imports from parsed modules. Safely evaluable arithmetic
+  parameter chains are folded to their final integer kind; compiler-dependent
+  intrinsics such as `selected_real_kind(...)` remain as resolved expressions.  
 - Shape expressions resolved using available symbol dictionary.  
 - Namespace/project parsing resolves cross-file kinds and dimensions after
   dependency ordering.  

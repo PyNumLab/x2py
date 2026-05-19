@@ -303,7 +303,7 @@ end module solver
     }
     signatures = collect_project_procedure_signatures(files)
     step = [s for s in signatures if s.name == "step"][0]
-    assert step.arguments[0].kind == "rk"
+    assert step.arguments[0].kind == "selected_real_kind(15, 307)"
 
 
 def test_derived_type_fields_and_methods_detection():
@@ -961,7 +961,7 @@ end module my_kinds
     assert "my_kinds" in ns.modules
     assert "solver" in ns.modules
     step = [s for s in ns.procedures.values() if s.name == "step"][0]
-    assert step.arguments[0].kind == "rk"
+    assert step.arguments[0].kind == "selected_real_kind(15, 307)"
 
 
 def test_recursive_function_and_result_keyword_variants():
@@ -1528,7 +1528,7 @@ end block data init_data
     assert "driver" in project.programs
     assert "solver_mod.step" in project.procedures
     solver = project.procedures["solver_mod.step"]
-    assert solver.arguments[0].kind == "rk"
+    assert solver.arguments[0].kind == "selected_real_kind(15, 307)"
 
 
 def test_singular_parse_entrypoints_return_single_models():

@@ -1107,13 +1107,13 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
             )
     for arg in sig.arguments:
         if arg.kind:
-            arg.kind = _resolve_symbol_reference(arg.kind, local_params)
+            arg.kind = _resolve_kind_expression(arg.kind, local_params)
         if arg.shape:
             arg.shape = [_resolve_compile_time_expression(dim, local_params) for dim in arg.shape]
         if arg.base_type == "unknown" and not implicit_none:
             arg.base_type = _infer_implicit_base_type(arg.name)
     if sig.result and sig.result.kind:
-        sig.result.kind = _resolve_symbol_reference(sig.result.kind, local_params)
+        sig.result.kind = _resolve_kind_expression(sig.result.kind, local_params)
     relevant_params = _collect_relevant_local_params(sig, local_params)
     declared_local_types = state.get("declared_local_types", {})
     # Defensive reconciliation: some legacy declaration forms can be parsed into
@@ -1173,7 +1173,23 @@ def _finalize_proc(state: dict) -> FortranProcedureSignature:
 # Compile-time expression and symbol resolution
 # -----------------------------------------------------------------------------
 
-def _resolve_signature_kinds(sig: FortranProcedureSignature, module_params: dict[str, dict[str, str]]) -> None:
+def _resolve_module_parameter_values(module_params: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
+    resolved: dict[str, dict[str, str]] = {}
+    for module_name, params in module_params.items():
+        resolved[module_name.lower()] = {
+            name.lower(): _resolve_compile_time_expression(value, params)
+            for name, value in params.items()
+        }
+    return resolved
+
+
+def _resolve_signature_kinds(
+    sig: FortranProcedureSignature,
+    module_params: dict[str, dict[str, str]],
+    *,
+    resolve_shapes: bool = True,
+) -> None:
+    module_params = _resolve_module_parameter_values(module_params)
     symbol_to_value: dict[str, str] = {}
     if sig.module:
         symbol_to_value.update(module_params.get(sig.module.lower(), {}))
@@ -1195,11 +1211,16 @@ def _resolve_signature_kinds(sig: FortranProcedureSignature, module_params: dict
     sig.variables.update(_resolve_variables(symbol_to_value))
     for arg in sig.arguments:
         if arg.kind:
-            arg.kind = _resolve_symbol_reference(arg.kind, symbol_to_value)
-        if arg.shape:
+            arg.kind = _resolve_kind_expression(arg.kind, symbol_to_value)
+        if resolve_shapes and arg.shape:
             arg.shape = [_resolve_compile_time_expression(dim, symbol_to_value) for dim in arg.shape]
     if sig.result and sig.result.kind:
-        sig.result.kind = _resolve_symbol_reference(sig.result.kind, symbol_to_value)
+        sig.result.kind = _resolve_kind_expression(sig.result.kind, symbol_to_value)
+
+
+def _resolve_kind_expression(expr: str, symbols: dict[str, str]) -> str:
+    resolved = _resolve_symbol_reference(expr, symbols)
+    return _resolve_compile_time_expression(resolved, symbols)
 
 
 def _resolve_symbol_reference(expr: str, symbols: dict[str, str]) -> str:
@@ -2944,6 +2965,28 @@ class FortranParser:
             parsed_files = [self.visit_file(path, encoding=encoding) for path in namespace["files"]]
         else:
             parsed_files = [self.visit_file(path, encoding=encoding) for path in files]
+
+        module_params: dict[str, dict[str, str]] = {}
+        for parsed_file in parsed_files:
+            if parsed_file.source is not None:
+                module_params.update(self._collect_module_parameters(parsed_file.source, parsed_file.filename))
+
+        seen_procedures: set[int] = set()
+        for parsed_file in parsed_files:
+            for proc in parsed_file.procedures:
+                if id(proc) not in seen_procedures:
+                    _resolve_signature_kinds(proc, module_params, resolve_shapes=False)
+                    seen_procedures.add(id(proc))
+            for module in parsed_file.modules:
+                for proc in module.procedures:
+                    if id(proc) not in seen_procedures:
+                        _resolve_signature_kinds(proc, module_params, resolve_shapes=False)
+                        seen_procedures.add(id(proc))
+            for submodule in parsed_file.submodules:
+                for proc in submodule.procedures:
+                    if id(proc) not in seen_procedures:
+                        _resolve_signature_kinds(proc, module_params, resolve_shapes=False)
+                        seen_procedures.add(id(proc))
 
         project = FortranProject(files=parsed_files)
 

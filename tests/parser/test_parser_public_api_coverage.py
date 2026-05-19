@@ -951,7 +951,9 @@ def test_cross_file_kind_resolution_for_arguments_results_and_local_parameters()
         {
             "kinds.f90": """
 module kinds_mod
-  integer, parameter :: rk = 8
+  integer, parameter :: base = 4
+  integer, parameter :: offset = base
+  integer, parameter :: rk = base + offset
 end module kinds_mod
 """,
             "solver.f90": """
@@ -974,8 +976,28 @@ end module solver_mod
     result_proc = project.procedures["solver_mod.make_value"]
     local_proc = project.procedures["solver_mod.use_local"]
 
-    assert result_proc.result.kind == "rk"
+    assert result_proc.result.kind == "8"
     assert local_proc.arguments[0].shape == ["1:4"]
+
+
+def test_local_kind_parameter_chain_resolves_to_final_integer_kind():
+    parsed = parse_fortran_file(
+        """
+subroutine consume(x, y)
+  integer, parameter :: word = 4
+  integer, parameter :: twice = 2
+  integer, parameter :: rk = word * twice
+  integer, parameter :: ck = rk * twice
+  real(kind=rk), intent(in) :: x
+  complex(kind=ck), intent(out) :: y
+end subroutine consume
+""",
+        filename="local_kind_chain.f90",
+    )
+    args = {arg.name: arg for arg in parsed.procedures[0].arguments}
+
+    assert args["x"].kind == "8"
+    assert args["y"].kind == "16"
 
 
 def test_preprocessor_without_macro_selection_keeps_distinct_conditional_procedures():
@@ -1290,9 +1312,9 @@ end module solver_mod
     project = parse_fortran_project(tmp_path)
     proc = project.procedures["solver_mod.make_value"]
 
-    assert proc.arguments[0].kind == "rk"
+    assert proc.arguments[0].kind == "8"
     assert proc.arguments[0].shape == ["1:rk"]
-    assert proc.result.kind == "rk"
+    assert proc.result.kind == "8"
     assert project.dependencies["solver_mod"] == {"kinds_mod"}
 
 
@@ -1300,8 +1322,10 @@ def test_directory_project_tracks_renamed_kind_imports_from_other_files(tmp_path
     (tmp_path / "precision.f90").write_text(
         """
 module precision_mod
-  integer, parameter :: wp = selected_real_kind(12)
+  integer, parameter :: word = 4
   integer, parameter :: stride = 2
+  integer, parameter :: wp = word * stride
+  integer, parameter :: wide = wp * stride
 end module precision_mod
 """,
         encoding="utf-8",
@@ -1309,11 +1333,11 @@ end module precision_mod
     (tmp_path / "solver.f90").write_text(
         """
 module solver_mod
-  use precision_mod, only: local_wp => wp, stride
+  use precision_mod, only: local_wp => wp, stride, local_wide => wide
 contains
   subroutine consume(x, y)
     real(kind=local_wp), intent(in) :: x(1:stride)
-    real(kind=local_wp + stride), intent(out) :: y
+    complex(kind=local_wide), intent(out) :: y
   end subroutine consume
 end module solver_mod
 """,
@@ -1324,12 +1348,13 @@ end module solver_mod
     proc = project.procedures["solver_mod.consume"]
     args = {arg.name: arg for arg in proc.arguments}
 
-    assert args["x"].kind == "local_wp"
+    assert args["x"].kind == "8"
     assert args["x"].shape == ["1:stride"]
-    assert args["y"].kind == "local_wp + stride"
+    assert args["y"].kind == "16"
     assert [(mapping.source, mapping.target) for mapping in proc.uses["precision_mod"]] == [
         ("wp", "local_wp"),
         ("stride", None),
+        ("wide", "local_wide"),
     ]
     assert project.dependencies["solver_mod"] == {"precision_mod"}
 
@@ -1575,7 +1600,7 @@ end subroutine file_level_worker
     proc = project.procedures["file_level_worker"]
     args = {arg.name: arg for arg in proc.arguments}
 
-    assert args["x"].kind == "rk"
+    assert args["x"].kind == "selected_real_kind(12)"
     assert args["x"].shape == ["1:n"]
     assert args["y"].kind == "selected_real_kind(6)"
     assert [mapping.local_name for mapping in proc.uses["public_params_mod"]] == ["rk", "n"]
