@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from fortran_parser.models import (
@@ -27,10 +28,42 @@ from .models import (
 
 FORTRAN_TYPE_MAP = {
     ("integer", None): "Int32",
+    ("integer", "1"): "Int8",
+    ("integer", "2"): "Int16",
+    ("integer", "4"): "Int32",
+    ("integer", "8"): "Int64",
+    ("integer", "int8"): "Int8",
+    ("integer", "int16"): "Int16",
+    ("integer", "int32"): "Int32",
+    ("integer", "int64"): "Int64",
+    ("integer", "c_signed_char"): "Int8",
+    ("integer", "c_short"): "Int16",
+    ("integer", "c_int"): "Int32",
+    ("integer", "c_long_long"): "Int64",
+    ("integer", "c_int8_t"): "Int8",
+    ("integer", "c_int16_t"): "Int16",
+    ("integer", "c_int32_t"): "Int32",
+    ("integer", "c_int64_t"): "Int64",
     ("real", None): "Float64",
     ("real", "4"): "Float32",
     ("real", "8"): "Float64",
+    ("real", "16"): "Float128",
+    ("real", "real32"): "Float32",
+    ("real", "real64"): "Float64",
+    ("real", "real128"): "Float128",
+    ("real", "c_float"): "Float32",
+    ("real", "c_double"): "Float64",
+    ("complex", None): "Complex128",
+    ("complex", "4"): "Complex64",
+    ("complex", "8"): "Complex128",
+    ("complex", "16"): "Complex256",
+    ("complex", "real32"): "Complex64",
+    ("complex", "real64"): "Complex128",
+    ("complex", "real128"): "Complex256",
+    ("complex", "c_float_complex"): "Complex64",
+    ("complex", "c_double_complex"): "Complex128",
     ("logical", None): "Bool",
+    ("logical", "c_bool"): "Bool",
     ("character", None): "String",
 }
 
@@ -247,13 +280,53 @@ class FortranToIRConverter:
         )
 
     def _semantic_type_name(self, var: FortranVariable) -> str:
-        if var.base_type.lower() == "derived":
+        base_type = var.base_type.lower()
+        if base_type == "unknown":
+            raise ValueError(f"Unknown Fortran datatype for variable '{var.name}'")
+
+        if base_type == "derived":
             if not var.kind:
                 raise ValueError(f"Derived type variable '{var.name}' is missing concrete type name")
             return str(var.kind)
+        if base_type == "procedure":
+            return "Procedure"
 
-        kind = str(var.kind).lower() if var.kind is not None else None
-        return self.type_map.get((var.base_type.lower(), kind), "Unknown")
+        kind = self._semantic_kind_key(var)
+        semantic_type = self.type_map.get((base_type, kind))
+        if semantic_type is None:
+            type_text = base_type if kind is None else f"{base_type}(kind={kind})"
+            raise ValueError(f"Unsupported Fortran semantic type for variable '{var.name}': {type_text}")
+        return semantic_type
+
+    @staticmethod
+    def _semantic_kind_key(var: FortranVariable) -> str | None:
+        if not var.kind:
+            return None
+
+        base_type = var.base_type.lower()
+        kind = str(var.kind).strip().lower()
+        if base_type == "character":
+            return None
+        if base_type == "logical":
+            return "c_bool" if kind == "c_bool" else None
+        literal_kind = FortranToIRConverter._literal_kind_key(kind)
+        if literal_kind is not None:
+            return literal_kind
+        return kind
+
+    @staticmethod
+    def _literal_kind_key(kind: str) -> str | None:
+        match = re.fullmatch(r"kind\(\s*[-+]?\d+(?:\.\d*)?([edq])[-+]?\d*\s*\)", kind)
+        if match is None:
+            return None
+        exponent_marker = match.group(1)
+        if exponent_marker == "e":
+            return "4"
+        if exponent_marker == "d":
+            return "8"
+        if exponent_marker == "q":
+            return "16"
+        return None
 
     @staticmethod
     def _add_shape_constraints(semantic_type: SemanticType) -> None:

@@ -27,7 +27,7 @@
         {
           "name": "test",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -74,7 +74,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -94,7 +94,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -462,7 +462,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -482,7 +482,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -549,7 +549,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -575,7 +575,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -985,7 +985,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1011,7 +1011,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1084,7 +1084,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 2,
               "shape": [
                 ":",
@@ -1113,7 +1113,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 2,
               "shape": [
                 ":",
@@ -1544,7 +1544,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 2,
               "shape": [
                 ":",
@@ -1573,7 +1573,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 2,
               "shape": [
                 ":",
@@ -1649,7 +1649,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 3,
               "shape": [
                 ":",
@@ -1681,7 +1681,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 3,
               "shape": [
                 ":",
@@ -2133,7 +2133,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 3,
               "shape": [
                 ":",
@@ -2165,7 +2165,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 3,
               "shape": [
                 ":",
@@ -2244,7 +2244,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 4,
               "shape": [
                 ":",
@@ -2279,7 +2279,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 4,
               "shape": [
                 ":",
@@ -2752,7 +2752,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 4,
               "shape": [
                 ":",
@@ -2787,7 +2787,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 4,
               "shape": [
                 ":",
@@ -2869,7 +2869,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 5,
               "shape": [
                 ":",
@@ -2907,7 +2907,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 5,
               "shape": [
                 ":",
@@ -3401,7 +3401,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 5,
               "shape": [
                 ":",
@@ -3439,7 +3439,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 5,
               "shape": [
                 ":",
@@ -3524,7 +3524,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 6,
               "shape": [
                 ":",
@@ -3565,7 +3565,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 6,
               "shape": [
                 ":",
@@ -4080,7 +4080,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 6,
               "shape": [
                 ":",
@@ -4121,7 +4121,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 6,
               "shape": [
                 ":",
@@ -4209,7 +4209,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 7,
               "shape": [
                 ":",
@@ -4253,7 +4253,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 7,
               "shape": [
                 ":",
@@ -4789,7 +4789,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 7,
               "shape": [
                 ":",
@@ -4833,7 +4833,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 7,
               "shape": [
                 ":",
@@ -4944,7 +4944,7 @@
             {
               "name": "info",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5032,7 +5032,7 @@
         {
           "name": "test",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -5079,7 +5079,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5099,7 +5099,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5467,7 +5467,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5487,7 +5487,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5554,7 +5554,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -5580,7 +5580,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -5990,7 +5990,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -6016,7 +6016,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -6089,7 +6089,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 2,
               "shape": [
                 ":",
@@ -6118,7 +6118,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 2,
               "shape": [
                 ":",
@@ -6549,7 +6549,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 2,
               "shape": [
                 ":",
@@ -6578,7 +6578,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 2,
               "shape": [
                 ":",
@@ -6654,7 +6654,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 3,
               "shape": [
                 ":",
@@ -6686,7 +6686,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 3,
               "shape": [
                 ":",
@@ -7138,7 +7138,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 3,
               "shape": [
                 ":",
@@ -7170,7 +7170,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 3,
               "shape": [
                 ":",
@@ -7249,7 +7249,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 4,
               "shape": [
                 ":",
@@ -7284,7 +7284,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 4,
               "shape": [
                 ":",
@@ -7757,7 +7757,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 4,
               "shape": [
                 ":",
@@ -7792,7 +7792,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 4,
               "shape": [
                 ":",
@@ -7874,7 +7874,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 5,
               "shape": [
                 ":",
@@ -7912,7 +7912,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 5,
               "shape": [
                 ":",
@@ -8406,7 +8406,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 5,
               "shape": [
                 ":",
@@ -8444,7 +8444,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 5,
               "shape": [
                 ":",
@@ -8529,7 +8529,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 6,
               "shape": [
                 ":",
@@ -8570,7 +8570,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 6,
               "shape": [
                 ":",
@@ -9085,7 +9085,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 6,
               "shape": [
                 ":",
@@ -9126,7 +9126,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 6,
               "shape": [
                 ":",
@@ -9214,7 +9214,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 7,
               "shape": [
                 ":",
@@ -9258,7 +9258,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 7,
               "shape": [
                 ":",
@@ -9794,7 +9794,7 @@
             {
               "name": "a",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 7,
               "shape": [
                 ":",
@@ -9838,7 +9838,7 @@
             {
               "name": "b",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 7,
               "shape": [
                 ":",
@@ -9949,7 +9949,7 @@
             {
               "name": "info",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],

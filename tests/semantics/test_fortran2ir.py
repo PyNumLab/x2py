@@ -141,6 +141,50 @@ def test_converter_rejects_unsupported_inputs_and_missing_derived_type_names():
     with pytest.raises(ValueError, match="missing concrete type name"):
         converter.visit_variable(FortranVariable(name="state", base_type="derived"))
 
+    with pytest.raises(ValueError, match="Unknown Fortran datatype"):
+        converter.visit_variable(FortranVariable(name="x", base_type="unknown"))
+
+    with pytest.raises(ValueError, match="Unsupported Fortran semantic type"):
+        converter.visit_variable(FortranVariable(name="x", base_type="real", kind="selected_real_kind(33)"))
+
+
+def test_iso_c_module_variable_kinds_map_to_semantic_types():
+    source = """
+module constants_mod
+  use iso_c_binding, only: c_int, c_double
+  integer(kind=c_int), parameter :: nmax = 100
+  real(kind=c_double), dimension(3) :: origin
+end module constants_mod
+"""
+
+    parsed = parse_fortran_source(source)
+    module = fortran_module_to_semantic_module(parsed)
+    variables = {var.name: var.semantic_type for var in module.variables}
+
+    assert variables["nmax"].name == "Int32"
+    assert has_constraint(variables["nmax"], "Constant")
+    assert variables["origin"].name == "Float64"
+    assert variables["origin"].shape == ["3"]
+
+
+def test_intrinsic_builtin_kinds_map_to_semantic_types():
+    converter = FortranToIRConverter()
+    cases = [
+        (FortranVariable(name="i1", base_type="integer", kind="1"), "Int8"),
+        (FortranVariable(name="i2", base_type="integer", kind="2"), "Int16"),
+        (FortranVariable(name="i8", base_type="integer", kind="8"), "Int64"),
+        (FortranVariable(name="r4", base_type="real", kind="4"), "Float32"),
+        (FortranVariable(name="r16", base_type="real", kind="16"), "Float128"),
+        (FortranVariable(name="c8", base_type="complex", kind="8"), "Complex128"),
+        (FortranVariable(name="ciso", base_type="complex", kind="c_double_complex"), "Complex128"),
+        (FortranVariable(name="flag", base_type="logical", kind="8"), "Bool"),
+        (FortranVariable(name="text", base_type="character", kind="len=12, kind=c_char"), "String"),
+        (FortranVariable(name="callback", base_type="procedure", kind="f_iface"), "Procedure"),
+    ]
+
+    for variable, expected in cases:
+        assert converter.visit_variable(variable).name == expected
+
 
 def test_semantic_model_helpers_cover_projection_and_canonical_edge_cases():
     assert SemanticFunction("f") != SemanticMethod("f")

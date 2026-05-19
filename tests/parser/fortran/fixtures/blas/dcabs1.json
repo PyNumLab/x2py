@@ -37,7 +37,7 @@
       "result": {
         "name": "DCABS1",
         "base_type": "real",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -95,7 +95,7 @@
       "result": {
         "name": "DCABS1",
         "base_type": "real",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],

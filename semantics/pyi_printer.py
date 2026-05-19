@@ -48,6 +48,8 @@ class PyiPrinter:
         return f"{constraint.name}({args})"
 
     def emit_semantic_type(self, semantic_type: SemanticType) -> str:
+        if semantic_type.name == "Unknown" or semantic_type.dtype == "Unknown":
+            raise ValueError("Cannot emit .pyi with unresolved semantic type 'Unknown'")
         text = semantic_type.name
         annotations = [self.emit_constraint(c) for c in semantic_type.constraints]
         if annotations:

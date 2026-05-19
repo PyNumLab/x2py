@@ -7,9 +7,9 @@ same_name_r: Float64
 
 same_name_l: Bool
 
-same_name_c: Unknown
+same_name_c: Complex128
 
-same_name_s: Unknown
+same_name_s: String
 
 def do_work_i(
     same_name: Int32
@@ -33,12 +33,12 @@ def host_two(
 
 def convert_to_complex(
     same_name: Int32
-) -> Unknown: ...
+) -> Complex128: ...
 
 def convert_to_char(
     same_name: Float64
-) -> Unknown: ...
+) -> String: ...
 
 def convert_to_logical(
-    same_name: Unknown
+    same_name: String
 ) -> Bool: ...

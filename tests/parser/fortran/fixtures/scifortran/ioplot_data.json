@@ -36,7 +36,7 @@
         {
           "name": "Y1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             ":"
@@ -288,7 +288,7 @@
         {
           "name": "Y1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             ":",
@@ -549,7 +549,7 @@
         {
           "name": "Y1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 3,
           "shape": [
             ":",
@@ -826,7 +826,7 @@
         {
           "name": "Y1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             ":"
@@ -1078,7 +1078,7 @@
         {
           "name": "Y1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             ":",
@@ -1339,7 +1339,7 @@
         {
           "name": "Y1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 3,
           "shape": [
             ":",

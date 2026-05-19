@@ -96,7 +96,7 @@
         {
           "name": "seed_random",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             ":"
@@ -122,7 +122,7 @@
         {
           "name": "nrandom",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -142,7 +142,7 @@
         {
           "name": "verb",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -182,7 +182,7 @@
         {
           "name": "ncheck_",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -336,7 +336,7 @@
         {
           "name": "seed_random",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             ":"
@@ -362,7 +362,7 @@
         {
           "name": "nrandom",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -382,7 +382,7 @@
         {
           "name": "verb",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -422,7 +422,7 @@
         {
           "name": "ncheck_",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

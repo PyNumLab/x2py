@@ -78,6 +78,21 @@ end module
     assert "-> None" not in code
 
 
+def test_emit_rejects_unknown_semantic_type():
+    module = SemanticModule(
+        name="bad",
+        variables=[
+            SemanticArgument(
+                name="x",
+                semantic_type=SemanticType("Unknown", dtype="Unknown"),
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match="unresolved semantic type 'Unknown'"):
+        emit_module(module)
+
+
 def test_emit_no_argument_subroutine_is_single_line_signature():
     source = """
 module no_arg_mod

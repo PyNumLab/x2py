@@ -36,7 +36,7 @@
         {
           "name": "Nvec",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "2"
@@ -552,7 +552,7 @@
         {
           "name": "Nvec",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "2"
@@ -925,7 +925,7 @@
         {
           "name": "normalize",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -984,7 +984,7 @@
         {
           "name": "Nvec",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "2"
@@ -1500,7 +1500,7 @@
         {
           "name": "Nvec",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "2"
@@ -1873,7 +1873,7 @@
         {
           "name": "normalize",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

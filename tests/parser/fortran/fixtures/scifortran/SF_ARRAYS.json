@@ -58,7 +58,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -78,7 +78,7 @@
             {
               "name": "istart",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -98,7 +98,7 @@
             {
               "name": "iend",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -215,7 +215,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -292,7 +292,7 @@
             {
               "name": "start",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -312,7 +312,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -333,7 +333,7 @@
           "result": {
             "name": "array",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               "num"
@@ -409,7 +409,7 @@
             {
               "name": "p",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -429,7 +429,7 @@
             {
               "name": "u",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -449,7 +449,7 @@
             {
               "name": "ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -489,7 +489,7 @@
             {
               "name": "istart",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -509,7 +509,7 @@
             {
               "name": "iend",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -652,7 +652,7 @@
             {
               "name": "p",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -672,7 +672,7 @@
             {
               "name": "q",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -692,7 +692,7 @@
             {
               "name": "type",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -835,7 +835,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -983,7 +983,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1003,7 +1003,7 @@
             {
               "name": "istart",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1023,7 +1023,7 @@
             {
               "name": "iend",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1140,7 +1140,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1217,7 +1217,7 @@
             {
               "name": "start",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1237,7 +1237,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1258,7 +1258,7 @@
           "result": {
             "name": "array",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               "num"
@@ -1334,7 +1334,7 @@
             {
               "name": "p",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1354,7 +1354,7 @@
             {
               "name": "u",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1374,7 +1374,7 @@
             {
               "name": "ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1414,7 +1414,7 @@
             {
               "name": "istart",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1434,7 +1434,7 @@
             {
               "name": "iend",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1577,7 +1577,7 @@
             {
               "name": "p",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1597,7 +1597,7 @@
             {
               "name": "q",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1617,7 +1617,7 @@
             {
               "name": "type",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1760,7 +1760,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],

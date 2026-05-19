@@ -251,9 +251,9 @@
             }
           ],
           "return_type": {
-            "name": "Unknown",
+            "name": "Complex128",
             "rank": 0,
-            "dtype": "Unknown",
+            "dtype": "Complex128",
             "shape": [],
             "constraints": [],
             "coercions": [],
@@ -308,9 +308,9 @@
             }
           ],
           "return_type": {
-            "name": "Unknown",
+            "name": "String",
             "rank": 0,
-            "dtype": "Unknown",
+            "dtype": "String",
             "shape": [],
             "constraints": [],
             "coercions": [],
@@ -344,9 +344,9 @@
             {
               "name": "same_name",
               "semantic_type": {
-                "name": "Unknown",
+                "name": "String",
                 "rank": 0,
-                "dtype": "Unknown",
+                "dtype": "String",
                 "shape": [],
                 "constraints": [],
                 "coercions": [],
@@ -500,9 +500,9 @@
         {
           "name": "same_name_c",
           "semantic_type": {
-            "name": "Unknown",
+            "name": "Complex128",
             "rank": 0,
-            "dtype": "Unknown",
+            "dtype": "Complex128",
             "shape": [],
             "constraints": [],
             "coercions": [],
@@ -522,9 +522,9 @@
         {
           "name": "same_name_s",
           "semantic_type": {
-            "name": "Unknown",
+            "name": "String",
             "rank": 0,
-            "dtype": "Unknown",
+            "dtype": "String",
             "shape": [],
             "constraints": [],
             "coercions": [],

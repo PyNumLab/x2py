@@ -1418,7 +1418,7 @@ end subroutine caller
     sig = parse_fortran_file(code).procedures[0]
     cb = next(a for a in sig.arguments if a.name == "cb")
     assert cb.base_type == "procedure"
-    assert cb.kind is None
+    assert cb.kind == ""
     assert "import(ext_cb)" in sig.attributes
 
 

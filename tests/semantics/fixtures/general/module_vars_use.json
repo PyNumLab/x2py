@@ -8,9 +8,9 @@
         {
           "name": "nmax",
           "semantic_type": {
-            "name": "Unknown",
+            "name": "Int32",
             "rank": 0,
-            "dtype": "Unknown",
+            "dtype": "Int32",
             "shape": [],
             "constraints": [
               {
@@ -35,9 +35,9 @@
         {
           "name": "origin",
           "semantic_type": {
-            "name": "Unknown",
+            "name": "Float64",
             "rank": 1,
-            "dtype": "Unknown",
+            "dtype": "Float64",
             "shape": [
               "3"
             ],

@@ -567,7 +567,7 @@ def test_character_entity_lengths_and_assumed_bounds_are_preserved():
     args = {arg.name: arg for arg in sig.arguments}
 
     assert args["name"].base_type == "character"
-    assert args["name"].kind is None
+    assert args["name"].kind == ""
     assert args["table"].shape == ["0:"]
     assert args["table"].lbound == ["0"]
     assert args["table"].ubound == [None]

@@ -12,13 +12,13 @@
         {
           "name": "a",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "8",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -32,13 +32,13 @@
         {
           "name": "b",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "3",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -52,13 +52,13 @@
         {
           "name": "c",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "2",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -72,13 +72,13 @@
         {
           "name": "p_add",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "a + b",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -92,13 +92,13 @@
         {
           "name": "p_sub",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "a - b",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -112,13 +112,13 @@
         {
           "name": "p_mul",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "b * c",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -132,13 +132,13 @@
         {
           "name": "p_div",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "a / c",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -152,13 +152,13 @@
         {
           "name": "p_pow",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "c ** b",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -172,13 +172,13 @@
         {
           "name": "p_mix",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "(a + b) * c - 1",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -199,7 +199,7 @@
             {
               "name": "x1",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:p_add"
@@ -225,7 +225,7 @@
             {
               "name": "x2",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:p_sub"
@@ -251,7 +251,7 @@
             {
               "name": "x3",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:p_mul"
@@ -277,7 +277,7 @@
             {
               "name": "x4",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:p_div"
@@ -303,7 +303,7 @@
             {
               "name": "x5",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:p_pow"
@@ -329,7 +329,7 @@
             {
               "name": "x6",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "0:p_mix"
@@ -355,7 +355,7 @@
             {
               "name": "x7",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:-(-a + b)"
@@ -381,7 +381,7 @@
             {
               "name": "x8",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:(a+b)*(c+1)-1"
@@ -407,7 +407,7 @@
             {
               "name": "x9",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:(a-b)*(a-c)"
@@ -463,13 +463,13 @@
         {
           "name": "a",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "8",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -483,13 +483,13 @@
         {
           "name": "b",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "3",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -503,13 +503,13 @@
         {
           "name": "c",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "2",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -523,13 +523,13 @@
         {
           "name": "p_add",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "a + b",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -543,13 +543,13 @@
         {
           "name": "p_sub",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "a - b",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -563,13 +563,13 @@
         {
           "name": "p_mul",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "b * c",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -583,13 +583,13 @@
         {
           "name": "p_div",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "a / c",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -603,13 +603,13 @@
         {
           "name": "p_pow",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "c ** b",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -623,13 +623,13 @@
         {
           "name": "p_mix",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "(a + b) * c - 1",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
@@ -650,7 +650,7 @@
             {
               "name": "x1",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:p_add"
@@ -676,7 +676,7 @@
             {
               "name": "x2",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:p_sub"
@@ -702,7 +702,7 @@
             {
               "name": "x3",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:p_mul"
@@ -728,7 +728,7 @@
             {
               "name": "x4",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:p_div"
@@ -754,7 +754,7 @@
             {
               "name": "x5",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:p_pow"
@@ -780,7 +780,7 @@
             {
               "name": "x6",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "0:p_mix"
@@ -806,7 +806,7 @@
             {
               "name": "x7",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:-(-a + b)"
@@ -832,7 +832,7 @@
             {
               "name": "x8",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:(a+b)*(c+1)-1"
@@ -858,7 +858,7 @@
             {
               "name": "x9",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:(a-b)*(a-c)"

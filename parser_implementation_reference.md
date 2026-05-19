@@ -469,6 +469,10 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
     themselves; wrap-readiness reports them as `unresolved_kind_arguments` or
     `unresolved_kind_fields` when they cannot be found in the parsed source or
     imports.
+  - Semantic conversion is stricter than parsing: a parsed intrinsic
+    `base_type`/`kind` pair must map to a concrete semantic type, otherwise
+    conversion raises instead of emitting `Unknown`. Generated `.pyi` output and
+    `.pyi` parsing also reject `Unknown` type annotations.
 - **Post-scope validation (hard error):**
   - After parsing each module, derived type, or procedure scope, a validation pass checks that all declared variables/fields/arguments have a known (non-`"unknown"`) base type; failures raise `FortranParseError`.
   - Under `implicit none`, missing declarations are treated as hard errors. For functions:

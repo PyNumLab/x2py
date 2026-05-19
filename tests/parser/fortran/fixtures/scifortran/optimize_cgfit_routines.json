@@ -12,7 +12,7 @@
         {
           "name": "ncom",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -327,7 +327,7 @@
             {
               "name": "itmax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -581,7 +581,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -673,7 +673,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -824,7 +824,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -844,7 +844,7 @@
             {
               "name": "fjac",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -904,7 +904,7 @@
             {
               "name": "itmax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -976,7 +976,7 @@
           "result": {
             "name": "bool",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1027,7 +1027,7 @@
           "result": {
             "name": "bool",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1424,7 +1424,7 @@
         {
           "name": "ncom",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1739,7 +1739,7 @@
             {
               "name": "itmax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1993,7 +1993,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2085,7 +2085,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2236,7 +2236,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2256,7 +2256,7 @@
             {
               "name": "fjac",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2316,7 +2316,7 @@
             {
               "name": "itmax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2388,7 +2388,7 @@
           "result": {
             "name": "bool",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2439,7 +2439,7 @@
           "result": {
             "name": "bool",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],

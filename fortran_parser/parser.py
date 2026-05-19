@@ -204,7 +204,7 @@ def _parse_type_prefix(prefix: str) -> tuple[str, str | None] | None:
         kind = extract_kind_from_type_spec(base, type_spec)
         if kind is None and type_spec and base != "character":
             kind = type_spec[1:-1].strip()
-        return base, kind
+        return base, kind or ""
     derived = _TYPE_FIELD_RE.match(txt)
     if derived:
         return "derived", derived.group("dtype")
@@ -751,6 +751,12 @@ def _var(entry: str):
     return e, []
 
 
+def _var_initializer(entry: str) -> str | None:
+    if "=" not in entry:
+        return None
+    return entry.split("=", 1)[1].strip()
+
+
 def _split_dim_bounds(dim: str) -> tuple[str | None, str | None]:
     part = dim.strip()
     if not part:  # pragma: no cover - empty dimensions are invalid Fortran and not emitted by split_csv.
@@ -775,7 +781,7 @@ def _extract_bounds(shape: list[str]) -> tuple[list[str | None], list[str | None
 
 def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
     arg.base_type = meta["base_type"]
-    arg.kind = meta["kind"]
+    arg.kind = meta["kind"] or ""
     arg.intent = meta["intent"]
     arg.optional = meta["optional"]
     arg.pass_by_value = meta["value"]
@@ -794,7 +800,7 @@ def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
 def _new_decl_meta(base_type: str, kind: str | None) -> dict:
     return {
         "base_type": base_type,
-        "kind": kind,
+        "kind": kind or "",
         "rank": 0,
         "shape": [],
         "intent": "unknown",
@@ -1220,6 +1226,34 @@ def _resolve_signature_kinds(
             arg.shape = [_resolve_compile_time_expression(dim, symbol_to_value) for dim in arg.shape]
     if sig.result and sig.result.kind:
         sig.result.kind = _resolve_kind_expression(sig.result.kind, symbol_to_value)
+
+
+def _resolve_module_variable_kinds(
+    module: FortranModule | FortranSubmodule | FortranProgram | FortranBlockData,
+    module_params: dict[str, dict[str, str]],
+) -> None:
+    module_params = _resolve_module_parameter_values(module_params)
+    symbol_to_value: dict[str, str] = {}
+    if getattr(module, "name", None):
+        symbol_to_value.update(module_params.get(module.name.lower(), {}))
+    for mod, mappings in getattr(module, "uses", {}).items():
+        params = module_params.get(mod.lower(), {})
+        if not params:
+            continue
+        if not mappings:
+            symbol_to_value.update(params)
+            continue
+        for mapping in mappings:
+            source = mapping.source.lower()
+            local = mapping.local_name.lower()
+            if source in params:
+                symbol_to_value[local] = params[source]
+    for var in getattr(module, "variables", []):
+        if var.value is not None:
+            symbol_to_value.setdefault(var.name.lower(), var.value)
+    for var in getattr(module, "variables", []):
+        if var.kind:
+            var.kind = _resolve_kind_expression(var.kind, symbol_to_value)
 
 
 def _resolve_kind_expression(expr: str, symbols: dict[str, str]) -> str:
@@ -2301,7 +2335,7 @@ class FortranParser:
                 arg = self._proc_scope_get_symbol(current_proc, iface_name)
                 if arg is not None:
                     arg.base_type = "procedure"
-                    arg.kind = None
+                    arg.kind = ""
             return current_proc
         return current_proc
 
@@ -2478,7 +2512,7 @@ class FortranParser:
         source_line: str | None,
     ) -> None:
         if meta["base_type"] == "procedure" and meta["kind"] in proc_state.get("imports", set()):
-            meta["kind"] = None
+            meta["kind"] = ""
 
         for entity in split_csv(right):
             raw_name, shape = _var(entity)
@@ -2801,6 +2835,10 @@ class FortranParser:
                 continue
             var = FortranArgument(name=_normalize_declared_name(name, meta))
             _apply(var, meta, shape)
+            initializer = _var_initializer(v)
+            if meta["parameter"] and initializer is not None:
+                var.value = _normalize_parameter_value(initializer)
+                var.value_type = "expression"
             module.variables.append(var)
     def _parse_single_procedure_signature(
         self,
@@ -2911,6 +2949,11 @@ class FortranParser:
         )
         programs = self.visit_fortran_programs(lines, filename=filename)
         block_data_units = self.visit_fortran_block_data(lines, filename=filename)
+        variable_units = [*modules, *submodules, *programs, *block_data_units]
+        if any(var.kind or var.value is not None for unit in variable_units for var in getattr(unit, "variables", [])):
+            module_params = self._collect_module_parameters(code, filename)
+            for unit in variable_units:
+                _resolve_module_variable_kinds(unit, module_params)
 
         owned_proc_ids = {id(proc) for mod in modules for proc in mod.procedures}
         owned_proc_ids.update(id(proc) for submod in submodules for proc in submod.procedures)

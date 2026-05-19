@@ -96,7 +96,7 @@
         {
           "name": "FLAG",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -215,7 +215,7 @@
         {
           "name": "FLAG",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

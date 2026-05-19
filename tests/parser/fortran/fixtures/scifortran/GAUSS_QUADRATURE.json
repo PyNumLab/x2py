@@ -17,8 +17,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "0",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -37,8 +37,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "0.5d0",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -57,8 +57,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "1",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -77,8 +77,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "2",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -97,8 +97,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "3",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -117,8 +117,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "4",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -219,7 +219,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -251,7 +251,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -377,7 +377,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -397,7 +397,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -449,7 +449,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -549,7 +549,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -569,7 +569,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -621,7 +621,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -739,7 +739,7 @@
             {
               "name": "methods",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(xl)"
@@ -765,7 +765,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -831,7 +831,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -883,7 +883,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -975,7 +975,7 @@
             {
               "name": "methods",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(xl)"
@@ -1001,7 +1001,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1067,7 +1067,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1225,7 +1225,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1245,7 +1245,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1398,7 +1398,7 @@
             {
               "name": "methods",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(xl)"
@@ -1424,7 +1424,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1490,7 +1490,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1588,7 +1588,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1628,7 +1628,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1722,7 +1722,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1841,7 +1841,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1960,7 +1960,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2079,7 +2079,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2198,7 +2198,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2329,7 +2329,7 @@
             {
               "name": "N",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2462,7 +2462,7 @@
             {
               "name": "N",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2605,7 +2605,7 @@
           "result": {
             "name": "locate",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2959,7 +2959,7 @@
           "result": {
             "name": "iminloc",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2989,7 +2989,7 @@
             {
               "name": "n1",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3009,7 +3009,7 @@
             {
               "name": "n2",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3050,7 +3050,7 @@
           "result": {
             "name": "assert_eq",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -3120,7 +3120,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3140,7 +3140,7 @@
             {
               "name": "istart",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3160,7 +3160,7 @@
             {
               "name": "iend",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3318,7 +3318,7 @@
             {
               "name": "dim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3513,7 +3513,7 @@
             {
               "name": "N",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3533,7 +3533,7 @@
             {
               "name": "Imin",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3553,7 +3553,7 @@
             {
               "name": "Imax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3573,7 +3573,7 @@
             {
               "name": "status",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3685,7 +3685,7 @@
             {
               "name": "N",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3705,7 +3705,7 @@
             {
               "name": "Imin",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3725,7 +3725,7 @@
             {
               "name": "Imax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3745,7 +3745,7 @@
             {
               "name": "Jmin",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3765,7 +3765,7 @@
             {
               "name": "Jmax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3785,7 +3785,7 @@
             {
               "name": "status",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3843,7 +3843,7 @@
                 {
                   "name": "m",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -3926,7 +3926,7 @@
                 {
                   "name": "m",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -4043,7 +4043,7 @@
                 {
                   "name": "m",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -4258,8 +4258,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "0",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -4278,8 +4278,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "0.5d0",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -4298,8 +4298,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "1",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -4318,8 +4318,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "2",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -4338,8 +4338,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "3",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -4358,8 +4358,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "4",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -4460,7 +4460,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4492,7 +4492,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4618,7 +4618,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4638,7 +4638,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4690,7 +4690,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4790,7 +4790,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4810,7 +4810,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4862,7 +4862,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4980,7 +4980,7 @@
             {
               "name": "methods",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(xl)"
@@ -5006,7 +5006,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5072,7 +5072,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5124,7 +5124,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5216,7 +5216,7 @@
             {
               "name": "methods",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(xl)"
@@ -5242,7 +5242,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5308,7 +5308,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5466,7 +5466,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5486,7 +5486,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5639,7 +5639,7 @@
             {
               "name": "methods",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(xl)"
@@ -5665,7 +5665,7 @@
             {
               "name": "method",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5731,7 +5731,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5829,7 +5829,7 @@
             {
               "name": "ierr",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5869,7 +5869,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -5963,7 +5963,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6082,7 +6082,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6201,7 +6201,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6320,7 +6320,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6439,7 +6439,7 @@
             {
               "name": "m",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6570,7 +6570,7 @@
             {
               "name": "N",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6703,7 +6703,7 @@
             {
               "name": "N",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -6846,7 +6846,7 @@
           "result": {
             "name": "locate",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -7200,7 +7200,7 @@
           "result": {
             "name": "iminloc",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -7230,7 +7230,7 @@
             {
               "name": "n1",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7250,7 +7250,7 @@
             {
               "name": "n2",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7291,7 +7291,7 @@
           "result": {
             "name": "assert_eq",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -7361,7 +7361,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7381,7 +7381,7 @@
             {
               "name": "istart",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7401,7 +7401,7 @@
             {
               "name": "iend",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7559,7 +7559,7 @@
             {
               "name": "dim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7754,7 +7754,7 @@
             {
               "name": "N",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7774,7 +7774,7 @@
             {
               "name": "Imin",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7794,7 +7794,7 @@
             {
               "name": "Imax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7814,7 +7814,7 @@
             {
               "name": "status",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7926,7 +7926,7 @@
             {
               "name": "N",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7946,7 +7946,7 @@
             {
               "name": "Imin",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7966,7 +7966,7 @@
             {
               "name": "Imax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -7986,7 +7986,7 @@
             {
               "name": "Jmin",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -8006,7 +8006,7 @@
             {
               "name": "Jmax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -8026,7 +8026,7 @@
             {
               "name": "status",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -8084,7 +8084,7 @@
                 {
                   "name": "m",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -8167,7 +8167,7 @@
                 {
                   "name": "m",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -8284,7 +8284,7 @@
                 {
                   "name": "m",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],

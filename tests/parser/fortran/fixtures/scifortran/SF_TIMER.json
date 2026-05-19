@@ -40,7 +40,7 @@
         {
           "name": "secs_in_one_day",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -60,7 +60,7 @@
         {
           "name": "secs_in_one_hour",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -80,7 +80,7 @@
         {
           "name": "secs_in_one_min",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -266,7 +266,7 @@
         {
           "name": "Tindex",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -286,7 +286,7 @@
         {
           "name": "Tprof",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -306,7 +306,7 @@
         {
           "name": "Tmax",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -326,7 +326,7 @@
         {
           "name": "time",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -346,7 +346,7 @@
         {
           "name": "old_time",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -366,7 +366,7 @@
         {
           "name": "dtime",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -386,7 +386,7 @@
         {
           "name": "elapsed_time",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -406,7 +406,7 @@
         {
           "name": "eta_time",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -492,7 +492,7 @@
         {
           "name": "dt_T_start",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "Tmax",
@@ -521,7 +521,7 @@
         {
           "name": "dt_T_stop",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "Tmax",
@@ -550,7 +550,7 @@
         {
           "name": "dt_T0",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "Tmax",
@@ -579,7 +579,7 @@
         {
           "name": "dt_T1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "Tmax",
@@ -920,7 +920,7 @@
         {
           "name": "mpi_id",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -940,7 +940,7 @@
         {
           "name": "mpi_size",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -960,7 +960,7 @@
         {
           "name": "mpi_master",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1071,7 +1071,7 @@
             {
               "name": "unit",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1139,7 +1139,7 @@
             {
               "name": "i",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1159,7 +1159,7 @@
             {
               "name": "L",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1179,7 +1179,7 @@
             {
               "name": "step",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1233,7 +1233,7 @@
             {
               "name": "i",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1253,7 +1253,7 @@
             {
               "name": "imax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1637,7 +1637,7 @@
             {
               "name": "dt_T",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "8"
@@ -1763,7 +1763,7 @@
         {
           "name": "secs_in_one_day",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1783,7 +1783,7 @@
         {
           "name": "secs_in_one_hour",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1803,7 +1803,7 @@
         {
           "name": "secs_in_one_min",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1989,7 +1989,7 @@
         {
           "name": "Tindex",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2009,7 +2009,7 @@
         {
           "name": "Tprof",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2029,7 +2029,7 @@
         {
           "name": "Tmax",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2049,7 +2049,7 @@
         {
           "name": "time",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2069,7 +2069,7 @@
         {
           "name": "old_time",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2089,7 +2089,7 @@
         {
           "name": "dtime",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2109,7 +2109,7 @@
         {
           "name": "elapsed_time",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2129,7 +2129,7 @@
         {
           "name": "eta_time",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2215,7 +2215,7 @@
         {
           "name": "dt_T_start",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "Tmax",
@@ -2244,7 +2244,7 @@
         {
           "name": "dt_T_stop",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "Tmax",
@@ -2273,7 +2273,7 @@
         {
           "name": "dt_T0",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "Tmax",
@@ -2302,7 +2302,7 @@
         {
           "name": "dt_T1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "Tmax",
@@ -2643,7 +2643,7 @@
         {
           "name": "mpi_id",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2663,7 +2663,7 @@
         {
           "name": "mpi_size",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2683,7 +2683,7 @@
         {
           "name": "mpi_master",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2794,7 +2794,7 @@
             {
               "name": "unit",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2862,7 +2862,7 @@
             {
               "name": "i",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2882,7 +2882,7 @@
             {
               "name": "L",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2902,7 +2902,7 @@
             {
               "name": "step",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2956,7 +2956,7 @@
             {
               "name": "i",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2976,7 +2976,7 @@
             {
               "name": "imax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3360,7 +3360,7 @@
             {
               "name": "dt_T",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "8"

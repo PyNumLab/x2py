@@ -270,6 +270,8 @@ class _PyiAstParser:
             return semantic_type
 
         name = self.type_name(node)
+        if name == "Unknown":
+            raise ValueError("Unknown semantic type is not allowed in .pyi annotations")
         if not isinstance(node, ast.Subscript):
             return SemanticType(name=name, dtype=name)
 

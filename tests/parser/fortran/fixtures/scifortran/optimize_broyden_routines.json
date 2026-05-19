@@ -96,7 +96,7 @@
         {
           "name": "npar_arth",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -116,7 +116,7 @@
         {
           "name": "npar2_arth",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -422,7 +422,7 @@
             {
               "name": "icheck",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -442,7 +442,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -557,7 +557,7 @@
             {
               "name": "sing",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -878,7 +878,7 @@
             {
               "name": "n1",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -898,7 +898,7 @@
             {
               "name": "n2",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -939,7 +939,7 @@
           "result": {
             "name": "assert_eq2",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -971,7 +971,7 @@
             {
               "name": "n1",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -991,7 +991,7 @@
             {
               "name": "n2",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1011,7 +1011,7 @@
             {
               "name": "n3",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1031,7 +1031,7 @@
             {
               "name": "n4",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1072,7 +1072,7 @@
           "result": {
             "name": "assert_eq4",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1104,7 +1104,7 @@
             {
               "name": "nn",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1151,7 +1151,7 @@
           "result": {
             "name": "assert_eqn",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1183,7 +1183,7 @@
             {
               "name": "j",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1203,7 +1203,7 @@
             {
               "name": "k",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1223,7 +1223,7 @@
             {
               "name": "extra",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1244,7 +1244,7 @@
           "result": {
             "name": "lower_triangle",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 2,
             "shape": [
               "j",
@@ -1285,7 +1285,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1311,7 +1311,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1338,7 +1338,7 @@
           "result": {
             "name": "outerdiff_i",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 2,
             "shape": [
               "size(a)",
@@ -1644,7 +1644,7 @@
             {
               "name": "mask",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1671,7 +1671,7 @@
           "result": {
             "name": "ifirstloc",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1869,7 +1869,7 @@
         {
           "name": "npar_arth",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1889,7 +1889,7 @@
         {
           "name": "npar2_arth",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2195,7 +2195,7 @@
             {
               "name": "icheck",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2215,7 +2215,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2330,7 +2330,7 @@
             {
               "name": "sing",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2651,7 +2651,7 @@
             {
               "name": "n1",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2671,7 +2671,7 @@
             {
               "name": "n2",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2712,7 +2712,7 @@
           "result": {
             "name": "assert_eq2",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2744,7 +2744,7 @@
             {
               "name": "n1",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2764,7 +2764,7 @@
             {
               "name": "n2",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2784,7 +2784,7 @@
             {
               "name": "n3",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2804,7 +2804,7 @@
             {
               "name": "n4",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2845,7 +2845,7 @@
           "result": {
             "name": "assert_eq4",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2877,7 +2877,7 @@
             {
               "name": "nn",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -2924,7 +2924,7 @@
           "result": {
             "name": "assert_eqn",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2956,7 +2956,7 @@
             {
               "name": "j",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2976,7 +2976,7 @@
             {
               "name": "k",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2996,7 +2996,7 @@
             {
               "name": "extra",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3017,7 +3017,7 @@
           "result": {
             "name": "lower_triangle",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 2,
             "shape": [
               "j",
@@ -3058,7 +3058,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3084,7 +3084,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3111,7 +3111,7 @@
           "result": {
             "name": "outerdiff_i",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 2,
             "shape": [
               "size(a)",
@@ -3417,7 +3417,7 @@
             {
               "name": "mask",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3444,7 +3444,7 @@
           "result": {
             "name": "ifirstloc",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
