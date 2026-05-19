@@ -60,13 +60,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Ndim"
+            "2"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Ndim"
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -86,13 +86,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Ndim"
+            "2"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Ndim"
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -112,16 +112,16 @@
           "kind": "8",
           "rank": 2,
           "shape": [
-            "Ndim",
-            "Ndim"
+            "2",
+            "2"
           ],
           "lbound": [
             "1",
             "1"
           ],
           "ubound": [
-            "Ndim",
-            "Ndim"
+            "2",
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -141,16 +141,16 @@
           "kind": "8",
           "rank": 2,
           "shape": [
-            "Ndim",
-            "Ndim"
+            "2",
+            "2"
           ],
           "lbound": [
             "1",
             "1"
           ],
           "ubound": [
-            "Ndim",
-            "Ndim"
+            "2",
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -170,13 +170,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Ndim"
+            "2"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Ndim"
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -196,13 +196,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Ndim"
+            "2"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Ndim"
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -222,16 +222,16 @@
           "kind": "8",
           "rank": 2,
           "shape": [
-            "Mdim",
-            "Ndim"
+            "3",
+            "2"
           ],
           "lbound": [
             "1",
             "1"
           ],
           "ubound": [
-            "Mdim",
-            "Ndim"
+            "3",
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -251,16 +251,16 @@
           "kind": "8",
           "rank": 2,
           "shape": [
-            "Mdim",
-            "Ndim"
+            "3",
+            "2"
           ],
           "lbound": [
             "1",
             "1"
           ],
           "ubound": [
-            "Mdim",
-            "Ndim"
+            "3",
+            "2"
           ],
           "value": null,
           "value_type": "unknown",

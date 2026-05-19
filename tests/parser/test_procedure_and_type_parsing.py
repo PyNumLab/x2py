@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from pathlib import Path
+
 import pytest
 
 from fortran_parser.models import FortranFunctionCall, FortranSlice, FortranUseMapping, FortranVariable
@@ -1240,6 +1242,41 @@ end module expr_mod
     }
     sig = collect_project_procedure_signatures(files)[0]
     assert [a.shape[0] for a in sig.arguments] == ["1:p_add", "1:p_sub", "1:p_mul", "1:p_div", "1:p_pow", "0:p_mix", "1:-(-a + b)", "1:(a+b)*(c+1)-1", "1:(a-b)*(a-c)"]
+
+
+def test_compile_time_expression_fixture_module_values_are_partially_evaluated():
+    parsed = parse_fortran_file(Path("tests/compile_time_expressions.f90"))
+    module = parsed.modules[0]
+    variables = {var.name: var for var in module.variables}
+
+    assert variables["expr_int"].value == "22"
+    assert variables["abs_value"].value == "12"
+    assert variables["max_value"].value == "7"
+    assert variables["mod_value"].value == "2"
+    assert variables["len_value"].value == "6"
+    assert variables["len_trim_value"].value == "3"
+    assert variables["char_code"].value == "65"
+    assert variables["cast_int"].value == "3"
+    assert variables["length_from_len"].kind == "len=7"
+    assert variables["length_from_parameter"].kind == "len=10"
+    assert variables["length_from_len_trim"].kind == "len=3"
+    assert variables["array_from_parameter"].shape == ["10"]
+    assert variables["array_from_expression"].shape == ["21"]
+    assert variables["matrix_from_constants"].shape == ["5", "10"]
+    assert variables["small_array"].value == "[1, 2, 3]"
+
+
+def test_parameterized_derived_type_declarations_preserve_and_resolve_arguments():
+    parsed = parse_fortran_file(Path("tests/compile_time_expressions.f90"))
+    module = parsed.modules[0]
+    variables = {var.name: var for var in module.variables}
+    buffer_type = next(dtype for dtype in module.derived_types if dtype.name == "buffer_type")
+    fields = {field.name: field for field in buffer_type.fields}
+
+    assert variables["compile_time_buffer"].base_type == "derived"
+    assert variables["compile_time_buffer"].kind == "buffer_type(real64, 4)"
+    assert fields["values"].kind == "k"
+    assert fields["values"].shape == ["n"]
 
 
 def test_derived_type_extends_and_attributes():

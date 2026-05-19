@@ -133,7 +133,7 @@
           "result": {
             "name": "reg",
             "base_type": "character",
-            "kind": "len=len_trim(trim(adjustl(trim(file",
+            "kind": "len=len_trim(trim(adjustl(trim(file))))",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1133,7 +1133,7 @@
           "result": {
             "name": "StrOut",
             "base_type": "character",
-            "kind": "len=len(strIn",
+            "kind": "len=len(strIn)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1184,7 +1184,7 @@
           "result": {
             "name": "StrOut",
             "base_type": "character",
-            "kind": "len=len(strIn",
+            "kind": "len=len(strIn)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2359,7 +2359,7 @@
           "result": {
             "name": "reg",
             "base_type": "character",
-            "kind": "len=len_trim(trim(adjustl(trim(file",
+            "kind": "len=len_trim(trim(adjustl(trim(file))))",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -3359,7 +3359,7 @@
           "result": {
             "name": "StrOut",
             "base_type": "character",
-            "kind": "len=len(strIn",
+            "kind": "len=len(strIn)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -3410,7 +3410,7 @@
           "result": {
             "name": "StrOut",
             "base_type": "character",
-            "kind": "len=len(strIn",
+            "kind": "len=len(strIn)",
             "rank": 0,
             "shape": [],
             "lbound": [],

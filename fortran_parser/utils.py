@@ -44,9 +44,9 @@ def split_csv(text: str | None) -> list[str]:
         return []
     out, cur, depth = [], [], 0
     for ch in text:
-        if ch == "(":
+        if ch in "([":
             depth += 1
-        elif ch == ")" and depth > 0:
+        elif ch in ")]" and depth > 0:
             depth -= 1
         if ch == "," and depth == 0:
             piece = "".join(cur).strip()

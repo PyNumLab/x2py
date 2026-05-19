@@ -39,7 +39,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=8+len(text",
+            "kind": "len=8+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -90,7 +90,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=8+len(text",
+            "kind": "len=8+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -141,7 +141,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=8+len(text",
+            "kind": "len=8+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -192,7 +192,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=8+len(text",
+            "kind": "len=8+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -243,7 +243,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -294,7 +294,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -345,7 +345,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -396,7 +396,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -447,7 +447,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=11+len(text",
+            "kind": "len=11+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -498,7 +498,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=11+len(text",
+            "kind": "len=11+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -549,7 +549,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=11+len(text",
+            "kind": "len=11+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -600,7 +600,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=11+len(text",
+            "kind": "len=11+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -651,7 +651,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -702,7 +702,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -753,7 +753,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -804,7 +804,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -896,7 +896,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=8+len(text",
+            "kind": "len=8+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -947,7 +947,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=8+len(text",
+            "kind": "len=8+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -998,7 +998,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=8+len(text",
+            "kind": "len=8+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1049,7 +1049,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=8+len(text",
+            "kind": "len=8+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1100,7 +1100,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1151,7 +1151,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1202,7 +1202,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1253,7 +1253,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1304,7 +1304,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=11+len(text",
+            "kind": "len=11+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1355,7 +1355,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=11+len(text",
+            "kind": "len=11+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1406,7 +1406,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=11+len(text",
+            "kind": "len=11+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1457,7 +1457,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=11+len(text",
+            "kind": "len=11+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1508,7 +1508,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1559,7 +1559,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1610,7 +1610,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1661,7 +1661,7 @@
           "result": {
             "name": "textout",
             "base_type": "character",
-            "kind": "len=9+len(text",
+            "kind": "len=9+len(text)",
             "rank": 0,
             "shape": [],
             "lbound": [],

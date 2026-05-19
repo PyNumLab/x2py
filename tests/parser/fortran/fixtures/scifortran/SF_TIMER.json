@@ -25,8 +25,8 @@
           "ubound": [
             "12"
           ],
-          "value": null,
-          "value_type": "unknown",
+          "value": "(/       'January  ',       'February ',       'March    ',       'April    ',       'May      ',       'June     ',       'July     ',       'August   ',       'September',       'October  ',       'November ',       'December ' /)",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -45,8 +45,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "86400",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -65,8 +65,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "3600",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -85,8 +85,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "60",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -311,8 +311,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "1000",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -429,13 +429,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -495,7 +495,7 @@
           "kind": "",
           "rank": 2,
           "shape": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "lbound": [
@@ -503,7 +503,7 @@
             "1"
           ],
           "ubound": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "value": null,
@@ -524,7 +524,7 @@
           "kind": "",
           "rank": 2,
           "shape": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "lbound": [
@@ -532,7 +532,7 @@
             "1"
           ],
           "ubound": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "value": null,
@@ -553,7 +553,7 @@
           "kind": "",
           "rank": 2,
           "shape": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "lbound": [
@@ -561,7 +561,7 @@
             "1"
           ],
           "ubound": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "value": null,
@@ -582,7 +582,7 @@
           "kind": "",
           "rank": 2,
           "shape": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "lbound": [
@@ -590,7 +590,7 @@
             "1"
           ],
           "ubound": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "value": null,
@@ -611,13 +611,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -637,13 +637,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -663,13 +663,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -689,13 +689,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -715,13 +715,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -741,13 +741,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -767,13 +767,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -793,13 +793,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -819,13 +819,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -845,13 +845,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -871,13 +871,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -897,13 +897,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -1748,8 +1748,8 @@
           "ubound": [
             "12"
           ],
-          "value": null,
-          "value_type": "unknown",
+          "value": "(/       'January  ',       'February ',       'March    ',       'April    ',       'May      ',       'June     ',       'July     ',       'August   ',       'September',       'October  ',       'November ',       'December ' /)",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -1768,8 +1768,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "86400",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -1788,8 +1788,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "3600",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -1808,8 +1808,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "60",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -2034,8 +2034,8 @@
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
+          "value": "1000",
+          "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
@@ -2152,13 +2152,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -2218,7 +2218,7 @@
           "kind": "",
           "rank": 2,
           "shape": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "lbound": [
@@ -2226,7 +2226,7 @@
             "1"
           ],
           "ubound": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "value": null,
@@ -2247,7 +2247,7 @@
           "kind": "",
           "rank": 2,
           "shape": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "lbound": [
@@ -2255,7 +2255,7 @@
             "1"
           ],
           "ubound": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "value": null,
@@ -2276,7 +2276,7 @@
           "kind": "",
           "rank": 2,
           "shape": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "lbound": [
@@ -2284,7 +2284,7 @@
             "1"
           ],
           "ubound": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "value": null,
@@ -2305,7 +2305,7 @@
           "kind": "",
           "rank": 2,
           "shape": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "lbound": [
@@ -2313,7 +2313,7 @@
             "1"
           ],
           "ubound": [
-            "Tmax",
+            "1000",
             "8"
           ],
           "value": null,
@@ -2334,13 +2334,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -2360,13 +2360,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -2386,13 +2386,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -2412,13 +2412,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -2438,13 +2438,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -2464,13 +2464,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -2490,13 +2490,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -2516,13 +2516,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -2542,13 +2542,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -2568,13 +2568,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -2594,13 +2594,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",
@@ -2620,13 +2620,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "Tmax"
+            "1000"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Tmax"
+            "1000"
           ],
           "value": null,
           "value_type": "unknown",

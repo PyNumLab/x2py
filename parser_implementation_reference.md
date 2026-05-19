@@ -106,6 +106,11 @@ another source language.
   parameter chains are folded to their final integer kind; compiler-dependent
   intrinsics such as `selected_real_kind(...)` remain as resolved expressions.  
 - Shape expressions resolved using available symbol dictionary.  
+- Module/program variable parameter values, character lengths, and shapes are
+  resolved through the same cached compile-time resolver where safe.
+- The resolver caches symbol and expression results per scope and evaluates a
+  restricted set of initialization intrinsics (`abs`, `max`, `min`, `mod`,
+  `len`, `len_trim`, `iachar`, `int`) plus arithmetic and comparisons.
 - Namespace/project parsing resolves cross-file kinds and dimensions after
   dependency ordering.  
 
@@ -487,7 +492,7 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
 - **Preprocessor-conditional duplicate procedures (guarded allowance):**
   - The parser does **not** run a full C preprocessor stage before parsing.
   - While scanning signatures, simple directive structure is tracked for `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` to model mutually-exclusive branches.
-  - `visit_fortran_file(..., macro_defines=...)` can provide macro decisions; inactive conditional branches are skipped during signature extraction so the active code path is selected. The legacy `parse_fortran_file(...)` alias remains for compatibility.
+  - `visit_file(..., macro_defines=...)` can provide macro decisions; inactive conditional branches are skipped during signature extraction so the active code path is selected. The module-level `parse_fortran_file(...)` convenience function delegates to this visitor.
     - accepted forms: `set[str]` or `dict[str, int|bool|str]`
     - dictionary values are truthy/falsey (`0`, `False`, `"0"`, `"false"` treated as undefined/disabled)
   - Basic `#if` expressions are supported for branch selection (`defined(X)`, `!`, `&&`, `||`, parentheses, `0`/`1`).

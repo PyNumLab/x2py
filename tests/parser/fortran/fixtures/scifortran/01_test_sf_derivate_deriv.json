@@ -40,13 +40,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -66,13 +66,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -92,13 +92,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -118,13 +118,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -144,13 +144,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -170,13 +170,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -196,13 +196,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -222,13 +222,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -248,13 +248,13 @@
           "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",

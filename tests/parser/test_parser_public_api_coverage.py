@@ -17,11 +17,10 @@ end module alias_mod
 """
 
     assert parser.visit_file(module_code).modules[0].name == "alias_mod"
-    assert parser.parse_file(module_code).modules[0].procedures[0].name == "ping"
+    assert parser.visit_file(module_code).modules[0].procedures[0].name == "ping"
     assert "alias_mod" in parser.visit_project({"alias.f90": module_code}).modules
-    assert "alias_mod.ping" in parser.parse_project({"alias.f90": module_code}).procedures
+    assert "alias_mod.ping" in parser.visit_project({"alias.f90": module_code}).procedures
     assert parser.visit_wrap_readiness(module_code)["wrappable"] is True
-    assert parser.assess_wrap_readiness(module_code)["wrappable"] is True
 
     assert parser.visit_fortran_module("module single_mod\nend module single_mod\n").name == "single_mod"
     assert parser.visit_fortran_program("program driver\nend program driver\n").name == "driver"
@@ -1259,16 +1258,16 @@ end module use_empty_items_mod
     assert [item.local_name for item in module.uses["constants_mod"]] == ["rk", "ik"]
 
 
-def test_public_instance_compatibility_aliases_use_source_strings():
+def test_public_instance_visitor_entrypoints_use_source_strings():
     parser = FortranParser()
 
-    assert parser.parse_fortran_file(
+    assert parser.visit_file(
         """
 subroutine alias_proc()
 end subroutine alias_proc
 """
     ).procedures[0].name == "alias_proc"
-    assert "alias_mod" in parser.parse_fortran_project(
+    assert "alias_mod" in parser.visit_project(
         {
             "alias_mod.f90": """
 module alias_mod
@@ -1533,7 +1532,7 @@ contains
 end module noisy_params_mod
 """
 
-    report = parser.assess_wrap_readiness(code, filename="noisy_params.f90")
+    report = parser.visit_wrap_readiness(code, filename="noisy_params.f90")
 
     assert report["wrappable"] is True
 
