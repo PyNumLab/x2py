@@ -42,6 +42,7 @@
             "4"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -71,6 +72,7 @@
             "4"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -100,6 +102,7 @@
             "4"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -129,6 +132,7 @@
             "4"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],

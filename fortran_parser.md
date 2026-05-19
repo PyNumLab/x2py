@@ -67,6 +67,9 @@ and practical usage from terminal and Python.
 - Unsupported-pattern checks
 - Unknown argument declaration reporting
 - Final boolean readiness (`wrappable`)
+- Unit-scoped blocker records (`unit_blockers`) for wrapper-relevant
+  procedures and derived types, plus file-level blockers when diagnostics are
+  not owned by a single unit. The ready-to-wrap flag remains file-level only.
 
 ## 2) Public API surface
 
@@ -173,11 +176,12 @@ actual declarations.
 Most parser organization changes are structural, but behavior, model-schema,
 coverage, or fixture changes should be reflected in this reference.
 
-Parameter constants expose both `value` and runtime `symbolic_value` when
-available. `value` is the parser's best resolved expression after compile-time
-folding; `symbolic_value` preserves the original parameter initializer for
-validation, debugging, and downstream diagnostics without changing the legacy
-JSON fixture shape.
+Parameter constants expose both `value` and serialized `symbolic_value` when
+available. `value` is reserved for a literal/evaluated result after
+compile-time folding. If an initializer cannot be evaluated safely, such as
+`selected_real_kind(...)`, `value` is `None` and `symbolic_value` preserves the
+original initializer for validation, debugging, downstream diagnostics, and
+JSON consumers.
 
 Procedure-local parameters may be folded into argument shapes during procedure
 finalization. Module-level and `use`-associated parameters used in procedure
@@ -471,7 +475,8 @@ Expected behavior:
 
 - `parsed` is a `FortranFile` aggregate model with parsed units and symbols.
 - `readiness` includes counts, unsupported hits, unknown args, unresolved
-  imported derived-type/kind dependencies, and `wrappable`.
+  imported derived-type/kind dependencies, unit-scoped blockers, and the
+  file-level `wrappable` flag.
 
 ### 4.3 Structured argument specifications
 
@@ -955,3 +960,13 @@ Lower-level unit parsers are internal `FortranParser` methods.
 Semantic conversion lives in `semantics/fortran2ir.py`. It accepts parsed `FortranFile`
 (or selected `FortranModule`) structures and converts metadata into semantic IR
 consumed by the `.pyi` printer and later wrapper/runtime stages.
+
+The semantic converter also supports compile-time specialization for values the
+parser intentionally leaves symbolic. Use
+`collect_semantic_compile_time_requirements(parsed)` to list missing parameter
+or kind values, then pass a dictionary such as
+`{"selected_real_kind(12)": 8}` to
+`fortran_module_to_semantic_module(..., compile_time_values=...)` or
+`fortran_file_to_semantic_modules(..., compile_time_values=...)`. Existing
+semantic IR can be copied and specialized with
+`resolve_semantic_compile_time_values(module, {"n": 64})`.

@@ -23,6 +23,7 @@
           "lbound": [],
           "ubound": [],
           "value": "50",
+          "symbolic_value": "50",
           "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
@@ -43,6 +44,7 @@
           "lbound": [],
           "ubound": [],
           "value": "99",
+          "symbolic_value": "2*Lin-1",
           "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
@@ -63,6 +65,7 @@
           "lbound": [],
           "ubound": [],
           "value": "10",
+          "symbolic_value": "10",
           "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
@@ -83,6 +86,7 @@
           "lbound": [],
           "ubound": [],
           "value": "0.1d0",
+          "symbolic_value": "0.1d0",
           "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
@@ -109,6 +113,7 @@
             "50"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -135,6 +140,7 @@
             "50"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -161,6 +167,7 @@
             "50"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -187,6 +194,7 @@
             "50"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -216,6 +224,7 @@
             "50"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -245,6 +254,7 @@
             "50"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -271,6 +281,7 @@
             "99"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -297,6 +308,7 @@
             "99"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -323,6 +335,7 @@
             "99"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -349,6 +362,7 @@
             "99"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -378,6 +392,7 @@
             "99"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -407,6 +422,7 @@
             "99"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -427,6 +443,7 @@
           "lbound": [],
           "ubound": [],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],

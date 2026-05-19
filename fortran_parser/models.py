@@ -208,6 +208,7 @@ class FortranVariable:
     lbound: list[str | None] = field(default_factory=list)
     ubound: list[str | None] = field(default_factory=list)
     value: str | None = None
+    symbolic_value: str | None = None
     value_type: str = "unknown"
     is_parameter: bool = False
     dimensions: list[int] = field(default_factory=list)
@@ -216,14 +217,6 @@ class FortranVariable:
     def __post_init__(self) -> None:
         if self.kind is None:
             self.kind = ""
-
-    @property
-    def symbolic_value(self) -> str | None:
-        return getattr(self, "_symbolic_value", None)
-
-    @symbolic_value.setter
-    def symbolic_value(self, value: str | None) -> None:
-        self._symbolic_value = value
 
     @property
     def shape_info(self) -> list[dict[str, str | None]]:

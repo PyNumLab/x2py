@@ -654,6 +654,178 @@ def _build_wrap_blockers(
         })
     return blockers
 
+
+def _same_unit(item: dict, sig: FortranProcedureSignature) -> bool:
+    return item.get("procedure") == sig.name and item.get("module") == sig.module
+
+
+def _derived_type_unit_key(module: str | None, type_owner: str | None) -> tuple[str | None, str | None]:
+    return (module.lower() if module else None, type_owner.lower() if type_owner else None)
+
+
+def _build_unit_blockers(
+    *,
+    filename: str | None,
+    signatures: list[FortranProcedureSignature],
+    types: list[FortranDerivedType],
+    unsupported: list[dict],
+    missing_decl_args: list[str],
+    unresolved_derived_args: list[dict],
+    unresolved_derived_fields: list[dict],
+    unresolved_kind_args: list[dict],
+    unresolved_kind_fields: list[dict],
+) -> list[dict]:
+    """Build unit-scoped blocker records without per-unit readiness flags.
+
+    The file-level record owns diagnostics that do not belong to one procedure
+    or derived type. Procedure records own argument/result blockers. Derived
+    type records own field blockers. This lets large files say exactly which
+    unit prevents wrapping while keeping `wrappable` as a file-level result.
+
+    Example:
+        ``_build_unit_blockers(signatures=[scale], types=[], ...)`` returns a
+        procedure item for ``scale`` only when that procedure has blockers.
+    """
+    units: list[dict] = []
+    if not signatures:
+        units.append({
+            "unit_kind": "file",
+            "name": filename or "<source>",
+            "qualified_name": filename or "<source>",
+            "module": None,
+            "blockers": [{
+                "code": "no_signatures",
+                "message": "No procedure signatures were found to wrap.",
+                "items": [],
+            }],
+        })
+    if unsupported:
+        units.append({
+            "unit_kind": "file",
+            "name": filename or "<source>",
+            "qualified_name": filename or "<source>",
+            "module": None,
+            "blockers": [{
+                "code": "unsupported_constructs",
+                "message": "Unsupported Fortran constructs were found.",
+                "items": unsupported,
+            }],
+        })
+
+    for sig in signatures:
+        blockers: list[dict] = []
+        missing_items = [
+            item
+            for item in missing_decl_args
+            if item.startswith(f"{sig.name}:")
+        ]
+        derived_items = [item for item in unresolved_derived_args if _same_unit(item, sig)]
+        kind_items = [item for item in unresolved_kind_args if _same_unit(item, sig)]
+        if missing_items:
+            blockers.append({
+                "code": "unknown_argument_types",
+                "message": "Some procedure arguments have no resolved declaration/type.",
+                "items": missing_items,
+            })
+        if derived_items:
+            blockers.append({
+                "code": "unresolved_derived_type_arguments",
+                "message": "Some derived-type procedure arguments refer to types missing from the parsed source.",
+                "items": derived_items,
+            })
+        if kind_items:
+            blockers.append({
+                "code": "unresolved_kind_arguments",
+                "message": "Some procedure arguments use kind symbols missing from the parsed source/imports.",
+                "items": kind_items,
+            })
+        if not blockers:
+            continue
+        qualified_name = f"{sig.module}.{sig.name}" if sig.module else sig.name
+        units.append({
+            "unit_kind": "procedure",
+            "name": sig.name,
+            "qualified_name": qualified_name,
+            "module": sig.module,
+            "blockers": blockers,
+        })
+
+    derived_field_items: dict[tuple[str | None, str | None], list[dict]] = {}
+    for item in unresolved_derived_fields:
+        key = _derived_type_unit_key(item.get("module"), item.get("type_owner"))
+        derived_field_items.setdefault(key, []).append(item)
+
+    kind_field_items: dict[tuple[str | None, str | None], list[dict]] = {}
+    for item in unresolved_kind_fields:
+        key = _derived_type_unit_key(item.get("module"), item.get("type_owner"))
+        kind_field_items.setdefault(key, []).append(item)
+
+    seen_type_keys: set[tuple[str | None, str | None]] = set()
+    for dtype in types:
+        key = _derived_type_unit_key(dtype.module, dtype.name)
+        seen_type_keys.add(key)
+        blockers = []
+        if derived_field_items.get(key):
+            blockers.append({
+                "code": "unresolved_derived_type_fields",
+                "message": "Some derived-type fields refer to types missing from the parsed source.",
+                "items": derived_field_items[key],
+            })
+        if kind_field_items.get(key):
+            blockers.append({
+                "code": "unresolved_kind_fields",
+                "message": "Some derived-type fields use kind symbols missing from the parsed source/imports.",
+                "items": kind_field_items[key],
+            })
+        if not blockers:
+            continue
+        qualified_name = f"{dtype.module}.{dtype.name}" if dtype.module else dtype.name
+        units.append({
+            "unit_kind": "derived_type",
+            "name": dtype.name,
+            "qualified_name": qualified_name,
+            "module": dtype.module,
+            "blockers": blockers,
+        })
+
+    def sort_unit_key(entry: tuple[tuple[str | None, str | None], list[dict]]) -> tuple[str, str]:
+        module, type_owner = entry[0]
+        return (module or "", type_owner or "")
+
+    for key, items in sorted(derived_field_items.items(), key=sort_unit_key):
+        if key in seen_type_keys:
+            continue
+        module, type_owner = key
+        name = items[0].get("type_owner")
+        units.append({
+            "unit_kind": "derived_type",
+            "name": name,
+            "qualified_name": f"{module}.{name}" if module and name else name,
+            "module": items[0].get("module"),
+            "blockers": [{
+                "code": "unresolved_derived_type_fields",
+                "message": "Some derived-type fields refer to types missing from the parsed source.",
+                "items": items,
+            }],
+        })
+    for key, items in sorted(kind_field_items.items(), key=sort_unit_key):
+        if key in seen_type_keys or key in derived_field_items:
+            continue
+        module, type_owner = key
+        name = items[0].get("type_owner")
+        units.append({
+            "unit_kind": "derived_type",
+            "name": name,
+            "qualified_name": f"{module}.{name}" if module and name else name,
+            "module": items[0].get("module"),
+            "blockers": [{
+                "code": "unresolved_kind_fields",
+                "message": "Some derived-type fields use kind symbols missing from the parsed source/imports.",
+                "items": items,
+            }],
+        })
+    return units
+
 # -----------------------------------------------------------------------------
 # Procedure parsing helpers
 # -----------------------------------------------------------------------------
@@ -1334,6 +1506,8 @@ def _resolve_signature_kinds(
     for name, var in sig.variables.items():
         if var.value is not None:
             symbol_to_value.setdefault(name.lower(), var.value)
+        elif var.symbolic_value is not None:
+            symbol_to_value.setdefault(name.lower(), var.symbolic_value)
     variable_base_types = {name.lower(): var.base_type for name, var in sig.variables.items()}
     variable_symbolic_values = {
         name.lower(): var.symbolic_value or var.value
@@ -1374,13 +1548,16 @@ def _resolve_module_variable_kinds(
             if source in params:
                 symbol_to_value[local] = params[source]
     for var in getattr(module, "variables", []):
-        if var.value is not None:
-            symbol_to_value.setdefault(var.name.lower(), var.value)
+        source_value = var.value if var.value is not None else var.symbolic_value
+        if source_value is not None:
+            symbol_to_value.setdefault(var.name.lower(), source_value)
     resolver = _CompileTimeResolver(symbol_to_value)
     for var in getattr(module, "variables", []):
-        if var.value is not None:
-            var.value = resolver.resolve(var.value, prefer_symbolic=False)
-            symbol_to_value[var.name.lower()] = var.value
+        source_value = var.value if var.value is not None else var.symbolic_value
+        if source_value is not None:
+            resolved_value = resolver.resolve(source_value, prefer_symbolic=False)
+            var.value = _normalize_parameter_value(resolved_value)
+            symbol_to_value[var.name.lower()] = var.value if var.value is not None else source_value
         if var.kind:
             var.kind = _resolve_kind_expression(var.kind, symbol_to_value, resolver=resolver)
         if var.shape:
@@ -1444,7 +1621,7 @@ def _extract_symbol_names(expr: str) -> set[str]:
     }
 
 
-def _normalize_parameter_value(value: str) -> str:
+def _normalize_parameter_value(value: str) -> str | None:
     parsed_int = _safe_eval_int_expr(value)
     if parsed_int is not None:
         return str(parsed_int)
@@ -1456,7 +1633,30 @@ def _normalize_parameter_value(value: str) -> str:
                 return str(int(as_float))
         except ValueError:
             pass
-    return text
+        return text
+    if _is_literal_parameter_value(text):
+        return text
+    return None
+
+
+def _is_literal_parameter_value(value: str) -> bool:
+    text = value.strip()
+    if not text:
+        return False
+    if re.fullmatch(r"[+-]?\d+(?:\.\d*)?(?:[deDE][+-]?\d+)?", text):
+        return True
+    if re.fullmatch(r"\.(?:true|false)\.", text, re.IGNORECASE):
+        return True
+    if re.fullmatch(r"(['\"]).*\1", text):
+        return True
+    if text.startswith("[") and text.endswith("]"):
+        return all(_is_literal_parameter_value(part) for part in split_csv(text[1:-1]))
+    if text.startswith("(/") and text.endswith("/)"):
+        return all(_is_literal_parameter_value(part) for part in split_csv(text[2:-2]))
+    if text.startswith("(") and text.endswith(")"):
+        parts = split_csv(text[1:-1])
+        return len(parts) == 2 and all(_is_literal_parameter_value(part) for part in parts)
+    return False
 
 def _resolve_variables(
     symbols: dict[str, str],
@@ -1471,7 +1671,7 @@ def _resolve_variables(
         var = FortranVariable(
             name=name,
             base_type=base_types.get(name.lower(), "unknown"),
-            value=resolver.resolve(value, prefer_symbolic=False),
+            value=_normalize_parameter_value(resolver.resolve(value, prefer_symbolic=False)),
             value_type="expression",
             is_parameter=True,
         )
@@ -1748,7 +1948,11 @@ class FortranParser:
 
         variable_units = [*modules, *submodules, *programs, *block_data_units]
         module_params = self._collect_module_parameters(lines, filename)
-        if any(var.kind or var.value is not None for unit in variable_units for var in getattr(unit, "variables", [])):
+        if any(
+            var.kind or var.value is not None or var.symbolic_value is not None
+            for unit in variable_units
+            for var in getattr(unit, "variables", [])
+        ):
             for unit in variable_units:
                 _resolve_module_variable_kinds(unit, module_params)
         for proc in standalone_procedures:
@@ -1930,6 +2134,17 @@ class FortranParser:
             unresolved_kind_args=unresolved_kind_args,
             unresolved_kind_fields=unresolved_kind_fields,
         )
+        unit_blockers = _build_unit_blockers(
+            filename=filename,
+            signatures=wrap_target_signatures,
+            types=types,
+            unsupported=unsupported,
+            missing_decl_args=missing_decl_args,
+            unresolved_derived_args=unresolved_derived_args,
+            unresolved_derived_fields=unresolved_derived_fields,
+            unresolved_kind_args=unresolved_kind_args,
+            unresolved_kind_fields=unresolved_kind_fields,
+        )
 
         return {
             "n_signatures": len(signatures),
@@ -1945,6 +2160,7 @@ class FortranParser:
             "unresolved_kind_arguments": unresolved_kind_args,
             "unresolved_kind_fields": unresolved_kind_fields,
             "wrappability_blockers": blockers,
+            "unit_blockers": unit_blockers,
             "why_not_wrappable": [b["message"] for b in blockers],
             "wrappable": not blockers,
         }

@@ -15,7 +15,7 @@ another source language.
 - Resolve compile-time symbols used in type kinds and array shapes, both local
   and cross-file via imported modules.  
 - Produce wrap-readiness diagnostics (`unsupported_constructs`, unknown
-  argument declarations, wrappable boolean).  
+  argument declarations, aggregate wrappable boolean, and unit-scoped blockers).
 - Provide CLI output in both human-readable tree form and JSON form.  
 
 ## 2) Language coverage actually implemented
@@ -172,6 +172,8 @@ another source language.
   - `n_signatures`, `n_types`, `n_modules`, `n_submodules`, `n_programs`, `n_block_data`
   - `unsupported_constructs`
   - `unknown_argument_types`
+  - `unit_blockers` with records only for procedure/derived-type/file units
+    that own blockers. Unit records do not carry a ready-to-wrap flag.
   - `wrappable`
 
 ## 3) Output/data model behavior
@@ -204,6 +206,9 @@ another source language.
 - Fortran `parameter` values are represented in semantic IR with the existing
   `Constant` constraint. The `.pyi` printer renders those as `Final[...]`, and
   the `.pyi` parser maps `Final[...]` back to the `Constant` constraint.
+- Parser JSON serializes both parameter `value` and `symbolic_value`. `value`
+  is literal/evaluated only; compiler-specific or unresolved expressions keep
+  `value: null` and preserve the original expression in `symbolic_value`.
 
 ## 4) Test strategy implemented (current workflow)
 
@@ -485,12 +490,10 @@ implemented today:
   allowed in mutually exclusive `#if/#ifdef` branches but still raise when two
   same-name procedures are active in overlapping branch conditions.
 - **Valued variables map**: compile-time constants are preserved as
-  `FortranVariable(name, value)` records in signature metadata. Parameter
-  objects also expose a runtime `symbolic_value` attribute when the parser has
-  the original initializer. `value` stores the parser's best resolved value
-  when it can determine one; `symbolic_value` keeps the original parameter
-  expression for validation and downstream diagnostics without changing the
-  legacy JSON fixture shape.
+  `FortranVariable(name, value, symbolic_value)` records in signature metadata.
+  `value` stores only a literal/evaluated value when the parser can determine
+  one; otherwise it is `None`. `symbolic_value` keeps the original parameter
+  expression for validation, downstream diagnostics, and JSON consumers.
 - **Expression normalization using valued variables**: argument kinds and shape
   expressions are rewritten using the resolved valued-variable map, including
   transitively dependent symbols.
@@ -609,6 +612,9 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
     `base_type`/`kind` pair must map to a concrete semantic type, otherwise
     conversion raises instead of emitting `Unknown`. Generated `.pyi` output and
     `.pyi` parsing also reject `Unknown` type annotations.
+  - When the missing type information depends on compiler-specific constants,
+    `collect_semantic_compile_time_requirements` reports the unknown expression
+    and semantic conversion accepts `compile_time_values` to specialize the IR.
 - **Post-scope validation (hard error):**
   - After parsing each module, derived type, or procedure scope, a validation pass checks that all declared variables/fields/arguments have a known (non-`"unknown"`) base type; failures raise `FortranParseError`.
   - Under `implicit none`, missing declarations are treated as hard errors. For functions:
