@@ -2436,7 +2436,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2456,7 +2456,7 @@
         {
           "name": "b",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2476,7 +2476,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2496,7 +2496,7 @@
         {
           "name": "hu",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -2516,7 +2516,7 @@
         {
           "name": "id",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -15419,7 +15419,7 @@
         {
           "name": "n",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -21666,7 +21666,7 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -21686,7 +21686,7 @@
         {
           "name": "b",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -21706,7 +21706,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -21726,7 +21726,7 @@
         {
           "name": "hu",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -21746,7 +21746,7 @@
         {
           "name": "id",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -34649,7 +34649,7 @@
         {
           "name": "n",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

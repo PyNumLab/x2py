@@ -16,7 +16,7 @@
         {
           "name": "STAGE1",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "VECT",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "UPLO",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -76,7 +76,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -96,7 +96,7 @@
         {
           "name": "KD",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -116,7 +116,7 @@
         {
           "name": "AB",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDAB",
@@ -145,7 +145,7 @@
         {
           "name": "LDAB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -165,7 +165,7 @@
         {
           "name": "D",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -191,7 +191,7 @@
         {
           "name": "E",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -217,7 +217,7 @@
         {
           "name": "HOUS",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -243,7 +243,7 @@
         {
           "name": "LHOUS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -263,7 +263,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -289,7 +289,7 @@
         {
           "name": "LWORK",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -309,7 +309,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -350,7 +350,7 @@
         {
           "name": "STAGE1",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -370,7 +370,7 @@
         {
           "name": "VECT",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -390,7 +390,7 @@
         {
           "name": "UPLO",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -410,7 +410,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -430,7 +430,7 @@
         {
           "name": "KD",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -450,7 +450,7 @@
         {
           "name": "AB",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDAB",
@@ -479,7 +479,7 @@
         {
           "name": "LDAB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -499,7 +499,7 @@
         {
           "name": "D",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -525,7 +525,7 @@
         {
           "name": "E",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -551,7 +551,7 @@
         {
           "name": "HOUS",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -577,7 +577,7 @@
         {
           "name": "LHOUS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -597,7 +597,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -623,7 +623,7 @@
         {
           "name": "LWORK",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -643,7 +643,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

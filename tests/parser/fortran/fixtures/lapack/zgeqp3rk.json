@@ -16,7 +16,7 @@
         {
           "name": "M",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "NRHS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -76,7 +76,7 @@
         {
           "name": "KMAX",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -96,7 +96,7 @@
         {
           "name": "ABSTOL",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -116,7 +116,7 @@
         {
           "name": "RELTOL",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -136,7 +136,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDA",
@@ -165,7 +165,7 @@
         {
           "name": "LDA",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -185,7 +185,7 @@
         {
           "name": "K",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -205,7 +205,7 @@
         {
           "name": "MAXC2NRMK",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -225,7 +225,7 @@
         {
           "name": "RELMAXC2NRMK",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -245,7 +245,7 @@
         {
           "name": "JPIV",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -271,7 +271,7 @@
         {
           "name": "TAU",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -297,7 +297,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -323,7 +323,7 @@
         {
           "name": "LWORK",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -343,7 +343,7 @@
         {
           "name": "RWORK",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -369,7 +369,7 @@
         {
           "name": "IWORK",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -395,7 +395,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -434,7 +434,7 @@
         {
           "name": "M",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -454,7 +454,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -474,7 +474,7 @@
         {
           "name": "NRHS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -494,7 +494,7 @@
         {
           "name": "KMAX",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -514,7 +514,7 @@
         {
           "name": "ABSTOL",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -534,7 +534,7 @@
         {
           "name": "RELTOL",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -554,7 +554,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDA",
@@ -583,7 +583,7 @@
         {
           "name": "LDA",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -603,7 +603,7 @@
         {
           "name": "K",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -623,7 +623,7 @@
         {
           "name": "MAXC2NRMK",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -643,7 +643,7 @@
         {
           "name": "RELMAXC2NRMK",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -663,7 +663,7 @@
         {
           "name": "JPIV",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -689,7 +689,7 @@
         {
           "name": "TAU",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -715,7 +715,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -741,7 +741,7 @@
         {
           "name": "LWORK",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -761,7 +761,7 @@
         {
           "name": "RWORK",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -787,7 +787,7 @@
         {
           "name": "IWORK",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -813,7 +813,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

@@ -17,14 +17,14 @@
         {
           "name": "L",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "10",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -37,14 +37,14 @@
         {
           "name": "P",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "3",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -57,14 +57,14 @@
         {
           "name": "Q",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "10",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -77,14 +77,14 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "31",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -97,16 +97,16 @@
         {
           "name": "irange",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
-            "L"
+            "10"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "10"
           ],
           "value": null,
           "value_type": "unknown",
@@ -123,16 +123,16 @@
         {
           "name": "grid",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "10"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "10"
           ],
           "value": null,
           "value_type": "unknown",
@@ -149,16 +149,16 @@
         {
           "name": "upmgrid",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "N"
+            "31"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "N"
+            "31"
           ],
           "value": null,
           "value_type": "unknown",
@@ -175,16 +175,16 @@
         {
           "name": "upmint",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "2*P*Q+1"
+            "61"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "2*P*Q+1"
+            "61"
           ],
           "value": null,
           "value_type": "unknown",
@@ -201,7 +201,7 @@
         {
           "name": "fmesh",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],

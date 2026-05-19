@@ -16,7 +16,7 @@
         {
           "name": "SRNAME_ARRAY",
           "base_type": "character",
-          "kind": null,
+          "kind": "1",
           "rank": 1,
           "shape": [
             "SRNAME_LEN"
@@ -42,7 +42,7 @@
         {
           "name": "SRNAME_LEN",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -62,7 +62,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -101,7 +101,7 @@
         {
           "name": "SRNAME_ARRAY",
           "base_type": "character",
-          "kind": null,
+          "kind": "1",
           "rank": 1,
           "shape": [
             "SRNAME_LEN"
@@ -127,7 +127,7 @@
         {
           "name": "SRNAME_LEN",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -147,7 +147,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

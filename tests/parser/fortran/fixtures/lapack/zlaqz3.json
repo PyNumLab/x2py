@@ -16,7 +16,7 @@
         {
           "name": "ILSCHUR",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "ILQ",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "ILZ",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -76,7 +76,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -96,7 +96,7 @@
         {
           "name": "ILO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -116,7 +116,7 @@
         {
           "name": "IHI",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -136,7 +136,7 @@
         {
           "name": "NSHIFTS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -156,7 +156,7 @@
         {
           "name": "NBLOCK_DESIRED",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -176,7 +176,7 @@
         {
           "name": "ALPHA",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -202,7 +202,7 @@
         {
           "name": "BETA",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -228,7 +228,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDA",
@@ -257,7 +257,7 @@
         {
           "name": "LDA",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -277,7 +277,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDB",
@@ -306,7 +306,7 @@
         {
           "name": "LDB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -326,7 +326,7 @@
         {
           "name": "Q",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDQ",
@@ -355,7 +355,7 @@
         {
           "name": "LDQ",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -375,7 +375,7 @@
         {
           "name": "Z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDZ",
@@ -404,7 +404,7 @@
         {
           "name": "LDZ",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -424,7 +424,7 @@
         {
           "name": "QC",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDQC",
@@ -453,7 +453,7 @@
         {
           "name": "LDQC",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -473,7 +473,7 @@
         {
           "name": "ZC",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDZC",
@@ -502,7 +502,7 @@
         {
           "name": "LDZC",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -522,7 +522,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -548,7 +548,7 @@
         {
           "name": "LWORK",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -568,7 +568,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -607,7 +607,7 @@
         {
           "name": "ILSCHUR",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -627,7 +627,7 @@
         {
           "name": "ILQ",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -647,7 +647,7 @@
         {
           "name": "ILZ",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -667,7 +667,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -687,7 +687,7 @@
         {
           "name": "ILO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -707,7 +707,7 @@
         {
           "name": "IHI",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -727,7 +727,7 @@
         {
           "name": "NSHIFTS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -747,7 +747,7 @@
         {
           "name": "NBLOCK_DESIRED",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -767,7 +767,7 @@
         {
           "name": "ALPHA",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -793,7 +793,7 @@
         {
           "name": "BETA",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -819,7 +819,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDA",
@@ -848,7 +848,7 @@
         {
           "name": "LDA",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -868,7 +868,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDB",
@@ -897,7 +897,7 @@
         {
           "name": "LDB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -917,7 +917,7 @@
         {
           "name": "Q",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDQ",
@@ -946,7 +946,7 @@
         {
           "name": "LDQ",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -966,7 +966,7 @@
         {
           "name": "Z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDZ",
@@ -995,7 +995,7 @@
         {
           "name": "LDZ",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1015,7 +1015,7 @@
         {
           "name": "QC",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDQC",
@@ -1044,7 +1044,7 @@
         {
           "name": "LDQC",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1064,7 +1064,7 @@
         {
           "name": "ZC",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDZC",
@@ -1093,7 +1093,7 @@
         {
           "name": "LDZC",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1113,7 +1113,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -1139,7 +1139,7 @@
         {
           "name": "LWORK",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1159,7 +1159,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

@@ -16,7 +16,7 @@
         {
           "name": "A",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -45,7 +45,7 @@
         {
           "name": "Eval",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -71,7 +71,7 @@
         {
           "name": "Evec",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -152,7 +152,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -181,7 +181,7 @@
         {
           "name": "Eval",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -207,7 +207,7 @@
         {
           "name": "Evec",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -295,7 +295,7 @@
         {
           "name": "A",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -324,7 +324,7 @@
         {
           "name": "Eval",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -350,7 +350,7 @@
         {
           "name": "Evec",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -431,7 +431,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -460,7 +460,7 @@
         {
           "name": "Eval",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -486,7 +486,7 @@
         {
           "name": "Evec",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",

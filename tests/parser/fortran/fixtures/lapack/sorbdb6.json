@@ -16,7 +16,7 @@
         {
           "name": "M1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "M2",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -76,7 +76,7 @@
         {
           "name": "X1",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -102,7 +102,7 @@
         {
           "name": "INCX1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -122,7 +122,7 @@
         {
           "name": "X2",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -148,7 +148,7 @@
         {
           "name": "INCX2",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -168,7 +168,7 @@
         {
           "name": "Q1",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDQ1",
@@ -197,7 +197,7 @@
         {
           "name": "LDQ1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -217,7 +217,7 @@
         {
           "name": "Q2",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDQ2",
@@ -246,7 +246,7 @@
         {
           "name": "LDQ2",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -266,7 +266,7 @@
         {
           "name": "WORK",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -292,7 +292,7 @@
         {
           "name": "LWORK",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -312,7 +312,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -351,7 +351,7 @@
         {
           "name": "M1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -371,7 +371,7 @@
         {
           "name": "M2",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -391,7 +391,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -411,7 +411,7 @@
         {
           "name": "X1",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -437,7 +437,7 @@
         {
           "name": "INCX1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -457,7 +457,7 @@
         {
           "name": "X2",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -483,7 +483,7 @@
         {
           "name": "INCX2",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -503,7 +503,7 @@
         {
           "name": "Q1",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDQ1",
@@ -532,7 +532,7 @@
         {
           "name": "LDQ1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -552,7 +552,7 @@
         {
           "name": "Q2",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDQ2",
@@ -581,7 +581,7 @@
         {
           "name": "LDQ2",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -601,7 +601,7 @@
         {
           "name": "WORK",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -627,7 +627,7 @@
         {
           "name": "LWORK",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -647,7 +647,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

@@ -16,7 +16,7 @@
         {
           "name": "COMPQ",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "T",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDT",
@@ -85,7 +85,7 @@
         {
           "name": "LDT",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -105,7 +105,7 @@
         {
           "name": "Q",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDQ",
@@ -134,7 +134,7 @@
         {
           "name": "LDQ",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -154,7 +154,7 @@
         {
           "name": "IFST",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -174,7 +174,7 @@
         {
           "name": "ILST",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -194,7 +194,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -233,7 +233,7 @@
         {
           "name": "COMPQ",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -253,7 +253,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -273,7 +273,7 @@
         {
           "name": "T",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDT",
@@ -302,7 +302,7 @@
         {
           "name": "LDT",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -322,7 +322,7 @@
         {
           "name": "Q",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDQ",
@@ -351,7 +351,7 @@
         {
           "name": "LDQ",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -371,7 +371,7 @@
         {
           "name": "IFST",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -391,7 +391,7 @@
         {
           "name": "ILST",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -411,7 +411,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

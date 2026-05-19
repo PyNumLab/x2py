@@ -97,7 +97,7 @@
       "result": {
         "name": "xercon",
         "base_type": "logical",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -215,7 +215,7 @@
       "result": {
         "name": "xercon",
         "base_type": "logical",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],

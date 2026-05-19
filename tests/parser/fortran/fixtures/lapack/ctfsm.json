@@ -16,7 +16,7 @@
         {
           "name": "TRANSR",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "SIDE",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "UPLO",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -76,7 +76,7 @@
         {
           "name": "TRANS",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -96,7 +96,7 @@
         {
           "name": "DIAG",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -116,7 +116,7 @@
         {
           "name": "M",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -136,7 +136,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -156,7 +156,7 @@
         {
           "name": "ALPHA",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -176,7 +176,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "0:*"
@@ -202,7 +202,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "0:LDB-1",
@@ -231,7 +231,7 @@
         {
           "name": "LDB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -270,7 +270,7 @@
         {
           "name": "TRANSR",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -290,7 +290,7 @@
         {
           "name": "SIDE",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -310,7 +310,7 @@
         {
           "name": "UPLO",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -330,7 +330,7 @@
         {
           "name": "TRANS",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -350,7 +350,7 @@
         {
           "name": "DIAG",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -370,7 +370,7 @@
         {
           "name": "M",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -390,7 +390,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -410,7 +410,7 @@
         {
           "name": "ALPHA",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -430,7 +430,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "0:*"
@@ -456,7 +456,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "0:LDB-1",
@@ -485,7 +485,7 @@
         {
           "name": "LDB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

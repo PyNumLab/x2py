@@ -16,7 +16,7 @@
         {
           "name": "M",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDA",
@@ -85,7 +85,7 @@
         {
           "name": "LDA",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -106,7 +106,7 @@
       "result": {
         "name": "ILACLR",
         "base_type": "integer",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -143,7 +143,7 @@
         {
           "name": "M",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -163,7 +163,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -183,7 +183,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDA",
@@ -212,7 +212,7 @@
         {
           "name": "LDA",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -233,7 +233,7 @@
       "result": {
         "name": "ILACLR",
         "base_type": "integer",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],

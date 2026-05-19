@@ -16,7 +16,7 @@
         {
           "name": "IJOB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "Z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDZ",
@@ -85,7 +85,7 @@
         {
           "name": "LDZ",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -105,7 +105,7 @@
         {
           "name": "RHS",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -131,7 +131,7 @@
         {
           "name": "RDSUM",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -151,7 +151,7 @@
         {
           "name": "RDSCAL",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -171,7 +171,7 @@
         {
           "name": "IPIV",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -197,7 +197,7 @@
         {
           "name": "JPIV",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -242,7 +242,7 @@
         {
           "name": "IJOB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -262,7 +262,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -282,7 +282,7 @@
         {
           "name": "Z",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDZ",
@@ -311,7 +311,7 @@
         {
           "name": "LDZ",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -331,7 +331,7 @@
         {
           "name": "RHS",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -357,7 +357,7 @@
         {
           "name": "RDSUM",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -377,7 +377,7 @@
         {
           "name": "RDSCAL",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -397,7 +397,7 @@
         {
           "name": "IPIV",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -423,7 +423,7 @@
         {
           "name": "JPIV",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"

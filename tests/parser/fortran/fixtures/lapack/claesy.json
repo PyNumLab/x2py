@@ -16,7 +16,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "C",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -76,7 +76,7 @@
         {
           "name": "RT1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -96,7 +96,7 @@
         {
           "name": "RT2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -116,7 +116,7 @@
         {
           "name": "EVSCAL",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -136,7 +136,7 @@
         {
           "name": "CS1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -156,7 +156,7 @@
         {
           "name": "SN1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -195,7 +195,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -215,7 +215,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -235,7 +235,7 @@
         {
           "name": "C",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -255,7 +255,7 @@
         {
           "name": "RT1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -275,7 +275,7 @@
         {
           "name": "RT2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -295,7 +295,7 @@
         {
           "name": "EVSCAL",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -315,7 +315,7 @@
         {
           "name": "CS1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -335,7 +335,7 @@
         {
           "name": "SN1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

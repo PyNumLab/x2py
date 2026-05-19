@@ -16,7 +16,7 @@
         {
           "name": "PREC_TYPE",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "UPLO",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -76,7 +76,7 @@
         {
           "name": "NRHS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -96,7 +96,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDA",
@@ -125,7 +125,7 @@
         {
           "name": "LDA",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -145,7 +145,7 @@
         {
           "name": "AF",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDAF",
@@ -174,7 +174,7 @@
         {
           "name": "LDAF",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -194,7 +194,7 @@
         {
           "name": "IPIV",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -220,7 +220,7 @@
         {
           "name": "COLEQU",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -240,7 +240,7 @@
         {
           "name": "C",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -266,7 +266,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDB",
@@ -295,7 +295,7 @@
         {
           "name": "LDB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -315,7 +315,7 @@
         {
           "name": "Y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDY",
@@ -344,7 +344,7 @@
         {
           "name": "LDY",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -364,7 +364,7 @@
         {
           "name": "BERR_OUT",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -390,7 +390,7 @@
         {
           "name": "N_NORMS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -410,7 +410,7 @@
         {
           "name": "ERR_BNDS_NORM",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "NRHS",
@@ -439,7 +439,7 @@
         {
           "name": "ERR_BNDS_COMP",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "NRHS",
@@ -468,7 +468,7 @@
         {
           "name": "RES",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -494,7 +494,7 @@
         {
           "name": "AYB",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -520,7 +520,7 @@
         {
           "name": "DY",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -546,7 +546,7 @@
         {
           "name": "Y_TAIL",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -572,7 +572,7 @@
         {
           "name": "RCOND",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -592,7 +592,7 @@
         {
           "name": "ITHRESH",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -612,7 +612,7 @@
         {
           "name": "RTHRESH",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -632,7 +632,7 @@
         {
           "name": "DZ_UB",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -652,7 +652,7 @@
         {
           "name": "IGNORE_CWISE",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -672,7 +672,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -711,7 +711,7 @@
         {
           "name": "PREC_TYPE",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -731,7 +731,7 @@
         {
           "name": "UPLO",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -751,7 +751,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -771,7 +771,7 @@
         {
           "name": "NRHS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -791,7 +791,7 @@
         {
           "name": "A",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDA",
@@ -820,7 +820,7 @@
         {
           "name": "LDA",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -840,7 +840,7 @@
         {
           "name": "AF",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDAF",
@@ -869,7 +869,7 @@
         {
           "name": "LDAF",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -889,7 +889,7 @@
         {
           "name": "IPIV",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -915,7 +915,7 @@
         {
           "name": "COLEQU",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -935,7 +935,7 @@
         {
           "name": "C",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -961,7 +961,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDB",
@@ -990,7 +990,7 @@
         {
           "name": "LDB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1010,7 +1010,7 @@
         {
           "name": "Y",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDY",
@@ -1039,7 +1039,7 @@
         {
           "name": "LDY",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1059,7 +1059,7 @@
         {
           "name": "BERR_OUT",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -1085,7 +1085,7 @@
         {
           "name": "N_NORMS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1105,7 +1105,7 @@
         {
           "name": "ERR_BNDS_NORM",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "NRHS",
@@ -1134,7 +1134,7 @@
         {
           "name": "ERR_BNDS_COMP",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "NRHS",
@@ -1163,7 +1163,7 @@
         {
           "name": "RES",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -1189,7 +1189,7 @@
         {
           "name": "AYB",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -1215,7 +1215,7 @@
         {
           "name": "DY",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -1241,7 +1241,7 @@
         {
           "name": "Y_TAIL",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -1267,7 +1267,7 @@
         {
           "name": "RCOND",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1287,7 +1287,7 @@
         {
           "name": "ITHRESH",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1307,7 +1307,7 @@
         {
           "name": "RTHRESH",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1327,7 +1327,7 @@
         {
           "name": "DZ_UB",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1347,7 +1347,7 @@
         {
           "name": "IGNORE_CWISE",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1367,7 +1367,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

@@ -23,9 +23,13 @@ another source language.
 ### 2.1 Source forms, lexing, and preprocessing
 
 - Free-form Fortran suffixes: `.f90`, `.f95`, `.f03`, `.f08`.  
-- Fixed-form suffixes: `.f`, `.for`, `.ftn`.  
+- Fixed-form suffixes: `.f`, `.for`, `.ftn`, `.f77`.  
 - Comment stripping and continuation folding via preprocessing stage.  
 - Fortran-77 fixed-form continuation support validated by tests.  
+- Source-form suffixes are preprocessing hints, not language-era gates:
+  parseable modern constructs are not rejected solely because the filename uses
+  a legacy suffix, and parseable legacy constructs are not rejected solely
+  because the filename uses a modern suffix.
 
 ### 2.2 Procedures
 
@@ -44,8 +48,14 @@ another source language.
 
 ### 2.3 Types, arguments, declarations
 
-- Intrinsic bases: `integer`, `real`, `complex`, `logical`, `character`.  
+- Intrinsic bases: `integer`, `real`, `complex`, `logical`, `character`,
+  and `double precision` (normalized as `real`).  
 - Derived argument declarations through `type(<name>)`.  
+- Procedure dummy declarations through `procedure(<interface>)`.  
+- Legacy star-kind forms are accepted where represented by the declaration
+  grammar. Modern declarations such as `real*8 :: x` preserve kind metadata;
+  old fixed-form declarations without `::`, such as `real*8 x`, preserve kind
+  metadata too.
 - Declaration attributes extracted:
   - `intent(in|out|inout)`
   - `optional`
@@ -66,7 +76,22 @@ another source language.
   - `FortranSlice` for `lower:upper[:stride]` dimensions
   - `FortranFunctionCall` for whole-expression calls such as `ubound(x, 1)`
   - `kind_expression` / `value_expression` for non-shape specs
-- `kind=...` extraction and assignment into argument/result metadata.  
+- Builtin kind extraction and assignment into argument/result metadata:
+  - positional forms such as `integer(4)`, `real(8)`, `complex(16)`,
+    `logical(1)`, and `character(1)`
+  - keyword forms such as `integer(kind=c_int)`, `real(kind=rk)`, and
+    `complex(kind=c_double_complex)`
+  - character length forms such as `character(len=8)` and combined character
+    specs such as `character(len=1, kind=c_char)`
+  - legacy star-kind forms covered by tests
+  Numeric, symbolic, and expression-like kind tokens are preserved when the
+  declaration grammar can recognize the surrounding datatype. This is not "any
+  datatype"; unknown base datatypes still fail fast as unsupported declarations.
+- Symbolic kind/length references are validated generically for wrap readiness:
+  they must be local parameters, module parameters, resolved from parsed
+  `use`-associated module parameters, or explicitly visible through an
+  intrinsic kind module such as `iso_c_binding` or `iso_fortran_env`. Intrinsic
+  kind names are not globally accepted without a visible `use` import.
 
 ### 2.4 Compile-time symbol and expression resolution
 
@@ -76,8 +101,16 @@ another source language.
   procedures/modules. Each explicit import records the imported `source` name
   and optional local `target` name so renamed imports survive JSON,
   semantic conversion, and `.pyi` printing.  
-- Signature kind expressions resolved transitively (symbol -> symbol -> value).  
+- Signature kind expressions resolved transitively (symbol -> symbol -> value),
+  including renamed imports from parsed modules. Safely evaluable arithmetic
+  parameter chains are folded to their final integer kind; compiler-dependent
+  intrinsics such as `selected_real_kind(...)` remain as resolved expressions.  
 - Shape expressions resolved using available symbol dictionary.  
+- Module/program variable parameter values, character lengths, and shapes are
+  resolved through the same cached compile-time resolver where safe.
+- The resolver caches symbol and expression results per scope and evaluates a
+  restricted set of initialization intrinsics (`abs`, `max`, `min`, `mod`,
+  `len`, `len_trim`, `iachar`, `int`) plus arithmetic and comparisons.
 - Namespace/project parsing resolves cross-file kinds and dimensions after
   dependency ordering.  
 
@@ -165,6 +198,9 @@ another source language.
 - The `.pyi` printer emits structured imports as `from module import name` or
   `from module import source as target`; the `.pyi` parser accepts the same
   syntax and restores the semantic import mapping.
+- Fortran `parameter` values are represented in semantic IR with the existing
+  `Constant` constraint. The `.pyi` printer renders those as `Final[...]`, and
+  the `.pyi` parser maps `Final[...]` back to the `Constant` constraint.
 
 ## 4) Test strategy implemented (current workflow)
 
@@ -409,23 +445,54 @@ the reference drifting from actual parser behavior.
 
 When updating parser behavior, keep this fail-fast contract aligned with tests:
 
-- **Version/source-form mismatch (hard error):**
-  - For files detected as Fortran 77 (`.f`, `.for`, `.ftn`, `.f77`), modern-only syntax raises `FortranParseError` (for example: `::`, `intent(...)`, `module`, `contains`, `interface`, `use`, `class(...)`).
-  - For files detected as modern (`.f90`, `.f95`, `.f03`, `.f08`), legacy star-kind declarations (e.g. `real*8`) raise `FortranParseError`.
+- **Source-form is not a language-era hard gate:**
+  - Filename suffixes choose preprocessing behavior and compatibility metadata.
+    Fixed-form suffixes (`.f`, `.for`, `.ftn`, `.f77`) use fixed-form
+    continuation/comment handling; modern suffixes (`.f90`, `.f95`, `.f03`,
+    `.f08`) use free-form handling.
+  - The parser does not reject mixed-era constructs solely because of suffix.
+    For example, `module`/`interface` syntax in a `.f77` file is parsed if the
+    fixed-form preprocessor produces valid logical lines, and legacy star-kind
+    syntax in `.f90` is parsed when the declaration grammar recognizes it.
+  - Wrapper generation/readiness should decide whether a parsed feature is safe
+    to wrap. Parser errors should be about unsupported grammar/metadata, not
+    about a filename implying an older or newer language standard.
 - **Unknown datatype declaration (hard error):**
   - Procedure declarations, derived-type fields, and module-variable declarations raise `FortranParseError` when the datatype declaration is unknown/unsupported instead of silently skipping.
+- **Datatype and kind support is bounded by the declaration grammar:**
+  - Supported base declaration families include intrinsic scalar bases,
+    `type(...)`/`class(...)` derived types, and `procedure(...)` dummy
+    procedure declarations.
+  - Supported kind forms include parenthesized positional specs, `kind=...`,
+    character `len=...` specs, combined character length/kind specs, legacy
+    star-kind forms covered by tests, and symbolic/expression tokens that can
+    later be resolved from local or imported parameters.
+  - Symbolic kind names from intrinsic modules must be made visible by a `use`
+    statement; names such as `c_double`, `real64`, or aliases introduced through
+    `only: local => remote` are not hard-coded as globally available.
+  - Unresolved but syntactically valid kind symbols are not parser errors by
+    themselves; wrap-readiness reports them as `unresolved_kind_arguments` or
+    `unresolved_kind_fields` when they cannot be found in the parsed source or
+    imports.
+  - Semantic conversion is stricter than parsing: a parsed intrinsic
+    `base_type`/`kind` pair must map to a concrete semantic type, otherwise
+    conversion raises instead of emitting `Unknown`. Generated `.pyi` output and
+    `.pyi` parsing also reject `Unknown` type annotations.
 - **Post-scope validation (hard error):**
   - After parsing each module, derived type, or procedure scope, a validation pass checks that all declared variables/fields/arguments have a known (non-`"unknown"`) base type; failures raise `FortranParseError`.
   - Under `implicit none`, missing declarations are treated as hard errors. For functions:
     - if the header uses an explicit `result(name)`, an undeclared result raises an "Unknown datatype for function result ..." error for that result symbol
     - otherwise the result is implicitly the function name and the usual "has no type declaration (implicit none is active)" wording is used
 - **Design intent:**
-  - The parser is intentionally strict at parse time to avoid mixed-standard inputs producing ambiguous metadata.
-  - "Unsupported but recognized" constructs are still surfaced via readiness diagnostics where appropriate; truly invalid-for-version or unknown datatype syntax should crash early.
+  - The parser is intentionally strict about unknown declarations and internal
+    metadata consistency, but permissive about mixed-era Fortran syntax that can
+    be parsed unambiguously.
+  - "Unsupported but recognized" constructs are still surfaced via readiness
+    diagnostics where appropriate; unknown datatype syntax should crash early.
 - **Preprocessor-conditional duplicate procedures (guarded allowance):**
   - The parser does **not** run a full C preprocessor stage before parsing.
   - While scanning signatures, simple directive structure is tracked for `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` to model mutually-exclusive branches.
-  - `visit_fortran_file(..., macro_defines=...)` can provide macro decisions; inactive conditional branches are skipped during signature extraction so the active code path is selected. The legacy `parse_fortran_file(...)` alias remains for compatibility.
+  - `visit_file(..., macro_defines=...)` can provide macro decisions; inactive conditional branches are skipped during signature extraction so the active code path is selected. The module-level `parse_fortran_file(...)` convenience function delegates to this visitor.
     - accepted forms: `set[str]` or `dict[str, int|bool|str]`
     - dictionary values are truthy/falsey (`0`, `False`, `"0"`, `"false"` treated as undefined/disabled)
   - Basic `#if` expressions are supported for branch selection (`defined(X)`, `!`, `&&`, `||`, parentheses, `0`/`1`).

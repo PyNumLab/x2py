@@ -12,7 +12,7 @@
         {
           "name": "ncom",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -32,7 +32,7 @@
         {
           "name": "pcom",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -58,7 +58,7 @@
         {
           "name": "xicom",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -131,7 +131,7 @@
             {
               "name": "p",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -157,7 +157,7 @@
             {
               "name": "xi",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -183,7 +183,7 @@
             {
               "name": "fret",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -203,7 +203,7 @@
             {
               "name": "ftol",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -235,7 +235,7 @@
             {
               "name": "p",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -261,7 +261,7 @@
             {
               "name": "xi",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -287,7 +287,7 @@
             {
               "name": "fret",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -307,7 +307,7 @@
             {
               "name": "ftol",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -327,7 +327,7 @@
             {
               "name": "itmax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -359,7 +359,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -380,7 +380,7 @@
           "result": {
             "name": "f1dim",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -410,7 +410,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -431,7 +431,7 @@
           "result": {
             "name": "df1dim",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -461,7 +461,7 @@
             {
               "name": "ax",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -481,7 +481,7 @@
             {
               "name": "bx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -501,7 +501,7 @@
             {
               "name": "cx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -521,7 +521,7 @@
             {
               "name": "fa",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -541,7 +541,7 @@
             {
               "name": "fb",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -561,7 +561,7 @@
             {
               "name": "fc",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -581,7 +581,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -613,7 +613,7 @@
             {
               "name": "ax",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -633,7 +633,7 @@
             {
               "name": "bx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -653,7 +653,7 @@
             {
               "name": "cx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -673,7 +673,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -693,7 +693,7 @@
             {
               "name": "tol",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -713,7 +713,7 @@
             {
               "name": "xmin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -734,7 +734,7 @@
           "result": {
             "name": "brent_",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -764,7 +764,7 @@
             {
               "name": "ax",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -784,7 +784,7 @@
             {
               "name": "bx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -804,7 +804,7 @@
             {
               "name": "cx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -824,7 +824,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -844,7 +844,7 @@
             {
               "name": "fjac",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -864,7 +864,7 @@
             {
               "name": "tol",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -884,7 +884,7 @@
             {
               "name": "xmin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -904,7 +904,7 @@
             {
               "name": "itmax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -925,7 +925,7 @@
           "result": {
             "name": "dbrent",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -955,7 +955,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -976,7 +976,7 @@
           "result": {
             "name": "bool",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1006,7 +1006,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1027,7 +1027,7 @@
           "result": {
             "name": "bool",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1064,7 +1064,7 @@
                 {
                   "name": "a",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 1,
                   "shape": [
                     ":"
@@ -1091,7 +1091,7 @@
               "result": {
                 "name": "cgfit_func",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -1121,7 +1121,7 @@
                 {
                   "name": "a",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 1,
                   "shape": [
                     ":"
@@ -1148,7 +1148,7 @@
               "result": {
                 "name": "cgfit_fjac",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 1,
                 "shape": [
                   "size(a)"
@@ -1190,7 +1190,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -1211,7 +1211,7 @@
               "result": {
                 "name": "func",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -1247,7 +1247,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -1268,7 +1268,7 @@
               "result": {
                 "name": "func",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -1304,7 +1304,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -1325,7 +1325,7 @@
               "result": {
                 "name": "func",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -1355,7 +1355,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -1376,7 +1376,7 @@
               "result": {
                 "name": "fjac",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -1424,7 +1424,7 @@
         {
           "name": "ncom",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1444,7 +1444,7 @@
         {
           "name": "pcom",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1470,7 +1470,7 @@
         {
           "name": "xicom",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -1543,7 +1543,7 @@
             {
               "name": "p",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1569,7 +1569,7 @@
             {
               "name": "xi",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1595,7 +1595,7 @@
             {
               "name": "fret",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1615,7 +1615,7 @@
             {
               "name": "ftol",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1647,7 +1647,7 @@
             {
               "name": "p",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1673,7 +1673,7 @@
             {
               "name": "xi",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1699,7 +1699,7 @@
             {
               "name": "fret",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1719,7 +1719,7 @@
             {
               "name": "ftol",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1739,7 +1739,7 @@
             {
               "name": "itmax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1771,7 +1771,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1792,7 +1792,7 @@
           "result": {
             "name": "f1dim",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1822,7 +1822,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1843,7 +1843,7 @@
           "result": {
             "name": "df1dim",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1873,7 +1873,7 @@
             {
               "name": "ax",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1893,7 +1893,7 @@
             {
               "name": "bx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1913,7 +1913,7 @@
             {
               "name": "cx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1933,7 +1933,7 @@
             {
               "name": "fa",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1953,7 +1953,7 @@
             {
               "name": "fb",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1973,7 +1973,7 @@
             {
               "name": "fc",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1993,7 +1993,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2025,7 +2025,7 @@
             {
               "name": "ax",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2045,7 +2045,7 @@
             {
               "name": "bx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2065,7 +2065,7 @@
             {
               "name": "cx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2085,7 +2085,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2105,7 +2105,7 @@
             {
               "name": "tol",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2125,7 +2125,7 @@
             {
               "name": "xmin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2146,7 +2146,7 @@
           "result": {
             "name": "brent_",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2176,7 +2176,7 @@
             {
               "name": "ax",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2196,7 +2196,7 @@
             {
               "name": "bx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2216,7 +2216,7 @@
             {
               "name": "cx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2236,7 +2236,7 @@
             {
               "name": "func",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2256,7 +2256,7 @@
             {
               "name": "fjac",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2276,7 +2276,7 @@
             {
               "name": "tol",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2296,7 +2296,7 @@
             {
               "name": "xmin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2316,7 +2316,7 @@
             {
               "name": "itmax",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2337,7 +2337,7 @@
           "result": {
             "name": "dbrent",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2367,7 +2367,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2388,7 +2388,7 @@
           "result": {
             "name": "bool",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2418,7 +2418,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2439,7 +2439,7 @@
           "result": {
             "name": "bool",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2476,7 +2476,7 @@
                 {
                   "name": "a",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 1,
                   "shape": [
                     ":"
@@ -2503,7 +2503,7 @@
               "result": {
                 "name": "cgfit_func",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -2533,7 +2533,7 @@
                 {
                   "name": "a",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 1,
                   "shape": [
                     ":"
@@ -2560,7 +2560,7 @@
               "result": {
                 "name": "cgfit_fjac",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 1,
                 "shape": [
                   "size(a)"
@@ -2602,7 +2602,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -2623,7 +2623,7 @@
               "result": {
                 "name": "func",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -2659,7 +2659,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -2680,7 +2680,7 @@
               "result": {
                 "name": "func",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -2716,7 +2716,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -2737,7 +2737,7 @@
               "result": {
                 "name": "func",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -2767,7 +2767,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -2788,7 +2788,7 @@
               "result": {
                 "name": "fjac",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],

@@ -12,14 +12,14 @@
         {
           "name": "n0",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "4",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -32,14 +32,14 @@
         {
           "name": "n1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "6",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -59,7 +59,7 @@
             {
               "name": "x",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "0:n1-1"
@@ -85,7 +85,7 @@
             {
               "name": "y",
               "base_type": "real",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:n0*2"
@@ -141,14 +141,14 @@
         {
           "name": "n0",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "4",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -161,14 +161,14 @@
         {
           "name": "n1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "6",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -188,7 +188,7 @@
             {
               "name": "x",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "0:n1-1"
@@ -214,7 +214,7 @@
             {
               "name": "y",
               "base_type": "real",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "1:n0*2"

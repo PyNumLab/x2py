@@ -16,7 +16,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "CX",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -62,7 +62,7 @@
         {
           "name": "INCX",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -83,7 +83,7 @@
       "result": {
         "name": "SCASUM",
         "base_type": "real",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -120,7 +120,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -140,7 +140,7 @@
         {
           "name": "CX",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -166,7 +166,7 @@
         {
           "name": "INCX",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -187,7 +187,7 @@
       "result": {
         "name": "SCASUM",
         "base_type": "real",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],

@@ -16,7 +16,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "H",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDH",
@@ -65,7 +65,7 @@
         {
           "name": "LDH",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -85,7 +85,7 @@
         {
           "name": "S1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -105,7 +105,7 @@
         {
           "name": "S2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -125,7 +125,7 @@
         {
           "name": "V",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -170,7 +170,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -190,7 +190,7 @@
         {
           "name": "H",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDH",
@@ -219,7 +219,7 @@
         {
           "name": "LDH",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -239,7 +239,7 @@
         {
           "name": "S1",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -259,7 +259,7 @@
         {
           "name": "S2",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -279,7 +279,7 @@
         {
           "name": "V",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"

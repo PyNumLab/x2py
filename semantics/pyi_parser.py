@@ -260,8 +260,18 @@ class _PyiAstParser:
         if self.is_subscript_of(node, "Annotated"):
             semantic_type, _ = self.semantic_type_annotation(node)
             return semantic_type
+        if self.is_subscript_of(node, "Final"):
+            items = self.subscript_items(node)
+            if len(items) != 1:
+                raise ValueError(f"Final expects exactly one type: {ast.unparse(node)!r}")
+            semantic_type = self.semantic_type(items[0])
+            if not any(constraint.name == "Constant" for constraint in semantic_type.constraints):
+                semantic_type.constraints.append(SemanticConstraint("Constant"))
+            return semantic_type
 
         name = self.type_name(node)
+        if name == "Unknown":
+            raise ValueError("Unknown semantic type is not allowed in .pyi annotations")
         if not isinstance(node, ast.Subscript):
             return SemanticType(name=name, dtype=name)
 

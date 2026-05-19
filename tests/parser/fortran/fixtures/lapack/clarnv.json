@@ -16,7 +16,7 @@
         {
           "name": "IDIST",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "ISEED",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "4"
@@ -62,7 +62,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -82,7 +82,7 @@
         {
           "name": "X",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -127,7 +127,7 @@
         {
           "name": "IDIST",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -147,7 +147,7 @@
         {
           "name": "ISEED",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "4"
@@ -173,7 +173,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -193,7 +193,7 @@
         {
           "name": "X",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"

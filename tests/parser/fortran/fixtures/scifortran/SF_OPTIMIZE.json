@@ -22,7 +22,7 @@
         {
           "name": "df_eps",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -42,7 +42,7 @@
         {
           "name": "fmin_fvecp",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -75,7 +75,7 @@
             {
               "name": "funcv",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -95,7 +95,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -121,7 +121,7 @@
             {
               "name": "fjac",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(x)"
@@ -147,7 +147,7 @@
             {
               "name": "epsfcn",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -189,7 +189,7 @@
             {
               "name": "funcv",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -209,7 +209,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -229,7 +229,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "n"
@@ -256,7 +256,7 @@
           "result": {
             "name": "df",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "n"
@@ -364,7 +364,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 1,
                   "shape": [
                     ":"
@@ -391,7 +391,7 @@
               "result": {
                 "name": "funcv",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -427,7 +427,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 1,
                   "shape": [
                     ":"
@@ -454,7 +454,7 @@
               "result": {
                 "name": "funcv",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -532,7 +532,7 @@
         {
           "name": "df_eps",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -552,7 +552,7 @@
         {
           "name": "fmin_fvecp",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             ":"
@@ -585,7 +585,7 @@
             {
               "name": "funcv",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -605,7 +605,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -631,7 +631,7 @@
             {
               "name": "fjac",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(x)"
@@ -657,7 +657,7 @@
             {
               "name": "epsfcn",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -699,7 +699,7 @@
             {
               "name": "funcv",
               "base_type": "procedure",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -719,7 +719,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -739,7 +739,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "n"
@@ -766,7 +766,7 @@
           "result": {
             "name": "df",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "n"
@@ -874,7 +874,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 1,
                   "shape": [
                     ":"
@@ -901,7 +901,7 @@
               "result": {
                 "name": "funcv",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -937,7 +937,7 @@
                 {
                   "name": "x",
                   "base_type": "real",
-                  "kind": null,
+                  "kind": "8",
                   "rank": 1,
                   "shape": [
                     ":"
@@ -964,7 +964,7 @@
               "result": {
                 "name": "funcv",
                 "base_type": "real",
-                "kind": null,
+                "kind": "8",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],

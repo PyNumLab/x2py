@@ -17,14 +17,14 @@
         {
           "name": "L",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "20",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -37,16 +37,16 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -63,16 +63,16 @@
         {
           "name": "f",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -89,16 +89,16 @@
         {
           "name": "df",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -115,16 +115,16 @@
         {
           "name": "df2",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -141,16 +141,16 @@
         {
           "name": "df3",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -167,16 +167,16 @@
         {
           "name": "df4",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -193,16 +193,16 @@
         {
           "name": "df5",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -219,16 +219,16 @@
         {
           "name": "df6",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -245,16 +245,16 @@
         {
           "name": "test",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "L"
+            "20"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "L"
+            "20"
           ],
           "value": null,
           "value_type": "unknown",
@@ -271,7 +271,7 @@
         {
           "name": "dx",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -291,7 +291,7 @@
         {
           "name": "i",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

@@ -105,7 +105,7 @@
         {
           "name": "pivot",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -331,7 +331,7 @@
         {
           "name": "pivot",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

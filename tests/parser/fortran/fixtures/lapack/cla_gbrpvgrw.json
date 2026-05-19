@@ -16,7 +16,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "KL",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "KU",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -76,7 +76,7 @@
         {
           "name": "NCOLS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -96,7 +96,7 @@
         {
           "name": "AB",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDAB",
@@ -125,7 +125,7 @@
         {
           "name": "LDAB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -145,7 +145,7 @@
         {
           "name": "AFB",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDAFB",
@@ -174,7 +174,7 @@
         {
           "name": "LDAFB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -195,7 +195,7 @@
       "result": {
         "name": "CLA_GBRPVGRW",
         "base_type": "real",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -232,7 +232,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -252,7 +252,7 @@
         {
           "name": "KL",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -272,7 +272,7 @@
         {
           "name": "KU",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -292,7 +292,7 @@
         {
           "name": "NCOLS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -312,7 +312,7 @@
         {
           "name": "AB",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDAB",
@@ -341,7 +341,7 @@
         {
           "name": "LDAB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -361,7 +361,7 @@
         {
           "name": "AFB",
           "base_type": "complex",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDAFB",
@@ -390,7 +390,7 @@
         {
           "name": "LDAFB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -411,7 +411,7 @@
       "result": {
         "name": "CLA_GBRPVGRW",
         "base_type": "real",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],

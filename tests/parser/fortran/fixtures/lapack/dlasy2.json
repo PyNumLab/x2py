@@ -16,7 +16,7 @@
         {
           "name": "LTRANL",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "LTRANR",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "ISGN",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -76,7 +76,7 @@
         {
           "name": "N1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -96,7 +96,7 @@
         {
           "name": "N2",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -116,7 +116,7 @@
         {
           "name": "TL",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDTL",
@@ -145,7 +145,7 @@
         {
           "name": "LDTL",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -165,7 +165,7 @@
         {
           "name": "TR",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDTR",
@@ -194,7 +194,7 @@
         {
           "name": "LDTR",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -214,7 +214,7 @@
         {
           "name": "B",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDB",
@@ -243,7 +243,7 @@
         {
           "name": "LDB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -263,7 +263,7 @@
         {
           "name": "SCALE",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -283,7 +283,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDX",
@@ -312,7 +312,7 @@
         {
           "name": "LDX",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -332,7 +332,7 @@
         {
           "name": "XNORM",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -352,7 +352,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -391,7 +391,7 @@
         {
           "name": "LTRANL",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -411,7 +411,7 @@
         {
           "name": "LTRANR",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -431,7 +431,7 @@
         {
           "name": "ISGN",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -451,7 +451,7 @@
         {
           "name": "N1",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -471,7 +471,7 @@
         {
           "name": "N2",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -491,7 +491,7 @@
         {
           "name": "TL",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDTL",
@@ -520,7 +520,7 @@
         {
           "name": "LDTL",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -540,7 +540,7 @@
         {
           "name": "TR",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDTR",
@@ -569,7 +569,7 @@
         {
           "name": "LDTR",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -589,7 +589,7 @@
         {
           "name": "B",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDB",
@@ -618,7 +618,7 @@
         {
           "name": "LDB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -638,7 +638,7 @@
         {
           "name": "SCALE",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -658,7 +658,7 @@
         {
           "name": "X",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDX",
@@ -687,7 +687,7 @@
         {
           "name": "LDX",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -707,7 +707,7 @@
         {
           "name": "XNORM",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -727,7 +727,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

@@ -110,6 +110,17 @@ def _load_fixture_payload(path: Path):
     return {"signatures": data.get("signatures", []), "types": data.get("types", [])}
 
 
+def _iter_typed_entries(node):
+    if isinstance(node, dict):
+        if "base_type" in node:
+            yield node
+        for value in node.values():
+            yield from _iter_typed_entries(value)
+    elif isinstance(node, list):
+        for item in node:
+            yield from _iter_typed_entries(item)
+
+
 def test_fortran_json_fixtures_are_valid_json():
     for path in _FCODE_DIR.rglob("*.json"):
         if path.name.endswith("_errors.json"):
@@ -130,17 +141,24 @@ def test_fortran_json_fixtures_have_sane_types():
     duplicate_argument_entries = []
     invalid_name_entries = []
     invalid_shape_entries = []
+    invalid_kind_entries = []
 
     for path in _FCODE_DIR.rglob("*.json"):
         if path.name.endswith("_errors.json") or path.name == _ALLOWLIST_PATH.name:
             continue
 
+        with path.open("r", encoding="utf-8") as f:
+            raw_payload = json.load(f)
         payload = _load_fixture_payload(path)
         relpath = str(path.relative_to(_FCODE_DIR))
         if relpath.startswith("general/"):
             relpath = relpath[len("general/"): ]
         if relpath.startswith("scifortran/"):
             relpath = relpath.replace("scifortran/", "SciFortran/", 1)
+
+        for entry in _iter_typed_entries(raw_payload):
+            if "kind" not in entry or entry.get("kind") is None:
+                invalid_kind_entries.append((relpath, entry.get("base_type"), entry.get("name")))
 
         for sig in payload["signatures"]:
             arg_names = []
@@ -198,4 +216,5 @@ def test_fortran_json_fixtures_have_sane_types():
     assert not invalid_rank_entries, f"Invalid rank entries: {invalid_rank_entries[:20]}"
     assert not invalid_name_entries, f"Invalid empty/missing names: {invalid_name_entries[:20]}"
     assert not invalid_shape_entries, f"Invalid shape/dimensions metadata: {invalid_shape_entries[:20]}"
+    assert not invalid_kind_entries, f"Missing/null kind entries: {invalid_kind_entries[:20]}"
     assert not duplicate_argument_entries, f"Duplicate argument names in signatures: {duplicate_argument_entries[:20]}"

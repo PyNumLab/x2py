@@ -16,7 +16,7 @@
         {
           "name": "TRANS",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -37,7 +37,7 @@
       "result": {
         "name": "ILATRANS",
         "base_type": "integer",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -74,7 +74,7 @@
         {
           "name": "TRANS",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -95,7 +95,7 @@
       "result": {
         "name": "ILATRANS",
         "base_type": "integer",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],

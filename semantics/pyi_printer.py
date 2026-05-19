@@ -48,6 +48,8 @@ class PyiPrinter:
         return f"{constraint.name}({args})"
 
     def emit_semantic_type(self, semantic_type: SemanticType) -> str:
+        if semantic_type.name == "Unknown" or semantic_type.dtype == "Unknown":
+            raise ValueError("Cannot emit .pyi with unresolved semantic type 'Unknown'")
         text = semantic_type.name
         annotations = [self.emit_constraint(c) for c in semantic_type.constraints]
         if annotations:
@@ -72,9 +74,12 @@ class PyiPrinter:
         *,
         original_name: str | None = None,
     ) -> str:
-        type_text = self.emit_semantic_type(arg.semantic_type)
+        semantic_type = self._without_constant_constraint(arg.semantic_type)
+        type_text = self.emit_semantic_type(semantic_type)
         if original_name is not None:
             type_text = f'Annotated[{type_text}, Name("{original_name}")]'
+        if self._is_constant(arg.semantic_type):
+            type_text = f"Final[{type_text}]"
         if getattr(arg, "visibility", "public") == "private":
             type_text = f"private[{type_text}]"
 
@@ -82,6 +87,29 @@ class PyiPrinter:
         if arg.optional:
             text += " = ..."
         return text
+
+    @staticmethod
+    def _is_constant(semantic_type: SemanticType) -> bool:
+        return any(constraint.name == "Constant" for constraint in semantic_type.constraints)
+
+    @staticmethod
+    def _without_constant_constraint(semantic_type: SemanticType) -> SemanticType:
+        if not PyiPrinter._is_constant(semantic_type):
+            return semantic_type
+        return SemanticType(
+            name=semantic_type.name,
+            rank=semantic_type.rank,
+            dtype=semantic_type.dtype,
+            shape=list(semantic_type.shape),
+            constraints=[
+                constraint
+                for constraint in semantic_type.constraints
+                if constraint.name != "Constant"
+            ],
+            coercions=list(semantic_type.coercions),
+            ownership=semantic_type.ownership,
+            metadata=dict(semantic_type.metadata),
+        )
 
     def emit_function(self, func: SemanticFunction) -> str:
         return_type = self._projected_return_annotation(func)

@@ -1,6 +1,6 @@
-n0: Int32
+n0: Final[Int32]
 
-n1: Int32
+n1: Final[Int32]
 
 def use_expr(
     x: Int32[Shape('0:n1-1'), ORDER_F],

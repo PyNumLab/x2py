@@ -18,7 +18,7 @@
             {
               "name": "func_in",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -44,7 +44,7 @@
             {
               "name": "func_out",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -82,7 +82,7 @@
             {
               "name": "func_in",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -108,7 +108,7 @@
             {
               "name": "func_out",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -146,7 +146,7 @@
             {
               "name": "func_in",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -172,7 +172,7 @@
             {
               "name": "func_out",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -210,7 +210,7 @@
             {
               "name": "func_in",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -236,7 +236,7 @@
             {
               "name": "func_out",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -274,7 +274,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -312,7 +312,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -350,7 +350,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -391,7 +391,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -432,7 +432,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -458,7 +458,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -478,7 +478,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -510,7 +510,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -536,7 +536,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -556,7 +556,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -588,7 +588,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -626,7 +626,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -664,7 +664,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -690,7 +690,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -710,7 +710,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -742,7 +742,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -768,7 +768,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -788,7 +788,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -820,7 +820,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -858,7 +858,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -896,7 +896,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -937,7 +937,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -978,7 +978,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1004,7 +1004,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1024,7 +1024,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1056,7 +1056,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1082,7 +1082,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1102,7 +1102,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1134,7 +1134,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1172,7 +1172,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1210,7 +1210,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1236,7 +1236,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1256,7 +1256,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1288,7 +1288,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1314,7 +1314,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1334,7 +1334,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1366,7 +1366,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1393,7 +1393,7 @@
           "result": {
             "name": "fout",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -1429,7 +1429,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1456,7 +1456,7 @@
           "result": {
             "name": "fout",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -1492,7 +1492,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1519,7 +1519,7 @@
           "result": {
             "name": "fout",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -1555,7 +1555,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1582,7 +1582,7 @@
           "result": {
             "name": "fout",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -1618,7 +1618,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1656,7 +1656,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1864,7 +1864,7 @@
             {
               "name": "func_in",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1890,7 +1890,7 @@
             {
               "name": "func_out",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -1928,7 +1928,7 @@
             {
               "name": "func_in",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1954,7 +1954,7 @@
             {
               "name": "func_out",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -1992,7 +1992,7 @@
             {
               "name": "func_in",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2018,7 +2018,7 @@
             {
               "name": "func_out",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -2056,7 +2056,7 @@
             {
               "name": "func_in",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2082,7 +2082,7 @@
             {
               "name": "func_out",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "size(func_in)"
@@ -2120,7 +2120,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2158,7 +2158,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2196,7 +2196,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2237,7 +2237,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2278,7 +2278,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2304,7 +2304,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2324,7 +2324,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2356,7 +2356,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2382,7 +2382,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2402,7 +2402,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2434,7 +2434,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2472,7 +2472,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2510,7 +2510,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2536,7 +2536,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2556,7 +2556,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2588,7 +2588,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2614,7 +2614,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2634,7 +2634,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2666,7 +2666,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2704,7 +2704,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2742,7 +2742,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2783,7 +2783,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2824,7 +2824,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2850,7 +2850,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2870,7 +2870,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2902,7 +2902,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2928,7 +2928,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2948,7 +2948,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2980,7 +2980,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3018,7 +3018,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3056,7 +3056,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3082,7 +3082,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3102,7 +3102,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3134,7 +3134,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3160,7 +3160,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3180,7 +3180,7 @@
             {
               "name": "lot",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3212,7 +3212,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3239,7 +3239,7 @@
           "result": {
             "name": "fout",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -3275,7 +3275,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3302,7 +3302,7 @@
           "result": {
             "name": "fout",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -3338,7 +3338,7 @@
             {
               "name": "fin",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3365,7 +3365,7 @@
           "result": {
             "name": "fout",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -3401,7 +3401,7 @@
             {
               "name": "fin",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3428,7 +3428,7 @@
           "result": {
             "name": "fout",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(fin)"
@@ -3464,7 +3464,7 @@
             {
               "name": "func",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3502,7 +3502,7 @@
             {
               "name": "func",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"

@@ -202,7 +202,7 @@ class FortranParseError(ValueError):
 class FortranVariable:
     name: str
     base_type: str = "unknown"
-    kind: Optional[str] = None
+    kind: str = ""
     rank: int = 0
     shape: list[str] = field(default_factory=list)
     lbound: list[str | None] = field(default_factory=list)
@@ -212,6 +212,10 @@ class FortranVariable:
     is_parameter: bool = False
     dimensions: list[int] = field(default_factory=list)
     visibility: str = "public"
+
+    def __post_init__(self) -> None:
+        if self.kind is None:
+            self.kind = ""
 
     @property
     def shape_info(self) -> list[dict[str, str | None]]:

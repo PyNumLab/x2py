@@ -17,11 +17,10 @@ end module alias_mod
 """
 
     assert parser.visit_file(module_code).modules[0].name == "alias_mod"
-    assert parser.parse_file(module_code).modules[0].procedures[0].name == "ping"
+    assert parser.visit_file(module_code).modules[0].procedures[0].name == "ping"
     assert "alias_mod" in parser.visit_project({"alias.f90": module_code}).modules
-    assert "alias_mod.ping" in parser.parse_project({"alias.f90": module_code}).procedures
+    assert "alias_mod.ping" in parser.visit_project({"alias.f90": module_code}).procedures
     assert parser.visit_wrap_readiness(module_code)["wrappable"] is True
-    assert parser.assess_wrap_readiness(module_code)["wrappable"] is True
 
     assert parser.visit_fortran_module("module single_mod\nend module single_mod\n").name == "single_mod"
     assert parser.visit_fortran_program("program driver\nend program driver\n").name == "driver"
@@ -190,9 +189,9 @@ def test_legacy_star_kind_and_declarations_without_double_colon_are_resolved():
     args = {arg.name: arg for arg in sig.arguments}
 
     assert args["x"].base_type == "real"
-    assert args["x"].kind is None
+    assert args["x"].kind == "8"
     assert args["z"].base_type == "complex"
-    assert args["z"].kind is None
+    assert args["z"].kind == "16"
     assert args["p"].base_type == "derived"
     assert args["p"].kind == "point"
     assert args["c"].base_type == "derived"
@@ -365,6 +364,88 @@ end module solver_mod
     assert report["unresolved_kind_arguments"] == []
 
 
+def test_wrap_readiness_requires_intrinsic_kind_symbols_to_be_imported():
+    missing_import = """
+subroutine scale(x)
+  real(kind=c_double), intent(inout) :: x
+end subroutine scale
+"""
+    report = assess_wrap_readiness(missing_import)
+
+    assert report["wrappable"] is False
+    assert report["unresolved_kind_arguments"] == [
+        {
+            "procedure": "scale",
+            "module": None,
+            "argument": "x",
+            "kind": "c_double",
+            "import_modules": [],
+        }
+    ]
+
+    imported = """
+subroutine scale(x, y)
+  use, intrinsic :: iso_c_binding, only: c_double, cd => c_float
+  real(kind=c_double), intent(inout) :: x
+  real(kind=cd), intent(inout) :: y
+end subroutine scale
+"""
+    report = assess_wrap_readiness(imported)
+
+    assert report["wrappable"] is True
+    assert report["unresolved_kind_arguments"] == []
+
+
+def test_wrap_readiness_accepts_arbitrary_imported_kind_symbols_and_expressions():
+    code = """
+module kinds_mod
+  integer, parameter :: wp = selected_real_kind(12)
+  integer, parameter :: extra = 1
+end module kinds_mod
+
+module solver_mod
+contains
+  subroutine scale(x, name)
+    use kinds_mod, only: local_wp => wp, extra
+    real(kind=local_wp + extra), intent(inout) :: x
+    character(len=extra, kind=local_wp), intent(out) :: name
+  end subroutine scale
+end module solver_mod
+"""
+
+    report = assess_wrap_readiness(code)
+
+    assert report["wrappable"] is True
+    assert report["unresolved_kind_arguments"] == []
+
+
+def test_wrap_readiness_reports_missing_symbols_inside_kind_expressions():
+    code = """
+module kinds_mod
+  integer, parameter :: wp = selected_real_kind(12)
+end module kinds_mod
+
+subroutine scale(x)
+  use kinds_mod, only: wp
+  real(kind=wp + missing_offset), intent(inout) :: x
+end subroutine scale
+"""
+
+    report = assess_wrap_readiness(code)
+
+    assert report["wrappable"] is False
+    assert report["unresolved_kind_arguments"] == [
+        {
+            "procedure": "scale",
+            "module": None,
+            "argument": "x",
+            "kind": "missing_offset",
+            "import_modules": [],
+            "kind_expression": "wp + missing_offset",
+        }
+    ]
+
+
 def test_signature_shape_helpers_evaluate_publicly_parsed_signature():
     code = """
 subroutine fill(a)
@@ -485,7 +566,7 @@ def test_character_entity_lengths_and_assumed_bounds_are_preserved():
     args = {arg.name: arg for arg in sig.arguments}
 
     assert args["name"].base_type == "character"
-    assert args["name"].kind is None
+    assert args["name"].kind == ""
     assert args["table"].shape == ["0:"]
     assert args["table"].lbound == ["0"]
     assert args["table"].ubound == [None]
@@ -869,7 +950,9 @@ def test_cross_file_kind_resolution_for_arguments_results_and_local_parameters()
         {
             "kinds.f90": """
 module kinds_mod
-  integer, parameter :: rk = 8
+  integer, parameter :: base = 4
+  integer, parameter :: offset = base
+  integer, parameter :: rk = base + offset
 end module kinds_mod
 """,
             "solver.f90": """
@@ -892,8 +975,28 @@ end module solver_mod
     result_proc = project.procedures["solver_mod.make_value"]
     local_proc = project.procedures["solver_mod.use_local"]
 
-    assert result_proc.result.kind == "rk"
+    assert result_proc.result.kind == "8"
     assert local_proc.arguments[0].shape == ["1:4"]
+
+
+def test_local_kind_parameter_chain_resolves_to_final_integer_kind():
+    parsed = parse_fortran_file(
+        """
+subroutine consume(x, y)
+  integer, parameter :: word = 4
+  integer, parameter :: twice = 2
+  integer, parameter :: rk = word * twice
+  integer, parameter :: ck = rk * twice
+  real(kind=rk), intent(in) :: x
+  complex(kind=ck), intent(out) :: y
+end subroutine consume
+""",
+        filename="local_kind_chain.f90",
+    )
+    args = {arg.name: arg for arg in parsed.procedures[0].arguments}
+
+    assert args["x"].kind == "8"
+    assert args["y"].kind == "16"
 
 
 def test_preprocessor_without_macro_selection_keeps_distinct_conditional_procedures():
@@ -1155,16 +1258,16 @@ end module use_empty_items_mod
     assert [item.local_name for item in module.uses["constants_mod"]] == ["rk", "ik"]
 
 
-def test_public_instance_compatibility_aliases_use_source_strings():
+def test_public_instance_visitor_entrypoints_use_source_strings():
     parser = FortranParser()
 
-    assert parser.parse_fortran_file(
+    assert parser.visit_file(
         """
 subroutine alias_proc()
 end subroutine alias_proc
 """
     ).procedures[0].name == "alias_proc"
-    assert "alias_mod" in parser.parse_fortran_project(
+    assert "alias_mod" in parser.visit_project(
         {
             "alias_mod.f90": """
 module alias_mod
@@ -1208,10 +1311,51 @@ end module solver_mod
     project = parse_fortran_project(tmp_path)
     proc = project.procedures["solver_mod.make_value"]
 
-    assert proc.arguments[0].kind == "rk"
+    assert proc.arguments[0].kind == "8"
     assert proc.arguments[0].shape == ["1:rk"]
-    assert proc.result.kind == "rk"
+    assert proc.result.kind == "8"
     assert project.dependencies["solver_mod"] == {"kinds_mod"}
+
+
+def test_directory_project_tracks_renamed_kind_imports_from_other_files(tmp_path):
+    (tmp_path / "precision.f90").write_text(
+        """
+module precision_mod
+  integer, parameter :: word = 4
+  integer, parameter :: stride = 2
+  integer, parameter :: wp = word * stride
+  integer, parameter :: wide = wp * stride
+end module precision_mod
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "solver.f90").write_text(
+        """
+module solver_mod
+  use precision_mod, only: local_wp => wp, stride, local_wide => wide
+contains
+  subroutine consume(x, y)
+    real(kind=local_wp), intent(in) :: x(1:stride)
+    complex(kind=local_wide), intent(out) :: y
+  end subroutine consume
+end module solver_mod
+""",
+        encoding="utf-8",
+    )
+
+    project = parse_fortran_project(tmp_path)
+    proc = project.procedures["solver_mod.consume"]
+    args = {arg.name: arg for arg in proc.arguments}
+
+    assert args["x"].kind == "8"
+    assert args["x"].shape == ["1:stride"]
+    assert args["y"].kind == "16"
+    assert [(mapping.source, mapping.target) for mapping in proc.uses["precision_mod"]] == [
+        ("wp", "local_wp"),
+        ("stride", None),
+        ("wide", "local_wide"),
+    ]
+    assert project.dependencies["solver_mod"] == {"precision_mod"}
 
 
 def test_type_field_spec_variants_and_empty_entities_from_public_source():
@@ -1388,7 +1532,7 @@ contains
 end module noisy_params_mod
 """
 
-    report = parser.assess_wrap_readiness(code, filename="noisy_params.f90")
+    report = parser.visit_wrap_readiness(code, filename="noisy_params.f90")
 
     assert report["wrappable"] is True
 
@@ -1455,7 +1599,7 @@ end subroutine file_level_worker
     proc = project.procedures["file_level_worker"]
     args = {arg.name: arg for arg in proc.arguments}
 
-    assert args["x"].kind == "rk"
+    assert args["x"].kind == "selected_real_kind(12)"
     assert args["x"].shape == ["1:n"]
     assert args["y"].kind == "selected_real_kind(6)"
     assert [mapping.local_name for mapping in proc.uses["public_params_mod"]] == ["rk", "n"]

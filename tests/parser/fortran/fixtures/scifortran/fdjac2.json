@@ -16,7 +16,7 @@
         {
           "name": "fcn",
           "base_type": "procedure",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -236,7 +236,7 @@
         {
           "name": "fcn",
           "base_type": "procedure",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

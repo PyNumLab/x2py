@@ -16,7 +16,7 @@
         {
           "name": "SIDE",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "HOWMNY",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "SELECT",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -82,7 +82,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -102,7 +102,7 @@
         {
           "name": "S",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDS",
@@ -131,7 +131,7 @@
         {
           "name": "LDS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -151,7 +151,7 @@
         {
           "name": "P",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDP",
@@ -180,7 +180,7 @@
         {
           "name": "LDP",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -200,7 +200,7 @@
         {
           "name": "VL",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDVL",
@@ -229,7 +229,7 @@
         {
           "name": "LDVL",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -249,7 +249,7 @@
         {
           "name": "VR",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDVR",
@@ -278,7 +278,7 @@
         {
           "name": "LDVR",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -298,7 +298,7 @@
         {
           "name": "MM",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -318,7 +318,7 @@
         {
           "name": "M",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -338,7 +338,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -364,7 +364,7 @@
         {
           "name": "RWORK",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -390,7 +390,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -429,7 +429,7 @@
         {
           "name": "SIDE",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -449,7 +449,7 @@
         {
           "name": "HOWMNY",
           "base_type": "character",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -469,7 +469,7 @@
         {
           "name": "SELECT",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -495,7 +495,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -515,7 +515,7 @@
         {
           "name": "S",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDS",
@@ -544,7 +544,7 @@
         {
           "name": "LDS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -564,7 +564,7 @@
         {
           "name": "P",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDP",
@@ -593,7 +593,7 @@
         {
           "name": "LDP",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -613,7 +613,7 @@
         {
           "name": "VL",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDVL",
@@ -642,7 +642,7 @@
         {
           "name": "LDVL",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -662,7 +662,7 @@
         {
           "name": "VR",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDVR",
@@ -691,7 +691,7 @@
         {
           "name": "LDVR",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -711,7 +711,7 @@
         {
           "name": "MM",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -731,7 +731,7 @@
         {
           "name": "M",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -751,7 +751,7 @@
         {
           "name": "WORK",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 1,
           "shape": [
             "*"
@@ -777,7 +777,7 @@
         {
           "name": "RWORK",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -803,7 +803,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

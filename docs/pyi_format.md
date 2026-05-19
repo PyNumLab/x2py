@@ -274,6 +274,26 @@ Common constraints include:
 - `Allocatable` for allocatable values.
 - `Pointer` for pointer values.
 
+## Constants
+
+Fortran `parameter` declarations are constants. The printer emits them with
+`Final[...]` instead of a generic type constraint:
+
+```python
+answer: Final[Int32]
+scale: Final[Float64]
+```
+
+When a constant is private, `private[...]` remains the outer visibility marker:
+
+```python
+hidden_answer: private[Final[Int32]]
+```
+
+The `.pyi` parser accepts `Final[...]` and restores it to the semantic IR as a
+`Constant` constraint, so edited stubs still round-trip through the existing IR
+model.
+
 ## Visibility
 
 Private procedures and classes use decorators:
