@@ -105,7 +105,10 @@ another source language.
   including renamed imports from parsed modules. Safely evaluable arithmetic
   parameter chains are folded to their final integer kind; compiler-dependent
   intrinsics such as `selected_real_kind(...)` remain as resolved expressions.  
-- Shape expressions resolved using available symbol dictionary.  
+- Procedure-local parameter expressions can be folded into argument shapes
+  during procedure finalization. Module-level and `use`-associated parameters
+  used in procedure argument shapes remain symbolic in the signature while
+  still being considered valid scope references for readiness diagnostics.
 - Module/program variable parameter values, character lengths, and shapes are
   resolved through the same cached compile-time resolver where safe.
 - The resolver caches symbol and expression results per scope and evaluates a
@@ -230,6 +233,8 @@ Covers, among others:
 - storage directives (`save`, `common`) in procedures are recognized and skipped as non-declaration statements
 - module variable and `use` parsing
 - module children attachment (procedures/types/interfaces)
+- executable parser-internals tutorial in
+  `tests/parser/test_parser_developer_tutorial.py`
 - ignoring local vars in external signatures
 - external callback declarations (including typed `real, external :: f`) under `implicit none`
 - ignoring internal procedures in `contains`
@@ -345,13 +350,15 @@ ask it to implement each of these layers explicitly:
 11. Project namespace parser with dependency ordering.  
 12. Readiness validator with unsupported-pattern rules + unknown type checks.  
 13. CLI with tree output + JSON output + file emission.  
-11. Unit tests per feature + fixture/golden regression suite + golden
+14. Unit tests per feature + fixture/golden regression suite + golden
     regeneration script.  
 
 
 ### 6.1 Parser control-flow example
 
-Use this as the mental model when changing `fortran_parser/parser.py`:
+Use this as the mental model when changing `fortran_parser/parser.py`: parsing
+is recursive over source units, and each unit is handled by the same grammar
+shape before grammar-specific exceptions are applied.
 
 ```fortran
 module m
@@ -383,6 +390,20 @@ The control flow is:
 6. `visit_derived_type_unit` and `visit_procedure_unit` repeat the same pattern:
    build a scope, split the unit, visit the relevant specification part, and
    push declarations into that scope.
+
+The grammar shape is the design rule:
+
+- every sliced source unit has a header and a specification part
+- procedures and programs can also have an execution part
+- modules, submodules, programs, procedures, and derived types can have a
+  `contains` part, but visitors decide whether children in that region matter
+  for wrapping
+- block data is specification-only
+- interfaces use the same child-slicing mechanism for procedure declarations
+
+That means new parser behavior should usually be implemented by extending the
+grammar profile, unit splitter, or shared specification/declaration helpers,
+not by adding a new whole-file scan.
 
 Declaration parsing is deliberately shared. Module variables, program/block
 data variables, procedure arguments/results, and derived-type fields all call
@@ -443,6 +464,11 @@ implemented today:
 - **Module specification scope tracking**: module `parameter` collection is
   restricted to the module specification part and stops at `contains`, avoiding
   leakage from executable regions.
+- **Module parameter references in contained procedure shapes**: a contained
+  procedure argument such as `real :: x(n)` may refer to a module-level
+  parameter `n`. The signature keeps the shape token symbolic (`"n"`) while
+  readiness validation treats it as a valid scoped reference. This protects
+  module-level parameters from being mistaken for undeclared procedure locals.
 - **Interface scope tracking**: procedures parsed inside `interface ... end
   interface` are represented separately and flagged as interface procedures.
   Interface-local argument declarations do not conflict with host declarations;

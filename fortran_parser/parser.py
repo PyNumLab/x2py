@@ -26,13 +26,17 @@ This module is intentionally split into two layers:
      file/project models.
 
 Recommended reading order for maintainers:
-- Start from `FortranParser.visit_file` / `visit_project`
+- Start from the module-level public wrappers (`parse_fortran_file`,
+  `parse_fortran_project`, `assess_wrap_readiness`)
+- Then read `FortranParser.visit_file` / `visit_project`
 - Then read the high-level unit visitor methods at the top of the class
 - Then drill into `_helper_*` implementations and low-level helpers
 
 `FortranParser` class layout (top -> bottom):
-- Visitor API: `visit_file`, `visit_project`, `visit_wrap_readiness`, plus
-  small `visit_*_unit` methods for each already-sliced source unit.
+- Internal visitor entrypoints: `visit_file`, `visit_project`,
+  `visit_wrap_readiness`, plus small `visit_*_unit` methods for each
+  already-sliced source unit. The stable public API is the module-level wrapper
+  layer at the bottom of the file.
 - Core `_helper_*` methods for source slicing, grammar-region splitting,
   scoped specification-part visits, declaration parsing, symbol pushing,
   preprocessor branch selection, and same-level duplicate checks.
@@ -1629,33 +1633,48 @@ class FortranParser:
 
     State carried on the instance:
     - `macro_defines`: optional macro-selection configuration used while
-      collecting procedures when conditional branches are present.
+      selecting preprocessor branches before source-unit slicing.
 
     Parsing pipeline used by `visit_file`:
     1. Preprocess source into normalized lines (`_preprocessed_lines`).
-    2. Parse signatures/types/interfaces/program units.
-    3. Attach parsed members to owning module/submodule scopes.
-    4. Build `FortranFile` symbol table and standalone entity lists.
+    2. Slice direct file-level source units (`module`, `submodule`,
+       `program`, standalone `procedure`, `block data`, file-level
+       `interface`, and file-level derived type).
+    3. Dispatch each `_SourceUnit` to a small `visit_*_unit` method.
+    4. Each unit visitor parses only that unit's own substring, builds its own
+       `_ParserScope`, splits the unit into grammar regions, visits the
+       specification part, and recursively slices direct children where the
+       grammar allows them.
+    5. Shared declaration helpers push variables, procedure symbols, and type
+       fields into the active scope model.
+    6. Build `FortranFile` symbol table and standalone entity lists.
 
     Class section map:
-    - Public API methods first (developer discovery).
-    - High-level unit parsing methods next (top-down by Fortran block size).
-    - Internal `_helper_*` methods after that (full scoped parsing logic).
+    - Internal visitor entrypoints first (developer discovery).
+    - Unit visitors next (one visitor per grammar-level source unit).
+    - Internal `_helper_*` methods after that (reusable scoped parsing logic).
     - Lower-level declaration/header helpers and assembly utilities last.
 
     Scope behavior summary:
-    - `current_module` tracks ownership for procedures/types/interfaces.
-    - `interface_depth`/stacks track when declarations belong to interface blocks.
-    - Per-procedure state tracks declaration-part vs executable-part boundaries.
-    - Type parsing tracks `contains` sub-region for bindings/generics vs fields.
-    - Program/module/submodule parsers collect specification-part declarations
-      and stop collecting variable declarations after `contains`.
+    - `_ParserScope` is passed explicitly into shared helpers; there is no
+      ambient `current_module` or interface stack.
+    - Module/submodule scopes own contained procedures, interfaces, and derived
+      types; program and block-data scopes collect their specification
+      variables only.
+    - Procedure scopes parse only wrapper-relevant specification declarations;
+      execution statements and internal procedures after `contains` are
+      ignored, except procedure-local interfaces are revisited to type callback
+      dummy arguments.
+    - Derived-type scopes parse fields in the specification region and
+      type-bound procedure/generic bindings in the `contains` region.
+    - Same-level unit names are validated by the slicer with preprocessor
+      branch-awareness, while identical names in different scopes remain valid.
 
     `visit_project` composes multiple `FortranFile` objects into one
     `FortranProject` registry and validates duplicate symbols by scope.
     """
     # ------------------------------------------------------------------
-    # Public API (kept first for discoverability)
+    # Internal visitor entrypoints (kept first for developer discovery)
     # ------------------------------------------------------------------
 
     def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):

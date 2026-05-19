@@ -85,8 +85,9 @@ sections so maintainers can navigate the file by concern instead of by history:
 - Module-level helper blocks (source-form rules, preprocessor logic,
   diagnostics, compile-time expression resolution, dependency ordering)
 - `FortranParser` internals grouped by domain:
-  - visitor-style API entrypoints (`visit_file`, `visit_project`,
-    `visit_wrap_readiness`)
+  - internal visitor entrypoints (`visit_file`, `visit_project`,
+    `visit_wrap_readiness`). The public API remains the module-level wrappers
+    listed above.
   - source-unit visitors for files, modules, submodules, programs,
     procedures, interfaces, derived types, and block data
   - recursive source-unit slicing (`header`, specification part, execution
@@ -101,10 +102,17 @@ sections so maintainers can navigate the file by concern instead of by history:
 
 `visit_file` is the central orchestration path. It first slices the source into
 direct file-level units, then each unit visitor parses only its own substring
-and recursively slices direct children. Procedure execution parts are ignored
-for wrapper metadata, and procedure-internal subprograms are not exported as
-file/module procedures. Procedure-local interface blocks are still visited
-enough to type callback dummy arguments and to preserve interface metadata.
+and recursively slices direct children. This is the key parser design: each
+Fortran grammar unit has a header, a specification region, optional execution
+region, and optional `contains` region. The differences between modules,
+programs, procedures, derived types, interfaces, and block data are expressed
+by small visitor decisions and grammar flags rather than separate whole-file
+parsing loops.
+
+Procedure execution parts are ignored for wrapper metadata, and
+procedure-internal subprograms are not exported as file/module procedures.
+Procedure-local interface blocks are still visited enough to type callback
+dummy arguments and to preserve interface metadata.
 
 ### 2.1 Recursive parser sketch
 
@@ -170,6 +178,13 @@ available. `value` is the parser's best resolved expression after compile-time
 folding; `symbolic_value` preserves the original parameter initializer for
 validation, debugging, and downstream diagnostics without changing the legacy
 JSON fixture shape.
+
+Procedure-local parameters may be folded into argument shapes during procedure
+finalization. Module-level and `use`-associated parameters used in procedure
+argument shapes are kept symbolic in the signature (`x(n)` remains `["n"]`)
+and are treated as valid scope references for readiness checks. Module/program
+variable shapes and parameter values can be resolved through the compile-time
+resolver when enough information is available.
 
 ## 3) Terminal usage and expected outputs
 
