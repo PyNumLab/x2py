@@ -453,6 +453,14 @@ The parser exposes stable file/project entrypoints:
 - `parse_fortran_project(...)` for many sources returning `FortranProject`.
 - `assess_wrap_readiness(...)` for wrappability diagnostics.
 
+Internally, `FortranParser.visit_file` uses a recursive source-unit parser:
+the file is sliced into direct modules/submodules/programs/procedures/block
+data/interfaces/types, then each unit visitor parses only its own substring and
+recurses into direct children. Shared declaration helpers parse variables,
+procedure arguments/results, and type fields, then push them into the active
+scope. Procedure execution bodies and internal subprograms are ignored for
+wrapper metadata; procedure-local interfaces are retained for callback typing.
+
 The semantics layer consumes `FortranFile`/`FortranModule` objects and projects them into language-independent semantic IR (`SemanticModule`, `SemanticFunction`, `SemanticClass`, `SemanticType`). This keeps the semantic API model independent from parser internals, matching the project goal that parser output is a helper and the semantic interface/IR is the source of truth.
 
 For Fortran `use` imports, the parser stores each explicit imported symbol as a

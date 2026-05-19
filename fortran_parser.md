@@ -88,15 +88,24 @@ sections so maintainers can navigate the file by concern instead of by history:
 - `FortranParser` internals grouped by domain:
   - visitor-style API entrypoints (`visit_file`, `visit_project`,
     `visit_wrap_readiness`)
-  - signature/declaration parsing
-  - module-variable parsing
-  - file/project orchestration
-  - program-unit parsers (types, modules, interfaces, submodules, programs,
-    block-data)
-  - `_helper_*` methods for scoped parsing, expression resolution, and shared
+  - source-unit visitors for files, modules, submodules, programs,
+    procedures, interfaces, derived types, and block data
+  - recursive source-unit slicing (`header`, specification part, execution
+    part, `contains`) with original line numbers preserved on each slice
+  - shared declaration parsing for module variables, program/block-data
+    variables, procedure arguments/results, and derived-type fields
+  - `_helper_*` methods for scoped parsing, expression resolution,
+    preprocessor branch selection, same-level duplicate checks, and shared
     specification-part collection
 - Thin module-level convenience wrappers that delegate to a shared parser
   instance
+
+`visit_file` is the central orchestration path. It first slices the source into
+direct file-level units, then each unit visitor parses only its own substring
+and recursively slices direct children. Procedure execution parts are ignored
+for wrapper metadata, and procedure-internal subprograms are not exported as
+file/module procedures. Procedure-local interface blocks are still visited
+enough to type callback dummy arguments and to preserve interface metadata.
 
 Most parser organization changes are structural, but behavior, model-schema,
 coverage, or fixture changes should be reflected in this reference.

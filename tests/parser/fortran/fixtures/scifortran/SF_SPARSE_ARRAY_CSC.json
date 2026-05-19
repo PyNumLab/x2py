@@ -4578,7 +4578,22 @@
         }
       ],
       "default_visibility": "private",
-      "public_symbols": [],
+      "public_symbols": [
+        "sparse_dmatrix_csc",
+        "sparse_zmatrix_csc",
+        "as_sparse",
+        "sparse",
+        "assignment(=)",
+        "operator(+)",
+        "operator(-)",
+        "operator(*)",
+        "operator(/)",
+        "operator(.x.)",
+        "sp_kron",
+        "transpose",
+        "hconjg",
+        "matmul"
+      ],
       "private_symbols": []
     }
   ],
@@ -9166,7 +9181,22 @@
         }
       ],
       "default_visibility": "private",
-      "public_symbols": [],
+      "public_symbols": [
+        "sparse_dmatrix_csc",
+        "sparse_zmatrix_csc",
+        "as_sparse",
+        "sparse",
+        "assignment(=)",
+        "operator(+)",
+        "operator(-)",
+        "operator(*)",
+        "operator(/)",
+        "operator(.x.)",
+        "sp_kron",
+        "transpose",
+        "hconjg",
+        "matmul"
+      ],
       "private_symbols": []
     }
   }

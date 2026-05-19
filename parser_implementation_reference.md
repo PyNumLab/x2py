@@ -329,15 +329,22 @@ If you want another agent to reproduce the same architecture for a new language,
 ask it to implement each of these layers explicitly:
 
 1. Preprocessor/lexer layer for source forms, comments, continuations.  
-2. Procedure signature parser (headers, args, attributes, result handling).  
-3. Declaration parser for types/intent/shape/flags.  
-4. Module/package parser with import/use tracking.  
-5. Composite type parser (fields, inheritance, bound methods/generics).  
-6. Interface/contract block parser.  
-7. Symbol resolver for local and cross-file compile-time constants.  
-8. Project namespace parser with dependency ordering.  
-9. Readiness validator with unsupported-pattern rules + unknown type checks.  
-10. CLI with tree output + JSON output + file emission.  
+2. Source-unit slicer that preserves original line numbers and returns direct
+   children for each scope.  
+3. Grammar-region splitter for `header`, specification part, execution part,
+   and `contains`.  
+4. Unit visitors for modules, submodules, programs, procedures, derived types,
+   interfaces, and block data.  
+5. Shared declaration parser for variables, procedure arguments/results, and
+   derived-type fields, with scope-specific storage handled separately.  
+6. Procedure signature parser (headers, args, attributes, result handling).  
+7. Module/package parser with import/use tracking.  
+8. Composite type parser (fields, inheritance, bound methods/generics).  
+9. Interface/contract block parser.  
+10. Symbol resolver for local and cross-file compile-time constants.  
+11. Project namespace parser with dependency ordering.  
+12. Readiness validator with unsupported-pattern rules + unknown type checks.  
+13. CLI with tree output + JSON output + file emission.  
 11. Unit tests per feature + fixture/golden regression suite + golden
     regeneration script.  
 
@@ -407,6 +414,13 @@ A condensed history of important parser capabilities added over time (from
 - Added parser public API coverage for less common module/import forms and
   preserved `use` rename source/target mappings through JSON, semantic IR, and
   `.pyi` import aliases.
+- Refactored `FortranParser.visit_file` onto recursive source-unit slicing:
+  file parsing now dispatches direct units to small `visit_*_unit` methods,
+  each unit works on its own source substring, and shared declaration helpers
+  push parsed symbols into the active scope.
+- Refreshed parser goldens for the grammar-style parser. Procedure-internal
+  subprograms are no longer exported as file/module procedures; local
+  interfaces remain available for callback typing and interface metadata.
 
 ## 9) Pull-request maintenance policy for this reference
 
@@ -491,12 +505,15 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
     diagnostics where appropriate; unknown datatype syntax should crash early.
 - **Preprocessor-conditional duplicate procedures (guarded allowance):**
   - The parser does **not** run a full C preprocessor stage before parsing.
-  - While scanning signatures, simple directive structure is tracked for `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` to model mutually-exclusive branches.
-  - `visit_file(..., macro_defines=...)` can provide macro decisions; inactive conditional branches are skipped during signature extraction so the active code path is selected. The module-level `parse_fortran_file(...)` convenience function delegates to this visitor.
+  - While slicing source units, simple directive structure is tracked for
+    `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` to model
+    mutually-exclusive branches.
+  - `visit_file(..., macro_defines=...)` can provide macro decisions; inactive conditional branches are skipped before unit parsing so the active code path is selected. The module-level `parse_fortran_file(...)` convenience function delegates to this visitor.
     - accepted forms: `set[str]` or `dict[str, int|bool|str]`
     - dictionary values are truthy/falsey (`0`, `False`, `"0"`, `"false"` treated as undefined/disabled)
   - Basic `#if` expressions are supported for branch selection (`defined(X)`, `!`, `&&`, `||`, parentheses, `0`/`1`).
-  - Duplicate procedure-name checks in a module/global scope are evaluated against this branch context:
+  - Duplicate procedure-name checks in a module/global scope are evaluated
+    against same-level sliced units and this branch context:
     - if two same-name procedure headers are reachable in an overlapping branch context, raise `FortranParseError` (duplicate procedure name).
     - if they are only present in mutually-exclusive branches of the same conditional group, allow both signatures.
   - This is a structural exclusivity model (branch groups), not semantic evaluation of macro expressions. In other words, branch mutual exclusivity is honored without requiring expression truth evaluation.

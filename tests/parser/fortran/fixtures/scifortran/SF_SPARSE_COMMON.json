@@ -577,7 +577,9 @@
         }
       ],
       "default_visibility": "public",
-      "public_symbols": [],
+      "public_symbols": [
+        "shape"
+      ],
       "private_symbols": []
     }
   ],
@@ -1164,7 +1166,9 @@
         }
       ],
       "default_visibility": "public",
-      "public_symbols": [],
+      "public_symbols": [
+        "shape"
+      ],
       "private_symbols": []
     }
   }
