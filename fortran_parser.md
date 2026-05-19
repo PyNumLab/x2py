@@ -67,6 +67,9 @@ and practical usage from terminal and Python.
 - Unsupported-pattern checks
 - Unknown argument declaration reporting
 - Final boolean readiness (`wrappable`)
+- Unit-scoped blocker records (`unit_blockers`) for wrapper-relevant
+  procedures and derived types, plus file-level blockers when diagnostics are
+  not owned by a single unit. The ready-to-wrap flag remains file-level only.
 
 ## 2) Public API surface
 
@@ -83,11 +86,11 @@ sections so maintainers can navigate the file by concern instead of by history:
 
 - Regex/constants and parser-wide type aliases
 - Module-level helper blocks (source-form rules, preprocessor logic,
-  diagnostics, shape evaluation, compile-time expression resolution,
-  dependency ordering)
+  diagnostics, compile-time expression resolution, dependency ordering)
 - `FortranParser` internals grouped by domain:
-  - visitor-style API entrypoints (`visit_file`, `visit_project`,
-    `visit_wrap_readiness`)
+  - internal visitor entrypoints (`visit_file`, `visit_project`,
+    `visit_wrap_readiness`). The public API remains the module-level wrappers
+    listed above.
   - source-unit visitors for files, modules, submodules, programs,
     procedures, interfaces, derived types, and block data
   - recursive source-unit slicing (`header`, specification part, execution
@@ -102,13 +105,90 @@ sections so maintainers can navigate the file by concern instead of by history:
 
 `visit_file` is the central orchestration path. It first slices the source into
 direct file-level units, then each unit visitor parses only its own substring
-and recursively slices direct children. Procedure execution parts are ignored
-for wrapper metadata, and procedure-internal subprograms are not exported as
-file/module procedures. Procedure-local interface blocks are still visited
-enough to type callback dummy arguments and to preserve interface metadata.
+and recursively slices direct children. This is the key parser design: each
+Fortran grammar unit has a header, a specification region, optional execution
+region, and optional `contains` region. The differences between modules,
+programs, procedures, derived types, interfaces, and block data are expressed
+by small visitor decisions and grammar flags rather than separate whole-file
+parsing loops.
+
+Procedure execution parts are ignored for wrapper metadata, and
+procedure-internal subprograms are not exported as file/module procedures.
+Procedure-local interface blocks are still visited enough to type callback
+dummy arguments and to preserve interface metadata.
+
+### 2.1 Recursive parser sketch
+
+Small input:
+
+```fortran
+module m
+  integer, parameter :: n = 4
+contains
+  subroutine scale(x)
+    real, intent(inout) :: x(n)
+  end subroutine scale
+end module m
+```
+
+The parser handles it in this order:
+
+1. `visit_file` preprocesses the source and calls `_helper_slice_child_units`
+   at file scope. The result is one `_SourceUnit`: `kind="module"`,
+   `name="m"`, and `lines=[module m ... end module m]`.
+2. `visit_source_unit` dispatches that slice to `visit_module_unit`.
+3. `visit_module_unit` creates a module `_ParserScope`, calls
+   `_helper_split_unit_parts`, and sends only the module specification lines to
+   `_helper_visit_spec_part`.
+4. `_helper_visit_spec_part` uses the shared declaration backend:
+   `_helper_parse_declaration_line` parses `integer, parameter :: n = 4`, then
+   `_helper_push_declaration_to_scope` appends the resulting parameter variable
+   to `FortranModule.variables`.
+5. The module visitor recursively slices direct children from its substring.
+   It finds one procedure unit, `scale`, and dispatches it to
+   `visit_procedure_unit`.
+6. `visit_procedure_unit` creates a procedure `_ParserScope`, splits the
+   procedure into header/specification/execution/contains, and visits only the
+   specification part. The same declaration backend parses
+   `real, intent(inout) :: x(n)` and pushes the metadata into the procedure
+   argument symbol table.
+
+Scope is always an explicit argument to the shared helpers. That is the reason
+two modules can each define `type :: state` without conflict, while two
+same-level `module m` declarations or two same-level contained procedures with
+the same name are rejected by `_helper_validate_sibling_units`.
+
+End-name validation is strict for structural units whose names define exported
+scope boundaries, such as modules, submodules, programs, interfaces, and
+derived types. Procedure end-name mismatches are still tolerated while slicing
+third-party sources because some accepted fixture code contains copy/paste
+procedure end labels; the procedure is closed by unit kind so parsing can
+continue, and duplicate procedure names are validated at the sibling scope.
+
+The only separate specification-line visitors are grammar-specific:
+module-like units share `_helper_visit_module_like_spec_line`, procedures use
+`_helper_visit_procedure_spec_line` for `implicit`, `external`, `import`, and
+local `parameter` handling, and derived types use
+`_helper_visit_type_spec_line` for `sequence`, `private`, and type-bound
+declaration rules. All three still call the same declaration parser/pusher for
+actual declarations.
 
 Most parser organization changes are structural, but behavior, model-schema,
 coverage, or fixture changes should be reflected in this reference.
+
+Parameter constants expose both `value` and serialized `symbolic_value` when
+available. `value` is reserved for a literal/evaluated result after
+compile-time folding. If an initializer cannot be evaluated safely, such as
+`selected_real_kind(...)`, `value` is `None` and `symbolic_value` preserves the
+original initializer for validation, debugging, downstream diagnostics, and
+JSON consumers.
+
+Procedure-local parameters may be folded into argument shapes during procedure
+finalization. Module-level and `use`-associated parameters used in procedure
+argument shapes are kept symbolic in the signature (`x(n)` remains `["n"]`)
+and are treated as valid scope references for readiness checks. Module/program
+variable shapes and parameter values can be resolved through the compile-time
+resolver when enough information is available.
 
 ## 3) Terminal usage and expected outputs
 
@@ -395,7 +475,8 @@ Expected behavior:
 
 - `parsed` is a `FortranFile` aggregate model with parsed units and symbols.
 - `readiness` includes counts, unsupported hits, unknown args, unresolved
-  imported derived-type/kind dependencies, and `wrappable`.
+  imported derived-type/kind dependencies, unit-scoped blockers, and the
+  file-level `wrappable` flag.
 
 ### 4.3 Structured argument specifications
 
@@ -879,3 +960,13 @@ Lower-level unit parsers are internal `FortranParser` methods.
 Semantic conversion lives in `semantics/fortran2ir.py`. It accepts parsed `FortranFile`
 (or selected `FortranModule`) structures and converts metadata into semantic IR
 consumed by the `.pyi` printer and later wrapper/runtime stages.
+
+The semantic converter also supports compile-time specialization for values the
+parser intentionally leaves symbolic. Use
+`collect_semantic_compile_time_requirements(parsed)` to list missing parameter
+or kind values, then pass a dictionary such as
+`{"selected_real_kind(12)": 8}` to
+`fortran_module_to_semantic_module(..., compile_time_values=...)` or
+`fortran_file_to_semantic_modules(..., compile_time_values=...)`. Existing
+semantic IR can be copied and specialized with
+`resolve_semantic_compile_time_values(module, {"n": 64})`.

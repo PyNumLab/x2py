@@ -16,8 +16,10 @@ from x2py import parse_fortran_file as parse_fortran_source
 
 from semantics.fortran2ir import (
     FortranToIRConverter,
+    collect_semantic_compile_time_requirements,
     fortran_file_to_semantic_modules,
     fortran_module_to_semantic_module,
+    resolve_semantic_compile_time_values,
 )
 from semantics import models as semantic_models
 
@@ -146,6 +148,62 @@ def test_converter_rejects_unsupported_inputs_and_missing_derived_type_names():
 
     with pytest.raises(ValueError, match="Unsupported Fortran semantic type"):
         converter.visit_variable(FortranVariable(name="x", base_type="real", kind="selected_real_kind(33)"))
+
+
+def test_semantic_compile_time_requirements_can_be_supplied_for_kind_selection():
+    source = """
+module solver_mod
+  integer, parameter :: rk = selected_real_kind(12)
+contains
+subroutine scale(x)
+  real(kind=rk), intent(inout) :: x
+end subroutine scale
+end module solver_mod
+"""
+    parsed = parse_fortran_source(source)
+
+    with pytest.raises(ValueError, match="Unsupported Fortran semantic type"):
+        fortran_module_to_semantic_module(parsed)
+
+    requirements = collect_semantic_compile_time_requirements(parsed)
+    assert {
+        (item["code"], item["symbol"], item["expression"])
+        for item in requirements
+    } >= {
+        ("parameter_value", "rk", "selected_real_kind(12)"),
+        ("unsupported_kind", "x", "selected_real_kind(12)"),
+    }
+
+    module = fortran_module_to_semantic_module(
+        parsed,
+        compile_time_values={"selected_real_kind(12)": 8},
+    )
+    arg_type = get_function(module, "scale").arguments[0].semantic_type
+    assert arg_type.name == "Float64"
+
+
+def test_resolve_semantic_compile_time_values_rewrites_shapes_and_constraints():
+    module = SemanticModule(
+        name="shape_mod",
+        variables=[
+            SemanticArgument(
+                name="values",
+                semantic_type=SemanticType(
+                    name="Float64",
+                    dtype="Float64",
+                    rank=1,
+                    shape=["1:n"],
+                    constraints=[SemanticConstraint("Shape", ["1:n"])],
+                ),
+            )
+        ],
+    )
+
+    resolved = resolve_semantic_compile_time_values(module, {"n": 8})
+
+    assert module.variables[0].semantic_type.shape == ["1:n"]
+    assert resolved.variables[0].semantic_type.shape == ["1:8"]
+    assert resolved.variables[0].semantic_type.constraints[0].arguments == ["1:8"]
 
 
 def test_iso_c_module_variable_kinds_map_to_semantic_types():

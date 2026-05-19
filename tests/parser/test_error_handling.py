@@ -716,3 +716,33 @@ def test_duplicate_variable_in_block_data_raises_parse_error():
 """
     with pytest.raises(FortranParseError, match="Duplicate variable.*block data"):
         parse_fortran_file(code, filename="dup_block_data_var.f")
+
+
+def test_same_level_duplicate_modules_raise_parse_error():
+    code = """
+module same_name
+end module same_name
+
+module same_name
+end module same_name
+"""
+    with pytest.raises(FortranParseError, match="Duplicate module name 'same_name' in file scope"):
+        parse_fortran_file(code, filename="dup_modules.f90")
+
+
+def test_slicer_reports_mismatched_end_unit_name():
+    code = """
+module expected_name
+end module wrong_name
+"""
+    with pytest.raises(FortranParseError, match="Mismatched end module name 'wrong_name' for module 'expected_name'"):
+        parse_fortran_file(code, filename="mismatch_module.f90")
+
+
+def test_slicer_reports_missing_end_unit():
+    code = """
+module missing_end
+  integer :: n
+"""
+    with pytest.raises(FortranParseError, match="Missing end module for module 'missing_end'"):
+        parse_fortran_file(code, filename="missing_end_module.f90")

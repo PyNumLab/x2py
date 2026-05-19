@@ -1,6 +1,6 @@
 import pytest
 
-from x2py import parse_fortran_file
+from x2py import assess_wrap_readiness, parse_fortran_file
 from fortran_parser.models import FortranParseError
 
 def test_same_argument_name_in_different_procedures_is_allowed():
@@ -238,6 +238,54 @@ end module dup_component_mod
 """
     with pytest.raises(FortranParseError, match="Duplicate field 'vals' in derived type 'thing'"):
         parse_fortran_file(code, filename="scope_component_dup_err.f90")
+
+
+def test_same_derived_type_name_is_allowed_in_different_module_scopes():
+    code = """
+module left_mod
+  type :: state
+    integer :: left
+  end type state
+end module left_mod
+
+module right_mod
+  type :: state
+    integer :: right
+  end type state
+end module right_mod
+"""
+    parsed = parse_fortran_file(code, filename="scope_same_type_names_ok.f90")
+
+    assert [module.name for module in parsed.modules] == ["left_mod", "right_mod"]
+    assert [module.derived_types[0].name for module in parsed.modules] == ["state", "state"]
+
+
+def test_module_parameter_shape_is_visible_to_contained_function_scope():
+    code = """
+module dims_mod
+  implicit none
+  integer, parameter :: n = 8
+contains
+  function total(values) result(out)
+    implicit none
+    real, intent(in) :: values(n)
+    real :: out
+  end function total
+end module dims_mod
+"""
+    parsed = parse_fortran_file(code, filename="scope_module_shape_param_ok.f90")
+    module = parsed.modules[0]
+    proc = module.procedures[0]
+
+    assert module.variables[0].name == "n"
+    assert module.variables[0].value == "8"
+    assert module.variables[0].symbolic_value == "8"
+    assert proc.name == "total"
+    assert proc.arguments[0].shape == ["n"]
+    assert proc.arguments[0].base_type == "real"
+    assert proc.result.base_type == "real"
+    assert proc.variables == {}
+    assert assess_wrap_readiness(code, filename="scope_module_shape_param_ok.f90")["wrappable"] is True
 
 
 def test_fortran_parser_class_entrypoint():

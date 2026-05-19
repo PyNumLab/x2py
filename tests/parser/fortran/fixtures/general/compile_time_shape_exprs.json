@@ -18,6 +18,7 @@
           "lbound": [],
           "ubound": [],
           "value": "4",
+          "symbolic_value": "4",
           "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
@@ -38,6 +39,7 @@
           "lbound": [],
           "ubound": [],
           "value": "6",
+          "symbolic_value": "n0 + 2",
           "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
@@ -71,6 +73,7 @@
                 "n1-1"
               ],
               "value": null,
+              "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
@@ -97,6 +100,7 @@
                 "n0*2"
               ],
               "value": null,
+              "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
@@ -147,6 +151,7 @@
           "lbound": [],
           "ubound": [],
           "value": "4",
+          "symbolic_value": "4",
           "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
@@ -167,6 +172,7 @@
           "lbound": [],
           "ubound": [],
           "value": "6",
+          "symbolic_value": "n0 + 2",
           "value_type": "expression",
           "is_parameter": true,
           "dimensions": [],
@@ -200,6 +206,7 @@
                 "n1-1"
               ],
               "value": null,
+              "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],
@@ -226,6 +233,7 @@
                 "n0*2"
               ],
               "value": null,
+              "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
               "dimensions": [],

@@ -869,6 +869,36 @@ end subroutine scale
         }
     ]
     assert [b["code"] for b in report["wrappability_blockers"]] == ["unresolved_kind_arguments"]
+    scale_unit = next(item for item in report["unit_blockers"] if item["name"] == "scale")
+    assert "wrappable" not in scale_unit
+    assert [b["code"] for b in scale_unit["blockers"]] == ["unresolved_kind_arguments"]
+
+
+def test_wrap_readiness_reports_each_procedure_unit_independently():
+    code = """
+module mixed_ready_mod
+contains
+subroutine ok(x)
+  real(8), intent(inout) :: x
+end subroutine ok
+
+subroutine bad(y)
+  use missing_kinds, only: rk
+  real(kind=rk), intent(inout) :: y
+end subroutine bad
+end module mixed_ready_mod
+"""
+    report = assess_wrap_readiness(code, filename="mixed_ready.f90")
+    units = {
+        item["qualified_name"]: item
+        for item in report["unit_blockers"]
+        if item["unit_kind"] == "procedure"
+    }
+
+    assert report["wrappable"] is False
+    assert "mixed_ready_mod.ok" not in units
+    assert "wrappable" not in units["mixed_ready_mod.bad"]
+    assert units["mixed_ready_mod.bad"]["blockers"][0]["code"] == "unresolved_kind_arguments"
 
 
 def test_assess_wrap_readiness_reports_imported_kind_field_without_definition():
@@ -1264,6 +1294,46 @@ def test_compile_time_expression_fixture_module_values_are_partially_evaluated()
     assert variables["array_from_expression"].shape == ["21"]
     assert variables["matrix_from_constants"].shape == ["5", "10"]
     assert variables["small_array"].value == "[1, 2, 3]"
+    assert variables["expr_int"].symbolic_value == "2 * n + m - 3"
+    assert variables["small_array"].symbolic_value == "[1, 2, 3]"
+
+
+def test_local_parameter_keeps_symbolic_value_after_project_resolution():
+    project = parse_fortran_project(
+        {
+            "local_symbolic.f90": """
+subroutine use_local_symbolic(x)
+  integer, parameter :: m = selected_int_kind(9)
+  real, intent(inout) :: x(m)
+end subroutine use_local_symbolic
+"""
+        }
+    )
+
+    variables = project.procedures["use_local_symbolic"].variables
+
+    assert variables["m"].value is None
+    assert variables["m"].symbolic_value == "selected_int_kind(9)"
+
+
+def test_unevaluated_module_parameter_keeps_symbolic_value_without_literal_value():
+    parsed = parse_fortran_file(
+        """
+module selected_kind_mod
+  integer, parameter :: rk = selected_real_kind(12)
+contains
+  subroutine scale(x)
+    real(kind=rk), intent(inout) :: x
+  end subroutine scale
+end module selected_kind_mod
+"""
+    )
+    module = parsed.modules[0]
+    variables = {var.name: var for var in module.variables}
+
+    assert variables["rk"].value is None
+    assert variables["rk"].symbolic_value == "selected_real_kind(12)"
+    assert module.procedures[0].arguments[0].kind == "selected_real_kind(12)"
 
 
 def test_parameterized_derived_type_declarations_preserve_and_resolve_arguments():

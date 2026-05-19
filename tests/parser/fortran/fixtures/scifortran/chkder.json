@@ -22,6 +22,7 @@
           "lbound": [],
           "ubound": [],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -42,6 +43,7 @@
           "lbound": [],
           "ubound": [],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -68,6 +70,7 @@
             "n"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -94,6 +97,7 @@
             "m"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -123,6 +127,7 @@
             "n"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -143,6 +148,7 @@
           "lbound": [],
           "ubound": [],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -169,6 +175,7 @@
             "n"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -195,6 +202,7 @@
             "m"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -215,6 +223,7 @@
           "lbound": [],
           "ubound": [],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -241,6 +250,7 @@
             "m"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -280,6 +290,7 @@
           "lbound": [],
           "ubound": [],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -300,6 +311,7 @@
           "lbound": [],
           "ubound": [],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -326,6 +338,7 @@
             "n"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -352,6 +365,7 @@
             "m"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -381,6 +395,7 @@
             "n"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -401,6 +416,7 @@
           "lbound": [],
           "ubound": [],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -427,6 +443,7 @@
             "n"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -453,6 +470,7 @@
             "m"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -473,6 +491,7 @@
           "lbound": [],
           "ubound": [],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],
@@ -499,6 +518,7 @@
             "m"
           ],
           "value": null,
+          "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
           "dimensions": [],

@@ -208,6 +208,7 @@ class FortranVariable:
     lbound: list[str | None] = field(default_factory=list)
     ubound: list[str | None] = field(default_factory=list)
     value: str | None = None
+    symbolic_value: str | None = None
     value_type: str = "unknown"
     is_parameter: bool = False
     dimensions: list[int] = field(default_factory=list)

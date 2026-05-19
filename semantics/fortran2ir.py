@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import re
 from pathlib import Path
 
 from fortran_parser.models import (
     FortranArgument,
+    FortranBlockData,
     FortranDerivedType,
     FortranFile,
     FortranModule,
+    FortranProgram,
     FortranProcedureSignature,
+    FortranSubmodule,
     FortranVariable,
 )
 
@@ -68,6 +72,57 @@ FORTRAN_TYPE_MAP = {
 }
 
 
+def _normalize_compile_time_values(
+    compile_time_values: dict[str, int | str] | None,
+) -> dict[str, str]:
+    """Normalize user-supplied compile-time values for text substitution.
+
+    The semantic layer accepts values keyed either by a symbol name
+    (``{"rk": 8}``) or by the exact unresolved expression kept by the parser
+    (``{"selected_real_kind(12)": 8}``). Internally both keys and values are
+    strings so that kind and shape expressions can be rewritten uniformly.
+
+    Example:
+        >>> _normalize_compile_time_values({"rk": 8})["rk"]
+        '8'
+    """
+    return {
+        str(key).strip().lower(): str(value)
+        for key, value in (compile_time_values or {}).items()
+        if str(key).strip()
+    }
+
+
+def _resolve_compile_time_text(text: str, compile_time_values: dict[str, str]) -> str:
+    """Resolve known compile-time symbols inside one kind or shape expression.
+
+    Exact expression keys win before identifier replacement, so compiler or
+    implementation-specific calls can be supplied directly. Symbol keys are
+    then substituted token by token.
+
+    Example:
+        >>> values = _normalize_compile_time_values({"selected_real_kind(12)": 8, "n": 32})
+        >>> _resolve_compile_time_text("selected_real_kind(12)", values)
+        '8'
+        >>> _resolve_compile_time_text("1:n", values)
+        '1:32'
+    """
+    raw = str(text)
+    stripped = raw.strip()
+    if not stripped or not compile_time_values:
+        return raw
+
+    exact = compile_time_values.get(stripped.lower())
+    if exact is not None:
+        return exact
+
+    def replace_symbol(match: re.Match[str]) -> str:
+        token = match.group(0)
+        return compile_time_values.get(token.lower(), token)
+
+    return re.sub(r"\b[A-Za-z_][A-Za-z0-9_]*\b", replace_symbol, raw)
+
+
 class FortranToIRConverter:
     """Convert parsed Fortran models into semantic IR models.
 
@@ -76,8 +131,13 @@ class FortranToIRConverter:
     parser model type into the corresponding semantic model type.
     """
 
-    def __init__(self, type_map: dict[tuple[str, str | None], str] | None = None):
+    def __init__(
+        self,
+        type_map: dict[tuple[str, str | None], str] | None = None,
+        compile_time_values: dict[str, int | str] | None = None,
+    ):
         self.type_map = FORTRAN_TYPE_MAP if type_map is None else type_map
+        self.compile_time_values = _normalize_compile_time_values(compile_time_values)
 
     def visit(self, node, **context):
         """Dispatch one parsed Fortran model to the matching conversion method."""
@@ -121,7 +181,7 @@ class FortranToIRConverter:
             name=semantic_name,
             rank=var.rank,
             dtype=semantic_name,
-            shape=list(var.shape),
+            shape=[self._resolve_compile_time_text(dim) for dim in var.shape],
         )
         self._add_shape_constraints(semantic_type)
         self._add_variable_constraints(semantic_type, var)
@@ -298,13 +358,12 @@ class FortranToIRConverter:
             raise ValueError(f"Unsupported Fortran semantic type for variable '{var.name}': {type_text}")
         return semantic_type
 
-    @staticmethod
-    def _semantic_kind_key(var: FortranVariable) -> str | None:
+    def _semantic_kind_key(self, var: FortranVariable) -> str | None:
         if not var.kind:
             return None
 
         base_type = var.base_type.lower()
-        kind = str(var.kind).strip().lower()
+        kind = self._resolve_compile_time_text(str(var.kind)).strip().lower()
         if base_type == "character":
             return None
         if base_type == "logical":
@@ -327,6 +386,9 @@ class FortranToIRConverter:
         if exponent_marker == "q":
             return "16"
         return None
+
+    def _resolve_compile_time_text(self, text: str) -> str:
+        return _resolve_compile_time_text(text, self.compile_time_values)
 
     @staticmethod
     def _add_shape_constraints(semantic_type: SemanticType) -> None:
@@ -453,19 +515,338 @@ class FortranToIRConverter:
         return getattr(module, "default_visibility", "public")
 
 
+def _requirement_unit_name(
+    *,
+    module: str | None = None,
+    unit_name: str | None = None,
+) -> str:
+    if module and unit_name:
+        return f"{module}.{unit_name}"
+    return unit_name or module or "<source>"
+
+
+def _iter_fortran_variable_contexts(
+    node,
+    *,
+    module_name: str | None = None,
+    unit_kind: str = "file",
+    unit_name: str | None = None,
+):
+    """Yield parser variables with enough unit context for diagnostics.
+
+    Example:
+        ``list(_iter_fortran_variable_contexts(parsed_file))`` returns module
+        parameters, procedure arguments/results/locals, and type fields with
+        the unit that owns each symbol.
+    """
+    if isinstance(node, FortranFile):
+        file_unit = node.filename or "<source>"
+        for var in getattr(node, "variables", []):
+            yield var, {
+                "unit_kind": "file",
+                "unit": file_unit,
+                "module": None,
+                "symbol": var.name,
+                "role": "variable",
+            }
+        for module in node.modules:
+            yield from _iter_fortran_variable_contexts(module)
+        for submodule in node.submodules:
+            yield from _iter_fortran_variable_contexts(submodule)
+        for program in node.programs:
+            yield from _iter_fortran_variable_contexts(program)
+        for block_data in node.block_data_units:
+            yield from _iter_fortran_variable_contexts(block_data)
+        for proc in node.procedures:
+            yield from _iter_fortran_variable_contexts(proc)
+        for dtype in node.derived_types:
+            yield from _iter_fortran_variable_contexts(dtype)
+        return
+
+    if isinstance(node, (FortranModule, FortranSubmodule)):
+        owner = node.name
+        for var in node.variables:
+            yield var, {
+                "unit_kind": "module" if isinstance(node, FortranModule) else "submodule",
+                "unit": owner,
+                "module": owner,
+                "symbol": var.name,
+                "role": "variable",
+            }
+        for proc in node.procedures:
+            yield from _iter_fortran_variable_contexts(proc, module_name=owner)
+        for dtype in node.derived_types:
+            yield from _iter_fortran_variable_contexts(dtype, module_name=owner)
+        return
+
+    if isinstance(node, FortranProgram):
+        owner = node.name or "<program>"
+        for var in node.variables:
+            yield var, {
+                "unit_kind": "program",
+                "unit": owner,
+                "module": None,
+                "symbol": var.name,
+                "role": "variable",
+            }
+        for proc in node.procedures:
+            yield from _iter_fortran_variable_contexts(proc, unit_kind="program", unit_name=owner)
+        return
+
+    if isinstance(node, FortranBlockData):
+        owner = node.name or "<block_data>"
+        for var in node.variables:
+            yield var, {
+                "unit_kind": "block_data",
+                "unit": owner,
+                "module": None,
+                "symbol": var.name,
+                "role": "variable",
+            }
+        return
+
+    if isinstance(node, FortranProcedureSignature):
+        proc_module = module_name or node.module
+        owner = _requirement_unit_name(module=proc_module, unit_name=node.name)
+        for arg in node.arguments:
+            yield arg, {
+                "unit_kind": "procedure",
+                "unit": owner,
+                "module": proc_module,
+                "procedure": node.name,
+                "symbol": arg.name,
+                "role": "argument",
+            }
+        if node.result is not None:
+            yield node.result, {
+                "unit_kind": "procedure",
+                "unit": owner,
+                "module": proc_module,
+                "procedure": node.name,
+                "symbol": node.result.name,
+                "role": "result",
+            }
+        for var in node.variables.values():
+            yield var, {
+                "unit_kind": "procedure",
+                "unit": owner,
+                "module": proc_module,
+                "procedure": node.name,
+                "symbol": var.name,
+                "role": "variable",
+            }
+        return
+
+    if isinstance(node, FortranDerivedType):
+        owner = _requirement_unit_name(module=module_name or node.module, unit_name=node.name)
+        for field in node.fields:
+            yield field, {
+                "unit_kind": "derived_type",
+                "unit": owner,
+                "module": module_name or node.module,
+                "type_owner": node.name,
+                "symbol": field.name,
+                "role": "field",
+            }
+
+
+def _compile_time_requirement_message(code: str, symbol: str, expression: str) -> str:
+    if code == "parameter_value":
+        return f"Parameter '{symbol}' needs a compile-time value for expression '{expression}'."
+    if code == "unsupported_kind":
+        return f"Kind expression for '{symbol}' needs a supported compile-time value."
+    return f"Compile-time value required for '{symbol}'."
+
+
+def collect_semantic_compile_time_requirements(
+    parsed,
+    *,
+    compile_time_values: dict[str, int | str] | None = None,
+    type_map: dict[tuple[str, str | None], str] | None = None,
+) -> list[dict[str, str | None]]:
+    """Collect parser symbols that block semantic IR conversion or wrapping.
+
+    This is the inspection half of the "unknown compile-time value" workflow:
+    parse first, collect unresolved parameter/kind expressions, evaluate them
+    externally when needed, then pass the resulting dictionary to
+    ``FortranToIRConverter(..., compile_time_values=...)`` or the convenience
+    wrappers below.
+
+    Example:
+        >>> from x2py import parse_fortran_file
+        >>> parsed = parse_fortran_file("module m\ninteger, parameter :: rk = selected_real_kind(12)\nend module")
+        >>> reqs = collect_semantic_compile_time_requirements(parsed)
+        >>> reqs[0]["symbol"]
+        'rk'
+    """
+    values = _normalize_compile_time_values(compile_time_values)
+    converter = FortranToIRConverter(type_map=type_map, compile_time_values=values)
+    requirements: list[dict[str, str | None]] = []
+    seen: set[tuple[str | None, ...]] = set()
+
+    def add_requirement(code: str, ctx: dict, *, expression: str, base_type: str | None = None, kind: str | None = None) -> None:
+        symbol = str(ctx.get("symbol") or "")
+        item = {
+            "code": code,
+            "unit_kind": ctx.get("unit_kind"),
+            "unit": ctx.get("unit"),
+            "module": ctx.get("module"),
+            "procedure": ctx.get("procedure"),
+            "type_owner": ctx.get("type_owner"),
+            "role": ctx.get("role"),
+            "symbol": symbol,
+            "base_type": base_type,
+            "kind": kind,
+            "expression": expression,
+            "message": _compile_time_requirement_message(code, symbol, expression),
+        }
+        key = tuple(str(item.get(field) or "") for field in ("code", "unit", "symbol", "base_type", "kind", "expression"))
+        if key in seen:
+            return
+        seen.add(key)
+        requirements.append(item)
+
+    for var, ctx in _iter_fortran_variable_contexts(parsed):
+        expression = var.symbolic_value if var.symbolic_value is not None else var.value
+        if var.is_parameter and var.value is None and expression:
+            resolved = _resolve_compile_time_text(expression, values)
+            supplied_by_symbol = values.get(var.name.lower())
+            if supplied_by_symbol is None and resolved == expression:
+                add_requirement("parameter_value", ctx, expression=expression)
+
+        base_type = str(var.base_type or "").lower()
+        if base_type not in {"integer", "real", "complex", "logical", "character"} or not var.kind:
+            continue
+        kind_key = converter._semantic_kind_key(var)
+        if converter.type_map.get((base_type, kind_key)) is None:
+            expression = _resolve_compile_time_text(str(var.kind), values)
+            add_requirement(
+                "unsupported_kind",
+                ctx,
+                expression=expression,
+                base_type=base_type,
+                kind=kind_key,
+            )
+
+    return requirements
+
+
+def _resolve_semantic_value(value, compile_time_values: dict[str, str]):
+    if isinstance(value, str):
+        return _resolve_compile_time_text(value, compile_time_values)
+    if isinstance(value, list):
+        return [_resolve_semantic_value(item, compile_time_values) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_resolve_semantic_value(item, compile_time_values) for item in value)
+    if isinstance(value, dict):
+        return {
+            key: _resolve_semantic_value(item, compile_time_values)
+            for key, item in value.items()
+        }
+    return value
+
+
+def _resolve_semantic_type_compile_time_values(
+    semantic_type: SemanticType | None,
+    compile_time_values: dict[str, str],
+) -> None:
+    if semantic_type is None:
+        return
+    semantic_type.shape = [
+        _resolve_compile_time_text(dim, compile_time_values)
+        for dim in semantic_type.shape
+    ]
+    for constraint in semantic_type.constraints:
+        constraint.arguments = _resolve_semantic_value(constraint.arguments, compile_time_values)
+    semantic_type.metadata = _resolve_semantic_value(semantic_type.metadata, compile_time_values)
+
+
+def _resolve_semantic_argument_compile_time_values(
+    arg: SemanticArgument,
+    compile_time_values: dict[str, str],
+) -> None:
+    _resolve_semantic_type_compile_time_values(arg.semantic_type, compile_time_values)
+    arg.default_value = _resolve_semantic_value(arg.default_value, compile_time_values)
+    arg.metadata = _resolve_semantic_value(arg.metadata, compile_time_values)
+
+
+def _resolve_semantic_function_compile_time_values(
+    func: SemanticFunction,
+    compile_time_values: dict[str, str],
+) -> None:
+    for arg in func.arguments:
+        _resolve_semantic_argument_compile_time_values(arg, compile_time_values)
+    _resolve_semantic_type_compile_time_values(func.return_type, compile_time_values)
+    for mapping in func.projection:
+        mapping.value = _resolve_semantic_value(mapping.value, compile_time_values)
+    func.metadata = _resolve_semantic_value(func.metadata, compile_time_values)
+
+
+def _resolve_semantic_module_compile_time_values(
+    module: SemanticModule,
+    compile_time_values: dict[str, str],
+) -> None:
+    for var in module.variables:
+        _resolve_semantic_argument_compile_time_values(var, compile_time_values)
+    for func in module.functions:
+        _resolve_semantic_function_compile_time_values(func, compile_time_values)
+    for cls in module.classes:
+        for field in cls.fields:
+            _resolve_semantic_argument_compile_time_values(field, compile_time_values)
+        for method in cls.methods:
+            _resolve_semantic_function_compile_time_values(method, compile_time_values)
+        cls.metadata = _resolve_semantic_value(cls.metadata, compile_time_values)
+    module.metadata = _resolve_semantic_value(module.metadata, compile_time_values)
+
+
+def resolve_semantic_compile_time_values(
+    semantic_ir: SemanticModule | list[SemanticModule],
+    compile_time_values: dict[str, int | str],
+) -> SemanticModule | list[SemanticModule]:
+    """Return a copy of semantic IR with known compile-time text resolved.
+
+    Use this after semantic conversion when symbolic shape metadata should be
+    specialized without mutating the original IR object.
+
+    Example:
+        >>> mod = SemanticModule(name="m", variables=[SemanticArgument("x", SemanticType("Float64", rank=1, shape=["1:n"]))])
+        >>> resolve_semantic_compile_time_values(mod, {"n": 4}).variables[0].semantic_type.shape
+        ['1:4']
+    """
+    values = _normalize_compile_time_values(compile_time_values)
+    resolved = deepcopy(semantic_ir)
+    modules = resolved if isinstance(resolved, list) else [resolved]
+    for module in modules:
+        _resolve_semantic_module_compile_time_values(module, values)
+    return resolved
+
+
+def _converter_for(
+    compile_time_values: dict[str, int | str] | None = None,
+) -> FortranToIRConverter:
+    if compile_time_values is None:
+        return _DEFAULT_CONVERTER
+    return FortranToIRConverter(compile_time_values=compile_time_values)
+
+
 _DEFAULT_CONVERTER = FortranToIRConverter()
 
 
-def fortran_module_to_semantic_module(module) -> SemanticModule:
-    return _DEFAULT_CONVERTER.module_to_semantic_module(module)
+def fortran_module_to_semantic_module(
+    module,
+    *,
+    compile_time_values: dict[str, int | str] | None = None,
+) -> SemanticModule:
+    return _converter_for(compile_time_values).module_to_semantic_module(module)
 
 
 def fortran_file_to_semantic_modules(
     parsed_file: FortranFile,
     *,
     standalone_module_name: str | None = None,
+    compile_time_values: dict[str, int | str] | None = None,
 ) -> list[SemanticModule]:
-    return _DEFAULT_CONVERTER.file_to_semantic_modules(
+    return _converter_for(compile_time_values).file_to_semantic_modules(
         parsed_file,
         standalone_module_name=standalone_module_name,
     )

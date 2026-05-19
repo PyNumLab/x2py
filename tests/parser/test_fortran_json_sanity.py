@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -74,6 +75,62 @@ def _has_valid_bounds(entry: dict) -> bool:
     return True
 
 
+def _split_top_level_csv(text: str) -> list[str]:
+    parts = []
+    current = []
+    depth = 0
+    quote: str | None = None
+    for char in text:
+        if quote:
+            current.append(char)
+            if char == quote:
+                quote = None
+            continue
+        if char in {"'", '"'}:
+            quote = char
+            current.append(char)
+            continue
+        if char in "([":
+            depth += 1
+        elif char in ")]" and depth:
+            depth -= 1
+        if char == "," and depth == 0:
+            parts.append("".join(current).strip())
+            current = []
+            continue
+        current.append(char)
+    parts.append("".join(current).strip())
+    return [part for part in parts if part]
+
+
+def _is_literal_json_parameter_value(value) -> bool:
+    """Return True only for evaluated/literal parameter values in JSON output."""
+    if isinstance(value, bool):
+        return True
+    if isinstance(value, (int, float)):
+        return True
+    if value is None:
+        return False
+
+    text = str(value).strip()
+    if not text:
+        return False
+    if re.fullmatch(r"[+-]?\d+(?:\.\d*)?(?:[deDE][+-]?\d+)?", text):
+        return True
+    if re.fullmatch(r"\.(?:true|false)\.", text, re.IGNORECASE):
+        return True
+    if re.fullmatch(r"(['\"]).*\1", text):
+        return True
+    if text.startswith("[") and text.endswith("]"):
+        return all(_is_literal_json_parameter_value(part) for part in _split_top_level_csv(text[1:-1]))
+    if text.startswith("(/") and text.endswith("/)"):
+        return all(_is_literal_json_parameter_value(part) for part in _split_top_level_csv(text[2:-2]))
+    if text.startswith("(") and text.endswith(")"):
+        parts = _split_top_level_csv(text[1:-1])
+        return len(parts) == 2 and all(_is_literal_json_parameter_value(part) for part in parts)
+    return False
+
+
 def _is_valid_shape_info(entry: dict) -> bool:
     """Enforce non-ambiguous shape metadata with clear scalar/array exception rules.
 
@@ -142,6 +199,7 @@ def test_fortran_json_fixtures_have_sane_types():
     invalid_name_entries = []
     invalid_shape_entries = []
     invalid_kind_entries = []
+    invalid_parameter_value_entries = []
 
     for path in _FCODE_DIR.rglob("*.json"):
         if path.name.endswith("_errors.json") or path.name == _ALLOWLIST_PATH.name:
@@ -159,6 +217,13 @@ def test_fortran_json_fixtures_have_sane_types():
         for entry in _iter_typed_entries(raw_payload):
             if "kind" not in entry or entry.get("kind") is None:
                 invalid_kind_entries.append((relpath, entry.get("base_type"), entry.get("name")))
+            if entry.get("is_parameter"):
+                value = entry.get("value")
+                symbolic_value = entry.get("symbolic_value")
+                if value is None and symbolic_value in (None, ""):
+                    invalid_parameter_value_entries.append((relpath, entry.get("name"), "missing value and symbolic_value"))
+                if value is not None and not _is_literal_json_parameter_value(value):
+                    invalid_parameter_value_entries.append((relpath, entry.get("name"), value))
 
         for sig in payload["signatures"]:
             arg_names = []
@@ -217,4 +282,5 @@ def test_fortran_json_fixtures_have_sane_types():
     assert not invalid_name_entries, f"Invalid empty/missing names: {invalid_name_entries[:20]}"
     assert not invalid_shape_entries, f"Invalid shape/dimensions metadata: {invalid_shape_entries[:20]}"
     assert not invalid_kind_entries, f"Missing/null kind entries: {invalid_kind_entries[:20]}"
+    assert not invalid_parameter_value_entries, f"Invalid parameter values: {invalid_parameter_value_entries[:20]}"
     assert not duplicate_argument_entries, f"Duplicate argument names in signatures: {duplicate_argument_entries[:20]}"

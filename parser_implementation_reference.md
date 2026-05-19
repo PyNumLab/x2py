@@ -15,7 +15,7 @@ another source language.
 - Resolve compile-time symbols used in type kinds and array shapes, both local
   and cross-file via imported modules.  
 - Produce wrap-readiness diagnostics (`unsupported_constructs`, unknown
-  argument declarations, wrappable boolean).  
+  argument declarations, aggregate wrappable boolean, and unit-scoped blockers).
 - Provide CLI output in both human-readable tree form and JSON form.  
 
 ## 2) Language coverage actually implemented
@@ -105,7 +105,10 @@ another source language.
   including renamed imports from parsed modules. Safely evaluable arithmetic
   parameter chains are folded to their final integer kind; compiler-dependent
   intrinsics such as `selected_real_kind(...)` remain as resolved expressions.  
-- Shape expressions resolved using available symbol dictionary.  
+- Procedure-local parameter expressions can be folded into argument shapes
+  during procedure finalization. Module-level and `use`-associated parameters
+  used in procedure argument shapes remain symbolic in the signature while
+  still being considered valid scope references for readiness diagnostics.
 - Module/program variable parameter values, character lengths, and shapes are
   resolved through the same cached compile-time resolver where safe.
 - The resolver caches symbol and expression results per scope and evaluates a
@@ -169,6 +172,8 @@ another source language.
   - `n_signatures`, `n_types`, `n_modules`, `n_submodules`, `n_programs`, `n_block_data`
   - `unsupported_constructs`
   - `unknown_argument_types`
+  - `unit_blockers` with records only for procedure/derived-type/file units
+    that own blockers. Unit records do not carry a ready-to-wrap flag.
   - `wrappable`
 
 ## 3) Output/data model behavior
@@ -201,6 +206,9 @@ another source language.
 - Fortran `parameter` values are represented in semantic IR with the existing
   `Constant` constraint. The `.pyi` printer renders those as `Final[...]`, and
   the `.pyi` parser maps `Final[...]` back to the `Constant` constraint.
+- Parser JSON serializes both parameter `value` and `symbolic_value`. `value`
+  is literal/evaluated only; compiler-specific or unresolved expressions keep
+  `value: null` and preserve the original expression in `symbolic_value`.
 
 ## 4) Test strategy implemented (current workflow)
 
@@ -230,6 +238,8 @@ Covers, among others:
 - storage directives (`save`, `common`) in procedures are recognized and skipped as non-declaration statements
 - module variable and `use` parsing
 - module children attachment (procedures/types/interfaces)
+- executable parser-internals tutorial in
+  `tests/parser/test_parser_developer_tutorial.py`
 - ignoring local vars in external signatures
 - external callback declarations (including typed `real, external :: f`) under `implicit none`
 - ignoring internal procedures in `contains`
@@ -345,9 +355,108 @@ ask it to implement each of these layers explicitly:
 11. Project namespace parser with dependency ordering.  
 12. Readiness validator with unsupported-pattern rules + unknown type checks.  
 13. CLI with tree output + JSON output + file emission.  
-11. Unit tests per feature + fixture/golden regression suite + golden
+14. Unit tests per feature + fixture/golden regression suite + golden
     regeneration script.  
 
+
+### 6.1 Parser control-flow example
+
+Use this as the mental model when changing `fortran_parser/parser.py`: parsing
+is recursive over source units, and each unit is handled by the same grammar
+shape before grammar-specific exceptions are applied.
+
+```fortran
+module m
+  type :: state
+    integer :: n
+  end type state
+contains
+  subroutine work(x)
+    real, intent(inout) :: x(:)
+  end subroutine work
+end module m
+```
+
+The control flow is:
+
+1. `visit_file` preprocesses the source, validates recognizable headers, and
+   asks `_helper_slice_child_units` for direct file-scope units.
+2. The slicer returns one `_SourceUnit(kind="module", name="m")` whose `lines`
+   are exactly the module substring and whose line numbers are the original
+   file line numbers.
+3. `visit_source_unit` dispatches the slice to `visit_module_unit`.
+4. `visit_module_unit` builds a module `_ParserScope`, splits the module into
+   `header`, specification part, execution part, and `contains` using
+   `_helper_split_unit_parts`, then calls `_helper_visit_spec_part` on the
+   module specification lines.
+5. The module visitor slices its own direct children. The `type :: state` slice
+   goes to `visit_derived_type_unit`; the contained `subroutine work` slice goes
+   to `visit_procedure_unit`.
+6. `visit_derived_type_unit` and `visit_procedure_unit` repeat the same pattern:
+   build a scope, split the unit, visit the relevant specification part, and
+   push declarations into that scope.
+
+The grammar shape is the design rule:
+
+- every sliced source unit has a header and a specification part
+- procedures and programs can also have an execution part
+- modules, submodules, programs, procedures, and derived types can have a
+  `contains` part, but visitors decide whether children in that region matter
+  for wrapping
+- block data is specification-only
+- interfaces use the same child-slicing mechanism for procedure declarations
+
+That means new parser behavior should usually be implemented by extending the
+grammar profile, unit splitter, or shared specification/declaration helpers,
+not by adding a new whole-file scan.
+
+Declaration parsing is deliberately shared. Module variables, program/block
+data variables, procedure arguments/results, and derived-type fields all call
+`_helper_parse_declaration_line`, then `_helper_push_declaration_to_scope`.
+The small spec-line visitors only cover grammar exceptions: module visibility
+and `use`, procedure `implicit`/`import`/`external`/local parameters, and
+derived-type `sequence`/`private`/type-bound declarations.
+
+Sibling validation happens at each recursive slicing level. Duplicate
+same-level units are errors, but identical names in different scopes are
+allowed; for example, `module a; type :: state ...` and
+`module b; type :: state ...` parse as two separate type scopes.
+End-name validation is strict for module/submodule/program/interface/derived
+type scopes. Procedure end-name labels are tolerated when the end statement is
+the right procedure kind, because some real third-party fixtures contain
+copy/paste labels that do not match the opening procedure name; duplicate
+procedure names are still checked at the sibling scope.
+
+### 6.2 Executable developer tutorial
+
+`tests/parser/test_parser_developer_tutorial.py` is a runnable tutorial for the
+private parser flow. It intentionally uses `FortranParser` internals and ends
+with asserts, so maintainers can read it as sample code and pytest can keep it
+honest.
+
+The tutorial demonstrates this sequence:
+
+```python
+parser = FortranParser()
+lines, root_scope, top_units = parser._helper_prepare_source_units(source, filename)
+module_parts = parser._helper_split_unit_parts(
+    top_units[0],
+    parser._helper_unit_grammar("module"),
+    filename=filename,
+)
+module = parser.visit_source_unit(top_units[0], parent_scope=root_scope, filename=filename)
+module_scope = parser._helper_scope_for_model("module", module, parent=root_scope)
+child_units = parser._helper_slice_child_units(
+    top_units[0].lines[1:-1],
+    parent_scope=module_scope,
+    filename=filename,
+)
+```
+
+Use that test when changing the recursive slicer or the small `visit_*_unit`
+methods: it documents how file parsing becomes unit parsing, how unit parsing
+becomes child-unit parsing, and how the active scope is passed into shared
+declaration helpers.
 
 ## 7) Scope handling and valued-variable mechanics (explicit)
 
@@ -360,6 +469,11 @@ implemented today:
 - **Module specification scope tracking**: module `parameter` collection is
   restricted to the module specification part and stops at `contains`, avoiding
   leakage from executable regions.
+- **Module parameter references in contained procedure shapes**: a contained
+  procedure argument such as `real :: x(n)` may refer to a module-level
+  parameter `n`. The signature keeps the shape token symbolic (`"n"`) while
+  readiness validation treats it as a valid scoped reference. This protects
+  module-level parameters from being mistaken for undeclared procedure locals.
 - **Interface scope tracking**: procedures parsed inside `interface ... end
   interface` are represented separately and flagged as interface procedures.
   Interface-local argument declarations do not conflict with host declarations;
@@ -376,7 +490,10 @@ implemented today:
   allowed in mutually exclusive `#if/#ifdef` branches but still raise when two
   same-name procedures are active in overlapping branch conditions.
 - **Valued variables map**: compile-time constants are preserved as
-  `FortranVariable(name, value)` records in signature metadata.
+  `FortranVariable(name, value, symbolic_value)` records in signature metadata.
+  `value` stores only a literal/evaluated value when the parser can determine
+  one; otherwise it is `None`. `symbolic_value` keeps the original parameter
+  expression for validation, downstream diagnostics, and JSON consumers.
 - **Expression normalization using valued variables**: argument kinds and shape
   expressions are rewritten using the resolved valued-variable map, including
   transitively dependent symbols.
@@ -396,7 +513,6 @@ A condensed history of important parser capabilities added over time (from
 - Improved argument declaration parsing plus shape/derived coverage.
 - Added assumed-shape bounds and derived-argument fixture coverage.
 - Added compile-time shape-expression resolution from parameters.
-- Added symbolic shape-evaluation API for externally supplied symbol values.
 - Added structured per-dimension shape component helpers (`raw/lower/upper`).
 - Restricted module-parameter collection to module specification scope.
 - Fixed deep and cyclic compile-time dependency resolution behavior.
@@ -407,7 +523,8 @@ A condensed history of important parser capabilities added over time (from
 - Improved compile-time argument expression resolution and local-variable
   distinction.
 - Added same-file derived-type parent object linking (`extends`).
-- Added valued-variable support and tests.
+- Added valued-variable support and tests, including separate symbolic and
+  resolved parameter values.
 - Refined CLI tree output (omit empty/internal sections; stable module
   procedure grouping).
 - Added tests/fixtures for same-name reuse across different scopes.
@@ -418,6 +535,9 @@ A condensed history of important parser capabilities added over time (from
   file parsing now dispatches direct units to small `visit_*_unit` methods,
   each unit works on its own source substring, and shared declaration helpers
   push parsed symbols into the active scope.
+- Collapsed old full-method parser helpers into visitor methods and kept
+  helpers focused on reusable grammar pieces: slicing, scope setup,
+  specification-part handling, declaration parsing, and validation.
 - Refreshed parser goldens for the grammar-style parser. Procedure-internal
   subprograms are no longer exported as file/module procedures; local
   interfaces remain available for callback typing and interface metadata.
@@ -492,6 +612,9 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
     `base_type`/`kind` pair must map to a concrete semantic type, otherwise
     conversion raises instead of emitting `Unknown`. Generated `.pyi` output and
     `.pyi` parsing also reject `Unknown` type annotations.
+  - When the missing type information depends on compiler-specific constants,
+    `collect_semantic_compile_time_requirements` reports the unknown expression
+    and semantic conversion accepts `compile_time_values` to specialize the IR.
 - **Post-scope validation (hard error):**
   - After parsing each module, derived type, or procedure scope, a validation pass checks that all declared variables/fields/arguments have a known (non-`"unknown"`) base type; failures raise `FortranParseError`.
   - Under `implicit none`, missing declarations are treated as hard errors. For functions:

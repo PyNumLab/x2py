@@ -1,8 +1,63 @@
 # -*- coding: utf-8 -*-
+import ast
+from dataclasses import replace
+import re
+
 import pytest
 
-from fortran_parser.parser import FortranParser, collect_signature_shape_symbols, evaluate_signature_shapes
+from fortran_parser.parser import FortranParser
 from x2py import FortranParseError, assess_wrap_readiness, parse_fortran_file, parse_fortran_project
+
+
+def collect_signature_shape_symbols(signature):
+    symbols = set()
+    for arg in signature.arguments:
+        for dim in arg.shape:
+            symbols.update(re.findall(r"[A-Za-z_]\w*", dim))
+    return symbols
+
+
+def evaluate_signature_shapes(signature, symbol_values=None):
+    symbol_values = symbol_values or {}
+    out = replace(signature)
+    out.arguments = [replace(a) for a in signature.arguments]
+
+    def fold_integer_expr(text):
+        try:
+            tree = ast.parse(text, mode="eval")
+        except SyntaxError:
+            return text
+        allowed = (
+            ast.Expression,
+            ast.BinOp,
+            ast.UnaryOp,
+            ast.Constant,
+            ast.Add,
+            ast.Sub,
+            ast.Mult,
+            ast.Div,
+            ast.FloorDiv,
+            ast.Mod,
+            ast.Pow,
+            ast.USub,
+            ast.UAdd,
+        )
+        if any(not isinstance(node, allowed) for node in ast.walk(tree)):
+            return text
+        value = eval(compile(tree, "<shape>", "eval"), {"__builtins__": {}}, {})
+        return str(int(value)) if isinstance(value, (int, float)) and value == int(value) else text
+
+    for arg in out.arguments:
+        arg.shape = list(arg.shape)
+        for index, dim in enumerate(arg.shape):
+            for key, value in symbol_values.items():
+                dim = re.sub(rf"\b{re.escape(str(key))}\b", str(value), dim, flags=re.IGNORECASE)
+            if ":" in dim:
+                dim = ":".join(fold_integer_expr(part) if part.strip() else part for part in dim.split(":"))
+            else:
+                dim = fold_integer_expr(dim)
+            arg.shape[index] = dim
+    return out
 
 
 def test_parser_public_entrypoint_aliases_and_singular_contracts_use_inline_sources():
@@ -1394,9 +1449,6 @@ end program type_stmt_program
     module = FortranParser().visit_fortran_modules(
         module_code,
         filename="module_like_edges.f90",
-        signatures=[],
-        types=[],
-        interfaces=[],
     )[0]
     program = parse_fortran_file(program_code, filename="module_like_edges.f90").programs[0]
 
