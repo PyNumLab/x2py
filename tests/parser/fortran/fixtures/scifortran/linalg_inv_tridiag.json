@@ -16,7 +16,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "sub_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N-1"
@@ -62,7 +62,7 @@
         {
           "name": "diag_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N"
@@ -88,7 +88,7 @@
         {
           "name": "over_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N-1"
@@ -114,7 +114,7 @@
         {
           "name": "Inv",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N"
@@ -152,7 +152,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -172,7 +172,7 @@
         {
           "name": "sub_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N-1"
@@ -198,7 +198,7 @@
         {
           "name": "diag_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N"
@@ -224,7 +224,7 @@
         {
           "name": "over_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N-1"
@@ -250,7 +250,7 @@
         {
           "name": "Inv",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N"
@@ -288,7 +288,7 @@
         {
           "name": "Nb",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -308,7 +308,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -328,7 +328,7 @@
         {
           "name": "sub_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb-1",
@@ -360,7 +360,7 @@
         {
           "name": "diag_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb",
@@ -392,7 +392,7 @@
         {
           "name": "over_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb-1",
@@ -424,7 +424,7 @@
         {
           "name": "Ainv",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb",
@@ -468,7 +468,7 @@
         {
           "name": "Nb",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -488,7 +488,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -508,7 +508,7 @@
         {
           "name": "sub_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb-1",
@@ -540,7 +540,7 @@
         {
           "name": "diag_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb",
@@ -572,7 +572,7 @@
         {
           "name": "over_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb-1",
@@ -604,7 +604,7 @@
         {
           "name": "Ainv",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb",
@@ -648,7 +648,7 @@
         {
           "name": "Amat",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -689,7 +689,7 @@
         {
           "name": "Amat",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -730,7 +730,7 @@
         {
           "name": "Nb",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -750,7 +750,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -770,7 +770,7 @@
         {
           "name": "Amat",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "Nb*N",
@@ -811,7 +811,7 @@
         {
           "name": "Nb",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -831,7 +831,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -851,7 +851,7 @@
         {
           "name": "Amat",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "Nb*N",
@@ -899,7 +899,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -919,7 +919,7 @@
         {
           "name": "sub_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N-1"
@@ -945,7 +945,7 @@
         {
           "name": "diag_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N"
@@ -971,7 +971,7 @@
         {
           "name": "over_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N-1"
@@ -997,7 +997,7 @@
         {
           "name": "Inv",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N"
@@ -1035,7 +1035,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1055,7 +1055,7 @@
         {
           "name": "sub_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N-1"
@@ -1081,7 +1081,7 @@
         {
           "name": "diag_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N"
@@ -1107,7 +1107,7 @@
         {
           "name": "over_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N-1"
@@ -1133,7 +1133,7 @@
         {
           "name": "Inv",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "N"
@@ -1171,7 +1171,7 @@
         {
           "name": "Nb",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1191,7 +1191,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1211,7 +1211,7 @@
         {
           "name": "sub_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb-1",
@@ -1243,7 +1243,7 @@
         {
           "name": "diag_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb",
@@ -1275,7 +1275,7 @@
         {
           "name": "over_",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb-1",
@@ -1307,7 +1307,7 @@
         {
           "name": "Ainv",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb",
@@ -1351,7 +1351,7 @@
         {
           "name": "Nb",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1371,7 +1371,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1391,7 +1391,7 @@
         {
           "name": "sub_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb-1",
@@ -1423,7 +1423,7 @@
         {
           "name": "diag_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb",
@@ -1455,7 +1455,7 @@
         {
           "name": "over_",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb-1",
@@ -1487,7 +1487,7 @@
         {
           "name": "Ainv",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 3,
           "shape": [
             "Nb",
@@ -1531,7 +1531,7 @@
         {
           "name": "Amat",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -1572,7 +1572,7 @@
         {
           "name": "Amat",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -1613,7 +1613,7 @@
         {
           "name": "Nb",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1633,7 +1633,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1653,7 +1653,7 @@
         {
           "name": "Amat",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "Nb*N",
@@ -1694,7 +1694,7 @@
         {
           "name": "Nb",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1714,7 +1714,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1734,7 +1734,7 @@
         {
           "name": "Amat",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             "Nb*N",

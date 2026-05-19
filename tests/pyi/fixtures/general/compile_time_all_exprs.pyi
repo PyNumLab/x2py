@@ -1,20 +1,20 @@
-a: Int32
+a: Final[Int32]
 
-b: Int32
+b: Final[Int32]
 
-c: Int32
+c: Final[Int32]
 
-p_add: Int32
+p_add: Final[Int32]
 
-p_sub: Int32
+p_sub: Final[Int32]
 
-p_mul: Int32
+p_mul: Final[Int32]
 
-p_div: Int32
+p_div: Final[Int32]
 
-p_pow: Int32
+p_pow: Final[Int32]
 
-p_mix: Int32
+p_mix: Final[Int32]
 
 def all_exprs(
     x1: Int32[Shape('1:p_add'), ORDER_F],

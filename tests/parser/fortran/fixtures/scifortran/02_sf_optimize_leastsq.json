@@ -17,14 +17,14 @@
         {
           "name": "n",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "2",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -37,14 +37,14 @@
         {
           "name": "npar",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "3",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -57,14 +57,14 @@
         {
           "name": "m",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "50",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -77,7 +77,7 @@
         {
           "name": "iflag",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -97,7 +97,7 @@
         {
           "name": "info",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -117,7 +117,7 @@
         {
           "name": "tol",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -137,16 +137,16 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "n"
+            "2"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "n"
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -163,16 +163,16 @@
         {
           "name": "x0",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "n"
+            "2"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "n"
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -189,16 +189,16 @@
         {
           "name": "y",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "n"
+            "2"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "n"
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -215,16 +215,16 @@
         {
           "name": "a",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "npar"
+            "3"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "npar"
+            "3"
           ],
           "value": null,
           "value_type": "unknown",
@@ -241,16 +241,16 @@
         {
           "name": "xdata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "m"
+            "50"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "m"
+            "50"
           ],
           "value": null,
           "value_type": "unknown",
@@ -267,16 +267,16 @@
         {
           "name": "ydata",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "m"
+            "50"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "m"
+            "50"
           ],
           "value": null,
           "value_type": "unknown",
@@ -293,16 +293,16 @@
         {
           "name": "ynoise",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "m"
+            "50"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "m"
+            "50"
           ],
           "value": null,
           "value_type": "unknown",
@@ -319,16 +319,16 @@
         {
           "name": "xwork",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "m"
+            "50"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "m"
+            "50"
           ],
           "value": null,
           "value_type": "unknown",
@@ -345,16 +345,16 @@
         {
           "name": "ywork",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "m"
+            "50"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "m"
+            "50"
           ],
           "value": null,
           "value_type": "unknown",
@@ -371,16 +371,16 @@
         {
           "name": "fvec",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "m"
+            "50"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "m"
+            "50"
           ],
           "value": null,
           "value_type": "unknown",

@@ -14,14 +14,14 @@
         {
           "name": "zero",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "(0.d0,0.d0)",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -34,14 +34,14 @@
         {
           "name": "xi",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "(0.d0,1.d0)",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -54,14 +54,14 @@
         {
           "name": "one",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "(1.d0,0.d0)",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -81,7 +81,7 @@
             {
               "name": "Nblock",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -101,7 +101,7 @@
             {
               "name": "N",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -122,7 +122,7 @@
           "result": {
             "name": "eye_block",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 3,
             "shape": [
               "Nblock",
@@ -166,7 +166,7 @@
             {
               "name": "Nblock",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -186,7 +186,7 @@
             {
               "name": "N",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -207,7 +207,7 @@
           "result": {
             "name": "eye_block",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 3,
             "shape": [
               "Nblock",
@@ -251,7 +251,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -280,7 +280,7 @@
             {
               "name": "shap",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -360,7 +360,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -389,7 +389,7 @@
             {
               "name": "shap",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -469,7 +469,7 @@
             {
               "name": "j",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -489,7 +489,7 @@
             {
               "name": "k",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -509,7 +509,7 @@
             {
               "name": "extra",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -530,7 +530,7 @@
           "result": {
             "name": "upper_triangle",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 2,
             "shape": [
               "j",
@@ -571,7 +571,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -597,7 +597,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -624,7 +624,7 @@
           "result": {
             "name": "outerdiff",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 2,
             "shape": [
               "size(a)",
@@ -665,7 +665,7 @@
             {
               "name": "first",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -685,7 +685,7 @@
             {
               "name": "increment",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -705,7 +705,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -726,7 +726,7 @@
           "result": {
             "name": "arth_i",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               "n"
@@ -764,7 +764,7 @@
             {
               "name": "x_in",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -785,7 +785,7 @@
           "result": {
             "name": "x",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -817,7 +817,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -838,7 +838,7 @@
           "result": {
             "name": "unit_",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1087,7 +1087,7 @@
                 {
                   "name": "ispec",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -1147,7 +1147,7 @@
                 {
                   "name": "n1",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -1167,7 +1167,7 @@
                 {
                   "name": "n2",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -1187,7 +1187,7 @@
                 {
                   "name": "n3",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -1207,7 +1207,7 @@
                 {
                   "name": "n4",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -1228,7 +1228,7 @@
               "result": {
                 "name": "ilaenv",
                 "base_type": "integer",
-                "kind": null,
+                "kind": "",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],
@@ -1330,14 +1330,14 @@
         {
           "name": "zero",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "(0.d0,0.d0)",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1350,14 +1350,14 @@
         {
           "name": "xi",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "(0.d0,1.d0)",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1370,14 +1370,14 @@
         {
           "name": "one",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "(1.d0,0.d0)",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1397,7 +1397,7 @@
             {
               "name": "Nblock",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1417,7 +1417,7 @@
             {
               "name": "N",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1438,7 +1438,7 @@
           "result": {
             "name": "eye_block",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 3,
             "shape": [
               "Nblock",
@@ -1482,7 +1482,7 @@
             {
               "name": "Nblock",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1502,7 +1502,7 @@
             {
               "name": "N",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1523,7 +1523,7 @@
           "result": {
             "name": "eye_block",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 3,
             "shape": [
               "Nblock",
@@ -1567,7 +1567,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -1596,7 +1596,7 @@
             {
               "name": "shap",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1676,7 +1676,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -1705,7 +1705,7 @@
             {
               "name": "shap",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1785,7 +1785,7 @@
             {
               "name": "j",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1805,7 +1805,7 @@
             {
               "name": "k",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1825,7 +1825,7 @@
             {
               "name": "extra",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1846,7 +1846,7 @@
           "result": {
             "name": "upper_triangle",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 2,
             "shape": [
               "j",
@@ -1887,7 +1887,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1913,7 +1913,7 @@
             {
               "name": "b",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1940,7 +1940,7 @@
           "result": {
             "name": "outerdiff",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 2,
             "shape": [
               "size(a)",
@@ -1981,7 +1981,7 @@
             {
               "name": "first",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2001,7 +2001,7 @@
             {
               "name": "increment",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2021,7 +2021,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2042,7 +2042,7 @@
           "result": {
             "name": "arth_i",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               "n"
@@ -2080,7 +2080,7 @@
             {
               "name": "x_in",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2101,7 +2101,7 @@
           "result": {
             "name": "x",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2133,7 +2133,7 @@
             {
               "name": "n",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2154,7 +2154,7 @@
           "result": {
             "name": "unit_",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2403,7 +2403,7 @@
                 {
                   "name": "ispec",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -2463,7 +2463,7 @@
                 {
                   "name": "n1",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -2483,7 +2483,7 @@
                 {
                   "name": "n2",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -2503,7 +2503,7 @@
                 {
                   "name": "n3",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -2523,7 +2523,7 @@
                 {
                   "name": "n4",
                   "base_type": "integer",
-                  "kind": null,
+                  "kind": "",
                   "rank": 0,
                   "shape": [],
                   "lbound": [],
@@ -2544,7 +2544,7 @@
               "result": {
                 "name": "ilaenv",
                 "base_type": "integer",
-                "kind": null,
+                "kind": "",
                 "rank": 0,
                 "shape": [],
                 "lbound": [],

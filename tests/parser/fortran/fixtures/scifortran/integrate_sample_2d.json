@@ -16,7 +16,7 @@
         {
           "name": "func",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -45,7 +45,7 @@
         {
           "name": "dhx",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -65,7 +65,7 @@
         {
           "name": "dhy",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -85,7 +85,7 @@
         {
           "name": "xrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -111,7 +111,7 @@
         {
           "name": "yrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -138,7 +138,7 @@
       "result": {
         "name": "int",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -168,7 +168,7 @@
         {
           "name": "func",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -197,7 +197,7 @@
         {
           "name": "dhx",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -217,7 +217,7 @@
         {
           "name": "dhy",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -237,7 +237,7 @@
         {
           "name": "xrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -263,7 +263,7 @@
         {
           "name": "yrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -290,7 +290,7 @@
       "result": {
         "name": "int",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -320,7 +320,7 @@
         {
           "name": "func",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -349,7 +349,7 @@
         {
           "name": "dhx",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -369,7 +369,7 @@
         {
           "name": "dhy",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -389,7 +389,7 @@
         {
           "name": "xrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -415,7 +415,7 @@
         {
           "name": "yrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -442,7 +442,7 @@
       "result": {
         "name": "int",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -472,7 +472,7 @@
         {
           "name": "func",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -501,7 +501,7 @@
         {
           "name": "dhx",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -521,7 +521,7 @@
         {
           "name": "dhy",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -541,7 +541,7 @@
         {
           "name": "xrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -567,7 +567,7 @@
         {
           "name": "yrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -594,7 +594,7 @@
       "result": {
         "name": "int",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -631,7 +631,7 @@
         {
           "name": "func",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -660,7 +660,7 @@
         {
           "name": "dhx",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -680,7 +680,7 @@
         {
           "name": "dhy",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -700,7 +700,7 @@
         {
           "name": "xrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -726,7 +726,7 @@
         {
           "name": "yrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -753,7 +753,7 @@
       "result": {
         "name": "int",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -783,7 +783,7 @@
         {
           "name": "func",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -812,7 +812,7 @@
         {
           "name": "dhx",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -832,7 +832,7 @@
         {
           "name": "dhy",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -852,7 +852,7 @@
         {
           "name": "xrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -878,7 +878,7 @@
         {
           "name": "yrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -905,7 +905,7 @@
       "result": {
         "name": "int",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -935,7 +935,7 @@
         {
           "name": "func",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -964,7 +964,7 @@
         {
           "name": "dhx",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -984,7 +984,7 @@
         {
           "name": "dhy",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1004,7 +1004,7 @@
         {
           "name": "xrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -1030,7 +1030,7 @@
         {
           "name": "yrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -1057,7 +1057,7 @@
       "result": {
         "name": "int",
         "base_type": "real",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -1087,7 +1087,7 @@
         {
           "name": "func",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
             ":",
@@ -1116,7 +1116,7 @@
         {
           "name": "dhx",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1136,7 +1136,7 @@
         {
           "name": "dhy",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1156,7 +1156,7 @@
         {
           "name": "xrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -1182,7 +1182,7 @@
         {
           "name": "yrange",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "2"
@@ -1209,7 +1209,7 @@
       "result": {
         "name": "int",
         "base_type": "complex",
-        "kind": null,
+        "kind": "8",
         "rank": 0,
         "shape": [],
         "lbound": [],

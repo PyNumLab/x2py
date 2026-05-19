@@ -115,7 +115,12 @@
             "rank": 0,
             "dtype": "Int32",
             "shape": [],
-            "constraints": [],
+            "constraints": [
+              {
+                "name": "Constant",
+                "arguments": []
+              }
+            ],
             "coercions": [],
             "ownership": {
               "ownership": "borrowed",
@@ -137,7 +142,12 @@
             "rank": 0,
             "dtype": "Int32",
             "shape": [],
-            "constraints": [],
+            "constraints": [
+              {
+                "name": "Constant",
+                "arguments": []
+              }
+            ],
             "coercions": [],
             "ownership": {
               "ownership": "borrowed",

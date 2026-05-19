@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from pathlib import Path
+
 import pytest
 
 from fortran_parser.models import FortranFunctionCall, FortranSlice, FortranUseMapping, FortranVariable
@@ -96,6 +98,76 @@ end function norm2
     assert sig.arguments[0].shape == [":"]
 
 
+def test_builtin_datatypes_preserve_positional_and_keyword_kinds():
+    code = """
+subroutine builtin_kinds(i1, i2, r1, r2, c1, c2, l1, l2, ch1, ch2)
+  integer(4), intent(in) :: i1
+  integer(kind=8), intent(in) :: i2
+  real(8), intent(in) :: r1
+  real(kind=c_double), intent(in) :: r2
+  complex(16), intent(in) :: c1
+  complex(kind=c_double_complex), intent(in) :: c2
+  logical(1), intent(in) :: l1
+  logical(kind=c_bool), intent(in) :: l2
+  character(1), intent(in) :: ch1
+  character(len=1, kind=c_char), intent(in) :: ch2
+end subroutine builtin_kinds
+"""
+
+    args = {arg.name: arg for arg in parse_fortran_file(code, filename="builtin_kinds.f90").procedures[0].arguments}
+
+    assert args["i1"].base_type == "integer"
+    assert args["i1"].kind == "4"
+    assert args["i2"].kind == "8"
+    assert args["r1"].base_type == "real"
+    assert args["r1"].kind == "8"
+    assert args["r2"].kind == "c_double"
+    assert args["c1"].base_type == "complex"
+    assert args["c1"].kind == "16"
+    assert args["c2"].kind == "c_double_complex"
+    assert args["l1"].base_type == "logical"
+    assert args["l1"].kind == "1"
+    assert args["l2"].kind == "c_bool"
+    assert args["ch1"].base_type == "character"
+    assert args["ch1"].kind == "1"
+    assert args["ch2"].kind == "len=1, kind=c_char"
+
+
+def test_builtin_star_kind_declarations_preserve_all_intrinsic_kinds():
+    code = """
+subroutine star_kinds(i1, i2, r1, r2, c1, c2, l1, l2, ch1, ch2)
+  integer*4 i1
+  integer*8 :: i2
+  real*4 r1
+  real*8 :: r2
+  complex*8 c1
+  complex*16 :: c2
+  logical*1 l1
+  logical*4 :: l2
+  character*8 ch1
+  character*(*) :: ch2
+end subroutine star_kinds
+"""
+
+    args = {arg.name: arg for arg in parse_fortran_file(code, filename="star_kinds.f90").procedures[0].arguments}
+
+    assert args["i1"].base_type == "integer"
+    assert args["i1"].kind == "4"
+    assert args["i2"].kind == "8"
+    assert args["r1"].base_type == "real"
+    assert args["r1"].kind == "4"
+    assert args["r2"].kind == "8"
+    assert args["c1"].base_type == "complex"
+    assert args["c1"].kind == "8"
+    assert args["c2"].kind == "16"
+    assert args["l1"].base_type == "logical"
+    assert args["l1"].kind == "1"
+    assert args["l2"].kind == "4"
+    assert args["ch1"].base_type == "character"
+    assert args["ch1"].kind == "8"
+    assert args["ch2"].kind == "*"
+
+
 def test_fixed_form_and_interface_detection():
     code = """
       subroutine saxpy(n,x,y)
@@ -116,8 +188,10 @@ def test_fixed_form_and_interface_detection():
     assert len(parsed.interfaces) == 1
     assert parsed.interfaces[0].procedures[0].in_interface is True
 
-    with pytest.raises(ValueError, match="Fortran 77"):
-        parse_fortran_file(code, filename="legacy.f77").procedures
+    parsed = parse_fortran_file(code, filename="legacy.f77")
+    assert len(parsed.procedures) == 1
+    assert parsed.procedures[0].name == "saxpy"
+    assert len(parsed.interfaces) == 1
 
     parsed = parse_fortran_file(code, filename="legacy.f90")
     assert len(parsed.procedures) == 1
@@ -167,15 +241,16 @@ def test_legacy_character_and_star_kind_declarations_from_inline_fortran():
     assert proc.arguments[0].kind == "*"
     assert proc.arguments[1].base_type == "real"
 
-    with pytest.raises(FortranParseError, match="Unsupported Fortran 77 star-kind declaration"):
-        parse_fortran_file(
-            """
+    modern_proc = parse_fortran_file(
+        """
 subroutine modern_star(x)
   real*8 x
 end subroutine modern_star
 """,
-            filename="modern_star.f90",
-        )
+        filename="modern_star.f90",
+    ).procedures[0]
+    assert modern_proc.arguments[0].base_type == "real"
+    assert modern_proc.arguments[0].kind == "8"
 
 
 def test_duplicate_symbols_are_reported_from_inline_fortran():
@@ -230,7 +305,7 @@ end module solver
     }
     signatures = collect_project_procedure_signatures(files)
     step = [s for s in signatures if s.name == "step"][0]
-    assert step.arguments[0].kind == "rk"
+    assert step.arguments[0].kind == "selected_real_kind(15, 307)"
 
 
 def test_derived_type_fields_and_methods_detection():
@@ -262,7 +337,7 @@ def test_module_variables_and_use_statements():
     code = """
 module cfg
   use iso_c_binding, only: c_int
-  integer(kind=c_int) :: nmax
+  integer(kind=c_int), parameter :: nmax = 32
   real(kind=8), dimension(3) :: origin
 end module cfg
 """
@@ -272,6 +347,8 @@ end module cfg
     assert mod.name == "cfg"
     assert mod.uses["iso_c_binding"] == ["c_int"]
     assert [v.name for v in mod.variables] == ["nmax", "origin"]
+    assert mod.variables[0].is_parameter is True
+    assert mod.variables[1].is_parameter is False
     assert mod.variables[1].shape == ["3"]
 
 
@@ -888,7 +965,7 @@ end module my_kinds
     assert "my_kinds" in ns.modules
     assert "solver" in ns.modules
     step = [s for s in ns.procedures.values() if s.name == "step"][0]
-    assert step.arguments[0].kind == "rk"
+    assert step.arguments[0].kind == "selected_real_kind(15, 307)"
 
 
 def test_recursive_function_and_result_keyword_variants():
@@ -1167,6 +1244,41 @@ end module expr_mod
     assert [a.shape[0] for a in sig.arguments] == ["1:p_add", "1:p_sub", "1:p_mul", "1:p_div", "1:p_pow", "0:p_mix", "1:-(-a + b)", "1:(a+b)*(c+1)-1", "1:(a-b)*(a-c)"]
 
 
+def test_compile_time_expression_fixture_module_values_are_partially_evaluated():
+    parsed = parse_fortran_file(Path("tests/compile_time_expressions.f90"))
+    module = parsed.modules[0]
+    variables = {var.name: var for var in module.variables}
+
+    assert variables["expr_int"].value == "22"
+    assert variables["abs_value"].value == "12"
+    assert variables["max_value"].value == "7"
+    assert variables["mod_value"].value == "2"
+    assert variables["len_value"].value == "6"
+    assert variables["len_trim_value"].value == "3"
+    assert variables["char_code"].value == "65"
+    assert variables["cast_int"].value == "3"
+    assert variables["length_from_len"].kind == "len=7"
+    assert variables["length_from_parameter"].kind == "len=10"
+    assert variables["length_from_len_trim"].kind == "len=3"
+    assert variables["array_from_parameter"].shape == ["10"]
+    assert variables["array_from_expression"].shape == ["21"]
+    assert variables["matrix_from_constants"].shape == ["5", "10"]
+    assert variables["small_array"].value == "[1, 2, 3]"
+
+
+def test_parameterized_derived_type_declarations_preserve_and_resolve_arguments():
+    parsed = parse_fortran_file(Path("tests/compile_time_expressions.f90"))
+    module = parsed.modules[0]
+    variables = {var.name: var for var in module.variables}
+    buffer_type = next(dtype for dtype in module.derived_types if dtype.name == "buffer_type")
+    fields = {field.name: field for field in buffer_type.fields}
+
+    assert variables["compile_time_buffer"].base_type == "derived"
+    assert variables["compile_time_buffer"].kind == "buffer_type(real64, 4)"
+    assert fields["values"].kind == "k"
+    assert fields["values"].shape == ["n"]
+
+
 def test_derived_type_extends_and_attributes():
     code = """
 module m
@@ -1216,14 +1328,15 @@ end module m
     assert {"name": "setup", "targets": ["init", "clear"], "attrs": ["public"]} in dt.generic_bindings
 
 
-def test_star_kind_is_rejected_in_modern_fortran_file():
+def test_star_kind_is_parsed_in_modern_fortran_file():
     code = """
 subroutine bad(x)
   real*8 :: x
 end subroutine bad
 """
-    with pytest.raises(ValueError, match="star-kind"):
-        parse_fortran_file(code, filename="bad.f90").procedures
+    proc = parse_fortran_file(code, filename="bad.f90").procedures[0]
+    assert proc.arguments[0].base_type == "real"
+    assert proc.arguments[0].kind == "8"
 
 
 def test_unknown_datatype_for_argument_crashes_parser():
@@ -1342,7 +1455,7 @@ end subroutine caller
     sig = parse_fortran_file(code).procedures[0]
     cb = next(a for a in sig.arguments if a.name == "cb")
     assert cb.base_type == "procedure"
-    assert cb.kind is None
+    assert cb.kind == ""
     assert "import(ext_cb)" in sig.attributes
 
 
@@ -1454,7 +1567,7 @@ end block data init_data
     assert "driver" in project.programs
     assert "solver_mod.step" in project.procedures
     solver = project.procedures["solver_mod.step"]
-    assert solver.arguments[0].kind == "rk"
+    assert solver.arguments[0].kind == "selected_real_kind(15, 307)"
 
 
 def test_singular_parse_entrypoints_return_single_models():

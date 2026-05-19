@@ -37,16 +37,24 @@ and practical usage from terminal and Python.
 
 - Module discovery
 - Module variable extraction
+- Shared specification-part parsing for module-like scopes (modules,
+  submodules, programs, and block-data units), preserving original line
+  numbers while skipping contained procedure bodies where they are not
+  wrap-relevant
 - `use` extraction at module and procedure scope
 - Explicit `use` symbol mappings preserve imported `source` names and local
   `target` names for renamed imports
 - Propagation of module-level `use` imports into contained procedures
 - Folder/project parsing with dependency-aware ordering
 - Cross-file kind constant resolution (e.g., kinds modules)
+- Cached compile-time expression resolution for local/module parameters,
+  module/program variable shapes, and character lengths
 
 ### 1.5 Derived type parsing
 
 - `type :: ... end type` and legacy `type name ... end type` discovery
+- Parameterized derived-type headers such as `type :: buffer_type(k, n)`
+  and declarations such as `type(buffer_type(real64, 4))`
 - Type attributes (e.g., `abstract`)
 - Inheritance (`extends(parent)`)
 - Field extraction including shape/pointer/allocatable
@@ -78,15 +86,15 @@ sections so maintainers can navigate the file by concern instead of by history:
   diagnostics, shape evaluation, compile-time expression resolution,
   dependency ordering)
 - `FortranParser` internals grouped by domain:
+  - visitor-style API entrypoints (`visit_file`, `visit_project`,
+    `visit_wrap_readiness`)
   - signature/declaration parsing
   - module-variable parsing
   - file/project orchestration
   - program-unit parsers (types, modules, interfaces, submodules, programs,
     block-data)
-  - visitor-style API wrappers (`visit_file`, `visit_project`,
-    `visit_wrap_readiness`)
-  - compatibility aliases (`parse_file`, `parse_project`,
-    `assess_wrap_readiness`)
+  - `_helper_*` methods for scoped parsing, expression resolution, and shared
+    specification-part collection
 - Thin module-level convenience wrappers that delegate to a shared parser
   instance
 

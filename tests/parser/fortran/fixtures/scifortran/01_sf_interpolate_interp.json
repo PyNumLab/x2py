@@ -17,14 +17,14 @@
         {
           "name": "Lin",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "50",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -37,14 +37,14 @@
         {
           "name": "Lout",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "99",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -57,14 +57,14 @@
         {
           "name": "Np",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "10",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -77,14 +77,14 @@
         {
           "name": "dt",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "0.1d0",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -97,16 +97,16 @@
         {
           "name": "xin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "Lin"
+            "50"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Lin"
+            "50"
           ],
           "value": null,
           "value_type": "unknown",
@@ -123,16 +123,16 @@
         {
           "name": "yin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "Lin"
+            "50"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Lin"
+            "50"
           ],
           "value": null,
           "value_type": "unknown",
@@ -149,16 +149,16 @@
         {
           "name": "xfin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "Lin"
+            "50"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Lin"
+            "50"
           ],
           "value": null,
           "value_type": "unknown",
@@ -175,16 +175,16 @@
         {
           "name": "cxfin",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "Lin"
+            "50"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Lin"
+            "50"
           ],
           "value": null,
           "value_type": "unknown",
@@ -201,19 +201,19 @@
         {
           "name": "fin",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
-            "Lin",
-            "Lin"
+            "50",
+            "50"
           ],
           "lbound": [
             "1",
             "1"
           ],
           "ubound": [
-            "Lin",
-            "Lin"
+            "50",
+            "50"
           ],
           "value": null,
           "value_type": "unknown",
@@ -230,19 +230,19 @@
         {
           "name": "cfin",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
-            "Lin",
-            "Lin"
+            "50",
+            "50"
           ],
           "lbound": [
             "1",
             "1"
           ],
           "ubound": [
-            "Lin",
-            "Lin"
+            "50",
+            "50"
           ],
           "value": null,
           "value_type": "unknown",
@@ -259,16 +259,16 @@
         {
           "name": "xout",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "Lout"
+            "99"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Lout"
+            "99"
           ],
           "value": null,
           "value_type": "unknown",
@@ -285,16 +285,16 @@
         {
           "name": "yout",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "Lout"
+            "99"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Lout"
+            "99"
           ],
           "value": null,
           "value_type": "unknown",
@@ -311,16 +311,16 @@
         {
           "name": "xfout",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "Lout"
+            "99"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Lout"
+            "99"
           ],
           "value": null,
           "value_type": "unknown",
@@ -337,16 +337,16 @@
         {
           "name": "cxfout",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "Lout"
+            "99"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Lout"
+            "99"
           ],
           "value": null,
           "value_type": "unknown",
@@ -363,19 +363,19 @@
         {
           "name": "fout",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
-            "Lout",
-            "Lout"
+            "99",
+            "99"
           ],
           "lbound": [
             "1",
             "1"
           ],
           "ubound": [
-            "Lout",
-            "Lout"
+            "99",
+            "99"
           ],
           "value": null,
           "value_type": "unknown",
@@ -392,19 +392,19 @@
         {
           "name": "cfout",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
-            "Lout",
-            "Lout"
+            "99",
+            "99"
           ],
           "lbound": [
             "1",
             "1"
           ],
           "ubound": [
-            "Lout",
-            "Lout"
+            "99",
+            "99"
           ],
           "value": null,
           "value_type": "unknown",
@@ -421,7 +421,7 @@
         {
           "name": "xmax",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],

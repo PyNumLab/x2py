@@ -1,5 +1,5 @@
 from iso_c_binding import c_int, c_double
 
-nmax: Unknown
+nmax: Final[Int32]
 
-origin: Unknown[Shape('3'), ORDER_F]
+origin: Float64[Shape('3'), ORDER_F]

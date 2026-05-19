@@ -356,7 +356,7 @@ end block data init_block
     assert "Derived types: 1" in res.stdout
     assert "- type particle (fields=2, methods=1)" in res.stdout
     assert "Fields: 2" in res.stdout
-    assert "- x:real[1]" in res.stdout
+    assert "- x:real(8)[1]" in res.stdout
     assert "Submodules: 1" in res.stdout
     assert "- submodule child_mod (parent=parent_mod, vars=0, uses=0)" in res.stdout
     assert "Programs: 1" in res.stdout
@@ -440,8 +440,8 @@ def test_cli_parse_shows_module_derived_types_and_derived_arg_kinds():
     assert "type particle" in res.stdout
     assert "Fields: 3" in res.stdout
     assert "- id:integer[0]" in res.stdout
-    assert "- mass:real[0]" in res.stdout
-    assert "- position:real[1]" in res.stdout
+    assert "- mass:real(8)[0]" in res.stdout
+    assert "- position:real(8)[1]" in res.stdout
     assert "init_particle(p:type(particle)[0]" in res.stdout
 
 
@@ -454,11 +454,11 @@ def test_cli_parse_modern_fixture_prints_derived_block_verbatim():
         - type particle (fields=3, methods=0)
           Fields: 3
             - id:integer[0]
-            - mass:real[0]
-            - position:real[1]
+            - mass:real(8)[0]
+            - position:real(8)[1]
         - type vector3 (fields=1, methods=0)
           Fields: 1
-            - values:real[1]
+            - values:real(8)[1]
         - type hidden_state (fields=1, methods=0)
           Fields: 1
             - code:integer[0]

@@ -16,7 +16,7 @@
         {
           "name": "ICOMPQ",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -36,7 +36,7 @@
         {
           "name": "SMLSIZ",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -56,7 +56,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -76,7 +76,7 @@
         {
           "name": "NRHS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -96,7 +96,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDB",
@@ -125,7 +125,7 @@
         {
           "name": "LDB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -145,7 +145,7 @@
         {
           "name": "BX",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDBX",
@@ -174,7 +174,7 @@
         {
           "name": "LDBX",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -194,7 +194,7 @@
         {
           "name": "U",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -223,7 +223,7 @@
         {
           "name": "LDU",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -243,7 +243,7 @@
         {
           "name": "VT",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -272,7 +272,7 @@
         {
           "name": "K",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -298,7 +298,7 @@
         {
           "name": "DIFL",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -327,7 +327,7 @@
         {
           "name": "DIFR",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -356,7 +356,7 @@
         {
           "name": "Z",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -385,7 +385,7 @@
         {
           "name": "POLES",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -414,7 +414,7 @@
         {
           "name": "GIVPTR",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -440,7 +440,7 @@
         {
           "name": "GIVCOL",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDGCOL",
@@ -469,7 +469,7 @@
         {
           "name": "LDGCOL",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -489,7 +489,7 @@
         {
           "name": "PERM",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDGCOL",
@@ -518,7 +518,7 @@
         {
           "name": "GIVNUM",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -547,7 +547,7 @@
         {
           "name": "C",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -573,7 +573,7 @@
         {
           "name": "S",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -599,7 +599,7 @@
         {
           "name": "RWORK",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -625,7 +625,7 @@
         {
           "name": "IWORK",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -651,7 +651,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -690,7 +690,7 @@
         {
           "name": "ICOMPQ",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -710,7 +710,7 @@
         {
           "name": "SMLSIZ",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -730,7 +730,7 @@
         {
           "name": "N",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -750,7 +750,7 @@
         {
           "name": "NRHS",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -770,7 +770,7 @@
         {
           "name": "B",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDB",
@@ -799,7 +799,7 @@
         {
           "name": "LDB",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -819,7 +819,7 @@
         {
           "name": "BX",
           "base_type": "complex",
-          "kind": null,
+          "kind": "16",
           "rank": 2,
           "shape": [
             "LDBX",
@@ -848,7 +848,7 @@
         {
           "name": "LDBX",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -868,7 +868,7 @@
         {
           "name": "U",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -897,7 +897,7 @@
         {
           "name": "LDU",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -917,7 +917,7 @@
         {
           "name": "VT",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -946,7 +946,7 @@
         {
           "name": "K",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -972,7 +972,7 @@
         {
           "name": "DIFL",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -1001,7 +1001,7 @@
         {
           "name": "DIFR",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -1030,7 +1030,7 @@
         {
           "name": "Z",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -1059,7 +1059,7 @@
         {
           "name": "POLES",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -1088,7 +1088,7 @@
         {
           "name": "GIVPTR",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -1114,7 +1114,7 @@
         {
           "name": "GIVCOL",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDGCOL",
@@ -1143,7 +1143,7 @@
         {
           "name": "LDGCOL",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -1163,7 +1163,7 @@
         {
           "name": "PERM",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDGCOL",
@@ -1192,7 +1192,7 @@
         {
           "name": "GIVNUM",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "LDU",
@@ -1221,7 +1221,7 @@
         {
           "name": "C",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -1247,7 +1247,7 @@
         {
           "name": "S",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -1273,7 +1273,7 @@
         {
           "name": "RWORK",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -1299,7 +1299,7 @@
         {
           "name": "IWORK",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 1,
           "shape": [
             "*"
@@ -1325,7 +1325,7 @@
         {
           "name": "INFO",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

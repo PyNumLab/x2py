@@ -12,14 +12,14 @@
         {
           "name": "pi",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "3.14159265358979323846264338327950288419716939937510d0",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -39,7 +39,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -65,7 +65,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -143,7 +143,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 2,
               "shape": [
                 ":",
@@ -172,7 +172,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -250,7 +250,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 3,
               "shape": [
                 ":",
@@ -282,7 +282,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -360,7 +360,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 4,
               "shape": [
                 ":",
@@ -395,7 +395,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -473,7 +473,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 5,
               "shape": [
                 ":",
@@ -511,7 +511,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -589,7 +589,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 6,
               "shape": [
                 ":",
@@ -630,7 +630,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -708,7 +708,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 7,
               "shape": [
                 ":",
@@ -752,7 +752,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -830,7 +830,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 8,
               "shape": [
                 ":",
@@ -877,7 +877,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -955,7 +955,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -981,7 +981,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1059,7 +1059,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -1088,7 +1088,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1166,7 +1166,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 3,
               "shape": [
                 ":",
@@ -1198,7 +1198,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1276,7 +1276,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 4,
               "shape": [
                 ":",
@@ -1311,7 +1311,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1389,7 +1389,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 5,
               "shape": [
                 ":",
@@ -1427,7 +1427,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1505,7 +1505,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 6,
               "shape": [
                 ":",
@@ -1546,7 +1546,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1624,7 +1624,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 7,
               "shape": [
                 ":",
@@ -1668,7 +1668,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1746,7 +1746,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 8,
               "shape": [
                 ":",
@@ -1793,7 +1793,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1871,7 +1871,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1897,7 +1897,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -1975,7 +1975,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -2004,7 +2004,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -2082,7 +2082,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 3,
               "shape": [
                 ":",
@@ -2114,7 +2114,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -2192,7 +2192,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 4,
               "shape": [
                 ":",
@@ -2227,7 +2227,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -2305,7 +2305,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 5,
               "shape": [
                 ":",
@@ -2343,7 +2343,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -2421,7 +2421,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 6,
               "shape": [
                 ":",
@@ -2462,7 +2462,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -2540,7 +2540,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 7,
               "shape": [
                 ":",
@@ -2584,7 +2584,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -2662,7 +2662,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 8,
               "shape": [
                 ":",
@@ -2709,7 +2709,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -2787,7 +2787,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -2813,7 +2813,7 @@
             {
               "name": "indx_a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(a)"
@@ -2851,7 +2851,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2877,7 +2877,7 @@
             {
               "name": "indx_a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(a)"
@@ -2915,7 +2915,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -2941,7 +2941,7 @@
             {
               "name": "indx",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(a)"
@@ -2979,7 +2979,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3005,7 +3005,7 @@
             {
               "name": "indx",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(a)"
@@ -3043,7 +3043,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3069,7 +3069,7 @@
             {
               "name": "indx_a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(a)"
@@ -3107,7 +3107,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3133,7 +3133,7 @@
             {
               "name": "indx_a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(a)"
@@ -3171,7 +3171,7 @@
             {
               "name": "AIN",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3197,7 +3197,7 @@
             {
               "name": "AOUT",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3223,7 +3223,7 @@
             {
               "name": "MASK",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3261,7 +3261,7 @@
             {
               "name": "AIN",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3287,7 +3287,7 @@
             {
               "name": "AOUT",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3313,7 +3313,7 @@
             {
               "name": "MASK",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3351,7 +3351,7 @@
             {
               "name": "AIN",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3377,7 +3377,7 @@
             {
               "name": "MASK",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3404,7 +3404,7 @@
           "result": {
             "name": "AOUT",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               ":"
@@ -3440,7 +3440,7 @@
             {
               "name": "AIN",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3466,7 +3466,7 @@
             {
               "name": "MASK",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3493,7 +3493,7 @@
           "result": {
             "name": "AOUT",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               ":"
@@ -3529,7 +3529,7 @@
             {
               "name": "Ain",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3555,7 +3555,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -3593,7 +3593,7 @@
             {
               "name": "Ain",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3619,7 +3619,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -3657,7 +3657,7 @@
             {
               "name": "Ain",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3683,7 +3683,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -3721,7 +3721,7 @@
             {
               "name": "Ain",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3747,7 +3747,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -3785,7 +3785,7 @@
             {
               "name": "Ain",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -3811,7 +3811,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -3838,7 +3838,7 @@
           "result": {
             "name": "Aout",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               "size(Ain)"
@@ -3874,7 +3874,7 @@
             {
               "name": "Ain",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3900,7 +3900,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -3927,7 +3927,7 @@
           "result": {
             "name": "Aout",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(Ain)"
@@ -3963,7 +3963,7 @@
             {
               "name": "Ain",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -3989,7 +3989,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -4016,7 +4016,7 @@
           "result": {
             "name": "Aout",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(Ain)"
@@ -4052,7 +4052,7 @@
             {
               "name": "Ain",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -4078,7 +4078,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -4105,7 +4105,7 @@
           "result": {
             "name": "Aout",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               "size(Ain)"
@@ -4167,7 +4167,7 @@
             {
               "name": "igoest",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -4205,7 +4205,7 @@
             {
               "name": "xdont",
               "base_type": "real",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -4231,7 +4231,7 @@
             {
               "name": "igoest",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -4269,7 +4269,7 @@
             {
               "name": "xdont",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -4295,7 +4295,7 @@
             {
               "name": "igoest",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -4384,7 +4384,7 @@
             {
               "name": "xval",
               "base_type": "real",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4405,7 +4405,7 @@
           "result": {
             "name": "r_nl",
             "base_type": "real",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -4435,7 +4435,7 @@
             {
               "name": "xval",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4456,7 +4456,7 @@
           "result": {
             "name": "i_nl",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -4512,7 +4512,7 @@
             {
               "name": "nuni",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4532,7 +4532,7 @@
             {
               "name": "mask",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(xdont)"
@@ -4570,7 +4570,7 @@
             {
               "name": "xdont",
               "base_type": "real",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -4596,7 +4596,7 @@
             {
               "name": "nuni",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4616,7 +4616,7 @@
             {
               "name": "mask",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(xdont)"
@@ -4654,7 +4654,7 @@
             {
               "name": "xdont",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -4680,7 +4680,7 @@
             {
               "name": "nuni",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -4700,7 +4700,7 @@
             {
               "name": "mask",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(xdont)"
@@ -4835,14 +4835,14 @@
         {
           "name": "pi",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "3.14159265358979323846264338327950288419716939937510d0",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -4862,7 +4862,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -4888,7 +4888,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -4966,7 +4966,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 2,
               "shape": [
                 ":",
@@ -4995,7 +4995,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -5073,7 +5073,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 3,
               "shape": [
                 ":",
@@ -5105,7 +5105,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -5183,7 +5183,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 4,
               "shape": [
                 ":",
@@ -5218,7 +5218,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -5296,7 +5296,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 5,
               "shape": [
                 ":",
@@ -5334,7 +5334,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -5412,7 +5412,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 6,
               "shape": [
                 ":",
@@ -5453,7 +5453,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -5531,7 +5531,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 7,
               "shape": [
                 ":",
@@ -5575,7 +5575,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -5653,7 +5653,7 @@
             {
               "name": "A",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 8,
               "shape": [
                 ":",
@@ -5700,7 +5700,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -5778,7 +5778,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -5804,7 +5804,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -5882,7 +5882,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -5911,7 +5911,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -5989,7 +5989,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 3,
               "shape": [
                 ":",
@@ -6021,7 +6021,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -6099,7 +6099,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 4,
               "shape": [
                 ":",
@@ -6134,7 +6134,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -6212,7 +6212,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 5,
               "shape": [
                 ":",
@@ -6250,7 +6250,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -6328,7 +6328,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 6,
               "shape": [
                 ":",
@@ -6369,7 +6369,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -6447,7 +6447,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 7,
               "shape": [
                 ":",
@@ -6491,7 +6491,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -6569,7 +6569,7 @@
             {
               "name": "A",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 8,
               "shape": [
                 ":",
@@ -6616,7 +6616,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -6694,7 +6694,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -6720,7 +6720,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -6798,7 +6798,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 2,
               "shape": [
                 ":",
@@ -6827,7 +6827,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -6905,7 +6905,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 3,
               "shape": [
                 ":",
@@ -6937,7 +6937,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -7015,7 +7015,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 4,
               "shape": [
                 ":",
@@ -7050,7 +7050,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -7128,7 +7128,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 5,
               "shape": [
                 ":",
@@ -7166,7 +7166,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -7244,7 +7244,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 6,
               "shape": [
                 ":",
@@ -7285,7 +7285,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -7363,7 +7363,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 7,
               "shape": [
                 ":",
@@ -7407,7 +7407,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -7485,7 +7485,7 @@
             {
               "name": "A",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 8,
               "shape": [
                 ":",
@@ -7532,7 +7532,7 @@
             {
               "name": "Ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -7610,7 +7610,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -7636,7 +7636,7 @@
             {
               "name": "indx_a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(a)"
@@ -7674,7 +7674,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7700,7 +7700,7 @@
             {
               "name": "indx_a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(a)"
@@ -7738,7 +7738,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -7764,7 +7764,7 @@
             {
               "name": "indx",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(a)"
@@ -7802,7 +7802,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7828,7 +7828,7 @@
             {
               "name": "indx",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(a)"
@@ -7866,7 +7866,7 @@
             {
               "name": "a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -7892,7 +7892,7 @@
             {
               "name": "indx_a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(a)"
@@ -7930,7 +7930,7 @@
             {
               "name": "a",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -7956,7 +7956,7 @@
             {
               "name": "indx_a",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(a)"
@@ -7994,7 +7994,7 @@
             {
               "name": "AIN",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -8020,7 +8020,7 @@
             {
               "name": "AOUT",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -8046,7 +8046,7 @@
             {
               "name": "MASK",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -8084,7 +8084,7 @@
             {
               "name": "AIN",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -8110,7 +8110,7 @@
             {
               "name": "AOUT",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -8136,7 +8136,7 @@
             {
               "name": "MASK",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -8174,7 +8174,7 @@
             {
               "name": "AIN",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -8200,7 +8200,7 @@
             {
               "name": "MASK",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -8227,7 +8227,7 @@
           "result": {
             "name": "AOUT",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               ":"
@@ -8263,7 +8263,7 @@
             {
               "name": "AIN",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -8289,7 +8289,7 @@
             {
               "name": "MASK",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -8316,7 +8316,7 @@
           "result": {
             "name": "AOUT",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               ":"
@@ -8352,7 +8352,7 @@
             {
               "name": "Ain",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -8378,7 +8378,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -8416,7 +8416,7 @@
             {
               "name": "Ain",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -8442,7 +8442,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -8480,7 +8480,7 @@
             {
               "name": "Ain",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -8506,7 +8506,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -8544,7 +8544,7 @@
             {
               "name": "Ain",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -8570,7 +8570,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -8608,7 +8608,7 @@
             {
               "name": "Ain",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -8634,7 +8634,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -8661,7 +8661,7 @@
           "result": {
             "name": "Aout",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               "size(Ain)"
@@ -8697,7 +8697,7 @@
             {
               "name": "Ain",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -8723,7 +8723,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -8750,7 +8750,7 @@
           "result": {
             "name": "Aout",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(Ain)"
@@ -8786,7 +8786,7 @@
             {
               "name": "Ain",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -8812,7 +8812,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -8839,7 +8839,7 @@
           "result": {
             "name": "Aout",
             "base_type": "complex",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "size(Ain)"
@@ -8875,7 +8875,7 @@
             {
               "name": "Ain",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -8901,7 +8901,7 @@
             {
               "name": "Index",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(Ain)"
@@ -8928,7 +8928,7 @@
           "result": {
             "name": "Aout",
             "base_type": "logical",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               "size(Ain)"
@@ -8990,7 +8990,7 @@
             {
               "name": "igoest",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -9028,7 +9028,7 @@
             {
               "name": "xdont",
               "base_type": "real",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -9054,7 +9054,7 @@
             {
               "name": "igoest",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -9092,7 +9092,7 @@
             {
               "name": "xdont",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -9118,7 +9118,7 @@
             {
               "name": "igoest",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -9207,7 +9207,7 @@
             {
               "name": "xval",
               "base_type": "real",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -9228,7 +9228,7 @@
           "result": {
             "name": "r_nl",
             "base_type": "real",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -9258,7 +9258,7 @@
             {
               "name": "xval",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -9279,7 +9279,7 @@
           "result": {
             "name": "i_nl",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -9335,7 +9335,7 @@
             {
               "name": "nuni",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -9355,7 +9355,7 @@
             {
               "name": "mask",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(xdont)"
@@ -9393,7 +9393,7 @@
             {
               "name": "xdont",
               "base_type": "real",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -9419,7 +9419,7 @@
             {
               "name": "nuni",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -9439,7 +9439,7 @@
             {
               "name": "mask",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(xdont)"
@@ -9477,7 +9477,7 @@
             {
               "name": "xdont",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -9503,7 +9503,7 @@
             {
               "name": "nuni",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -9523,7 +9523,7 @@
             {
               "name": "mask",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(xdont)"

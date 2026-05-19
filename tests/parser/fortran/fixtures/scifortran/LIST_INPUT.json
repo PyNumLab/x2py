@@ -72,14 +72,14 @@
         {
           "name": "pos_comment",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "46",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -184,7 +184,7 @@
           "result": {
             "name": "size",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -214,7 +214,7 @@
             {
               "name": "variable",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -286,7 +286,7 @@
             {
               "name": "variable",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -358,7 +358,7 @@
             {
               "name": "variable",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -430,7 +430,7 @@
             {
               "name": "variable",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -508,7 +508,7 @@
             {
               "name": "variable",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -586,7 +586,7 @@
             {
               "name": "variable",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -904,7 +904,7 @@
             {
               "name": "ch",
               "base_type": "character",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -936,7 +936,7 @@
             {
               "name": "ch",
               "base_type": "character",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1000,7 +1000,7 @@
             {
               "name": "i4",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1051,7 +1051,7 @@
             {
               "name": "r8",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1102,7 +1102,7 @@
             {
               "name": "c",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1123,7 +1123,7 @@
           "result": {
             "name": "string",
             "base_type": "character",
-            "kind": "len=32+3",
+            "kind": "len=35",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1153,7 +1153,7 @@
             {
               "name": "bool",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1204,7 +1204,7 @@
             {
               "name": "i4",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1256,7 +1256,7 @@
             {
               "name": "r8",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1308,7 +1308,7 @@
             {
               "name": "digit",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1328,7 +1328,7 @@
             {
               "name": "ch",
               "base_type": "character",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1360,7 +1360,7 @@
           "result": {
             "name": "unit_",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1391,7 +1391,7 @@
             {
               "name": "i",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1411,7 +1411,7 @@
             {
               "name": "d",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1431,7 +1431,7 @@
             {
               "name": "l",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1599,7 +1599,7 @@
             {
               "name": "status",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1619,7 +1619,7 @@
             {
               "name": "size",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1766,14 +1766,14 @@
         {
           "name": "pos_comment",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "46",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1878,7 +1878,7 @@
           "result": {
             "name": "size",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1908,7 +1908,7 @@
             {
               "name": "variable",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1980,7 +1980,7 @@
             {
               "name": "variable",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2052,7 +2052,7 @@
             {
               "name": "variable",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2124,7 +2124,7 @@
             {
               "name": "variable",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -2202,7 +2202,7 @@
             {
               "name": "variable",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -2280,7 +2280,7 @@
             {
               "name": "variable",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -2598,7 +2598,7 @@
             {
               "name": "ch",
               "base_type": "character",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2630,7 +2630,7 @@
             {
               "name": "ch",
               "base_type": "character",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2694,7 +2694,7 @@
             {
               "name": "i4",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2745,7 +2745,7 @@
             {
               "name": "r8",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2796,7 +2796,7 @@
             {
               "name": "c",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2817,7 +2817,7 @@
           "result": {
             "name": "string",
             "base_type": "character",
-            "kind": "len=32+3",
+            "kind": "len=35",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -2847,7 +2847,7 @@
             {
               "name": "bool",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2898,7 +2898,7 @@
             {
               "name": "i4",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -2950,7 +2950,7 @@
             {
               "name": "r8",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3002,7 +3002,7 @@
             {
               "name": "digit",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3022,7 +3022,7 @@
             {
               "name": "ch",
               "base_type": "character",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3054,7 +3054,7 @@
           "result": {
             "name": "unit_",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -3085,7 +3085,7 @@
             {
               "name": "i",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3105,7 +3105,7 @@
             {
               "name": "d",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3125,7 +3125,7 @@
             {
               "name": "l",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3293,7 +3293,7 @@
             {
               "name": "status",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -3313,7 +3313,7 @@
             {
               "name": "size",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],

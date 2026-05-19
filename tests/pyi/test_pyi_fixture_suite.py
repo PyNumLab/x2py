@@ -26,6 +26,16 @@ def test_pyi_fixtures_match_fortran_data_one_to_one():
     assert not sorted(actual - expected)
 
 
+def test_pyi_fixtures_do_not_contain_unknown_types():
+    unknown_fixtures = [
+        path.name
+        for path in PYI_FIXTURE_DIR.glob("*.pyi")
+        if "Unknown" in path.read_text(encoding="utf-8")
+    ]
+
+    assert not unknown_fixtures, f"Unknown semantic types in .pyi fixtures: {unknown_fixtures[:20]}"
+
+
 @pytest.mark.parametrize(
     "fixture",
     FORTRAN_FIXTURES,

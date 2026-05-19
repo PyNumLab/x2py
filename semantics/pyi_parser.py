@@ -67,32 +67,14 @@ class _PyiAstParser:
         )
 
     def class_def(self, node: ast.ClassDef, *, visibility: str) -> SemanticClass:
-        fields: list[SemanticArgument] = []
-        methods: list[SemanticMethod] = []
-
-        for item in node.body:
-            if isinstance(item, ast.Pass):
-                continue
-            if isinstance(item, ast.AnnAssign):
-                fields.append(self.ann_assign(item, default_intent="in"))
-                continue
-            if isinstance(item, ast.FunctionDef):
-                decorators = self.decorators(item.decorator_list, context="class body")
-                methods.append(
-                    self.method_def(
-                        item,
-                        visibility=decorators.visibility,
-                        projection=decorators.projection,
-                    )
-                )
-                continue
-            raise ValueError(f"Unsupported class body node: {_node_text(item)!r}")
+        body = _ClassBodyVisitor(self)
+        body.visit_body(node.body)
 
         return SemanticClass(
             name=node.name,
             native_name=node.name,
-            fields=fields,
-            methods=methods,
+            fields=body.fields,
+            methods=body.methods,
             base_classes=[ast.unparse(base) for base in node.bases],
             visibility=visibility,
         )
@@ -152,10 +134,10 @@ class _PyiAstParser:
     def decorators(self, nodes: list[ast.expr], *, context: str) -> _Decorators:
         parsed = _Decorators()
         for node in nodes:
-            if isinstance(node, ast.Name) and node.id == "private":
+            if self.matches_name(node, "private"):
                 parsed.visibility = "private"
                 continue
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "native_call":
+            if isinstance(node, ast.Call) and self.matches_name(node.func, "native_call"):
                 parsed.has_native_call = True
                 parsed.projection = self.native_call(node)
                 continue
@@ -174,12 +156,12 @@ class _PyiAstParser:
         ]
 
     def native_projection_entry(self, node: ast.AST, native_position: int) -> ProjectionMapping:
-        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+        if not isinstance(node, ast.Call):
             raise ValueError("native_call expects projection entry calls")
         if node.keywords:
-            raise ValueError(f"{node.func.id} expects positional arguments only")
+            raise ValueError(f"{self.required_name(node.func)} expects positional arguments only")
 
-        helper = node.func.id
+        helper = self.required_name(node.func)
         if helper == "Arg":
             if len(node.args) != 1:
                 raise ValueError("Arg expects one positional index")
@@ -239,27 +221,28 @@ class _PyiAstParser:
         raise ValueError(f"Unsupported native_call projection entry: {helper}")
 
     def native_value_ref(self, node: ast.AST) -> dict[str, int | str]:
-        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+        if not isinstance(node, ast.Call):
             raise ValueError("Expected Arg(...), Return(...), or Work(...) value reference")
         if node.keywords or len(node.args) != 1:
-            raise ValueError(f"{node.func.id} value reference expects one positional argument")
-        if node.func.id == "Arg":
+            raise ValueError(f"{self.required_name(node.func)} value reference expects one positional argument")
+        helper = self.required_name(node.func)
+        if helper == "Arg":
             return {"kind": "arg", "position": int(ast.literal_eval(node.args[0]))}
-        if node.func.id == "Return":
+        if helper == "Return":
             return {"kind": "return", "position": int(ast.literal_eval(node.args[0]))}
-        if node.func.id == "Work":
+        if helper == "Work":
             return {"kind": "work", "name": str(ast.literal_eval(node.args[0]))}
         raise ValueError("Expected Arg(...), Return(...), or Work(...) value reference")
 
     def visible_type(self, node: ast.expr) -> tuple[str, SemanticType, str | None]:
-        if self.subscript_name(node) == "private":
+        if self.is_subscript_of(node, "private"):
             semantic_type, original_name = self.semantic_type_annotation(self.subscript_slice(node))
             return "private", semantic_type, original_name
         semantic_type, original_name = self.semantic_type_annotation(node)
         return "public", semantic_type, original_name
 
     def semantic_type_annotation(self, node: ast.expr) -> tuple[SemanticType, str | None]:
-        if self.subscript_name(node) != "Annotated":
+        if not self.is_subscript_of(node, "Annotated"):
             return self.semantic_type(node), None
 
         items = self.subscript_items(node)
@@ -274,11 +257,21 @@ class _PyiAstParser:
         return self.semantic_type(items[0]), original_name
 
     def semantic_type(self, node: ast.expr) -> SemanticType:
-        if self.subscript_name(node) == "Annotated":
+        if self.is_subscript_of(node, "Annotated"):
             semantic_type, _ = self.semantic_type_annotation(node)
+            return semantic_type
+        if self.is_subscript_of(node, "Final"):
+            items = self.subscript_items(node)
+            if len(items) != 1:
+                raise ValueError(f"Final expects exactly one type: {ast.unparse(node)!r}")
+            semantic_type = self.semantic_type(items[0])
+            if not any(constraint.name == "Constant" for constraint in semantic_type.constraints):
+                semantic_type.constraints.append(SemanticConstraint("Constant"))
             return semantic_type
 
         name = self.type_name(node)
+        if name == "Unknown":
+            raise ValueError("Unknown semantic type is not allowed in .pyi annotations")
         if not isinstance(node, ast.Subscript):
             return SemanticType(name=name, dtype=name)
 
@@ -299,9 +292,9 @@ class _PyiAstParser:
     def constraint(self, node: ast.expr) -> SemanticConstraint:
         if isinstance(node, ast.Name):
             return SemanticConstraint(node.id)
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        if isinstance(node, ast.Call):
             return SemanticConstraint(
-                name=node.func.id,
+                name=self.required_name(node.func),
                 arguments=[ast.literal_eval(arg) for arg in node.args],
             )
         raise ValueError(f"Unsupported semantic type constraint: {ast.unparse(node)!r}")
@@ -338,7 +331,7 @@ class _PyiAstParser:
         return return_type, returned_args
 
     def returned_argument(self, node: ast.expr) -> SemanticArgument | None:
-        if self.subscript_name(node) != "Returns":
+        if not self.is_subscript_of(node, "Returns"):
             return None
         items = self.subscript_items(node)
         if len(items) not in {2, 3}:
@@ -355,7 +348,7 @@ class _PyiAstParser:
 
     @staticmethod
     def name_metadata(node: ast.expr) -> str | None:
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "Name":
+        if isinstance(node, ast.Call) and _PyiAstParser.matches_name(node.func, "Name"):
             if len(node.args) != 1:
                 raise ValueError(f"Name metadata expects one argument: {ast.unparse(node)!r}")
             return str(ast.literal_eval(node.args[0]))
@@ -374,10 +367,31 @@ class _PyiAstParser:
         return isinstance(node, ast.Constant) and node.value in {Ellipsis, None}
 
     @staticmethod
-    def subscript_name(node: ast.AST) -> str:
-        if isinstance(node, ast.Subscript):
-            return ast.unparse(node.value)
-        return ""
+    def qualified_name(node: ast.AST) -> tuple[str, ...] | None:
+        if isinstance(node, ast.Name):
+            return (node.id,)
+        if isinstance(node, ast.Attribute):
+            parent = _PyiAstParser.qualified_name(node.value)
+            if parent is None:
+                return None
+            return (*parent, node.attr)
+        return None
+
+    @staticmethod
+    def matches_name(node: ast.AST, name: str) -> bool:
+        qualified = _PyiAstParser.qualified_name(node)
+        return qualified is not None and qualified[-1] == name
+
+    @staticmethod
+    def required_name(node: ast.AST) -> str:
+        qualified = _PyiAstParser.qualified_name(node)
+        if qualified is None:
+            raise ValueError(f"Expected named helper: {ast.unparse(node)!r}")
+        return qualified[-1]
+
+    @staticmethod
+    def is_subscript_of(node: ast.AST, name: str) -> bool:
+        return isinstance(node, ast.Subscript) and _PyiAstParser.matches_name(node.value, name)
 
     @staticmethod
     def subscript_slice(node: ast.AST) -> ast.expr:
@@ -527,9 +541,39 @@ class _PyiAstParser:
                 mapping.result_position = return_positions.get(arg.name)
 
     def return_items(self, node: ast.expr) -> list[ast.expr]:
-        if self.subscript_name(node) == "tuple":
+        if self.is_subscript_of(node, "tuple") or self.is_subscript_of(node, "Tuple"):
             return self.subscript_items(node)
         return [node]
+
+
+class _ClassBodyVisitor(ast.NodeVisitor):
+    def __init__(self, parser: _PyiAstParser):
+        self.parser = parser
+        self.fields: list[SemanticArgument] = []
+        self.methods: list[SemanticMethod] = []
+
+    def visit_body(self, nodes: list[ast.stmt]) -> None:
+        for node in nodes:
+            self.visit(node)
+
+    def visit_Pass(self, node: ast.Pass) -> None:
+        return None
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        self.fields.append(self.parser.ann_assign(node, default_intent="in"))
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        decorators = self.parser.decorators(node.decorator_list, context="class body")
+        self.methods.append(
+            self.parser.method_def(
+                node,
+                visibility=decorators.visibility,
+                projection=decorators.projection,
+            )
+        )
+
+    def generic_visit(self, node: ast.AST) -> None:
+        raise ValueError(f"Unsupported class body node: {_node_text(node)!r}")
 
 
 class _ModuleVisitor(ast.NodeVisitor):

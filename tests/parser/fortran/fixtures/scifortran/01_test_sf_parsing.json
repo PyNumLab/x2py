@@ -26,7 +26,7 @@
         {
           "name": "L",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -46,7 +46,7 @@
         {
           "name": "L_r",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -66,7 +66,7 @@
         {
           "name": "dble",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -86,7 +86,7 @@
         {
           "name": "dble_r",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -106,7 +106,7 @@
         {
           "name": "dble_vec",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "3"
@@ -132,59 +132,7 @@
         {
           "name": "dble_vec_r",
           "base_type": "real",
-          "kind": null,
-          "rank": 1,
-          "shape": [
-            "3"
-          ],
-          "lbound": [
-            "1"
-          ],
-          "ubound": [
-            "3"
-          ],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "public",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        },
-        {
-          "name": "1d0",
-          "base_type": "real",
-          "kind": null,
-          "rank": 1,
-          "shape": [
-            "3"
-          ],
-          "lbound": [
-            "1"
-          ],
-          "ubound": [
-            "3"
-          ],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
-          "dimensions": [],
-          "visibility": "public",
-          "procedure": null,
-          "intent": "unknown",
-          "optional": false,
-          "pass_by_value": false,
-          "allocatable": false,
-          "pointer": false
-        },
-        {
-          "name": "0d0]",
-          "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
             "3"
@@ -250,7 +198,7 @@
         {
           "name": "bool",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -270,7 +218,7 @@
         {
           "name": "bool_r",
           "base_type": "logical",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

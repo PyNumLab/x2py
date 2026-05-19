@@ -16,7 +16,7 @@
         {
           "name": "x",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "0:",
@@ -57,7 +57,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "0:",
@@ -137,7 +137,7 @@
         {
           "name": "x",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "0:",
@@ -178,7 +178,7 @@
         {
           "name": "x",
           "base_type": "real",
-          "kind": null,
+          "kind": "",
           "rank": 2,
           "shape": [
             "0:",

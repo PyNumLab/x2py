@@ -18,7 +18,7 @@
             {
               "name": "start",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -38,7 +38,7 @@
             {
               "name": "stop",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -58,7 +58,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -78,7 +78,7 @@
             {
               "name": "istart",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -98,7 +98,7 @@
             {
               "name": "iend",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -118,7 +118,7 @@
             {
               "name": "mesh",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -139,7 +139,7 @@
           "result": {
             "name": "array",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "num"
@@ -175,7 +175,7 @@
             {
               "name": "start",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -195,7 +195,7 @@
             {
               "name": "stop",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -215,7 +215,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -235,7 +235,7 @@
             {
               "name": "base",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -256,7 +256,7 @@
           "result": {
             "name": "array",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "num"
@@ -292,7 +292,7 @@
             {
               "name": "start",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -312,7 +312,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -333,7 +333,7 @@
           "result": {
             "name": "array",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               "num"
@@ -369,7 +369,7 @@
             {
               "name": "start",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -389,7 +389,7 @@
             {
               "name": "stop",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -409,7 +409,7 @@
             {
               "name": "p",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -429,7 +429,7 @@
             {
               "name": "u",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -449,7 +449,7 @@
             {
               "name": "ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -469,7 +469,7 @@
             {
               "name": "base",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -489,7 +489,7 @@
             {
               "name": "istart",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -509,7 +509,7 @@
             {
               "name": "iend",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -529,7 +529,7 @@
             {
               "name": "mesh",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "ndim"
@@ -556,7 +556,7 @@
           "result": {
             "name": "aout",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "ndim"
@@ -592,7 +592,7 @@
             {
               "name": "start",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -612,7 +612,7 @@
             {
               "name": "stop",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -632,7 +632,7 @@
             {
               "name": "midpoint",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -652,7 +652,7 @@
             {
               "name": "p",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -672,7 +672,7 @@
             {
               "name": "q",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -692,7 +692,7 @@
             {
               "name": "type",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -712,7 +712,7 @@
             {
               "name": "base",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -732,7 +732,7 @@
             {
               "name": "mesh",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "2*P*Q+1"
@@ -759,7 +759,7 @@
           "result": {
             "name": "array",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "2*p*q+1"
@@ -795,7 +795,7 @@
             {
               "name": "start",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -815,7 +815,7 @@
             {
               "name": "stop",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -835,7 +835,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -855,7 +855,7 @@
             {
               "name": "base",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -876,7 +876,7 @@
           "result": {
             "name": "array",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "num"
@@ -943,7 +943,7 @@
             {
               "name": "start",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -963,7 +963,7 @@
             {
               "name": "stop",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -983,7 +983,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1003,7 +1003,7 @@
             {
               "name": "istart",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1023,7 +1023,7 @@
             {
               "name": "iend",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1043,7 +1043,7 @@
             {
               "name": "mesh",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1064,7 +1064,7 @@
           "result": {
             "name": "array",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "num"
@@ -1100,7 +1100,7 @@
             {
               "name": "start",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1120,7 +1120,7 @@
             {
               "name": "stop",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1140,7 +1140,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1160,7 +1160,7 @@
             {
               "name": "base",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1181,7 +1181,7 @@
           "result": {
             "name": "array",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "num"
@@ -1217,7 +1217,7 @@
             {
               "name": "start",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1237,7 +1237,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1258,7 +1258,7 @@
           "result": {
             "name": "array",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               "num"
@@ -1294,7 +1294,7 @@
             {
               "name": "start",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1314,7 +1314,7 @@
             {
               "name": "stop",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1334,7 +1334,7 @@
             {
               "name": "p",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1354,7 +1354,7 @@
             {
               "name": "u",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1374,7 +1374,7 @@
             {
               "name": "ndim",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1394,7 +1394,7 @@
             {
               "name": "base",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1414,7 +1414,7 @@
             {
               "name": "istart",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1434,7 +1434,7 @@
             {
               "name": "iend",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1454,7 +1454,7 @@
             {
               "name": "mesh",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "ndim"
@@ -1481,7 +1481,7 @@
           "result": {
             "name": "aout",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "ndim"
@@ -1517,7 +1517,7 @@
             {
               "name": "start",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1537,7 +1537,7 @@
             {
               "name": "stop",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1557,7 +1557,7 @@
             {
               "name": "midpoint",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1577,7 +1577,7 @@
             {
               "name": "p",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1597,7 +1597,7 @@
             {
               "name": "q",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1617,7 +1617,7 @@
             {
               "name": "type",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1637,7 +1637,7 @@
             {
               "name": "base",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1657,7 +1657,7 @@
             {
               "name": "mesh",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "2*P*Q+1"
@@ -1684,7 +1684,7 @@
           "result": {
             "name": "array",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "2*p*q+1"
@@ -1720,7 +1720,7 @@
             {
               "name": "start",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1740,7 +1740,7 @@
             {
               "name": "stop",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1760,7 +1760,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1780,7 +1780,7 @@
             {
               "name": "base",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1801,7 +1801,7 @@
           "result": {
             "name": "array",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "num"

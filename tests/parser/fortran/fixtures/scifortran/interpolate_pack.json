@@ -1704,7 +1704,7 @@
       "result": {
         "name": "r8vec_ascends_strictly",
         "base_type": "logical",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],
@@ -3795,7 +3795,7 @@
       "result": {
         "name": "r8vec_ascends_strictly",
         "base_type": "logical",
-        "kind": null,
+        "kind": "",
         "rank": 0,
         "shape": [],
         "lbound": [],

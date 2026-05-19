@@ -50,7 +50,7 @@
           "result": {
             "name": "shape",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               "2"
@@ -97,7 +97,7 @@
             {
               "name": "array",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -123,7 +123,7 @@
             {
               "name": "order",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(array)"
@@ -172,7 +172,7 @@
             {
               "name": "Ain",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -198,7 +198,7 @@
             {
               "name": "value",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -219,7 +219,7 @@
           "result": {
             "name": "bsresult",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -262,7 +262,7 @@
             {
               "name": "vec",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -288,7 +288,7 @@
             {
               "name": "val",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -331,7 +331,7 @@
             {
               "name": "vec",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -357,7 +357,7 @@
             {
               "name": "val",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -400,7 +400,7 @@
             {
               "name": "vec",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -426,7 +426,7 @@
             {
               "name": "val",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -470,7 +470,7 @@
             {
               "name": "Nrow",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -490,7 +490,7 @@
             {
               "name": "Ncol",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -510,7 +510,7 @@
             {
               "name": "Nelements",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -530,7 +530,7 @@
             {
               "name": "status",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -639,7 +639,7 @@
           "result": {
             "name": "shape",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 1,
             "shape": [
               "2"
@@ -686,7 +686,7 @@
             {
               "name": "array",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -712,7 +712,7 @@
             {
               "name": "order",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 "size(array)"
@@ -761,7 +761,7 @@
             {
               "name": "Ain",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -787,7 +787,7 @@
             {
               "name": "value",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -808,7 +808,7 @@
           "result": {
             "name": "bsresult",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -851,7 +851,7 @@
             {
               "name": "vec",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 1,
               "shape": [
                 ":"
@@ -877,7 +877,7 @@
             {
               "name": "val",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -920,7 +920,7 @@
             {
               "name": "vec",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -946,7 +946,7 @@
             {
               "name": "val",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -989,7 +989,7 @@
             {
               "name": "vec",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1015,7 +1015,7 @@
             {
               "name": "val",
               "base_type": "complex",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1059,7 +1059,7 @@
             {
               "name": "Nrow",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1079,7 +1079,7 @@
             {
               "name": "Ncol",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1099,7 +1099,7 @@
             {
               "name": "Nelements",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1119,7 +1119,7 @@
             {
               "name": "status",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],

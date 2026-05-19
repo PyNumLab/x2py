@@ -14,14 +14,14 @@
         {
           "name": "zero",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "(0.d0,0.d0)",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -34,14 +34,14 @@
         {
           "name": "xi",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "(0.d0,1.d0)",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -54,14 +54,14 @@
         {
           "name": "one",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "(1.d0,0.d0)",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -74,14 +74,14 @@
         {
           "name": "pi",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "3.14159265358979323846264338327950288419716939937510d0",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -101,7 +101,7 @@
             {
               "name": "fi",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "M"
@@ -127,7 +127,7 @@
             {
               "name": "wr",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "M"
@@ -153,7 +153,7 @@
             {
               "name": "M",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -174,7 +174,7 @@
           "result": {
             "name": "fr",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "M"
@@ -212,7 +212,7 @@
             {
               "name": "wt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -238,7 +238,7 @@
             {
               "name": "nrk",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -272,7 +272,7 @@
             {
               "name": "start",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -292,7 +292,7 @@
             {
               "name": "stop",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -312,7 +312,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -332,7 +332,7 @@
             {
               "name": "istart",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -352,7 +352,7 @@
             {
               "name": "iend",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -372,7 +372,7 @@
             {
               "name": "mesh",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -393,7 +393,7 @@
           "result": {
             "name": "array",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "num"
@@ -431,7 +431,7 @@
             {
               "name": "xa",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -457,7 +457,7 @@
             {
               "name": "ya",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -483,7 +483,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -503,7 +503,7 @@
             {
               "name": "y",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -523,7 +523,7 @@
             {
               "name": "dy",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -557,7 +557,7 @@
             {
               "name": "xx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -583,7 +583,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -604,7 +604,7 @@
           "result": {
             "name": "locate",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -636,7 +636,7 @@
             {
               "name": "arr",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -663,7 +663,7 @@
           "result": {
             "name": "iminloc",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -695,7 +695,7 @@
             {
               "name": "n1",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -715,7 +715,7 @@
             {
               "name": "n2",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -756,7 +756,7 @@
           "result": {
             "name": "assert_eq2",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -844,14 +844,14 @@
         {
           "name": "zero",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "(0.d0,0.d0)",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -864,14 +864,14 @@
         {
           "name": "xi",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "(0.d0,1.d0)",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -884,14 +884,14 @@
         {
           "name": "one",
           "base_type": "complex",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "(1.d0,0.d0)",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -904,14 +904,14 @@
         {
           "name": "pi",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "3.14159265358979323846264338327950288419716939937510d0",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -931,7 +931,7 @@
             {
               "name": "fi",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "M"
@@ -957,7 +957,7 @@
             {
               "name": "wr",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 "M"
@@ -983,7 +983,7 @@
             {
               "name": "M",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1004,7 +1004,7 @@
           "result": {
             "name": "fr",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "M"
@@ -1042,7 +1042,7 @@
             {
               "name": "wt",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1068,7 +1068,7 @@
             {
               "name": "nrk",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1102,7 +1102,7 @@
             {
               "name": "start",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1122,7 +1122,7 @@
             {
               "name": "stop",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1142,7 +1142,7 @@
             {
               "name": "num",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1162,7 +1162,7 @@
             {
               "name": "istart",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1182,7 +1182,7 @@
             {
               "name": "iend",
               "base_type": "logical",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1202,7 +1202,7 @@
             {
               "name": "mesh",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1223,7 +1223,7 @@
           "result": {
             "name": "array",
             "base_type": "real",
-            "kind": null,
+            "kind": "8",
             "rank": 1,
             "shape": [
               "num"
@@ -1261,7 +1261,7 @@
             {
               "name": "xa",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1287,7 +1287,7 @@
             {
               "name": "ya",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1313,7 +1313,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1333,7 +1333,7 @@
             {
               "name": "y",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1353,7 +1353,7 @@
             {
               "name": "dy",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1387,7 +1387,7 @@
             {
               "name": "xx",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1413,7 +1413,7 @@
             {
               "name": "x",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1434,7 +1434,7 @@
           "result": {
             "name": "locate",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1466,7 +1466,7 @@
             {
               "name": "arr",
               "base_type": "real",
-              "kind": null,
+              "kind": "8",
               "rank": 1,
               "shape": [
                 ":"
@@ -1493,7 +1493,7 @@
           "result": {
             "name": "iminloc",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],
@@ -1525,7 +1525,7 @@
             {
               "name": "n1",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1545,7 +1545,7 @@
             {
               "name": "n2",
               "base_type": "integer",
-              "kind": null,
+              "kind": "",
               "rank": 0,
               "shape": [],
               "lbound": [],
@@ -1586,7 +1586,7 @@
           "result": {
             "name": "assert_eq2",
             "base_type": "integer",
-            "kind": null,
+            "kind": "",
             "rank": 0,
             "shape": [],
             "lbound": [],

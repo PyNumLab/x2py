@@ -17,14 +17,14 @@
         {
           "name": "Ndim",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "2",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -37,14 +37,14 @@
         {
           "name": "Mdim",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
           "ubound": [],
-          "value": null,
-          "value_type": "unknown",
-          "is_parameter": false,
+          "value": "3",
+          "value_type": "expression",
+          "is_parameter": true,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -57,16 +57,16 @@
         {
           "name": "xc",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "Ndim"
+            "2"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Ndim"
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -83,16 +83,16 @@
         {
           "name": "fc",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "Ndim"
+            "2"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Ndim"
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -109,19 +109,19 @@
         {
           "name": "fjac",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
-            "Ndim",
-            "Ndim"
+            "2",
+            "2"
           ],
           "lbound": [
             "1",
             "1"
           ],
           "ubound": [
-            "Ndim",
-            "Ndim"
+            "2",
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -138,19 +138,19 @@
         {
           "name": "exact_fjac",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
-            "Ndim",
-            "Ndim"
+            "2",
+            "2"
           ],
           "lbound": [
             "1",
             "1"
           ],
           "ubound": [
-            "Ndim",
-            "Ndim"
+            "2",
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -167,16 +167,16 @@
         {
           "name": "fgrad",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "Ndim"
+            "2"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Ndim"
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -193,16 +193,16 @@
         {
           "name": "exact_fgrad",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 1,
           "shape": [
-            "Ndim"
+            "2"
           ],
           "lbound": [
             "1"
           ],
           "ubound": [
-            "Ndim"
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -219,19 +219,19 @@
         {
           "name": "gjac",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
-            "Mdim",
-            "Ndim"
+            "3",
+            "2"
           ],
           "lbound": [
             "1",
             "1"
           ],
           "ubound": [
-            "Mdim",
-            "Ndim"
+            "3",
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -248,19 +248,19 @@
         {
           "name": "exact_gjac",
           "base_type": "real",
-          "kind": null,
+          "kind": "8",
           "rank": 2,
           "shape": [
-            "Mdim",
-            "Ndim"
+            "3",
+            "2"
           ],
           "lbound": [
             "1",
             "1"
           ],
           "ubound": [
-            "Mdim",
-            "Ndim"
+            "3",
+            "2"
           ],
           "value": null,
           "value_type": "unknown",
@@ -277,7 +277,7 @@
         {
           "name": "i",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],
@@ -297,7 +297,7 @@
         {
           "name": "j",
           "base_type": "integer",
-          "kind": null,
+          "kind": "",
           "rank": 0,
           "shape": [],
           "lbound": [],

@@ -61,7 +61,7 @@ def _parse_report(paths: list[str]) -> dict[str, dict]:
     parser = FortranParser()
     for p in _expand_paths(paths):
         code = p.read_text(encoding="utf-8")
-        parsed = parser.parse_file(code, filename=str(p))
+        parsed = parser.visit_file(code, filename=str(p))
         out[str(p)] = {
             "signatures": [_to_dict_no_parent(s) for s in parsed.procedures],
             "types": [_to_dict_no_parent(t) for t in parsed.derived_types],
@@ -69,7 +69,7 @@ def _parse_report(paths: list[str]) -> dict[str, dict]:
             "submodules": [_to_dict_no_parent(m) for m in parsed.submodules],
             "programs": [_to_dict_no_parent(m) for m in parsed.programs],
             "block_data": [_to_dict_no_parent(m) for m in parsed.block_data_units],
-            "wrap_readiness": parser.assess_wrap_readiness(code, filename=str(p)),
+            "wrap_readiness": parser.visit_wrap_readiness(code, filename=str(p)),
         }
     return out
 
@@ -82,7 +82,7 @@ def _semantic_report(paths: list[str]) -> dict[str, dict]:
     parser = FortranParser()
     for p in _expand_paths(paths):
         code = p.read_text(encoding="utf-8")
-        fobj = parser.parse_file(code, filename=str(p))
+        fobj = parser.visit_file(code, filename=str(p))
         modules = [fortran_module_to_semantic_module(m) for m in fobj.modules]
         out[str(p)] = {
             "semantic_modules": [asdict(m) for m in modules],
