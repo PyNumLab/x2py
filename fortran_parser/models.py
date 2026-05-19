@@ -218,6 +218,14 @@ class FortranVariable:
             self.kind = ""
 
     @property
+    def symbolic_value(self) -> str | None:
+        return getattr(self, "_symbolic_value", None)
+
+    @symbolic_value.setter
+    def symbolic_value(self, value: str | None) -> None:
+        self._symbolic_value = value
+
+    @property
     def shape_info(self) -> list[dict[str, str | None]]:
         """Structured per-dimension shape metadata derived from `shape` tokens."""
         return [_parse_shape_dim(dim) for dim in self.shape]

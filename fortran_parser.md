@@ -83,8 +83,7 @@ sections so maintainers can navigate the file by concern instead of by history:
 
 - Regex/constants and parser-wide type aliases
 - Module-level helper blocks (source-form rules, preprocessor logic,
-  diagnostics, shape evaluation, compile-time expression resolution,
-  dependency ordering)
+  diagnostics, compile-time expression resolution, dependency ordering)
 - `FortranParser` internals grouped by domain:
   - visitor-style API entrypoints (`visit_file`, `visit_project`,
     `visit_wrap_readiness`)
@@ -107,8 +106,70 @@ for wrapper metadata, and procedure-internal subprograms are not exported as
 file/module procedures. Procedure-local interface blocks are still visited
 enough to type callback dummy arguments and to preserve interface metadata.
 
+### 2.1 Recursive parser sketch
+
+Small input:
+
+```fortran
+module m
+  integer, parameter :: n = 4
+contains
+  subroutine scale(x)
+    real, intent(inout) :: x(n)
+  end subroutine scale
+end module m
+```
+
+The parser handles it in this order:
+
+1. `visit_file` preprocesses the source and calls `_helper_slice_child_units`
+   at file scope. The result is one `_SourceUnit`: `kind="module"`,
+   `name="m"`, and `lines=[module m ... end module m]`.
+2. `visit_source_unit` dispatches that slice to `visit_module_unit`.
+3. `visit_module_unit` creates a module `_ParserScope`, calls
+   `_helper_split_unit_parts`, and sends only the module specification lines to
+   `_helper_visit_spec_part`.
+4. `_helper_visit_spec_part` uses the shared declaration backend:
+   `_helper_parse_declaration_line` parses `integer, parameter :: n = 4`, then
+   `_helper_push_declaration_to_scope` appends the resulting parameter variable
+   to `FortranModule.variables`.
+5. The module visitor recursively slices direct children from its substring.
+   It finds one procedure unit, `scale`, and dispatches it to
+   `visit_procedure_unit`.
+6. `visit_procedure_unit` creates a procedure `_ParserScope`, splits the
+   procedure into header/specification/execution/contains, and visits only the
+   specification part. The same declaration backend parses
+   `real, intent(inout) :: x(n)` and pushes the metadata into the procedure
+   argument symbol table.
+
+Scope is always an explicit argument to the shared helpers. That is the reason
+two modules can each define `type :: state` without conflict, while two
+same-level `module m` declarations or two same-level contained procedures with
+the same name are rejected by `_helper_validate_sibling_units`.
+
+End-name validation is strict for structural units whose names define exported
+scope boundaries, such as modules, submodules, programs, interfaces, and
+derived types. Procedure end-name mismatches are still tolerated while slicing
+third-party sources because some accepted fixture code contains copy/paste
+procedure end labels; the procedure is closed by unit kind so parsing can
+continue, and duplicate procedure names are validated at the sibling scope.
+
+The only separate specification-line visitors are grammar-specific:
+module-like units share `_helper_visit_module_like_spec_line`, procedures use
+`_helper_visit_procedure_spec_line` for `implicit`, `external`, `import`, and
+local `parameter` handling, and derived types use
+`_helper_visit_type_spec_line` for `sequence`, `private`, and type-bound
+declaration rules. All three still call the same declaration parser/pusher for
+actual declarations.
+
 Most parser organization changes are structural, but behavior, model-schema,
 coverage, or fixture changes should be reflected in this reference.
+
+Parameter constants expose both `value` and runtime `symbolic_value` when
+available. `value` is the parser's best resolved expression after compile-time
+folding; `symbolic_value` preserves the original parameter initializer for
+validation, debugging, and downstream diagnostics without changing the legacy
+JSON fixture shape.
 
 ## 3) Terminal usage and expected outputs
 

@@ -349,6 +349,89 @@ ask it to implement each of these layers explicitly:
     regeneration script.  
 
 
+### 6.1 Parser control-flow example
+
+Use this as the mental model when changing `fortran_parser/parser.py`:
+
+```fortran
+module m
+  type :: state
+    integer :: n
+  end type state
+contains
+  subroutine work(x)
+    real, intent(inout) :: x(:)
+  end subroutine work
+end module m
+```
+
+The control flow is:
+
+1. `visit_file` preprocesses the source, validates recognizable headers, and
+   asks `_helper_slice_child_units` for direct file-scope units.
+2. The slicer returns one `_SourceUnit(kind="module", name="m")` whose `lines`
+   are exactly the module substring and whose line numbers are the original
+   file line numbers.
+3. `visit_source_unit` dispatches the slice to `visit_module_unit`.
+4. `visit_module_unit` builds a module `_ParserScope`, splits the module into
+   `header`, specification part, execution part, and `contains` using
+   `_helper_split_unit_parts`, then calls `_helper_visit_spec_part` on the
+   module specification lines.
+5. The module visitor slices its own direct children. The `type :: state` slice
+   goes to `visit_derived_type_unit`; the contained `subroutine work` slice goes
+   to `visit_procedure_unit`.
+6. `visit_derived_type_unit` and `visit_procedure_unit` repeat the same pattern:
+   build a scope, split the unit, visit the relevant specification part, and
+   push declarations into that scope.
+
+Declaration parsing is deliberately shared. Module variables, program/block
+data variables, procedure arguments/results, and derived-type fields all call
+`_helper_parse_declaration_line`, then `_helper_push_declaration_to_scope`.
+The small spec-line visitors only cover grammar exceptions: module visibility
+and `use`, procedure `implicit`/`import`/`external`/local parameters, and
+derived-type `sequence`/`private`/type-bound declarations.
+
+Sibling validation happens at each recursive slicing level. Duplicate
+same-level units are errors, but identical names in different scopes are
+allowed; for example, `module a; type :: state ...` and
+`module b; type :: state ...` parse as two separate type scopes.
+End-name validation is strict for module/submodule/program/interface/derived
+type scopes. Procedure end-name labels are tolerated when the end statement is
+the right procedure kind, because some real third-party fixtures contain
+copy/paste labels that do not match the opening procedure name; duplicate
+procedure names are still checked at the sibling scope.
+
+### 6.2 Executable developer tutorial
+
+`tests/parser/test_parser_developer_tutorial.py` is a runnable tutorial for the
+private parser flow. It intentionally uses `FortranParser` internals and ends
+with asserts, so maintainers can read it as sample code and pytest can keep it
+honest.
+
+The tutorial demonstrates this sequence:
+
+```python
+parser = FortranParser()
+lines, root_scope, top_units = parser._helper_prepare_source_units(source, filename)
+module_parts = parser._helper_split_unit_parts(
+    top_units[0],
+    parser._helper_unit_grammar("module"),
+    filename=filename,
+)
+module = parser.visit_source_unit(top_units[0], parent_scope=root_scope, filename=filename)
+module_scope = parser._helper_scope_for_model("module", module, parent=root_scope)
+child_units = parser._helper_slice_child_units(
+    top_units[0].lines[1:-1],
+    parent_scope=module_scope,
+    filename=filename,
+)
+```
+
+Use that test when changing the recursive slicer or the small `visit_*_unit`
+methods: it documents how file parsing becomes unit parsing, how unit parsing
+becomes child-unit parsing, and how the active scope is passed into shared
+declaration helpers.
+
 ## 7) Scope handling and valued-variable mechanics (explicit)
 
 These behaviors are easy to miss, but they are core to correctness and are
@@ -376,7 +459,12 @@ implemented today:
   allowed in mutually exclusive `#if/#ifdef` branches but still raise when two
   same-name procedures are active in overlapping branch conditions.
 - **Valued variables map**: compile-time constants are preserved as
-  `FortranVariable(name, value)` records in signature metadata.
+  `FortranVariable(name, value)` records in signature metadata. Parameter
+  objects also expose a runtime `symbolic_value` attribute when the parser has
+  the original initializer. `value` stores the parser's best resolved value
+  when it can determine one; `symbolic_value` keeps the original parameter
+  expression for validation and downstream diagnostics without changing the
+  legacy JSON fixture shape.
 - **Expression normalization using valued variables**: argument kinds and shape
   expressions are rewritten using the resolved valued-variable map, including
   transitively dependent symbols.
@@ -396,7 +484,6 @@ A condensed history of important parser capabilities added over time (from
 - Improved argument declaration parsing plus shape/derived coverage.
 - Added assumed-shape bounds and derived-argument fixture coverage.
 - Added compile-time shape-expression resolution from parameters.
-- Added symbolic shape-evaluation API for externally supplied symbol values.
 - Added structured per-dimension shape component helpers (`raw/lower/upper`).
 - Restricted module-parameter collection to module specification scope.
 - Fixed deep and cyclic compile-time dependency resolution behavior.
@@ -407,7 +494,8 @@ A condensed history of important parser capabilities added over time (from
 - Improved compile-time argument expression resolution and local-variable
   distinction.
 - Added same-file derived-type parent object linking (`extends`).
-- Added valued-variable support and tests.
+- Added valued-variable support and tests, including separate symbolic and
+  resolved parameter values.
 - Refined CLI tree output (omit empty/internal sections; stable module
   procedure grouping).
 - Added tests/fixtures for same-name reuse across different scopes.
@@ -418,6 +506,9 @@ A condensed history of important parser capabilities added over time (from
   file parsing now dispatches direct units to small `visit_*_unit` methods,
   each unit works on its own source substring, and shared declaration helpers
   push parsed symbols into the active scope.
+- Collapsed old full-method parser helpers into visitor methods and kept
+  helpers focused on reusable grammar pieces: slicing, scope setup,
+  specification-part handling, declaration parsing, and validation.
 - Refreshed parser goldens for the grammar-style parser. Procedure-internal
   subprograms are no longer exported as file/module procedures; local
   interfaces remain available for callback typing and interface metadata.

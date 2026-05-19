@@ -1264,6 +1264,26 @@ def test_compile_time_expression_fixture_module_values_are_partially_evaluated()
     assert variables["array_from_expression"].shape == ["21"]
     assert variables["matrix_from_constants"].shape == ["5", "10"]
     assert variables["small_array"].value == "[1, 2, 3]"
+    assert variables["expr_int"].symbolic_value == "2 * n + m - 3"
+    assert variables["small_array"].symbolic_value == "[1, 2, 3]"
+
+
+def test_local_parameter_keeps_symbolic_value_after_project_resolution():
+    project = parse_fortran_project(
+        {
+            "local_symbolic.f90": """
+subroutine use_local_symbolic(x)
+  integer, parameter :: m = selected_int_kind(9)
+  real, intent(inout) :: x(m)
+end subroutine use_local_symbolic
+"""
+        }
+    )
+
+    variables = project.procedures["use_local_symbolic"].variables
+
+    assert variables["m"].value == "selected_int_kind(9)"
+    assert variables["m"].symbolic_value == "selected_int_kind(9)"
 
 
 def test_parameterized_derived_type_declarations_preserve_and_resolve_arguments():

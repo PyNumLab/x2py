@@ -460,6 +460,8 @@ recurses into direct children. Shared declaration helpers parse variables,
 procedure arguments/results, and type fields, then push them into the active
 scope. Procedure execution bodies and internal subprograms are ignored for
 wrapper metadata; procedure-local interfaces are retained for callback typing.
+Parameter variables keep both `value` (best resolved value) and runtime
+`symbolic_value` (the original expression) when the parser has that information.
 
 The semantics layer consumes `FortranFile`/`FortranModule` objects and projects them into language-independent semantic IR (`SemanticModule`, `SemanticFunction`, `SemanticClass`, `SemanticType`). This keeps the semantic API model independent from parser internals, matching the project goal that parser output is a helper and the semantic interface/IR is the source of truth.
 
