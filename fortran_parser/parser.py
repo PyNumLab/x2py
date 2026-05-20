@@ -336,7 +336,10 @@ class FortranParser:
             *(dtype for submodule in submodules for dtype in submodule.derived_types),
         ]
         self._resolve_derived_type_extensions(all_types)
-        all_interfaces = self.visit_fortran_interfaces(lines, filename=filename)
+        all_interfaces = [
+            self.visit_interface_unit(unit, parent_scope=scope, filename=filename)
+            for unit, scope in self._collect_interface_source_units(lines, filename)
+        ]
         interfaces = [iface for iface in all_interfaces if iface.module is None]
         for module in modules:
             module.interfaces = [
@@ -569,160 +572,70 @@ class FortranParser:
             "wrappable": not blockers,
         }
 
-    def visit_fortran_modules(
-        self,
-        code: _SourceOrLines,
-        filename: str | None = None,
-        *,
-        require_present: bool = True,
-    ) -> list[FortranModule]:
-        lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
+    def visit_fortran_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
+        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
         module_units = [unit for unit in all_units if unit.kind == "module"]
-        modules = [self.visit_module_unit(unit, parent_scope=root_scope, filename=filename) for unit in module_units]
-        if require_present and not modules and any(unit.kind == "procedure" for unit in all_units):
+        if not module_units and any(unit.kind == "procedure" for unit in all_units):
             raise FortranParseError(
-                "visit_fortran_modules() expected a module program unit, but only standalone procedures were found",
+                "visit_fortran_module() expected a module program unit, but only standalone procedures were found",
                 filename=filename,
                 code="PARSE_WRONG_ENTRYPOINT",
             )
-        return modules
-
-    def visit_fortran_submodules(
-        self,
-        code: _SourceOrLines,
-        filename: str | None = None,
-    ) -> list[FortranSubmodule]:
-        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
-        return [
-            self.visit_submodule_unit(unit, parent_scope=root_scope, filename=filename)
-            for unit in all_units
-            if unit.kind == "submodule"
-        ]
-
-    def visit_fortran_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
-        lines, root_scope, _all_units = self._helper_prepare_source_units(code, filename)
-        interfaces: list[FortranInterface] = []
-
-        def collect(scope: _ParserScope, source_lines: _PreprocessedLines) -> None:
-            for child in self._helper_slice_child_units(source_lines, parent_scope=scope, filename=filename):
-                if child.kind == "interface":
-                    interfaces.append(self.visit_interface_unit(child, parent_scope=scope, filename=filename))
-                    continue
-                if child.kind in {"module", "submodule"}:
-                    child_scope = _ParserScope(
-                        kind=child.kind,
-                        name=child.name,
-                        parent=scope,
-                        module_owner=child.name,
-                    )
-                    collect(child_scope, child.lines[1:-1])
-                    continue
-                if child.kind in {"procedure", "program", "block_data"}:
-                    child_scope = _ParserScope(
-                        kind=child.kind,
-                        name=child.name,
-                        parent=scope,
-                        module_owner=scope.module_owner,
-                    )
-                    collect(child_scope, child.lines[1:-1])
-
-        collect(root_scope, lines)
-        return interfaces
-
-    def visit_fortran_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
-        lines, root_scope, _all_units = self._helper_prepare_source_units(code, filename)
-        types: list[FortranDerivedType] = []
-
-        def collect(scope: _ParserScope, source_lines: _PreprocessedLines) -> None:
-            for child in self._helper_slice_child_units(source_lines, parent_scope=scope, filename=filename):
-                if child.kind == "derived_type":
-                    types.append(self.visit_derived_type_unit(child, parent_scope=scope, filename=filename))
-                    continue
-                if child.kind in {"module", "submodule", "program"}:
-                    child_scope = _ParserScope(
-                        kind=child.kind,
-                        name=child.name,
-                        parent=scope,
-                        module_owner=child.name if child.kind in {"module", "submodule"} else scope.module_owner,
-                    )
-                    collect(child_scope, child.lines[1:-1])
-                    continue
-                if child.kind in {"procedure", "block_data"}:
-                    child_scope = _ParserScope(
-                        kind=child.kind,
-                        name=child.name,
-                        parent=scope,
-                        module_owner=scope.module_owner,
-                    )
-                    collect(child_scope, child.lines[1:-1])
-
-        collect(root_scope, lines)
-        self._resolve_derived_type_extensions(types)
-        return types
-
-    def visit_fortran_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
-        return self._expect_single_parse_result(
-            self.visit_fortran_modules(code, filename=filename, require_present=True),
+        unit = self._expect_single_parse_result(
+            module_units,
             parser_name="visit_fortran_module",
             entity_name="module",
             filename=filename,
         )
+        return self.visit_module_unit(unit, parent_scope=root_scope, filename=filename)
 
     def visit_fortran_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
-        return self._expect_single_parse_result(
-            self.visit_fortran_submodules(code, filename=filename),
+        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
+        unit = self._expect_single_parse_result(
+            [unit for unit in all_units if unit.kind == "submodule"],
             parser_name="visit_fortran_submodule",
             entity_name="submodule",
             filename=filename,
         )
+        return self.visit_submodule_unit(unit, parent_scope=root_scope, filename=filename)
 
     def visit_fortran_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
-        return self._expect_single_parse_result(
-            self.visit_fortran_interfaces(code, filename=filename),
+        unit, scope = self._expect_single_parse_result(
+            self._collect_interface_source_units(code, filename),
             parser_name="visit_fortran_interface",
             entity_name="interface",
             filename=filename,
         )
+        return self.visit_interface_unit(unit, parent_scope=scope, filename=filename)
 
     def visit_fortran_derived_type(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
-        return self._expect_single_parse_result(
-            self.visit_fortran_types(code, filename=filename),
+        unit, scope = self._expect_single_parse_result(
+            self._collect_derived_type_source_units(code, filename),
             parser_name="visit_fortran_derived_type",
             entity_name="derived type",
             filename=filename,
         )
-
-    def visit_fortran_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
-        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
-        return [
-            self.visit_program_unit(unit, parent_scope=root_scope, filename=filename)
-            for unit in all_units
-            if unit.kind == "program"
-        ]
+        return self.visit_derived_type_unit(unit, parent_scope=scope, filename=filename)
 
     def visit_fortran_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
-        return self._expect_single_parse_result(
-            self.visit_fortran_programs(code, filename=filename),
+        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
+        unit = self._expect_single_parse_result(
+            [unit for unit in all_units if unit.kind == "program"],
             parser_name="visit_fortran_program",
             entity_name="program",
             filename=filename,
         )
-
-    def visit_fortran_block_data(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
-        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
-        return [
-            self.visit_block_data_source_unit(unit, parent_scope=root_scope, filename=filename)
-            for unit in all_units
-            if unit.kind == "block_data"
-        ]
+        return self.visit_program_unit(unit, parent_scope=root_scope, filename=filename)
 
     def visit_fortran_block_data_unit(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
-        return self._expect_single_parse_result(
-            self.visit_fortran_block_data(code, filename=filename),
+        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
+        unit = self._expect_single_parse_result(
+            [unit for unit in all_units if unit.kind == "block_data"],
             parser_name="visit_fortran_block_data_unit",
             entity_name="block data unit",
             filename=filename,
         )
+        return self.visit_block_data_source_unit(unit, parent_scope=root_scope, filename=filename)
 
     # ------------------------------------------------------------------
     # Source unit visitors
@@ -1004,14 +917,19 @@ class FortranParser:
         module_to_file: dict[str, str] = {}
         submodule_to_file: dict[str, str] = {}
         file_to_uses: dict[str, set[str]] = {fname: set() for fname in sources}
-        modules_by_file: dict[str, list[str]] = {}
-        submodules_by_file: dict[str, list[str]] = {}
         for fname, _code in sources.items():
             lines = file_lines[fname]
-            modules = self.visit_fortran_modules(lines, filename=fname, require_present=False)
-            submodules = self.visit_fortran_submodules(lines, filename=fname)
-            modules_by_file[fname] = [m.name for m in modules]
-            submodules_by_file[fname] = [m.name for m in submodules]
+            _lines, root_scope, all_units = self._helper_prepare_source_units(lines, fname)
+            modules = [
+                self.visit_module_unit(unit, parent_scope=root_scope, filename=fname)
+                for unit in all_units
+                if unit.kind == "module"
+            ]
+            submodules = [
+                self.visit_submodule_unit(unit, parent_scope=root_scope, filename=fname)
+                for unit in all_units
+                if unit.kind == "submodule"
+            ]
             for m in modules:
                 module_to_file[m.name.lower()] = fname
                 file_to_uses[fname].update(u.lower() for u in m.uses)
@@ -1085,6 +1003,81 @@ class FortranParser:
         units = self._helper_slice_child_units(lines, parent_scope=root_scope, filename=filename)
         self._helper_validate_sibling_units(units, parent_scope=root_scope, filename=filename)
         return lines, root_scope, units
+
+    def _collect_interface_source_units(
+        self,
+        code: _SourceOrLines,
+        filename: str | None,
+    ) -> list[tuple[_SourceUnit, _ParserScope]]:
+        """Collect interface units with the parent scope needed to parse them.
+
+        Public plural/singular interface visitors both use this collector so
+        singular parsing selects one source unit directly instead of parsing a
+        plural result list and checking its length afterward.
+        """
+        lines, root_scope, _all_units = self._helper_prepare_source_units(code, filename)
+        interfaces: list[tuple[_SourceUnit, _ParserScope]] = []
+
+        def collect(scope: _ParserScope, source_lines: _PreprocessedLines) -> None:
+            for child in self._helper_slice_child_units(source_lines, parent_scope=scope, filename=filename):
+                if child.kind == "interface":
+                    interfaces.append((child, scope))
+                    continue
+                if child.kind in {"module", "submodule"}:
+                    child_scope = _ParserScope(
+                        kind=child.kind,
+                        name=child.name,
+                        parent=scope,
+                        module_owner=child.name,
+                    )
+                    collect(child_scope, child.lines[1:-1])
+                    continue
+                if child.kind in {"procedure", "program", "block_data"}:
+                    child_scope = _ParserScope(
+                        kind=child.kind,
+                        name=child.name,
+                        parent=scope,
+                        module_owner=scope.module_owner,
+                    )
+                    collect(child_scope, child.lines[1:-1])
+
+        collect(root_scope, lines)
+        return interfaces
+
+    def _collect_derived_type_source_units(
+        self,
+        code: _SourceOrLines,
+        filename: str | None,
+    ) -> list[tuple[_SourceUnit, _ParserScope]]:
+        """Collect derived-type units with their module/program scope context."""
+        lines, root_scope, _all_units = self._helper_prepare_source_units(code, filename)
+        types: list[tuple[_SourceUnit, _ParserScope]] = []
+
+        def collect(scope: _ParserScope, source_lines: _PreprocessedLines) -> None:
+            for child in self._helper_slice_child_units(source_lines, parent_scope=scope, filename=filename):
+                if child.kind == "derived_type":
+                    types.append((child, scope))
+                    continue
+                if child.kind in {"module", "submodule", "program"}:
+                    child_scope = _ParserScope(
+                        kind=child.kind,
+                        name=child.name,
+                        parent=scope,
+                        module_owner=child.name if child.kind in {"module", "submodule"} else scope.module_owner,
+                    )
+                    collect(child_scope, child.lines[1:-1])
+                    continue
+                if child.kind in {"procedure", "block_data"}:
+                    child_scope = _ParserScope(
+                        kind=child.kind,
+                        name=child.name,
+                        parent=scope,
+                        module_owner=scope.module_owner,
+                    )
+                    collect(child_scope, child.lines[1:-1])
+
+        collect(root_scope, lines)
+        return types
 
     def _helper_select_active_preprocessor_lines(
         self,

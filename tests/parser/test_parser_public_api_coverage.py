@@ -1446,10 +1446,10 @@ program type_stmt_program
 end program type_stmt_program
 """
 
-    module = FortranParser().visit_fortran_modules(
+    module = FortranParser().visit_fortran_module(
         module_code,
         filename="module_like_edges.f90",
-    )[0]
+    )
     program = parse_fortran_file(program_code, filename="module_like_edges.f90").programs[0]
 
     assert [var.name for var in module.variables] == ["first", "second"]
