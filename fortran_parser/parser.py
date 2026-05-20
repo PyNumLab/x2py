@@ -15,15 +15,16 @@ from .utils         import split_csv
 Parser architecture quick guide
 ===============================
 
-This module is intentionally split into two layers:
+This module is intentionally centered on two public surfaces:
 
-1) Module-level helper functions
-   - Pure helpers for lexical checks, declaration parsing utilities,
-     shape/kind resolution, diagnostics, and dependency ordering.
+1) `FortranParser`
+   - Stateful orchestration layer that runs block parsers, owns parser helper
+     methods, and aggregates file/project models.
 
-2) `FortranParser`
-   - Stateful orchestration layer that runs block parsers and aggregates
-     file/project models.
+2) Module-level wrappers
+   - Small convenience entrypoints (`parse_fortran_file`,
+     `parse_fortran_project`, `assess_wrap_readiness`) backed by one default
+     parser instance.
 
 Recommended reading order for maintainers:
 - Start from the module-level public wrappers (`parse_fortran_file`,
@@ -33,14 +34,13 @@ Recommended reading order for maintainers:
 - Then drill into `_helper_*` implementations and low-level helpers
 
 `FortranParser` class layout (top -> bottom):
-- Internal visitor entrypoints: `visit_file`, `visit_project`,
-  `visit_wrap_readiness`, plus small `visit_*_unit` methods for each
-  already-sliced source unit. The stable public API is the module-level wrapper
-  layer at the bottom of the file.
-- Core `_helper_*` methods for source slicing, grammar-region splitting,
-  scoped specification-part visits, declaration parsing, symbol pushing,
-  preprocessor branch selection, and same-level duplicate checks.
-- Header/declaration helpers for the few grammar-specific details.
+- Public visitor entrypoints and compatibility visitors.
+- One visitor per grammar-level source unit.
+- Source preparation, preprocessor handling, source-unit slicing, and unit
+  grammar helpers.
+- Header parsers, scope/state helpers, specification visitors, declaration
+  parsing, finalization, and kind/shape resolution.
+- Project diagnostics and general lexical/static utilities.
 - Final module-level convenience wrappers using `_DEFAULT_PARSER`.
 
 The parser flow is intentionally grammar-shaped. Given this source:
@@ -64,7 +64,7 @@ specification part; the execution part and internal subprograms are ignored for
 wrapper metadata.
 
 Scoping follows the same recursion. A helper that parses `integer :: n` or
-`real :: x(n)` receives a `_ParserScope` argument. The common declaration parser
+`real :: x(n)` receives a `_ParserScope` argument. The shared declaration parser
 builds the same metadata for variables, procedure arguments/results, and
 derived-type fields; `_helper_push_declaration_to_scope` stores the symbol in
 the current scope model. This is why the same derived-type name can exist in
@@ -72,39 +72,46 @@ two modules, while duplicate names at one sibling level are rejected by the
 slicer validation.
 """
 
-_TYPE_RE = re.compile(r"^(integer|real|complex|logical|character|double\s+precision)\s*(\([^)]*\))?\s*(.*)$", re.IGNORECASE)
-_CHAR_STAR_RE = re.compile(r"^character\s*\*\s*(?P<len>\([^)]*\)|\*|[A-Za-z_]\w*|\d+)\s*(?P<rest>.*)$", re.IGNORECASE)
-_PROC_RE = re.compile(r"^(?P<prefix>(?:\w+\s+)*)subroutine\s+(?P<name>\w+)(?:\s*\((?P<args>[^)]*)\))?\s*(?P<tail>.*)$", re.IGNORECASE)
-_FUNC_RE = re.compile(
-    r"^(?P<prefix>.*?)\b"
-    r"function\s+(?P<name>\w+)(?:\s*\((?P<args>[^)]*)\))?\s*(?P<tail>.*)$",
-    re.IGNORECASE,
-)
-_RESULT_RE = re.compile(r"results?\s*\(\s*(?P<name>\w+)\s*\)", re.IGNORECASE)
+_REGEX: dict[str, re.Pattern[str]] = {
+    "type": re.compile(r"^(integer|real|complex|logical|character|double\s+precision)\s*(\([^)]*\))?\s*(.*)$", re.IGNORECASE),
+    "char_star": re.compile(r"^character\s*\*\s*(?P<len>\([^)]*\)|\*|[A-Za-z_]\w*|\d+)\s*(?P<rest>.*)$", re.IGNORECASE),
+    "procedure": re.compile(r"^(?P<prefix>(?:\w+\s+)*)subroutine\s+(?P<name>\w+)(?:\s*\((?P<args>[^)]*)\))?\s*(?P<tail>.*)$", re.IGNORECASE),
+    "function": re.compile(
+        r"^(?P<prefix>.*?)\b"
+        r"function\s+(?P<name>\w+)(?:\s*\((?P<args>[^)]*)\))?\s*(?P<tail>.*)$",
+        re.IGNORECASE,
+    ),
+    "result": re.compile(r"results?\s*\(\s*(?P<name>\w+)\s*\)", re.IGNORECASE),
+    "bind_c": re.compile(r"bind\s*\(\s*c\s*(?:,\s*name\s*=\s*['\"][^'\"]*['x\"])?\s*\)", re.IGNORECASE),
+    "use": re.compile(
+        r"^use\s*(?:,\s*(?:intrinsic|non_intrinsic)\s*)?(?:::)?\s*(?P<module>\w+)\s*(?P<rest>,\s*.*)?$",
+        re.IGNORECASE,
+    ),
+    "include": re.compile(r"^(?:#\s*)?include\s*(?P<path>['\"][^'\"]+['\"])", re.IGNORECASE),
+    "import": re.compile(r"^import\s*(?:::)?\s*(?P<symbols>.*)$", re.IGNORECASE),
+    "typed_parameter": re.compile(
+        r"^(integer|real|logical|character|complex)\s*(?:\([^)]*\))?\s*,\s*parameter\s*::\s*(?P<body>.*)$",
+        re.IGNORECASE,
+    ),
+    "legacy_parameter": re.compile(r"^parameter\s*\(\s*(?P<body>.*)\s*\)$", re.IGNORECASE),
+    "derived_type": re.compile(r"^type\s*(?P<attrs>(?:,\s*[^:]+)?)::\s*(?P<name>\w+)(?:\s*\([^)]*\))?$", re.IGNORECASE),
+    "type_field": re.compile(r"^type\s*\(\s*(?P<dtype>\w+(?:\s*\([^)]*\))?)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE),
+    "class_field": re.compile(r"^class\s*\(\s*(?P<dtype>\w+(?:\s*\([^)]*\))?)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE),
+    "procedure_binding": re.compile(r"^procedure\s*(?:,\s*[^:]*)?::\s*(?P<names>.*)$", re.IGNORECASE),
+    "procedure_dummy": re.compile(r"^procedure\s*\(\s*(?P<iface>\w+)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE),
+    "module": re.compile(r"^module\s+(?P<name>\w+)\s*$", re.IGNORECASE),
+    "submodule": re.compile(r"^submodule\s*\(\s*(?P<parent>[^)]+?)\s*\)\s*(?P<name>\w+)\s*$", re.IGNORECASE),
+    "module_procedure_impl": re.compile(r"^module\s+procedure\s+(?P<name>\w+)\s*$", re.IGNORECASE),
+    "program": re.compile(r"^program\s+(?P<name>\w+)\s*$", re.IGNORECASE),
+    "block_data": re.compile(r"^block\s+data(?:\s+(?P<name>\w+))?\s*$", re.IGNORECASE),
+    "unsupported_class_star": re.compile(r"\bclass\s*\(\s*\*\s*\)", re.IGNORECASE),
+    "unsupported_select_type": re.compile(r"\bselect\s+type\b", re.IGNORECASE),
+    "unsupported_coarray": re.compile(r"\bcoarray\b|\[[^\]]*\]", re.IGNORECASE),
+    "unsupported_procedure_pointer": re.compile(r"\bprocedure\s*,\s*pointer\b", re.IGNORECASE),
+    "unsupported_c_ptr": re.compile(r"\btype\s*\(\s*c_ptr\s*\)", re.IGNORECASE),
+    "identifier": re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b"),
+}
 _ATTR_PREFIX_WORDS = {"pure", "elemental", "recursive", "impure", "module"}
-
-_BINDC_RE = re.compile(r"bind\s*\(\s*c\s*(?:,\s*name\s*=\s*['\"][^'\"]*['x\"])?\s*\)", re.IGNORECASE)
-_USE_RE = re.compile(
-    r"^use\s*(?:,\s*(?:intrinsic|non_intrinsic)\s*)?(?:::)?\s*(?P<module>\w+)\s*(?P<rest>,\s*.*)?$",
-    re.IGNORECASE,
-)
-_INCLUDE_RE = re.compile(r"^(?:#\s*)?include\s*(?P<path>['\"][^'\"]+['\"])", re.IGNORECASE)
-_IMPORT_RE = re.compile(r"^import\s*(?:::)?\s*(?P<symbols>.*)$", re.IGNORECASE)
-_PARAM_RE = re.compile(
-    r"^(integer|real|logical|character|complex)\s*(?:\([^)]*\))?\s*,\s*parameter\s*::\s*(?P<body>.*)$",
-    re.IGNORECASE,
-)
-_LEGACY_PARAM_STMT_RE = re.compile(r"^parameter\s*\(\s*(?P<body>.*)\s*\)$", re.IGNORECASE)
-_DERIVED_TYPE_RE = re.compile(r"^type\s*(?P<attrs>(?:,\s*[^:]+)?)::\s*(?P<name>\w+)(?:\s*\([^)]*\))?$", re.IGNORECASE)
-_TYPE_FIELD_RE = re.compile(r"^type\s*\(\s*(?P<dtype>\w+(?:\s*\([^)]*\))?)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE)
-_CLASS_FIELD_RE = re.compile(r"^class\s*\(\s*(?P<dtype>\w+(?:\s*\([^)]*\))?)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE)
-_PROC_BIND_RE = re.compile(r"^procedure\s*(?:,\s*[^:]*)?::\s*(?P<names>.*)$", re.IGNORECASE)
-_PROC_DUMMY_RE = re.compile(r"^procedure\s*\(\s*(?P<iface>\w+)\s*\)\s*(?P<attrs>.*)$", re.IGNORECASE)
-_MODULE_RE = re.compile(r"^module\s+(?P<name>\w+)\s*$", re.IGNORECASE)
-_SUBMODULE_RE = re.compile(r"^submodule\s*\(\s*(?P<parent>[^)]+?)\s*\)\s*(?P<name>\w+)\s*$", re.IGNORECASE)
-_MOD_PROC_IMPL_RE = re.compile(r"^module\s+procedure\s+(?P<name>\w+)\s*$", re.IGNORECASE)
-_PROGRAM_RE = re.compile(r"^program\s+(?P<name>\w+)\s*$", re.IGNORECASE)
-_BLOCK_DATA_RE = re.compile(r"^block\s+data(?:\s+(?P<name>\w+))?\s*$", re.IGNORECASE)
 _INTRINSIC_KIND_MODULES = {"iso_c_binding", "iso_fortran_env"}
 _KIND_EXPRESSION_INTRINSICS = {
     "kind",
@@ -115,12 +122,12 @@ _KIND_EXPRESSION_INTRINSICS = {
 }
 _KIND_EXPRESSION_KEYWORDS = {"and", "or", "not", "true", "false"}
 
-_UNSUPPORTED_PATTERNS = (
-    re.compile(r"\bclass\s*\(\s*\*\s*\)", re.IGNORECASE),
-    re.compile(r"\bselect\s+type\b", re.IGNORECASE),
-    re.compile(r"\bcoarray\b|\[[^\]]*\]", re.IGNORECASE),
-    re.compile(r"\bprocedure\s*,\s*pointer\b", re.IGNORECASE),
-    re.compile(r"\btype\s*\(\s*c_ptr\s*\)", re.IGNORECASE),
+_UNSUPPORTED_PATTERN_KEYS = (
+    "unsupported_class_star",
+    "unsupported_select_type",
+    "unsupported_coarray",
+    "unsupported_procedure_pointer",
+    "unsupported_c_ptr",
 )
 
 
@@ -167,1251 +174,6 @@ class _UnitParts:
 
 
 # -----------------------------------------------------------------------------
-# Low-level syntax and declaration helpers
-# -----------------------------------------------------------------------------
-
-def _split_intrinsic_type_spec(text: str) -> tuple[str, str, str] | None:
-    """Split an intrinsic declaration prefix into base, parenthesized spec, and tail."""
-    match = re.match(
-        r"^(integer|real|complex|logical|character|double\s+precision)\b(?P<rest>.*)$",
-        text.strip(),
-        re.IGNORECASE,
-    )
-    if not match:
-        return None
-    base = match.group(1).lower()
-    rest = (match.group("rest") or "").lstrip()
-    if not rest.startswith("("):
-        return base, "", rest.strip()
-
-    depth = 0
-    quote: str | None = None
-    for index, char in enumerate(rest):
-        if quote:
-            if char == quote:
-                quote = None
-            continue
-        if char in {"'", '"'}:
-            quote = char
-            continue
-        if char == "(":
-            depth += 1
-        elif char == ")":
-            depth -= 1
-            if depth == 0:
-                return base, rest[: index + 1], rest[index + 1 :].strip()
-    return base, rest, ""
-
-
-
-def _expect_single_parse_result(
-    items: list,
-    *,
-    parser_name: str,
-    entity_name: str,
-    filename: str | None,
-):
-    """Return one parsed entity or raise when a singular parser contract is broken."""
-    if len(items) == 1:
-        return items[0]
-    if not items:
-        raise FortranParseError(
-            f"{parser_name}() expected exactly one {entity_name}, but none were found",
-            filename=filename,
-            code="PARSE_WRONG_ENTRYPOINT",
-        )
-    raise FortranParseError(
-        f"{parser_name}() expected exactly one {entity_name}, but found {len(items)}",
-        filename=filename,
-        code="PARSE_AMBIGUOUS_ENTRYPOINT",
-    )
-
-# -----------------------------------------------------------------------------
-# Public entrypoints
-# -----------------------------------------------------------------------------
-
-# -----------------------------------------------------------------------------
-# Source-form and implicit typing helpers
-# -----------------------------------------------------------------------------
-
-def _source_form(filename: str | None) -> str:
-    if not filename:
-        return "unknown"
-    ext = Path(filename).suffix.lower()
-    if ext in {".f", ".for", ".ftn", ".f77"}:
-        return "f77"
-    if ext in {".f90", ".f95", ".f03", ".f08"}:
-        return "modern"
-    return "unknown"
-
-
-def _infer_implicit_base_type(symbol_name: str) -> str:
-    first = symbol_name.strip()[:1].lower()
-    if "i" <= first <= "n":
-        return "integer"
-    return "real"
-
-
-def _find_legacy_star_kind(type_left: str) -> tuple[str, str] | None:
-    m = re.match(r"^(integer|real|complex|logical|character)\s*\*\s*([0-9]+)\b", type_left, re.IGNORECASE)
-    if not m:
-        return None
-    return m.group(1).lower(), m.group(2)
-
-
-def _parse_type_prefix(prefix: str) -> tuple[str, str | None] | None:
-    txt = prefix.strip()
-    if not txt:
-        return None
-    star_kind = _find_legacy_star_kind(txt)
-    if star_kind:
-        base, kind = star_kind
-        return base, kind
-    cm = _CHAR_STAR_RE.match(txt)
-    if cm:
-        raw_len = cm.group("len").strip()
-        char_kind = raw_len[1:-1].strip() if raw_len.startswith("(") and raw_len.endswith(")") else raw_len
-        return "character", char_kind
-    intrinsic = _split_intrinsic_type_spec(txt)
-    if intrinsic:
-        base, type_spec, tail = intrinsic
-        if tail:
-            return None
-        if base == "double precision":
-            base = "real"
-        kind = extract_kind_from_type_spec(base, type_spec)
-        if kind is None and type_spec and base != "character":
-            kind = type_spec[1:-1].strip()
-        return base, kind or ""
-    derived = _TYPE_FIELD_RE.match(txt)
-    if derived:
-        return "derived", derived.group("dtype")
-    class_derived = _CLASS_FIELD_RE.match(txt)
-    if class_derived:
-        return "derived", class_derived.group("dtype")
-    return None  # pragma: no cover - unsupported prefixes are rejected by public grammar.
-
-
-def _enforce_source_form_compatibility(
-    line: str,
-    filename: str | None,
-    lineno: int | None = None,
-    source_line: str | None = None,
-) -> None:
-    """Compatibility hook for source-form checks.
-
-    The parser records fixed-form metadata, but it stays permissive about
-    modern constructs in `.f77` files because existing callers use the suffix
-    for layout, not strict language-version validation.
-    """
-    return
-
-
-# -----------------------------------------------------------------------------
-# Preprocessor and conditional-compilation helpers
-# -----------------------------------------------------------------------------
-
-def _preprocessor_conditions_overlap(c1: frozenset[str], c2: frozenset[str]) -> bool:
-    """Return True when two preprocessor condition sets may both be active."""
-    if not c1 or not c2:
-        return True
-    values: dict[str, str] = {}
-    for token in c1 | c2:
-        group, _, branch = token.partition(":")
-        if group in values and values[group] != branch:
-            return False
-        values[group] = branch
-    return True
-
-
-def _normalize_macro_defines(macro_defines: set[str] | dict[str, int | bool | str] | None) -> set[str]:
-    if not macro_defines:
-        return set()
-    if isinstance(macro_defines, dict):
-        out = set()
-        for k, v in macro_defines.items():
-            if str(v).strip() not in {"", "0", "false", "False"}:
-                out.add(str(k).lower())
-        return out
-    return {str(x).lower() for x in macro_defines}
-
-
-def _eval_cpp_expr(expr: str, macro_names: set[str]) -> bool:
-    """Evaluate a small C-preprocessor boolean expression."""
-    txt = expr.strip()
-    if not txt:  # pragma: no cover - bare #if is not valid Fortran preprocessing input.
-        return False
-    txt = re.sub(r"defined\s*\(\s*([A-Za-z_]\w*)\s*\)", lambda m: str(m.group(1).lower() in macro_names), txt)
-    txt = re.sub(r"\bdefined\s+([A-Za-z_]\w*)\b", lambda m: str(m.group(1).lower() in macro_names), txt)
-    def _ident_to_bool(m: re.Match[str]) -> str:
-        token = m.group(1)
-        if token in {"True", "False", "and", "or", "not"}:
-            return token
-        return "True" if token.lower() in macro_names else "False"
-    txt = re.sub(r"\b([A-Za-z_]\w*)\b", _ident_to_bool, txt)
-    txt = txt.replace("&&", " and ").replace("||", " or ")
-    txt = re.sub(r"(?<![=!<>])!(?!=)", " not ", txt)
-    txt = re.sub(r"\b0\b", "False", txt)
-    txt = re.sub(r"\b1\b", "True", txt)
-    try:
-        node = ast.parse(txt, mode="eval")
-        return bool(eval(compile(node, "<cpp-expr>", "eval"), {"__builtins__": {}}, {}))
-    except Exception:
-        return False
-
-
-# -----------------------------------------------------------------------------
-# Symbol, import, and diagnostic utilities
-# -----------------------------------------------------------------------------
-
-def _looks_like_existing_source_path(source: str | Path) -> bool:
-    """Return True when ``source`` names a readable source file path."""
-    if not isinstance(source, (str, Path)):
-        return False
-    text = str(source)
-    if "\n" in text or "\r" in text:
-        return False
-    return Path(text).is_file()
-
-
-def _split_submodule_parent(parent_spec: str) -> tuple[str, str | None]:
-    parts = [p.strip() for p in parent_spec.split(":", 1)]
-    if len(parts) == 2:
-        ancestor, parent = parts
-        return parent, ancestor
-    return parts[0], None
-
-
-def _visible_import_modules(symbol: str, uses: dict[str, list[FortranUseMapping]]) -> list[str]:
-    """Return imported modules that could provide ``symbol`` under Fortran USE rules."""
-    wanted = symbol.lower()
-    providers: list[str] = []
-    for module_name, only_symbols in uses.items():
-        normalized_only = [sym.local_name.lower() for sym in only_symbols]
-        if not normalized_only or wanted in normalized_only:
-            providers.append(module_name)
-    return providers
-
-
-def _derived_type_base_name(kind: str | None) -> str:
-    return (kind or "").split("(", 1)[0].strip()
-
-
-def _kind_expression_symbols(expr: str | None) -> set[str]:
-    """Return identifier symbols referenced by a kind/len expression."""
-    if expr is None:
-        return set()
-    text = expr.strip()
-    if not text or text == "*":
-        return set()
-    parts: list[str] = []
-    for item in split_csv(text):
-        token = item.strip()
-        if not token:
-            continue
-        key, sep, value = token.partition("=")
-        if sep and key.strip().lower() in {"kind", "len"}:
-            parts.append(value.strip())
-        else:
-            parts.append(token)
-    normalized = " ".join(parts)
-    normalized = re.sub(
-        r"(?<![A-Za-z_])(?:\d+(?:\.\d*)?|\.\d+)(?:[deDE][+-]?\d+)?",
-        " ",
-        normalized,
-    )
-    ignored = _KIND_EXPRESSION_INTRINSICS | _KIND_EXPRESSION_KEYWORDS
-    return {
-        token.lower()
-        for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", normalized)
-        if token.lower() not in ignored
-    }
-
-
-def _kind_symbol_visible_from_intrinsic_use(symbol: str, uses: dict[str, list[FortranUseMapping]]) -> bool:
-    lowered = symbol.lower()
-    for module_name, mappings in uses.items():
-        if module_name.lower() not in _INTRINSIC_KIND_MODULES:
-            continue
-        if not mappings or lowered in {mapping.local_name.lower() for mapping in mappings}:
-            return True
-    return False
-
-
-def _kind_symbol_visible_from_module_params(
-    symbol: str,
-    uses: dict[str, list[FortranUseMapping]],
-    module_params: dict[str, dict[str, str]],
-) -> bool:
-    lowered = symbol.lower()
-    for module_name, mappings in uses.items():
-        params = module_params.get(module_name.lower(), {})
-        if not params:
-            continue
-        if not mappings and lowered in params:
-            return True
-        for mapping in mappings:
-            if mapping.local_name.lower() != lowered:
-                continue
-            if mapping.source.lower() in params:
-                return True
-    return False
-
-
-def _kind_symbol_is_known(
-    symbol: str,
-    *,
-    owning_module: str | None,
-    uses: dict[str, list[FortranUseMapping]],
-    local_symbols: set[str],
-    module_params: dict[str, dict[str, str]],
-) -> bool:
-    """Check whether a symbolic kind is declared locally or in parsed imports."""
-    lowered = symbol.lower()
-    if lowered in local_symbols:
-        return True
-    if owning_module and lowered in module_params.get(owning_module.lower(), {}):
-        return True
-    if _kind_symbol_visible_from_module_params(symbol, uses, module_params):
-        return True
-    if _kind_symbol_visible_from_intrinsic_use(symbol, uses):
-        return True
-    return False
-
-
-def _collect_unresolved_derived_type_diagnostics(
-    signatures: list[FortranProcedureSignature],
-    types: list[FortranDerivedType],
-    modules: list[FortranModule],
-) -> tuple[list[dict], list[dict]]:
-    """Find derived-type references that are not defined in the parsed source."""
-    defined_types = {dtype.name.lower() for dtype in types}
-    module_uses = {mod.name.lower(): mod.uses for mod in modules}
-    unresolved_args: list[dict] = []
-    unresolved_fields: list[dict] = []
-
-    def _missing_type(kind: str | None) -> bool:
-        base_name = _derived_type_base_name(kind)
-        return bool(base_name) and base_name.lower() not in defined_types
-
-    for sig in signatures:
-        for arg in sig.arguments:
-            if arg.base_type == "derived" and _missing_type(arg.kind):
-                unresolved_args.append({
-                    "procedure": sig.name,
-                    "module": sig.module,
-                    "argument": arg.name,
-                    "type": arg.kind,
-                    "import_modules": _visible_import_modules(arg.kind or "", sig.uses),
-                })
-        if sig.result and sig.result.base_type == "derived" and _missing_type(sig.result.kind):
-            unresolved_args.append({
-                "procedure": sig.name,
-                "module": sig.module,
-                "argument": sig.result.name,
-                "type": sig.result.kind,
-                "import_modules": _visible_import_modules(sig.result.kind or "", sig.uses),
-            })
-
-    for dtype in types:
-        uses = module_uses.get(dtype.module.lower(), {}) if dtype.module else {}
-        for field in dtype.fields:
-            if field.base_type == "derived" and _missing_type(field.kind):
-                unresolved_fields.append({
-                    "type_owner": dtype.name,
-                    "module": dtype.module,
-                    "field": field.name,
-                    "type": field.kind,
-                    "import_modules": _visible_import_modules(field.kind or "", uses),
-                })
-
-    return unresolved_args, unresolved_fields
-
-
-def _collect_unresolved_kind_diagnostics(
-    signatures: list[FortranProcedureSignature],
-    types: list[FortranDerivedType],
-    modules: list[FortranModule],
-    module_params: dict[str, dict[str, str]],
-) -> tuple[list[dict], list[dict]]:
-    """Find symbolic intrinsic kind references not declared in parsed source/imports."""
-    module_uses = {mod.name.lower(): mod.uses for mod in modules}
-    unresolved_args: list[dict] = []
-    unresolved_fields: list[dict] = []
-
-    for sig in signatures:
-        local_symbols = {name.lower() for name, var in sig.variables.items() if var.value is not None}
-
-        def _append_unresolved_arg(arg: FortranArgument) -> None:
-            for symbol in sorted(_kind_expression_symbols(arg.kind)):
-                if _kind_symbol_is_known(
-                    symbol,
-                    owning_module=sig.module,
-                    uses=sig.uses,
-                    local_symbols=local_symbols,
-                    module_params=module_params,
-                ):
-                    continue
-                item = {
-                    "procedure": sig.name,
-                    "module": sig.module,
-                    "argument": arg.name,
-                    "kind": symbol,
-                    "import_modules": _visible_import_modules(symbol, sig.uses),
-                }
-                if (arg.kind or "").strip().lower() != symbol:
-                    item["kind_expression"] = arg.kind
-                unresolved_args.append(item)
-
-        for arg in sig.arguments:
-            if arg.base_type != "derived":
-                _append_unresolved_arg(arg)
-        if sig.result and sig.result.base_type != "derived":
-            _append_unresolved_arg(sig.result)
-
-    for dtype in types:
-        uses = module_uses.get(dtype.module.lower(), {}) if dtype.module else {}
-        local_symbols: set[str] = set()
-        for field in dtype.fields:
-            if field.base_type == "derived":
-                continue
-            for symbol in sorted(_kind_expression_symbols(field.kind)):
-                if _kind_symbol_is_known(
-                    symbol,
-                    owning_module=dtype.module,
-                    uses=uses,
-                    local_symbols=local_symbols,
-                    module_params=module_params,
-                ):
-                    continue
-                item = {
-                    "type_owner": dtype.name,
-                    "module": dtype.module,
-                    "field": field.name,
-                    "kind": symbol,
-                    "import_modules": _visible_import_modules(symbol, uses),
-                }
-                if (field.kind or "").strip().lower() != symbol:
-                    item["kind_expression"] = field.kind
-                unresolved_fields.append(item)
-
-    return unresolved_args, unresolved_fields
-
-
-def _build_wrap_blockers(
-    *,
-    signatures: list[FortranProcedureSignature],
-    unsupported: list[dict],
-    missing_decl_args: list[str],
-    unresolved_derived_args: list[dict],
-    unresolved_derived_fields: list[dict],
-    unresolved_kind_args: list[dict],
-    unresolved_kind_fields: list[dict],
-) -> list[dict]:
-    """Create explicit, user-facing reasons why a source is not wrap-ready."""
-    blockers: list[dict] = []
-    if not signatures:
-        blockers.append({
-            "code": "no_signatures",
-            "message": "No procedure signatures were found to wrap.",
-            "items": [],
-        })
-    if unsupported:
-        blockers.append({
-            "code": "unsupported_constructs",
-            "message": "Unsupported Fortran constructs were found.",
-            "items": unsupported,
-        })
-    if missing_decl_args:  # pragma: no cover - public parsing resolves or rejects declarations before readiness.
-        blockers.append({
-            "code": "unknown_argument_types",
-            "message": "Some procedure arguments have no resolved declaration/type.",
-            "items": missing_decl_args,
-        })
-    if unresolved_derived_args:
-        blockers.append({
-            "code": "unresolved_derived_type_arguments",
-            "message": "Some derived-type procedure arguments refer to types missing from the parsed source.",
-            "items": unresolved_derived_args,
-        })
-    if unresolved_derived_fields:
-        blockers.append({
-            "code": "unresolved_derived_type_fields",
-            "message": "Some derived-type fields refer to types missing from the parsed source.",
-            "items": unresolved_derived_fields,
-        })
-    if unresolved_kind_args:
-        blockers.append({
-            "code": "unresolved_kind_arguments",
-            "message": "Some procedure arguments use kind symbols missing from the parsed source/imports.",
-            "items": unresolved_kind_args,
-        })
-    if unresolved_kind_fields:
-        blockers.append({
-            "code": "unresolved_kind_fields",
-            "message": "Some derived-type fields use kind symbols missing from the parsed source/imports.",
-            "items": unresolved_kind_fields,
-        })
-    return blockers
-
-
-def _same_unit(item: dict, sig: FortranProcedureSignature) -> bool:
-    return item.get("procedure") == sig.name and item.get("module") == sig.module
-
-
-def _derived_type_unit_key(module: str | None, type_owner: str | None) -> tuple[str | None, str | None]:
-    return (module.lower() if module else None, type_owner.lower() if type_owner else None)
-
-
-def _build_unit_blockers(
-    *,
-    filename: str | None,
-    signatures: list[FortranProcedureSignature],
-    types: list[FortranDerivedType],
-    unsupported: list[dict],
-    missing_decl_args: list[str],
-    unresolved_derived_args: list[dict],
-    unresolved_derived_fields: list[dict],
-    unresolved_kind_args: list[dict],
-    unresolved_kind_fields: list[dict],
-) -> list[dict]:
-    """Build unit-scoped blocker records without per-unit readiness flags.
-
-    The file-level record owns diagnostics that do not belong to one procedure
-    or derived type. Procedure records own argument/result blockers. Derived
-    type records own field blockers. This lets large files say exactly which
-    unit prevents wrapping while keeping `wrappable` as a file-level result.
-
-    Example:
-        ``_build_unit_blockers(signatures=[scale], types=[], ...)`` returns a
-        procedure item for ``scale`` only when that procedure has blockers.
-    """
-    units: list[dict] = []
-    if not signatures:
-        units.append({
-            "unit_kind": "file",
-            "name": filename or "<source>",
-            "qualified_name": filename or "<source>",
-            "module": None,
-            "blockers": [{
-                "code": "no_signatures",
-                "message": "No procedure signatures were found to wrap.",
-                "items": [],
-            }],
-        })
-    if unsupported:
-        units.append({
-            "unit_kind": "file",
-            "name": filename or "<source>",
-            "qualified_name": filename or "<source>",
-            "module": None,
-            "blockers": [{
-                "code": "unsupported_constructs",
-                "message": "Unsupported Fortran constructs were found.",
-                "items": unsupported,
-            }],
-        })
-
-    for sig in signatures:
-        blockers: list[dict] = []
-        missing_items = [
-            item
-            for item in missing_decl_args
-            if item.startswith(f"{sig.name}:")
-        ]
-        derived_items = [item for item in unresolved_derived_args if _same_unit(item, sig)]
-        kind_items = [item for item in unresolved_kind_args if _same_unit(item, sig)]
-        if missing_items:
-            blockers.append({
-                "code": "unknown_argument_types",
-                "message": "Some procedure arguments have no resolved declaration/type.",
-                "items": missing_items,
-            })
-        if derived_items:
-            blockers.append({
-                "code": "unresolved_derived_type_arguments",
-                "message": "Some derived-type procedure arguments refer to types missing from the parsed source.",
-                "items": derived_items,
-            })
-        if kind_items:
-            blockers.append({
-                "code": "unresolved_kind_arguments",
-                "message": "Some procedure arguments use kind symbols missing from the parsed source/imports.",
-                "items": kind_items,
-            })
-        if not blockers:
-            continue
-        qualified_name = f"{sig.module}.{sig.name}" if sig.module else sig.name
-        units.append({
-            "unit_kind": "procedure",
-            "name": sig.name,
-            "qualified_name": qualified_name,
-            "module": sig.module,
-            "blockers": blockers,
-        })
-
-    derived_field_items: dict[tuple[str | None, str | None], list[dict]] = {}
-    for item in unresolved_derived_fields:
-        key = _derived_type_unit_key(item.get("module"), item.get("type_owner"))
-        derived_field_items.setdefault(key, []).append(item)
-
-    kind_field_items: dict[tuple[str | None, str | None], list[dict]] = {}
-    for item in unresolved_kind_fields:
-        key = _derived_type_unit_key(item.get("module"), item.get("type_owner"))
-        kind_field_items.setdefault(key, []).append(item)
-
-    seen_type_keys: set[tuple[str | None, str | None]] = set()
-    for dtype in types:
-        key = _derived_type_unit_key(dtype.module, dtype.name)
-        seen_type_keys.add(key)
-        blockers = []
-        if derived_field_items.get(key):
-            blockers.append({
-                "code": "unresolved_derived_type_fields",
-                "message": "Some derived-type fields refer to types missing from the parsed source.",
-                "items": derived_field_items[key],
-            })
-        if kind_field_items.get(key):
-            blockers.append({
-                "code": "unresolved_kind_fields",
-                "message": "Some derived-type fields use kind symbols missing from the parsed source/imports.",
-                "items": kind_field_items[key],
-            })
-        if not blockers:
-            continue
-        qualified_name = f"{dtype.module}.{dtype.name}" if dtype.module else dtype.name
-        units.append({
-            "unit_kind": "derived_type",
-            "name": dtype.name,
-            "qualified_name": qualified_name,
-            "module": dtype.module,
-            "blockers": blockers,
-        })
-
-    def sort_unit_key(entry: tuple[tuple[str | None, str | None], list[dict]]) -> tuple[str, str]:
-        module, type_owner = entry[0]
-        return (module or "", type_owner or "")
-
-    for key, items in sorted(derived_field_items.items(), key=sort_unit_key):
-        if key in seen_type_keys:
-            continue
-        module, type_owner = key
-        name = items[0].get("type_owner")
-        units.append({
-            "unit_kind": "derived_type",
-            "name": name,
-            "qualified_name": f"{module}.{name}" if module and name else name,
-            "module": items[0].get("module"),
-            "blockers": [{
-                "code": "unresolved_derived_type_fields",
-                "message": "Some derived-type fields refer to types missing from the parsed source.",
-                "items": items,
-            }],
-        })
-    for key, items in sorted(kind_field_items.items(), key=sort_unit_key):
-        if key in seen_type_keys or key in derived_field_items:
-            continue
-        module, type_owner = key
-        name = items[0].get("type_owner")
-        units.append({
-            "unit_kind": "derived_type",
-            "name": name,
-            "qualified_name": f"{module}.{name}" if module and name else name,
-            "module": items[0].get("module"),
-            "blockers": [{
-                "code": "unresolved_kind_fields",
-                "message": "Some derived-type fields use kind symbols missing from the parsed source/imports.",
-                "items": items,
-            }],
-        })
-    return units
-
-# -----------------------------------------------------------------------------
-# Procedure parsing helpers
-# -----------------------------------------------------------------------------
-
-def _validate_no_duplicate_arg_names(
-    args: list[FortranArgument],
-    proc_name: str,
-    filename: str | None,
-    line_number: int | None = None,
-    source_line: str | None = None,
-) -> None:
-    seen: set[str] = set()
-    for arg in args:
-        key = arg.name.lower()
-        if key in seen:
-            raise FortranParseError(
-                f"Duplicate argument name '{arg.name}' in procedure '{proc_name}'.",
-                filename=filename,
-                line_number=line_number,
-                source_line=source_line,
-            )
-        seen.add(key)
-
-def _attrs(prefix: str, tail: str) -> list[str]:
-    attrs = [t.lower() for t in prefix.split() if t.lower() in _ATTR_PREFIX_WORDS]
-    if _BINDC_RE.search(tail):
-        attrs.append("bind(c)")
-    return attrs
-
-
-def _looks_like_procedure_header(line: str) -> bool:
-    stripped = line.strip()
-    if not stripped:
-        return False
-    lowered = stripped.lower()
-    if lowered.startswith(("end ", "call ")):
-        return False
-    without_strings = re.sub(r"'[^']*'|\"[^\"]*\"", "", stripped)
-    return bool(re.search(r"(?:^|[\s,])(?:subroutine|function)\s+[A-Za-z_]\w*", without_strings, re.IGNORECASE))
-
-
-def _is_openmp_directive(line: str) -> bool:
-    return line.lstrip().lower().startswith("!$omp")
-
-
-def _is_openmp_declarative_directive(line: str) -> bool:
-    directive = line.lstrip()[5:].strip().lower() if _is_openmp_directive(line) else ""
-    return directive.startswith(
-        (
-            "threadprivate",
-            "declare simd",
-            "declare target",
-            "declare reduction",
-            "requires",
-            "declare mapper",
-        )
-    )
-
-
-def _looks_like_declaration_or_spec(line: str) -> bool:
-    stripped = line.strip()
-    if not stripped:
-        return False
-    lowered = stripped.lower()
-    if _is_openmp_directive(stripped):
-        return _is_openmp_declarative_directive(stripped)
-    first_match = re.match(r"([a-z_][a-z0-9_]*)", lowered)
-    first = first_match.group(1) if first_match else lowered.split(None, 1)[0].rstrip(",")
-    non_decl_starts = {
-        "do", "if", "where", "call", "select", "case", "allocate", "deallocate",
-        "print", "write", "read", "return", "stop", "cycle", "exit", "continue",
-        "end", "else", "elseif", "contains", "goto", "go", "format",
-    }
-    if first in non_decl_starts:
-        return False
-    if "::" in stripped or "," in stripped:
-        return True
-    return bool(re.match(r"^[A-Za-z_]\w+\s+[A-Za-z_]\w*", stripped))
-
-
-def _is_ignored_spec_statement(line: str) -> bool:
-    return bool(
-        _INCLUDE_RE.match(line)
-        or re.match(
-            r"^(implicit|save|common|data|equivalence|external|intrinsic|parameter|namelist|entry)\b",
-            line,
-            flags=re.IGNORECASE,
-        )
-    )
-
-
-def _parse_use_statement(line: str) -> tuple[str, list[FortranUseMapping]] | None:
-    match = _USE_RE.match(line)
-    if not match:
-        return None
-    rest = (match.group("rest") or "").strip()
-    if not rest:
-        return match.group("module"), []
-    payload = rest.lstrip(",").strip()
-    only_match = re.match(r"^only\s*:\s*(?P<symbols>.*)$", payload, re.IGNORECASE)
-    if only_match:
-        payload = only_match.group("symbols")
-    mappings: list[FortranUseMapping] = []
-    for item in split_csv(payload):
-        token = item.strip()
-        if not token:
-            continue
-        if "=>" in token:
-            target, source = [part.strip() for part in token.split("=>", 1)]
-        else:
-            source = token
-            target = None
-        mappings.append(FortranUseMapping(source=source, target=target))
-    return match.group("module"), mappings
-
-def _is_executable_statement_start(line: str) -> bool:
-    stripped = line.strip()
-    if not stripped:  # pragma: no cover - callers skip blank lines before executable checks.
-        return False
-    lowered = stripped.lower()
-    if _is_openmp_directive(stripped):
-        return not _is_openmp_declarative_directive(stripped)
-    first_match = re.match(r"([a-z_][a-z0-9_]*)", lowered)
-    first = first_match.group(1) if first_match else lowered.split(None, 1)[0]
-    if first.isdigit():
-        return False
-    executable_starts = {
-        "do", "if", "where", "call", "select", "case", "allocate", "deallocate",
-        "print", "write", "read", "return", "stop", "cycle", "exit", "continue",
-        "goto", "go", "open", "close", "rewind", "backspace", "inquire", "flush",
-        "wait", "nullify", "associate", "block", "forall", "error", "pause",
-    }
-    if first in executable_starts:
-        return True
-    if _LEGACY_PARAM_STMT_RE.match(stripped):
-        return False
-    if "=" in stripped and "::" not in stripped:
-        # Distinguish assignment/statements from declaration lines carrying
-        # type specs with named arguments, e.g.:
-        #   integer ( kind = 4 ) i
-        #   character ( len = * ) s
-        if _CHAR_STAR_RE.match(stripped) or _TYPE_RE.match(stripped) or _TYPE_FIELD_RE.match(stripped) or _CLASS_FIELD_RE.match(stripped):
-            return False
-        # Covers assignment and statement functions in execution part.
-        return True
-    return False
-
-
-def _var(entry: str):
-    e = entry.strip()
-    if not e:  # pragma: no cover - split_csv omits empty declaration entities for valid declarations.
-        return "", []
-    if "=" in e:
-        # Keep only the declared entity name/shape; drop initializer text.
-        e = e.split("=", 1)[0].strip()
-    if "(" in e and e.endswith(")"):
-        name = e[:e.find("(")].strip()
-        return name, split_csv(e[e.find("(")+1:-1])
-    return e, []
-
-
-def _split_dim_bounds(dim: str) -> tuple[str | None, str | None]:
-    part = dim.strip()
-    if not part:  # pragma: no cover - empty dimensions are invalid Fortran and not emitted by split_csv.
-        return None, None
-    if ':' not in part:
-        return "1", part
-    lo, hi = part.split(':', 1)
-    lo = lo.strip() or None
-    hi = hi.strip() or None
-    return lo, hi
-
-
-def _extract_bounds(shape: list[str]) -> tuple[list[str | None], list[str | None]]:
-    lbounds: list[str | None] = []
-    ubounds: list[str | None] = []
-    for dim in shape:
-        lo, hi = _split_dim_bounds(dim)
-        lbounds.append(lo)
-        ubounds.append(hi)
-    return lbounds, ubounds
-
-
-def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
-    arg.base_type = meta["base_type"]
-    arg.kind = meta["kind"] or ""
-    arg.intent = meta["intent"]
-    arg.optional = meta["optional"]
-    arg.pass_by_value = meta["value"]
-    arg.allocatable = meta["allocatable"]
-    arg.pointer = meta["pointer"]
-    arg.is_parameter = meta["parameter"]
-    if shape:
-        arg.shape = shape
-        arg.rank = len(shape)
-    else:
-        arg.shape = list(meta["shape"])
-        arg.rank = meta["rank"]
-    arg.lbound, arg.ubound = _extract_bounds(arg.shape)
-
-
-def _new_decl_meta(base_type: str, kind: str | None) -> dict:
-    return {
-        "base_type": base_type,
-        "kind": kind or "",
-        "rank": 0,
-        "shape": [],
-        "intent": "unknown",
-        "optional": False,
-        "value": False,
-        "allocatable": False,
-        "pointer": False,
-        "external": False,
-        "parameter": False,
-    }
-
-
-def _apply_decl_attrs(meta: dict, attrs: list[str], *, include_intent: bool = False) -> None:
-    for a in attrs:
-        la = a.lower()
-        if include_intent and la.startswith("intent") and "(" in la and ")" in la:
-            meta["intent"] = la.split("(", 1)[1].rsplit(")", 1)[0].strip()
-        elif la == "optional":
-            meta["optional"] = True
-        elif la == "value":
-            meta["value"] = True
-        elif la == "allocatable":
-            meta["allocatable"] = True
-        elif la == "pointer":
-            meta["pointer"] = True
-        elif la == "external":
-            meta["external"] = True
-        elif la == "parameter":
-            meta["parameter"] = True
-        elif la.startswith("dimension") and "(" in a and ")" in a:
-            shape = split_csv(a[a.find("(") + 1 : a.rfind(")")])
-            meta["shape"] = shape
-            meta["rank"] = len(shape)
-
-
-def _normalize_declared_name(name: str, meta: dict) -> str:
-    normalized_name = re.sub(r"^\*\s*[0-9]+\s*", "", name).strip()
-    if meta["base_type"] == "character" and "*" in normalized_name:
-        # Legacy CHARACTER declarations may carry entity-local length
-        # specifiers (e.g. NAME*(*) or SUBNAM*6). Strip the `*len`
-        # suffix so symbol lookup matches procedure arguments.
-        normalized_name = normalized_name.split("*", 1)[0].strip()
-    return normalized_name
-
-
-def _strip_legacy_star_kind_prefix(left: str) -> str:
-    return re.sub(
-        r"^(integer|real|complex|logical)\s*\*\s*[0-9]+\s*",
-        "",
-        left,
-        flags=re.IGNORECASE,
-    ).strip()
-
-
-def _legacy_declaration_entities(left: str, meta: dict) -> str | None:
-    """Return the entity-list tail from a declaration without `::`."""
-    char_star = _CHAR_STAR_RE.match(left)
-    if char_star:
-        return (char_star.group("rest") or "").strip().lstrip(", ")
-
-    star_kind = _find_legacy_star_kind(left)
-    if star_kind and meta["base_type"] != "character":
-        return _strip_legacy_star_kind_prefix(left).lstrip(", ")
-
-    intrinsic = _split_intrinsic_type_spec(left)
-    if intrinsic:
-        return intrinsic[2].strip().lstrip(", ")
-
-    derived = _TYPE_FIELD_RE.match(left) or _CLASS_FIELD_RE.match(left)
-    if derived:
-        return (derived.group("attrs") or "").strip().lstrip(", ")
-
-    procm = _PROC_DUMMY_RE.match(left)
-    if procm:
-        tail = (procm.group("attrs") or "").strip()
-        if tail and not tail.startswith(","):
-            return tail
-    return None  # pragma: no cover - invalid legacy declaration tails are ignored.
-
-
-def _parse_common_declaration_left(
-    left: str,
-    *,
-    filename: str | None,
-    line_number: int | None = None,
-    source_line: str | None = None,
-    parse_character_star: bool = True,
-) -> tuple[dict, list[str]] | None:
-    star_kind = _find_legacy_star_kind(left)
-    char_star = _CHAR_STAR_RE.match(left) if parse_character_star else None
-    if char_star:
-        kind = char_star.group("len").strip()
-        if kind.startswith("(") and kind.endswith(")"):
-            kind = kind[1:-1].strip()
-        trailing = (char_star.group("rest") or "").strip().lstrip(", ")
-        return _new_decl_meta("character", kind), split_csv(trailing)
-    if star_kind:
-        base, kind = star_kind
-        tail = _strip_legacy_star_kind_prefix(left)
-        attrs = split_csv(tail.lstrip(", ")) if tail.startswith(",") else []
-        return _new_decl_meta(base.lower(), kind), attrs
-
-    intrinsic = _split_intrinsic_type_spec(left)
-    derived = _TYPE_FIELD_RE.match(left)
-    class_derived = _CLASS_FIELD_RE.match(left)
-    if intrinsic:
-        base, type_spec, tail = intrinsic
-        if base == "double precision":
-            base = "real"
-        return _new_decl_meta(base, extract_kind_from_type_spec(base, type_spec)), split_csv(tail.strip().lstrip(", "))
-    if derived or class_derived:
-        decl = derived or class_derived
-        return _new_decl_meta("derived", decl.group("dtype")), split_csv((decl.group("attrs") or "").strip().lstrip(", "))
-    if re.match(r"^procedure\s*\(", left, re.IGNORECASE):
-        procm = _PROC_DUMMY_RE.match(left)
-        iface = procm.group("iface").lower() if procm else None
-        return _new_decl_meta("procedure", iface), split_csv((procm.group("attrs") if procm else "").strip().lstrip(", "))
-    return None
-
-
-def _parse_common_declaration_line(
-    line: str,
-    *,
-    filename: str | None,
-    line_number: int | None = None,
-    source_line: str | None = None,
-    include_intent: bool = False,
-    parse_character_star: bool = True,
-) -> tuple[dict, str] | None:
-    if "::" in line:
-        left, right = [x.strip() for x in line.split("::", 1)]
-        has_separator = True
-    else:
-        left = line.strip()
-        right = ""
-        has_separator = False
-
-    parsed_decl = _parse_common_declaration_left(
-        left,
-        filename=filename,
-        line_number=line_number,
-        source_line=source_line,
-        parse_character_star=parse_character_star,
-    )
-    if parsed_decl is None:
-        return None
-
-    meta, attrs = parsed_decl
-    if not has_separator:
-        legacy_right = _legacy_declaration_entities(left, meta)
-        if legacy_right is not None:
-            right = legacy_right
-            attrs = []
-
-    _apply_decl_attrs(meta, attrs, include_intent=include_intent)
-    return meta, right
-
-# -----------------------------------------------------------------------------
-# Validation and finalization
-# -----------------------------------------------------------------------------
-
-
-def _validate_all_args_declared(sig: FortranProcedureSignature, filename: str | None, *, explicit_result: bool) -> None:
-    for arg in sig.arguments:
-        if arg.base_type == "unknown":
-            raise FortranParseError(
-                f"Argument '{arg.name}' in procedure '{sig.name}' has no type declaration (implicit none is active).",
-                filename=filename,
-            )
-    if sig.kind == "function" and sig.result and sig.result.base_type == "unknown":
-        if explicit_result:
-            raise FortranParseError(
-                f"Unknown datatype for function result '{sig.result.name}' in procedure '{sig.name}'.",
-                filename=filename,
-            )
-        raise FortranParseError(
-            f"Function result '{sig.result.name}' in procedure '{sig.name}' has no type declaration (implicit none is active).",
-            filename=filename,
-        )
-
-
-def _validate_function_result(sig: FortranProcedureSignature, filename: str | None) -> None:
-    if sig.result is None:  # pragma: no cover - function signatures are constructed with result objects.
-        raise FortranParseError(
-            f"Function '{sig.name}' has no result variable.",
-            filename=filename,
-        )
-    result_name = sig.result.name.lower()
-    func_name = sig.name.lower()
-    for arg in sig.arguments:
-        if arg.name.lower() == result_name and result_name != func_name:
-            raise FortranParseError(
-                f"Function result variable '{sig.result.name}' in function '{sig.name}' shadows an argument name.",
-                filename=filename,
-            )
-
-
-def _validate_variable_declarations(
-    variables: list[FortranVariable],
-    *,
-    owner_kind: str,
-    owner_name: str | None,
-    filename: str | None,
-) -> None:
-    seen: dict[str, FortranArgument] = {}
-    display_name = owner_name or "<unnamed>"
-    for var in variables:
-        key = var.name.lower()
-        if not re.match(r"^[a-z_]\w*$", key, re.IGNORECASE):  # pragma: no cover - parser normalizes valid Fortran identifiers.
-            continue
-        prev = seen.get(key)
-        if prev is not None:
-            if (
-                prev.base_type != var.base_type
-                or prev.kind != var.kind
-                or prev.rank != var.rank
-                or tuple(prev.shape) != tuple(var.shape)
-            ):
-                raise FortranParseError(
-                    f"Duplicate variable '{var.name}' in {owner_kind} '{display_name}'.",
-                    filename=filename,
-                )
-            continue  # pragma: no cover - exact duplicate declarations are invalid Fortran and tolerated defensively.
-        seen[key] = var
-
-
-def _variable_scope_label(scope) -> tuple[str, str | None]:
-    if isinstance(scope, FortranSubmodule):
-        return "submodule", scope.name
-    if isinstance(scope, FortranProgram):
-        return "program", scope.name
-    if isinstance(scope, FortranBlockData):
-        return "block data", scope.name
-    return "module", scope.name
-
-
-def _validate_module_variables(module: FortranModule | FortranSubmodule, filename: str | None) -> None:
-    owner_kind, owner_name = _variable_scope_label(module)
-    _validate_variable_declarations(
-        module.variables,
-        owner_kind=owner_kind,
-        owner_name=owner_name,
-        filename=filename,
-    )
-
-
-def _apply_module_visibility(module: FortranModule, filename: str | None) -> None:
-    public_set = {s.lower() for s in module.public_symbols}
-    private_set = {s.lower() for s in module.private_symbols}
-    for var in module.variables:
-        name = var.name.lower()
-        if name in private_set:
-            var.visibility = "private"
-        elif name in public_set:
-            var.visibility = "public"
-        else:
-            var.visibility = module.default_visibility
-        if var.base_type == "unknown":  # pragma: no cover - unknown module declarations raise before finalization.
-            raise FortranParseError(
-                f"Unknown type for variable '{var.name}' in module '{module.name}'.",
-                filename=filename,
-            )
-
-
-def _validate_derived_type_fields(dtype: FortranDerivedType, filename: str | None) -> None:
-    seen: set[str] = set()
-    for f in dtype.fields:
-        if f.name.lower() in seen:
-            raise FortranParseError(
-                f"Duplicate field '{f.name}' in derived type '{dtype.name}'.",
-                filename=filename,
-            )
-        seen.add(f.name.lower())
-        if f.base_type == "unknown":  # pragma: no cover - unknown type fields raise before finalization.
-            raise FortranParseError(
-                f"Unknown type for field '{f.name}' in derived type '{dtype.name}'.",
-                filename=filename,
-            )
-
-
-def _finalize_proc(state: dict) -> FortranProcedureSignature:
-    sig = state["signature"]
-    symbols = state["symbols"]
-    local_params = state.get("local_params", {})
-    legacy_local_params = state.get("legacy_local_params", set())
-    implicit_typed_symbols = state.get("implicit_typed_symbols", {})
-    filename = state.get("filename")
-    implicit_none = state.get("implicit_none", False)
-    sig.variables = {}
-    sig.arguments = [symbols.get(a.name.lower(), a) for a in sig.arguments]
-    if sig.result:
-        sig.result = symbols.get(sig.result.name.lower(), sig.result)
-
-    _validate_no_duplicate_arg_names(
-        sig.arguments,
-        sig.name,
-        filename,
-        state.get("header_lineno"),
-        state.get("header_source_line"),
-    )
-
-    # Safety check: if an argument has been explicitly declared in this
-    # procedure, it must not remain unknown after declaration parsing.
-    # This catches declaration-application regressions (e.g. legacy
-    # star-kind list handling) while still allowing truly undeclared
-    # arguments to be reported via readiness diagnostics.
-    declared_symbols = state.get("typed_symbols", set())
-    for arg in sig.arguments:
-        if arg.name.lower() in declared_symbols and arg.base_type == "unknown":  # pragma: no cover - defensive parser invariant.
-            raise FortranParseError(
-                f"Failed to resolve declared argument '{arg.name}' in procedure '{sig.name}'.",
-                filename=filename,
-            )
-    local_resolver = _CompileTimeResolver(local_params)
-    for arg in sig.arguments:
-        if arg.kind:
-            arg.kind = _resolve_kind_expression(arg.kind, local_params, resolver=local_resolver)
-        if arg.shape:
-            arg.shape = [local_resolver.resolve(dim) for dim in arg.shape]
-        if arg.base_type == "unknown" and not implicit_none:
-            arg.base_type = _infer_implicit_base_type(arg.name)
-    if sig.result and sig.result.kind:
-        sig.result.kind = _resolve_kind_expression(sig.result.kind, local_params, resolver=local_resolver)
-    relevant_params = _collect_relevant_local_params(sig, local_params)
-    declared_local_types = state.get("declared_local_types", {})
-    # Defensive reconciliation: some legacy declaration forms can be parsed into
-    # `declared_local_types` before being matched back to argument symbols.
-    # If an argument is still unknown but we have an exact-name local type
-    # record, apply it before implicit-none validation to avoid false positives.
-    for arg in sig.arguments:
-        if arg.base_type != "unknown":
-            continue
-        inferred = declared_local_types.get(arg.name.lower())
-        if not inferred:
-            continue
-        arg.base_type = inferred.get("base_type", arg.base_type)
-        arg.kind = inferred.get("kind", arg.kind)
-
-    if implicit_none and not sig.in_interface:
-        _validate_all_args_declared(sig, filename, explicit_result=bool(state.get("explicit_result", False)))
-
-    for name, value in relevant_params.items():
-        if name.lower() in legacy_local_params:
-            # Legacy PARAMETER (...) constants are declaration artifacts in
-            # fixed-form sources; keep them available for compile-time
-            # resolution but do not expose them as parsed procedure variables.
-            continue
-        local_decl = declared_local_types.get(name.lower(), {})
-        var = FortranVariable(
-            name=name.lower(),
-            base_type=local_decl.get("base_type", implicit_typed_symbols.get(name.lower(), "unknown")),
-            kind=local_decl.get("kind"),
-            value=_normalize_parameter_value(value),
-            value_type="expression",
-            is_parameter=True,
-        )
-        var.symbolic_value = value
-        sig.variables[name.lower()] = var
-    if sig.kind == "function" and sig.result and sig.result.base_type == "unknown":
-        if not implicit_none:
-            sig.result.base_type = _infer_implicit_base_type(sig.result.name)
-        if sig.result.base_type == "unknown":  # pragma: no cover - implicit-none result validation handles public cases first.
-            raise FortranParseError(
-                f"Unknown datatype for function result '{sig.result.name}' in procedure '{sig.name}'.",
-                filename=filename,
-            )
-    if sig.kind == "function":
-        _validate_function_result(sig, filename)
-    for symbol in sorted(state.get("imports", set())):
-        attr = f"import({symbol})"
-        if attr not in sig.attributes:
-            sig.attributes.append(attr)
-    sig.uses = dict(state["uses"])
-    return replace(sig)
-
-# -----------------------------------------------------------------------------
-# Cross-file resolution helpers
-# -----------------------------------------------------------------------------
-
-
-# -----------------------------------------------------------------------------
 # Compile-time expression and symbol resolution
 # -----------------------------------------------------------------------------
 
@@ -1438,8 +200,6 @@ class _CompileTimeResolver:
 
         replaced = text
         max_passes = max(8, len(self.symbols) * 2)
-        identifier_re = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
-
         for _ in range(max_passes):
             changed = False
 
@@ -1454,379 +214,21 @@ class _CompileTimeResolver:
                     prefer_symbolic=False,
                     resolving=resolving | {key},
                 )
-                if prefer_symbolic and _safe_eval_int_expr(resolved_value) is None:
+                if prefer_symbolic and FortranParser._safe_eval_int_expr(resolved_value) is None:
                     return token
                 changed = True
                 return f"({resolved_value})"
 
-            updated = identifier_re.sub(replace_symbol, replaced)
+            updated = _REGEX["identifier"].sub(replace_symbol, replaced)
             if not changed or updated == replaced:
                 break
             replaced = updated
 
-        evaluated = _safe_eval_int_expr(replaced)
+        evaluated = FortranParser._safe_eval_int_expr(replaced)
         resolved = str(evaluated) if evaluated is not None else (replaced if replaced != text else text)
         self.cache[cache_key] = resolved
         return resolved
 
-
-def _resolve_module_parameter_values(module_params: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
-    resolved: dict[str, dict[str, str]] = {}
-    for module_name, params in module_params.items():
-        resolver = _CompileTimeResolver(params)
-        resolved[module_name.lower()] = {
-            name.lower(): resolver.resolve(value)
-            for name, value in params.items()
-        }
-    return resolved
-
-
-def _resolve_signature_kinds(
-    sig: FortranProcedureSignature,
-    module_params: dict[str, dict[str, str]],
-    *,
-    resolve_shapes: bool = True,
-) -> None:
-    module_params = _resolve_module_parameter_values(module_params)
-    symbol_to_value: dict[str, str] = {}
-    if sig.module:
-        symbol_to_value.update(module_params.get(sig.module.lower(), {}))
-    for mod, mappings in sig.uses.items():
-        params = module_params.get(mod.lower(), {})
-        if not params:
-            continue
-        if not mappings:
-            symbol_to_value.update(params)
-            continue
-        for mapping in mappings:
-            source = mapping.source.lower()
-            local = mapping.local_name.lower()
-            if source in params:
-                symbol_to_value[local] = params[source]
-    for name, var in sig.variables.items():
-        if var.value is not None:
-            symbol_to_value.setdefault(name.lower(), var.value)
-        elif var.symbolic_value is not None:
-            symbol_to_value.setdefault(name.lower(), var.symbolic_value)
-    variable_base_types = {name.lower(): var.base_type for name, var in sig.variables.items()}
-    variable_symbolic_values = {
-        name.lower(): var.symbolic_value or var.value
-        for name, var in sig.variables.items()
-    }
-    resolved_variables = _resolve_variables(symbol_to_value, variable_base_types, variable_symbolic_values)
-    for name in list(sig.variables):
-        if name.lower() in resolved_variables:
-            sig.variables[name] = resolved_variables[name.lower()]
-    resolver = _CompileTimeResolver(symbol_to_value)
-    for arg in sig.arguments:
-        if arg.kind:
-            arg.kind = _resolve_kind_expression(arg.kind, symbol_to_value, resolver=resolver)
-        if resolve_shapes and arg.shape:
-            arg.shape = [resolver.resolve(dim) for dim in arg.shape]
-    if sig.result and sig.result.kind:
-        sig.result.kind = _resolve_kind_expression(sig.result.kind, symbol_to_value, resolver=resolver)
-
-
-def _resolve_module_variable_kinds(
-    module: FortranModule | FortranSubmodule | FortranProgram | FortranBlockData,
-    module_params: dict[str, dict[str, str]],
-) -> None:
-    module_params = _resolve_module_parameter_values(module_params)
-    symbol_to_value: dict[str, str] = {}
-    if getattr(module, "name", None):
-        symbol_to_value.update(module_params.get(module.name.lower(), {}))
-    for mod, mappings in getattr(module, "uses", {}).items():
-        params = module_params.get(mod.lower(), {})
-        if not params:
-            continue
-        if not mappings:
-            symbol_to_value.update(params)
-            continue
-        for mapping in mappings:
-            source = mapping.source.lower()
-            local = mapping.local_name.lower()
-            if source in params:
-                symbol_to_value[local] = params[source]
-    for var in getattr(module, "variables", []):
-        source_value = var.value if var.value is not None else var.symbolic_value
-        if source_value is not None:
-            symbol_to_value.setdefault(var.name.lower(), source_value)
-    resolver = _CompileTimeResolver(symbol_to_value)
-    for var in getattr(module, "variables", []):
-        source_value = var.value if var.value is not None else var.symbolic_value
-        if source_value is not None:
-            resolved_value = resolver.resolve(source_value, prefer_symbolic=False)
-            var.value = _normalize_parameter_value(resolved_value)
-            symbol_to_value[var.name.lower()] = var.value if var.value is not None else source_value
-        if var.kind:
-            var.kind = _resolve_kind_expression(var.kind, symbol_to_value, resolver=resolver)
-        if var.shape:
-            var.shape = [resolver.resolve(dim) for dim in var.shape]
-            var.lbound, var.ubound = _extract_bounds(var.shape)
-
-
-def _resolve_kind_expression(
-    expr: str,
-    symbols: dict[str, str],
-    *,
-    resolver: _CompileTimeResolver | None = None,
-) -> str:
-    active_resolver = resolver or _CompileTimeResolver(symbols)
-    text = expr.strip()
-    if text.lower().startswith("len="):
-        return f"len={active_resolver.resolve(text.split('=', 1)[1].strip())}"
-    resolved = _resolve_symbol_reference(expr, symbols)
-    return active_resolver.resolve(resolved)
-
-
-def _resolve_symbol_reference(expr: str, symbols: dict[str, str]) -> str:
-    out = expr.strip()
-    seen: set[str] = set()
-    while out.lower() in symbols and out.lower() not in seen:
-        seen.add(out.lower())
-        out = symbols[out.lower()].strip()
-    return out
-
-
-def _collect_relevant_local_params(sig: FortranProcedureSignature, local_params: dict[str, str]) -> dict[str, str]:
-    if not local_params:
-        return {}
-    if not sig.arguments and sig.result is None:
-        return dict(local_params)
-    pending = set()
-    for arg in sig.arguments:
-        if arg.kind:
-            pending.update(_extract_symbol_names(arg.kind))
-        for dim in arg.shape:
-            pending.update(_extract_symbol_names(dim))
-    if sig.result and sig.result.kind:
-        pending.update(_extract_symbol_names(sig.result.kind))
-    relevant: dict[str, str] = {}
-    while pending:
-        sym = pending.pop().lower()
-        if sym in relevant or sym not in local_params:
-            continue
-        value = local_params[sym]
-        relevant[sym] = value
-        pending.update(_extract_symbol_names(value))
-    return relevant
-
-
-def _extract_symbol_names(expr: str) -> set[str]:
-    keywords = {"and", "or", "not"}
-    return {
-        token.lower()
-        for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", expr or "")
-        if not token.isdigit() and token.lower() not in keywords
-    }
-
-
-def _normalize_parameter_value(value: str) -> str | None:
-    parsed_int = _safe_eval_int_expr(value)
-    if parsed_int is not None:
-        return str(parsed_int)
-    text = value.strip()
-    if re.fullmatch(r"[+-]?\d+(?:\.\d*)?(?:[deDE][+-]?\d+)?", text):
-        try:
-            as_float = float(text.replace("d", "e").replace("D", "E"))
-            if as_float.is_integer():
-                return str(int(as_float))
-        except ValueError:
-            pass
-        return text
-    if _is_literal_parameter_value(text):
-        return text
-    return None
-
-
-def _is_literal_parameter_value(value: str) -> bool:
-    text = value.strip()
-    if not text:
-        return False
-    if re.fullmatch(r"[+-]?\d+(?:\.\d*)?(?:[deDE][+-]?\d+)?", text):
-        return True
-    if re.fullmatch(r"\.(?:true|false)\.", text, re.IGNORECASE):
-        return True
-    if re.fullmatch(r"(['\"]).*\1", text):
-        return True
-    if text.startswith("[") and text.endswith("]"):
-        return all(_is_literal_parameter_value(part) for part in split_csv(text[1:-1]))
-    if text.startswith("(/") and text.endswith("/)"):
-        return all(_is_literal_parameter_value(part) for part in split_csv(text[2:-2]))
-    if text.startswith("(") and text.endswith(")"):
-        parts = split_csv(text[1:-1])
-        return len(parts) == 2 and all(_is_literal_parameter_value(part) for part in parts)
-    return False
-
-def _resolve_variables(
-    symbols: dict[str, str],
-    base_types: dict[str, str] | None = None,
-    symbolic_values: dict[str, str | None] | None = None,
-) -> dict[str, FortranVariable]:
-    base_types = base_types or {}
-    symbolic_values = symbolic_values or {}
-    valued: dict[str, FortranVariable] = {}
-    resolver = _CompileTimeResolver(symbols)
-    for name, value in symbols.items():
-        var = FortranVariable(
-            name=name,
-            base_type=base_types.get(name.lower(), "unknown"),
-            value=_normalize_parameter_value(resolver.resolve(value, prefer_symbolic=False)),
-            value_type="expression",
-            is_parameter=True,
-        )
-        var.symbolic_value = symbolic_values.get(name.lower(), value)
-        valued[name] = var
-    return valued
-
-
-def _safe_eval_int_expr(expr: str) -> int | None:
-    """Safely evaluate a restricted integer-only Python expression.
-
-    Used to fold simple arithmetic after symbol substitution. Only numeric
-    constants and basic arithmetic operators are allowed. Any other syntax
-    returns None rather than raising.
-    """
-    normalized = expr.strip()
-    normalized = re.sub(r"(?<=\d)_[A-Za-z_][A-Za-z0-9_]*", "", normalized)
-    normalized = re.sub(r"\.and\.", " and ", normalized, flags=re.IGNORECASE)
-    normalized = re.sub(r"\.or\.", " or ", normalized, flags=re.IGNORECASE)
-    normalized = re.sub(r"\.not\.", " not ", normalized, flags=re.IGNORECASE)
-    normalized = re.sub(r"\.true\.", "True", normalized, flags=re.IGNORECASE)
-    normalized = re.sub(r"\.false\.", "False", normalized, flags=re.IGNORECASE)
-
-    try:
-        node = ast.parse(normalized, mode="eval")
-    except SyntaxError:
-        return None
-
-    allowed_binops = (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow)
-    allowed_unary = (ast.UAdd, ast.USub)
-
-    def _eval(n):
-        if isinstance(n, ast.Expression):
-            return _eval(n.body)
-        if isinstance(n, ast.Constant) and isinstance(n.value, (int, float, str, bool)):
-            return n.value
-        if isinstance(n, ast.BinOp) and isinstance(n.op, allowed_binops):
-            left = _eval(n.left)
-            right = _eval(n.right)
-            if left is None or right is None or not isinstance(left, (int, float)) or not isinstance(right, (int, float)):
-                return None
-            if isinstance(n.op, ast.Add):
-                return left + right
-            if isinstance(n.op, ast.Sub):
-                return left - right
-            if isinstance(n.op, ast.Mult):
-                return left * right
-            if isinstance(n.op, ast.Div):
-                return left / right
-            if isinstance(n.op, ast.FloorDiv):
-                return left // right
-            if isinstance(n.op, ast.Mod):
-                return left % right
-            if isinstance(n.op, ast.Pow):
-                return left ** right
-        if isinstance(n, ast.UnaryOp) and isinstance(n.op, allowed_unary):
-            v = _eval(n.operand)
-            if v is None or not isinstance(v, (int, float)):
-                return None
-            return +v if isinstance(n.op, ast.UAdd) else -v
-        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name):
-            name = n.func.id.lower()
-            args = [_eval(arg) for arg in n.args]
-            if any(arg is None for arg in args):
-                return None
-            try:
-                if name == "abs" and len(args) == 1 and isinstance(args[0], (int, float)):
-                    return abs(args[0])
-                if name == "max" and args and all(isinstance(arg, (int, float)) for arg in args):
-                    return max(args)
-                if name == "min" and args and all(isinstance(arg, (int, float)) for arg in args):
-                    return min(args)
-                if name == "mod" and len(args) == 2 and all(isinstance(arg, (int, float)) for arg in args):
-                    return args[0] % args[1]
-                if name == "int" and args and isinstance(args[0], (int, float)):
-                    return int(args[0])
-                if name == "len" and len(args) == 1 and isinstance(args[0], str):
-                    return len(args[0])
-                if name == "len_trim" and len(args) == 1 and isinstance(args[0], str):
-                    return len(args[0].rstrip())
-                if name == "iachar" and len(args) == 1 and isinstance(args[0], str) and args[0]:
-                    return ord(args[0][0])
-            except (OverflowError, ValueError, ZeroDivisionError):
-                return None
-        if isinstance(n, ast.BoolOp):
-            values = [_eval(value) for value in n.values]
-            if any(value is None for value in values):
-                return None
-            if isinstance(n.op, ast.And):
-                return all(bool(value) for value in values)
-            if isinstance(n.op, ast.Or):
-                return any(bool(value) for value in values)
-        if isinstance(n, ast.Compare):
-            left = _eval(n.left)
-            if left is None:
-                return None
-            for op, comparator in zip(n.ops, n.comparators):
-                right = _eval(comparator)
-                if right is None:
-                    return None
-                if isinstance(op, ast.Gt):
-                    ok = left > right
-                elif isinstance(op, ast.GtE):
-                    ok = left >= right
-                elif isinstance(op, ast.Lt):
-                    ok = left < right
-                elif isinstance(op, ast.LtE):
-                    ok = left <= right
-                elif isinstance(op, ast.Eq):
-                    ok = left == right
-                elif isinstance(op, ast.NotEq):
-                    ok = left != right
-                else:
-                    return None
-                if not ok:
-                    return False
-                left = right
-            return True
-        return None
-
-    val = _eval(node)
-    if val is None:
-        return None
-    if isinstance(val, bool):
-        return int(val)
-    if isinstance(val, float) and val.is_integer():
-        return int(val)
-    return val if isinstance(val, int) else None
-
-
-# -----------------------------------------------------------------------------
-# Project dependency ordering
-# -----------------------------------------------------------------------------
-
-def _topological_files(file_deps: dict[str, set[str]]) -> list[str]:
-    in_degree = {f: 0 for f in file_deps}
-    for f, deps in file_deps.items():
-        for d in deps:
-            if d in in_degree:
-                in_degree[f] += 1
-    ready = sorted([f for f, deg in in_degree.items() if deg == 0])
-    ordered: list[str] = []
-    deps_copy = {k: set(v) for k, v in file_deps.items()}
-    while ready:
-        cur = ready.pop(0)
-        ordered.append(cur)
-        for f, deps in deps_copy.items():
-            if cur in deps:
-                deps.remove(cur)
-                if len(deps) == 0 and f not in ordered and f not in ready:
-                    ready.append(f)
-                    ready.sort()
-    remaining = [f for f in file_deps if f not in ordered]
-    ordered.extend(sorted(remaining))
-    return ordered
 
 class FortranParser:
     """Stateful parser entrypoint and orchestration object.
@@ -1873,8 +275,9 @@ class FortranParser:
     `visit_project` composes multiple `FortranFile` objects into one
     `FortranProject` registry and validates duplicate symbols by scope.
     """
+
     # ------------------------------------------------------------------
-    # Internal visitor entrypoints (kept first for developer discovery)
+    # Public visitor entrypoints
     # ------------------------------------------------------------------
 
     def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):
@@ -1888,7 +291,7 @@ class FortranParser:
         encoding: str = "utf-8",
     ) -> FortranFile:
         """Parse one source string/path into a `FortranFile` aggregate model."""
-        if filename is None and _looks_like_existing_source_path(source_or_path):
+        if filename is None and self._looks_like_existing_source_path(source_or_path):
             path = Path(source_or_path)
             filename = str(path)
             code = path.read_text(encoding=encoding)
@@ -1954,21 +357,21 @@ class FortranParser:
             for var in getattr(unit, "variables", [])
         ):
             for unit in variable_units:
-                _resolve_module_variable_kinds(unit, module_params)
+                self._resolve_module_variable_kinds(unit, module_params)
         for proc in standalone_procedures:
-            _resolve_signature_kinds(proc, module_params, resolve_shapes=False)
+            self._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
         for module in modules:
             for proc in module.procedures:
-                _resolve_signature_kinds(proc, module_params, resolve_shapes=False)
+                self._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
         for submodule in submodules:
             for proc in submodule.procedures:
-                _resolve_signature_kinds(proc, module_params, resolve_shapes=False)
+                self._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
 
         file = FortranFile(
             filename=filename,
             source=code,
             encoding=encoding,
-            format=_source_form(filename),
+            format=self._source_form(filename),
             modules=modules,
             submodules=submodules,
             programs=programs,
@@ -2010,17 +413,17 @@ class FortranParser:
         for parsed_file in parsed_files:
             for proc in parsed_file.procedures:
                 if id(proc) not in seen_procedures:
-                    _resolve_signature_kinds(proc, module_params, resolve_shapes=False)
+                    self._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
                     seen_procedures.add(id(proc))
             for module in parsed_file.modules:
                 for proc in module.procedures:
                     if id(proc) not in seen_procedures:
-                        _resolve_signature_kinds(proc, module_params, resolve_shapes=False)
+                        self._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
                         seen_procedures.add(id(proc))
             for submodule in parsed_file.submodules:
                 for proc in submodule.procedures:
                     if id(proc) not in seen_procedures:
-                        _resolve_signature_kinds(proc, module_params, resolve_shapes=False)
+                        self._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
                         seen_procedures.add(id(proc))
 
         project = FortranProject(files=parsed_files)
@@ -2102,7 +505,8 @@ class FortranParser:
         wrap_target_signatures = [sig for sig in signatures if not sig.in_interface]
         unsupported: list[dict] = []
         for line, lineno, source_line in lines:
-            for p in _UNSUPPORTED_PATTERNS:
+            for pattern_key in _UNSUPPORTED_PATTERN_KEYS:
+                p = _REGEX[pattern_key]
                 if p.search(line):
                     unsupported.append({"line": lineno, "text": line.strip(), "pattern": p.pattern})
                     break
@@ -2114,18 +518,18 @@ class FortranParser:
                     missing_decl_args.append(f"{sig.name}:{a.name}")
 
         module_params = self._collect_module_parameters(code, filename)
-        unresolved_derived_args, unresolved_derived_fields = _collect_unresolved_derived_type_diagnostics(
+        unresolved_derived_args, unresolved_derived_fields = self._collect_unresolved_derived_type_diagnostics(
             wrap_target_signatures,
             types,
             modules,
         )
-        unresolved_kind_args, unresolved_kind_fields = _collect_unresolved_kind_diagnostics(
+        unresolved_kind_args, unresolved_kind_fields = self._collect_unresolved_kind_diagnostics(
             wrap_target_signatures,
             types,
             modules,
             module_params,
         )
-        blockers = _build_wrap_blockers(
+        blockers = self._build_wrap_blockers(
             signatures=signatures,
             unsupported=unsupported,
             missing_decl_args=missing_decl_args,
@@ -2134,7 +538,7 @@ class FortranParser:
             unresolved_kind_args=unresolved_kind_args,
             unresolved_kind_fields=unresolved_kind_fields,
         )
-        unit_blockers = _build_unit_blockers(
+        unit_blockers = self._build_unit_blockers(
             filename=filename,
             signatures=wrap_target_signatures,
             types=types,
@@ -2165,9 +569,1436 @@ class FortranParser:
             "wrappable": not blockers,
         }
 
+    def visit_fortran_modules(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+        *,
+        require_present: bool = True,
+    ) -> list[FortranModule]:
+        lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
+        module_units = [unit for unit in all_units if unit.kind == "module"]
+        modules = [self.visit_module_unit(unit, parent_scope=root_scope, filename=filename) for unit in module_units]
+        if require_present and not modules and any(unit.kind == "procedure" for unit in all_units):
+            raise FortranParseError(
+                "visit_fortran_modules() expected a module program unit, but only standalone procedures were found",
+                filename=filename,
+                code="PARSE_WRONG_ENTRYPOINT",
+            )
+        return modules
+
+    def visit_fortran_submodules(
+        self,
+        code: _SourceOrLines,
+        filename: str | None = None,
+    ) -> list[FortranSubmodule]:
+        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
+        return [
+            self.visit_submodule_unit(unit, parent_scope=root_scope, filename=filename)
+            for unit in all_units
+            if unit.kind == "submodule"
+        ]
+
+    def visit_fortran_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
+        lines, root_scope, _all_units = self._helper_prepare_source_units(code, filename)
+        interfaces: list[FortranInterface] = []
+
+        def collect(scope: _ParserScope, source_lines: _PreprocessedLines) -> None:
+            for child in self._helper_slice_child_units(source_lines, parent_scope=scope, filename=filename):
+                if child.kind == "interface":
+                    interfaces.append(self.visit_interface_unit(child, parent_scope=scope, filename=filename))
+                    continue
+                if child.kind in {"module", "submodule"}:
+                    child_scope = _ParserScope(
+                        kind=child.kind,
+                        name=child.name,
+                        parent=scope,
+                        module_owner=child.name,
+                    )
+                    collect(child_scope, child.lines[1:-1])
+                    continue
+                if child.kind in {"procedure", "program", "block_data"}:
+                    child_scope = _ParserScope(
+                        kind=child.kind,
+                        name=child.name,
+                        parent=scope,
+                        module_owner=scope.module_owner,
+                    )
+                    collect(child_scope, child.lines[1:-1])
+
+        collect(root_scope, lines)
+        return interfaces
+
+    def visit_fortran_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
+        lines, root_scope, _all_units = self._helper_prepare_source_units(code, filename)
+        types: list[FortranDerivedType] = []
+
+        def collect(scope: _ParserScope, source_lines: _PreprocessedLines) -> None:
+            for child in self._helper_slice_child_units(source_lines, parent_scope=scope, filename=filename):
+                if child.kind == "derived_type":
+                    types.append(self.visit_derived_type_unit(child, parent_scope=scope, filename=filename))
+                    continue
+                if child.kind in {"module", "submodule", "program"}:
+                    child_scope = _ParserScope(
+                        kind=child.kind,
+                        name=child.name,
+                        parent=scope,
+                        module_owner=child.name if child.kind in {"module", "submodule"} else scope.module_owner,
+                    )
+                    collect(child_scope, child.lines[1:-1])
+                    continue
+                if child.kind in {"procedure", "block_data"}:
+                    child_scope = _ParserScope(
+                        kind=child.kind,
+                        name=child.name,
+                        parent=scope,
+                        module_owner=scope.module_owner,
+                    )
+                    collect(child_scope, child.lines[1:-1])
+
+        collect(root_scope, lines)
+        self._resolve_derived_type_extensions(types)
+        return types
+
+    def visit_fortran_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
+        return self._expect_single_parse_result(
+            self.visit_fortran_modules(code, filename=filename, require_present=True),
+            parser_name="visit_fortran_module",
+            entity_name="module",
+            filename=filename,
+        )
+
+    def visit_fortran_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
+        return self._expect_single_parse_result(
+            self.visit_fortran_submodules(code, filename=filename),
+            parser_name="visit_fortran_submodule",
+            entity_name="submodule",
+            filename=filename,
+        )
+
+    def visit_fortran_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
+        return self._expect_single_parse_result(
+            self.visit_fortran_interfaces(code, filename=filename),
+            parser_name="visit_fortran_interface",
+            entity_name="interface",
+            filename=filename,
+        )
+
+    def visit_fortran_derived_type(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
+        return self._expect_single_parse_result(
+            self.visit_fortran_types(code, filename=filename),
+            parser_name="visit_fortran_derived_type",
+            entity_name="derived type",
+            filename=filename,
+        )
+
+    def visit_fortran_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
+        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
+        return [
+            self.visit_program_unit(unit, parent_scope=root_scope, filename=filename)
+            for unit in all_units
+            if unit.kind == "program"
+        ]
+
+    def visit_fortran_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
+        return self._expect_single_parse_result(
+            self.visit_fortran_programs(code, filename=filename),
+            parser_name="visit_fortran_program",
+            entity_name="program",
+            filename=filename,
+        )
+
+    def visit_fortran_block_data(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
+        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
+        return [
+            self.visit_block_data_source_unit(unit, parent_scope=root_scope, filename=filename)
+            for unit in all_units
+            if unit.kind == "block_data"
+        ]
+
+    def visit_fortran_block_data_unit(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
+        return self._expect_single_parse_result(
+            self.visit_fortran_block_data(code, filename=filename),
+            parser_name="visit_fortran_block_data_unit",
+            entity_name="block data unit",
+            filename=filename,
+        )
+
     # ------------------------------------------------------------------
-    # Scope symbol-table helpers
+    # Source unit visitors
     # ------------------------------------------------------------------
+
+    def visit_source_unit(
+        self,
+        unit: _SourceUnit,
+        *,
+        parent_scope: _ParserScope,
+        filename: str | None,
+    ):
+        """Visit one already-sliced source unit and dispatch by unit kind."""
+        if unit.kind == "module":
+            return self.visit_module_unit(unit, parent_scope=parent_scope, filename=filename)
+        if unit.kind == "submodule":
+            return self.visit_submodule_unit(unit, parent_scope=parent_scope, filename=filename)
+        if unit.kind == "program":
+            return self.visit_program_unit(unit, parent_scope=parent_scope, filename=filename)
+        if unit.kind == "block_data":
+            return self.visit_block_data_source_unit(unit, parent_scope=parent_scope, filename=filename)
+        if unit.kind == "derived_type":
+            return self.visit_derived_type_unit(unit, parent_scope=parent_scope, filename=filename)
+        if unit.kind == "interface":
+            return self.visit_interface_unit(unit, parent_scope=parent_scope, filename=filename)
+        if unit.kind == "procedure":
+            return self.visit_procedure_unit(unit, parent_scope=parent_scope, filename=filename)
+        return None
+
+    def visit_module_unit(
+        self,
+        unit: _SourceUnit,
+        *,
+        parent_scope: _ParserScope,
+        filename: str | None,
+    ) -> FortranModule:
+        """Visit a sliced `module ... end module` unit."""
+        header = unit.lines[0]
+        module = self._parse_module_header(header[0].strip(), filename, lineno=header[1], source_line=header[2])
+        if module is None:  # pragma: no cover - slicer only dispatches module units with module headers.
+            raise FortranParseError("Expected module unit.", filename=filename, line_number=header[1], source_line=header[2])
+        scope = self._helper_scope_for_model("module", module, parent=parent_scope)
+        parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("module"), filename=filename)
+        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
+
+        child_units = self._helper_slice_child_units(unit.lines[1:-1], parent_scope=scope, filename=filename)
+        self._helper_validate_sibling_units(child_units, parent_scope=scope, filename=filename)
+        signatures = [
+            self.visit_procedure_unit(child, parent_scope=scope, filename=filename)
+            for child in child_units
+            if child.kind == "procedure"
+        ]
+        types = [
+            self.visit_derived_type_unit(child, parent_scope=scope, filename=filename)
+            for child in child_units
+            if child.kind == "derived_type"
+        ]
+        interfaces = [
+            self.visit_interface_unit(child, parent_scope=scope, filename=filename)
+            for child in child_units
+            if child.kind == "interface"
+        ]
+        module.procedures.extend(sig for sig in signatures if sig.module and sig.module.lower() == module.name.lower() and not sig.in_interface)
+        module.derived_types.extend(dtype for dtype in types if dtype.module and dtype.module.lower() == module.name.lower())
+        module.interfaces.extend(iface for iface in interfaces if iface.module and iface.module.lower() == module.name.lower())
+        self._validate_module_variables(module, filename)
+        self._apply_module_visibility(module, filename)
+        return module
+
+    def visit_submodule_unit(
+        self,
+        unit: _SourceUnit,
+        *,
+        parent_scope: _ParserScope,
+        filename: str | None,
+    ) -> FortranSubmodule:
+        """Visit a sliced `submodule (...) name ... end submodule` unit."""
+        header = unit.lines[0]
+        submodule = self._parse_submodule_header(header[0].strip(), filename)
+        if submodule is None:  # pragma: no cover - slicer only dispatches submodule units with submodule headers.
+            raise FortranParseError("Expected submodule unit.", filename=filename, line_number=header[1], source_line=header[2])
+        scope = self._helper_scope_for_model("submodule", submodule, parent=parent_scope)
+        parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("submodule"), filename=filename)
+        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
+
+        child_units = self._helper_slice_child_units(unit.lines[1:-1], parent_scope=scope, filename=filename)
+        self._helper_validate_sibling_units(child_units, parent_scope=scope, filename=filename)
+        signatures = [
+            self.visit_procedure_unit(child, parent_scope=scope, filename=filename)
+            for child in child_units
+            if child.kind == "procedure"
+        ]
+        types = [
+            self.visit_derived_type_unit(child, parent_scope=scope, filename=filename)
+            for child in child_units
+            if child.kind == "derived_type"
+        ]
+        interfaces = [
+            self.visit_interface_unit(child, parent_scope=scope, filename=filename)
+            for child in child_units
+            if child.kind == "interface"
+        ]
+        submodule.procedures.extend(sig for sig in signatures if sig.module and sig.module.lower() == submodule.name.lower() and not sig.in_interface)
+        submodule.derived_types.extend(dtype for dtype in types if dtype.module and dtype.module.lower() == submodule.name.lower())
+        submodule.interfaces.extend(iface for iface in interfaces if iface.module and iface.module.lower() == submodule.name.lower())
+        self._validate_module_variables(submodule, filename)
+        return submodule
+
+    def visit_program_unit(
+        self,
+        unit: _SourceUnit,
+        *,
+        parent_scope: _ParserScope,
+        filename: str | None,
+    ) -> FortranProgram:
+        """Visit a sliced `program ... end program` unit."""
+        header = unit.lines[0]
+        program = self._parse_program_header(header[0].strip(), filename)
+        if program is None:  # pragma: no cover - slicer only dispatches program units with program headers.
+            raise FortranParseError("Expected program unit.", filename=filename, line_number=header[1], source_line=header[2])
+        scope = self._helper_scope_for_model("program", program, parent=parent_scope)
+        parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("program"), filename=filename)
+        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
+        self._validate_variable_declarations(
+            program.variables,
+            owner_kind="program",
+            owner_name=program.name,
+            filename=filename,
+        )
+        return program
+
+    def visit_block_data_source_unit(
+        self,
+        unit: _SourceUnit,
+        *,
+        parent_scope: _ParserScope,
+        filename: str | None,
+    ) -> FortranBlockData:
+        """Visit a sliced `block data ... end block data` unit."""
+        header = unit.lines[0]
+        block_data = self._parse_block_data_header(header[0].strip(), filename)
+        if block_data is None:  # pragma: no cover - slicer only dispatches block-data units with block-data headers.
+            raise FortranParseError("Expected block data unit.", filename=filename, line_number=header[1], source_line=header[2])
+        scope = self._helper_scope_for_model("block_data", block_data, parent=parent_scope)
+        parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("block_data"), filename=filename)
+        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
+        self._validate_variable_declarations(
+            block_data.variables,
+            owner_kind="block data",
+            owner_name=block_data.name,
+            filename=filename,
+        )
+        return block_data
+
+    def visit_derived_type_unit(
+        self,
+        unit: _SourceUnit,
+        *,
+        parent_scope: _ParserScope,
+        filename: str | None,
+    ) -> FortranDerivedType:
+        """Visit a sliced derived-type definition."""
+        header = unit.lines[0]
+        dtype = self._init_derived_type(header[0].strip(), current_module=parent_scope.module_owner)
+        if dtype is None:  # pragma: no cover - slicer only dispatches derived-type units with type headers.
+            raise FortranParseError("Expected derived-type unit.", filename=filename, line_number=header[1], source_line=header[2])
+        scope = self._helper_scope_for_model("derived_type", dtype, parent=parent_scope)
+        parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("derived_type"), filename=filename)
+        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
+        for line, lineno, source_line in parts.contains:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            self._parse_derived_type_contains_line(
+                stripped,
+                dtype,
+                filename=filename,
+                lineno=lineno,
+                source_line=source_line,
+            )
+        self._validate_derived_type_fields(dtype, filename)
+        return dtype
+
+    def visit_interface_unit(
+        self,
+        unit: _SourceUnit,
+        *,
+        parent_scope: _ParserScope,
+        filename: str | None,
+    ) -> FortranInterface:
+        """Visit a sliced interface block."""
+        header = unit.lines[0]
+        starts_interface, interface_name = self._parse_interface_header(header[0].strip())
+        if not starts_interface:  # pragma: no cover - slicer only dispatches interface units with interface headers.
+            raise FortranParseError("Expected interface unit.", filename=filename, line_number=header[1], source_line=header[2])
+        interface = FortranInterface(name=interface_name, module=parent_scope.module_owner)
+        scope = self._helper_scope_for_model("interface", interface, parent=parent_scope)
+        child_units = self._helper_slice_child_units(
+            unit.lines[1:-1],
+            parent_scope=scope,
+            allowed_kinds={"procedure"},
+            filename=filename,
+        )
+        for child in child_units:
+            sig = self.visit_procedure_unit(child, parent_scope=scope, filename=filename, in_interface=True)
+            self._add_interface_attribute(sig, interface.name)
+            interface.procedures.append(sig)
+        return interface
+
+    def visit_procedure_unit(
+        self,
+        unit: _SourceUnit,
+        *,
+        parent_scope: _ParserScope,
+        filename: str | None,
+        in_interface: bool = False,
+    ) -> FortranProcedureSignature:
+        """Visit a sliced procedure body or interface procedure declaration."""
+        header = unit.lines[0]
+        proc_state = self._parse_procedure_header(
+            header[0].strip(),
+            parent_scope.module_owner,
+            in_interface or parent_scope.kind == "interface",
+            filename=filename,
+            lineno=header[1],
+            source_line=header[2],
+        )
+        if proc_state is None:
+            self._raise_if_unparsed_procedure_header(
+                header[0].strip(),
+                in_interface=in_interface or parent_scope.kind == "interface",
+                filename=filename,
+                lineno=header[1],
+                source_line=header[2],
+            )
+            raise FortranParseError("Expected procedure unit.", filename=filename, line_number=header[1], source_line=header[2])
+        proc_state["filename"] = filename
+        proc_state["header_lineno"] = header[1]
+        proc_state["header_source_line"] = header[2]
+        proc_state["uses"].update(getattr(parent_scope.model, "uses", {}))
+        scope = self._helper_scope_for_model("procedure", proc_state["signature"], parent=parent_scope, state=proc_state)
+        parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("procedure"), filename=filename)
+        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
+        self._helper_apply_local_interface_declarations(proc_state, unit, scope, filename=filename)
+        return self._finalize_proc(proc_state)
+
+    # ------------------------------------------------------------------
+    # Source preparation and unit slicing
+    # ------------------------------------------------------------------
+
+    def _preprocessed_lines(self, source: _SourceOrLines, filename: str | None) -> _PreprocessedLines:
+        """Return preprocessed source lines, reusing file-level preprocessing when supplied."""
+        if isinstance(source, list):
+            return source
+        return preprocess_lines(source, filename)
+
+    def _helper_collect_namespace(
+        self,
+        root: str | Path,
+        extensions: tuple[str, ...] = (".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"),
+    ) -> dict:
+        """Collect parseable source files and dependency-order them.
+
+        Project parsing uses this helper when the caller passes a directory
+        instead of an explicit file list. It performs a light first pass to map
+        modules/submodules to files, topologically orders files by ``use``
+        dependencies, then parses them in that order.
+
+        Example:
+            ``visit_project("src")`` calls this helper, receives
+            ``{"files": ordered_files, "module_to_file": ...}``, and then
+            visits each ordered path through the normal file visitor.
+        """
+        root_path = Path(root)
+        files = sorted([p for p in root_path.rglob("*") if p.suffix.lower() in extensions])
+        sources = {str(p): p.read_text(encoding="utf-8") for p in files}
+        file_lines = {fname: preprocess_lines(code, fname) for fname, code in sources.items()}
+
+        module_to_file: dict[str, str] = {}
+        submodule_to_file: dict[str, str] = {}
+        file_to_uses: dict[str, set[str]] = {fname: set() for fname in sources}
+        modules_by_file: dict[str, list[str]] = {}
+        submodules_by_file: dict[str, list[str]] = {}
+        for fname, _code in sources.items():
+            lines = file_lines[fname]
+            modules = self.visit_fortran_modules(lines, filename=fname, require_present=False)
+            submodules = self.visit_fortran_submodules(lines, filename=fname)
+            modules_by_file[fname] = [m.name for m in modules]
+            submodules_by_file[fname] = [m.name for m in submodules]
+            for m in modules:
+                module_to_file[m.name.lower()] = fname
+                file_to_uses[fname].update(u.lower() for u in m.uses)
+            for sm in submodules:
+                submodule_to_file[sm.name.lower()] = fname
+                file_to_uses[fname].add(sm.parent.lower())
+                if sm.ancestor:
+                    file_to_uses[fname].add(sm.ancestor.lower())
+                file_to_uses[fname].update(u.lower() for u in sm.uses)
+
+        file_dependencies: dict[str, set[str]] = {}
+        for fname, used_modules in file_to_uses.items():
+            deps = set()
+            for mod in used_modules:
+                dep_file = module_to_file.get(mod) or submodule_to_file.get(mod)
+                if dep_file and dep_file != fname:
+                    deps.add(dep_file)
+            file_dependencies[fname] = deps
+
+        ordered_files = self._topological_files(file_dependencies)
+        types = []
+        modules = []
+        submodules = []
+        programs = []
+        block_data = []
+        for f in ordered_files:
+            parsed_file = self.visit_file(sources[f], filename=f)
+            types.extend(parsed_file.derived_types)
+            types.extend(dtype for module in parsed_file.modules for dtype in module.derived_types)
+            types.extend(dtype for submodule in parsed_file.submodules for dtype in submodule.derived_types)
+            modules.extend(parsed_file.modules)
+            submodules.extend(parsed_file.submodules)
+            programs.extend(parsed_file.programs)
+            block_data.extend(parsed_file.block_data_units)
+
+        return {
+            "files": ordered_files,
+            "file_dependencies": {k: sorted(v) for k, v in file_dependencies.items()},
+            "module_to_file": module_to_file,
+            "submodule_to_file": submodule_to_file,
+            "modules": modules,
+            "submodules": submodules,
+            "programs": programs,
+            "block_data": block_data,
+            "types": types,
+        }
+
+    def _helper_prepare_source_units(
+        self,
+        code: _SourceOrLines,
+        filename: str | None,
+        *,
+        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+    ) -> tuple[_PreprocessedLines, _ParserScope, list[_SourceUnit]]:
+        """Preprocess, validate, and slice file-level source units.
+
+        This is the first grammar-shaped step in `visit_file`: raw source is
+        normalized into line tuples, obvious malformed headers are rejected,
+        and only direct file-scope units are returned.
+
+        Example:
+            A file containing ``module constants`` and standalone
+            ``subroutine solve`` returns a root file scope plus two
+            `_SourceUnit` objects, one module unit and one procedure unit, both
+            carrying original source line numbers.
+        """
+        lines = self._preprocessed_lines(code, filename)
+        lines = self._helper_select_active_preprocessor_lines(lines, macro_defines)
+        self._helper_validate_unit_headers(lines, filename)
+        root_scope = _ParserScope(kind="file", name=None)
+        units = self._helper_slice_child_units(lines, parent_scope=root_scope, filename=filename)
+        self._helper_validate_sibling_units(units, parent_scope=root_scope, filename=filename)
+        return lines, root_scope, units
+
+    def _helper_select_active_preprocessor_lines(
+        self,
+        lines: _PreprocessedLines,
+        macro_defines: set[str] | dict[str, int | bool | str] | None,
+    ) -> _PreprocessedLines:
+        """Drop inactive preprocessor branches when macro selection is enabled.
+
+        This runs before source-unit slicing, so duplicate declarations hidden
+        behind inactive ``#ifdef`` branches do not produce false same-scope
+        conflicts.
+
+        Example:
+            With ``macro_defines={"USE_FAST"}``, only the active branch of
+            ``#ifdef USE_FAST`` is returned to `_helper_slice_child_units`;
+            with ``macro_defines=None``, all branches are preserved and their
+            condition sets are used for overlap-aware duplicate checks.
+        """
+        if macro_defines is None:
+            return lines
+        selected: _PreprocessedLines = []
+        macro_names = self._normalize_macro_defines(macro_defines)
+        pp_condition_stack: list[tuple[int, int]] = []
+        pp_active_stack: list[bool] = []
+        pp_group_counter = 0
+        for line, _lineno, _source_line in lines:
+            handled_pp, pp_group_counter = self._handle_procedure_preprocessor_line(
+                line.strip(),
+                macro_selection_enabled=True,
+                macro_names=macro_names,
+                pp_condition_stack=pp_condition_stack,
+                pp_active_stack=pp_active_stack,
+                pp_group_counter=pp_group_counter,
+            )
+            if handled_pp:
+                continue
+            if pp_active_stack and not all(pp_active_stack):
+                continue
+            selected.append((line, _lineno, _source_line))
+        return selected
+
+    def _handle_procedure_preprocessor_line(
+        self,
+        line: str,
+        *,
+        macro_selection_enabled: bool,
+        macro_names: set[str],
+        pp_condition_stack: list[tuple[int, int]],
+        pp_active_stack: list[bool],
+        pp_group_counter: int,
+    ) -> tuple[bool, int]:
+        """Update conditional-compilation state while collecting source units.
+
+        The slicer calls this while scanning sibling units so duplicate checks
+        can distinguish mutually exclusive preprocessor branches. When macro
+        selection is enabled, the same state also decides which lines remain
+        active before parsing.
+
+        Example:
+            Seeing ``#ifdef USE_MPI`` pushes a new condition branch; a later
+            ``#else`` advances that branch id. Two procedures with the same
+            name under those two branches are allowed because their condition
+            sets do not overlap.
+        """
+        if not line.startswith("#"):
+            return False, pp_group_counter
+
+        directive = line[1:].strip()
+        directive_low = directive.lower()
+        if directive_low.startswith("ifdef "):
+            pp_group_counter += 1
+            pp_condition_stack.append((pp_group_counter, 0))
+            expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
+            pp_active_stack.append((bool(expr) and expr.lower() in macro_names) if macro_selection_enabled else True)
+            return True, pp_group_counter
+        if directive_low.startswith("ifndef "):
+            pp_group_counter += 1
+            pp_condition_stack.append((pp_group_counter, 0))
+            expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
+            pp_active_stack.append(((not expr) or expr.lower() not in macro_names) if macro_selection_enabled else True)
+            return True, pp_group_counter
+        if directive_low.startswith("if "):
+            pp_group_counter += 1
+            pp_condition_stack.append((pp_group_counter, 0))
+            expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
+            pp_active_stack.append(self._eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
+            return True, pp_group_counter
+        if directive_low.startswith("else"):
+            if pp_condition_stack:
+                group_id, branch_id = pp_condition_stack.pop()
+                pp_condition_stack.append((group_id, branch_id + 1))
+            if pp_active_stack:
+                prev = pp_active_stack.pop()
+                pp_active_stack.append((not prev) if macro_selection_enabled else True)
+            return True, pp_group_counter
+        if directive_low.startswith("elif "):
+            if pp_condition_stack:
+                group_id, branch_id = pp_condition_stack.pop()
+                pp_condition_stack.append((group_id, branch_id + 1))
+            if pp_active_stack:
+                pp_active_stack.pop()
+                expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
+                pp_active_stack.append(self._eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
+            return True, pp_group_counter
+        if directive_low.startswith("endif"):
+            if pp_condition_stack:
+                pp_condition_stack.pop()
+            if pp_active_stack:
+                pp_active_stack.pop()
+            return True, pp_group_counter
+        return False, pp_group_counter
+
+    @staticmethod
+    def _procedure_preprocessor_condition_set(pp_condition_stack: list[tuple[int, int]]) -> frozenset[str]:
+        return frozenset(f"g{group_id}:b{branch_id}" for group_id, branch_id in pp_condition_stack)
+
+    def _helper_validate_unit_headers(self, lines: _PreprocessedLines, filename: str | None) -> None:
+        """Validate recognizable unit headers before slicing hides bad ones.
+
+        The slicer intentionally ignores lines that are not valid starts. This
+        helper preserves diagnostics for malformed headers whose first keyword
+        still shows the user's intent.
+
+        Example:
+            ``module :: bad_mod`` is not a valid module unit and therefore is
+            not returned by `_helper_slice_child_units`; this helper raises the
+            same explicit "malformed module header" error before parsing
+            continues.
+        """
+        for line, lineno, source_line in lines:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            self._parse_module_header(stripped, filename, lineno=lineno, source_line=source_line)
+            if stripped.lower().startswith("end "):
+                continue
+            if re.match(r"^module\s+procedure\s*::", stripped, flags=re.IGNORECASE):
+                continue
+            if not (
+                stripped.lower().startswith("module procedure")
+                or self._looks_like_procedure_header(stripped)
+            ):
+                continue
+            if self._parse_procedure_header(
+                stripped,
+                None,
+                False,
+                filename=filename,
+                lineno=lineno,
+                source_line=source_line,
+            ) is None:
+                self._raise_if_unparsed_procedure_header(
+                    stripped,
+                    in_interface=False,
+                    filename=filename,
+                    lineno=lineno,
+                    source_line=source_line,
+                )
+
+    def _helper_slice_child_units(
+        self,
+        lines: _PreprocessedLines,
+        *,
+        parent_scope: _ParserScope,
+        allowed_kinds: set[str] | None = None,
+        filename: str | None = None,
+    ) -> list[_SourceUnit]:
+        """Slice direct child units from a parent source substring.
+
+        The name says "child" because this helper is recursive by design:
+        `visit_file` calls it for file-level units, `visit_module_unit` calls it
+        for module children, and `visit_interface_unit` calls it for interface
+        procedure declarations. Each returned `_SourceUnit.lines` contains only
+        that child unit's substring.
+
+        Example:
+            In ``module m`` with an ``interface`` block and a contained
+            ``subroutine run``, this helper returns two direct children for the
+            module scope: one interface unit and one procedure unit. The
+            interface's subroutine is not returned at module level; it is
+            returned when the interface visitor asks for its own children.
+        """
+        units: list[_SourceUnit] = []
+        index = 0
+        pp_condition_stack: list[tuple[int, int]] = []
+        pp_active_stack: list[bool] = []
+        pp_group_counter = 0
+        while index < len(lines):
+            line, lineno, _ = lines[index]
+            stripped = line.strip()
+            handled_pp, pp_group_counter = self._handle_procedure_preprocessor_line(
+                stripped,
+                macro_selection_enabled=False,
+                macro_names=set(),
+                pp_condition_stack=pp_condition_stack,
+                pp_active_stack=pp_active_stack,
+                pp_group_counter=pp_group_counter,
+            )
+            if handled_pp:
+                index += 1
+                continue
+            if parent_scope.kind == "interface" and re.match(r"^module\s+procedure\b", line.strip(), re.IGNORECASE):
+                index += 1
+                continue
+            start = self._helper_classify_unit_start(line)
+            if start is None:
+                index += 1
+                continue
+            kind, name = start
+            if allowed_kinds is not None and kind not in allowed_kinds:
+                index += 1
+                continue
+
+            end_index = self._helper_find_unit_end(lines, index, kind, filename=filename)
+            if end_index is None:
+                if kind == "derived_type":
+                    # A `type :: name` statement without a matching `end type`
+                    # is treated as a declaration-like line for compatibility
+                    # with existing tolerant parser behavior.
+                    index += 1
+                    continue
+                if kind == "interface" and (lines[index][2] or "").strip().lower().startswith("end interface"):
+                    index += 1
+                    continue
+                if parent_scope.kind == "interface" and kind == "procedure":
+                    # Interface bodies often contain a procedure declaration
+                    # that is closed by `end interface`, not by an explicit
+                    # `end subroutine`/`end function`. In that grammar context
+                    # the whole remaining interface substring belongs to the
+                    # declaration.
+                    end_index = len(lines) - 1
+                else:
+                    label = self._helper_unit_label(kind)
+                    raise FortranParseError(
+                        f"Missing end {label} for {label} '{name or '<unnamed>'}'.",
+                        filename=filename,
+                        line_number=lineno,
+                        source_line=lines[index][2],
+                    )
+
+            end_line = lines[end_index][1]
+            units.append(
+                _SourceUnit(
+                    kind=kind,
+                    name=name,
+                    lines=lines[index : end_index + 1],
+                    start_line=lineno,
+                    end_line=end_line,
+                    condition_set=self._procedure_preprocessor_condition_set(pp_condition_stack),
+                )
+            )
+            index = end_index + 1
+        return units
+
+    def _helper_find_unit_end(
+        self,
+        lines: _PreprocessedLines,
+        start_index: int,
+        kind: str,
+        *,
+        filename: str | None = None,
+    ) -> int | None:
+        """Find the matching end line for a source unit.
+
+        The helper walks nested parseable units with a small stack. It is used
+        before building a `_SourceUnit`, so every visitor receives only its own
+        substring and original line numbers remain attached to each tuple.
+
+        Example:
+            Given a module containing an interface containing a subroutine, the
+            module end is returned, not the subroutine end, because the nested
+            interface/procedure pair is pushed and popped before the module is
+            closed.
+        """
+        start = self._helper_classify_unit_start(lines[start_index][0])
+        start_name = start[1] if start is not None else None
+        stack: list[tuple[str, str | None, int | None, str | None]] = [
+            (kind, start_name, lines[start_index][1], lines[start_index][2])
+        ]
+        idx = start_index + 1
+        while idx < len(lines):
+            line, lineno, source_line = lines[idx]
+            line = line.strip()
+            if not line:
+                idx += 1
+                continue
+            start = self._helper_classify_unit_start(line)
+            current_kind, current_name, current_line, current_source = stack[-1]
+            if current_kind == "interface" and re.match(r"^module\s+procedure\b", line, re.IGNORECASE):
+                idx += 1
+                continue
+            if start is not None and self._helper_has_unit_end_ahead(lines, idx, start[0]):
+                nested_kind, _ = start
+                stack.append((nested_kind, start[1], lineno, source_line))
+                idx += 1
+                continue
+
+            closes_current, end_name = self._helper_parse_unit_end(current_kind, line)
+            if closes_current:
+                if current_kind != "procedure" and end_name and current_name and end_name.lower() != current_name.lower():
+                    label = self._helper_unit_label(current_kind)
+                    raise FortranParseError(
+                        f"Mismatched end {label} name '{end_name}' for {label} '{current_name}'.",
+                        filename=filename,
+                        line_number=lineno,
+                        source_line=source_line,
+                    )
+                stack.pop()
+                if not stack:
+                    return idx
+                idx += 1
+                continue
+
+            for open_kind, open_name, open_line, open_source in reversed(stack):
+                closes_open, end_name = self._helper_parse_unit_end(open_kind, line)
+                if not closes_open:
+                    continue
+                label = self._helper_unit_label(current_kind)
+                expected = self._helper_unit_label(open_kind)
+                raise FortranParseError(
+                    f"Unexpected end {expected} while parsing {label} '{current_name or '<unnamed>'}'.",
+                    filename=filename,
+                    line_number=lineno,
+                    source_line=source_line,
+                )
+            idx += 1
+        return None
+
+    def _helper_has_unit_end_ahead(self, lines: _PreprocessedLines, start_index: int, kind: str) -> bool:
+        """Check whether a candidate unit opener has a later matching end.
+
+        The slicer uses this conservative look-ahead for ambiguous lines such
+        as ``type :: state``. With a later ``end type`` it is a derived-type
+        unit; without one the existing parser treats it as a declaration-like
+        line and continues.
+
+        Example:
+            ``type :: particle`` followed by ``end type particle`` returns
+            `True`, but a lone ``type :: local_state`` in a program
+            specification part returns `False`.
+        """
+        start = self._helper_classify_unit_start(lines[start_index][0])
+        start_name = start[1] if start is not None else None
+        for idx in range(start_index + 1, len(lines)):
+            matched, end_name = self._helper_parse_unit_end(kind, lines[idx][0])
+            if not matched:
+                continue
+            if kind != "procedure" and start_name and end_name and end_name.lower() != start_name.lower():
+                continue
+            if matched:
+                return True
+        return False
+
+    def _helper_split_unit_parts(
+        self,
+        unit: _SourceUnit,
+        grammar: _UnitGrammar,
+        *,
+        filename: str | None = None,
+    ) -> _UnitParts:
+        """Split one unit substring into grammar regions.
+
+        The helper follows the shape you described: every parseable unit has a
+        header and a specification part, some have an execution part, and some
+        have a contains part. Visitors can then be small and choose which
+        region matters for wrapping metadata.
+
+        Example:
+            For a procedure, declarations before the first executable
+            statement go into `specification`, assignments/calls go into
+            `execution`, and internal procedures after `contains` go into
+            `contains`. The procedure visitor parses only `specification`.
+        """
+        header = unit.lines[0] if unit.lines else None
+        footer = unit.lines[-1] if unit.lines and self._helper_unit_end_matches(unit.kind, unit.lines[-1][0]) else None
+        body = unit.lines[1:-1] if footer is not None else unit.lines[1:]
+        specification: _PreprocessedLines = []
+        execution: _PreprocessedLines = []
+        contains: _PreprocessedLines = []
+        region = "specification"
+        index = 0
+
+        while index < len(body):
+            line, _, _ = body[index]
+            stripped = line.strip()
+            if not stripped:
+                index += 1
+                continue
+            if self._is_contains_transition(stripped):
+                region = "contains"
+                index += 1
+                continue
+
+            start = self._helper_classify_unit_start(stripped)
+            if start is not None:
+                child_kind, _ = start
+                child_end = self._helper_find_unit_end(body, index, child_kind, filename=filename)
+                if child_end is not None:
+                    index = child_end + 1
+                    continue
+
+            is_spec_statement = (
+                self._parse_use_statement(stripped) is not None
+                or self._is_ignored_spec_statement(stripped)
+                or self._looks_like_declaration_or_spec(stripped)
+            )
+            if (
+                region == "specification"
+                and grammar.has_execution_part
+                and self._is_executable_statement_start(stripped)
+                and not is_spec_statement
+            ):
+                region = "execution"
+
+            if region == "specification":
+                specification.append(body[index])
+            elif region == "execution":
+                execution.append(body[index])
+            else:
+                contains.append(body[index])
+            index += 1
+
+        return _UnitParts(
+            header=header,
+            specification=specification,
+            execution=execution,
+            contains=contains,
+            footer=footer,
+        )
+
+    def _helper_validate_sibling_units(
+        self,
+        units: list[_SourceUnit],
+        *,
+        parent_scope: _ParserScope,
+        filename: str | None,
+    ) -> None:
+        """Validate duplicate source-unit names at one scope level.
+
+        The check is scope-local: two modules may each define ``type state``,
+        but two direct children with the same relevant kind/name in one scope
+        are rejected unless they are guarded by mutually exclusive preprocessor
+        branches.
+
+        Example:
+            Two ``module mesh`` units at file scope raise a duplicate-module
+            error. Two ``subroutine step`` children in one module raise a
+            duplicate-procedure error when their preprocessor conditions can
+            both be active.
+        """
+        seen: dict[tuple[str, str], list[_SourceUnit]] = {}
+        for unit in units:
+            if not unit.name:
+                continue
+            if unit.kind == "procedure":
+                key = ("procedure", unit.name.lower())
+            elif unit.kind in {"module", "submodule", "program", "block_data", "derived_type", "interface"}:
+                key = (unit.kind, unit.name.lower())
+            else:
+                continue
+            for existing in seen.get(key, []):
+                if not self._preprocessor_conditions_overlap(existing.condition_set, unit.condition_set):
+                    continue
+                if unit.kind == "procedure":
+                    scope_label = (
+                        f"module '{parent_scope.name}'"
+                        if parent_scope.kind in {"module", "submodule"}
+                        else "global scope"
+                    )
+                    raise FortranParseError(
+                        f"Duplicate procedure name '{unit.name}' in {scope_label}.",
+                        filename=filename,
+                        line_number=unit.start_line,
+                        source_line=unit.lines[0][2] if unit.lines else None,
+                    )
+                raise FortranParseError(
+                    f"Duplicate {unit.kind.replace('_', ' ')} name '{unit.name}' in {parent_scope.kind} scope.",
+                    filename=filename,
+                    line_number=unit.start_line,
+                    source_line=unit.lines[0][2] if unit.lines else None,
+                )
+            seen.setdefault(key, []).append(unit)
+
+    def _helper_unit_grammar(self, kind: str) -> _UnitGrammar:
+        """Return the grammar profile used by the small `visit_*_unit` methods.
+
+        The name is intentionally explicit: callers ask for the grammar of a
+        source unit before splitting its body into the same high-level regions
+        that appear in the Fortran standard: header, specification part,
+        execution part, and contains part.
+
+        Example:
+            A procedure has a specification part and an execution part, but
+            wrapper metadata only needs the specification part::
+
+                grammar = self._helper_unit_grammar("procedure")
+                assert grammar.has_execution_part is True
+                assert grammar.ignores_contains_children is True
+        """
+        grammars = {
+            "module": _UnitGrammar(
+                kind="module",
+                has_contains_part=True,
+                declaration_role="module_variable",
+            ),
+            "submodule": _UnitGrammar(
+                kind="submodule",
+                has_contains_part=True,
+                declaration_role="module_variable",
+            ),
+            "program": _UnitGrammar(
+                kind="program",
+                has_execution_part=True,
+                has_contains_part=True,
+                ignores_contains_children=True,
+                declaration_role="module_variable",
+            ),
+            "procedure": _UnitGrammar(
+                kind="procedure",
+                has_execution_part=True,
+                has_contains_part=True,
+                ignores_contains_children=True,
+                declaration_role="procedure_symbol",
+            ),
+            "derived_type": _UnitGrammar(
+                kind="derived_type",
+                has_contains_part=True,
+                declaration_role="type_field",
+            ),
+            "interface": _UnitGrammar(kind="interface", has_contains_part=True),
+            "block_data": _UnitGrammar(kind="block_data", declaration_role="module_variable"),
+            "file": _UnitGrammar(kind="file", has_contains_part=True),
+        }
+        return grammars.get(kind, _UnitGrammar(kind=kind))
+
+    def _helper_classify_unit_start(self, line: str) -> tuple[str, str | None] | None:
+        """Classify a line that opens a parseable Fortran source unit.
+
+        The helper name uses "classify" because it does not parse the unit; it
+        only recognizes the header enough for the slicer and visitors to agree
+        on what visitor should be called next.
+
+        Example:
+            ``module mesh`` becomes ``("module", "mesh")`` while
+            ``module procedure reset`` becomes ``("procedure", "reset")``.
+            That lets a submodule `contains` region reuse the normal procedure
+            visitor instead of having a special submodule-only loop.
+        """
+        stripped = line.strip()
+        if not stripped:
+            return None
+        lower = stripped.lower()
+        if lower.startswith("end "):
+            return None
+        submodule = _REGEX["submodule"].match(stripped)
+        if submodule:
+            return "submodule", submodule.group("name")
+        module = _REGEX["module"].match(stripped)
+        if module:
+            return "module", module.group("name")
+        program = _REGEX["program"].match(stripped)
+        if program:
+            return "program", program.group("name")
+        block_data = _REGEX["block_data"].match(stripped)
+        if block_data:
+            return "block_data", block_data.group("name")
+        if lower == "enum" or lower.startswith("enum,"):
+            return "enum", None
+        starts_interface, interface_name = self._parse_interface_header(stripped)
+        if starts_interface:
+            return "interface", interface_name
+        module_proc = _REGEX["module_procedure_impl"].match(stripped)
+        if module_proc:
+            return "procedure", module_proc.group("name")
+        if FortranParser._looks_like_procedure_header(stripped):
+            proc_match = _REGEX["procedure"].match(stripped) or _REGEX["function"].match(stripped)
+            if proc_match:
+                return "procedure", proc_match.group("name")
+        parsed_type = self._parse_derived_type_start(stripped)
+        if parsed_type:
+            return "derived_type", parsed_type[0]
+        return None
+
+    @staticmethod
+    def _helper_parse_unit_end(kind: str, line: str) -> tuple[bool, str | None]:
+        """Return whether `line` closes `kind`, plus the optional end name.
+
+        This is the shared closing-token table for the slicer and the unit
+        splitter. Keeping it centralized prevents one visitor from accepting a
+        different end spelling than another visitor.
+
+        Example:
+            ``_helper_parse_unit_end("module", "end module mesh")`` returns
+            ``(True, "mesh")``. ``_helper_parse_unit_end("procedure",
+            "end function norm")`` returns ``(True, "norm")``.
+        """
+        stripped = line.strip()
+        lower = stripped.lower()
+        if kind == "module":
+            m = re.match(r"^end\s+module(?:\s+(?P<name>\w+))?\s*$", stripped, re.IGNORECASE)
+            return (m is not None, m.group("name") if m else None)
+        if kind == "submodule":
+            m = re.match(r"^end\s+submodule(?:\s+(?P<name>\w+))?\s*$", stripped, re.IGNORECASE)
+            return (m is not None, m.group("name") if m else None)
+        if kind == "program":
+            m = re.match(r"^end\s+program(?:\s+(?P<name>\w+))?\s*$", stripped, re.IGNORECASE)
+            return (m is not None, m.group("name") if m else None)
+        if kind == "block_data":
+            if lower == "end":
+                return True, None
+            m = re.match(r"^end\s+block\s+data(?:\s+(?P<name>\w+))?\s*$", stripped, re.IGNORECASE)
+            return (m is not None, m.group("name") if m else None)
+        if kind == "interface":
+            m = re.match(r"^end\s+interface(?:\s+(?P<name>.+?))?\s*$", stripped, re.IGNORECASE)
+            return (m is not None, m.group("name") if m else None)
+        if kind == "derived_type":
+            m = re.match(r"^end\s+type(?:\s+(?P<name>\w+))?\s*$", stripped, re.IGNORECASE)
+            return (m is not None, m.group("name") if m else None)
+        if kind == "enum":
+            m = re.match(r"^end\s+enum\s*$", stripped, re.IGNORECASE)
+            return (m is not None, None)
+        if kind == "procedure":
+            if lower == "end":
+                return True, None
+            m = re.match(r"^end\s+(?:subroutine|function|procedure)(?:\s+(?P<name>\w+))?\s*$", stripped, re.IGNORECASE)
+            return (m is not None, m.group("name") if m else None)
+        return False, None
+
+    @staticmethod
+    def _helper_unit_label(kind: str) -> str:
+        """Return a human-readable unit kind for diagnostics.
+
+        The parser stores normalized kind names such as ``"block_data"`` in
+        `_SourceUnit`; diagnostics should use Fortran-facing text instead.
+
+        Example:
+            ``_helper_unit_label("derived_type")`` returns
+            ``"derived type"`` for an error like "Missing end derived type".
+        """
+        return kind.replace("_", " ")
+
+    @staticmethod
+    def _helper_unit_end_matches(kind: str, line: str) -> bool:
+        """Return whether `line` closes a unit of `kind`.
+
+        The method isolates all end-token spelling differences so the slicer,
+        the body splitter, and unit visitors share one closing-rule table.
+
+        Example:
+            The splitter calls ``_helper_unit_end_matches("program", line)``
+            on the last line of a sliced unit to decide whether that line is
+            the footer or still belongs to the unit body.
+        """
+        matched, _ = FortranParser._helper_parse_unit_end(kind, line)
+        return matched
+
+    @staticmethod
+    def _is_contains_transition(line: str) -> bool:
+        return line.lower() == "contains"
+
+    # ------------------------------------------------------------------
+    # Header parsers and source-unit construction
+    # ------------------------------------------------------------------
+
+    def _parse_module_header(
+        self,
+        line: str,
+        filename: str | None,
+        lineno: int | None = None,
+        source_line: str | None = None,
+    ) -> FortranModule | None:
+        module_match = _REGEX["module"].match(line)
+        if not module_match:
+            if line.lower().startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", line, re.IGNORECASE):
+                raise FortranParseError(
+                    f"Unsupported or malformed module header: {line.strip()}",
+                    filename=filename,
+                    line_number=lineno,
+                    source_line=source_line,
+                )
+            return None
+        return FortranModule(name=module_match.group("name"), filename=filename)
+
+    def _parse_submodule_header(self, line: str, filename: str | None) -> FortranSubmodule | None:
+        match = _REGEX["submodule"].match(line)
+        if not match:
+            return None
+        parent, ancestor = self._split_submodule_parent(match.group("parent"))
+        return FortranSubmodule(
+            name=match.group("name"),
+            parent=parent,
+            ancestor=ancestor,
+            filename=filename,
+        )
+
+    def _parse_program_header(self, line: str, filename: str | None) -> FortranProgram | None:
+        match = _REGEX["program"].match(line)
+        if not match:
+            return None
+        return FortranProgram(name=match.group("name"), filename=filename)
+
+    def _parse_block_data_header(self, line: str, filename: str | None) -> FortranBlockData | None:
+        match = _REGEX["block_data"].match(line)
+        if not match:
+            return None
+        return FortranBlockData(name=match.group("name"), filename=filename)
+
+    def _parse_derived_type_start(self, line: str) -> tuple[str, list[str]] | None:
+        stripped = line.strip()
+        tm = _REGEX["derived_type"].match(stripped)
+        if tm:
+            attr_txt = (tm.group("attrs") or "").strip().lstrip(",").strip()
+            attrs = [a.strip() for a in split_csv(attr_txt)] if attr_txt else []
+            return tm.group("name"), attrs
+        legacy = re.match(r"^type\s+(?P<name>\w+)\s*$", stripped, re.IGNORECASE)
+        if legacy:
+            return legacy.group("name"), []
+        return None
+
+    def _init_derived_type(
+        self,
+        line: str,
+        *,
+        current_module: str | None,
+    ) -> FortranDerivedType | None:
+        parsed_type = self._parse_derived_type_start(line)
+        if not parsed_type:
+            return None
+
+        type_name, attrs = parsed_type
+        extends = None
+        normalized_attrs: list[str] = []
+        for attr in attrs:
+            lowered = attr.lower()
+            if lowered.startswith("extends(") and lowered.endswith(")"):
+                extends = attr[attr.find("(") + 1 : -1].strip()
+            else:
+                normalized_attrs.append(lowered)
+
+        return FortranDerivedType(
+            name=type_name,
+            module=current_module,
+            extends=extends,
+            attributes=normalized_attrs,
+        )
+
+    @staticmethod
+    def _parse_interface_header(line: str) -> tuple[bool, str | None]:
+        lower = line.lower()
+        if not (lower.startswith("interface") or lower.startswith("abstract interface")):
+            return False, None
+        parts = line.split(maxsplit=1)
+        name = parts[1].strip() if len(parts) > 1 and not lower.startswith("abstract interface") else None
+        return True, name
+
+    def _parse_procedure_header(
+        self,
+        line: str,
+        module: str | None,
+        in_interface: bool,
+        filename: str | None = None,
+        lineno: int | None = None,
+        source_line: str | None = None,
+    ):
+        module_proc = _REGEX["module_procedure_impl"].match(line)
+        if module_proc and not in_interface:
+            name = module_proc.group("name")
+            sig = FortranProcedureSignature(
+                name=name,
+                kind="module procedure",
+                module=module,
+                attributes=["module procedure"],
+                in_interface=in_interface,
+            )
+            return self._new_procedure_scope_state(sig, symbols={})
+
+        m = _REGEX["procedure"].match(line)
+        if m:
+            args = [FortranArgument(name=a, procedure=m.group("name")) for a in split_csv(m.group("args") or "")]
+            sig = FortranProcedureSignature(
+                name=m.group("name"),
+                kind="subroutine",
+                module=module,
+                arguments=args,
+                attributes=self._attrs(m.group("prefix"), m.group("tail")),
+                in_interface=in_interface,
+            )
+            return self._new_procedure_scope_state(
+                sig,
+                symbols={a.name.lower(): a for a in args},
+            )
+        m = _REGEX["function"].match(line)
+        if not m:
+            return None
+        prefix = (m.group("prefix") or "").strip()
+        args = [FortranArgument(name=a, procedure=m.group("name")) for a in split_csv(m.group("args") or "")]
+        result_match = _REGEX["result"].search(m.group("tail"))
+        explicit_result = result_match is not None
+        result_name = result_match.group("name") if result_match else m.group("name")
+        result = FortranArgument(name=result_name, procedure=m.group("name"))
+
+        type_tokens = [t for t in prefix.split() if t.lower() not in _ATTR_PREFIX_WORDS]
+        type_prefix = " ".join(type_tokens)
+        parsed_prefix = self._parse_type_prefix(type_prefix)
+        if type_prefix and parsed_prefix is None:
+            raise FortranParseError(
+                f"Unsupported function result type prefix '{type_prefix}' in procedure header.",
+                filename=filename,
+                line_number=lineno,
+                source_line=source_line,
+            )
+        if parsed_prefix:
+            result.base_type, result.kind = parsed_prefix
+
+        sig = FortranProcedureSignature(
+            name=m.group("name"),
+            kind="function",
+            module=module,
+            arguments=args,
+            result=result,
+            attributes=self._attrs(m.group("prefix"), m.group("tail")),
+            in_interface=in_interface,
+        )
+        return self._new_procedure_scope_state(
+            sig,
+            symbols={**{a.name.lower(): a for a in args}, result_name.lower(): result},
+            typed_symbols={result_name.lower()} if parsed_prefix else set(),
+            explicit_result=explicit_result,
+        )
+
+    @staticmethod
+    def _raise_if_unparsed_procedure_header(
+        line: str,
+        *,
+        in_interface: bool,
+        filename: str | None,
+        lineno: int | None,
+        source_line: str | None,
+    ) -> None:
+        stripped = line.strip()
+        if not stripped:
+            return
+        lowered = stripped.lower()
+        if lowered.startswith("module procedure"):
+            if in_interface or _REGEX["module_procedure_impl"].match(stripped) or "(" not in stripped:
+                return
+            raise FortranParseError(
+                f"Unsupported or malformed module procedure header: {stripped}",
+                filename=filename,
+                line_number=lineno,
+                source_line=source_line,
+            )
+        if FortranParser._looks_like_procedure_header(stripped):
+            raise FortranParseError(
+                f"Unsupported or malformed procedure header: {stripped}",
+                filename=filename,
+                line_number=lineno,
+                source_line=source_line,
+            )
+
+    @staticmethod
+    def _add_interface_attribute(sig: FortranProcedureSignature, interface_name: str | None) -> None:
+        if not interface_name:
+            return
+        iface_attr = f"interface({interface_name})"
+        if iface_attr not in sig.attributes:
+            sig.attributes.append(iface_attr)
+
+    @staticmethod
+    def _resolve_derived_type_extensions(types: list[FortranDerivedType]) -> None:
+        by_name = {t.name.lower(): t for t in types}
+        for dtype in types:
+            if isinstance(dtype.extends, str):
+                parent = by_name.get(dtype.extends.lower())
+                if parent is not None:
+                    dtype.extends = parent
+
+    # ------------------------------------------------------------------
+    # Scope and procedure state helpers
+    # ------------------------------------------------------------------
+
+    def _helper_scope_for_model(
+        self,
+        kind: str,
+        model: object,
+        *,
+        parent: _ParserScope | None = None,
+        module_owner: str | None = None,
+        state: dict | None = None,
+    ) -> _ParserScope:
+        """Build the scope object passed through shared helpers.
+
+        This helper keeps scope construction consistent: every unit visitor
+        passes its own model, parent scope, current module owner, and optional
+        procedure state through the same small object.
+
+        Example:
+            A module procedure receives a procedure scope whose parent is the
+            module scope and whose `module_owner` is the module name. The same
+            declaration helper can then update procedure arguments while still
+            knowing the owner for diagnostics and imports.
+        """
+        name = getattr(model, "name", None)
+        inherited_owner = module_owner if module_owner is not None else (parent.module_owner if parent else None)
+        if kind in {"module", "submodule"}:
+            inherited_owner = name
+        return _ParserScope(
+            kind=kind,
+            name=name,
+            model=model,
+            parent=parent,
+            module_owner=inherited_owner,
+            state=state,
+        )
 
     @staticmethod
     def _scope_key(name: str) -> str:
@@ -2279,7 +2110,7 @@ class FortranParser:
             )
         proc_state["local_params"][key] = value
         if register_implicit_if_missing and not self._proc_scope_symbol_is_declared(proc_state, key):
-            proc_state["implicit_typed_symbols"][key] = _infer_implicit_base_type(name)
+            proc_state["implicit_typed_symbols"][key] = self._infer_implicit_base_type(name)
         if legacy:
             proc_state["legacy_local_params"].add(key)
 
@@ -2296,672 +2127,58 @@ class FortranParser:
             raise FortranParseError(f"Duplicate symbol '{key}' in {label}.", filename=filename)
         scope[key] = value
 
-    @staticmethod
-    def _is_contains_transition(line: str) -> bool:
-        return line.lower() == "contains"
+    # ------------------------------------------------------------------
+    # Specification-part visitors
+    # ------------------------------------------------------------------
 
-    def _helper_unit_grammar(self, kind: str) -> _UnitGrammar:
-        """Return the grammar profile used by the small `visit_*_unit` methods.
-
-        The name is intentionally explicit: callers ask for the grammar of a
-        source unit before splitting its body into the same high-level regions
-        that appear in the Fortran standard: header, specification part,
-        execution part, and contains part.
-
-        Example:
-            A procedure has a specification part and an execution part, but
-            wrapper metadata only needs the specification part::
-
-                grammar = self._helper_unit_grammar("procedure")
-                assert grammar.has_execution_part is True
-                assert grammar.ignores_contains_children is True
-        """
-        grammars = {
-            "module": _UnitGrammar(
-                kind="module",
-                has_contains_part=True,
-                declaration_role="module_variable",
-            ),
-            "submodule": _UnitGrammar(
-                kind="submodule",
-                has_contains_part=True,
-                declaration_role="module_variable",
-            ),
-            "program": _UnitGrammar(
-                kind="program",
-                has_execution_part=True,
-                has_contains_part=True,
-                ignores_contains_children=True,
-                declaration_role="module_variable",
-            ),
-            "procedure": _UnitGrammar(
-                kind="procedure",
-                has_execution_part=True,
-                has_contains_part=True,
-                ignores_contains_children=True,
-                declaration_role="procedure_symbol",
-            ),
-            "derived_type": _UnitGrammar(
-                kind="derived_type",
-                has_contains_part=True,
-                declaration_role="type_field",
-            ),
-            "interface": _UnitGrammar(kind="interface", has_contains_part=True),
-            "block_data": _UnitGrammar(kind="block_data", declaration_role="module_variable"),
-            "file": _UnitGrammar(kind="file", has_contains_part=True),
-        }
-        return grammars.get(kind, _UnitGrammar(kind=kind))
-
-    def _helper_classify_unit_start(self, line: str) -> tuple[str, str | None] | None:
-        """Classify a line that opens a parseable Fortran source unit.
-
-        The helper name uses "classify" because it does not parse the unit; it
-        only recognizes the header enough for the slicer and visitors to agree
-        on what visitor should be called next.
-
-        Example:
-            ``module mesh`` becomes ``("module", "mesh")`` while
-            ``module procedure reset`` becomes ``("procedure", "reset")``.
-            That lets a submodule `contains` region reuse the normal procedure
-            visitor instead of having a special submodule-only loop.
-        """
-        stripped = line.strip()
-        if not stripped:
-            return None
-        lower = stripped.lower()
-        if lower.startswith("end "):
-            return None
-        submodule = _SUBMODULE_RE.match(stripped)
-        if submodule:
-            return "submodule", submodule.group("name")
-        module = _MODULE_RE.match(stripped)
-        if module:
-            return "module", module.group("name")
-        program = _PROGRAM_RE.match(stripped)
-        if program:
-            return "program", program.group("name")
-        block_data = _BLOCK_DATA_RE.match(stripped)
-        if block_data:
-            return "block_data", block_data.group("name")
-        if lower == "enum" or lower.startswith("enum,"):
-            return "enum", None
-        starts_interface, interface_name = self._parse_interface_header(stripped)
-        if starts_interface:
-            return "interface", interface_name
-        module_proc = _MOD_PROC_IMPL_RE.match(stripped)
-        if module_proc:
-            return "procedure", module_proc.group("name")
-        if _looks_like_procedure_header(stripped):
-            proc_match = _PROC_RE.match(stripped) or _FUNC_RE.match(stripped)
-            if proc_match:
-                return "procedure", proc_match.group("name")
-        parsed_type = self._parse_derived_type_start(stripped)
-        if parsed_type:
-            return "derived_type", parsed_type[0]
-        return None
-
-    @staticmethod
-    def _helper_parse_unit_end(kind: str, line: str) -> tuple[bool, str | None]:
-        """Return whether `line` closes `kind`, plus the optional end name.
-
-        This is the shared closing-token table for the slicer and the unit
-        splitter. Keeping it centralized prevents one visitor from accepting a
-        different end spelling than another visitor.
-
-        Example:
-            ``_helper_parse_unit_end("module", "end module mesh")`` returns
-            ``(True, "mesh")``. ``_helper_parse_unit_end("procedure",
-            "end function norm")`` returns ``(True, "norm")``.
-        """
-        stripped = line.strip()
-        lower = stripped.lower()
-        if kind == "module":
-            m = re.match(r"^end\s+module(?:\s+(?P<name>\w+))?\s*$", stripped, re.IGNORECASE)
-            return (m is not None, m.group("name") if m else None)
-        if kind == "submodule":
-            m = re.match(r"^end\s+submodule(?:\s+(?P<name>\w+))?\s*$", stripped, re.IGNORECASE)
-            return (m is not None, m.group("name") if m else None)
-        if kind == "program":
-            m = re.match(r"^end\s+program(?:\s+(?P<name>\w+))?\s*$", stripped, re.IGNORECASE)
-            return (m is not None, m.group("name") if m else None)
-        if kind == "block_data":
-            if lower == "end":
-                return True, None
-            m = re.match(r"^end\s+block\s+data(?:\s+(?P<name>\w+))?\s*$", stripped, re.IGNORECASE)
-            return (m is not None, m.group("name") if m else None)
-        if kind == "interface":
-            m = re.match(r"^end\s+interface(?:\s+(?P<name>.+?))?\s*$", stripped, re.IGNORECASE)
-            return (m is not None, m.group("name") if m else None)
-        if kind == "derived_type":
-            m = re.match(r"^end\s+type(?:\s+(?P<name>\w+))?\s*$", stripped, re.IGNORECASE)
-            return (m is not None, m.group("name") if m else None)
-        if kind == "enum":
-            m = re.match(r"^end\s+enum\s*$", stripped, re.IGNORECASE)
-            return (m is not None, None)
-        if kind == "procedure":
-            if lower == "end":
-                return True, None
-            m = re.match(r"^end\s+(?:subroutine|function|procedure)(?:\s+(?P<name>\w+))?\s*$", stripped, re.IGNORECASE)
-            return (m is not None, m.group("name") if m else None)
-        return False, None
-
-    @staticmethod
-    def _helper_unit_label(kind: str) -> str:
-        """Return a human-readable unit kind for diagnostics.
-
-        The parser stores normalized kind names such as ``"block_data"`` in
-        `_SourceUnit`; diagnostics should use Fortran-facing text instead.
-
-        Example:
-            ``_helper_unit_label("derived_type")`` returns
-            ``"derived type"`` for an error like "Missing end derived type".
-        """
-        return kind.replace("_", " ")
-
-    @staticmethod
-    def _helper_unit_end_matches(kind: str, line: str) -> bool:
-        """Return whether `line` closes a unit of `kind`.
-
-        The method isolates all end-token spelling differences so the slicer,
-        the body splitter, and unit visitors share one closing-rule table.
-
-        Example:
-            The splitter calls ``_helper_unit_end_matches("program", line)``
-            on the last line of a sliced unit to decide whether that line is
-            the footer or still belongs to the unit body.
-        """
-        matched, _ = FortranParser._helper_parse_unit_end(kind, line)
-        return matched
-
-    def _helper_has_unit_end_ahead(self, lines: _PreprocessedLines, start_index: int, kind: str) -> bool:
-        """Check whether a candidate unit opener has a later matching end.
-
-        The slicer uses this conservative look-ahead for ambiguous lines such
-        as ``type :: state``. With a later ``end type`` it is a derived-type
-        unit; without one the existing parser treats it as a declaration-like
-        line and continues.
-
-        Example:
-            ``type :: particle`` followed by ``end type particle`` returns
-            `True`, but a lone ``type :: local_state`` in a program
-            specification part returns `False`.
-        """
-        start = self._helper_classify_unit_start(lines[start_index][0])
-        start_name = start[1] if start is not None else None
-        for idx in range(start_index + 1, len(lines)):
-            matched, end_name = self._helper_parse_unit_end(kind, lines[idx][0])
-            if not matched:
-                continue
-            if kind != "procedure" and start_name and end_name and end_name.lower() != start_name.lower():
-                continue
-            if matched:
-                return True
-        return False
-
-    def _helper_find_unit_end(
+    def _helper_visit_spec_part(
         self,
-        lines: _PreprocessedLines,
-        start_index: int,
-        kind: str,
-        *,
-        filename: str | None = None,
-    ) -> int | None:
-        """Find the matching end line for a source unit.
-
-        The helper walks nested parseable units with a small stack. It is used
-        before building a `_SourceUnit`, so every visitor receives only its own
-        substring and original line numbers remain attached to each tuple.
-
-        Example:
-            Given a module containing an interface containing a subroutine, the
-            module end is returned, not the subroutine end, because the nested
-            interface/procedure pair is pushed and popped before the module is
-            closed.
-        """
-        start = self._helper_classify_unit_start(lines[start_index][0])
-        start_name = start[1] if start is not None else None
-        stack: list[tuple[str, str | None, int | None, str | None]] = [
-            (kind, start_name, lines[start_index][1], lines[start_index][2])
-        ]
-        idx = start_index + 1
-        while idx < len(lines):
-            line, lineno, source_line = lines[idx]
-            line = line.strip()
-            if not line:
-                idx += 1
-                continue
-            start = self._helper_classify_unit_start(line)
-            current_kind, current_name, current_line, current_source = stack[-1]
-            if current_kind == "interface" and re.match(r"^module\s+procedure\b", line, re.IGNORECASE):
-                idx += 1
-                continue
-            if start is not None and self._helper_has_unit_end_ahead(lines, idx, start[0]):
-                nested_kind, _ = start
-                stack.append((nested_kind, start[1], lineno, source_line))
-                idx += 1
-                continue
-
-            closes_current, end_name = self._helper_parse_unit_end(current_kind, line)
-            if closes_current:
-                if current_kind != "procedure" and end_name and current_name and end_name.lower() != current_name.lower():
-                    label = self._helper_unit_label(current_kind)
-                    raise FortranParseError(
-                        f"Mismatched end {label} name '{end_name}' for {label} '{current_name}'.",
-                        filename=filename,
-                        line_number=lineno,
-                        source_line=source_line,
-                    )
-                stack.pop()
-                if not stack:
-                    return idx
-                idx += 1
-                continue
-
-            for open_kind, open_name, open_line, open_source in reversed(stack):
-                closes_open, end_name = self._helper_parse_unit_end(open_kind, line)
-                if not closes_open:
-                    continue
-                label = self._helper_unit_label(current_kind)
-                expected = self._helper_unit_label(open_kind)
-                raise FortranParseError(
-                    f"Unexpected end {expected} while parsing {label} '{current_name or '<unnamed>'}'.",
-                    filename=filename,
-                    line_number=lineno,
-                    source_line=source_line,
-                )
-            idx += 1
-        return None
-
-    def _helper_slice_child_units(
-        self,
+        scope: _ParserScope,
         lines: _PreprocessedLines,
         *,
-        parent_scope: _ParserScope,
-        allowed_kinds: set[str] | None = None,
-        filename: str | None = None,
-    ) -> list[_SourceUnit]:
-        """Slice direct child units from a parent source substring.
-
-        The name says "child" because this helper is recursive by design:
-        `visit_file` calls it for file-level units, `visit_module_unit` calls it
-        for module children, and `visit_interface_unit` calls it for interface
-        procedure declarations. Each returned `_SourceUnit.lines` contains only
-        that child unit's substring.
-
-        Example:
-            In ``module m`` with an ``interface`` block and a contained
-            ``subroutine run``, this helper returns two direct children for the
-            module scope: one interface unit and one procedure unit. The
-            interface's subroutine is not returned at module level; it is
-            returned when the interface visitor asks for its own children.
-        """
-        units: list[_SourceUnit] = []
-        index = 0
-        pp_condition_stack: list[tuple[int, int]] = []
-        pp_active_stack: list[bool] = []
-        pp_group_counter = 0
-        while index < len(lines):
-            line, lineno, _ = lines[index]
-            stripped = line.strip()
-            handled_pp, pp_group_counter = self._handle_procedure_preprocessor_line(
-                stripped,
-                macro_selection_enabled=False,
-                macro_names=set(),
-                pp_condition_stack=pp_condition_stack,
-                pp_active_stack=pp_active_stack,
-                pp_group_counter=pp_group_counter,
-            )
-            if handled_pp:
-                index += 1
-                continue
-            if parent_scope.kind == "interface" and re.match(r"^module\s+procedure\b", line.strip(), re.IGNORECASE):
-                index += 1
-                continue
-            start = self._helper_classify_unit_start(line)
-            if start is None:
-                index += 1
-                continue
-            kind, name = start
-            if allowed_kinds is not None and kind not in allowed_kinds:
-                index += 1
-                continue
-
-            end_index = self._helper_find_unit_end(lines, index, kind, filename=filename)
-            if end_index is None:
-                if kind == "derived_type":
-                    # A `type :: name` statement without a matching `end type`
-                    # is treated as a declaration-like line for compatibility
-                    # with existing tolerant parser behavior.
-                    index += 1
-                    continue
-                if kind == "interface" and (lines[index][2] or "").strip().lower().startswith("end interface"):
-                    index += 1
-                    continue
-                if parent_scope.kind == "interface" and kind == "procedure":
-                    # Interface bodies often contain a procedure declaration
-                    # that is closed by `end interface`, not by an explicit
-                    # `end subroutine`/`end function`. In that grammar context
-                    # the whole remaining interface substring belongs to the
-                    # declaration.
-                    end_index = len(lines) - 1
-                else:
-                    label = self._helper_unit_label(kind)
-                    raise FortranParseError(
-                        f"Missing end {label} for {label} '{name or '<unnamed>'}'.",
-                        filename=filename,
-                        line_number=lineno,
-                        source_line=lines[index][2],
-                    )
-
-            end_line = lines[end_index][1]
-            units.append(
-                _SourceUnit(
-                    kind=kind,
-                    name=name,
-                    lines=lines[index : end_index + 1],
-                    start_line=lineno,
-                    end_line=end_line,
-                    condition_set=self._procedure_preprocessor_condition_set(pp_condition_stack),
-                )
-            )
-            index = end_index + 1
-        return units
-
-    def _helper_select_active_preprocessor_lines(
-        self,
-        lines: _PreprocessedLines,
-        macro_defines: set[str] | dict[str, int | bool | str] | None,
-    ) -> _PreprocessedLines:
-        """Drop inactive preprocessor branches when macro selection is enabled.
-
-        This runs before source-unit slicing, so duplicate declarations hidden
-        behind inactive ``#ifdef`` branches do not produce false same-scope
-        conflicts.
-
-        Example:
-            With ``macro_defines={"USE_FAST"}``, only the active branch of
-            ``#ifdef USE_FAST`` is returned to `_helper_slice_child_units`;
-            with ``macro_defines=None``, all branches are preserved and their
-            condition sets are used for overlap-aware duplicate checks.
-        """
-        if macro_defines is None:
-            return lines
-        selected: _PreprocessedLines = []
-        macro_names = _normalize_macro_defines(macro_defines)
-        pp_condition_stack: list[tuple[int, int]] = []
-        pp_active_stack: list[bool] = []
-        pp_group_counter = 0
-        for line, _lineno, _source_line in lines:
-            handled_pp, pp_group_counter = self._handle_procedure_preprocessor_line(
-                line.strip(),
-                macro_selection_enabled=True,
-                macro_names=macro_names,
-                pp_condition_stack=pp_condition_stack,
-                pp_active_stack=pp_active_stack,
-                pp_group_counter=pp_group_counter,
-            )
-            if handled_pp:
-                continue
-            if pp_active_stack and not all(pp_active_stack):
-                continue
-            selected.append((line, _lineno, _source_line))
-        return selected
-
-    def _helper_prepare_source_units(
-        self,
-        code: _SourceOrLines,
-        filename: str | None,
-        *,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
-    ) -> tuple[_PreprocessedLines, _ParserScope, list[_SourceUnit]]:
-        """Preprocess, validate, and slice file-level source units.
-
-        This is the first grammar-shaped step in `visit_file`: raw source is
-        normalized into line tuples, obvious malformed headers are rejected,
-        and only direct file-scope units are returned.
-
-        Example:
-            A file containing ``module constants`` and standalone
-            ``subroutine solve`` returns a root file scope plus two
-            `_SourceUnit` objects, one module unit and one procedure unit, both
-            carrying original source line numbers.
-        """
-        lines = self._preprocessed_lines(code, filename)
-        lines = self._helper_select_active_preprocessor_lines(lines, macro_defines)
-        self._helper_validate_unit_headers(lines, filename)
-        for line, lineno, source_line in lines:
-            if line.strip():
-                _enforce_source_form_compatibility(line.strip(), filename, lineno, source_line)
-        root_scope = _ParserScope(kind="file", name=None)
-        units = self._helper_slice_child_units(lines, parent_scope=root_scope, filename=filename)
-        self._helper_validate_sibling_units(units, parent_scope=root_scope, filename=filename)
-        return lines, root_scope, units
-
-    def _helper_validate_sibling_units(
-        self,
-        units: list[_SourceUnit],
-        *,
-        parent_scope: _ParserScope,
         filename: str | None,
     ) -> None:
-        """Validate duplicate source-unit names at one scope level.
+        """Visit declaration/specification lines for a unit scope.
 
-        The check is scope-local: two modules may each define ``type state``,
-        but two direct children with the same relevant kind/name in one scope
-        are rejected unless they are guarded by mutually exclusive preprocessor
-        branches.
-
-        Example:
-            Two ``module mesh`` units at file scope raise a duplicate-module
-            error. Two ``subroutine step`` children in one module raise a
-            duplicate-procedure error when their preprocessor conditions can
-            both be active.
-        """
-        seen: dict[tuple[str, str], list[_SourceUnit]] = {}
-        for unit in units:
-            if not unit.name:
-                continue
-            if unit.kind == "procedure":
-                key = ("procedure", unit.name.lower())
-            elif unit.kind in {"module", "submodule", "program", "block_data", "derived_type", "interface"}:
-                key = (unit.kind, unit.name.lower())
-            else:
-                continue
-            for existing in seen.get(key, []):
-                if not _preprocessor_conditions_overlap(existing.condition_set, unit.condition_set):
-                    continue
-                if unit.kind == "procedure":
-                    scope_label = (
-                        f"module '{parent_scope.name}'"
-                        if parent_scope.kind in {"module", "submodule"}
-                        else "global scope"
-                    )
-                    raise FortranParseError(
-                        f"Duplicate procedure name '{unit.name}' in {scope_label}.",
-                        filename=filename,
-                        line_number=unit.start_line,
-                        source_line=unit.lines[0][2] if unit.lines else None,
-                    )
-                raise FortranParseError(
-                    f"Duplicate {unit.kind.replace('_', ' ')} name '{unit.name}' in {parent_scope.kind} scope.",
-                    filename=filename,
-                    line_number=unit.start_line,
-                    source_line=unit.lines[0][2] if unit.lines else None,
-                )
-            seen.setdefault(key, []).append(unit)
-
-    def _helper_split_unit_parts(
-        self,
-        unit: _SourceUnit,
-        grammar: _UnitGrammar,
-        *,
-        filename: str | None = None,
-    ) -> _UnitParts:
-        """Split one unit substring into grammar regions.
-
-        The helper follows the shape you described: every parseable unit has a
-        header and a specification part, some have an execution part, and some
-        have a contains part. Visitors can then be small and choose which
-        region matters for wrapping metadata.
+        The helper name mirrors the grammar term "specification part". It is
+        called by module, submodule, program, procedure, derived-type, and
+        block-data visitors after `_helper_split_unit_parts` has isolated the
+        relevant region.
 
         Example:
-            For a procedure, declarations before the first executable
-            statement go into `specification`, assignments/calls go into
-            `execution`, and internal procedures after `contains` go into
-            `contains`. The procedure visitor parses only `specification`.
-        """
-        header = unit.lines[0] if unit.lines else None
-        footer = unit.lines[-1] if unit.lines and self._helper_unit_end_matches(unit.kind, unit.lines[-1][0]) else None
-        body = unit.lines[1:-1] if footer is not None else unit.lines[1:]
-        specification: _PreprocessedLines = []
-        execution: _PreprocessedLines = []
-        contains: _PreprocessedLines = []
-        region = "specification"
-        index = 0
-
-        while index < len(body):
-            line, _, _ = body[index]
-            stripped = line.strip()
-            if not stripped:
-                index += 1
-                continue
-            if self._is_contains_transition(stripped):
-                region = "contains"
-                index += 1
-                continue
-
-            start = self._helper_classify_unit_start(stripped)
-            if start is not None:
-                child_kind, _ = start
-                child_end = self._helper_find_unit_end(body, index, child_kind, filename=filename)
-                if child_end is not None:
-                    index = child_end + 1
-                    continue
-
-            is_spec_statement = (
-                _parse_use_statement(stripped) is not None
-                or _is_ignored_spec_statement(stripped)
-                or _looks_like_declaration_or_spec(stripped)
-            )
-            if (
-                region == "specification"
-                and grammar.has_execution_part
-                and _is_executable_statement_start(stripped)
-                and not is_spec_statement
-            ):
-                region = "execution"
-
-            if region == "specification":
-                specification.append(body[index])
-            elif region == "execution":
-                execution.append(body[index])
-            else:
-                contains.append(body[index])
-            index += 1
-
-        return _UnitParts(
-            header=header,
-            specification=specification,
-            execution=execution,
-            contains=contains,
-            footer=footer,
-        )
-
-    def _helper_validate_unit_headers(self, lines: _PreprocessedLines, filename: str | None) -> None:
-        """Validate recognizable unit headers before slicing hides bad ones.
-
-        The slicer intentionally ignores lines that are not valid starts. This
-        helper preserves diagnostics for malformed headers whose first keyword
-        still shows the user's intent.
-
-        Example:
-            ``module :: bad_mod`` is not a valid module unit and therefore is
-            not returned by `_helper_slice_child_units`; this helper raises the
-            same explicit "malformed module header" error before parsing
-            continues.
+            A program and a procedure both have executable statements, but this
+            helper only sees their declaration lines before execution begins.
+            The visitor decides whether later execution/contains regions are
+            ignored or visited separately.
         """
         for line, lineno, source_line in lines:
             stripped = line.strip()
             if not stripped:
                 continue
-            self._parse_module_header(stripped, filename, lineno=lineno, source_line=source_line)
-            if stripped.lower().startswith("end "):
-                continue
-            if re.match(r"^module\s+procedure\s*::", stripped, flags=re.IGNORECASE):
-                continue
-            if not (
-                stripped.lower().startswith("module procedure")
-                or _looks_like_procedure_header(stripped)
-            ):
-                continue
-            if self._parse_procedure_header(
-                stripped,
-                None,
-                False,
-                filename=filename,
-                lineno=lineno,
-                source_line=source_line,
-            ) is None:
-                self._raise_if_unparsed_procedure_header(
+            if scope.kind == "procedure":
+                self._helper_visit_procedure_spec_line(
                     stripped,
-                    in_interface=False,
+                    scope.state,
                     filename=filename,
                     lineno=lineno,
                     source_line=source_line,
                 )
-
-    def _helper_scope_for_model(
-        self,
-        kind: str,
-        model: object,
-        *,
-        parent: _ParserScope | None = None,
-        module_owner: str | None = None,
-        state: dict | None = None,
-    ) -> _ParserScope:
-        """Build the scope object passed through shared helpers.
-
-        This helper keeps scope construction consistent: every unit visitor
-        passes its own model, parent scope, current module owner, and optional
-        procedure state through the same small object.
-
-        Example:
-            A module procedure receives a procedure scope whose parent is the
-            module scope and whose `module_owner` is the module name. The same
-            declaration helper can then update procedure arguments while still
-            knowing the owner for diagnostics and imports.
-        """
-        name = getattr(model, "name", None)
-        inherited_owner = module_owner if module_owner is not None else (parent.module_owner if parent else None)
-        if kind in {"module", "submodule"}:
-            inherited_owner = name
-        return _ParserScope(
-            kind=kind,
-            name=name,
-            model=model,
-            parent=parent,
-            module_owner=inherited_owner,
-            state=state,
-        )
-
-    def _parse_module_header(
-        self,
-        line: str,
-        filename: str | None,
-        lineno: int | None = None,
-        source_line: str | None = None,
-    ) -> FortranModule | None:
-        module_match = _MODULE_RE.match(line)
-        if not module_match:
-            if line.lower().startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", line, re.IGNORECASE):
-                raise FortranParseError(
-                    f"Unsupported or malformed module header: {line.strip()}",
-                    filename=filename,
-                    line_number=lineno,
+            elif scope.kind == "derived_type":
+                self._helper_visit_type_spec_line(
+                    stripped,
+                    scope,
+                    filename,
+                    lineno=lineno,
                     source_line=source_line,
                 )
-            return None
-        return FortranModule(name=module_match.group("name"), filename=filename)
+            elif scope.kind in {"module", "submodule", "program", "block_data"}:
+                self._helper_visit_module_like_spec_line(
+                    scope,
+                    stripped,
+                    filename=filename,
+                    lineno=lineno,
+                    source_line=source_line,
+                )
 
     def _helper_visit_module_like_spec_line(
         self,
@@ -2991,8 +2208,8 @@ class FortranParser:
         stripped = line.strip()
         lower = stripped.lower()
 
-        if _is_openmp_declarative_directive(stripped):
-            owner_kind, owner_name = _variable_scope_label(target)
+        if self._is_openmp_declarative_directive(stripped):
+            owner_kind, owner_name = self._variable_scope_label(target)
             raise FortranParseError(
                 f"Unsupported OpenMP declarative directive in {owner_kind} '{owner_name or '<unnamed>'}': {stripped}",
                 filename=filename,
@@ -3008,13 +2225,13 @@ class FortranParser:
                 target.default_visibility = "public"
                 return
 
-        parsed_use = _parse_use_statement(stripped)
+        parsed_use = self._parse_use_statement(stripped)
         if parsed_use and hasattr(target, "uses"):
             module_name, mappings = parsed_use
             target.uses[module_name] = mappings
             return
 
-        if _DERIVED_TYPE_RE.match(stripped):
+        if _REGEX["derived_type"].match(stripped):
             return
 
         if "::" in stripped:
@@ -3036,9 +2253,9 @@ class FortranParser:
                 return
             if lower_left in {"module procedure", "import"}:
                 return
-        elif _is_executable_statement_start(stripped) or _is_ignored_spec_statement(stripped):
-            if _is_executable_statement_start(stripped) and scope.kind != "program":
-                owner_kind, owner_name = _variable_scope_label(target)
+        elif self._is_executable_statement_start(stripped) or self._is_ignored_spec_statement(stripped):
+            if self._is_executable_statement_start(stripped) and scope.kind != "program":
+                owner_kind, owner_name = self._variable_scope_label(target)
                 raise FortranParseError(
                     f"Executable statement is not allowed in {owner_kind} specification part '{owner_name or '<unnamed>'}': {stripped}",
                     filename=filename,
@@ -3058,9 +2275,9 @@ class FortranParser:
         )
         if parsed:
             return
-        if "::" not in stripped and not _looks_like_declaration_or_spec(stripped):
+        if "::" not in stripped and not self._looks_like_declaration_or_spec(stripped):
             return
-        owner_kind, owner_name = _variable_scope_label(target)
+        owner_kind, owner_name = self._variable_scope_label(target)
         raise FortranParseError(
             f"Unknown or unsupported datatype declaration in {owner_kind} '{owner_name or '<unnamed>'}': {stripped}",
             filename=filename,
@@ -3068,530 +2285,157 @@ class FortranParser:
             source_line=source_line,
         )
 
-    def _parse_submodule_header(self, line: str, filename: str | None) -> FortranSubmodule | None:
-        match = _SUBMODULE_RE.match(line)
-        if not match:
-            return None
-        parent, ancestor = _split_submodule_parent(match.group("parent"))
-        return FortranSubmodule(
-            name=match.group("name"),
-            parent=parent,
-            ancestor=ancestor,
-            filename=filename,
-        )
+    def _helper_visit_procedure_spec_line(self, line: str, proc_state: dict, filename: str | None = None, lineno: int | None = None, source_line: str | None = None) -> None:
+        """Parse one declaration/specification line inside a procedure scope.
 
-    def _parse_program_header(self, line: str, filename: str | None) -> FortranProgram | None:
-        match = _PROGRAM_RE.match(line)
-        if not match:
-            return None
-        return FortranProgram(name=match.group("name"), filename=filename)
-
-    def _parse_block_data_header(self, line: str, filename: str | None) -> FortranBlockData | None:
-        match = _BLOCK_DATA_RE.match(line)
-        if not match:
-            return None
-        return FortranBlockData(name=match.group("name"), filename=filename)
-
-    # ------------------------------------------------------------------
-    # High-level unit parsing (largest scopes first)
-    # ------------------------------------------------------------------
-
-    def visit_fortran_modules(
-        self,
-        code: _SourceOrLines,
-        filename: str | None = None,
-        *,
-        require_present: bool = True,
-    ) -> list[FortranModule]:
-        lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
-        module_units = [unit for unit in all_units if unit.kind == "module"]
-        modules = [self.visit_module_unit(unit, parent_scope=root_scope, filename=filename) for unit in module_units]
-        if require_present and not modules and any(unit.kind == "procedure" for unit in all_units):
-            raise FortranParseError(
-                "visit_fortran_modules() expected a module program unit, but only standalone procedures were found",
-                filename=filename,
-                code="PARSE_WRONG_ENTRYPOINT",
-            )
-        return modules
-
-    def visit_fortran_submodules(
-        self,
-        code: _SourceOrLines,
-        filename: str | None = None,
-    ) -> list[FortranSubmodule]:
-        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
-        return [
-            self.visit_submodule_unit(unit, parent_scope=root_scope, filename=filename)
-            for unit in all_units
-            if unit.kind == "submodule"
-        ]
-
-    def visit_fortran_interfaces(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranInterface]:
-        lines, root_scope, _all_units = self._helper_prepare_source_units(code, filename)
-        interfaces: list[FortranInterface] = []
-
-        def collect(scope: _ParserScope, source_lines: _PreprocessedLines) -> None:
-            for child in self._helper_slice_child_units(source_lines, parent_scope=scope, filename=filename):
-                if child.kind == "interface":
-                    interfaces.append(self.visit_interface_unit(child, parent_scope=scope, filename=filename))
-                    continue
-                if child.kind in {"module", "submodule"}:
-                    child_scope = _ParserScope(
-                        kind=child.kind,
-                        name=child.name,
-                        parent=scope,
-                        module_owner=child.name,
-                    )
-                    collect(child_scope, child.lines[1:-1])
-                    continue
-                if child.kind in {"procedure", "program", "block_data"}:
-                    child_scope = _ParserScope(
-                        kind=child.kind,
-                        name=child.name,
-                        parent=scope,
-                        module_owner=scope.module_owner,
-                    )
-                    collect(child_scope, child.lines[1:-1])
-
-        collect(root_scope, lines)
-        return interfaces
-
-    def visit_fortran_types(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranDerivedType]:
-        lines, root_scope, _all_units = self._helper_prepare_source_units(code, filename)
-        types: list[FortranDerivedType] = []
-
-        def collect(scope: _ParserScope, source_lines: _PreprocessedLines) -> None:
-            for child in self._helper_slice_child_units(source_lines, parent_scope=scope, filename=filename):
-                if child.kind == "derived_type":
-                    types.append(self.visit_derived_type_unit(child, parent_scope=scope, filename=filename))
-                    continue
-                if child.kind in {"module", "submodule", "program"}:
-                    child_scope = _ParserScope(
-                        kind=child.kind,
-                        name=child.name,
-                        parent=scope,
-                        module_owner=child.name if child.kind in {"module", "submodule"} else scope.module_owner,
-                    )
-                    collect(child_scope, child.lines[1:-1])
-                    continue
-                if child.kind in {"procedure", "block_data"}:
-                    child_scope = _ParserScope(
-                        kind=child.kind,
-                        name=child.name,
-                        parent=scope,
-                        module_owner=scope.module_owner,
-                    )
-                    collect(child_scope, child.lines[1:-1])
-
-        collect(root_scope, lines)
-        self._resolve_derived_type_extensions(types)
-        return types
-
-    def visit_fortran_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
-        return _expect_single_parse_result(
-            self.visit_fortran_modules(code, filename=filename, require_present=True),
-            parser_name="visit_fortran_module",
-            entity_name="module",
-            filename=filename,
-        )
-
-    def visit_fortran_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
-        return _expect_single_parse_result(
-            self.visit_fortran_submodules(code, filename=filename),
-            parser_name="visit_fortran_submodule",
-            entity_name="submodule",
-            filename=filename,
-        )
-
-    def visit_fortran_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
-        return _expect_single_parse_result(
-            self.visit_fortran_interfaces(code, filename=filename),
-            parser_name="visit_fortran_interface",
-            entity_name="interface",
-            filename=filename,
-        )
-
-    def visit_fortran_derived_type(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
-        return _expect_single_parse_result(
-            self.visit_fortran_types(code, filename=filename),
-            parser_name="visit_fortran_derived_type",
-            entity_name="derived type",
-            filename=filename,
-        )
-
-    def visit_fortran_programs(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranProgram]:
-        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
-        return [
-            self.visit_program_unit(unit, parent_scope=root_scope, filename=filename)
-            for unit in all_units
-            if unit.kind == "program"
-        ]
-
-    def visit_fortran_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
-        return _expect_single_parse_result(
-            self.visit_fortran_programs(code, filename=filename),
-            parser_name="visit_fortran_program",
-            entity_name="program",
-            filename=filename,
-        )
-
-    def visit_fortran_block_data(self, code: _SourceOrLines, filename: str | None = None) -> list[FortranBlockData]:
-        _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
-        return [
-            self.visit_block_data_source_unit(unit, parent_scope=root_scope, filename=filename)
-            for unit in all_units
-            if unit.kind == "block_data"
-        ]
-
-    def visit_fortran_block_data_unit(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
-        return _expect_single_parse_result(
-            self.visit_fortran_block_data(code, filename=filename),
-            parser_name="visit_fortran_block_data_unit",
-            entity_name="block data unit",
-            filename=filename,
-        )
-
-    def visit_source_unit(
-        self,
-        unit: _SourceUnit,
-        *,
-        parent_scope: _ParserScope,
-        filename: str | None,
-    ):
-        """Visit one already-sliced source unit and dispatch by unit kind."""
-        if unit.kind == "module":
-            return self.visit_module_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "submodule":
-            return self.visit_submodule_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "program":
-            return self.visit_program_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "block_data":
-            return self.visit_block_data_source_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "derived_type":
-            return self.visit_derived_type_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "interface":
-            return self.visit_interface_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "procedure":
-            return self.visit_procedure_unit(unit, parent_scope=parent_scope, filename=filename)
-        return None
-
-    def visit_module_unit(
-        self,
-        unit: _SourceUnit,
-        *,
-        parent_scope: _ParserScope,
-        filename: str | None,
-    ) -> FortranModule:
-        """Visit a sliced `module ... end module` unit."""
-        header = unit.lines[0]
-        module = self._parse_module_header(header[0].strip(), filename, lineno=header[1], source_line=header[2])
-        if module is None:  # pragma: no cover - slicer only dispatches module units with module headers.
-            raise FortranParseError("Expected module unit.", filename=filename, line_number=header[1], source_line=header[2])
-        scope = self._helper_scope_for_model("module", module, parent=parent_scope)
-        parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("module"), filename=filename)
-        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
-
-        child_units = self._helper_slice_child_units(unit.lines[1:-1], parent_scope=scope, filename=filename)
-        self._helper_validate_sibling_units(child_units, parent_scope=scope, filename=filename)
-        signatures = [
-            self.visit_procedure_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "procedure"
-        ]
-        types = [
-            self.visit_derived_type_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "derived_type"
-        ]
-        interfaces = [
-            self.visit_interface_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "interface"
-        ]
-        module.procedures.extend(sig for sig in signatures if sig.module and sig.module.lower() == module.name.lower() and not sig.in_interface)
-        module.derived_types.extend(dtype for dtype in types if dtype.module and dtype.module.lower() == module.name.lower())
-        module.interfaces.extend(iface for iface in interfaces if iface.module and iface.module.lower() == module.name.lower())
-        _validate_module_variables(module, filename)
-        _apply_module_visibility(module, filename)
-        return module
-
-    def visit_submodule_unit(
-        self,
-        unit: _SourceUnit,
-        *,
-        parent_scope: _ParserScope,
-        filename: str | None,
-    ) -> FortranSubmodule:
-        """Visit a sliced `submodule (...) name ... end submodule` unit."""
-        header = unit.lines[0]
-        submodule = self._parse_submodule_header(header[0].strip(), filename)
-        if submodule is None:  # pragma: no cover - slicer only dispatches submodule units with submodule headers.
-            raise FortranParseError("Expected submodule unit.", filename=filename, line_number=header[1], source_line=header[2])
-        scope = self._helper_scope_for_model("submodule", submodule, parent=parent_scope)
-        parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("submodule"), filename=filename)
-        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
-
-        child_units = self._helper_slice_child_units(unit.lines[1:-1], parent_scope=scope, filename=filename)
-        self._helper_validate_sibling_units(child_units, parent_scope=scope, filename=filename)
-        signatures = [
-            self.visit_procedure_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "procedure"
-        ]
-        types = [
-            self.visit_derived_type_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "derived_type"
-        ]
-        interfaces = [
-            self.visit_interface_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "interface"
-        ]
-        submodule.procedures.extend(sig for sig in signatures if sig.module and sig.module.lower() == submodule.name.lower() and not sig.in_interface)
-        submodule.derived_types.extend(dtype for dtype in types if dtype.module and dtype.module.lower() == submodule.name.lower())
-        submodule.interfaces.extend(iface for iface in interfaces if iface.module and iface.module.lower() == submodule.name.lower())
-        _validate_module_variables(submodule, filename)
-        return submodule
-
-    def visit_program_unit(
-        self,
-        unit: _SourceUnit,
-        *,
-        parent_scope: _ParserScope,
-        filename: str | None,
-    ) -> FortranProgram:
-        """Visit a sliced `program ... end program` unit."""
-        header = unit.lines[0]
-        program = self._parse_program_header(header[0].strip(), filename)
-        if program is None:  # pragma: no cover - slicer only dispatches program units with program headers.
-            raise FortranParseError("Expected program unit.", filename=filename, line_number=header[1], source_line=header[2])
-        scope = self._helper_scope_for_model("program", program, parent=parent_scope)
-        parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("program"), filename=filename)
-        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
-        _validate_variable_declarations(
-            program.variables,
-            owner_kind="program",
-            owner_name=program.name,
-            filename=filename,
-        )
-        return program
-
-    def visit_block_data_source_unit(
-        self,
-        unit: _SourceUnit,
-        *,
-        parent_scope: _ParserScope,
-        filename: str | None,
-    ) -> FortranBlockData:
-        """Visit a sliced `block data ... end block data` unit."""
-        header = unit.lines[0]
-        block_data = self._parse_block_data_header(header[0].strip(), filename)
-        if block_data is None:  # pragma: no cover - slicer only dispatches block-data units with block-data headers.
-            raise FortranParseError("Expected block data unit.", filename=filename, line_number=header[1], source_line=header[2])
-        scope = self._helper_scope_for_model("block_data", block_data, parent=parent_scope)
-        parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("block_data"), filename=filename)
-        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
-        _validate_variable_declarations(
-            block_data.variables,
-            owner_kind="block data",
-            owner_name=block_data.name,
-            filename=filename,
-        )
-        return block_data
-
-    def visit_derived_type_unit(
-        self,
-        unit: _SourceUnit,
-        *,
-        parent_scope: _ParserScope,
-        filename: str | None,
-    ) -> FortranDerivedType:
-        """Visit a sliced derived-type definition."""
-        header = unit.lines[0]
-        dtype = self._init_derived_type(header[0].strip(), current_module=parent_scope.module_owner)
-        if dtype is None:  # pragma: no cover - slicer only dispatches derived-type units with type headers.
-            raise FortranParseError("Expected derived-type unit.", filename=filename, line_number=header[1], source_line=header[2])
-        scope = self._helper_scope_for_model("derived_type", dtype, parent=parent_scope)
-        parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("derived_type"), filename=filename)
-        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
-        for line, lineno, source_line in parts.contains:
-            stripped = line.strip()
-            if not stripped:
-                continue
-            self._parse_derived_type_contains_line(
-                stripped,
-                dtype,
-                filename=filename,
-                lineno=lineno,
-                source_line=source_line,
-            )
-        _validate_derived_type_fields(dtype, filename)
-        return dtype
-
-    def visit_interface_unit(
-        self,
-        unit: _SourceUnit,
-        *,
-        parent_scope: _ParserScope,
-        filename: str | None,
-    ) -> FortranInterface:
-        """Visit a sliced interface block."""
-        header = unit.lines[0]
-        starts_interface, interface_name = self._parse_interface_header(header[0].strip())
-        if not starts_interface:  # pragma: no cover - slicer only dispatches interface units with interface headers.
-            raise FortranParseError("Expected interface unit.", filename=filename, line_number=header[1], source_line=header[2])
-        interface = FortranInterface(name=interface_name, module=parent_scope.module_owner)
-        scope = self._helper_scope_for_model("interface", interface, parent=parent_scope)
-        child_units = self._helper_slice_child_units(
-            unit.lines[1:-1],
-            parent_scope=scope,
-            allowed_kinds={"procedure"},
-            filename=filename,
-        )
-        for child in child_units:
-            sig = self.visit_procedure_unit(child, parent_scope=scope, filename=filename, in_interface=True)
-            self._add_interface_attribute(sig, interface.name)
-            interface.procedures.append(sig)
-        return interface
-
-    def visit_procedure_unit(
-        self,
-        unit: _SourceUnit,
-        *,
-        parent_scope: _ParserScope,
-        filename: str | None,
-        in_interface: bool = False,
-    ) -> FortranProcedureSignature:
-        """Visit a sliced procedure body or interface procedure declaration."""
-        header = unit.lines[0]
-        proc_state = self._parse_procedure_header(
-            header[0].strip(),
-            parent_scope.module_owner,
-            in_interface or parent_scope.kind == "interface",
-            filename=filename,
-            lineno=header[1],
-            source_line=header[2],
-        )
-        if proc_state is None:
-            self._raise_if_unparsed_procedure_header(
-                header[0].strip(),
-                in_interface=in_interface or parent_scope.kind == "interface",
-                filename=filename,
-                lineno=header[1],
-                source_line=header[2],
-            )
-            raise FortranParseError("Expected procedure unit.", filename=filename, line_number=header[1], source_line=header[2])
-        proc_state["filename"] = filename
-        proc_state["header_lineno"] = header[1]
-        proc_state["header_source_line"] = header[2]
-        proc_state["uses"].update(getattr(parent_scope.model, "uses", {}))
-        scope = self._helper_scope_for_model("procedure", proc_state["signature"], parent=parent_scope, state=proc_state)
-        parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("procedure"), filename=filename)
-        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
-        self._helper_apply_local_interface_declarations(proc_state, unit, scope, filename=filename)
-        return _finalize_proc(proc_state)
-
-    def _handle_procedure_preprocessor_line(
-        self,
-        line: str,
-        *,
-        macro_selection_enabled: bool,
-        macro_names: set[str],
-        pp_condition_stack: list[tuple[int, int]],
-        pp_active_stack: list[bool],
-        pp_group_counter: int,
-    ) -> tuple[bool, int]:
-        """Update conditional-compilation state while collecting source units.
-
-        The slicer calls this while scanning sibling units so duplicate checks
-        can distinguish mutually exclusive preprocessor branches. When macro
-        selection is enabled, the same state also decides which lines remain
-        active before parsing.
+        The method mutates `proc_state` in-place by:
+        - registering typed symbols and parameter constants,
+        - annotating argument metadata (type/kind/intent/rank/shape),
+        - recording imports/includes/external callbacks,
+        - transitioning unsupported/unknown declarations into explicit errors.
 
         Example:
-            Seeing ``#ifdef USE_MPI`` pushes a new condition branch; a later
-            ``#else`` advances that branch id. Two procedures with the same
-            name under those two branches are allowed because their condition
-            sets do not overlap.
+            ``real, intent(in) :: x(n)`` goes through
+            `_helper_parse_declaration_line` with role ``"procedure_symbol"``
+            and updates the existing dummy argument ``x`` in the procedure
+            scope.
         """
-        if not line.startswith("#"):
-            return False, pp_group_counter
-
-        directive = line[1:].strip()
-        directive_low = directive.lower()
-        if directive_low.startswith("ifdef "):
-            pp_group_counter += 1
-            pp_condition_stack.append((pp_group_counter, 0))
-            expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-            pp_active_stack.append((bool(expr) and expr.lower() in macro_names) if macro_selection_enabled else True)
-            return True, pp_group_counter
-        if directive_low.startswith("ifndef "):
-            pp_group_counter += 1
-            pp_condition_stack.append((pp_group_counter, 0))
-            expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-            pp_active_stack.append(((not expr) or expr.lower() not in macro_names) if macro_selection_enabled else True)
-            return True, pp_group_counter
-        if directive_low.startswith("if "):
-            pp_group_counter += 1
-            pp_condition_stack.append((pp_group_counter, 0))
-            expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-            pp_active_stack.append(_eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
-            return True, pp_group_counter
-        if directive_low.startswith("else"):
-            if pp_condition_stack:
-                group_id, branch_id = pp_condition_stack.pop()
-                pp_condition_stack.append((group_id, branch_id + 1))
-            if pp_active_stack:
-                prev = pp_active_stack.pop()
-                pp_active_stack.append((not prev) if macro_selection_enabled else True)
-            return True, pp_group_counter
-        if directive_low.startswith("elif "):
-            if pp_condition_stack:
-                group_id, branch_id = pp_condition_stack.pop()
-                pp_condition_stack.append((group_id, branch_id + 1))
-            if pp_active_stack:
-                pp_active_stack.pop()
-                expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-                pp_active_stack.append(_eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
-            return True, pp_group_counter
-        if directive_low.startswith("endif"):
-            if pp_condition_stack:
-                pp_condition_stack.pop()
-            if pp_active_stack:
-                pp_active_stack.pop()
-            return True, pp_group_counter
-        return False, pp_group_counter
-
-    @staticmethod
-    def _procedure_preprocessor_condition_set(pp_condition_stack: list[tuple[int, int]]) -> frozenset[str]:
-        return frozenset(f"g{group_id}:b{branch_id}" for group_id, branch_id in pp_condition_stack)
-
-    @staticmethod
-    def _raise_if_unparsed_procedure_header(
-        line: str,
-        *,
-        in_interface: bool,
-        filename: str | None,
-        lineno: int | None,
-        source_line: str | None,
-    ) -> None:
         stripped = line.strip()
-        if not stripped:
-            return
-        lowered = stripped.lower()
-        if lowered.startswith("module procedure"):
-            if in_interface or _MOD_PROC_IMPL_RE.match(stripped) or "(" not in stripped:
-                return
+        if self._is_openmp_declarative_directive(stripped):
             raise FortranParseError(
-                f"Unsupported or malformed module procedure header: {stripped}",
+                f"Unsupported OpenMP declarative directive in procedure '{proc_state['signature'].name}': {stripped}",
                 filename=filename,
                 line_number=lineno,
                 source_line=source_line,
             )
-        if _looks_like_procedure_header(stripped):
+        if self._handle_proc_implicit_line(stripped, proc_state):
+            return
+        if self._handle_proc_external_line(stripped, proc_state):
+            return
+        parsed_use = self._parse_use_statement(stripped)
+        if parsed_use:
+            module_name, mappings = parsed_use
+            proc_state["uses"][module_name] = mappings
+            return
+        # This parser is a subset parser focused on wrapper-relevant metadata.
+        # These statements do not affect extracted signature typing/shapes.
+        if self._is_ignored_proc_spec_line(stripped):
+            return
+        if self._handle_proc_include_or_import_line(stripped, proc_state):
+            return
+        if self._handle_proc_parameter_line(
+            stripped,
+            proc_state,
+            filename=filename,
+            lineno=lineno,
+            source_line=source_line,
+        ):
+            return
+
+        parsed = self._helper_parse_declaration_line(
+            stripped,
+            _ParserScope(
+                kind="procedure",
+                name=proc_state["signature"].name,
+                model=proc_state["signature"],
+                state=proc_state,
+                module_owner=proc_state["signature"].module,
+            ),
+            role="procedure_symbol",
+            filename=proc_state.get("filename") or filename,
+            lineno=lineno,
+            source_line=source_line,
+            include_intent=True,
+        )
+        if not parsed:
+            self._handle_unknown_proc_declaration(
+                line,
+                proc_state,
+                filename=filename,
+                lineno=lineno,
+                source_line=source_line,
+            )
+            return
+
+    def _helper_visit_type_spec_line(self, line: str, scope: _ParserScope, filename: str | None, lineno: int | None = None, source_line: str | None = None) -> None:
+        """Visit one derived-type specification-part line.
+
+        Derived types share the common declaration parser for fields, but keep
+        their own visitor because the type grammar has type-only statements
+        such as ``sequence`` and a later ``contains`` region for bindings.
+
+        Example:
+            ``real :: values(n)`` is parsed through
+            `_helper_parse_declaration_line` with role ``"type_field"`` and
+            appended to `dtype.fields`. ``sequence`` is consumed here without
+            creating a field.
+        """
+        dtype = scope.model
+        if dtype is None:  # pragma: no cover - internal helper misuse.
+            raise FortranParseError("Derived-type specification scope is missing a target model.", filename=filename)
+        stripped = line.strip()
+        if re.match(r"^type\s*::\s*\w+$", stripped, re.IGNORECASE):
+            return
+        if stripped.lower() in {"sequence", "private"}:
+            return
+        if self._is_openmp_declarative_directive(stripped):
             raise FortranParseError(
-                f"Unsupported or malformed procedure header: {stripped}",
+                f"Unsupported OpenMP declarative directive in type '{dtype.name}': {stripped}",
+                filename=filename,
+                line_number=lineno,
+                source_line=source_line,
+            )
+        parsed = self._helper_parse_declaration_line(
+            stripped,
+            scope,
+            role="type_field",
+            filename=filename,
+            lineno=lineno,
+            source_line=source_line,
+            parse_character_star=False,
+        )
+        if parsed:
+            return
+        if "::" not in stripped and not self._looks_like_declaration_or_spec(stripped):
+            return
+        raise FortranParseError(
+            f"Unknown or unsupported datatype declaration in type '{dtype.name}': {line.strip()}",
+            filename=filename,
+            line_number=lineno,
+            source_line=source_line,
+        )
+
+    def _parse_derived_type_contains_line(
+        self,
+        line: str,
+        dtype: FortranDerivedType,
+        *,
+        filename: str | None = None,
+        lineno: int | None = None,
+        source_line: str | None = None,
+    ) -> None:
+        proc_binding = _REGEX["procedure_binding"].match(line)
+        if proc_binding:
+            binding_names = split_csv(proc_binding.group("names"))
+            dtype.methods.extend(binding_names)
+            left = line.split("::", 1)[0]
+            attrs = [a.strip().lower() for a in split_csv(left.split(",", 1)[1] if "," in left else "")]
+            for name in binding_names:
+                dtype.procedure_bindings.append({"name": name, "attrs": attrs})
+            return
+
+        if line.lower().startswith("generic") and "::" in line and "=>" in line:
+            left, right = [x.strip() for x in line.split("::", 1)]
+            attr_txt = left[len("generic") :].strip().lstrip(",").strip()
+            attrs = [a.strip().lower() for a in split_csv(attr_txt)] if attr_txt else []
+            lhs, rhs_txt = [x.strip() for x in right.split("=>", 1)]
+            rhs = [r.strip() for r in split_csv(rhs_txt)]
+            dtype.generic_bindings.append({"name": lhs, "targets": rhs, "attrs": attrs})
+            return
+
+        if self._looks_like_declaration_or_spec(line):
+            raise FortranParseError(
+                f"Unsupported or malformed type-bound declaration in type '{dtype.name}': {line.strip()}",
                 filename=filename,
                 line_number=lineno,
                 source_line=source_line,
@@ -3666,6 +2510,125 @@ class FortranParser:
                     arg.base_type = "procedure"
                     arg.kind = ""
 
+    # ------------------------------------------------------------------
+    # Declaration parsing and symbol storage
+    # ------------------------------------------------------------------
+
+    def _helper_parse_declaration_line(
+        self,
+        line: str,
+        scope: _ParserScope,
+        *,
+        role: str,
+        filename: str | None,
+        lineno: int | None,
+        source_line: str | None,
+        include_intent: bool = False,
+        parse_character_star: bool = True,
+    ) -> bool:
+        """Parse one declaration line and store it in `scope`.
+
+        This is the common declaration backend for module variables, program
+        variables, block-data variables, derived-type fields, and procedure
+        arguments/results. The `role` argument captures the small differences
+        in where the parsed symbol is pushed.
+
+        Example:
+            ``real, intent(in) :: x(:)`` with role ``procedure_symbol`` updates
+            the active procedure argument. ``real :: x(:)`` with role
+            ``module_variable`` appends a `FortranVariable` to the module.
+        """
+        if "::" in line:
+            left, right = [x.strip() for x in line.split("::", 1)]
+            has_separator = True
+        else:
+            left = line.strip()
+            right = ""
+            has_separator = False
+
+        parsed_decl = self._parse_declaration_left(left, parse_character_star=parse_character_star)
+        if parsed_decl is None:
+            return False
+        meta, attrs = parsed_decl
+        if not has_separator:
+            legacy_right = self._legacy_declaration_entities(left, meta)
+            if legacy_right is not None:
+                right = legacy_right
+                attrs = []
+        self._apply_decl_attrs(meta, attrs, include_intent=include_intent)
+        self._helper_push_declaration_to_scope(
+            scope,
+            meta=meta,
+            right=right,
+            role=role,
+            filename=filename,
+            lineno=lineno,
+            source_line=source_line,
+        )
+        return True
+
+    def _parse_declaration_left(
+        self,
+        left: str,
+        *,
+        parse_character_star: bool = True,
+    ) -> tuple[dict, list[str]] | None:
+        star_kind = self._find_legacy_star_kind(left)
+        char_star = _REGEX["char_star"].match(left) if parse_character_star else None
+        if char_star:
+            kind = char_star.group("len").strip()
+            if kind.startswith("(") and kind.endswith(")"):
+                kind = kind[1:-1].strip()
+            trailing = (char_star.group("rest") or "").strip().lstrip(", ")
+            return self._new_decl_meta("character", kind), split_csv(trailing)
+        if star_kind:
+            base, kind = star_kind
+            tail = self._strip_legacy_star_kind_prefix(left)
+            attrs = split_csv(tail.lstrip(", ")) if tail.startswith(",") else []
+            return self._new_decl_meta(base.lower(), kind), attrs
+
+        intrinsic = self._split_intrinsic_type_spec(left)
+        derived = _REGEX["type_field"].match(left)
+        class_derived = _REGEX["class_field"].match(left)
+        if intrinsic:
+            base, type_spec, tail = intrinsic
+            if base == "double precision":
+                base = "real"
+            return self._new_decl_meta(base, extract_kind_from_type_spec(base, type_spec)), split_csv(tail.strip().lstrip(", "))
+        if derived or class_derived:
+            decl = derived or class_derived
+            return self._new_decl_meta("derived", decl.group("dtype")), split_csv((decl.group("attrs") or "").strip().lstrip(", "))
+        if re.match(r"^procedure\s*\(", left, re.IGNORECASE):
+            procm = _REGEX["procedure_dummy"].match(left)
+            iface = procm.group("iface").lower() if procm else None
+            return self._new_decl_meta("procedure", iface), split_csv((procm.group("attrs") if procm else "").strip().lstrip(", "))
+        return None
+
+    def _legacy_declaration_entities(self, left: str, meta: dict) -> str | None:
+        """Return the entity-list tail from a declaration without `::`."""
+        char_star = _REGEX["char_star"].match(left)
+        if char_star:
+            return (char_star.group("rest") or "").strip().lstrip(", ")
+
+        star_kind = self._find_legacy_star_kind(left)
+        if star_kind and meta["base_type"] != "character":
+            return self._strip_legacy_star_kind_prefix(left).lstrip(", ")
+
+        intrinsic = self._split_intrinsic_type_spec(left)
+        if intrinsic:
+            return intrinsic[2].strip().lstrip(", ")
+
+        derived = _REGEX["type_field"].match(left) or _REGEX["class_field"].match(left)
+        if derived:
+            return (derived.group("attrs") or "").strip().lstrip(", ")
+
+        procm = _REGEX["procedure_dummy"].match(left)
+        if procm:
+            tail = (procm.group("attrs") or "").strip()
+            if tail and not tail.startswith(","):
+                return tail
+        return None  # pragma: no cover - invalid legacy declaration tails are ignored.
+
     def _helper_push_declaration_to_scope(
         self,
         scope: _ParserScope,
@@ -3697,10 +2660,10 @@ class FortranParser:
             if meta["base_type"] == "procedure" and meta["kind"] in proc_state.get("imports", set()):
                 meta["kind"] = None
             for entity in split_csv(right):
-                raw_name, shape = _var(entity)
+                raw_name, shape = self._var(entity)
                 if not raw_name:
                     continue
-                normalized_name = _normalize_declared_name(raw_name, meta)
+                normalized_name = self._normalize_declared_name(raw_name, meta)
                 if not normalized_name:
                     continue
                 lowered_name = self._proc_scope_mark_declared_symbol(
@@ -3716,7 +2679,7 @@ class FortranParser:
                 if arg is None:
                     self._proc_scope_set_declared_local_type(proc_state, lowered_name, meta)
                     continue
-                _apply(arg, meta, shape)
+                self._apply(arg, meta, shape)
             return
 
         target = scope.model
@@ -3725,122 +2688,138 @@ class FortranParser:
 
         for entity in split_csv(right):
             initializer = entity.split("=", 1)[1].strip() if "=" in entity else None
-            raw_name, shape = _var(entity)
+            raw_name, shape = self._var(entity)
             if not raw_name:
                 continue
-            normalized_name = _normalize_declared_name(raw_name, meta)
+            normalized_name = self._normalize_declared_name(raw_name, meta)
             if not normalized_name:
                 continue
             if role == "type_field":
                 field = FortranArgument(name=normalized_name)
-                _apply(field, meta, shape)
+                self._apply(field, meta, shape)
                 target.fields.append(field)
                 continue
             var = FortranArgument(name=normalized_name)
-            _apply(var, meta, shape)
+            self._apply(var, meta, shape)
             if initializer is not None and meta["parameter"]:
-                var.value = _normalize_parameter_value(initializer)
+                var.value = self._normalize_parameter_value(initializer)
                 var.symbolic_value = initializer
                 var.value_type = "expression"
             target.variables.append(var)
 
-    def _helper_parse_declaration_line(
-        self,
-        line: str,
-        scope: _ParserScope,
-        *,
-        role: str,
-        filename: str | None,
-        lineno: int | None,
-        source_line: str | None,
-        include_intent: bool = False,
-        parse_character_star: bool = True,
-    ) -> bool:
-        """Parse one declaration line and store it in `scope`.
+    @staticmethod
+    def _new_decl_meta(base_type: str, kind: str | None) -> dict:
+        return {
+            "base_type": base_type,
+            "kind": kind or "",
+            "rank": 0,
+            "shape": [],
+            "intent": "unknown",
+            "optional": False,
+            "value": False,
+            "allocatable": False,
+            "pointer": False,
+            "external": False,
+            "parameter": False,
+        }
 
-        This is the common declaration backend for module variables, program
-        variables, block-data variables, derived-type fields, and procedure
-        arguments/results. The `role` argument captures the small differences
-        in where the parsed symbol is pushed.
+    @staticmethod
+    def _apply_decl_attrs(meta: dict, attrs: list[str], *, include_intent: bool = False) -> None:
+        for a in attrs:
+            la = a.lower()
+            if include_intent and la.startswith("intent") and "(" in la and ")" in la:
+                meta["intent"] = la.split("(", 1)[1].rsplit(")", 1)[0].strip()
+            elif la == "optional":
+                meta["optional"] = True
+            elif la == "value":
+                meta["value"] = True
+            elif la == "allocatable":
+                meta["allocatable"] = True
+            elif la == "pointer":
+                meta["pointer"] = True
+            elif la == "external":
+                meta["external"] = True
+            elif la == "parameter":
+                meta["parameter"] = True
+            elif la.startswith("dimension") and "(" in a and ")" in a:
+                shape = split_csv(a[a.find("(") + 1 : a.rfind(")")])
+                meta["shape"] = shape
+                meta["rank"] = len(shape)
 
-        Example:
-            ``real, intent(in) :: x(:)`` with role ``procedure_symbol`` updates
-            the active procedure argument. ``real :: x(:)`` with role
-            ``module_variable`` appends a `FortranVariable` to the module.
-        """
-        parsed_decl = _parse_common_declaration_line(
-            line,
-            filename=filename,
-            line_number=lineno,
-            source_line=source_line,
-            include_intent=include_intent,
-            parse_character_star=parse_character_star,
-        )
-        if parsed_decl is None:
-            return False
-        meta, right = parsed_decl
-        self._helper_push_declaration_to_scope(
-            scope,
-            meta=meta,
-            right=right,
-            role=role,
-            filename=filename,
-            lineno=lineno,
-            source_line=source_line,
-        )
-        return True
+    @staticmethod
+    def _normalize_declared_name(name: str, meta: dict) -> str:
+        normalized_name = re.sub(r"^\*\s*[0-9]+\s*", "", name).strip()
+        if meta["base_type"] == "character" and "*" in normalized_name:
+            # Legacy CHARACTER declarations may carry entity-local length
+            # specifiers (e.g. NAME*(*) or SUBNAM*6). Strip the `*len`
+            # suffix so symbol lookup matches procedure arguments.
+            normalized_name = normalized_name.split("*", 1)[0].strip()
+        return normalized_name
 
-    def _helper_visit_spec_part(
-        self,
-        scope: _ParserScope,
-        lines: _PreprocessedLines,
-        *,
-        filename: str | None,
-    ) -> None:
-        """Visit declaration/specification lines for a unit scope.
+    @staticmethod
+    def _strip_legacy_star_kind_prefix(left: str) -> str:
+        return re.sub(
+            r"^(integer|real|complex|logical)\s*\*\s*[0-9]+\s*",
+            "",
+            left,
+            flags=re.IGNORECASE,
+        ).strip()
 
-        The helper name mirrors the grammar term "specification part". It is
-        called by module, submodule, program, procedure, derived-type, and
-        block-data visitors after `_helper_split_unit_parts` has isolated the
-        relevant region.
+    @staticmethod
+    def _var(entry: str):
+        e = entry.strip()
+        if not e:  # pragma: no cover - split_csv omits empty declaration entities for valid declarations.
+            return "", []
+        if "=" in e:
+            # Keep only the declared entity name/shape; drop initializer text.
+            e = e.split("=", 1)[0].strip()
+        if "(" in e and e.endswith(")"):
+            name = e[:e.find("(")].strip()
+            return name, split_csv(e[e.find("(")+1:-1])
+        return e, []
 
-        Example:
-            A program and a procedure both have executable statements, but this
-            helper only sees their declaration lines before execution begins.
-            The visitor decides whether later execution/contains regions are
-            ignored or visited separately.
-        """
-        for line, lineno, source_line in lines:
-            stripped = line.strip()
-            if not stripped:
-                continue
-            if scope.kind == "procedure":
-                self._helper_visit_procedure_spec_line(
-                    stripped,
-                    scope.state,
-                    filename=filename,
-                    lineno=lineno,
-                    source_line=source_line,
-                )
-            elif scope.kind == "derived_type":
-                self._helper_visit_type_spec_line(
-                    stripped,
-                    scope,
-                    filename,
-                    lineno=lineno,
-                    source_line=source_line,
-                )
-            elif scope.kind in {"module", "submodule", "program", "block_data"}:
-                self._helper_visit_module_like_spec_line(
-                    scope,
-                    stripped,
-                    filename=filename,
-                    lineno=lineno,
-                    source_line=source_line,
-                )
+    @staticmethod
+    def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
+        arg.base_type = meta["base_type"]
+        arg.kind = meta["kind"] or ""
+        arg.intent = meta["intent"]
+        arg.optional = meta["optional"]
+        arg.pass_by_value = meta["value"]
+        arg.allocatable = meta["allocatable"]
+        arg.pointer = meta["pointer"]
+        arg.is_parameter = meta["parameter"]
+        if shape:
+            arg.shape = shape
+            arg.rank = len(shape)
+        else:
+            arg.shape = list(meta["shape"])
+            arg.rank = meta["rank"]
+        arg.lbound, arg.ubound = FortranParser._extract_bounds(arg.shape)
+
+    @staticmethod
+    def _split_dim_bounds(dim: str) -> tuple[str | None, str | None]:
+        part = dim.strip()
+        if not part:  # pragma: no cover - empty dimensions are invalid Fortran and not emitted by split_csv.
+            return None, None
+        if ':' not in part:
+            return "1", part
+        lo, hi = part.split(':', 1)
+        lo = lo.strip() or None
+        hi = hi.strip() or None
+        return lo, hi
+
+    @staticmethod
+    def _extract_bounds(shape: list[str]) -> tuple[list[str | None], list[str | None]]:
+        lbounds: list[str | None] = []
+        ubounds: list[str | None] = []
+        for dim in shape:
+            lo, hi = FortranParser._split_dim_bounds(dim)
+            lbounds.append(lo)
+            ubounds.append(hi)
+        return lbounds, ubounds
 
     # ------------------------------------------------------------------
-    # Procedure declaration parsing helpers
+    # Procedure specification handlers
     # ------------------------------------------------------------------
 
     def _handle_proc_implicit_line(self, line: str, proc_state: dict) -> bool:
@@ -3906,11 +2885,11 @@ class FortranParser:
             ``import :: c_ptr`` records ``c_ptr`` as an imported symbol, while
             ``include "shape.inc"`` records the include path on the signature.
         """
-        include_match = _INCLUDE_RE.match(line)
+        include_match = _REGEX["include"].match(line)
         if include_match:
             self._proc_scope_add_include(proc_state, include_match.group("path"))
             return True
-        import_match = _IMPORT_RE.match(line)
+        import_match = _REGEX["import"].match(line)
         if import_match:
             symbols = [s.strip().lower() for s in split_csv(import_match.group("symbols") or "") if s.strip()]
             self._proc_scope_add_imports(proc_state, symbols)
@@ -3937,7 +2916,7 @@ class FortranParser:
             compile-time shape resolution. Legacy ``parameter (n=4)`` is also
             accepted in fixed-form-style sources.
         """
-        param_match = _PARAM_RE.match(line)
+        param_match = _REGEX["typed_parameter"].match(line)
         if param_match:
             for assign in split_csv(param_match.group("body")):
                 if "=" not in assign:
@@ -3953,7 +2932,7 @@ class FortranParser:
                 )
             return True
 
-        legacy_param_match = _LEGACY_PARAM_STMT_RE.match(line)
+        legacy_param_match = _REGEX["legacy_parameter"].match(line)
         if legacy_param_match:
             for assign in split_csv(legacy_param_match.group("body")):
                 if "=" not in assign:
@@ -4016,7 +2995,7 @@ class FortranParser:
         """
         if not self._looks_like_unknown_proc_declaration(line):
             return
-        if any(pattern.search(line) for pattern in _UNSUPPORTED_PATTERNS):
+        if any(_REGEX[pattern_key].search(line) for pattern_key in _UNSUPPORTED_PATTERN_KEYS):
             return
         raise FortranParseError(
             f"Unknown or unsupported datatype declaration for procedure '{proc_state['signature'].name}': {line.strip()}",
@@ -4025,77 +3004,242 @@ class FortranParser:
             source_line=source_line,
         )
 
-    def _helper_visit_procedure_spec_line(self, line: str, proc_state: dict, filename: str | None = None, lineno: int | None = None, source_line: str | None = None) -> None:
-        """Parse one declaration/specification line inside a procedure scope.
+    # ------------------------------------------------------------------
+    # Finalization and compile-time resolution
+    # ------------------------------------------------------------------
 
-        The method mutates `proc_state` in-place by:
-        - registering typed symbols and parameter constants,
-        - annotating argument metadata (type/kind/intent/rank/shape),
-        - recording imports/includes/external callbacks,
-        - transitioning unsupported/unknown declarations into explicit errors.
+    def _finalize_proc(self, state: dict) -> FortranProcedureSignature:
+        sig = state["signature"]
+        symbols = state["symbols"]
+        local_params = state.get("local_params", {})
+        legacy_local_params = state.get("legacy_local_params", set())
+        implicit_typed_symbols = state.get("implicit_typed_symbols", {})
+        filename = state.get("filename")
+        implicit_none = state.get("implicit_none", False)
+        sig.variables = {}
+        sig.arguments = [symbols.get(a.name.lower(), a) for a in sig.arguments]
+        if sig.result:
+            sig.result = symbols.get(sig.result.name.lower(), sig.result)
 
-        Example:
-            ``real, intent(in) :: x(n)`` goes through
-            `_helper_parse_declaration_line` with role ``"procedure_symbol"``
-            and updates the existing dummy argument ``x`` in the procedure
-            scope.
-        """
-        stripped = line.strip()
-        if _is_openmp_declarative_directive(stripped):
-            raise FortranParseError(
-                f"Unsupported OpenMP declarative directive in procedure '{proc_state['signature'].name}': {stripped}",
-                filename=filename,
-                line_number=lineno,
-                source_line=source_line,
-            )
-        if self._handle_proc_implicit_line(stripped, proc_state):
-            return
-        if self._handle_proc_external_line(stripped, proc_state):
-            return
-        parsed_use = _parse_use_statement(stripped)
-        if parsed_use:
-            module_name, mappings = parsed_use
-            proc_state["uses"][module_name] = mappings
-            return
-        # This parser is a subset parser focused on wrapper-relevant metadata.
-        # These statements do not affect extracted signature typing/shapes.
-        if self._is_ignored_proc_spec_line(stripped):
-            return
-        if self._handle_proc_include_or_import_line(stripped, proc_state):
-            return
-        if self._handle_proc_parameter_line(
-            stripped,
-            proc_state,
-            filename=filename,
-            lineno=lineno,
-            source_line=source_line,
-        ):
-            return
-
-        parsed = self._helper_parse_declaration_line(
-            stripped,
-            _ParserScope(
-                kind="procedure",
-                name=proc_state["signature"].name,
-                model=proc_state["signature"],
-                state=proc_state,
-                module_owner=proc_state["signature"].module,
-            ),
-            role="procedure_symbol",
-            filename=proc_state.get("filename") or filename,
-            lineno=lineno,
-            source_line=source_line,
-            include_intent=True,
+        FortranParser._validate_no_duplicate_arg_names(
+            sig.arguments,
+            sig.name,
+            filename,
+            state.get("header_lineno"),
+            state.get("header_source_line"),
         )
-        if not parsed:
-            self._handle_unknown_proc_declaration(
-                line,
-                proc_state,
-                filename=filename,
-                lineno=lineno,
-                source_line=source_line,
+
+        # Safety check: if an argument has been explicitly declared in this
+        # procedure, it must not remain unknown after declaration parsing.
+        # This catches declaration-application regressions (e.g. legacy
+        # star-kind list handling) while still allowing truly undeclared
+        # arguments to be reported via readiness diagnostics.
+        declared_symbols = state.get("typed_symbols", set())
+        for arg in sig.arguments:
+            if arg.name.lower() in declared_symbols and arg.base_type == "unknown":  # pragma: no cover - defensive parser invariant.
+                raise FortranParseError(
+                    f"Failed to resolve declared argument '{arg.name}' in procedure '{sig.name}'.",
+                    filename=filename,
+                )
+        local_resolver = _CompileTimeResolver(local_params)
+        for arg in sig.arguments:
+            if arg.kind:
+                arg.kind = self._resolve_kind_expression(arg.kind, local_params, resolver=local_resolver)
+            if arg.shape:
+                arg.shape = [local_resolver.resolve(dim) for dim in arg.shape]
+            if arg.base_type == "unknown" and not implicit_none:
+                arg.base_type = self._infer_implicit_base_type(arg.name)
+        if sig.result and sig.result.kind:
+            sig.result.kind = self._resolve_kind_expression(sig.result.kind, local_params, resolver=local_resolver)
+        relevant_params = self._collect_relevant_local_params(sig, local_params)
+        declared_local_types = state.get("declared_local_types", {})
+        # Defensive reconciliation: some legacy declaration forms can be parsed into
+        # `declared_local_types` before being matched back to argument symbols.
+        # If an argument is still unknown but we have an exact-name local type
+        # record, apply it before implicit-none validation to avoid false positives.
+        for arg in sig.arguments:
+            if arg.base_type != "unknown":
+                continue
+            inferred = declared_local_types.get(arg.name.lower())
+            if not inferred:
+                continue
+            arg.base_type = inferred.get("base_type", arg.base_type)
+            arg.kind = inferred.get("kind", arg.kind)
+
+        if implicit_none and not sig.in_interface:
+            self._validate_all_args_declared(sig, filename, explicit_result=bool(state.get("explicit_result", False)))
+
+        for name, value in relevant_params.items():
+            if name.lower() in legacy_local_params:
+                # Legacy PARAMETER (...) constants are declaration artifacts in
+                # fixed-form sources; keep them available for compile-time
+                # resolution but do not expose them as parsed procedure variables.
+                continue
+            local_decl = declared_local_types.get(name.lower(), {})
+            var = FortranVariable(
+                name=name.lower(),
+                base_type=local_decl.get("base_type", implicit_typed_symbols.get(name.lower(), "unknown")),
+                kind=local_decl.get("kind"),
+                value=self._normalize_parameter_value(value),
+                value_type="expression",
+                is_parameter=True,
             )
-            return
+            var.symbolic_value = value
+            sig.variables[name.lower()] = var
+        if sig.kind == "function" and sig.result and sig.result.base_type == "unknown":
+            if not implicit_none:
+                sig.result.base_type = self._infer_implicit_base_type(sig.result.name)
+            if sig.result.base_type == "unknown":  # pragma: no cover - implicit-none result validation handles public cases first.
+                raise FortranParseError(
+                    f"Unknown datatype for function result '{sig.result.name}' in procedure '{sig.name}'.",
+                    filename=filename,
+                )
+        if sig.kind == "function":
+            self._validate_function_result(sig, filename)
+        for symbol in sorted(state.get("imports", set())):
+            attr = f"import({symbol})"
+            if attr not in sig.attributes:
+                sig.attributes.append(attr)
+        sig.uses = dict(state["uses"])
+        return replace(sig)
+
+    @staticmethod
+    def _validate_all_args_declared(sig: FortranProcedureSignature, filename: str | None, *, explicit_result: bool) -> None:
+        for arg in sig.arguments:
+            if arg.base_type == "unknown":
+                raise FortranParseError(
+                    f"Argument '{arg.name}' in procedure '{sig.name}' has no type declaration (implicit none is active).",
+                    filename=filename,
+                )
+        if sig.kind == "function" and sig.result and sig.result.base_type == "unknown":
+            if explicit_result:
+                raise FortranParseError(
+                    f"Unknown datatype for function result '{sig.result.name}' in procedure '{sig.name}'.",
+                    filename=filename,
+                )
+            raise FortranParseError(
+                f"Function result '{sig.result.name}' in procedure '{sig.name}' has no type declaration (implicit none is active).",
+                filename=filename,
+            )
+
+    @staticmethod
+    def _validate_function_result(sig: FortranProcedureSignature, filename: str | None) -> None:
+        if sig.result is None:  # pragma: no cover - function signatures are constructed with result objects.
+            raise FortranParseError(
+                f"Function '{sig.name}' has no result variable.",
+                filename=filename,
+            )
+        result_name = sig.result.name.lower()
+        func_name = sig.name.lower()
+        for arg in sig.arguments:
+            if arg.name.lower() == result_name and result_name != func_name:
+                raise FortranParseError(
+                    f"Function result variable '{sig.result.name}' in function '{sig.name}' shadows an argument name.",
+                    filename=filename,
+                )
+
+    @staticmethod
+    def _validate_variable_declarations(
+        variables: list[FortranVariable],
+        *,
+        owner_kind: str,
+        owner_name: str | None,
+        filename: str | None,
+    ) -> None:
+        seen: dict[str, FortranArgument] = {}
+        display_name = owner_name or "<unnamed>"
+        for var in variables:
+            key = var.name.lower()
+            if not re.match(r"^[a-z_]\w*$", key, re.IGNORECASE):  # pragma: no cover - parser normalizes valid Fortran identifiers.
+                continue
+            prev = seen.get(key)
+            if prev is not None:
+                if (
+                    prev.base_type != var.base_type
+                    or prev.kind != var.kind
+                    or prev.rank != var.rank
+                    or tuple(prev.shape) != tuple(var.shape)
+                ):
+                    raise FortranParseError(
+                        f"Duplicate variable '{var.name}' in {owner_kind} '{display_name}'.",
+                        filename=filename,
+                    )
+                continue  # pragma: no cover - exact duplicate declarations are invalid Fortran and tolerated defensively.
+            seen[key] = var
+
+    @staticmethod
+    def _variable_scope_label(scope) -> tuple[str, str | None]:
+        if isinstance(scope, FortranSubmodule):
+            return "submodule", scope.name
+        if isinstance(scope, FortranProgram):
+            return "program", scope.name
+        if isinstance(scope, FortranBlockData):
+            return "block data", scope.name
+        return "module", scope.name
+
+    @staticmethod
+    def _validate_module_variables(module: FortranModule | FortranSubmodule, filename: str | None) -> None:
+        owner_kind, owner_name = FortranParser._variable_scope_label(module)
+        FortranParser._validate_variable_declarations(
+            module.variables,
+            owner_kind=owner_kind,
+            owner_name=owner_name,
+            filename=filename,
+        )
+
+    @staticmethod
+    def _apply_module_visibility(module: FortranModule, filename: str | None) -> None:
+        public_set = {s.lower() for s in module.public_symbols}
+        private_set = {s.lower() for s in module.private_symbols}
+        for var in module.variables:
+            name = var.name.lower()
+            if name in private_set:
+                var.visibility = "private"
+            elif name in public_set:
+                var.visibility = "public"
+            else:
+                var.visibility = module.default_visibility
+            if var.base_type == "unknown":  # pragma: no cover - unknown module declarations raise before finalization.
+                raise FortranParseError(
+                    f"Unknown type for variable '{var.name}' in module '{module.name}'.",
+                    filename=filename,
+                )
+
+    @staticmethod
+    def _validate_derived_type_fields(dtype: FortranDerivedType, filename: str | None) -> None:
+        seen: set[str] = set()
+        for f in dtype.fields:
+            if f.name.lower() in seen:
+                raise FortranParseError(
+                    f"Duplicate field '{f.name}' in derived type '{dtype.name}'.",
+                    filename=filename,
+                )
+            seen.add(f.name.lower())
+            if f.base_type == "unknown":  # pragma: no cover - unknown type fields raise before finalization.
+                raise FortranParseError(
+                    f"Unknown type for field '{f.name}' in derived type '{dtype.name}'.",
+                    filename=filename,
+                )
+
+    @staticmethod
+    def _validate_no_duplicate_arg_names(
+        args: list[FortranArgument],
+        proc_name: str,
+        filename: str | None,
+        line_number: int | None = None,
+        source_line: str | None = None,
+    ) -> None:
+        seen: set[str] = set()
+        for arg in args:
+            key = arg.name.lower()
+            if key in seen:
+                raise FortranParseError(
+                    f"Duplicate argument name '{arg.name}' in procedure '{proc_name}'.",
+                    filename=filename,
+                    line_number=line_number,
+                    source_line=source_line,
+                )
+            seen.add(key)
 
     def _collect_module_parameters(self, code: _SourceOrLines, filename: str | None) -> dict[str, dict[str, str]]:
         lines = self._preprocessed_lines(code, filename)
@@ -4126,7 +3270,7 @@ class FortranParser:
                 continue
             if not in_module_spec_part:
                 continue
-            pm = _PARAM_RE.match(s)
+            pm = _REGEX["typed_parameter"].match(s)
             if not pm:
                 continue
             for assign in split_csv(pm.group("body")):
@@ -4135,320 +3279,1125 @@ class FortranParser:
                 k, v = [x.strip() for x in assign.split("=", 1)]
                 output[current_module][k.lower()] = v
         return output
-    # ------------------------------------------------------------------
-    # Derived types, modules, interfaces, and other program units
-    # ------------------------------------------------------------------
-
-    def _init_derived_type(
-        self,
-        line: str,
-        *,
-        current_module: str | None,
-    ) -> FortranDerivedType | None:
-        parsed_type = self._parse_derived_type_start(line)
-        if not parsed_type:
-            return None
-
-        type_name, attrs = parsed_type
-        extends = None
-        normalized_attrs: list[str] = []
-        for attr in attrs:
-            lowered = attr.lower()
-            if lowered.startswith("extends(") and lowered.endswith(")"):
-                extends = attr[attr.find("(") + 1 : -1].strip()
-            else:
-                normalized_attrs.append(lowered)
-
-        return FortranDerivedType(
-            name=type_name,
-            module=current_module,
-            extends=extends,
-            attributes=normalized_attrs,
-        )
-
-    def _parse_derived_type_contains_line(
-        self,
-        line: str,
-        dtype: FortranDerivedType,
-        *,
-        filename: str | None = None,
-        lineno: int | None = None,
-        source_line: str | None = None,
-    ) -> None:
-        proc_binding = _PROC_BIND_RE.match(line)
-        if proc_binding:
-            binding_names = split_csv(proc_binding.group("names"))
-            dtype.methods.extend(binding_names)
-            left = line.split("::", 1)[0]
-            attrs = [a.strip().lower() for a in split_csv(left.split(",", 1)[1] if "," in left else "")]
-            for name in binding_names:
-                dtype.procedure_bindings.append({"name": name, "attrs": attrs})
-            return
-
-        if line.lower().startswith("generic") and "::" in line and "=>" in line:
-            left, right = [x.strip() for x in line.split("::", 1)]
-            attr_txt = left[len("generic") :].strip().lstrip(",").strip()
-            attrs = [a.strip().lower() for a in split_csv(attr_txt)] if attr_txt else []
-            lhs, rhs_txt = [x.strip() for x in right.split("=>", 1)]
-            rhs = [r.strip() for r in split_csv(rhs_txt)]
-            dtype.generic_bindings.append({"name": lhs, "targets": rhs, "attrs": attrs})
-            return
-
-        if _looks_like_declaration_or_spec(line):
-            raise FortranParseError(
-                f"Unsupported or malformed type-bound declaration in type '{dtype.name}': {line.strip()}",
-                filename=filename,
-                line_number=lineno,
-                source_line=source_line,
-            )
 
     @staticmethod
-    def _resolve_derived_type_extensions(types: list[FortranDerivedType]) -> None:
-        by_name = {t.name.lower(): t for t in types}
-        for dtype in types:
-            if isinstance(dtype.extends, str):
-                parent = by_name.get(dtype.extends.lower())
-                if parent is not None:
-                    dtype.extends = parent
+    def _resolve_module_parameter_values(module_params: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
+        resolved: dict[str, dict[str, str]] = {}
+        for module_name, params in module_params.items():
+            resolver = _CompileTimeResolver(params)
+            resolved[module_name.lower()] = {
+                name.lower(): resolver.resolve(value)
+                for name, value in params.items()
+            }
+        return resolved
 
-    def _helper_visit_type_spec_line(self, line: str, scope: _ParserScope, filename: str | None, lineno: int | None = None, source_line: str | None = None) -> None:
-        """Visit one derived-type specification-part line.
+    @staticmethod
+    def _resolve_signature_kinds(
+        sig: FortranProcedureSignature,
+        module_params: dict[str, dict[str, str]],
+        *,
+        resolve_shapes: bool = True,
+    ) -> None:
+        module_params = FortranParser._resolve_module_parameter_values(module_params)
+        symbol_to_value: dict[str, str] = {}
+        if sig.module:
+            symbol_to_value.update(module_params.get(sig.module.lower(), {}))
+        for mod, mappings in sig.uses.items():
+            params = module_params.get(mod.lower(), {})
+            if not params:
+                continue
+            if not mappings:
+                symbol_to_value.update(params)
+                continue
+            for mapping in mappings:
+                source = mapping.source.lower()
+                local = mapping.local_name.lower()
+                if source in params:
+                    symbol_to_value[local] = params[source]
+        for name, var in sig.variables.items():
+            if var.value is not None:
+                symbol_to_value.setdefault(name.lower(), var.value)
+            elif var.symbolic_value is not None:
+                symbol_to_value.setdefault(name.lower(), var.symbolic_value)
+        variable_base_types = {name.lower(): var.base_type for name, var in sig.variables.items()}
+        variable_symbolic_values = {
+            name.lower(): var.symbolic_value or var.value
+            for name, var in sig.variables.items()
+        }
+        resolved_variables = FortranParser._resolve_variables(symbol_to_value, variable_base_types, variable_symbolic_values)
+        for name in list(sig.variables):
+            if name.lower() in resolved_variables:
+                sig.variables[name] = resolved_variables[name.lower()]
+        resolver = _CompileTimeResolver(symbol_to_value)
+        for arg in sig.arguments:
+            if arg.kind:
+                arg.kind = FortranParser._resolve_kind_expression(arg.kind, symbol_to_value, resolver=resolver)
+            if resolve_shapes and arg.shape:
+                arg.shape = [resolver.resolve(dim) for dim in arg.shape]
+        if sig.result and sig.result.kind:
+            sig.result.kind = FortranParser._resolve_kind_expression(sig.result.kind, symbol_to_value, resolver=resolver)
 
-        Derived types share the common declaration parser for fields, but keep
-        their own visitor because the type grammar has type-only statements
-        such as ``sequence`` and a later ``contains`` region for bindings.
+    @staticmethod
+    def _resolve_module_variable_kinds(
+        module: FortranModule | FortranSubmodule | FortranProgram | FortranBlockData,
+        module_params: dict[str, dict[str, str]],
+    ) -> None:
+        module_params = FortranParser._resolve_module_parameter_values(module_params)
+        symbol_to_value: dict[str, str] = {}
+        if getattr(module, "name", None):
+            symbol_to_value.update(module_params.get(module.name.lower(), {}))
+        for mod, mappings in getattr(module, "uses", {}).items():
+            params = module_params.get(mod.lower(), {})
+            if not params:
+                continue
+            if not mappings:
+                symbol_to_value.update(params)
+                continue
+            for mapping in mappings:
+                source = mapping.source.lower()
+                local = mapping.local_name.lower()
+                if source in params:
+                    symbol_to_value[local] = params[source]
+        for var in getattr(module, "variables", []):
+            source_value = var.value if var.value is not None else var.symbolic_value
+            if source_value is not None:
+                symbol_to_value.setdefault(var.name.lower(), source_value)
+        resolver = _CompileTimeResolver(symbol_to_value)
+        for var in getattr(module, "variables", []):
+            source_value = var.value if var.value is not None else var.symbolic_value
+            if source_value is not None:
+                resolved_value = resolver.resolve(source_value, prefer_symbolic=False)
+                var.value = FortranParser._normalize_parameter_value(resolved_value)
+                symbol_to_value[var.name.lower()] = var.value if var.value is not None else source_value
+            if var.kind:
+                var.kind = FortranParser._resolve_kind_expression(var.kind, symbol_to_value, resolver=resolver)
+            if var.shape:
+                var.shape = [resolver.resolve(dim) for dim in var.shape]
+                var.lbound, var.ubound = FortranParser._extract_bounds(var.shape)
 
-        Example:
-            ``real :: values(n)`` is parsed through
-            `_helper_parse_declaration_line` with role ``"type_field"`` and
-            appended to `dtype.fields`. ``sequence`` is consumed here without
-            creating a field.
-        """
-        dtype = scope.model
-        if dtype is None:  # pragma: no cover - internal helper misuse.
-            raise FortranParseError("Derived-type specification scope is missing a target model.", filename=filename)
-        stripped = line.strip()
-        if re.match(r"^type\s*::\s*\w+$", stripped, re.IGNORECASE):
-            return
-        if stripped.lower() in {"sequence", "private"}:
-            return
-        if _is_openmp_declarative_directive(stripped):
-            raise FortranParseError(
-                f"Unsupported OpenMP declarative directive in type '{dtype.name}': {stripped}",
-                filename=filename,
-                line_number=lineno,
-                source_line=source_line,
-            )
-        parsed = self._helper_parse_declaration_line(
-            stripped,
-            scope,
-            role="type_field",
-            filename=filename,
-            lineno=lineno,
-            source_line=source_line,
-            parse_character_star=False,
-        )
-        if parsed:
-            return
-        if "::" not in stripped and not _looks_like_declaration_or_spec(stripped):
-            return
-        raise FortranParseError(
-            f"Unknown or unsupported datatype declaration in type '{dtype.name}': {line.strip()}",
-            filename=filename,
-            line_number=lineno,
-            source_line=source_line,
-        )
+    @staticmethod
+    def _resolve_kind_expression(
+        expr: str,
+        symbols: dict[str, str],
+        *,
+        resolver: _CompileTimeResolver | None = None,
+    ) -> str:
+        active_resolver = resolver or _CompileTimeResolver(symbols)
+        text = expr.strip()
+        if text.lower().startswith("len="):
+            return f"len={active_resolver.resolve(text.split('=', 1)[1].strip())}"
+        resolved = FortranParser._resolve_symbol_reference(expr, symbols)
+        return active_resolver.resolve(resolved)
 
-    def _parse_derived_type_start(self, line: str) -> tuple[str, list[str]] | None:
-        stripped = line.strip()
-        tm = _DERIVED_TYPE_RE.match(stripped)
-        if tm:
-            attr_txt = (tm.group("attrs") or "").strip().lstrip(",").strip()
-            attrs = [a.strip() for a in split_csv(attr_txt)] if attr_txt else []
-            return tm.group("name"), attrs
-        legacy = re.match(r"^type\s+(?P<name>\w+)\s*$", stripped, re.IGNORECASE)
-        if legacy:
-            return legacy.group("name"), []
+    @staticmethod
+    def _resolve_symbol_reference(expr: str, symbols: dict[str, str]) -> str:
+        out = expr.strip()
+        seen: set[str] = set()
+        while out.lower() in symbols and out.lower() not in seen:
+            seen.add(out.lower())
+            out = symbols[out.lower()].strip()
+        return out
+
+    @staticmethod
+    def _collect_relevant_local_params(sig: FortranProcedureSignature, local_params: dict[str, str]) -> dict[str, str]:
+        if not local_params:
+            return {}
+        if not sig.arguments and sig.result is None:
+            return dict(local_params)
+        pending = set()
+        for arg in sig.arguments:
+            if arg.kind:
+                pending.update(FortranParser._extract_symbol_names(arg.kind))
+            for dim in arg.shape:
+                pending.update(FortranParser._extract_symbol_names(dim))
+        if sig.result and sig.result.kind:
+            pending.update(FortranParser._extract_symbol_names(sig.result.kind))
+        relevant: dict[str, str] = {}
+        while pending:
+            sym = pending.pop().lower()
+            if sym in relevant or sym not in local_params:
+                continue
+            value = local_params[sym]
+            relevant[sym] = value
+            pending.update(FortranParser._extract_symbol_names(value))
+        return relevant
+
+    @staticmethod
+    def _extract_symbol_names(expr: str) -> set[str]:
+        keywords = {"and", "or", "not"}
+        return {
+            token.lower()
+            for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", expr or "")
+            if not token.isdigit() and token.lower() not in keywords
+        }
+
+    @staticmethod
+    def _normalize_parameter_value(value: str) -> str | None:
+        parsed_int = FortranParser._safe_eval_int_expr(value)
+        if parsed_int is not None:
+            return str(parsed_int)
+        text = value.strip()
+        if re.fullmatch(r"[+-]?\d+(?:\.\d*)?(?:[deDE][+-]?\d+)?", text):
+            try:
+                as_float = float(text.replace("d", "e").replace("D", "E"))
+                if as_float.is_integer():
+                    return str(int(as_float))
+            except ValueError:
+                pass
+            return text
+        if FortranParser._is_literal_parameter_value(text):
+            return text
         return None
 
     @staticmethod
-    def _parse_interface_header(line: str) -> tuple[bool, str | None]:
-        lower = line.lower()
-        if not (lower.startswith("interface") or lower.startswith("abstract interface")):
-            return False, None
-        parts = line.split(maxsplit=1)
-        name = parts[1].strip() if len(parts) > 1 and not lower.startswith("abstract interface") else None
-        return True, name
+    def _is_literal_parameter_value(value: str) -> bool:
+        text = value.strip()
+        if not text:
+            return False
+        if re.fullmatch(r"[+-]?\d+(?:\.\d*)?(?:[deDE][+-]?\d+)?", text):
+            return True
+        if re.fullmatch(r"\.(?:true|false)\.", text, re.IGNORECASE):
+            return True
+        if re.fullmatch(r"(['\"]).*\1", text):
+            return True
+        if text.startswith("[") and text.endswith("]"):
+            return all(FortranParser._is_literal_parameter_value(part) for part in split_csv(text[1:-1]))
+        if text.startswith("(/") and text.endswith("/)"):
+            return all(FortranParser._is_literal_parameter_value(part) for part in split_csv(text[2:-2]))
+        if text.startswith("(") and text.endswith(")"):
+            parts = split_csv(text[1:-1])
+            return len(parts) == 2 and all(FortranParser._is_literal_parameter_value(part) for part in parts)
+        return False
 
     @staticmethod
-    def _add_interface_attribute(sig: FortranProcedureSignature, interface_name: str | None) -> None:
-        if not interface_name:
-            return
-        iface_attr = f"interface({interface_name})"
-        if iface_attr not in sig.attributes:
-            sig.attributes.append(iface_attr)
-
-    def _parse_procedure_header(
-        self,
-        line: str,
-        module: str | None,
-        in_interface: bool,
-        filename: str | None = None,
-        lineno: int | None = None,
-        source_line: str | None = None,
-    ):
-        module_proc = _MOD_PROC_IMPL_RE.match(line)
-        if module_proc and not in_interface:
-            name = module_proc.group("name")
-            sig = FortranProcedureSignature(
+    def _resolve_variables(
+        symbols: dict[str, str],
+        base_types: dict[str, str] | None = None,
+        symbolic_values: dict[str, str | None] | None = None,
+    ) -> dict[str, FortranVariable]:
+        base_types = base_types or {}
+        symbolic_values = symbolic_values or {}
+        valued: dict[str, FortranVariable] = {}
+        resolver = _CompileTimeResolver(symbols)
+        for name, value in symbols.items():
+            var = FortranVariable(
                 name=name,
-                kind="module procedure",
-                module=module,
-                attributes=["module procedure"],
-                in_interface=in_interface,
+                base_type=base_types.get(name.lower(), "unknown"),
+                value=FortranParser._normalize_parameter_value(resolver.resolve(value, prefer_symbolic=False)),
+                value_type="expression",
+                is_parameter=True,
             )
-            return self._new_procedure_scope_state(sig, symbols={})
+            var.symbolic_value = symbolic_values.get(name.lower(), value)
+            valued[name] = var
+        return valued
 
-        m = _PROC_RE.match(line)
-        if m:
-            args = [FortranArgument(name=a, procedure=m.group("name")) for a in split_csv(m.group("args") or "")]
-            sig = FortranProcedureSignature(
-                name=m.group("name"),
-                kind="subroutine",
-                module=module,
-                arguments=args,
-                attributes=_attrs(m.group("prefix"), m.group("tail")),
-                in_interface=in_interface,
-            )
-            return self._new_procedure_scope_state(
-                sig,
-                symbols={a.name.lower(): a for a in args},
-            )
-        m = _FUNC_RE.match(line)
-        if not m:
-            return None
-        prefix = (m.group("prefix") or "").strip()
-        args = [FortranArgument(name=a, procedure=m.group("name")) for a in split_csv(m.group("args") or "")]
-        result_match = _RESULT_RE.search(m.group("tail"))
-        explicit_result = result_match is not None
-        result_name = result_match.group("name") if result_match else m.group("name")
-        result = FortranArgument(name=result_name, procedure=m.group("name"))
+    @staticmethod
+    def _safe_eval_int_expr(expr: str) -> int | None:
+        """Safely evaluate a restricted integer-only Python expression.
 
-        type_tokens = [t for t in prefix.split() if t.lower() not in _ATTR_PREFIX_WORDS]
-        type_prefix = " ".join(type_tokens)
-        parsed_prefix = _parse_type_prefix(type_prefix)
-        if type_prefix and parsed_prefix is None:
-            raise FortranParseError(
-                f"Unsupported function result type prefix '{type_prefix}' in procedure header.",
-                filename=filename,
-                line_number=lineno,
-                source_line=source_line,
-            )
-        if parsed_prefix:
-            result.base_type, result.kind = parsed_prefix
-
-        sig = FortranProcedureSignature(
-            name=m.group("name"),
-            kind="function",
-            module=module,
-            arguments=args,
-            result=result,
-            attributes=_attrs(m.group("prefix"), m.group("tail")),
-            in_interface=in_interface,
-        )
-        return self._new_procedure_scope_state(
-            sig,
-            symbols={**{a.name.lower(): a for a in args}, result_name.lower(): result},
-            typed_symbols={result_name.lower()} if parsed_prefix else set(),
-            explicit_result=explicit_result,
-        )
-
-    def _helper_collect_namespace(
-        self,
-        root: str | Path,
-        extensions: tuple[str, ...] = (".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"),
-    ) -> dict:
-        """Collect parseable source files and dependency-order them.
-
-        Project parsing uses this helper when the caller passes a directory
-        instead of an explicit file list. It performs a light first pass to map
-        modules/submodules to files, topologically orders files by ``use``
-        dependencies, then parses them in that order.
-
-        Example:
-            ``visit_project("src")`` calls this helper, receives
-            ``{"files": ordered_files, "module_to_file": ...}``, and then
-            visits each ordered path through the normal file visitor.
+        Used to fold simple arithmetic after symbol substitution. Only numeric
+        constants and basic arithmetic operators are allowed. Any other syntax
+        returns None rather than raising.
         """
-        root_path = Path(root)
-        files = sorted([p for p in root_path.rglob("*") if p.suffix.lower() in extensions])
-        sources = {str(p): p.read_text(encoding="utf-8") for p in files}
-        file_lines = {fname: preprocess_lines(code, fname) for fname, code in sources.items()}
+        normalized = expr.strip()
+        normalized = re.sub(r"(?<=\d)_[A-Za-z_][A-Za-z0-9_]*", "", normalized)
+        normalized = re.sub(r"\.and\.", " and ", normalized, flags=re.IGNORECASE)
+        normalized = re.sub(r"\.or\.", " or ", normalized, flags=re.IGNORECASE)
+        normalized = re.sub(r"\.not\.", " not ", normalized, flags=re.IGNORECASE)
+        normalized = re.sub(r"\.true\.", "True", normalized, flags=re.IGNORECASE)
+        normalized = re.sub(r"\.false\.", "False", normalized, flags=re.IGNORECASE)
 
-        module_to_file: dict[str, str] = {}
-        submodule_to_file: dict[str, str] = {}
-        file_to_uses: dict[str, set[str]] = {fname: set() for fname in sources}
-        modules_by_file: dict[str, list[str]] = {}
-        submodules_by_file: dict[str, list[str]] = {}
-        for fname, _code in sources.items():
-            lines = file_lines[fname]
-            modules = self.visit_fortran_modules(lines, filename=fname, require_present=False)
-            submodules = self.visit_fortran_submodules(lines, filename=fname)
-            modules_by_file[fname] = [m.name for m in modules]
-            submodules_by_file[fname] = [m.name for m in submodules]
-            for m in modules:
-                module_to_file[m.name.lower()] = fname
-                file_to_uses[fname].update(u.lower() for u in m.uses)
-            for sm in submodules:
-                submodule_to_file[sm.name.lower()] = fname
-                file_to_uses[fname].add(sm.parent.lower())
-                if sm.ancestor:
-                    file_to_uses[fname].add(sm.ancestor.lower())
-                file_to_uses[fname].update(u.lower() for u in sm.uses)
+        try:
+            node = ast.parse(normalized, mode="eval")
+        except SyntaxError:
+            return None
 
-        file_dependencies: dict[str, set[str]] = {}
-        for fname, used_modules in file_to_uses.items():
-            deps = set()
-            for mod in used_modules:
-                dep_file = module_to_file.get(mod) or submodule_to_file.get(mod)
-                if dep_file and dep_file != fname:
-                    deps.add(dep_file)
-            file_dependencies[fname] = deps
+        allowed_binops = (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow)
+        allowed_unary = (ast.UAdd, ast.USub)
 
-        ordered_files = _topological_files(file_dependencies)
-        types = []
-        modules = []
-        submodules = []
-        programs = []
-        block_data = []
-        for f in ordered_files:
-            parsed_file = self.visit_file(sources[f], filename=f)
-            types.extend(parsed_file.derived_types)
-            types.extend(dtype for module in parsed_file.modules for dtype in module.derived_types)
-            types.extend(dtype for submodule in parsed_file.submodules for dtype in submodule.derived_types)
-            modules.extend(parsed_file.modules)
-            submodules.extend(parsed_file.submodules)
-            programs.extend(parsed_file.programs)
-            block_data.extend(parsed_file.block_data_units)
+        def _eval(n):
+            if isinstance(n, ast.Expression):
+                return _eval(n.body)
+            if isinstance(n, ast.Constant) and isinstance(n.value, (int, float, str, bool)):
+                return n.value
+            if isinstance(n, ast.BinOp) and isinstance(n.op, allowed_binops):
+                left = _eval(n.left)
+                right = _eval(n.right)
+                if left is None or right is None or not isinstance(left, (int, float)) or not isinstance(right, (int, float)):
+                    return None
+                if isinstance(n.op, ast.Add):
+                    return left + right
+                if isinstance(n.op, ast.Sub):
+                    return left - right
+                if isinstance(n.op, ast.Mult):
+                    return left * right
+                if isinstance(n.op, ast.Div):
+                    return left / right
+                if isinstance(n.op, ast.FloorDiv):
+                    return left // right
+                if isinstance(n.op, ast.Mod):
+                    return left % right
+                if isinstance(n.op, ast.Pow):
+                    return left ** right
+            if isinstance(n, ast.UnaryOp) and isinstance(n.op, allowed_unary):
+                v = _eval(n.operand)
+                if v is None or not isinstance(v, (int, float)):
+                    return None
+                return +v if isinstance(n.op, ast.UAdd) else -v
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name):
+                name = n.func.id.lower()
+                args = [_eval(arg) for arg in n.args]
+                if any(arg is None for arg in args):
+                    return None
+                try:
+                    if name == "abs" and len(args) == 1 and isinstance(args[0], (int, float)):
+                        return abs(args[0])
+                    if name == "max" and args and all(isinstance(arg, (int, float)) for arg in args):
+                        return max(args)
+                    if name == "min" and args and all(isinstance(arg, (int, float)) for arg in args):
+                        return min(args)
+                    if name == "mod" and len(args) == 2 and all(isinstance(arg, (int, float)) for arg in args):
+                        return args[0] % args[1]
+                    if name == "int" and args and isinstance(args[0], (int, float)):
+                        return int(args[0])
+                    if name == "len" and len(args) == 1 and isinstance(args[0], str):
+                        return len(args[0])
+                    if name == "len_trim" and len(args) == 1 and isinstance(args[0], str):
+                        return len(args[0].rstrip())
+                    if name == "iachar" and len(args) == 1 and isinstance(args[0], str) and args[0]:
+                        return ord(args[0][0])
+                except (OverflowError, ValueError, ZeroDivisionError):
+                    return None
+            if isinstance(n, ast.BoolOp):
+                values = [_eval(value) for value in n.values]
+                if any(value is None for value in values):
+                    return None
+                if isinstance(n.op, ast.And):
+                    return all(bool(value) for value in values)
+                if isinstance(n.op, ast.Or):
+                    return any(bool(value) for value in values)
+            if isinstance(n, ast.Compare):
+                left = _eval(n.left)
+                if left is None:
+                    return None
+                for op, comparator in zip(n.ops, n.comparators):
+                    right = _eval(comparator)
+                    if right is None:
+                        return None
+                    if isinstance(op, ast.Gt):
+                        ok = left > right
+                    elif isinstance(op, ast.GtE):
+                        ok = left >= right
+                    elif isinstance(op, ast.Lt):
+                        ok = left < right
+                    elif isinstance(op, ast.LtE):
+                        ok = left <= right
+                    elif isinstance(op, ast.Eq):
+                        ok = left == right
+                    elif isinstance(op, ast.NotEq):
+                        ok = left != right
+                    else:
+                        return None
+                    if not ok:
+                        return False
+                    left = right
+                return True
+            return None
 
+        val = _eval(node)
+        if val is None:
+            return None
+        if isinstance(val, bool):
+            return int(val)
+        if isinstance(val, float) and val.is_integer():
+            return int(val)
+        return val if isinstance(val, int) else None
+
+    # ------------------------------------------------------------------
+    # Project and wrap-readiness diagnostics
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _topological_files(file_deps: dict[str, set[str]]) -> list[str]:
+        in_degree = {f: 0 for f in file_deps}
+        for f, deps in file_deps.items():
+            for d in deps:
+                if d in in_degree:
+                    in_degree[f] += 1
+        ready = sorted([f for f, deg in in_degree.items() if deg == 0])
+        ordered: list[str] = []
+        deps_copy = {k: set(v) for k, v in file_deps.items()}
+        while ready:
+            cur = ready.pop(0)
+            ordered.append(cur)
+            for f, deps in deps_copy.items():
+                if cur in deps:
+                    deps.remove(cur)
+                    if len(deps) == 0 and f not in ordered and f not in ready:
+                        ready.append(f)
+                        ready.sort()
+        remaining = [f for f in file_deps if f not in ordered]
+        ordered.extend(sorted(remaining))
+        return ordered
+
+    @staticmethod
+    def _visible_import_modules(symbol: str, uses: dict[str, list[FortranUseMapping]]) -> list[str]:
+        """Return imported modules that could provide ``symbol`` under Fortran USE rules."""
+        wanted = symbol.lower()
+        providers: list[str] = []
+        for module_name, only_symbols in uses.items():
+            normalized_only = [sym.local_name.lower() for sym in only_symbols]
+            if not normalized_only or wanted in normalized_only:
+                providers.append(module_name)
+        return providers
+
+    @staticmethod
+    def _derived_type_base_name(kind: str | None) -> str:
+        return (kind or "").split("(", 1)[0].strip()
+
+    @staticmethod
+    def _kind_expression_symbols(expr: str | None) -> set[str]:
+        """Return identifier symbols referenced by a kind/len expression."""
+        if expr is None:
+            return set()
+        text = expr.strip()
+        if not text or text == "*":
+            return set()
+        parts: list[str] = []
+        for item in split_csv(text):
+            token = item.strip()
+            if not token:
+                continue
+            key, sep, value = token.partition("=")
+            if sep and key.strip().lower() in {"kind", "len"}:
+                parts.append(value.strip())
+            else:
+                parts.append(token)
+        normalized = " ".join(parts)
+        normalized = re.sub(
+            r"(?<![A-Za-z_])(?:\d+(?:\.\d*)?|\.\d+)(?:[deDE][+-]?\d+)?",
+            " ",
+            normalized,
+        )
+        ignored = _KIND_EXPRESSION_INTRINSICS | _KIND_EXPRESSION_KEYWORDS
         return {
-            "files": ordered_files,
-            "file_dependencies": {k: sorted(v) for k, v in file_dependencies.items()},
-            "module_to_file": module_to_file,
-            "submodule_to_file": submodule_to_file,
-            "modules": modules,
-            "submodules": submodules,
-            "programs": programs,
-            "block_data": block_data,
-            "types": types,
+            token.lower()
+            for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", normalized)
+            if token.lower() not in ignored
         }
 
-    def _preprocessed_lines(self, source: _SourceOrLines, filename: str | None) -> _PreprocessedLines:
-        """Return preprocessed source lines, reusing file-level preprocessing when supplied."""
-        if isinstance(source, list):
-            return source
-        return preprocess_lines(source, filename)
+    @staticmethod
+    def _kind_symbol_visible_from_intrinsic_use(symbol: str, uses: dict[str, list[FortranUseMapping]]) -> bool:
+        lowered = symbol.lower()
+        for module_name, mappings in uses.items():
+            if module_name.lower() not in _INTRINSIC_KIND_MODULES:
+                continue
+            if not mappings or lowered in {mapping.local_name.lower() for mapping in mappings}:
+                return True
+        return False
 
+    @staticmethod
+    def _kind_symbol_visible_from_module_params(
+        symbol: str,
+        uses: dict[str, list[FortranUseMapping]],
+        module_params: dict[str, dict[str, str]],
+    ) -> bool:
+        lowered = symbol.lower()
+        for module_name, mappings in uses.items():
+            params = module_params.get(module_name.lower(), {})
+            if not params:
+                continue
+            if not mappings and lowered in params:
+                return True
+            for mapping in mappings:
+                if mapping.local_name.lower() != lowered:
+                    continue
+                if mapping.source.lower() in params:
+                    return True
+        return False
+
+    @staticmethod
+    def _kind_symbol_is_known(
+        symbol: str,
+        *,
+        owning_module: str | None,
+        uses: dict[str, list[FortranUseMapping]],
+        local_symbols: set[str],
+        module_params: dict[str, dict[str, str]],
+    ) -> bool:
+        """Check whether a symbolic kind is declared locally or in parsed imports."""
+        lowered = symbol.lower()
+        if lowered in local_symbols:
+            return True
+        if owning_module and lowered in module_params.get(owning_module.lower(), {}):
+            return True
+        if FortranParser._kind_symbol_visible_from_module_params(symbol, uses, module_params):
+            return True
+        if FortranParser._kind_symbol_visible_from_intrinsic_use(symbol, uses):
+            return True
+        return False
+
+    @staticmethod
+    def _collect_unresolved_derived_type_diagnostics(
+        signatures: list[FortranProcedureSignature],
+        types: list[FortranDerivedType],
+        modules: list[FortranModule],
+    ) -> tuple[list[dict], list[dict]]:
+        """Find derived-type references that are not defined in the parsed source."""
+        defined_types = {dtype.name.lower() for dtype in types}
+        module_uses = {mod.name.lower(): mod.uses for mod in modules}
+        unresolved_args: list[dict] = []
+        unresolved_fields: list[dict] = []
+
+        def _missing_type(kind: str | None) -> bool:
+            base_name = FortranParser._derived_type_base_name(kind)
+            return bool(base_name) and base_name.lower() not in defined_types
+
+        for sig in signatures:
+            for arg in sig.arguments:
+                if arg.base_type == "derived" and _missing_type(arg.kind):
+                    unresolved_args.append({
+                        "procedure": sig.name,
+                        "module": sig.module,
+                        "argument": arg.name,
+                        "type": arg.kind,
+                        "import_modules": FortranParser._visible_import_modules(arg.kind or "", sig.uses),
+                    })
+            if sig.result and sig.result.base_type == "derived" and _missing_type(sig.result.kind):
+                unresolved_args.append({
+                    "procedure": sig.name,
+                    "module": sig.module,
+                    "argument": sig.result.name,
+                    "type": sig.result.kind,
+                    "import_modules": FortranParser._visible_import_modules(sig.result.kind or "", sig.uses),
+                })
+
+        for dtype in types:
+            uses = module_uses.get(dtype.module.lower(), {}) if dtype.module else {}
+            for field in dtype.fields:
+                if field.base_type == "derived" and _missing_type(field.kind):
+                    unresolved_fields.append({
+                        "type_owner": dtype.name,
+                        "module": dtype.module,
+                        "field": field.name,
+                        "type": field.kind,
+                        "import_modules": FortranParser._visible_import_modules(field.kind or "", uses),
+                    })
+
+        return unresolved_args, unresolved_fields
+
+    @staticmethod
+    def _collect_unresolved_kind_diagnostics(
+        signatures: list[FortranProcedureSignature],
+        types: list[FortranDerivedType],
+        modules: list[FortranModule],
+        module_params: dict[str, dict[str, str]],
+    ) -> tuple[list[dict], list[dict]]:
+        """Find symbolic intrinsic kind references not declared in parsed source/imports."""
+        module_uses = {mod.name.lower(): mod.uses for mod in modules}
+        unresolved_args: list[dict] = []
+        unresolved_fields: list[dict] = []
+
+        for sig in signatures:
+            local_symbols = {name.lower() for name, var in sig.variables.items() if var.value is not None}
+
+            def _append_unresolved_arg(arg: FortranArgument) -> None:
+                for symbol in sorted(FortranParser._kind_expression_symbols(arg.kind)):
+                    if FortranParser._kind_symbol_is_known(
+                        symbol,
+                        owning_module=sig.module,
+                        uses=sig.uses,
+                        local_symbols=local_symbols,
+                        module_params=module_params,
+                    ):
+                        continue
+                    item = {
+                        "procedure": sig.name,
+                        "module": sig.module,
+                        "argument": arg.name,
+                        "kind": symbol,
+                        "import_modules": FortranParser._visible_import_modules(symbol, sig.uses),
+                    }
+                    if (arg.kind or "").strip().lower() != symbol:
+                        item["kind_expression"] = arg.kind
+                    unresolved_args.append(item)
+
+            for arg in sig.arguments:
+                if arg.base_type != "derived":
+                    _append_unresolved_arg(arg)
+            if sig.result and sig.result.base_type != "derived":
+                _append_unresolved_arg(sig.result)
+
+        for dtype in types:
+            uses = module_uses.get(dtype.module.lower(), {}) if dtype.module else {}
+            local_symbols: set[str] = set()
+            for field in dtype.fields:
+                if field.base_type == "derived":
+                    continue
+                for symbol in sorted(FortranParser._kind_expression_symbols(field.kind)):
+                    if FortranParser._kind_symbol_is_known(
+                        symbol,
+                        owning_module=dtype.module,
+                        uses=uses,
+                        local_symbols=local_symbols,
+                        module_params=module_params,
+                    ):
+                        continue
+                    item = {
+                        "type_owner": dtype.name,
+                        "module": dtype.module,
+                        "field": field.name,
+                        "kind": symbol,
+                        "import_modules": FortranParser._visible_import_modules(symbol, uses),
+                    }
+                    if (field.kind or "").strip().lower() != symbol:
+                        item["kind_expression"] = field.kind
+                    unresolved_fields.append(item)
+
+        return unresolved_args, unresolved_fields
+
+    @staticmethod
+    def _build_wrap_blockers(
+        *,
+        signatures: list[FortranProcedureSignature],
+        unsupported: list[dict],
+        missing_decl_args: list[str],
+        unresolved_derived_args: list[dict],
+        unresolved_derived_fields: list[dict],
+        unresolved_kind_args: list[dict],
+        unresolved_kind_fields: list[dict],
+    ) -> list[dict]:
+        """Create explicit, user-facing reasons why a source is not wrap-ready."""
+        blockers: list[dict] = []
+        if not signatures:
+            blockers.append({
+                "code": "no_signatures",
+                "message": "No procedure signatures were found to wrap.",
+                "items": [],
+            })
+        if unsupported:
+            blockers.append({
+                "code": "unsupported_constructs",
+                "message": "Unsupported Fortran constructs were found.",
+                "items": unsupported,
+            })
+        if missing_decl_args:  # pragma: no cover - public parsing resolves or rejects declarations before readiness.
+            blockers.append({
+                "code": "unknown_argument_types",
+                "message": "Some procedure arguments have no resolved declaration/type.",
+                "items": missing_decl_args,
+            })
+        if unresolved_derived_args:
+            blockers.append({
+                "code": "unresolved_derived_type_arguments",
+                "message": "Some derived-type procedure arguments refer to types missing from the parsed source.",
+                "items": unresolved_derived_args,
+            })
+        if unresolved_derived_fields:
+            blockers.append({
+                "code": "unresolved_derived_type_fields",
+                "message": "Some derived-type fields refer to types missing from the parsed source.",
+                "items": unresolved_derived_fields,
+            })
+        if unresolved_kind_args:
+            blockers.append({
+                "code": "unresolved_kind_arguments",
+                "message": "Some procedure arguments use kind symbols missing from the parsed source/imports.",
+                "items": unresolved_kind_args,
+            })
+        if unresolved_kind_fields:
+            blockers.append({
+                "code": "unresolved_kind_fields",
+                "message": "Some derived-type fields use kind symbols missing from the parsed source/imports.",
+                "items": unresolved_kind_fields,
+            })
+        return blockers
+
+    @staticmethod
+    def _build_unit_blockers(
+        *,
+        filename: str | None,
+        signatures: list[FortranProcedureSignature],
+        types: list[FortranDerivedType],
+        unsupported: list[dict],
+        missing_decl_args: list[str],
+        unresolved_derived_args: list[dict],
+        unresolved_derived_fields: list[dict],
+        unresolved_kind_args: list[dict],
+        unresolved_kind_fields: list[dict],
+    ) -> list[dict]:
+        """Build unit-scoped blocker records without per-unit readiness flags.
+
+        The file-level record owns diagnostics that do not belong to one procedure
+        or derived type. Procedure records own argument/result blockers. Derived
+        type records own field blockers. This lets large files say exactly which
+        unit prevents wrapping while keeping `wrappable` as a file-level result.
+
+        Example:
+            ``_build_unit_blockers(signatures=[scale], types=[], ...)`` returns a
+            procedure item for ``scale`` only when that procedure has blockers.
+        """
+        def same_unit(item: dict, sig: FortranProcedureSignature) -> bool:
+            return item.get("procedure") == sig.name and item.get("module") == sig.module
+
+        def derived_type_unit_key(module: str | None, type_owner: str | None) -> tuple[str | None, str | None]:
+            return (module.lower() if module else None, type_owner.lower() if type_owner else None)
+
+        units: list[dict] = []
+        if not signatures:
+            units.append({
+                "unit_kind": "file",
+                "name": filename or "<source>",
+                "qualified_name": filename or "<source>",
+                "module": None,
+                "blockers": [{
+                    "code": "no_signatures",
+                    "message": "No procedure signatures were found to wrap.",
+                    "items": [],
+                }],
+            })
+        if unsupported:
+            units.append({
+                "unit_kind": "file",
+                "name": filename or "<source>",
+                "qualified_name": filename or "<source>",
+                "module": None,
+                "blockers": [{
+                    "code": "unsupported_constructs",
+                    "message": "Unsupported Fortran constructs were found.",
+                    "items": unsupported,
+                }],
+            })
+
+        for sig in signatures:
+            blockers: list[dict] = []
+            missing_items = [
+                item
+                for item in missing_decl_args
+                if item.startswith(f"{sig.name}:")
+            ]
+            derived_items = [item for item in unresolved_derived_args if same_unit(item, sig)]
+            kind_items = [item for item in unresolved_kind_args if same_unit(item, sig)]
+            if missing_items:
+                blockers.append({
+                    "code": "unknown_argument_types",
+                    "message": "Some procedure arguments have no resolved declaration/type.",
+                    "items": missing_items,
+                })
+            if derived_items:
+                blockers.append({
+                    "code": "unresolved_derived_type_arguments",
+                    "message": "Some derived-type procedure arguments refer to types missing from the parsed source.",
+                    "items": derived_items,
+                })
+            if kind_items:
+                blockers.append({
+                    "code": "unresolved_kind_arguments",
+                    "message": "Some procedure arguments use kind symbols missing from the parsed source/imports.",
+                    "items": kind_items,
+                })
+            if not blockers:
+                continue
+            qualified_name = f"{sig.module}.{sig.name}" if sig.module else sig.name
+            units.append({
+                "unit_kind": "procedure",
+                "name": sig.name,
+                "qualified_name": qualified_name,
+                "module": sig.module,
+                "blockers": blockers,
+            })
+
+        derived_field_items: dict[tuple[str | None, str | None], list[dict]] = {}
+        for item in unresolved_derived_fields:
+            key = derived_type_unit_key(item.get("module"), item.get("type_owner"))
+            derived_field_items.setdefault(key, []).append(item)
+
+        kind_field_items: dict[tuple[str | None, str | None], list[dict]] = {}
+        for item in unresolved_kind_fields:
+            key = derived_type_unit_key(item.get("module"), item.get("type_owner"))
+            kind_field_items.setdefault(key, []).append(item)
+
+        seen_type_keys: set[tuple[str | None, str | None]] = set()
+        for dtype in types:
+            key = derived_type_unit_key(dtype.module, dtype.name)
+            seen_type_keys.add(key)
+            blockers = []
+            if derived_field_items.get(key):
+                blockers.append({
+                    "code": "unresolved_derived_type_fields",
+                    "message": "Some derived-type fields refer to types missing from the parsed source.",
+                    "items": derived_field_items[key],
+                })
+            if kind_field_items.get(key):
+                blockers.append({
+                    "code": "unresolved_kind_fields",
+                    "message": "Some derived-type fields use kind symbols missing from the parsed source/imports.",
+                    "items": kind_field_items[key],
+                })
+            if not blockers:
+                continue
+            qualified_name = f"{dtype.module}.{dtype.name}" if dtype.module else dtype.name
+            units.append({
+                "unit_kind": "derived_type",
+                "name": dtype.name,
+                "qualified_name": qualified_name,
+                "module": dtype.module,
+                "blockers": blockers,
+            })
+
+        def sort_unit_key(entry: tuple[tuple[str | None, str | None], list[dict]]) -> tuple[str, str]:
+            module, type_owner = entry[0]
+            return (module or "", type_owner or "")
+
+        for key, items in sorted(derived_field_items.items(), key=sort_unit_key):
+            if key in seen_type_keys:
+                continue
+            module, type_owner = key
+            name = items[0].get("type_owner")
+            units.append({
+                "unit_kind": "derived_type",
+                "name": name,
+                "qualified_name": f"{module}.{name}" if module and name else name,
+                "module": items[0].get("module"),
+                "blockers": [{
+                    "code": "unresolved_derived_type_fields",
+                    "message": "Some derived-type fields refer to types missing from the parsed source.",
+                    "items": items,
+                }],
+            })
+        for key, items in sorted(kind_field_items.items(), key=sort_unit_key):
+            if key in seen_type_keys or key in derived_field_items:
+                continue
+            module, type_owner = key
+            name = items[0].get("type_owner")
+            units.append({
+                "unit_kind": "derived_type",
+                "name": name,
+                "qualified_name": f"{module}.{name}" if module and name else name,
+                "module": items[0].get("module"),
+                "blockers": [{
+                    "code": "unresolved_kind_fields",
+                    "message": "Some derived-type fields use kind symbols missing from the parsed source/imports.",
+                    "items": items,
+                }],
+            })
+        return units
+
+    # ------------------------------------------------------------------
+    # General lexical utilities
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _split_intrinsic_type_spec(text: str) -> tuple[str, str, str] | None:
+        """Split an intrinsic declaration prefix into base, parenthesized spec, and tail."""
+        match = re.match(
+            r"^(integer|real|complex|logical|character|double\s+precision)\b(?P<rest>.*)$",
+            text.strip(),
+            re.IGNORECASE,
+        )
+        if not match:
+            return None
+        base = match.group(1).lower()
+        rest = (match.group("rest") or "").lstrip()
+        if not rest.startswith("("):
+            return base, "", rest.strip()
+
+        depth = 0
+        quote: str | None = None
+        for index, char in enumerate(rest):
+            if quote:
+                if char == quote:
+                    quote = None
+                continue
+            if char in {"'", '"'}:
+                quote = char
+                continue
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+                if depth == 0:
+                    return base, rest[: index + 1], rest[index + 1 :].strip()
+        return base, rest, ""
+
+    @staticmethod
+    def _expect_single_parse_result(
+        items: list,
+        *,
+        parser_name: str,
+        entity_name: str,
+        filename: str | None,
+    ):
+        """Return one parsed entity or raise when a singular parser contract is broken."""
+        if len(items) == 1:
+            return items[0]
+        if not items:
+            raise FortranParseError(
+                f"{parser_name}() expected exactly one {entity_name}, but none were found",
+                filename=filename,
+                code="PARSE_WRONG_ENTRYPOINT",
+            )
+        raise FortranParseError(
+            f"{parser_name}() expected exactly one {entity_name}, but found {len(items)}",
+            filename=filename,
+            code="PARSE_AMBIGUOUS_ENTRYPOINT",
+        )
+
+    @staticmethod
+    def _source_form(filename: str | None) -> str:
+        if not filename:
+            return "unknown"
+        ext = Path(filename).suffix.lower()
+        if ext in {".f", ".for", ".ftn", ".f77"}:
+            return "f77"
+        if ext in {".f90", ".f95", ".f03", ".f08"}:
+            return "modern"
+        return "unknown"
+
+    @staticmethod
+    def _infer_implicit_base_type(symbol_name: str) -> str:
+        first = symbol_name.strip()[:1].lower()
+        if "i" <= first <= "n":
+            return "integer"
+        return "real"
+
+    @staticmethod
+    def _find_legacy_star_kind(type_left: str) -> tuple[str, str] | None:
+        m = re.match(r"^(integer|real|complex|logical|character)\s*\*\s*([0-9]+)\b", type_left, re.IGNORECASE)
+        if not m:
+            return None
+        return m.group(1).lower(), m.group(2)
+
+    @staticmethod
+    def _parse_type_prefix(prefix: str) -> tuple[str, str | None] | None:
+        txt = prefix.strip()
+        if not txt:
+            return None
+        star_kind = FortranParser._find_legacy_star_kind(txt)
+        if star_kind:
+            base, kind = star_kind
+            return base, kind
+        cm = _REGEX["char_star"].match(txt)
+        if cm:
+            raw_len = cm.group("len").strip()
+            char_kind = raw_len[1:-1].strip() if raw_len.startswith("(") and raw_len.endswith(")") else raw_len
+            return "character", char_kind
+        intrinsic = FortranParser._split_intrinsic_type_spec(txt)
+        if intrinsic:
+            base, type_spec, tail = intrinsic
+            if tail:
+                return None
+            if base == "double precision":
+                base = "real"
+            kind = extract_kind_from_type_spec(base, type_spec)
+            if kind is None and type_spec and base != "character":
+                kind = type_spec[1:-1].strip()
+            return base, kind or ""
+        derived = _REGEX["type_field"].match(txt)
+        if derived:
+            return "derived", derived.group("dtype")
+        class_derived = _REGEX["class_field"].match(txt)
+        if class_derived:
+            return "derived", class_derived.group("dtype")
+        return None  # pragma: no cover - unsupported prefixes are rejected by public grammar.
+
+    @staticmethod
+    def _preprocessor_conditions_overlap(c1: frozenset[str], c2: frozenset[str]) -> bool:
+        """Return True when two preprocessor condition sets may both be active."""
+        if not c1 or not c2:
+            return True
+        values: dict[str, str] = {}
+        for token in c1 | c2:
+            group, _, branch = token.partition(":")
+            if group in values and values[group] != branch:
+                return False
+            values[group] = branch
+        return True
+
+    @staticmethod
+    def _normalize_macro_defines(macro_defines: set[str] | dict[str, int | bool | str] | None) -> set[str]:
+        if not macro_defines:
+            return set()
+        if isinstance(macro_defines, dict):
+            out = set()
+            for k, v in macro_defines.items():
+                if str(v).strip() not in {"", "0", "false", "False"}:
+                    out.add(str(k).lower())
+            return out
+        return {str(x).lower() for x in macro_defines}
+
+    @staticmethod
+    def _eval_cpp_expr(expr: str, macro_names: set[str]) -> bool:
+        """Evaluate a small C-preprocessor boolean expression."""
+        txt = expr.strip()
+        if not txt:  # pragma: no cover - bare #if is not valid Fortran preprocessing input.
+            return False
+        txt = re.sub(r"defined\s*\(\s*([A-Za-z_]\w*)\s*\)", lambda m: str(m.group(1).lower() in macro_names), txt)
+        txt = re.sub(r"\bdefined\s+([A-Za-z_]\w*)\b", lambda m: str(m.group(1).lower() in macro_names), txt)
+        def _ident_to_bool(m: re.Match[str]) -> str:
+            token = m.group(1)
+            if token in {"True", "False", "and", "or", "not"}:
+                return token
+            return "True" if token.lower() in macro_names else "False"
+        txt = re.sub(r"\b([A-Za-z_]\w*)\b", _ident_to_bool, txt)
+        txt = txt.replace("&&", " and ").replace("||", " or ")
+        txt = re.sub(r"(?<![=!<>])!(?!=)", " not ", txt)
+        txt = re.sub(r"\b0\b", "False", txt)
+        txt = re.sub(r"\b1\b", "True", txt)
+        try:
+            node = ast.parse(txt, mode="eval")
+            return bool(eval(compile(node, "<cpp-expr>", "eval"), {"__builtins__": {}}, {}))
+        except Exception:
+            return False
+
+    @staticmethod
+    def _looks_like_existing_source_path(source: str | Path) -> bool:
+        """Return True when ``source`` names a readable source file path."""
+        if not isinstance(source, (str, Path)):
+            return False
+        text = str(source)
+        if "\n" in text or "\r" in text:
+            return False
+        return Path(text).is_file()
+
+    @staticmethod
+    def _split_submodule_parent(parent_spec: str) -> tuple[str, str | None]:
+        parts = [p.strip() for p in parent_spec.split(":", 1)]
+        if len(parts) == 2:
+            ancestor, parent = parts
+            return parent, ancestor
+        return parts[0], None
+
+    @staticmethod
+    def _attrs(prefix: str, tail: str) -> list[str]:
+        attrs = [t.lower() for t in prefix.split() if t.lower() in _ATTR_PREFIX_WORDS]
+        if _REGEX["bind_c"].search(tail):
+            attrs.append("bind(c)")
+        return attrs
+
+    @staticmethod
+    def _looks_like_procedure_header(line: str) -> bool:
+        stripped = line.strip()
+        if not stripped:
+            return False
+        lowered = stripped.lower()
+        if lowered.startswith(("end ", "call ")):
+            return False
+        without_strings = re.sub(r"'[^']*'|\"[^\"]*\"", "", stripped)
+        return bool(re.search(r"(?:^|[\s,])(?:subroutine|function)\s+[A-Za-z_]\w*", without_strings, re.IGNORECASE))
+
+    @staticmethod
+    def _is_openmp_directive(line: str) -> bool:
+        return line.lstrip().lower().startswith("!$omp")
+
+    @staticmethod
+    def _is_openmp_declarative_directive(line: str) -> bool:
+        directive = line.lstrip()[5:].strip().lower() if FortranParser._is_openmp_directive(line) else ""
+        return directive.startswith(
+            (
+                "threadprivate",
+                "declare simd",
+                "declare target",
+                "declare reduction",
+                "requires",
+                "declare mapper",
+            )
+        )
+
+    @staticmethod
+    def _looks_like_declaration_or_spec(line: str) -> bool:
+        stripped = line.strip()
+        if not stripped:
+            return False
+        lowered = stripped.lower()
+        if FortranParser._is_openmp_directive(stripped):
+            return FortranParser._is_openmp_declarative_directive(stripped)
+        first_match = re.match(r"([a-z_][a-z0-9_]*)", lowered)
+        first = first_match.group(1) if first_match else lowered.split(None, 1)[0].rstrip(",")
+        non_decl_starts = {
+            "do", "if", "where", "call", "select", "case", "allocate", "deallocate",
+            "print", "write", "read", "return", "stop", "cycle", "exit", "continue",
+            "end", "else", "elseif", "contains", "goto", "go", "format",
+        }
+        if first in non_decl_starts:
+            return False
+        if "::" in stripped or "," in stripped:
+            return True
+        return bool(re.match(r"^[A-Za-z_]\w+\s+[A-Za-z_]\w*", stripped))
+
+    @staticmethod
+    def _is_ignored_spec_statement(line: str) -> bool:
+        return bool(
+            _REGEX["include"].match(line)
+            or re.match(
+                r"^(implicit|save|common|data|equivalence|external|intrinsic|parameter|namelist|entry)\b",
+                line,
+                flags=re.IGNORECASE,
+            )
+        )
+
+    @staticmethod
+    def _parse_use_statement(line: str) -> tuple[str, list[FortranUseMapping]] | None:
+        match = _REGEX["use"].match(line)
+        if not match:
+            return None
+        rest = (match.group("rest") or "").strip()
+        if not rest:
+            return match.group("module"), []
+        payload = rest.lstrip(",").strip()
+        only_match = re.match(r"^only\s*:\s*(?P<symbols>.*)$", payload, re.IGNORECASE)
+        if only_match:
+            payload = only_match.group("symbols")
+        mappings: list[FortranUseMapping] = []
+        for item in split_csv(payload):
+            token = item.strip()
+            if not token:
+                continue
+            if "=>" in token:
+                target, source = [part.strip() for part in token.split("=>", 1)]
+            else:
+                source = token
+                target = None
+            mappings.append(FortranUseMapping(source=source, target=target))
+        return match.group("module"), mappings
+
+    @staticmethod
+    def _is_executable_statement_start(line: str) -> bool:
+        stripped = line.strip()
+        if not stripped:  # pragma: no cover - callers skip blank lines before executable checks.
+            return False
+        lowered = stripped.lower()
+        if FortranParser._is_openmp_directive(stripped):
+            return not FortranParser._is_openmp_declarative_directive(stripped)
+        first_match = re.match(r"([a-z_][a-z0-9_]*)", lowered)
+        first = first_match.group(1) if first_match else lowered.split(None, 1)[0]
+        if first.isdigit():
+            return False
+        executable_starts = {
+            "do", "if", "where", "call", "select", "case", "allocate", "deallocate",
+            "print", "write", "read", "return", "stop", "cycle", "exit", "continue",
+            "goto", "go", "open", "close", "rewind", "backspace", "inquire", "flush",
+            "wait", "nullify", "associate", "block", "forall", "error", "pause",
+        }
+        if first in executable_starts:
+            return True
+        if _REGEX["legacy_parameter"].match(stripped):
+            return False
+        if "=" in stripped and "::" not in stripped:
+            # Distinguish assignment/statements from declaration lines carrying
+            # type specs with named arguments, e.g.:
+            #   integer ( kind = 4 ) i
+            #   character ( len = * ) s
+            if (
+                _REGEX["char_star"].match(stripped)
+                or _REGEX["type"].match(stripped)
+                or _REGEX["type_field"].match(stripped)
+                or _REGEX["class_field"].match(stripped)
+            ):
+                return False
+            # Covers assignment and statement functions in execution part.
+            return True
+        return False
 
 # -----------------------------------------------------------------------------
 # Module-level convenience wrappers

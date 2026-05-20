@@ -5,10 +5,13 @@ import pytest
 
 from fortran_parser.models import (
     FortranArgument,
+    FortranBlockData,
     FortranDerivedType,
     FortranFile,
     FortranModule,
+    FortranProgram,
     FortranProcedureSignature,
+    FortranSubmodule,
     FortranUseMapping,
     FortranVariable,
 )
@@ -16,6 +19,8 @@ from x2py import parse_fortran_file as parse_fortran_source
 
 from semantics.fortran2ir import (
     FortranToIRConverter,
+    _compile_time_requirement_message,
+    _iter_fortran_variable_contexts,
     collect_semantic_compile_time_requirements,
     fortran_file_to_semantic_modules,
     fortran_module_to_semantic_module,
@@ -150,6 +155,40 @@ def test_converter_rejects_unsupported_inputs_and_missing_derived_type_names():
         converter.visit_variable(FortranVariable(name="x", base_type="real", kind="selected_real_kind(33)"))
 
 
+def test_converter_covers_derived_dispatch_methods_and_kind_edges():
+    converter = FortranToIRConverter()
+    callback = SemanticFunction(
+        name="advance",
+        native_name="advance_impl",
+        arguments=[SemanticArgument("state", SemanticType("particle_t"))],
+        return_type=SemanticType("Int32"),
+        contracts=[SemanticConstraint("Pure")],
+        visibility="private",
+    )
+    dtype = FortranDerivedType(
+        name="particle_t",
+        fields=[FortranArgument(name="id", base_type="integer")],
+        methods=["missing_binding", "advance"],
+    )
+
+    semantic_class = converter.visit(dtype, procedure_lookup={"advance": callback})
+
+    assert semantic_class.methods == [
+        SemanticMethod(
+            name="advance",
+            native_name="advance_impl",
+            arguments=callback.arguments,
+            return_type=callback.return_type,
+            contracts=callback.contracts,
+            visibility="private",
+        )
+    ]
+    assert converter.visit(FortranVariable(name="count", base_type="integer")).name == "Int32"
+    assert converter.first_module([FortranProcedureSignature(name="hidden", kind="subroutine", in_interface=True)]).name == ""
+    assert FortranToIRConverter._literal_kind_key("kind(1.0q0)") == "16"
+    assert FortranToIRConverter._literal_kind_key("kind(1)") is None
+
+
 def test_semantic_compile_time_requirements_can_be_supplied_for_kind_selection():
     source = """
 module solver_mod
@@ -182,6 +221,77 @@ end module solver_mod
     assert arg_type.name == "Float64"
 
 
+def test_semantic_compile_time_requirements_cover_all_parser_contexts():
+    proc = FortranProcedureSignature(
+        name="step",
+        kind="function",
+        module="solver_mod",
+        arguments=[FortranArgument(name="x", base_type="real", kind="rk")],
+        result=FortranArgument(name="r", base_type="real", kind="rk"),
+        variables={
+            "scratch": FortranVariable(name="scratch", base_type="real", kind="rk"),
+        },
+    )
+    dtype = FortranDerivedType(
+        name="state_t",
+        module="solver_mod",
+        fields=[FortranArgument(name="mass", base_type="real", kind="rk")],
+    )
+    parsed = FortranFile(
+        variables=[FortranVariable(name="file_param", base_type="integer", is_parameter=True, symbolic_value="n + 1")],
+        modules=[
+            FortranModule(
+                name="solver_mod",
+                variables=[
+                    FortranVariable(name="rk", base_type="integer", is_parameter=True, symbolic_value="selected_real_kind(12)"),
+                    FortranVariable(name="scale", base_type="real", kind="rk"),
+                ],
+                procedures=[proc],
+                derived_types=[dtype],
+            )
+        ],
+        submodules=[
+            FortranSubmodule(
+                name="solver_child",
+                parent="solver_mod",
+                variables=[FortranVariable(name="child_scale", base_type="real", kind="rk")],
+                procedures=[FortranProcedureSignature(name="child_step", kind="subroutine", arguments=[FortranArgument(name="y", base_type="real", kind="rk")])],
+                derived_types=[FortranDerivedType(name="child_t", fields=[FortranArgument(name="value", base_type="real", kind="rk")])],
+            )
+        ],
+        programs=[
+            FortranProgram(
+                variables=[FortranVariable(name="program_scale", base_type="real", kind="rk")],
+                procedures=[FortranProcedureSignature(name="program_step", kind="subroutine", arguments=[FortranArgument(name="z", base_type="real", kind="rk")])],
+            )
+        ],
+        block_data_units=[
+            FortranBlockData(variables=[FortranVariable(name="saved_scale", base_type="real", kind="rk")])
+        ],
+        procedures=[FortranProcedureSignature(name="free_step", kind="subroutine", arguments=[FortranArgument(name="q", base_type="real", kind="rk")])],
+        derived_types=[FortranDerivedType(name="free_t", fields=[FortranArgument(name="payload", base_type="real", kind="rk")])],
+    )
+
+    contexts = [ctx for _var, ctx in _iter_fortran_variable_contexts(parsed)]
+    requirements = collect_semantic_compile_time_requirements(parsed)
+    supplied = collect_semantic_compile_time_requirements(
+        parsed,
+        compile_time_values={"rk": 8, "selected_real_kind(12)": 8, "n": 2},
+    )
+
+    assert {"file", "module", "submodule", "program", "block_data", "procedure", "derived_type"} <= {
+        ctx["unit_kind"] for ctx in contexts
+    }
+    assert {ctx["role"] for ctx in contexts} >= {"variable", "argument", "result", "field"}
+    assert ("parameter_value", "rk", "selected_real_kind(12)") in {
+        (item["code"], item["symbol"], item["expression"])
+        for item in requirements
+    }
+    assert any(item["code"] == "unsupported_kind" and item["symbol"] == "scale" for item in requirements)
+    assert supplied == []
+    assert _compile_time_requirement_message("other", "n", "n + 1") == "Compile-time value required for 'n'."
+
+
 def test_resolve_semantic_compile_time_values_rewrites_shapes_and_constraints():
     module = SemanticModule(
         name="shape_mod",
@@ -204,6 +314,80 @@ def test_resolve_semantic_compile_time_values_rewrites_shapes_and_constraints():
     assert module.variables[0].semantic_type.shape == ["1:n"]
     assert resolved.variables[0].semantic_type.shape == ["1:8"]
     assert resolved.variables[0].semantic_type.constraints[0].arguments == ["1:8"]
+
+
+def test_resolve_semantic_compile_time_values_handles_nested_modules():
+    module = SemanticModule(
+        name="nested_mod",
+        variables=[
+            SemanticArgument(
+                name="values",
+                semantic_type=SemanticType(
+                    name="Float64",
+                    dtype="Float64",
+                    rank=1,
+                    shape=["n"],
+                    constraints=[SemanticConstraint("Shape", [{"extent": "n"}])],
+                    metadata={"bounds": ("n", ["m"])},
+                ),
+                default_value="n",
+                metadata={"alias": "m"},
+            )
+        ],
+        functions=[
+            SemanticFunction(
+                name="step",
+                arguments=[
+                    SemanticArgument(
+                        name="x",
+                        semantic_type=SemanticType("Float64", rank=1, shape=["m"]),
+                        metadata={"scale": "n"},
+                    )
+                ],
+                projection=[ProjectionMapping(value={"shape": ["n", ("m",)]})],
+                metadata={"work": ["n", {"inner": "m"}]},
+            ),
+            SemanticFunction(
+                name="with_result",
+                return_type=SemanticType("Int32", metadata={"extent": "n"}),
+            ),
+        ],
+        classes=[
+            SemanticClass(
+                name="state_t",
+                fields=[
+                    SemanticArgument(
+                        name="field",
+                        semantic_type=SemanticType("Float64", shape=["n"]),
+                        default_value="m",
+                    )
+                ],
+                methods=[
+                    SemanticMethod(
+                        name="touch",
+                        arguments=[SemanticArgument("self", SemanticType("state_t", metadata={"n": "n"}))],
+                        return_type=SemanticType("Int32", metadata={"m": "m"}),
+                        projection=[ProjectionMapping(value=("n", {"m": "m"}))],
+                        metadata={"method": "n"},
+                    )
+                ],
+                metadata={"class": "m"},
+            )
+        ],
+        metadata={"module": ["n", ("m",)]},
+    )
+
+    resolved = resolve_semantic_compile_time_values([module], {"n": 4, "m": 2})
+
+    assert module.variables[0].semantic_type.shape == ["n"]
+    resolved_module = resolved[0]
+    assert resolved_module.variables[0].semantic_type.shape == ["4"]
+    assert resolved_module.variables[0].semantic_type.constraints[0].arguments == [{"extent": "4"}]
+    assert resolved_module.variables[0].semantic_type.metadata == {"bounds": ("4", ["2"])}
+    assert resolved_module.functions[0].projection[0].value == {"shape": ["4", ("2",)]}
+    assert resolved_module.functions[1].return_type.metadata == {"extent": "4"}
+    assert resolved_module.classes[0].methods[0].projection[0].value == ("4", {"m": "2"})
+    assert resolved_module.metadata == {"module": ["4", ("2",)]}
 
 
 def test_iso_c_module_variable_kinds_map_to_semantic_types():
