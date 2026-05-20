@@ -261,6 +261,7 @@ Scope:
 
 - Test directories, fixtures, golden scripts, and update workflow.
 - Minimal placeholder fixtures are allowed.
+- Skipped roadmap tests are allowed before parser implementation exists.
 - No real parser logic unless needed to support skeleton output already added.
 
 ### Test Layout Tasks
@@ -277,6 +278,39 @@ Scope:
 - [ ] Keep C fixture data separate from Fortran fixture data.
 - [ ] Add README files explaining each C fixture directory.
 - [ ] Add small placeholder `.h` and `.c` fixture files only if tests need them.
+
+### Skipped Roadmap Test Policy
+
+- [x] Add skipped C parser roadmap tests before implementation starts.
+- [x] Keep every roadmap test skipped until its implementation branch lands.
+- [x] Keep `c_parser` imports inside skipped test functions, not at module
+      import time, so collection works before the package exists.
+- [x] Use the skipped tests as an executable checklist for future branches.
+- [ ] Unskip tests one capability at a time.
+- [ ] In each implementation branch, unskip only the tests covered by that
+      branch.
+- [ ] Do not unskip broad fixture, corpus, semantic, or `.pyi` tests before
+      the supporting workflow exists.
+- [ ] When a skipped test is unblocked, replace placeholder expectations with
+      the exact implemented model fields if the final schema differs.
+- [ ] Keep the skipped C suite separate from existing Fortran tests.
+- [ ] Keep Fortran tests green whenever C tests are unskipped.
+
+### Skipped Roadmap Test Files
+
+- [x] Create `tests/parser/c/README.md` with the staged unskip policy.
+- [x] Create `tests/parser/c/test_c_public_entrypoints.py`.
+- [x] Create `tests/parser/c/test_c_cli.py`.
+- [x] Create `tests/parser/c/test_c_lexer_preprocessor.py`.
+- [x] Create `tests/parser/c/test_c_declarations_and_declarators.py`.
+- [x] Create `tests/parser/c/test_c_functions.py`.
+- [x] Create `tests/parser/c/test_c_structs_unions_enums_typedefs.py`.
+- [x] Create `tests/parser/c/test_c_project_includes.py`.
+- [x] Create `tests/parser/c/test_c_wrap_readiness.py`.
+- [x] Create `tests/parser/c/test_c_fixture_suite.py`.
+- [x] Create `tests/parser/c/test_c_error_fixture_suite.py`.
+- [x] Create `tests/parser/c/test_c_json_sanity.py`.
+- [x] Create `tests/parser/c/test_c_corpus.py`.
 
 ### Golden Workflow Tasks
 
@@ -325,6 +359,8 @@ Scope:
 
 ### Phase 2 Test Expectations
 
+- [x] Run the skipped C roadmap suite and confirm it collects without importing
+      `c_parser` at module import time.
 - [ ] Run C skeleton CLI tests.
 - [ ] Run existing parser CLI tests.
 - [ ] Run a small targeted test command, for example
@@ -1170,6 +1206,22 @@ Scope:
 
 ### Corpus Tasks
 
+- [ ] Use cJSON as the first pinned real-world C corpus target.
+- [ ] Pin cJSON to an exact tag or commit rather than tracking the moving
+      default branch.
+- [ ] Store cJSON provenance in `tests/data/c/corpus/cjson/SOURCE.md`.
+- [ ] Store cJSON license text next to the vendored fixture files.
+- [ ] Add `tests/data/c/corpus/cjson/cJSON.h`.
+- [ ] Add `tests/data/c/corpus/cjson/cJSON.c`.
+- [ ] Treat cJSON corpus tests as parse-only at first.
+- [ ] Use cJSON to exercise typedef structs, recursive pointers, `const char *`
+      APIs, `size_t`, public declaration macros, numeric/string constants,
+      and callback hook fields.
+- [ ] Keep callback hook fields modeled in `c_parser/models.py`, with
+      wrap-readiness requiring explicit user `.pyi` callback policy metadata
+      before claiming they are wrappable.
+- [ ] Add zlib or another macro-heavier C library only after
+      compiler-assisted preprocessing mode is available.
 - [ ] Add small real-world C header corpus.
 - [ ] Add scientific C API fixtures.
 - [ ] Add source/header project fixtures.
