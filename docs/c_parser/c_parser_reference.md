@@ -262,6 +262,12 @@ Test families should mirror the Fortran parser:
 - error fixture/golden tests
 - corpus parse-only tests
 
+The first committed C parser tests are skipped roadmap tests under
+`tests/parser/c/`. They are intentionally collected but skipped before the
+parser exists. Future implementation branches should unskip only the tests for
+the capability they implement, then merge those branches back into
+`c-parser/main`.
+
 Fixture layout should be separate from Fortran:
 
 ```text
@@ -276,6 +282,12 @@ tests/parser/c/
   errors/
   generate_c_parser_goldens.py
 ```
+
+The first real-world corpus target should be cJSON, pinned to an exact release
+or commit with license and source provenance. cJSON is small enough for early
+stabilization while still covering typedef structs, recursive pointers, public
+macro declaration wrappers, constants, `const char *` APIs, `size_t`, and
+callback hook fields.
 
 ## Planned Documentation Set
 
