@@ -345,7 +345,14 @@ This is the C equivalent of the Fortran parser's shared declaration backend.
 The C frontend must be preprocessor-aware without trying to be a full C
 preprocessor in v1.
 
-Initial target:
+The practical rule is: x2py should not own full preprocessor correctness.
+Macro-heavy APIs are still in scope, but the supported path for those APIs is
+compiler-assisted preprocessing. The parser should support both raw-source
+mode and a later preprocessed-input mode, and should store the facts it learns
+from either mode in C parser models before any semantic IR conversion is
+attempted.
+
+Raw-source mode target:
 
 - Strip comments safely while preserving line numbers.
 - Fold backslash-newline continuations.
@@ -356,11 +363,30 @@ Initial target:
   similarly to the Fortran duplicate-check branch tracking.
 - Allow optional `macro_defines` to select active branches.
 - Preserve inactive branch diagnostics when macro selection is not requested.
+- Parse ordinary declarations visible without macro expansion.
+- Mark declaration regions that depend on unresolved macros.
+
+Compiler-assisted preprocessing target:
+
+- Accept a preprocessed stream from `.i` files or a configured compiler command
+  such as `cc -E` or `clang -E`.
+- Preserve `#line` marker information so diagnostics can map preprocessed
+  declarations back to original files.
+- Store both the original input path and the preprocessed origin metadata on
+  parsed models.
+- Mark declarations discovered only after preprocessing with
+  `origin="preprocessed"` or equivalent model metadata.
+- Record the macro definitions/include directories/preprocessor command that
+  produced the parse, because different `-D` and `-I` settings can expose
+  different public APIs.
+- Treat function-like macros as metadata in raw mode, but allow their expanded
+  declarations to be parsed when they appear in compiler-preprocessed input.
 
 Initial non-goal:
 
 - Do not implement arbitrary macro expansion.
 - Do not attempt token-paste/stringify semantics.
+- Do not implement recursive compiler-compatible macro semantics inside x2py.
 - Do not require libclang as the only way to understand headers.
 
 ## Project Parsing Strategy
@@ -401,7 +427,7 @@ Planned blocker families:
 - unresolved tag type
 - incomplete struct/union used by value
 - function pointer parameter or return
-- callback parameter requiring manual projection
+- callback/function-pointer API without user-supplied `.pyi` policy
 - variadic function
 - K&R style function definition
 - array parameter with unknown size relationship
@@ -430,6 +456,20 @@ The JSON readiness shape should stay close to Fortran:
   "wrappable": bool
 }
 ```
+
+## Parser-First Model Policy
+
+For the current planning horizon, the C parser should store C-specific facts in
+`c_parser/models.py`. This includes preprocessing origin, macro dependencies,
+function pointer signatures, callback-like parameters, pointer qualifiers,
+ownership ambiguity, include dependencies, typedef resolution state, and
+readiness diagnostics.
+
+Semantic IR conversion is deliberately later work. When that phase starts, the
+IR model may need extensions for C pointer ownership, unsigned integer types,
+callbacks, opaque handles, function pointer policies, and preprocessing-origin
+metadata. The parser should not wait for those IR decisions before preserving
+the source facts it can extract.
 
 ## Semantic IR Mapping
 
@@ -476,7 +516,8 @@ Likely stub patterns:
 - structs:
   - `class struct_name: ...` when field layout is useful and stable
 - callbacks:
-  - defer until function pointer semantics are explicit
+  - generated stubs should include callback declarations only after user policy
+    fields are designed and supported
 - constants:
   - `Final[...]`
 
@@ -484,6 +525,28 @@ The existing `.pyi` parser already supports `Final`, `private`, `native_call`,
 imports, classes, functions, shapes, and native projection entries. C-specific
 work should extend the semantic model intentionally before changing `.pyi`
 syntax.
+
+For function pointers and callbacks, parser extraction and wrap-readiness are
+separate decisions. The parser should extract the function pointer type into C
+models whenever possible. A callback-bearing API should become wrap-ready only
+when the user supplies enough `.pyi` policy for wrapper generation. The policy
+needs to identify:
+
+- the callback signature, including argument and return semantic types
+- whether native calls Python, Python passes a callback to native, or both
+- whether the callback is used only during the call or stored by native code
+- which context/userdata parameter, often `void *`, is paired with it
+- whether `NULL` is allowed for the callback and/or context
+- the calling convention when it is not the platform default
+- whether invocation is synchronous, asynchronous, same-thread, or arbitrary
+  native-thread
+- who owns callback and context memory
+- how and when a stored callback is released
+- what should happen if the Python callback raises
+
+Until those fields exist and are supplied, readiness should report an explicit
+callback policy blocker rather than pretending the function is safely
+wrappable.
 
 ## Isolation Policy
 

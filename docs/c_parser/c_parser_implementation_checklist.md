@@ -463,7 +463,9 @@ Scope:
 
 - Token/source normalization.
 - Comments, continuations, directives, includes, simple macro metadata.
-- No full macro expansion.
+- No internal full macro expansion.
+- Raw-source parsing first; compiler-assisted preprocessing path planned for
+  macro-heavy APIs.
 
 ### Lexer Tasks
 
@@ -508,8 +510,15 @@ Scope:
 - [ ] Support optional `macro_defines` for active-branch selection.
 - [ ] Implement a tiny safe evaluator for simple `defined(NAME)`, `&&`, `||`,
       `!`, `0`, and `1`.
+- [ ] Mark declarations that depend on unresolved macros.
+- [ ] Store macro-dependency metadata in C parser models.
+- [ ] Store preprocessing mode metadata in `CFile`.
+- [ ] Store preprocessor configuration metadata such as macro defines and
+      include dirs.
 - [ ] Do not implement general macro expansion.
 - [ ] Do not expand token-paste or stringify macros.
+- [ ] Do not attempt recursive compiler-compatible macro expansion inside
+      x2py.
 - [ ] Add tests for include collection.
 - [ ] Add tests for object-like macro collection.
 - [ ] Add tests for function-like macro diagnostics.
@@ -517,12 +526,28 @@ Scope:
 - [ ] Add tests for selected active branches.
 - [ ] Add tests for duplicate declarations in mutually exclusive branches.
 
+### Compiler-Assisted Preprocessing Tasks
+
+- [ ] Design a preprocessed-input mode for `.i` files.
+- [ ] Design an optional compiler invocation mode for `cc -E` or `clang -E`.
+- [ ] Preserve `#line` markers from compiler-preprocessed input.
+- [ ] Map diagnostics from preprocessed declarations back to original files.
+- [ ] Mark preprocessed declarations with origin metadata.
+- [ ] Store the preprocessor command/configuration in `CFile` or `CProject`.
+- [ ] Store original and preprocessed source paths when both exist.
+- [ ] Add tests for parsing a simple `.i` file.
+- [ ] Add tests for `#line` source mapping.
+- [ ] Add tests that macro-generated declarations are parseable only when they
+      appear in preprocessed input.
+
 ### Phase 4 Definition Of Done
 
 - [ ] Lexer/preprocessor preserves source locations.
 - [ ] Includes and macros are collected as metadata.
 - [ ] Conditional branch tracking exists.
 - [ ] No arbitrary macro expansion is attempted.
+- [ ] Compiler-assisted preprocessing has a documented design path for
+      macro-heavy APIs.
 - [ ] Tests cover comments, continuations, directives, and branch selection.
 
 ### Phase 4 Risks And Open Questions
@@ -531,6 +556,8 @@ Scope:
       declarator parsing requires tokens.
 - [ ] Decide whether system headers are recorded only or optionally searched.
 - [ ] Decide whether `#pragma` should become diagnostics or metadata.
+- [ ] Decide whether compiler invocation belongs in Phase 4 or a later
+      project-resolution phase.
 
 ## Phase 5: Declarations And Declarators
 
@@ -910,6 +937,7 @@ Scope:
 - [ ] Include `unresolved_typedefs`.
 - [ ] Include `unresolved_tags`.
 - [ ] Include `macro_dependent_declarations`.
+- [ ] Include `preprocessing_origin`.
 - [ ] Include `unsupported_extensions`.
 - [ ] Include `ambiguous_pointer_ownership`.
 - [ ] Include `ambiguous_array_extents`.
@@ -936,6 +964,7 @@ Scope:
 - [ ] Report function pointer return types.
 - [ ] Report function pointer parameters.
 - [ ] Report callback typedef parameters.
+- [ ] Report missing callback `.pyi` policy.
 - [ ] Report macro-dependent declarations.
 - [ ] Report unsupported attributes.
 - [ ] Report unsupported compiler extensions.
@@ -971,7 +1000,8 @@ Scope:
 
 - [ ] Decide which pointer cases are blockers versus warnings.
 - [ ] Decide how readiness should treat opaque handles.
-- [ ] Decide whether callbacks are always blockers in v1.
+- [ ] Decide the exact readiness code names for callback APIs that are parsed
+      but missing user-supplied `.pyi` policy.
 
 ## Phase 10: Semantic IR Conversion
 
@@ -1023,7 +1053,10 @@ Scope:
 - [ ] Add projection metadata only where native and Python signatures diverge.
 - [ ] Treat out parameters conservatively until ownership/intent policy exists.
 - [ ] Reject or defer variadic functions.
-- [ ] Reject or defer callbacks.
+- [ ] Preserve callback/function-pointer facts from C parser models even if
+      semantic conversion defers wrapper generation.
+- [ ] Defer callback conversion unless `.pyi` policy supplies the required
+      callback facts.
 - [ ] Add semantic tests for scalar functions.
 - [ ] Add semantic tests for pointer input.
 - [ ] Add semantic tests for const pointer input.
@@ -1086,7 +1119,19 @@ Scope:
 - [ ] Represent pointer/size hidden relationships where known.
 - [ ] Represent returned output buffers only with explicit projection metadata.
 - [ ] Represent ownership/lifetime metadata if supported by IR.
-- [ ] Defer callback projection until function pointer semantics are designed.
+- [ ] Define `.pyi` policy fields for callback signatures.
+- [ ] Define `.pyi` policy fields for callback direction.
+- [ ] Define `.pyi` policy fields for call-only versus stored callback
+      lifetime.
+- [ ] Define `.pyi` policy fields for context/userdata pairing.
+- [ ] Define `.pyi` policy fields for callback nullability.
+- [ ] Define `.pyi` policy fields for non-default calling conventions.
+- [ ] Define `.pyi` policy fields for threading and async invocation.
+- [ ] Define `.pyi` policy fields for ownership of callback/context memory.
+- [ ] Define `.pyi` policy fields for release/unregistration APIs.
+- [ ] Define `.pyi` policy fields for Python exception/error handling.
+- [ ] Defer callback projection until those policy fields are supplied by the
+      user.
 - [ ] Defer arbitrary ABI details.
 
 ### Phase 11 Definition Of Done
@@ -1101,7 +1146,8 @@ Scope:
 - [ ] Existing `.pyi` syntax may not be expressive enough for ownership and
       lifetimes.
 - [ ] Opaque handles might require new conventions.
-- [ ] C callbacks likely need a dedicated semantic design.
+- [ ] C callbacks likely need dedicated `.pyi` policy syntax and later semantic
+      IR extensions.
 
 ## Phase 12: Corpus Testing, Stabilization, And Regression Hardening
 
@@ -1171,7 +1217,8 @@ Scope:
 ### Phase 12 Risks And Open Questions
 
 - [ ] Scope creep toward compiler-grade parsing.
-- [ ] Macro-heavy APIs may exceed lightweight preprocessing.
+- [ ] Macro-heavy APIs require clear raw-source versus compiler-preprocessed
+      mode behavior.
 - [ ] Ownership/lifetime semantics may need broader IR work.
 - [ ] C extensions may need fixture-driven prioritization.
 
@@ -1187,7 +1234,7 @@ Scope:
 - [ ] Do not parse C++.
 - [ ] Do not generate a full ABI model.
 - [ ] Do not infer pointer ownership silently.
-- [ ] Do not claim callbacks are safely wrappable before a callback design
-      exists.
+- [ ] Do not claim callbacks are safely wrappable before the required `.pyi`
+      callback policy is supplied.
 - [ ] Do not modify Fortran parser behavior as part of C parser work unless a
       shared change is explicitly planned, tested, and documented.
