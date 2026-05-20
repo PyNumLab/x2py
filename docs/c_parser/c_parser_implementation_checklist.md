@@ -46,11 +46,11 @@ Scope:
 - [x] Create long-lived integration branch `c-parser/main`.
 - [x] Create planning branch `c-parser/phase-0-roadmap` from
       `c-parser/main`.
-- [ ] Merge `c-parser/phase-0-roadmap` back into `c-parser/main`.
-- [ ] Confirm `main` has no C parser planning commits unless intentionally
+- [x] Merge `c-parser/phase-0-roadmap` back into `c-parser/main`.
+- [x] Confirm `main` has no C parser planning commits unless intentionally
       merged later after stabilization.
-- [ ] Record the branch strategy in C parser docs.
-- [ ] Use `codex: ...` prefix for planning commit message.
+- [x] Record the branch strategy in C parser docs.
+- [x] Use `codex: ...` prefix for planning commit message.
 
 ### Repository Inspection Tasks
 
@@ -113,15 +113,15 @@ Scope:
 - [x] Docs make CLI and documentation Phase 1 deliverables.
 - [x] Docs preserve the grammar-style parser requirement.
 - [x] Docs preserve project-main isolation.
-- [ ] Planning branch is committed.
-- [ ] Planning branch is merged into `c-parser/main`.
+- [x] Planning branch is committed.
+- [x] Planning branch is merged into `c-parser/main`.
 
 ### Phase 0 Test Expectations
 
-- [ ] No test changes are required in Phase 0.
-- [ ] Run a documentation-safe sanity command such as `git status`.
-- [ ] Do not regenerate fixtures.
-- [ ] Do not run parser golden update scripts.
+- [x] No test changes are required in Phase 0.
+- [x] Run a documentation-safe sanity command such as `git status`.
+- [x] Do not regenerate fixtures.
+- [x] Do not run parser golden update scripts.
 
 ### Phase 0 Risks And Open Questions
 
