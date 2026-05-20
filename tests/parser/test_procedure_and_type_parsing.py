@@ -18,6 +18,41 @@ parse_fortran_block_data_unit = lambda code, filename=None: parse_fortran_block_
 parse_fortran_interfaces = lambda code, filename=None: parse_fortran_file(code, filename=filename).interfaces
 parse_fortran_interface = lambda code, filename=None: parse_fortran_interfaces(code, filename=filename)[0]
 
+COMPILE_TIME_EXPRESSION_SOURCE = """
+module compile_time_expression_examples
+  use iso_fortran_env, only: real64
+  implicit none
+
+  integer, parameter :: n = 10
+  integer, parameter :: m = 5
+  integer, parameter :: expr_int = 2 * n + m - 3
+  integer, parameter :: abs_value = abs(-12)
+  integer, parameter :: max_value = max(3, 7, 2)
+  integer, parameter :: mod_value = mod(17, 5)
+  integer, parameter :: len_value = len("abcdef")
+  integer, parameter :: len_trim_value = len_trim("abc   ")
+  integer, parameter :: char_code = iachar("A")
+  integer, parameter :: cast_int = int(3.9)
+
+  character(len=len("compile")) :: length_from_len
+  character(len=n) :: length_from_parameter
+  character(len=len_trim("abc   ")) :: length_from_len_trim
+
+  real(real64) :: array_from_parameter(n)
+  real(real64) :: array_from_expression(2 * n + 1)
+  integer :: matrix_from_constants(m, n)
+  integer, parameter :: small_array(3) = [1, 2, 3]
+
+  type :: buffer_type(k, n)
+     integer, kind :: k
+     integer, len  :: n
+     real(kind=k) :: values(n)
+  end type buffer_type
+
+  type(buffer_type(real64, 4)) :: compile_time_buffer
+end module compile_time_expression_examples
+"""
+
 
 def collect_signature_shape_symbols(signature):
     import re
@@ -1274,8 +1309,8 @@ end module expr_mod
     assert [a.shape[0] for a in sig.arguments] == ["1:p_add", "1:p_sub", "1:p_mul", "1:p_div", "1:p_pow", "0:p_mix", "1:-(-a + b)", "1:(a+b)*(c+1)-1", "1:(a-b)*(a-c)"]
 
 
-def test_compile_time_expression_fixture_module_values_are_partially_evaluated():
-    parsed = parse_fortran_file(Path("tests/compile_time_expressions.f90"))
+def test_compile_time_expression_module_values_are_partially_evaluated():
+    parsed = parse_fortran_file(COMPILE_TIME_EXPRESSION_SOURCE)
     module = parsed.modules[0]
     variables = {var.name: var for var in module.variables}
 
@@ -1337,7 +1372,7 @@ end module selected_kind_mod
 
 
 def test_parameterized_derived_type_declarations_preserve_and_resolve_arguments():
-    parsed = parse_fortran_file(Path("tests/compile_time_expressions.f90"))
+    parsed = parse_fortran_file(COMPILE_TIME_EXPRESSION_SOURCE)
     module = parsed.modules[0]
     variables = {var.name: var for var in module.variables}
     buffer_type = next(dtype for dtype in module.derived_types if dtype.name == "buffer_type")
