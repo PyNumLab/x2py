@@ -129,6 +129,9 @@ def _format_blocker_item(code: str, item) -> str:
     if code == "unresolved_kind_fields":
         providers = ", ".join(item.get("import_modules") or []) or "<not imported>"
         return f"{item['type_owner']}:{item['field']} uses kind {item['kind']} from {providers}"
+    if code == "callback_arguments_requiring_pyi":
+        iface = f" via {item['interface']}" if item.get("interface") else ""
+        return f"{item['procedure']}:{item['argument']} needs Callable[...] callback metadata{iface}"
     return str(item)
 
 

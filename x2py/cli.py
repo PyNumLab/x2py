@@ -56,7 +56,7 @@ def _expand_paths(paths: list[str]) -> list[Path]:
     return sorted(set(expanded))
 
 
-def _parse_report(paths: list[str]) -> dict[str, dict]:
+def _parse_report(paths: list[str], *, readiness_pyi_files: list[str] | None = None) -> dict[str, dict]:
     out: dict[str, dict] = {}
     parser = FortranParser()
     for p in _expand_paths(paths):
@@ -69,7 +69,11 @@ def _parse_report(paths: list[str]) -> dict[str, dict]:
             "submodules": [_to_dict_no_parent(m) for m in parsed.submodules],
             "programs": [_to_dict_no_parent(m) for m in parsed.programs],
             "block_data": [_to_dict_no_parent(m) for m in parsed.block_data_units],
-            "wrap_readiness": parser.visit_wrap_readiness(code, filename=str(p)),
+            "wrap_readiness": parser.visit_wrap_readiness(
+                code,
+                filename=str(p),
+                pyi_files=readiness_pyi_files,
+            ),
         }
     return out
 
@@ -151,6 +155,8 @@ def main() -> int:
             "    python -m x2py path/to/src_dir --parse --out\n"
             "  Show wrap-readiness only:\n"
             "    python -m x2py path/to/file.f90 --parse --wrap-readiness\n"
+            "  Show wrap-readiness using user-provided .pyi facts:\n"
+            "    python -m x2py path/to/file.f90 --parse --wrap-readiness --readiness-pyi path/to/context.pyi\n"
             "  Print semantic IR JSON:\n"
             "    python -m x2py path/to/file.f90 --semantics\n"
             "  Print generated Python stub text:\n"
@@ -190,6 +196,17 @@ def main() -> int:
     parser.add_argument("--pyi", action="store_true", help="Generate Python .pyi content")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
     parser.add_argument("--out", nargs="?", const="", type=str, help="Write stage output to file (optional explicit output filename)")
+    parser.add_argument(
+        "--readiness-pyi",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help=(
+            "Use an edited .pyi file as wrap-readiness context for imported "
+            "derived types, literal Final[...] constants, and Callable[...] callbacks. "
+            "May be repeated."
+        ),
+    )
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI color in parse diagnostics")
     parser.add_argument("--debug-traceback", action="store_true", help="Re-raise parser errors for debug")
     args = parser.parse_args()
@@ -199,6 +216,9 @@ def main() -> int:
 
     if args.wrap_readiness and not args.parse:
         parser.error("--wrap-readiness requires --parse")
+
+    if args.readiness_pyi and not args.parse:
+        parser.error("--readiness-pyi requires --parse")
 
     if (args.show_vars or args.print_limit is not None or args.vars_limit is not None) and not args.parse:
         parser.error("--show-vars/--print-limit require --parse")
@@ -220,7 +240,7 @@ def main() -> int:
         parser.error("JSON output currently supports only the parsing stage. Use --parse with --json/--out.")
 
     try:
-        parse_payload = _parse_report(args.paths) if args.parse else None
+        parse_payload = _parse_report(args.paths, readiness_pyi_files=args.readiness_pyi) if args.parse else None
         semantic_payload = _semantic_report(args.paths) if (args.semantics or args.pyi) else None
     except FortranParseError as exc:
         if args.debug_traceback or _env_flag("FORTRAN_PARSER_DEBUG"):

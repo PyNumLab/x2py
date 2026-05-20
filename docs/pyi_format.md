@@ -389,3 +389,47 @@ example, `def f(a: Int32) -> None: ...` and
 renaming is applied inside shape expressions such as `Shape('1:n')`. Names
 outside function and method argument lists, including module variables and class
 fields, remain significant.
+
+## Wrap-Readiness Context
+
+An edited `.pyi` file can also be used as parser-side wrap-readiness context
+before semantic IR conversion. This is useful when the parsed Fortran source
+imports symbols from files that are not part of the current parse, but the user
+knows enough about those symbols to make wrapping safe.
+
+Use the CLI with one or more context files:
+
+```bash
+python -m x2py solver.f90 --parse --wrap-readiness --readiness-pyi state_mod.pyi
+```
+
+The readiness context currently consumes three kinds of facts:
+
+- `class name:` declares an external derived type name.
+- `name: Final[Int32] = 8` declares a literal compile-time constant or kind
+  value.
+- `Callable[...]` on a procedure argument declares the callback signature for a
+  Fortran procedure dummy argument.
+
+Example:
+
+```python
+from typing import Callable, Final
+
+rk: Final[Int32] = 8
+
+class sim_state:
+    n: Int32
+    values: Float64[Shape('n'), ORDER_F]
+
+def step(
+    state: sim_state,
+    t: Float64,
+    objective: Callable[[sim_state, Float64], Float64],
+) -> tuple[Returns["state", sim_state], Returns["score", Float64]]: ...
+```
+
+This can clear readiness blockers for a Fortran routine that imports
+`sim_state`, uses `real(kind=rk)`, and accepts `objective` as a callback. A
+`Final[...]` declaration without a literal value is intentionally not enough
+for kind or compile-time value resolution.

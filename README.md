@@ -435,6 +435,17 @@ Expected result:
   unresolved imported derived-type/kind dependencies, and final `wrappable`
   boolean.
 
+If readiness is blocked only because the parsed file imports facts from another
+source, an edited `.pyi` file can provide the missing wrapper-facing context:
+
+```bash
+python -m x2py solver.f90 --parse --wrap-readiness --readiness-pyi state_mod.pyi
+```
+
+The `.pyi` context can declare imported derived types with `class` stubs,
+literal compile-time constants with `Final[...] = value`, and callback
+signatures with `Callable[...]`.
+
 ## Running tests
 
 From repository root:

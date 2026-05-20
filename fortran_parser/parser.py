@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 
 from .lexer         import preprocess_lines
 from .models        import FortranArgument, FortranBlockData, FortranDerivedType, FortranFile, FortranInterface, FortranModule, FortranParseError, FortranProcedureSignature, FortranProgram, FortranProject, FortranSubmodule, FortranUseMapping, FortranVariable
+from .pyi_context   import PyiReadinessContext, load_pyi_readiness_context
 from .type_resolver import extract_kind_from_type_spec
 from .utils         import split_csv
 
@@ -482,9 +483,17 @@ class FortranParser:
                     self._insert_unique_scope_symbol(project.interfaces, iface.name.lower(), iface, label="project interface scope")
         return project
 
-    def visit_wrap_readiness(self, code: str, filename: str | None = None) -> dict:
+    def visit_wrap_readiness(
+        self,
+        code: str,
+        filename: str | None = None,
+        *,
+        pyi_files: list[str | Path] | tuple[str | Path, ...] | None = None,
+        pyi_context: PyiReadinessContext | None = None,
+    ) -> dict:
         lines = self._preprocessed_lines(code, filename)
         parsed_file = self.visit_file(code, filename=filename)
+        readiness_context = pyi_context or load_pyi_readiness_context(pyi_files)
         modules = parsed_file.modules
         submodules = parsed_file.submodules
         programs = parsed_file.programs
@@ -525,12 +534,19 @@ class FortranParser:
             wrap_target_signatures,
             types,
             modules,
+            pyi_context=readiness_context,
         )
         unresolved_kind_args, unresolved_kind_fields = self._collect_unresolved_kind_diagnostics(
             wrap_target_signatures,
             types,
             modules,
             module_params,
+            pyi_context=readiness_context,
+        )
+        callback_args_requiring_pyi = self._collect_callback_argument_diagnostics(
+            wrap_target_signatures,
+            interfaces,
+            pyi_context=readiness_context,
         )
         blockers = self._build_wrap_blockers(
             signatures=signatures,
@@ -540,6 +556,7 @@ class FortranParser:
             unresolved_derived_fields=unresolved_derived_fields,
             unresolved_kind_args=unresolved_kind_args,
             unresolved_kind_fields=unresolved_kind_fields,
+            callback_args_requiring_pyi=callback_args_requiring_pyi,
         )
         unit_blockers = self._build_unit_blockers(
             filename=filename,
@@ -551,6 +568,7 @@ class FortranParser:
             unresolved_derived_fields=unresolved_derived_fields,
             unresolved_kind_args=unresolved_kind_args,
             unresolved_kind_fields=unresolved_kind_fields,
+            callback_args_requiring_pyi=callback_args_requiring_pyi,
         )
 
         return {
@@ -566,6 +584,8 @@ class FortranParser:
             "unresolved_derived_type_fields": unresolved_derived_fields,
             "unresolved_kind_arguments": unresolved_kind_args,
             "unresolved_kind_fields": unresolved_kind_fields,
+            "callback_arguments_requiring_pyi": callback_args_requiring_pyi,
+            "pyi_context": readiness_context.to_dict(),
             "wrappability_blockers": blockers,
             "unit_blockers": unit_blockers,
             "why_not_wrappable": [b["message"] for b in blockers],
@@ -3717,10 +3737,13 @@ class FortranParser:
         uses: dict[str, list[FortranUseMapping]],
         local_symbols: set[str],
         module_params: dict[str, dict[str, str]],
+        pyi_context: PyiReadinessContext | None = None,
     ) -> bool:
         """Check whether a symbolic kind is declared locally or in parsed imports."""
         lowered = symbol.lower()
         if lowered in local_symbols:
+            return True
+        if pyi_context is not None and pyi_context.has_constant(symbol):
             return True
         if owning_module and lowered in module_params.get(owning_module.lower(), {}):
             return True
@@ -3735,6 +3758,8 @@ class FortranParser:
         signatures: list[FortranProcedureSignature],
         types: list[FortranDerivedType],
         modules: list[FortranModule],
+        *,
+        pyi_context: PyiReadinessContext | None = None,
     ) -> tuple[list[dict], list[dict]]:
         """Find derived-type references that are not defined in the parsed source."""
         defined_types = {dtype.name.lower() for dtype in types}
@@ -3744,7 +3769,9 @@ class FortranParser:
 
         def _missing_type(kind: str | None) -> bool:
             base_name = FortranParser._derived_type_base_name(kind)
-            return bool(base_name) and base_name.lower() not in defined_types
+            return bool(base_name) and base_name.lower() not in defined_types and not (
+                pyi_context is not None and pyi_context.has_type(base_name)
+            )
 
         for sig in signatures:
             for arg in sig.arguments:
@@ -3785,6 +3812,8 @@ class FortranParser:
         types: list[FortranDerivedType],
         modules: list[FortranModule],
         module_params: dict[str, dict[str, str]],
+        *,
+        pyi_context: PyiReadinessContext | None = None,
     ) -> tuple[list[dict], list[dict]]:
         """Find symbolic intrinsic kind references not declared in parsed source/imports."""
         module_uses = {mod.name.lower(): mod.uses for mod in modules}
@@ -3802,6 +3831,7 @@ class FortranParser:
                         uses=sig.uses,
                         local_symbols=local_symbols,
                         module_params=module_params,
+                        pyi_context=pyi_context,
                     ):
                         continue
                     item = {
@@ -3816,16 +3846,16 @@ class FortranParser:
                     unresolved_args.append(item)
 
             for arg in sig.arguments:
-                if arg.base_type != "derived":
+                if arg.base_type not in {"derived", "procedure"}:
                     _append_unresolved_arg(arg)
-            if sig.result and sig.result.base_type != "derived":
+            if sig.result and sig.result.base_type not in {"derived", "procedure"}:
                 _append_unresolved_arg(sig.result)
 
         for dtype in types:
             uses = module_uses.get(dtype.module.lower(), {}) if dtype.module else {}
             local_symbols: set[str] = set()
             for field in dtype.fields:
-                if field.base_type == "derived":
+                if field.base_type in {"derived", "procedure"}:
                     continue
                 for symbol in sorted(FortranParser._kind_expression_symbols(field.kind)):
                     if FortranParser._kind_symbol_is_known(
@@ -3834,6 +3864,7 @@ class FortranParser:
                         uses=uses,
                         local_symbols=local_symbols,
                         module_params=module_params,
+                        pyi_context=pyi_context,
                     ):
                         continue
                     item = {
@@ -3850,6 +3881,43 @@ class FortranParser:
         return unresolved_args, unresolved_fields
 
     @staticmethod
+    def _collect_callback_argument_diagnostics(
+        signatures: list[FortranProcedureSignature],
+        interfaces: list[FortranInterface],
+        *,
+        pyi_context: PyiReadinessContext | None = None,
+    ) -> list[dict]:
+        """Find procedure dummy arguments whose callback signature is not known."""
+        parsed_interfaces = {
+            iface.name.lower()
+            for iface in interfaces
+            if iface.name
+        }
+        missing_callbacks: list[dict] = []
+
+        for sig in signatures:
+            for arg in sig.arguments:
+                if arg.base_type != "procedure":
+                    continue
+                if pyi_context is not None and pyi_context.has_callback_argument(sig.name, arg.name):
+                    continue
+                if arg.kind and arg.kind.lower() in parsed_interfaces:
+                    continue
+                missing_callbacks.append({
+                    "procedure": sig.name,
+                    "module": sig.module,
+                    "argument": arg.name,
+                    "interface": arg.kind or None,
+                    "needs": [
+                        "callable_signature",
+                        "argument_order",
+                        "return_type",
+                    ],
+                })
+
+        return missing_callbacks
+
+    @staticmethod
     def _build_wrap_blockers(
         *,
         signatures: list[FortranProcedureSignature],
@@ -3859,6 +3927,7 @@ class FortranParser:
         unresolved_derived_fields: list[dict],
         unresolved_kind_args: list[dict],
         unresolved_kind_fields: list[dict],
+        callback_args_requiring_pyi: list[dict],
     ) -> list[dict]:
         """Create explicit, user-facing reasons why a source is not wrap-ready."""
         blockers: list[dict] = []
@@ -3904,6 +3973,12 @@ class FortranParser:
                 "message": "Some derived-type fields use kind symbols missing from the parsed source/imports.",
                 "items": unresolved_kind_fields,
             })
+        if callback_args_requiring_pyi:
+            blockers.append({
+                "code": "callback_arguments_requiring_pyi",
+                "message": "Some procedure dummy arguments need callback signatures from a .pyi file.",
+                "items": callback_args_requiring_pyi,
+            })
         return blockers
 
     @staticmethod
@@ -3918,6 +3993,7 @@ class FortranParser:
         unresolved_derived_fields: list[dict],
         unresolved_kind_args: list[dict],
         unresolved_kind_fields: list[dict],
+        callback_args_requiring_pyi: list[dict],
     ) -> list[dict]:
         """Build unit-scoped blocker records without per-unit readiness flags.
 
@@ -3971,6 +4047,7 @@ class FortranParser:
             ]
             derived_items = [item for item in unresolved_derived_args if same_unit(item, sig)]
             kind_items = [item for item in unresolved_kind_args if same_unit(item, sig)]
+            callback_items = [item for item in callback_args_requiring_pyi if same_unit(item, sig)]
             if missing_items:
                 blockers.append({
                     "code": "unknown_argument_types",
@@ -3988,6 +4065,12 @@ class FortranParser:
                     "code": "unresolved_kind_arguments",
                     "message": "Some procedure arguments use kind symbols missing from the parsed source/imports.",
                     "items": kind_items,
+                })
+            if callback_items:
+                blockers.append({
+                    "code": "callback_arguments_requiring_pyi",
+                    "message": "Some procedure dummy arguments need callback signatures from a .pyi file.",
+                    "items": callback_items,
                 })
             if not blockers:
                 continue
@@ -4418,5 +4501,10 @@ def parse_fortran_project(files, *, encoding: str = "utf-8") -> FortranProject:
     return _DEFAULT_PARSER.visit_project(files, encoding=encoding)
 
 
-def assess_wrap_readiness(code: str, filename: str | None = None) -> dict:
-    return _DEFAULT_PARSER.visit_wrap_readiness(code, filename=filename)
+def assess_wrap_readiness(
+    code: str,
+    filename: str | None = None,
+    *,
+    pyi_files: list[str | Path] | tuple[str | Path, ...] | None = None,
+) -> dict:
+    return _DEFAULT_PARSER.visit_wrap_readiness(code, filename=filename, pyi_files=pyi_files)
