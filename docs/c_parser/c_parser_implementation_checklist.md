@@ -17,6 +17,10 @@ stable.
 - [ ] Put C parser implementation in a separate `c_parser` package.
 - [ ] Keep C parser tests separated from existing Fortran tests.
 - [ ] Gate all integration through explicit C flags or C-specific APIs.
+- [ ] Keep the C parser main-merge guard active for C parser branches and
+      paths.
+- [ ] Require the `c-parser-ready-for-main` label only for the final approved
+      merge into project `main`.
 - [ ] Do not implement a giant regex parser.
 - [ ] Do not implement a whole-file scanner as the core architecture.
 - [ ] Do not make libclang the only parser architecture.
@@ -94,7 +98,9 @@ Scope:
 - [x] Create `docs/c_parser/c_parser_architecture.md`.
 - [x] Create `docs/c_parser/c_parser_cli_workflow.md`.
 - [x] Create `docs/c_parser/c_parser_implementation_checklist.md`.
+- [x] Create `docs/c_parser/c_parser_main_merge_guard.md`.
 - [x] Document the branch isolation strategy.
+- [x] Document the main-merge guard policy.
 - [x] Document Fortran parser architecture observations.
 - [x] Document proposed C parser package layout.
 - [x] Document public API shape.
@@ -113,6 +119,7 @@ Scope:
 - [x] Docs make CLI and documentation Phase 1 deliverables.
 - [x] Docs preserve the grammar-style parser requirement.
 - [x] Docs preserve project-main isolation.
+- [x] Main-merge guard policy is documented.
 - [x] Planning branch is committed.
 - [x] Planning branch is merged into `c-parser/main`.
 
