@@ -1,0 +1,59 @@
+name: C Parser Main Guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  c-parser-main-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reject premature C parser work targeting main
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+
+          if [ "$BASE_REF" != "main" ]; then
+            echo "PR does not target main; C parser main guard does not apply."
+            exit 0
+          fi
+
+          ALLOW_LABEL="c-parser-ready-for-main"
+
+          if echo ",${PR_LABELS}," | grep -Fq ",${ALLOW_LABEL},"; then
+            echo "${ALLOW_LABEL} label present; allowing C parser merge candidate."
+            exit 0
+          fi
+
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+
+          echo "Base branch: $BASE_REF"
+          echo "Head branch: $HEAD_REF"
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          C_PARSER_PATH_PATTERN='^(\.github/workflows/c-parser-main-guard\.yml|\.githooks/|docs/c_parser/|c_parser/|tests/(c_parser|parser/c|data/c)/|semantics/c2ir\.py)'
+
+          if echo "$HEAD_REF" | grep -Eq '^c-parser/'; then
+            echo "C parser branches must not target main before the C parser is ready."
+            echo "Target c-parser/main instead, or add ${ALLOW_LABEL} only for the final approved merge."
+            exit 1
+          fi
+
+          if echo "$CHANGED_FILES" | grep -Eq "$C_PARSER_PATH_PATTERN"; then
+            echo "C parser files changed in a PR targeting main."
+            echo "Target c-parser/main instead, or add ${ALLOW_LABEL} only for the final approved merge."
+            exit 1
+          fi
+
+          echo "No C parser branch or C parser paths detected in a PR targeting main."
