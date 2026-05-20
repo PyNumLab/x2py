@@ -167,7 +167,35 @@ def _format_var_type(var: dict) -> str:
         base_repr = base
     return f"{base_repr}[{rank}]"
 
-def _format_report(report: dict[str, dict]) -> str:
+def _limit_items(items: list[dict], print_limit: int | None) -> tuple[list[dict], int]:
+    if print_limit is None:
+        return items, 0
+    visible_items = items[:print_limit]
+    return visible_items, len(items) - len(visible_items)
+
+
+def _format_variable_lines(variables: list[dict], *, indent: str, print_limit: int | None) -> list[str]:
+    """Format variable declarations for optional verbose parse output."""
+    if not variables:
+        return []
+
+    visible_variables, hidden = _limit_items(variables, print_limit)
+    lines = [f"{indent}Variables: {len(variables)}"]
+    for var in visible_variables:
+        lines.append(f"{indent}  - {var['name']}:{_format_var_type(var)}")
+
+    if hidden > 0:
+        lines.append(f"{indent}  ... {hidden} more variables")
+
+    return lines
+
+
+def _format_report(
+    report: dict[str, dict],
+    *,
+    show_vars: bool = False,
+    print_limit: int | None = None,
+) -> str:
     """Format the per-file parse report as a stable, human-readable tree."""
     lines: list[str] = []
     for fname, parsed in report.items():
@@ -176,57 +204,95 @@ def _format_report(report: dict[str, dict]) -> str:
 
         if free_procedures:
             lines.append(f"  Procedures: {len(free_procedures)}")
-            for s in free_procedures:
+            visible_procedures, hidden = _limit_items(free_procedures, print_limit)
+            for s in visible_procedures:
                 args = ", ".join(f"{a['name']}:{_format_var_type(a)}" for a in s["arguments"])
                 result_txt = f" -> {_format_var_type(s['result'])}" if s.get('result') else ""
                 lines.append(f"    - {s['kind']} {s['name']}({args}){result_txt}")
+            if hidden > 0:
+                lines.append(f"    ... {hidden} more procedures")
 
         if parsed["types"]:
             lines.append(f"  Derived types: {len(parsed['types'])}")
-            for t in parsed["types"]:
+            visible_types, hidden = _limit_items(parsed["types"], print_limit)
+            for t in visible_types:
                 lines.append(f"    - type {t['name']} (fields={len(t['fields'])}, methods={len(t['methods'])})")
+            if hidden > 0:
+                lines.append(f"    ... {hidden} more derived types")
 
         if parsed["modules"]:
             lines.append(f"  Modules: {len(parsed['modules'])}")
-            for mod in parsed["modules"]:
+            visible_modules, hidden_modules = _limit_items(parsed["modules"], print_limit)
+            for mod in visible_modules:
                 lines.append(f"    - module {mod['name']} (vars={len(mod['variables'])}, uses={len(mod['uses'])})")
+                if show_vars:
+                    lines.extend(_format_variable_lines(mod["variables"], indent="      ", print_limit=print_limit))
                 if mod.get("derived_types"):
                     lines.append(f"      Derived types: {len(mod['derived_types'])}")
-                    for t in mod["derived_types"]:
+                    visible_types, hidden = _limit_items(mod["derived_types"], print_limit)
+                    for t in visible_types:
                         lines.append(f"        - type {t['name']} (fields={len(t['fields'])}, methods={len(t['methods'])})")
                         if t.get("fields"):
                             lines.append(f"          Fields: {len(t['fields'])}")
-                            for field in t["fields"]:
+                            visible_fields, hidden_fields = _limit_items(t["fields"], print_limit)
+                            for field in visible_fields:
                                 lines.append(f"            - {field['name']}:{_format_var_type(field)}")
+                            if hidden_fields > 0:
+                                lines.append(f"            ... {hidden_fields} more fields")
+                    if hidden > 0:
+                        lines.append(f"        ... {hidden} more derived types")
                 if mod.get("procedures"):
                     lines.append(f"      Procedures: {len(mod['procedures'])}")
-                    for s in mod["procedures"]:
+                    visible_procedures, hidden = _limit_items(mod["procedures"], print_limit)
+                    for s in visible_procedures:
                         args = ", ".join(f"{a['name']}:{_format_var_type(a)}" for a in s["arguments"])
                         result_txt = f" -> {_format_var_type(s['result'])}" if s.get('result') else ""
                         lines.append(f"        - {s['kind']} {s['name']}({args}){result_txt}")
+                    if hidden > 0:
+                        lines.append(f"        ... {hidden} more procedures")
+            if hidden_modules > 0:
+                lines.append(f"    ... {hidden_modules} more modules")
 
         if parsed.get("submodules"):
             lines.append(f"  Submodules: {len(parsed['submodules'])}")
-            for submod in parsed["submodules"]:
+            visible_submodules, hidden_submodules = _limit_items(parsed["submodules"], print_limit)
+            for submod in visible_submodules:
                 parent = submod["parent"] if submod.get("ancestor") is None else f"{submod['ancestor']}:{submod['parent']}"
                 lines.append(f"    - submodule {submod['name']} (parent={parent}, vars={len(submod['variables'])}, uses={len(submod['uses'])})")
+                if show_vars:
+                    lines.extend(_format_variable_lines(submod["variables"], indent="      ", print_limit=print_limit))
                 if submod.get("procedures"):
                     lines.append(f"      Procedures: {len(submod['procedures'])}")
-                    for proc in submod["procedures"]:
+                    visible_procedures, hidden = _limit_items(submod["procedures"], print_limit)
+                    for proc in visible_procedures:
                         args = ", ".join(f"{a['name']}:{_format_var_type(a)}" for a in proc["arguments"])
                         result_txt = f" -> {_format_var_type(proc['result'])}" if proc.get('result') else ""
                         lines.append(f"        - {proc['kind']} {proc['name']}({args}){result_txt}")
+                    if hidden > 0:
+                        lines.append(f"        ... {hidden} more procedures")
+            if hidden_submodules > 0:
+                lines.append(f"    ... {hidden_submodules} more submodules")
 
         if parsed.get("programs"):
             lines.append(f"  Programs: {len(parsed['programs'])}")
-            for prog in parsed["programs"]:
+            visible_programs, hidden_programs = _limit_items(parsed["programs"], print_limit)
+            for prog in visible_programs:
                 lines.append(f"    - program {prog['name']} (vars={len(prog['variables'])}, uses={len(prog['uses'])})")
+                if show_vars:
+                    lines.extend(_format_variable_lines(prog["variables"], indent="      ", print_limit=print_limit))
+            if hidden_programs > 0:
+                lines.append(f"    ... {hidden_programs} more programs")
 
         if parsed.get("block_data"):
             lines.append(f"  Block data: {len(parsed['block_data'])}")
-            for block in parsed["block_data"]:
+            visible_blocks, hidden_blocks = _limit_items(parsed["block_data"], print_limit)
+            for block in visible_blocks:
                 name = block["name"] or "<unnamed>"
                 lines.append(f"    - block data {name} (vars={len(block['variables'])})")
+                if show_vars:
+                    lines.extend(_format_variable_lines(block["variables"], indent="      ", print_limit=print_limit))
+            if hidden_blocks > 0:
+                lines.append(f"    ... {hidden_blocks} more block data units")
 
 #        readiness = parsed["wrap_readiness"]
 #        lines.append(f"  Wrappable: {'yes' if readiness['wrappable'] else 'no'}")
@@ -258,6 +324,23 @@ def main() -> int:
         action="store_true",
         help="Print only whether each input is wrap-ready and, when it is not, why.",
     )
+    parser.add_argument(
+        "--show-vars",
+        action="store_true",
+        help="Include module, submodule, program, and block-data variables in the human-readable parse report.",
+    )
+    parser.add_argument(
+        "--print-limit",
+        type=int,
+        metavar="N",
+        help="Show at most N items per repeated section in the human-readable parse report.",
+    )
+    parser.add_argument(
+        "--vars-limit",
+        type=int,
+        metavar="N",
+        help=argparse.SUPPRESS,
+    )
     parser.add_argument("--json-out", type=Path, help="Write JSON report to this file")
     parser.add_argument(
         "--no-color",
@@ -271,6 +354,10 @@ def main() -> int:
         "Can also be enabled with FORTRAN_PARSER_DEBUG=1.",
     )
     args = parser.parse_args()
+
+    print_limit = args.print_limit if args.print_limit is not None else args.vars_limit
+    if print_limit is not None and print_limit < 0:
+        parser.error("--print-limit must be >= 0")
 
     try:
         report = _parse_paths(args.paths)
@@ -297,7 +384,7 @@ def main() -> int:
     elif args.semantics:
         print(json.dumps(payload, indent=2))
     else:
-        print(_format_report(report))
+        print(_format_report(report, show_vars=args.show_vars or args.vars_limit is not None, print_limit=print_limit))
 
     return 0
 

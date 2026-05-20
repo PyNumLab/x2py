@@ -67,6 +67,10 @@ The editable wrapper `.pyi` format is documented in
 - `--semantics` for semantic IR JSON
 - `--pyi` for generated Python stub text
 
+For parse output, `--show-vars` expands scope-level variables that are normally
+summarized as `vars=N`. Use `--print-limit N` to keep large repeated sections
+readable.
+
 ### Run from source tree
 
 ```bash
@@ -112,6 +116,34 @@ File: tests/data/fortran/general/basic_subroutine.f90
       Procedures: 1
         - subroutine add1(n:integer[0], x:real[1])
 ```
+
+To include module variables in the same tree:
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --show-vars
+```
+
+```text
+File: tests/data/fortran/general/basic_subroutine.f90
+  Modules: 1
+    - module m1 (vars=2, uses=0)
+      Variables: 2
+        - n:integer[0]
+        - x:real[1]
+      Procedures: 1
+        - subroutine add1(n:integer[0], x:real[1])
+```
+
+For large modules, cap repeated sections:
+
+```bash
+python -m x2py path/to/file.f90 --parse --show-vars --print-limit 50
+```
+
+`--print-limit` applies independently to each repeated section in the
+human-readable parse tree, including modules, submodules, programs, block data
+units, derived types, fields, procedures, and variables when `--show-vars` is
+also set. Section totals are still printed before truncation.
 
 ### Example 1b: more complex tree output
 

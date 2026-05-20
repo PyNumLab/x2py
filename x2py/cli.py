@@ -133,10 +133,30 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  python -m x2py path/to/file.f90 --parse\n"
-            "  python -m x2py path/to/file.f90 --parse --json --out [report.json]\n"
-            "  python -m x2py path/to/file.f90 --semantics\n"
-            "  python -m x2py path/to/file.f90 --pyi --out [module.pyi]\n"
+            "  Parse, compact tree:\n"
+            "    python -m x2py path/to/file.f90 --parse\n"
+            "  Parse, include scope variables:\n"
+            "    python -m x2py path/to/file.f90 --parse --show-vars\n"
+            "  Parse, cap every repeated section to 50 items:\n"
+            "    python -m x2py path/to/file.f90 --parse --print-limit 50\n"
+            "  Parse, include variables and cap every repeated section:\n"
+            "    python -m x2py path/to/file.f90 --parse --show-vars --print-limit 50\n"
+            "  Parse directory recursively:\n"
+            "    python -m x2py path/to/src_dir --parse --print-limit 20\n"
+            "  Print parser JSON:\n"
+            "    python -m x2py path/to/file.f90 --parse --json\n"
+            "  Write parser JSON:\n"
+            "    python -m x2py path/to/file.f90 --parse --json --out report.json\n"
+            "  Write one JSON file next to each source:\n"
+            "    python -m x2py path/to/src_dir --parse --out\n"
+            "  Show wrap-readiness only:\n"
+            "    python -m x2py path/to/file.f90 --parse --wrap-readiness\n"
+            "  Print semantic IR JSON:\n"
+            "    python -m x2py path/to/file.f90 --semantics\n"
+            "  Print generated Python stub text:\n"
+            "    python -m x2py path/to/file.f90 --pyi\n"
+            "  Write generated Python stub text:\n"
+            "    python -m x2py path/to/file.f90 --pyi --out module.pyi\n"
             "\nOptional:\n"
             "  Install 'rich' for colored terminal syntax highlighting:\n"
             "      pip install rich"
@@ -144,6 +164,23 @@ def main() -> int:
     )
     parser.add_argument("paths", nargs="+", help="Fortran file(s) or directory path(s)")
     parser.add_argument("--parse", action="store_true", help="Run and output parser stage report")
+    parser.add_argument(
+        "--show-vars",
+        action="store_true",
+        help="Include module, submodule, program, and block-data variables in the human-readable parse report.",
+    )
+    parser.add_argument(
+        "--print-limit",
+        type=int,
+        metavar="N",
+        help="Show at most N items per repeated section in the human-readable parse report.",
+    )
+    parser.add_argument(
+        "--vars-limit",
+        type=int,
+        metavar="N",
+        help=argparse.SUPPRESS,
+    )
     parser.add_argument(
         "--wrap-readiness",
         action="store_true",
@@ -162,6 +199,13 @@ def main() -> int:
 
     if args.wrap_readiness and not args.parse:
         parser.error("--wrap-readiness requires --parse")
+
+    if (args.show_vars or args.print_limit is not None or args.vars_limit is not None) and not args.parse:
+        parser.error("--show-vars/--print-limit require --parse")
+
+    print_limit = args.print_limit if args.print_limit is not None else args.vars_limit
+    if print_limit is not None and print_limit < 0:
+        parser.error("--print-limit must be >= 0")
 
     if args.wrap_readiness and args.json:
         parser.error("--wrap-readiness cannot be combined with --json")
@@ -213,7 +257,7 @@ def main() -> int:
     elif args.pyi and not args.json:
         print_pyi_output(_format_pyi_report(semantic_payload or {}))
     elif args.parse and not (args.semantics or args.json or args.pyi):
-        print(_format_report(parse_payload or {}))
+        print(_format_report(parse_payload or {}, show_vars=args.show_vars or args.vars_limit is not None, print_limit=print_limit))
     else:
         print(json.dumps(payload, indent=2))
 

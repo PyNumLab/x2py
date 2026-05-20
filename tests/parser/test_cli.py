@@ -22,9 +22,84 @@ def test_cli_readable_output():
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert f"File: {TEST_FILE}" in res.stdout
     assert "subroutine add1" in res.stdout
+    assert "Variables:" not in res.stdout
     assert "Derived types: 0" not in res.stdout
     print(res.stdout)
     assert "Wrappable:" not in res.stdout
+
+
+def test_cli_parse_show_vars_prints_scope_variables(tmp_path: Path):
+    f90 = tmp_path / "module_vars.f90"
+    f90.write_text(
+        """
+module module_vars
+  integer :: n
+  real(kind=8), dimension(3) :: x
+contains
+  subroutine work()
+  end subroutine work
+end module module_vars
+""".strip(),
+        encoding="utf-8",
+    )
+
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse", "--show-vars"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    assert "    - module module_vars (vars=2, uses=0)" in res.stdout
+    assert "      Variables: 2" in res.stdout
+    assert "        - n:integer[0]" in res.stdout
+    assert "        - x:real(8)[1]" in res.stdout
+
+
+def test_cli_parse_print_limit_limits_scope_variables_when_shown(tmp_path: Path):
+    f90 = tmp_path / "module_vars.f90"
+    f90.write_text(
+        """
+module module_vars
+  integer :: n
+  real(kind=8), dimension(3) :: x
+contains
+  subroutine work()
+  end subroutine work
+end module module_vars
+""".strip(),
+        encoding="utf-8",
+    )
+
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse", "--show-vars", "--print-limit", "1"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    assert "      Variables: 2" in res.stdout
+    assert "        - n:integer[0]" in res.stdout
+    assert "        - x:real(8)[1]" not in res.stdout
+    assert "        ... 1 more variables" in res.stdout
+
+
+def test_cli_parse_print_limit_limits_procedures(tmp_path: Path):
+    f90 = tmp_path / "many_procs.f90"
+    f90.write_text(
+        """
+module many_procs
+contains
+  subroutine first()
+  end subroutine first
+
+  subroutine second()
+  end subroutine second
+end module many_procs
+""".strip(),
+        encoding="utf-8",
+    )
+
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse", "--print-limit", "1"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    assert "      Procedures: 2" in res.stdout
+    assert "        - subroutine first()" in res.stdout
+    assert "        - subroutine second()" not in res.stdout
+    assert "        ... 1 more procedures" in res.stdout
+    assert "Variables:" not in res.stdout
 
 
 def test_cli_wrap_readiness_output():
@@ -428,7 +503,12 @@ def test_cli_help_includes_examples():
     cmd = [sys.executable, "-m", "x2py", "--help"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert "Examples:" in res.stdout
+    assert "Parse, compact tree:" in res.stdout
     assert "python -m x2py path/to/file.f90 --parse" in res.stdout
+    assert "python -m x2py path/to/file.f90 --parse --show-vars" in res.stdout
+    assert "python -m x2py path/to/file.f90 --parse --print-limit 50" in res.stdout
+    assert "python -m x2py path/to/file.f90 --parse --wrap-readiness" in res.stdout
+    assert "python -m x2py path/to/file.f90 --pyi --out module.pyi" in res.stdout
 
 
 def test_cli_parse_shows_module_derived_types_and_derived_arg_kinds():
@@ -572,6 +652,98 @@ def test_fortran_parser_cli_formatting_branches():
     assert "- type particle (fields=0, methods=0)" in report
     assert fortran_parser_cli._format_var_type({"base_type": "derived", "kind": "particle", "rank": 0}) == "type(particle)[0]"
     assert fortran_parser_cli._format_var_type({"base_type": "real", "kind": "4", "rank": 2}) == "real(4)[2]"
+
+
+def test_fortran_parser_cli_format_report_print_limit_covers_sections():
+    var_a = {"name": "a", "base_type": "integer", "kind": "", "rank": 0}
+    var_b = {"name": "b", "base_type": "real", "kind": "8", "rank": 1}
+    field_a = {"name": "left", "base_type": "integer", "kind": "", "rank": 0}
+    field_b = {"name": "right", "base_type": "integer", "kind": "", "rank": 0}
+    proc_a = {"kind": "subroutine", "name": "first", "arguments": [var_a], "result": None}
+    proc_b = {"kind": "function", "name": "second", "arguments": [], "result": var_b}
+    dtype_a = {"name": "pair", "fields": [field_a, field_b], "methods": []}
+    dtype_b = {"name": "hidden_pair", "fields": [], "methods": []}
+
+    report = fortran_parser_cli._format_report(
+        {
+            "mixed.f90": {
+                "signatures": [proc_a, proc_b],
+                "types": [dtype_a, dtype_b],
+                "modules": [
+                    {
+                        "name": "m1",
+                        "variables": [var_a, var_b],
+                        "uses": {},
+                        "derived_types": [dtype_a, dtype_b],
+                        "procedures": [proc_a, proc_b],
+                    },
+                    {
+                        "name": "m2",
+                        "variables": [],
+                        "uses": {},
+                        "derived_types": [],
+                        "procedures": [],
+                    },
+                ],
+                "submodules": [
+                    {
+                        "name": "sm1",
+                        "parent": "m1",
+                        "ancestor": None,
+                        "variables": [var_a, var_b],
+                        "uses": {},
+                        "procedures": [proc_a, proc_b],
+                    },
+                    {
+                        "name": "sm2",
+                        "parent": "m1",
+                        "ancestor": "root",
+                        "variables": [],
+                        "uses": {},
+                        "procedures": [],
+                    },
+                ],
+                "programs": [
+                    {"name": "driver", "variables": [var_a, var_b], "uses": {}},
+                    {"name": "other_driver", "variables": [], "uses": {}},
+                ],
+                "block_data": [
+                    {"name": None, "variables": [var_a, var_b]},
+                    {"name": "named_block", "variables": []},
+                ],
+                "wrap_readiness": {"wrappable": True, "wrappability_blockers": []},
+            }
+        },
+        show_vars=True,
+        print_limit=1,
+    )
+
+    assert "  Procedures: 2" in report
+    assert "    - subroutine first(a:integer[0])" in report
+    assert "    ... 1 more procedures" in report
+    assert "  Derived types: 2" in report
+    assert "    ... 1 more derived types" in report
+    assert "  Modules: 2" in report
+    assert "    - module m1 (vars=2, uses=0)" in report
+    assert "      Variables: 2" in report
+    assert "        - a:integer[0]" in report
+    assert "        ... 1 more variables" in report
+    assert "            - left:integer[0]" in report
+    assert "            ... 1 more fields" in report
+    assert "        ... 1 more derived types" in report
+    assert "        ... 1 more procedures" in report
+    assert "    ... 1 more modules" in report
+    assert "  Submodules: 2" in report
+    assert "    - submodule sm1 (parent=m1, vars=2, uses=0)" in report
+    assert "    ... 1 more submodules" in report
+    assert "  Programs: 2" in report
+    assert "    - program driver (vars=2, uses=0)" in report
+    assert "    ... 1 more programs" in report
+    assert "  Block data: 2" in report
+    assert "    - block data <unnamed> (vars=2)" in report
+    assert "    ... 1 more block data units" in report
+
+    assert fortran_parser_cli._format_variable_lines([], indent="  ", print_limit=1) == []
 
 
 def test_fortran_parser_cli_json_wrap_readiness_and_parse_errors(tmp_path: Path):

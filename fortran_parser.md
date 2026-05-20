@@ -201,6 +201,10 @@ python -m x2py <path ...>
 `<path ...>` supports files and directories. Directories are recursively scanned
 for `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`, `.f08`.
 
+The human-readable parse tree keeps scope variables compact by default as
+`vars=N`. Add `--show-vars` to print the variables, or `--print-limit N` to
+print only the first `N` items in each repeated section.
+
 ### 3.2 Human-readable output example
 
 Input Fortran (`tests/data/fortran/general/basic_subroutine.f90`):
@@ -233,6 +237,34 @@ File: tests/data/fortran/general/basic_subroutine.f90
       Procedures: 1
         - subroutine add1(n:integer[0], x:real[1])
 ```
+
+With variables expanded:
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --show-vars
+```
+
+```text
+File: tests/data/fortran/general/basic_subroutine.f90
+  Modules: 1
+    - module m1 (vars=2, uses=0)
+      Variables: 2
+        - n:integer[0]
+        - x:real[1]
+      Procedures: 1
+        - subroutine add1(n:integer[0], x:real[1])
+```
+
+For large files:
+
+```bash
+python -m x2py path/to/file.f90 --parse --show-vars --print-limit 50
+```
+
+`--print-limit` applies independently to modules, submodules, programs, block
+data units, derived types, fields, procedures, and variables when variables are
+shown. Counts such as `Procedures: 80` and `Variables: 657` still show the full
+totals even when only the first `N` entries are printed.
 
 Interpretation:
 
