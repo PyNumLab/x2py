@@ -78,6 +78,25 @@ The initial C parser should explicitly report or defer:
 - complex `_Atomic` behavior
 - arbitrary attributes before fixture-driven support exists
 
+## Planned Preprocessing Policy
+
+The C parser should have clear preprocessing modes instead of trying to become
+a full C preprocessor.
+
+Raw-source mode should parse declarations that are visible without arbitrary
+macro expansion, collect includes, collect simple object-like constants, track
+conditional branches, and preserve macro-dependent declarations as parser model
+metadata.
+
+Compiler-assisted preprocessing should be the practical path for macro-heavy
+APIs. x2py may later accept `.i` files or invoke a configured compiler
+preprocessor such as `cc -E` or `clang -E`. In that mode, the parser should
+preserve `#line` mapping, record the preprocessor command/configuration, and
+mark declarations that came from preprocessed input.
+
+This means macro-heavy APIs are not out of scope. The boundary is that x2py v1
+should not implement recursive, compiler-compatible macro expansion internally.
+
 ## Planned Public API
 
 Target module-level entrypoints:
@@ -189,6 +208,23 @@ Expected readiness categories:
 
 The top-level readiness report should keep a file-level `wrappable` boolean
 and unit-scoped blockers, following the Fortran parser pattern.
+
+Function pointers and callbacks should be parsed into C models when possible.
+They should not be marked wrap-ready until the user supplies enough `.pyi`
+policy to explain how wrapper generation should handle them.
+
+The required user policy should make these facts explicit:
+
+- callback signature
+- callback direction: native-to-Python, Python-to-native, or both
+- lifetime: call-only, stored by native, or released by a specific API
+- associated context/userdata parameter
+- nullability rules
+- non-default calling convention
+- threading or async behavior
+- ownership of callback and context memory
+- release/unregistration API
+- exception/error policy for Python callback failures
 
 ## Planned Error Handling
 
