@@ -389,3 +389,56 @@ example, `def f(a: Int32) -> None: ...` and
 renaming is applied inside shape expressions such as `Shape('1:n')`. Names
 outside function and method argument lists, including module variables and class
 fields, remain significant.
+
+## Semantic Wrap-Readiness
+
+Readiness is assessed from semantic IR, not from parser internals. The same CLI
+flag works for either source path:
+
+```bash
+python -m x2py solver.f90 --wrap-readiness
+python -m x2py solver.pyi --wrap-readiness
+```
+
+For Fortran input, x2py parses the source, converts it to semantic IR, then
+checks that semantic interface. For `.pyi` input, x2py parses the edited stub
+directly to semantic IR and checks that interface. The edited `.pyi` is the
+source of truth when the user needs to provide information the source parser
+cannot infer.
+
+The flag can be requested alone for a concise readiness report or combined with
+other stages. For example, `--semantics --wrap-readiness` emits semantic IR with
+the readiness payload attached.
+
+The readiness check currently consumes these `.pyi` facts:
+
+- `class name:` declares a wrapper-visible derived type or handle.
+- `name: Final[Int32] = 8` declares a literal compile-time constant value that
+  can satisfy shape and size metadata.
+- `Callable[[ArgType, ...], ReturnType]` declares the full callback signature
+  for a procedure/function-pointer argument.
+
+Example:
+
+```python
+from typing import Callable, Final
+
+rk: Final[Int32] = 8
+
+class sim_state:
+    n: Int32
+    values: Float64[Shape('n'), ORDER_F]
+
+def step(
+    state: sim_state,
+    t: Float64,
+    objective: Callable[[sim_state, Float64], Float64],
+) -> tuple[Returns["state", sim_state], Returns["score", Float64]]: ...
+```
+
+This can clear readiness blockers for a Fortran routine that imports
+`sim_state`, uses `real(kind=rk)`, and accepts `objective` as a callback. A
+`Final[...]` declaration without a literal value is intentionally not enough
+for compile-time shape or size resolution, and `Callable[..., ReturnType]` is
+not enough for callbacks because the wrapper still needs argument order and
+argument types.

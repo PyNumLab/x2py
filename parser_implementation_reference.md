@@ -14,8 +14,8 @@ another source language.
 - Parse multi-file projects with dependency-aware ordering.  
 - Resolve compile-time symbols used in type kinds and array shapes, both local
   and cross-file via imported modules.  
-- Produce wrap-readiness diagnostics (`unsupported_constructs`, unknown
-  argument declarations, aggregate wrappable boolean, and unit-scoped blockers).
+- Keep parser output parse-only. Wrap-readiness is assessed after conversion to
+  semantic IR, either from parsed Fortran or from an edited `.pyi` interface.
 - Provide CLI output in both human-readable tree form and JSON form.  
 
 ## 2) Language coverage actually implemented
@@ -87,11 +87,10 @@ another source language.
   Numeric, symbolic, and expression-like kind tokens are preserved when the
   declaration grammar can recognize the surrounding datatype. This is not "any
   datatype"; unknown base datatypes still fail fast as unsupported declarations.
-- Symbolic kind/length references are validated generically for wrap readiness:
-  they must be local parameters, module parameters, resolved from parsed
-  `use`-associated module parameters, or explicitly visible through an
-  intrinsic kind module such as `iso_c_binding` or `iso_fortran_env`. Intrinsic
-  kind names are not globally accepted without a visible `use` import.
+- Symbolic kind/length references are preserved and resolved where the parser
+  has enough local, module, or project context. Remaining syntactically valid
+  symbols are carried forward for semantic conversion/readiness instead of
+  becoming parser JSON readiness fields.
 
 ### 2.4 Compile-time symbol and expression resolution
 
@@ -108,7 +107,7 @@ another source language.
 - Procedure-local parameter expressions can be folded into argument shapes
   during procedure finalization. Module-level and `use`-associated parameters
   used in procedure argument shapes remain symbolic in the signature while
-  still being considered valid scope references for readiness diagnostics.
+  still being visible to downstream semantic conversion/readiness.
 - Module/program variable parameter values, character lengths, and shapes are
   resolved through the same cached compile-time resolver where safe.
 - The resolver caches symbol and expression results per scope and evaluates a
@@ -159,22 +158,30 @@ another source language.
 - Submodule procedure implementations recognized via `module subroutine/function` and `module procedure`.
 - Main `program` and `block data` units are parsed into dedicated model objects.
 
-### 2.9 Wrap-readiness analysis
+### 2.9 Parser/semantic readiness boundary
 
-- Unsupported construct patterns explicitly scanned:
-  - assumed-type polymorphic `class(*)`
-  - `select type`
-  - coarray forms
-  - `procedure, pointer`
-  - `type(c_ptr)`
-- Unknown argument declaration tracking (`base_type == "unknown"`).  
-- Summary report fields:
-  - `n_signatures`, `n_types`, `n_modules`, `n_submodules`, `n_programs`, `n_block_data`
-  - `unsupported_constructs`
-  - `unknown_argument_types`
-  - `unit_blockers` with records only for procedure/derived-type/file units
-    that own blockers. Unit records do not carry a ready-to-wrap flag.
-  - `wrappable`
+- The parser no longer owns wrap-readiness.
+- `FortranParser` does not expose `visit_wrap_readiness(...)`.
+- `fortran_parser.parser` does not expose `assess_wrap_readiness(...)`.
+- Parser JSON does not contain `wrap_readiness`, `wrappable`,
+  `wrappability_blockers`, `unit_blockers`, `unsupported_constructs`, or
+  `unknown_argument_types` readiness payloads.
+- Parser responsibility ends at producing typed parse models and parse-stage
+  diagnostics such as `FortranParseError`.
+- Readiness is a semantic feature:
+  - For Fortran input, `x2py --wrap-readiness` parses the source, converts the
+    parsed model to semantic IR, and assesses that semantic interface.
+  - For `.pyi` input, `x2py --wrap-readiness` parses the edited stub directly to
+    semantic IR and assesses that interface.
+  - The edited `.pyi` is the source of truth when the user supplies missing
+    wrapper information such as imported types, compile-time constants, or
+    callback signatures.
+- Combining `x2py --parse --wrap-readiness --json` keeps stage payloads
+  separate:
+  - top-level `parse` contains parse-only JSON
+  - top-level `wrap_readiness` contains semantic readiness JSON
+- Combining `x2py --semantics --wrap-readiness` attaches the readiness payload to
+  the semantic report because both payloads are semantic-stage artifacts.
 
 ## 3) Output/data model behavior
 
@@ -192,8 +199,8 @@ another source language.
   - file dependency graph
   - module-to-file and submodule-to-file indexes
   - merged modules/submodules/programs/block-data/types/signatures
-- CLI JSON output emits per-file buckets for signatures, types, modules,
-  readiness report.  
+- CLI JSON output emits per-file parser buckets for signatures, types, modules,
+  submodules, programs, and block data.  
 - CLI human output prints tree-like structure grouped by file/module/procedure.  
 - Parser JSON serializes explicit `use` symbols as objects containing
   `source` and `target`. Bare imports still use an empty list.
@@ -209,6 +216,8 @@ another source language.
 - Parser JSON serializes both parameter `value` and `symbolic_value`. `value`
   is literal/evaluated only; compiler-specific or unresolved expressions keep
   `value: null` and preserve the original expression in `symbolic_value`.
+- Semantic readiness JSON is emitted by `x2py --wrap-readiness`, not by
+  `fortran_parser` parse JSON.
 
 ## 4) Test strategy implemented (current workflow)
 
@@ -246,7 +255,7 @@ Covers, among others:
 - local parameter propagation into argument kinds
 - compile-time shape expression evaluation helpers
 - shape symbol collection helpers
-- readiness diagnostics and unsupported detection
+- parse-stage diagnostics and unsupported declaration handling
 
 ### 4.3 Fixture and corpus regression (`tests/parser/test_fortran_fixture_suite.py`)
 
@@ -276,6 +285,10 @@ continues to validate the serialized model shape.
 - Semantic and `.pyi` fixture generators are separate:
   - `python tests/semantics/generate_semantic_fixtures.py`
   - `python tests/pyi/generate_pyi_fixtures.py`
+- Semantic wrap-readiness message fixtures are separate from parser goldens:
+  - `python tests/semantics/generate_wrap_readiness_fixtures.py`
+  - generated output: `tests/semantics/fixtures/wrap_readiness_messages.json`
+  - covered corpus: `general`, `blas`, `lapack`, and `scifortran`
 
 ### 4.5 CLI tests (`tests/parser/test_cli.py`)
 
@@ -288,6 +301,12 @@ Validates command-line behavior for:
 - parse-error diagnostics without tracebacks by default
 - developer traceback opt-in through `--debug-traceback` and `FORTRAN_PARSER_DEBUG=1`
 - default ANSI color for diagnostics, with `--no-color` and `NO_COLOR=1` opt-out
+- parser JSON remains parse-only and does not include semantic readiness fields
+
+Semantic readiness CLI behavior is tested in
+`tests/semantics/test_semantic_wrap_readiness.py`, including `.pyi` input,
+Fortran input, combined `--parse --wrap-readiness` human output, combined JSON
+stage separation, and `--semantics --wrap-readiness`.
 
 ### 4.6 Error handling tests (`tests/parser/test_error_handling.py`)
 
@@ -353,7 +372,8 @@ ask it to implement each of these layers explicitly:
 9. Interface/contract block parser.  
 10. Symbol resolver for local and cross-file compile-time constants.  
 11. Project namespace parser with dependency ordering.  
-12. Readiness validator with unsupported-pattern rules + unknown type checks.  
+12. Semantic readiness validator outside the parser, fed by semantic IR from
+    parsed source or `.pyi`.  
 13. CLI with tree output + JSON output + file emission.  
 14. Unit tests per feature + fixture/golden regression suite + golden
     regeneration script.  
@@ -472,8 +492,9 @@ implemented today:
 - **Module parameter references in contained procedure shapes**: a contained
   procedure argument such as `real :: x(n)` may refer to a module-level
   parameter `n`. The signature keeps the shape token symbolic (`"n"`) while
-  readiness validation treats it as a valid scoped reference. This protects
-  module-level parameters from being mistaken for undeclared procedure locals.
+  downstream semantic readiness can use the semantic compile-time metadata. This
+  protects module-level parameters from being mistaken for undeclared procedure
+  locals.
 - **Interface scope tracking**: procedures parsed inside `interface ... end
   interface` are represented separately and flagged as interface procedures.
   Interface-local argument declarations do not conflict with host declarations;
@@ -588,9 +609,10 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
     For example, `module`/`interface` syntax in a `.f77` file is parsed if the
     fixed-form preprocessor produces valid logical lines, and legacy star-kind
     syntax in `.f90` is parsed when the declaration grammar recognizes it.
-  - Wrapper generation/readiness should decide whether a parsed feature is safe
-    to wrap. Parser errors should be about unsupported grammar/metadata, not
-    about a filename implying an older or newer language standard.
+  - Wrapper generation/readiness should decide from semantic IR or `.pyi`
+    whether a parsed feature is safe to wrap. Parser errors should be about
+    unsupported grammar/metadata, not about a filename implying an older or newer
+    language standard.
 - **Unknown datatype declaration (hard error):**
   - Procedure declarations, derived-type fields, and module-variable declarations raise `FortranParseError` when the datatype declaration is unknown/unsupported instead of silently skipping.
 - **Datatype and kind support is bounded by the declaration grammar:**
@@ -605,9 +627,8 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
     statement; names such as `c_double`, `real64`, or aliases introduced through
     `only: local => remote` are not hard-coded as globally available.
   - Unresolved but syntactically valid kind symbols are not parser errors by
-    themselves; wrap-readiness reports them as `unresolved_kind_arguments` or
-    `unresolved_kind_fields` when they cannot be found in the parsed source or
-    imports.
+    themselves; semantic conversion/readiness decides whether the final interface
+    has enough compile-time information.
   - Semantic conversion is stricter than parsing: a parsed intrinsic
     `base_type`/`kind` pair must map to a concrete semantic type, otherwise
     conversion raises instead of emitting `Unknown`. Generated `.pyi` output and
@@ -624,8 +645,9 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
   - The parser is intentionally strict about unknown declarations and internal
     metadata consistency, but permissive about mixed-era Fortran syntax that can
     be parsed unambiguously.
-  - "Unsupported but recognized" constructs are still surfaced via readiness
-    diagnostics where appropriate; unknown datatype syntax should crash early.
+  - "Unsupported but recognized" constructs may be carried far enough for
+    semantic readiness or `.pyi` completion to decide wrappability. Unknown
+    datatype syntax should crash early.
 - **Preprocessor-conditional duplicate procedures (guarded allowance):**
   - The parser does **not** run a full C preprocessor stage before parsing.
   - While slicing source units, simple directive structure is tracked for

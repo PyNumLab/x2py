@@ -50,11 +50,23 @@ class PyiPrinter:
     def emit_semantic_type(self, semantic_type: SemanticType) -> str:
         if semantic_type.name == "Unknown" or semantic_type.dtype == "Unknown":
             raise ValueError("Cannot emit .pyi with unresolved semantic type 'Unknown'")
+        if semantic_type.name == "Callable":
+            return self._emit_callable_type(semantic_type)
         text = semantic_type.name
         annotations = [self.emit_constraint(c) for c in semantic_type.constraints]
         if annotations:
             text += "[" + ", ".join(annotations) + "]"
         return text
+
+    def _emit_callable_type(self, semantic_type: SemanticType) -> str:
+        arguments = semantic_type.metadata.get("arguments")
+        return_type = semantic_type.metadata.get("return")
+        if isinstance(arguments, list) and return_type is not None:
+            args = ", ".join(self.emit_semantic_type(arg) for arg in arguments)
+            return f"Callable[[{args}], {self.emit_semantic_type(return_type)}]"
+        if return_type is not None:
+            return f"Callable[..., {self.emit_semantic_type(return_type)}]"
+        return "Callable"
 
     def emit_argument(self, arg: SemanticArgument) -> str:
         name = self._parameter_target(arg.name)
