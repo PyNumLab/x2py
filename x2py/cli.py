@@ -314,7 +314,6 @@ def main() -> int:
         parse_payload = _parse_report(args.paths) if args.parse else None
         semantic_payload = _semantic_report(args.paths) if (args.semantics or args.pyi) else None
         readiness_payload = _wrap_readiness_report(args.paths) if args.wrap_readiness else None
-        _attach_wrap_readiness(parse_payload, readiness_payload)
         _attach_wrap_readiness(semantic_payload, readiness_payload)
     except FortranParseError as exc:
         if args.debug_traceback or _env_flag("FORTRAN_PARSER_DEBUG"):
@@ -327,7 +326,12 @@ def main() -> int:
         print(f"x2py: error: {exc}", file=sys.stderr)
         return 1
 
-    if args.parse:
+    if args.parse and args.wrap_readiness and (args.json or args.out is not None):
+        payload = {
+            "parse": parse_payload or {},
+            "wrap_readiness": readiness_payload or {},
+        }
+    elif args.parse:
         payload = parse_payload or {}
     elif args.semantics or args.pyi:
         payload = semantic_payload or {}

@@ -39,10 +39,10 @@ front-end). Current handled coverage:
   - Attributes (e.g. `abstract`) and `extends(...)`
   - Field extraction (intrinsic + `type(...)`)
   - Type-bound procedures and generic bindings
-- **Readiness diagnostics**
-  - Unsupported-pattern detection
+- **Parser diagnostics and metadata**
+  - Source locations for parser errors
   - Unknown argument declaration reporting
-  - Parser-side blocker discovery for early feedback
+  - Parse-stage unsupported construct reporting
 
 ## Public APIs
 
@@ -246,7 +246,9 @@ level and includes `unit_blockers` only for units that own a blocker.
 `--wrap-readiness` can also be combined with other stages. For example,
 `--semantics --wrap-readiness` emits semantic IR with a `wrap_readiness` payload
 attached, and `--parse --wrap-readiness` prints the parse tree followed by the
-semantic readiness summary.
+semantic readiness summary. Parser JSON remains parse-only; when `--json` is
+used with `--parse --wrap-readiness`, the output is split into top-level
+`parse` and `wrap_readiness` sections.
 
 ### Example 4: semantic IR JSON output
 
@@ -508,13 +510,27 @@ short explanation in the PR. For `.pyi` or semantic IR behavior changes, update
 the corresponding fixtures under `tests/pyi/fixtures` or
 `tests/semantics/fixtures`.
 
+Semantic wrap-readiness corpus messages for the general, BLAS, LAPACK, and
+SciFortran fixtures are regenerated separately:
+
+```bash
+python tests/semantics/generate_wrap_readiness_fixtures.py
+```
+
+This writes `tests/semantics/fixtures/wrap_readiness_messages.json`. The file is
+a semantic readiness fixture, not a parser golden, even though Fortran fixtures
+are used as input.
+
 ## Semantic parser structure
 
 The parser exposes stable file/project entrypoints:
 
 - `parse_fortran_file(...)` for one source (string or path) returning `FortranFile`.
 - `parse_fortran_project(...)` for many sources returning `FortranProject`.
-- `assess_semantic_wrap_readiness(...)` for wrappability diagnostics over semantic IR.
+
+Wrap-readiness is intentionally outside the parser model. Use
+`fortran_file_to_semantic_modules(...)` or `.pyi` parsing to produce semantic IR,
+then call `assess_semantic_wrap_readiness(...)` on that semantic interface.
 
 Internally, `FortranParser.visit_file` uses a recursive grammar-style
 source-unit parser. The file is first sliced into direct

@@ -1,6 +1,6 @@
 import pytest
 
-from x2py import assess_wrap_readiness, parse_fortran_file
+from x2py import parse_fortran_file
 from fortran_parser.models import FortranParseError
 
 def test_same_argument_name_in_different_procedures_is_allowed():
@@ -285,7 +285,6 @@ end module dims_mod
     assert proc.arguments[0].base_type == "real"
     assert proc.result.base_type == "real"
     assert proc.variables == {}
-    assert assess_wrap_readiness(code, filename="scope_module_shape_param_ok.f90")["wrappable"] is True
 
 
 def test_fortran_parser_class_entrypoint():

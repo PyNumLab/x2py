@@ -5,6 +5,10 @@ from pathlib import Path
 
 from semantics.pyi_parser import parse_pyi_text
 from semantics.readiness import assess_semantic_wrap_readiness
+from x2py import cli as x2py_cli
+
+
+TEST_FILE = Path(__file__).parent.parent / "data" / "fortran" / "general" / "basic_subroutine.f90"
 
 
 def _readiness_from_pyi(source: str):
@@ -170,3 +174,72 @@ def test_cli_wrap_readiness_json_loads_pyi(tmp_path: Path):
 
     assert payload[str(pyi)]["source_kind"] == "pyi"
     assert payload[str(pyi)]["wrap_readiness"]["wrappable"] is True
+
+
+def test_cli_wrap_readiness_output_from_fortran():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--wrap-readiness"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    assert f"File: {TEST_FILE}" in res.stdout
+    assert "Source: fortran" in res.stdout
+    assert "Wrappable: yes" in res.stdout
+    assert "No semantic readiness blockers detected." in res.stdout
+    assert "Modules:" not in res.stdout
+
+
+def test_cli_wrap_readiness_json_output_from_fortran():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--wrap-readiness", "--json"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+    assert payload[str(TEST_FILE)]["source_kind"] == "fortran"
+    assert payload[str(TEST_FILE)]["wrap_readiness"]["wrappable"] is True
+
+
+def test_cli_parse_can_print_semantic_wrap_readiness():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--parse", "--wrap-readiness"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    assert "subroutine add1" in res.stdout
+    assert "Source: fortran" in res.stdout
+    assert "Wrappable: yes" in res.stdout
+
+
+def test_cli_parse_wrap_readiness_json_keeps_stage_payloads_separate():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--parse", "--wrap-readiness", "--json"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+    assert str(TEST_FILE) in payload["parse"]
+    assert "wrap_readiness" not in payload["parse"][str(TEST_FILE)]
+    assert payload["wrap_readiness"][str(TEST_FILE)]["wrap_readiness"]["wrappable"] is True
+
+
+def test_cli_semantics_can_include_semantic_wrap_readiness():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--semantics", "--wrap-readiness"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+    assert payload[str(TEST_FILE)]["semantic_modules"]
+    assert payload[str(TEST_FILE)]["wrap_readiness"]["wrappable"] is True
+
+
+def test_cli_help_includes_semantic_wrap_readiness_examples():
+    cmd = [sys.executable, "-m", "x2py", "--help"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    assert "python -m x2py path/to/file.f90 --wrap-readiness" in res.stdout
+    assert "python -m x2py path/to/file.f90 --semantics --wrap-readiness" in res.stdout
+    assert "python -m x2py path/to/module.pyi --wrap-readiness" in res.stdout
+
+
+def test_x2py_main_wrap_readiness_mode_from_inline_source(tmp_path: Path, monkeypatch, capsys):
+    f90 = tmp_path / "mini.f90"
+    f90.write_text(
+        """module m
+contains
+  subroutine work(n)
+    integer, intent(in) :: n
+  end subroutine work
+end module m
+""",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--wrap-readiness"])
+    assert x2py_cli.main() == 0
+    assert "Wrappable: yes" in capsys.readouterr().out

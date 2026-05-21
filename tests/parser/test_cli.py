@@ -102,40 +102,6 @@ end module many_procs
     assert "Variables:" not in res.stdout
 
 
-def test_cli_wrap_readiness_output():
-    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--wrap-readiness"]
-    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    assert f"File: {TEST_FILE}" in res.stdout
-    assert "Source: fortran" in res.stdout
-    assert "Wrappable: yes" in res.stdout
-    assert "No semantic readiness blockers detected." in res.stdout
-    assert "Modules:" not in res.stdout
-
-
-def test_cli_wrap_readiness_json_output():
-    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--wrap-readiness", "--json"]
-    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    payload = json.loads(res.stdout)
-    assert payload[str(TEST_FILE)]["source_kind"] == "fortran"
-    assert payload[str(TEST_FILE)]["wrap_readiness"]["wrappable"] is True
-
-
-def test_cli_parse_can_include_semantic_wrap_readiness():
-    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--parse", "--wrap-readiness"]
-    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    assert "subroutine add1" in res.stdout
-    assert "Source: fortran" in res.stdout
-    assert "Wrappable: yes" in res.stdout
-
-
-def test_cli_semantics_can_include_semantic_wrap_readiness():
-    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--semantics", "--wrap-readiness"]
-    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    payload = json.loads(res.stdout)
-    assert payload[str(TEST_FILE)]["semantic_modules"]
-    assert payload[str(TEST_FILE)]["wrap_readiness"]["wrappable"] is True
-
-
 def test_cli_json_out(tmp_path: Path):
     out = tmp_path / "report.json"
     cmd = [
@@ -173,6 +139,7 @@ def test_cli_json_output_without_out():
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     payload = json.loads(res.stdout)
     assert str(TEST_FILE) in payload
+    assert "wrap_readiness" not in payload[str(TEST_FILE)]
 
 
 def test_cli_pyi_output_without_out():
@@ -532,9 +499,6 @@ def test_cli_help_includes_examples():
     assert "python -m x2py path/to/file.f90 --parse" in res.stdout
     assert "python -m x2py path/to/file.f90 --parse --show-vars" in res.stdout
     assert "python -m x2py path/to/file.f90 --parse --print-limit 50" in res.stdout
-    assert "python -m x2py path/to/file.f90 --wrap-readiness" in res.stdout
-    assert "python -m x2py path/to/file.f90 --semantics --wrap-readiness" in res.stdout
-    assert "python -m x2py path/to/module.pyi --wrap-readiness" in res.stdout
     assert "python -m x2py path/to/file.f90 --pyi --out module.pyi" in res.stdout
 
 
@@ -609,59 +573,6 @@ def test_fortran_parser_cli_helper_branches(tmp_path: Path, monkeypatch):
 
 
 def test_fortran_parser_cli_formatting_branches():
-    blocker_items = [
-        (
-            "unsupported_constructs",
-            {"line": 3, "text": "common /blk/ x"},
-            "line 3: common /blk/ x",
-        ),
-        ("unknown_argument_types", {"arg": "x"}, "{'arg': 'x'}"),
-        (
-            "unresolved_derived_type_arguments",
-            {"procedure": "step", "argument": "state", "type": "state_t", "import_modules": ["state_mod"]},
-            "step:state uses type(state_t) from state_mod",
-        ),
-        (
-            "unresolved_derived_type_fields",
-            {"type_owner": "state_t", "field": "grid", "type": "grid_t", "import_modules": []},
-            "state_t:grid uses type(grid_t) from <not imported>",
-        ),
-        (
-            "unresolved_kind_arguments",
-            {"procedure": "scale", "argument": "x", "kind": "rk", "import_modules": ["kinds"]},
-            "scale:x uses kind rk from kinds",
-        ),
-        (
-            "unresolved_kind_fields",
-            {"type_owner": "state_t", "field": "value", "kind": "rk", "import_modules": []},
-            "state_t:value uses kind rk from <not imported>",
-        ),
-        ("other", {"payload": 1}, "{'payload': 1}"),
-    ]
-
-    for code, item, expected in blocker_items:
-        assert fortran_parser_cli._format_blocker_item(code, item) == expected
-
-    readiness = fortran_parser_cli._format_wrap_readiness(
-        {
-            "bad.f90": {
-                "wrap_readiness": {
-                    "wrappable": False,
-                    "wrappability_blockers": [
-                        {
-                            "code": "unsupported_constructs",
-                            "message": "Unsupported constructs were found.",
-                            "items": [{"line": 3, "text": "common /blk/ x"}],
-                        }
-                    ],
-                }
-            }
-        }
-    )
-    assert "Wrappable: no" in readiness
-    assert "Why not wrappable:" in readiness
-    assert "* line 3: common /blk/ x" in readiness
-
     report = fortran_parser_cli._format_report(
         {
             "types.f90": {
@@ -671,7 +582,6 @@ def test_fortran_parser_cli_formatting_branches():
                 "submodules": [],
                 "programs": [],
                 "block_data": [],
-                "wrap_readiness": {"wrappable": True, "wrappability_blockers": []},
             }
         }
     )
@@ -738,7 +648,6 @@ def test_fortran_parser_cli_format_report_print_limit_covers_sections():
                     {"name": None, "variables": [var_a, var_b]},
                     {"name": "named_block", "variables": []},
                 ],
-                "wrap_readiness": {"wrappable": True, "wrappability_blockers": []},
             }
         },
         show_vars=True,
@@ -773,17 +682,13 @@ def test_fortran_parser_cli_format_report_print_limit_covers_sections():
     assert fortran_parser_cli._format_variable_lines([], indent="  ", print_limit=1) == []
 
 
-def test_fortran_parser_cli_json_wrap_readiness_and_parse_errors(tmp_path: Path):
+def test_fortran_parser_cli_json_and_parse_errors(tmp_path: Path):
     good = tmp_path / "good.f90"
     good.write_text("subroutine work(n)\n  integer, intent(in) :: n\nend subroutine work\n", encoding="utf-8")
 
     json_cmd = [sys.executable, "-m", "fortran_parser", str(good), "--json"]
     json_res = subprocess.run(json_cmd, capture_output=True, text=True, check=True)
     assert str(good) in json.loads(json_res.stdout)
-
-    wrap_cmd = [sys.executable, "-m", "fortran_parser", str(good), "--wrap-readiness"]
-    wrap_res = subprocess.run(wrap_cmd, capture_output=True, text=True, check=True)
-    assert "Wrappable: yes" in wrap_res.stdout
 
     bad = tmp_path / "bad.f90"
     bad.write_text("subroutine bad(x)\n  weirdtype :: x\nend subroutine bad\n", encoding="utf-8")
@@ -950,11 +855,6 @@ end module m
     assert "File:" in pyi_out
     assert "def work(" in pyi_out
 
-    monkeypatch.setattr(sys, "argv", ["fortran_parser", str(f90), "--wrap-readiness"])
-    assert fortran_parser_cli.main() == 0
-    wrap_out = capsys.readouterr().out
-    assert "Wrappable: yes" in wrap_out
-
     monkeypatch.setattr(sys, "argv", ["fortran_parser", str(f90)])
     assert fortran_parser_cli.main() == 0
     readable = capsys.readouterr().out
@@ -979,10 +879,6 @@ end module m
     assert x2py_cli.main() == 0
     assert capsys.readouterr().out == ""
     assert json.loads(json_out.read_text(encoding="utf-8")).get(str(f90)) is not None
-
-    monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--wrap-readiness"])
-    assert x2py_cli.main() == 0
-    assert "Wrappable: yes" in capsys.readouterr().out
 
     monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--pyi"])
     assert x2py_cli.main() == 0
