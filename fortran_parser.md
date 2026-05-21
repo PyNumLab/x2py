@@ -62,14 +62,16 @@ and practical usage from terminal and Python.
   - `procedure ... :: ...` bindings with attributes (e.g. `pass(self)`, `nopass`)
   - `generic ... :: name => target1, target2`
 
-### 1.6 Readiness diagnostics
+### 1.6 Parser diagnostics and semantic readiness boundary
 
-- Unsupported-pattern checks
-- Unknown argument declaration reporting
-- Final boolean readiness (`wrappable`)
-- Unit-scoped blocker records (`unit_blockers`) for wrapper-relevant
-  procedures and derived types, plus file-level blockers when diagnostics are
-  not owned by a single unit. The ready-to-wrap flag remains file-level only.
+- Parser diagnostics report source-level parse errors and unsupported parser
+  constructs.
+- Parser JSON remains parse-only and does not contain `wrap_readiness`,
+  `wrappable`, `unit_blockers`, or other readiness payloads.
+- Wrap-readiness is assessed from semantic IR, either after converting parsed
+  Fortran source or after loading an edited `.pyi` semantic interface.
+- The semantic readiness report owns the final file-level `wrappable` flag and
+  blocker messages.
 
 ## 2) Public API surface
 
@@ -77,7 +79,8 @@ Supported public API:
 
 - `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
 - `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
-- `assess_wrap_readiness(code, filename=None) -> dict`
+- `assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
+- `assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`
 
 ## Parser organization notes
 
@@ -88,9 +91,8 @@ sections so maintainers can navigate the file by concern instead of by history:
 - Module-level helper blocks (source-form rules, preprocessor logic,
   diagnostics, compile-time expression resolution, dependency ordering)
 - `FortranParser` internals grouped by domain:
-  - internal visitor entrypoints (`visit_file`, `visit_project`,
-    `visit_wrap_readiness`). The public API remains the module-level wrappers
-    listed above.
+  - internal visitor entrypoints (`visit_file`, `visit_project`). The public
+    API remains the module-level wrappers listed above.
   - source-unit visitors for files, modules, submodules, programs,
     procedures, interfaces, derived types, and block data
   - recursive source-unit slicing (`header`, specification part, execution
@@ -340,7 +342,7 @@ python -m x2py tests/data/fortran/general/basic_subroutine.f90 --json
 Write parser JSON:
 
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --json-out report.json
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --json --out report.json
 ```
 
 Expected JSON layout:
@@ -353,7 +355,6 @@ Expected JSON layout:
   - `submodules`
   - `programs`
   - `block_data`
-  - `wrap_readiness`
 
 `use` import shape:
 
@@ -395,13 +396,23 @@ checks. Prefer reading `source`, `target`, or `local_name` in new code.
 ### 3.4 Wrap-readiness summary
 
 ```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
+```
+
+This mode parses the source, converts it to semantic IR, and prints the
+per-file semantic readiness status. A non-wrappable file is reported as
+`Wrappable: no` followed by a `Why not wrappable` section listing semantic
+blockers, for example unresolved semantic types, missing compile-time constant
+values, or incomplete callback signatures.
+
+The readiness stage can be combined with parser output:
+
+```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --wrap-readiness
 ```
 
-This mode prints only the per-file readiness status. A non-wrappable file is
-reported as `Wrappable: no` followed by a `Why not wrappable` section listing
-the blocking diagnostics, for example unresolved imported derived-type
-arguments/fields or unresolved symbolic kind arguments/fields.
+With `--json`, combined parse/readiness output is split into top-level `parse`
+and `wrap_readiness` sections. Parser JSON stays parse-only.
 
 Semantic IR JSON uses the same output channels, but the per-file payload is the
 semantic model projection instead of raw parser output:
@@ -486,28 +497,31 @@ Expected behavior:
 - Resolves dependencies and module imports across files.
 - Returns aggregate namespace parse output.
 
-### 4.2 Parse single file and run readiness check
+### 4.2 Parse single file and run semantic readiness check
 
 ```python
 from pathlib import Path
-from x2py import parse_fortran_file, assess_wrap_readiness
+from x2py import parse_fortran_file, assess_semantic_wrap_readiness
+from semantics.fortran2ir import fortran_file_to_semantic_modules
 
 p = Path("tests/data/fortran/general/basic_subroutine.f90")
 code = p.read_text()
 
 parsed = parse_fortran_file(code, filename=str(p))
-readiness = assess_wrap_readiness(code, filename=str(p))
+modules = fortran_file_to_semantic_modules(parsed, standalone_module_name=p.stem)
+readiness = assess_semantic_wrap_readiness(modules, source=str(p))
 
 print("procedures", len(parsed.procedures))
 print("wrappable", readiness["wrappable"])
-print("unsupported", len(readiness["unsupported_constructs"]))
+print("blockers", len(readiness["wrappability_blockers"]))
 ```
 
 Expected behavior:
 
 - `parsed` is a `FortranFile` aggregate model with parsed units and symbols.
-- `readiness` includes counts, unsupported hits, unknown args, unresolved
-  imported derived-type/kind dependencies, unit-scoped blockers, and the
+- `modules` is the semantic IR projection used by `.pyi` printing and
+  readiness.
+- `readiness` includes semantic API counts, semantic blockers, and the
   file-level `wrappable` flag.
 
 ### 4.3 Structured argument specifications
@@ -966,8 +980,8 @@ Failed to resolve declared argument '<name>' in procedure '<proc>'.
 ## 7) Scope note
 
 This parser is intentionally wrapper-focused and not a complete Fortran front
-end. Unsupported syntax should be surfaced through diagnostics/readiness output
-for incremental parser extension.
+end. Unsupported syntax should be surfaced through parser diagnostics or later
+semantic readiness output for incremental parser extension.
 
 
 ### External callback dummy declarations
@@ -985,7 +999,8 @@ Use the stable top-level API:
 
 - `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
 - `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
-- `assess_wrap_readiness(code, filename=None) -> dict`
+- `assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
+- `assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`
 
 Lower-level unit parsers are internal `FortranParser` methods.
 

@@ -59,14 +59,13 @@ int unspecified();
     assert functions["unspecified"].prototype_style == "unspecified"
 
 
-def test_variadic_functions_are_parsed_and_marked_not_ready_by_default():
-    from c_parser import assess_c_wrap_readiness, parse_c_file
+def test_variadic_functions_are_parsed_as_source_facts():
+    from c_parser import parse_c_file
 
     parsed = parse_c_file("int log_msg(const char *fmt, ...);\n", filename="variadic.h")
-    report = assess_c_wrap_readiness(parsed)
 
     assert parsed.functions[0].variadic is True
-    assert any(blocker["code"] == "C_VARIADIC_FUNCTION" for blocker in report["blockers"])
+    assert any(fact.code == "C_VARIADIC_FUNCTION" for fact in parsed.functions[0].source_facts)
 
 
 def test_old_style_knr_function_definition_raises_or_records_unsupported_diagnostic():
@@ -86,17 +85,17 @@ int b;
 
 
 def test_function_pointer_parameter_is_modeled_as_callback_candidate():
-    from c_parser import assess_c_wrap_readiness, parse_c_file
+    from c_parser import parse_c_file
 
     parsed = parse_c_file(
         "void sort_items(void *items, int (*compare)(const void *, const void *));\n",
         filename="callbacks.h",
     )
-    report = assess_c_wrap_readiness(parsed)
 
     compare = parsed.functions[0].parameters[1]
     assert compare.type.kind == "function_pointer"
-    assert any(blocker["code"] == "C_CALLBACK_POLICY_REQUIRED" for blocker in report["blockers"])
+    assert compare.callback_candidate is True
+    assert compare.callback_policy is None
 
 
 def test_callback_typedef_parameter_links_to_typedef_signature():
@@ -130,4 +129,3 @@ const struct state *current_state(void);
     assert fn.return_type.qualifiers == ["const"]
     assert fn.return_type.tag == "state"
     assert fn.return_type.pointers
-

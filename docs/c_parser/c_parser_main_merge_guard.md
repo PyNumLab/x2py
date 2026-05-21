@@ -77,6 +77,6 @@ Before any final merge to project `main`:
 - full Fortran tests pass
 - C parser tests pass
 - CLI behavior is documented and stable
-- readiness diagnostics are stable
+- semantic readiness diagnostics are stable if that layer exists
 - semantic IR and `.pyi` behavior are documented if implemented
 - the final PR carries `c-parser-ready-for-main`

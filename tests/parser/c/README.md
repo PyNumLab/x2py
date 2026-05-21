@@ -9,8 +9,8 @@ merge only into `c-parser/main`.
 Guidelines:
 
 - keep these tests separate from the Fortran parser tests
+- keep wrap-readiness tests under `tests/semantics`, not under parser tests
 - do not import `c_parser` at module import time while the suite is skipped
 - unskip the smallest useful group of tests with each implementation branch
 - add fixtures and goldens only when the corresponding schema is stable
 - keep cJSON as the first real-world corpus target once corpus tests start
-

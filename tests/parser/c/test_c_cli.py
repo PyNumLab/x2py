@@ -76,7 +76,7 @@ def test_cli_c_parse_json_out_writes_file_and_suppresses_stdout(tmp_path: Path):
     assert payload[str(header)]["functions"][0]["name"] == "scale"
 
 
-def test_cli_c_wrap_readiness_output_uses_fortran_diagnostic_shape(tmp_path: Path):
+def test_cli_c_wrap_readiness_is_rejected_until_semantic_conversion_exists(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
     cmd = [
@@ -90,10 +90,11 @@ def test_cli_c_wrap_readiness_output_uses_fortran_diagnostic_shape(tmp_path: Pat
         "--wrap-readiness",
     ]
 
-    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    res = subprocess.run(cmd, capture_output=True, text=True)
 
-    assert "Wrappable:" in res.stdout
-    assert "blocker" not in res.stdout.lower()
+    assert res.returncode != 0
+    assert "semantic" in res.stderr.lower()
+    assert "not supported" in res.stderr.lower()
 
 
 def test_cli_c_rejects_fortran_only_flags_with_clear_error(tmp_path: Path):
@@ -187,4 +188,3 @@ def test_cli_without_language_keeps_fortran_default_behavior():
 
     assert "subroutine add1" in res.stdout
     assert "Language: c" not in res.stdout
-

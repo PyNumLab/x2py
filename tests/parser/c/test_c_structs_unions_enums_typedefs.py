@@ -102,7 +102,7 @@ enum status {
 
 
 def test_forward_declared_struct_pointer_is_modeled_as_opaque_type():
-    from c_parser import assess_c_wrap_readiness, parse_c_file
+    from c_parser import parse_c_file
 
     parsed = parse_c_file(
         """
@@ -112,12 +112,11 @@ void close_handle(struct handle *handle);
 """,
         filename="opaque.h",
     )
-    report = assess_c_wrap_readiness(parsed)
 
     assert parsed.structs[0].name == "handle"
     assert parsed.structs[0].opaque is True
-    assert report["wrappable"] is False
-    assert any(blocker["code"] == "C_OPAQUE_POLICY_REQUIRED" for blocker in report["blockers"])
+    assert parsed.structs[0].fields == []
+    assert parsed.structs[0].requires_user_policy is True
 
 
 def test_recursive_struct_pointer_does_not_recurse_infinitely():
@@ -153,4 +152,3 @@ api_size count(void);
     fn = parsed.functions[0]
     assert fn.return_type.typedef_name == "api_size"
     assert fn.return_type.resolved.base == "unsigned long"
-

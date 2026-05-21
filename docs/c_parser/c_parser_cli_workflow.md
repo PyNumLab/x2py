@@ -14,8 +14,9 @@ The current `x2py` CLI is Fortran-oriented:
 ```bash
 python -m x2py <path ...> --parse
 python -m x2py <path ...> --parse --json
-python -m x2py <path ...> --parse --wrap-readiness
+python -m x2py <path ...> --wrap-readiness
 python -m x2py <path ...> --semantics
+python -m x2py <path ...> --semantics --wrap-readiness
 python -m x2py <path ...> --pyi
 ```
 
@@ -23,8 +24,11 @@ Important current behaviors to preserve:
 
 - Stage flags are explicit: `--parse`, `--semantics`, `--pyi`.
 - `--out` writes stage output and suppresses stdout.
-- `--wrap-readiness` requires `--parse`.
-- `--json` currently applies to parse output.
+- `--json` prints JSON for the selected stage output.
+- `--wrap-readiness` is semantic readiness. It can be requested alone for
+  Fortran or `.pyi` inputs, or combined with other stages.
+- Parser JSON remains parse-only. Combined `--parse --wrap-readiness --json`
+  keeps parse and readiness payloads in separate top-level sections.
 - Parse diagnostics are compiler-style and go to stderr.
 - Python tracebacks are hidden by default.
 - `--debug-traceback` or parser debug env vars re-raise parse errors.
@@ -79,7 +83,6 @@ Initial flags:
 --language {fortran,c}
 --parse
 --json
---wrap-readiness
 --out [PATH]
 --no-color
 --debug-traceback
@@ -145,41 +148,14 @@ JSON output:
     "globals": [],
     "macros": [],
     "includes": [],
-    "diagnostics": [],
-    "wrap_readiness": {
-      "n_functions": 0,
-      "n_structs": 0,
-      "n_unions": 0,
-      "n_enums": 0,
-      "n_typedefs": 0,
-      "n_macros": 0,
-      "wrappability_blockers": [
-        {
-          "code": "parser_skeleton",
-          "message": "The C parser frontend is present but not implemented yet.",
-          "items": []
-        }
-      ],
-      "unit_blockers": [],
-      "why_not_wrappable": [
-        "The C parser frontend is present but not implemented yet."
-      ],
-      "wrappable": false
-    }
+    "diagnostics": []
   }
 }
 ```
 
-Readiness output:
-
-```text
-File: include/example.h
-  Wrappable: no
-  Why not wrappable:
-    - The C parser frontend is present but not implemented yet.
-```
-
-The skeleton should not claim C files are wrappable.
+The skeleton should not claim C files are wrappable. If C readiness is added
+later, it should follow the semantics-owned readiness boundary used elsewhere
+in x2py, not become parser JSON.
 
 ## JSON Parse Schema
 
@@ -198,7 +174,6 @@ globals
 macros
 includes
 diagnostics
-wrap_readiness
 ```
 
 Every model should include source-location metadata once implementation begins:
@@ -235,15 +210,8 @@ File: src/api.c
     - MAX_DIM = 16
 ```
 
-With readiness:
-
-```text
-File: src/api.c
-  Wrappable: no
-  Why not wrappable:
-    - Some functions use pointer arguments with unknown ownership.
-      * scale:x is a non-const pointer without ownership metadata
-```
+Future semantic readiness output should be described in the semantic-layer
+documentation, not in the parser CLI workflow.
 
 ## Diagnostics Behavior
 
@@ -286,12 +254,10 @@ Phase 1 should add CLI tests before real parsing:
 - `python -m x2py <file.c> --language c --parse` is accepted.
 - `python -m x2py <file.c> --parse-c` is accepted only if the alias is added.
 - `--language c --parse --json` emits stable skeleton JSON.
-- `--language c --parse --wrap-readiness` emits stable skeleton readiness.
 - `--language c --parse --out report.json` writes JSON and suppresses stdout.
 - `--language c --parse --no-color` affects C diagnostics.
 - `--language c --parse --debug-traceback` re-raises `CParseError` once the
   error class exists.
-- `--wrap-readiness` still requires `--parse`.
 - `--show-vars` remains Fortran-specific or is rejected for C until a C
   equivalent exists.
 - `--semantics` with `--language c` is rejected until C semantic conversion is
@@ -305,6 +271,6 @@ Phase 1 should add CLI tests before real parsing:
 2. Keep Fortran as default behavior.
 3. Add a skeleton C report provider with no parser logic.
 4. Add C-specific docs for command shape and placeholder output.
-5. Add CLI tests around discovery, stable command behavior, JSON, readiness,
-   output files, and diagnostics.
+5. Add CLI tests around discovery, stable command behavior, JSON, output
+   files, and diagnostics.
 6. Only then begin parser package/model work.

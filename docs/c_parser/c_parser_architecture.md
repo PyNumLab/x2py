@@ -31,7 +31,7 @@ workflow.
 - `tests/parser/test_fortran_error_fixture_suite.py`
 - `tests/parser/test_parser_developer_tutorial.py`
 - `tests/parser/test_parser_public_entrypoints.py`
-- `tests/parser/test_wrap_readiness.py`
+- `tests/semantics/test_semantic_wrap_readiness.py`
 - `tests/parser/test_error_handling.py`
 - `tests/semantics/test_fortran2ir.py`
 - `tests/semantics/test_semantic_conversion_smoke.py`
@@ -64,10 +64,11 @@ architectural properties are:
   contains regions. Wrapper extraction mostly ignores executable bodies.
 - Parser model objects are typed dataclasses with stable JSON-friendly fields.
 - Project parsing builds indexes and dependency order from imports/uses.
-- Readiness diagnostics are explicit and user-facing, with file-level
-  `wrappable`, blocker groups, and unit-level blocker records.
-- CLI output has a stable human tree, JSON output, readiness output, output
-  file behavior, no-color support, and debug traceback opt-in.
+- Readiness is semantic-layer work, not parser work. The C parser should
+  preserve enough source facts for later semantic readiness, but it should not
+  expose parser-side `wrappable` reports.
+- CLI output has a stable human tree, JSON output, output file behavior,
+  no-color support, and debug traceback opt-in.
 - Semantic IR conversion is a separate visitor layer. Parser output is a helper
   input, not the source of truth.
 - `.pyi` generation and parsing operate over semantic IR, not parser internals.
@@ -77,6 +78,31 @@ architectural properties are:
 The C parser should follow these patterns where they map cleanly to C syntax.
 It should not be a giant regex parser, a compiler wrapper, or a libclang-only
 dependency architecture.
+
+## Grammar-Style Parser Requirement
+
+The C frontend must be implemented as a grammar-style recursive parser, not as
+an unstructured source scanner. The core parser should be shaped around C
+grammar regions and reusable visitors:
+
+- translation-unit visitor
+- preprocessor directive collector
+- declaration visitor
+- declarator parser
+- initializer skipper/extractor where wrapper-relevant
+- function prototype visitor
+- function definition visitor that extracts signatures and skips bodies
+- struct, union, enum, and typedef visitors
+- scoped symbol/type indexes
+
+Regular expressions are acceptable only as narrow helpers inside a grammar
+step, such as recognizing an include directive after the preprocessor collector
+has isolated the line. They must not become the top-level parsing strategy.
+
+External compiler preprocessing can be used later as an optional input source
+for `.i` files or macro-expanded views, but the x2py C frontend still needs its
+own typed parser models, source-location handling, diagnostics, and project
+indexes. Invoking a compiler must not replace the grammar-style parser.
 
 ## Target Package Layout
 
@@ -103,7 +129,7 @@ Planned responsibilities:
   - Typed parser models.
   - `CParseError` and compiler-style diagnostic rendering.
   - JSON-stable dataclasses for files, translation units, declarations, types,
-    functions, macros/constants, project indexes, and readiness reports.
+    functions, macros/constants, and project indexes.
 - `c_parser/lexer.py`
   - Tokenization and source-location preservation.
   - Comment removal that preserves line mapping.
@@ -147,7 +173,6 @@ The public C API should mirror the Fortran style but remain C-specific:
 ```python
 parse_c_file(source_or_path, filename=None, macro_defines=None, include_dirs=None, encoding="utf-8") -> CFile
 parse_c_project(files, include_dirs=None, macro_defines=None, encoding="utf-8") -> CProject
-assess_c_wrap_readiness(code, filename=None, include_dirs=None, macro_defines=None) -> dict
 ```
 
 Expected companion class:
@@ -156,7 +181,6 @@ Expected companion class:
 class CParser:
     def visit_file(...): ...
     def visit_project(...): ...
-    def visit_wrap_readiness(...): ...
 ```
 
 The initial implementation should not re-export these from `x2py.__init__`
@@ -409,61 +433,36 @@ Planned behavior:
   - struct/union/enum tags
   - labels are not wrapper-relevant and should not enter the public index
 - Keep project resolution tolerant enough to parse partial projects, while
-  readiness diagnostics explain missing dependencies.
+  parser diagnostics and metadata preserve missing dependencies for later
+  semantic readiness.
 
-## Readiness Diagnostics
+## Readiness Boundary
 
-C readiness should be explicit and actionable. It should not merely report
-parse success.
+The parser should not compute wrappability. That responsibility belongs to the
+semantic layer, after parser models are converted into semantic IR or after an
+edited `.pyi` file supplies the missing policy.
 
-Planned blocker families:
+What the parser should still preserve is the source information needed for that
+later stage:
 
-- no functions found
-- parse errors
-- unsupported declarations
+- unresolved include references
+- unresolved typedef/tag references
 - macro-dependent declarations
-- unresolved include
-- unresolved typedef
-- unresolved tag type
-- incomplete struct/union used by value
-- function pointer parameter or return
-- callback/function-pointer API without user-supplied `.pyi` policy
-- variadic function
-- K&R style function definition
-- array parameter with unknown size relationship
-- pointer ownership ambiguity
-- pointer mutability ambiguity
-- unsupported compiler extension
-- unsupported bitfield layout
-- unsupported anonymous composite type in public API
+- variadic functions
+- pointer ownership and mutability ambiguity
+- incomplete public types
+- callback and function-pointer structure
+- unsupported extension markers
 
-The JSON readiness shape should stay close to Fortran:
-
-```text
-{
-  "n_functions": int,
-  "n_structs": int,
-  "n_unions": int,
-  "n_enums": int,
-  "n_typedefs": int,
-  "n_macros": int,
-  "unsupported_constructs": [...],
-  "unresolved_types": [...],
-  "macro_dependent_declarations": [...],
-  "wrappability_blockers": [...],
-  "unit_blockers": [...],
-  "why_not_wrappable": [...],
-  "wrappable": bool
-}
-```
+These should become parser diagnostics or parser metadata, not a parser-side
+`wrappable` report or a parser JSON readiness payload.
 
 ## Parser-First Model Policy
 
 For the current planning horizon, the C parser should store C-specific facts in
 `c_parser/models.py`. This includes preprocessing origin, macro dependencies,
 function pointer signatures, callback-like parameters, pointer qualifiers,
-ownership ambiguity, include dependencies, typedef resolution state, and
-readiness diagnostics.
+ownership ambiguity, include dependencies, and typedef resolution state.
 
 Semantic IR conversion is deliberately later work. When that phase starts, the
 IR model may need extensions for C pointer ownership, unsigned integer types,
@@ -499,8 +498,9 @@ Python APIs.
 
 ## `.pyi` Integration
 
-Generated `.pyi` stubs for C should come after parser models, readiness, and
-semantic IR conversion are stable.
+Generated `.pyi` stubs for C should come after parser models and semantic IR
+conversion are stable. Readiness, if added for C, should follow the semantic
+layer pattern already used by the project.
 
 Likely stub patterns:
 
@@ -526,11 +526,11 @@ imports, classes, functions, shapes, and native projection entries. C-specific
 work should extend the semantic model intentionally before changing `.pyi`
 syntax.
 
-For function pointers and callbacks, parser extraction and wrap-readiness are
-separate decisions. The parser should extract the function pointer type into C
-models whenever possible. A callback-bearing API should become wrap-ready only
-when the user supplies enough `.pyi` policy for wrapper generation. The policy
-needs to identify:
+For function pointers and callbacks, parser extraction and later wrappability
+are separate decisions. The parser should extract the function pointer type into
+C models whenever possible. If a callback-bearing API later becomes wrappable,
+that should be because the user supplied enough `.pyi` policy for the semantic
+layer to make the decision. The policy needs to identify:
 
 - the callback signature, including argument and return semantic types
 - whether native calls Python, Python passes a callback to native, or both
@@ -544,9 +544,9 @@ needs to identify:
 - how and when a stored callback is released
 - what should happen if the Python callback raises
 
-Until those fields exist and are supplied, readiness should report an explicit
-callback policy blocker rather than pretending the function is safely
-wrappable.
+Until those fields exist and are supplied, any future readiness layer should
+report an explicit callback policy blocker rather than pretending the function
+is safely wrappable.
 
 ## Isolation Policy
 
@@ -577,12 +577,12 @@ c-parser/phase-5-declarations
 c-parser/phase-6-functions
 c-parser/phase-7-structs-enums
 c-parser/phase-8-project-resolution
-c-parser/phase-9-readiness
+c-parser/phase-9-semantic-readiness
 c-parser/phase-10-semantics
 c-parser/phase-11-pyi
 c-parser/phase-12-corpus-stabilization
 ```
 
 No C parser branch should merge directly into project `main` until the
-frontend has stable parser behavior, docs, CLI, tests, readiness diagnostics,
-semantic conversion, and `.pyi` expectations.
+frontend has stable parser behavior, docs, CLI, tests, semantic readiness
+integration, semantic conversion, and `.pyi` expectations.

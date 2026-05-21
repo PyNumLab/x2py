@@ -54,15 +54,16 @@ def test_cjson_header_preprocessed_mode_accepts_compiler_expanded_declarations()
     assert not any(diag.severity == "error" for diag in parsed.diagnostics)
 
 
-def test_cjson_callback_hook_fields_are_modeled_but_not_wrap_ready_without_policy():
-    from c_parser import assess_c_wrap_readiness, parse_c_file
+def test_cjson_callback_hook_fields_are_modeled_with_policy_placeholders():
+    from c_parser import parse_c_file
 
     parsed = parse_c_file(_CJSON_DIR / "cJSON.h")
-    report = assess_c_wrap_readiness(parsed)
 
     assert "cJSON_Hooks" in {struct.name for struct in parsed.structs}
-    assert any(blocker["code"] == "C_CALLBACK_POLICY_REQUIRED" for blocker in report["blockers"])
-    assert report["wrappable"] is False
+    hooks = next(struct for struct in parsed.structs if struct.name == "cJSON_Hooks")
+    callback_fields = [field for field in hooks.fields if field.type.kind == "function_pointer"]
+    assert callback_fields
+    assert all(field.callback_policy is None for field in callback_fields)
 
 
 def test_cjson_source_file_parse_skips_function_bodies_safely():
@@ -82,4 +83,3 @@ def test_cjson_project_parse_links_header_and_source():
     assert "cJSON.h" in project.files
     assert "cJSON.c" in project.files
     assert project.header_source_pairs["cJSON.h"] == {"cJSON.c"}
-

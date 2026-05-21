@@ -79,11 +79,9 @@ def test_c_parser_instance_entrypoints_match_public_functions():
     assert parser.visit_project({"api.h": source}) == parse_c_project({"api.h": source})
 
 
-def test_assess_c_wrap_readiness_accepts_source_or_model():
-    from c_parser import assess_c_wrap_readiness, parse_c_file
+def test_public_c_parser_entrypoints_do_not_include_parser_side_readiness():
+    import c_parser
 
-    source = "int answer(void);\n"
-    parsed = parse_c_file(source, filename="api.h")
-
-    assert assess_c_wrap_readiness(source, filename="api.h") == assess_c_wrap_readiness(parsed)
-
+    assert hasattr(c_parser, "parse_c_file")
+    assert hasattr(c_parser, "parse_c_project")
+    assert not hasattr(c_parser, "assess_c_wrap_readiness")

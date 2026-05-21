@@ -12,6 +12,11 @@ The C parser frontend will be a wrapper-oriented source extraction system for
 x2py. It should extract enough stable semantic information from C sources and
 headers to help create or update the semantic interface layer.
 
+The implementation must be grammar-style: lex and slice source into C grammar
+regions, visit declarations and scopes recursively, reuse shared declarator/type
+parsing helpers, and store typed model objects. It must not be implemented as a
+giant regex parser, a whole-file scanner, or a compiler-wrapper-only frontend.
+
 It is not intended to be:
 
 - a compiler-grade C frontend
@@ -102,7 +107,7 @@ should not implement recursive, compiler-compatible macro expansion internally.
 Target module-level entrypoints:
 
 ```python
-from c_parser import parse_c_file, parse_c_project, assess_c_wrap_readiness
+from c_parser import parse_c_file, parse_c_project
 ```
 
 Expected signatures:
@@ -123,17 +128,16 @@ parse_c_project(
     encoding="utf-8",
 )
 
-assess_c_wrap_readiness(
-    code,
-    filename=None,
-    include_dirs=None,
-    macro_defines=None,
-)
 ```
 
 These should return typed parser models and dictionaries analogous to the
 Fortran parser API. Re-export from `x2py` should wait until the API is tested
 and documented.
+
+The parser itself should stay parse-only. If the C frontend later gains
+wrappability assessment, that should live in the semantic layer after C parser
+models are converted to semantic IR or edited `.pyi` policy is loaded, matching
+the current Fortran and `.pyi` readiness boundary.
 
 ## Planned CLI Usage
 
@@ -142,7 +146,6 @@ Initial explicit mode:
 ```bash
 x2py path/to/api.h --language c --parse
 x2py path/to/api.h --language c --parse --json
-x2py path/to/api.h --language c --parse --wrap-readiness
 ```
 
 Optional alias:
@@ -170,8 +173,7 @@ Per-file shape:
     "globals": [],
     "macros": [],
     "includes": [],
-    "diagnostics": [],
-    "wrap_readiness": {}
+    "diagnostics": []
   }
 }
 ```
@@ -184,36 +186,17 @@ JSON compatibility rules:
 - keep model fields stable enough for golden fixture testing
 - document every intentional schema break
 
-## Planned Readiness Diagnostics
+## Planned Readiness Boundary
 
-Readiness should answer whether the parsed C API is safe enough for x2py to
-wrap automatically or semi-automatically.
+The parser should not assess wrappability.
 
-Expected readiness categories:
+Any future C readiness rules should be implemented after the parser output is
+converted to semantic IR, or after an edited `.pyi` file provides the missing
+policy. That keeps the C parser aligned with the current project rule that
+readiness is a semantic concern, not a parser concern.
 
-- unsupported constructs
-- parse errors
-- unresolved includes
-- unresolved typedefs
-- unresolved struct/union/enum tags
-- incomplete public types
-- macro-dependent declarations
-- variadic functions
-- function pointers and callbacks
-- pointer ownership ambiguity
-- pointer mutability ambiguity
-- array extent ambiguity
-- unsupported compiler extensions
-- no functions found
-
-The top-level readiness report should keep a file-level `wrappable` boolean
-and unit-scoped blockers, following the Fortran parser pattern.
-
-Function pointers and callbacks should be parsed into C models when possible.
-They should not be marked wrap-ready until the user supplies enough `.pyi`
-policy to explain how wrapper generation should handle them.
-
-The required user policy should make these facts explicit:
+For C callback-bearing APIs, the parser should still preserve enough source
+facts to let later semantic work decide what is safe:
 
 - callback signature
 - callback direction: native-to-Python, Python-to-native, or both
@@ -225,6 +208,9 @@ The required user policy should make these facts explicit:
 - ownership of callback and context memory
 - release/unregistration API
 - exception/error policy for Python callback failures
+
+Those facts should be stored in parser models, but not turned into a parser-side
+`wrappable` report.
 
 ## Planned Error Handling
 
@@ -254,7 +240,7 @@ Test families should mirror the Fortran parser:
 - typedef tests
 - macro/constant tests
 - include/project tests
-- readiness tests
+- semantic readiness tests once C semantic conversion exists
 - CLI tests
 - semantic conversion tests
 - `.pyi` generation/parser tests

@@ -17,6 +17,13 @@ stable.
 - [ ] Put C parser implementation in a separate `c_parser` package.
 - [ ] Keep C parser tests separated from existing Fortran tests.
 - [ ] Gate all integration through explicit C flags or C-specific APIs.
+- [ ] Keep any C wrappability assessment in the semantic layer, not inside the
+      parser package.
+- [ ] Implement C parsing as a grammar-style recursive parser with scoped
+      visitors, source slicing, shared declaration/declarator parsing helpers,
+      and typed model objects.
+- [ ] Store initial C-specific facts in `c_parser/models.py`; defer semantic IR
+      extensions until the C parser models prove what information is needed.
 - [ ] Keep the C parser main-merge guard active for C parser branches and
       paths.
 - [ ] Require the `c-parser-ready-for-main` label only for the final approved
@@ -24,6 +31,8 @@ stable.
 - [ ] Do not implement a giant regex parser.
 - [ ] Do not implement a whole-file scanner as the core architecture.
 - [ ] Do not make libclang the only parser architecture.
+- [ ] Do not make compiler preprocessing a replacement for x2py parser models,
+      source locations, diagnostics, or project indexes.
 - [ ] Preserve the semantic IR layer as the source of truth.
 - [ ] Treat documentation as a first-class deliverable in every phase.
 - [ ] Update this checklist when implementation reality changes.
@@ -78,7 +87,7 @@ Scope:
 - [x] Inspect parser CLI tests.
 - [x] Inspect parser public entrypoint tests.
 - [x] Inspect parser developer tutorial tests.
-- [x] Inspect wrap-readiness tests.
+- [x] Inspect semantic wrap-readiness tests.
 - [x] Inspect parser error handling tests.
 - [x] Inspect parser fixture/golden suite.
 - [x] Inspect parser golden regeneration script.
@@ -107,7 +116,7 @@ Scope:
 - [x] Document CLI command shape.
 - [x] Document early skeleton CLI behavior.
 - [x] Document JSON schema direction.
-- [x] Document readiness diagnostics direction.
+- [x] Document semantic readiness direction.
 - [x] Document semantic IR mapping direction.
 - [x] Document `.pyi` integration direction.
 - [x] Document v1 non-goals.
@@ -166,7 +175,7 @@ Scope:
 - [ ] Document unsupported `--semantics --language c` behavior.
 - [ ] Document unsupported `--pyi --language c` behavior.
 - [ ] Document C parser diagnostics even if only skeleton diagnostics exist.
-- [ ] Add examples for parse tree, JSON, readiness, and output file behavior.
+- [ ] Add examples for parse tree, JSON, and output file behavior.
 
 ### CLI Design Tasks
 
@@ -180,7 +189,6 @@ Scope:
 - [ ] Reject `--language c --semantics` until Phase 10.
 - [ ] Reject `--language c --pyi` until Phase 11.
 - [ ] Reject Fortran-only flags in C mode if they do not apply.
-- [ ] Keep `--wrap-readiness` requiring `--parse`.
 - [ ] Keep `--json` behavior stable for parse output.
 - [ ] Keep `--out` behavior stable for C parse JSON.
 - [ ] Keep `--no-color` accepted in C mode.
@@ -204,10 +212,7 @@ Scope:
 - [ ] Return empty `macros` list.
 - [ ] Return empty `includes` list.
 - [ ] Return empty `diagnostics` list unless a skeleton diagnostic is needed.
-- [ ] Return readiness with `wrappable: false`.
-- [ ] Include a `parser_skeleton` blocker.
 - [ ] Human tree output should show zero-count C sections and skeleton status.
-- [ ] Readiness output should show the skeleton blocker.
 
 ### CLI Test Tasks
 
@@ -217,7 +222,6 @@ Scope:
 - [ ] Test `--help` shows `--language`.
 - [ ] Test `--language c --parse` accepts a temporary `.h` file.
 - [ ] Test `--language c --parse --json` emits valid JSON.
-- [ ] Test `--language c --parse --wrap-readiness` emits stable readiness.
 - [ ] Test `--language c --parse --out report.json` writes JSON and suppresses
       stdout.
 - [ ] Test `--language c --semantics` returns argparse error or clear
@@ -237,7 +241,6 @@ Scope:
 - [ ] Users can discover C mode from CLI help.
 - [ ] Users can run a stable C parse skeleton command.
 - [ ] C JSON skeleton output has a documented schema.
-- [ ] C readiness skeleton output is stable and not falsely wrappable.
 - [ ] Fortran CLI behavior is unchanged.
 - [ ] Documentation includes the exact command workflow.
 - [ ] Tests cover the skeleton command workflow.
@@ -306,7 +309,8 @@ Scope:
 - [x] Create `tests/parser/c/test_c_functions.py`.
 - [x] Create `tests/parser/c/test_c_structs_unions_enums_typedefs.py`.
 - [x] Create `tests/parser/c/test_c_project_includes.py`.
-- [x] Create `tests/parser/c/test_c_wrap_readiness.py`.
+- [x] Create `tests/semantics/test_c_semantic_readiness.py` or equivalent
+      semantic-layer coverage for C wrappability once that layer exists.
 - [x] Create `tests/parser/c/test_c_fixture_suite.py`.
 - [x] Create `tests/parser/c/test_c_error_fixture_suite.py`.
 - [x] Create `tests/parser/c/test_c_json_sanity.py`.
@@ -339,7 +343,7 @@ Scope:
 - [ ] Add typedef parser test file.
 - [ ] Add macro/constant parser test file.
 - [ ] Add project/include parser test file.
-- [ ] Add readiness test file.
+- [ ] Add semantic readiness test file when C semantic conversion exists.
 - [ ] Add public entrypoint test file.
 - [ ] Add developer tutorial test file once internal helpers exist.
 - [ ] Add CLI test file.
@@ -442,8 +446,6 @@ Scope:
 - [ ] Define `CInclude`.
 - [ ] Define `CFile`.
 - [ ] Define `CProject`.
-- [ ] Define `CWrapReadinessReport` only if a dataclass helps; otherwise use
-      stable dictionaries like Fortran readiness.
 - [ ] Add helper properties for pointer depth.
 - [ ] Add helper properties for array rank.
 - [ ] Add helper properties for effective type text.
@@ -469,11 +471,9 @@ Scope:
 - [ ] Implement `CParser.visit_file` returning skeleton or model-only `CFile`.
 - [ ] Implement `CParser.visit_project` returning skeleton/model-only
       `CProject`.
-- [ ] Implement `CParser.visit_wrap_readiness`.
 - [ ] Implement module-level `_DEFAULT_PARSER`.
 - [ ] Implement `parse_c_file`.
 - [ ] Implement `parse_c_project`.
-- [ ] Implement `assess_c_wrap_readiness`.
 - [ ] Add public API tests for source strings.
 - [ ] Add public API tests for file paths.
 - [ ] Add public API tests for empty source.
@@ -774,7 +774,7 @@ Scope:
 - [ ] Function bodies are skipped safely.
 - [ ] Variadic and function pointer cases are represented and diagnosed.
 - [ ] CLI human and JSON output show functions.
-- [ ] Readiness reports no-functions only when appropriate.
+- [ ] Parser diagnostics report no-functions only when appropriate.
 
 ### Phase 6 Risks And Open Questions
 
@@ -804,7 +804,7 @@ Scope:
 - [ ] Parse pointer fields.
 - [ ] Parse array fields.
 - [ ] Parse nested anonymous structs as unsupported or metadata.
-- [ ] Parse bitfields as metadata with readiness limitations.
+- [ ] Parse bitfields as metadata with semantic limitations.
 - [ ] Preserve field order.
 - [ ] Preserve source locations.
 - [ ] Mark incomplete structs.
@@ -823,10 +823,10 @@ Scope:
 - [ ] Parse typedef unions.
 - [ ] Parse union fields with shared declaration backend.
 - [ ] Mark union fields distinctly from struct fields.
-- [ ] Add readiness diagnostics for by-value unions if unsafe.
+- [ ] Add diagnostics for by-value unions if unsafe.
 - [ ] Add tests for named unions.
 - [ ] Add tests for typedef unions.
-- [ ] Add tests for union readiness.
+- [ ] Add tests for union diagnostics.
 
 ### Enum Tasks
 
@@ -929,7 +929,7 @@ Scope:
 - [ ] Resolve union tag references.
 - [ ] Resolve enum tag references.
 - [ ] Resolve opaque pointer typedefs.
-- [ ] Preserve unresolved references for readiness diagnostics.
+- [ ] Preserve unresolved references for later semantic diagnostics.
 - [ ] Do not lose original spelling during resolution.
 - [ ] Add tests for cross-file typedef resolution.
 - [ ] Add tests for cross-file struct resolution.
@@ -949,7 +949,8 @@ Scope:
 - [ ] `parse_c_project` returns a populated `CProject`.
 - [ ] Include graph is stable and serialized.
 - [ ] Cross-file typedef/tag resolution works for basic projects.
-- [ ] Missing project context becomes readiness diagnostics.
+- [ ] Missing project context becomes parser or semantic diagnostics as
+      appropriate.
 - [ ] Tests cover directory and file-list parsing.
 
 ### Phase 8 Risks And Open Questions
@@ -959,20 +960,21 @@ Scope:
 - [ ] Decide how to handle generated headers.
 - [ ] Decide whether include graph should be path-keyed, module-keyed, or both.
 
-## Phase 9: Wrap-Readiness Diagnostics
+## Phase 9: Semantic Readiness Integration
 
 Branch target:
 
-- `c-parser/phase-9-readiness`
+- `c-parser/phase-9-semantic-readiness`
 
 Scope:
 
-- Actionable readiness diagnostics.
-- File-level and unit-level blockers.
+- Semantic readiness integration for C parser facts.
+- File-level and unit-level blockers, but owned by the semantic layer rather
+  than the parser.
 
 ### Readiness Schema Tasks
 
-- [ ] Define stable C readiness dictionary keys.
+- [ ] Define stable C readiness dictionary keys for the semantic layer.
 - [ ] Include counts for functions, structs, unions, enums, typedefs, macros,
       includes, and diagnostics.
 - [ ] Include `unsupported_constructs`.
@@ -1029,11 +1031,12 @@ Scope:
 - [ ] Use qualified names where available.
 - [ ] Avoid per-unit ready flags; keep readiness file-level like Fortran.
 - [ ] Add tests for every blocker family.
-- [ ] Add CLI readiness formatting tests.
+- [ ] Add semantic readiness formatting tests.
 
 ### Phase 9 Definition Of Done
 
-- [ ] Readiness output is stable in JSON and human CLI.
+- [ ] Readiness output is stable in JSON and human CLI when served by the
+      semantic layer.
 - [ ] Diagnostics identify exactly which units block wrapping.
 - [ ] Common unsupported C constructs produce actionable messages.
 - [ ] Docs list readiness codes and examples.
@@ -1042,7 +1045,7 @@ Scope:
 ### Phase 9 Risks And Open Questions
 
 - [ ] Decide which pointer cases are blockers versus warnings.
-- [ ] Decide how readiness should treat opaque handles.
+- [ ] Decide how semantic readiness should treat opaque handles.
 - [ ] Decide the exact readiness code names for callback APIs that are parsed
       but missing user-supplied `.pyi` policy.
 
@@ -1218,7 +1221,7 @@ Scope:
       APIs, `size_t`, public declaration macros, numeric/string constants,
       and callback hook fields.
 - [ ] Keep callback hook fields modeled in `c_parser/models.py`, with
-      wrap-readiness requiring explicit user `.pyi` callback policy metadata
+      semantic readiness requiring explicit user `.pyi` callback policy metadata
       before claiming they are wrappable.
 - [ ] Add zlib or another macro-heavier C library only after
       compiler-assisted preprocessing mode is available.
@@ -1266,7 +1269,8 @@ Scope:
 ### Phase 12 Definition Of Done
 
 - [ ] C parser handles a representative stable subset.
-- [ ] CLI, JSON, readiness, semantic IR, and `.pyi` workflows are tested.
+- [ ] CLI, JSON, semantic readiness, semantic IR, and `.pyi` workflows are
+      tested.
 - [ ] Fixture/golden workflows are stable.
 - [ ] Corpus tests catch regressions.
 - [ ] Fortran behavior remains stable.
