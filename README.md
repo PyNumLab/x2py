@@ -39,10 +39,10 @@ front-end). Current handled coverage:
   - Attributes (e.g. `abstract`) and `extends(...)`
   - Field extraction (intrinsic + `type(...)`)
   - Type-bound procedures and generic bindings
-- **Readiness diagnostics**
-  - Unsupported-pattern detection
+- **Parser diagnostics and metadata**
+  - Source locations for parser errors
   - Unknown argument declaration reporting
-  - Final wrappability summary
+  - Parse-stage unsupported construct reporting
 
 ## Public APIs
 
@@ -50,7 +50,9 @@ Public API:
 
 - `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
 - `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
-- `assess_wrap_readiness(code, filename=None) -> dict`
+- `fortran_file_to_semantic_modules(parsed_file, standalone_module_name=None) -> list[SemanticModule]`
+- `assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
+- `assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`
 
 ## Repository layout
 
@@ -61,11 +63,12 @@ The editable wrapper `.pyi` format is documented in
 
 ## Terminal usage
 
-`x2py` exposes three stage flags:
+`x2py` exposes four stage flags:
 
 - `--parse` for parser output and parse-stage diagnostics
 - `--semantics` for semantic IR JSON
 - `--pyi` for generated Python stub text
+- `--wrap-readiness` for semantic wrap-readiness from either Fortran or `.pyi`
 
 For parse output, `--show-vars` expands scope-level variables that are normally
 summarized as `vars=N`. Use `--print-limit N` to keep large repeated sections
@@ -223,17 +226,29 @@ Expected JSON structure (top-level keyed by input path):
 - `<file>.submodules`: parsed submodules
 - `<file>.programs`: parsed programs
 - `<file>.block_data`: parsed block data units
-- `<file>.wrap_readiness`: readiness diagnostics
 
 ### Example 3: wrap-readiness summary
 
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --wrap-readiness
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
 ```
 
-This prints the wrappability status and blocker list for each input file.
-The JSON readiness payload keeps `wrappable` at file level and includes
-`unit_blockers` only for procedure/type/file units that own a blocker.
+This converts each input to semantic IR, then prints the wrappability status
+and blocker list. The same flag accepts edited `.pyi` files:
+
+```bash
+python -m x2py solver.pyi --wrap-readiness
+```
+
+Use `--json` for the stable readiness payload. It keeps `wrappable` at file
+level and includes `unit_blockers` only for units that own a blocker.
+
+`--wrap-readiness` can also be combined with other stages. For example,
+`--semantics --wrap-readiness` emits semantic IR with a `wrap_readiness` payload
+attached, and `--parse --wrap-readiness` prints the parse tree followed by the
+semantic readiness summary. Parser JSON remains parse-only; when `--json` is
+used with `--parse --wrap-readiness`, the output is split into top-level
+`parse` and `wrap_readiness` sections.
 
 ### Example 4: semantic IR JSON output
 
@@ -415,25 +430,41 @@ Expected result:
 
 ```python
 from pathlib import Path
-from x2py import parse_fortran_file, assess_wrap_readiness
+from x2py import (
+    assess_semantic_wrap_readiness,
+    fortran_file_to_semantic_modules,
+    parse_fortran_file,
+)
 
 path = Path("tests/data/fortran/general/basic_subroutine.f90")
 code = path.read_text()
 
 parsed = parse_fortran_file(code, filename=str(path))
-report = assess_wrap_readiness(code, filename=str(path))
+modules = fortran_file_to_semantic_modules(parsed, standalone_module_name=path.stem)
+report = assess_semantic_wrap_readiness(modules, source=str(path))
 
 print("procedures:", len(parsed.procedures))
 print("wrappable:", report["wrappable"])
-print("unknown args:", report["unknown_argument_types"])
+print("blockers:", report["why_not_wrappable"])
 ```
 
 Expected result:
 
 - `parsed` is a `FortranFile` aggregate with procedures/modules/types/interfaces/program units.
-- `report` includes counts, unsupported construct hits, unknown argument info,
-  unresolved imported derived-type/kind dependencies, and final `wrappable`
-  boolean.
+- `report` is produced from semantic IR and includes public API counts,
+  semantic blockers, unit-level blockers, and final `wrappable` boolean.
+
+If the parsed Fortran file cannot describe the wrapper interface completely,
+generate a draft `.pyi`, edit it, then assess readiness from the edited stub:
+
+```bash
+python -m x2py solver.f90 --pyi --out solver.pyi
+python -m x2py solver.pyi --wrap-readiness
+```
+
+The edited `.pyi` is the source of truth for readiness. It can declare derived
+types with `class` stubs, literal compile-time constants with
+`Final[...] = value`, and callback signatures with `Callable[[...], ...]`.
 
 ## Running tests
 
@@ -479,13 +510,27 @@ short explanation in the PR. For `.pyi` or semantic IR behavior changes, update
 the corresponding fixtures under `tests/pyi/fixtures` or
 `tests/semantics/fixtures`.
 
+Semantic wrap-readiness corpus messages for the general, BLAS, LAPACK, and
+SciFortran fixtures are regenerated separately:
+
+```bash
+python tests/semantics/generate_wrap_readiness_fixtures.py
+```
+
+This writes `tests/semantics/fixtures/wrap_readiness_messages.json`. The file is
+a semantic readiness fixture, not a parser golden, even though Fortran fixtures
+are used as input.
+
 ## Semantic parser structure
 
 The parser exposes stable file/project entrypoints:
 
 - `parse_fortran_file(...)` for one source (string or path) returning `FortranFile`.
 - `parse_fortran_project(...)` for many sources returning `FortranProject`.
-- `assess_wrap_readiness(...)` for wrappability diagnostics.
+
+Wrap-readiness is intentionally outside the parser model. Use
+`fortran_file_to_semantic_modules(...)` or `.pyi` parsing to produce semantic IR,
+then call `assess_semantic_wrap_readiness(...)` on that semantic interface.
 
 Internally, `FortranParser.visit_file` uses a recursive grammar-style
 source-unit parser. The file is first sliced into direct

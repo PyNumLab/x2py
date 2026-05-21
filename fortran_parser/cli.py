@@ -75,7 +75,6 @@ def _parse_paths(paths: list[str]) -> dict[str, dict]:
             "submodules": [_to_dict_no_parent(m) for m in parsed.submodules],
             "programs": [_to_dict_no_parent(m) for m in parsed.programs],
             "block_data": [_to_dict_no_parent(m) for m in parsed.block_data_units],
-            "wrap_readiness": parser.visit_wrap_readiness(code, filename=str(p)),
         }
     return out
 
@@ -110,50 +109,6 @@ def _format_pyi_report(semantic_report: dict[str, dict]) -> str:
         lines.append(pyi if pyi else "<no module declarations found>")
         lines.append("")
     return "\n".join(lines).rstrip()
-
-def _format_blocker_item(code: str, item) -> str:
-    """Format one wrap-readiness blocker item for human-readable output."""
-    if code == "unsupported_constructs":
-        return f"line {item['line']}: {item['text']}"
-    if code == "unknown_argument_types":
-        return str(item)
-    if code == "unresolved_derived_type_arguments":
-        providers = ", ".join(item.get("import_modules") or []) or "<not imported>"
-        return f"{item['procedure']}:{item['argument']} uses type({item['type']}) from {providers}"
-    if code == "unresolved_derived_type_fields":
-        providers = ", ".join(item.get("import_modules") or []) or "<not imported>"
-        return f"{item['type_owner']}:{item['field']} uses type({item['type']}) from {providers}"
-    if code == "unresolved_kind_arguments":
-        providers = ", ".join(item.get("import_modules") or []) or "<not imported>"
-        return f"{item['procedure']}:{item['argument']} uses kind {item['kind']} from {providers}"
-    if code == "unresolved_kind_fields":
-        providers = ", ".join(item.get("import_modules") or []) or "<not imported>"
-        return f"{item['type_owner']}:{item['field']} uses kind {item['kind']} from {providers}"
-    return str(item)
-
-
-def _format_wrap_readiness(report: dict[str, dict]) -> str:
-    """Format only wrap-readiness status and blockers for each parsed file."""
-    lines: list[str] = []
-    for fname, parsed in report.items():
-        readiness = parsed["wrap_readiness"]
-        status = "yes" if readiness["wrappable"] else "no"
-        lines.append(f"File: {fname}")
-        lines.append(f"  Wrappable: {status}")
-        blockers = readiness.get("wrappability_blockers", [])
-        if blockers:
-            lines.append("  Why not wrappable:")
-            for blocker in blockers:
-                lines.append(f"    - {blocker['message']}")
-                for item in blocker.get("items", []):
-                    lines.append(f"      * {_format_blocker_item(blocker['code'], item)}")
-        else:
-            lines.append("  No wrap-readiness blockers detected.")
-        lines.append("")
-    return "\n".join(lines).rstrip()
-
-
-
 
 def _format_var_type(var: dict) -> str:
     base = var.get("base_type", "unknown")
@@ -294,14 +249,6 @@ def _format_report(
             if hidden_blocks > 0:
                 lines.append(f"    ... {hidden_blocks} more block data units")
 
-#        readiness = parsed["wrap_readiness"]
-#        lines.append(f"  Wrappable: {'yes' if readiness['wrappable'] else 'no'}")
-#        if readiness.get("wrappability_blockers"):
-#            lines.append("  Why not wrappable:")
-#            for blocker in readiness["wrappability_blockers"]:
-#                lines.append(f"    - {blocker['message']}")
-#                for item in blocker.get("items", []):
-#                    lines.append(f"      * {_format_blocker_item(blocker['code'], item)}")
         lines.append("")
     return "\n".join(lines).rstrip()
 
@@ -319,11 +266,6 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
     parser.add_argument("--semantics", action="store_true", help="Generate semantic IR models from parsed Fortran modules")
     parser.add_argument("--pyi", action="store_true", help="Print the generated Python .pyi content from semantic models")
-    parser.add_argument(
-        "--wrap-readiness",
-        action="store_true",
-        help="Print only whether each input is wrap-ready and, when it is not, why.",
-    )
     parser.add_argument(
         "--show-vars",
         action="store_true",
@@ -379,8 +321,6 @@ def main() -> int:
         print(json.dumps(payload, indent=2))
     elif args.pyi:
         print(_format_pyi_report(semantic or {}))
-    elif args.wrap_readiness:
-        print(_format_wrap_readiness(report))
     elif args.semantics:
         print(json.dumps(payload, indent=2))
     else:

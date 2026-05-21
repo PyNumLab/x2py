@@ -4,7 +4,7 @@
 import pytest
 
 from fortran_parser.parser import FortranParser
-from x2py import FortranParseError, assess_wrap_readiness, parse_fortran_file, parse_fortran_project
+from x2py import FortranParseError, parse_fortran_file, parse_fortran_project
 
 def test_parser_public_entrypoint_aliases_and_singular_contracts_use_inline_sources():
     parser = FortranParser()
@@ -21,7 +21,6 @@ end module alias_mod
     assert parser.visit_file(module_code).modules[0].procedures[0].name == "ping"
     assert "alias_mod" in parser.visit_project({"alias.f90": module_code}).modules
     assert "alias_mod.ping" in parser.visit_project({"alias.f90": module_code}).procedures
-    assert parser.visit_wrap_readiness(module_code)["wrappable"] is True
 
     assert parser.visit_fortran_module("module single_mod\nend module single_mod\n").name == "single_mod"
     assert parser.visit_fortran_program("program driver\nend program driver\n").name == "driver"
@@ -108,22 +107,7 @@ end subroutine lone_proc
 """
         )
 
-def test_public_assess_wrap_readiness_alias_and_module_parameter_noise(tmp_path):
-    parser = FortranParser()
-    code = """
-module noisy_params_mod
-  integer, parameter :: rk = 8, ignored_token
-contains
-  subroutine scale(x)
-    real(kind=rk), intent(inout) :: x
-  end subroutine scale
-end module noisy_params_mod
-"""
-
-    report = parser.visit_wrap_readiness(code, filename="noisy_params.f90")
-
-    assert report["wrappable"] is True
-
+def test_public_project_parse_from_path_sequence(tmp_path):
     source_path = tmp_path / "listed_project.f90"
     source_path.write_text(
         """
