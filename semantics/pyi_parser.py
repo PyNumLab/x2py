@@ -129,6 +129,7 @@ class _PyiAstParser:
             intent=default_intent,
             optional=self.default_marks_optional(node.value),
             visibility=visibility,
+            default_value=self.literal_default_value(node.value),
         )
 
     def decorators(self, nodes: list[ast.expr], *, context: str) -> _Decorators:
@@ -268,6 +269,8 @@ class _PyiAstParser:
             if not any(constraint.name == "Constant" for constraint in semantic_type.constraints):
                 semantic_type.constraints.append(SemanticConstraint("Constant"))
             return semantic_type
+        if self.matches_name(node, "Callable") or self.is_subscript_of(node, "Callable"):
+            return self.callable_type(node)
 
         name = self.type_name(node)
         if name == "Unknown":
@@ -298,6 +301,33 @@ class _PyiAstParser:
                 arguments=[ast.literal_eval(arg) for arg in node.args],
             )
         raise ValueError(f"Unsupported semantic type constraint: {ast.unparse(node)!r}")
+
+    def callable_type(self, node: ast.expr) -> SemanticType:
+        if not isinstance(node, ast.Subscript):
+            return SemanticType(name="Callable", dtype="Callable")
+
+        items = self.subscript_items(node)
+        if len(items) != 2:
+            raise ValueError(f"Callable expects argument types and a return type: {ast.unparse(node)!r}")
+
+        raw_args, raw_return = items
+        if isinstance(raw_args, ast.Constant) and raw_args.value is Ellipsis:
+            return SemanticType(
+                name="Callable",
+                dtype="Callable",
+                metadata={"arguments": None, "return": self.semantic_type(raw_return)},
+            )
+        if not isinstance(raw_args, ast.List):
+            raise ValueError(f"Callable arguments must be a list: {ast.unparse(node)!r}")
+
+        return SemanticType(
+            name="Callable",
+            dtype="Callable",
+            metadata={
+                "arguments": [self.semantic_type(item) for item in raw_args.elts],
+                "return": self.semantic_type(raw_return),
+            },
+        )
 
     def return_projection(self, node: ast.expr) -> tuple[SemanticType | None, list[SemanticArgument]]:
         if isinstance(node, ast.Constant) and node.value is None:
@@ -365,6 +395,12 @@ class _PyiAstParser:
     @staticmethod
     def default_marks_optional(node: ast.expr | None) -> bool:
         return isinstance(node, ast.Constant) and node.value in {Ellipsis, None}
+
+    @staticmethod
+    def literal_default_value(node: ast.expr | None) -> str | None:
+        if node is None or _PyiAstParser.default_marks_optional(node):
+            return None
+        return str(ast.literal_eval(node))
 
     @staticmethod
     def qualified_name(node: ast.AST) -> tuple[str, ...] | None:

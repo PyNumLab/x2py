@@ -69,6 +69,7 @@ class particle:
 scale: private[Float64]
 answer: Final[Int32]
 hidden_answer: private[Final[Int32]]
+literal_answer: Final[Int32] = 42
 
 def touch(
     p: particle
@@ -87,7 +88,31 @@ def touch(
     assert module.variables[2].name == "hidden_answer"
     assert module.variables[2].visibility == "private"
     assert [c.name for c in module.variables[2].semantic_type.constraints] == ["Constant"]
+    assert module.variables[3].name == "literal_answer"
+    assert module.variables[3].default_value == "42"
     assert module.functions[0].arguments[0].intent == "inout"
+
+
+def test_parse_pyi_text_preserves_callable_signature_metadata():
+    module = parse_pyi_text(
+        """
+from typing import Callable
+
+class sim_state:
+    n: Int32
+
+def integrate(
+    state: sim_state,
+    objective: Callable[[sim_state, Float64], Float64]
+) -> Float64: ...
+""",
+        module_name="callbacks",
+    )
+
+    callback_type = module.functions[0].arguments[1].semantic_type
+    assert callback_type.name == "Callable"
+    assert [arg.name for arg in callback_type.metadata["arguments"]] == ["sim_state", "Float64"]
+    assert callback_type.metadata["return"].name == "Float64"
 
 
 def test_parse_pyi_text_accepts_import_aliases():

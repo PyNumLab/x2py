@@ -9,7 +9,10 @@ from pathlib import Path
 
 from fortran_parser.models import FortranParseError
 from fortran_parser.parser import FortranParser
-from fortran_parser.cli import _format_report, _format_wrap_readiness
+from fortran_parser.cli import _format_report
+from semantics.fortran2ir import fortran_file_to_semantic_modules
+from semantics.pyi_parser import load_pyi_file
+from semantics.readiness import assess_semantic_wrap_readiness
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
@@ -45,6 +48,14 @@ def _collect_extensions(path: Path) -> list[Path]:
     return sorted(p for p in path.rglob("*") if p.suffix.lower() in exts)
 
 
+def _collect_pyi_extensions(path: Path) -> list[Path]:
+    return sorted(p for p in path.rglob("*.pyi") if p.is_file())
+
+
+def _collect_readiness_extensions(path: Path) -> list[Path]:
+    return sorted({*_collect_extensions(path), *_collect_pyi_extensions(path)})
+
+
 def _expand_paths(paths: list[str]) -> list[Path]:
     expanded: list[Path] = []
     for raw in paths:
@@ -56,7 +67,18 @@ def _expand_paths(paths: list[str]) -> list[Path]:
     return sorted(set(expanded))
 
 
-def _parse_report(paths: list[str], *, readiness_pyi_files: list[str] | None = None) -> dict[str, dict]:
+def _expand_readiness_paths(paths: list[str]) -> list[Path]:
+    expanded: list[Path] = []
+    for raw in paths:
+        p = Path(raw)
+        if p.is_dir():
+            expanded.extend(_collect_readiness_extensions(p))
+        else:
+            expanded.append(p)
+    return sorted(set(expanded))
+
+
+def _parse_report(paths: list[str]) -> dict[str, dict]:
     out: dict[str, dict] = {}
     parser = FortranParser()
     for p in _expand_paths(paths):
@@ -69,11 +91,6 @@ def _parse_report(paths: list[str], *, readiness_pyi_files: list[str] | None = N
             "submodules": [_to_dict_no_parent(m) for m in parsed.submodules],
             "programs": [_to_dict_no_parent(m) for m in parsed.programs],
             "block_data": [_to_dict_no_parent(m) for m in parsed.block_data_units],
-            "wrap_readiness": parser.visit_wrap_readiness(
-                code,
-                filename=str(p),
-                pyi_files=readiness_pyi_files,
-            ),
         }
     return out
 
@@ -102,6 +119,82 @@ def _format_pyi_report(semantic_report: dict[str, dict]) -> str:
         lines.append(payload.get("pyi") or "<no module declarations found>")
         lines.append("")
     return "\n".join(lines).rstrip()
+
+
+def _wrap_readiness_report(paths: list[str]) -> dict[str, dict]:
+    out: dict[str, dict] = {}
+    parser = FortranParser()
+    for p in _expand_readiness_paths(paths):
+        if p.suffix.lower() == ".pyi":
+            modules = [load_pyi_file(p)]
+            source_kind = "pyi"
+        else:
+            code = p.read_text(encoding="utf-8")
+            parsed = parser.visit_file(code, filename=str(p))
+            modules = fortran_file_to_semantic_modules(parsed, standalone_module_name=p.stem)
+            source_kind = "fortran"
+
+        out[str(p)] = {
+            "source_kind": source_kind,
+            "semantic_modules": [asdict(module) for module in modules],
+            "wrap_readiness": assess_semantic_wrap_readiness(modules, source=str(p)),
+        }
+    return out
+
+
+def _attach_wrap_readiness(payload: dict[str, dict] | None, readiness_report: dict[str, dict] | None) -> None:
+    if not payload or not readiness_report:
+        return
+    for fname, report in payload.items():
+        readiness = readiness_report.get(fname)
+        if readiness is None:
+            continue
+        report["wrap_readiness"] = readiness["wrap_readiness"]
+
+
+def _format_semantic_blocker_item(code: str, item) -> str:
+    if code == "unresolved_semantic_types":
+        return f"{item['owner']} uses unresolved type {item['type']}"
+    if code == "unresolved_shape_symbols":
+        return f"{item['owner']} shape {item['expression']!r} uses unresolved symbol {item['symbol']}"
+    if code == "missing_compile_time_values":
+        return f"{item['owner']} needs literal value for Final constant {item['symbol']}"
+    if code == "callback_signature_incomplete":
+        needs = ", ".join(item.get("needs") or [])
+        return f"{item['owner']} needs Callable[[...], ...] metadata ({needs})"
+    if code == "no_public_api":
+        needs = ", ".join(item.get("needs") or [])
+        return f"{item['owner']} needs {needs}"
+    return str(item)
+
+
+def _format_semantic_readiness(readiness_report: dict[str, dict]) -> str:
+    lines: list[str] = []
+    for fname, payload in readiness_report.items():
+        readiness = payload.get("wrap_readiness", {})
+        module_names = [
+            module.get("name", "<unknown>")
+            for module in payload.get("semantic_modules", [])
+        ]
+        lines.append(f"File: {fname}")
+        lines.append(f"  Source: {payload.get('source_kind', '<unknown>')}")
+        lines.append(f"  Semantic modules: {', '.join(module_names) or '<none>'}")
+        lines.append(f"  Wrappable: {'yes' if readiness.get('wrappable') else 'no'}")
+        lines.append(f"  Public functions: {readiness.get('n_functions', 0)}")
+        lines.append(f"  Public classes: {readiness.get('n_classes', 0)}")
+        lines.append(f"  Public variables: {readiness.get('n_variables', 0)}")
+        blockers = readiness.get("wrappability_blockers") or []
+        if blockers:
+            lines.append("  Why not wrappable:")
+            for blocker in blockers:
+                lines.append(f"    - {blocker.get('code')}: {blocker.get('message')}")
+                for item in blocker.get("items") or []:
+                    lines.append(f"      * {_format_semantic_blocker_item(blocker.get('code', ''), item)}")
+        else:
+            lines.append("  No semantic readiness blockers detected.")
+        lines.append("")
+    return "\n".join(lines).rstrip()
+
 
 def print_pyi_output(code: str) -> None:
     # Safe fallback for files, pipes, CI, unsupported terminals, etc.
@@ -154,21 +247,25 @@ def main() -> int:
             "  Write one JSON file next to each source:\n"
             "    python -m x2py path/to/src_dir --parse --out\n"
             "  Show wrap-readiness only:\n"
-            "    python -m x2py path/to/file.f90 --parse --wrap-readiness\n"
-            "  Show wrap-readiness using user-provided .pyi facts:\n"
-            "    python -m x2py path/to/file.f90 --parse --wrap-readiness --readiness-pyi path/to/context.pyi\n"
+            "    python -m x2py path/to/file.f90 --wrap-readiness\n"
             "  Print semantic IR JSON:\n"
             "    python -m x2py path/to/file.f90 --semantics\n"
             "  Print generated Python stub text:\n"
             "    python -m x2py path/to/file.f90 --pyi\n"
             "  Write generated Python stub text:\n"
             "    python -m x2py path/to/file.f90 --pyi --out module.pyi\n"
+            "  Print semantic IR with readiness attached:\n"
+            "    python -m x2py path/to/file.f90 --semantics --wrap-readiness\n"
+            "  Check edited .pyi semantic readiness:\n"
+            "    python -m x2py path/to/module.pyi --wrap-readiness\n"
+            "  Print semantic readiness JSON:\n"
+            "    python -m x2py path/to/module.pyi --wrap-readiness --json\n"
             "\nOptional:\n"
             "  Install 'rich' for colored terminal syntax highlighting:\n"
             "      pip install rich"
         ),
     )
-    parser.add_argument("paths", nargs="+", help="Fortran file(s) or directory path(s)")
+    parser.add_argument("paths", nargs="+", help="Fortran source file(s), .pyi file(s), or directory path(s)")
     parser.add_argument("--parse", action="store_true", help="Run and output parser stage report")
     parser.add_argument(
         "--show-vars",
@@ -190,35 +287,18 @@ def main() -> int:
     parser.add_argument(
         "--wrap-readiness",
         action="store_true",
-        help="Show wrap-readiness status and blockers for parsed files",
+        help="Convert Fortran or .pyi input to semantic IR and show wrapper readiness",
     )
     parser.add_argument("--semantics", action="store_true", help="Generate semantic IR models from parsed Fortran modules")
     parser.add_argument("--pyi", action="store_true", help="Generate Python .pyi content")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
     parser.add_argument("--out", nargs="?", const="", type=str, help="Write stage output to file (optional explicit output filename)")
-    parser.add_argument(
-        "--readiness-pyi",
-        action="append",
-        default=[],
-        metavar="PATH",
-        help=(
-            "Use an edited .pyi file as wrap-readiness context for imported "
-            "derived types, literal Final[...] constants, and Callable[...] callbacks. "
-            "May be repeated."
-        ),
-    )
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI color in parse diagnostics")
     parser.add_argument("--debug-traceback", action="store_true", help="Re-raise parser errors for debug")
     args = parser.parse_args()
 
-    if args.out is not None and not (args.parse or args.semantics or args.pyi):
-        parser.error("--out requires a stage flag: choose one of --parse, --semantics, or --pyi")
-
-    if args.wrap_readiness and not args.parse:
-        parser.error("--wrap-readiness requires --parse")
-
-    if args.readiness_pyi and not args.parse:
-        parser.error("--readiness-pyi requires --parse")
+    if args.out is not None and not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
+        parser.error("--out requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness")
 
     if (args.show_vars or args.print_limit is not None or args.vars_limit is not None) and not args.parse:
         parser.error("--show-vars/--print-limit require --parse")
@@ -227,28 +307,32 @@ def main() -> int:
     if print_limit is not None and print_limit < 0:
         parser.error("--print-limit must be >= 0")
 
-    if args.wrap_readiness and args.json:
-        parser.error("--wrap-readiness cannot be combined with --json")
-
-    if args.wrap_readiness and args.out is not None:
-        parser.error("--wrap-readiness cannot be combined with --out")
-
-    if not (args.parse or args.semantics or args.pyi):
-        parser.error("Select at least one stage flag: --parse, --semantics, or --pyi")
-
-    if args.json and not args.parse:
-        parser.error("JSON output currently supports only the parsing stage. Use --parse with --json/--out.")
+    if not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
+        parser.error("Select at least one stage flag: --parse, --semantics, --pyi, or --wrap-readiness")
 
     try:
-        parse_payload = _parse_report(args.paths, readiness_pyi_files=args.readiness_pyi) if args.parse else None
+        parse_payload = _parse_report(args.paths) if args.parse else None
         semantic_payload = _semantic_report(args.paths) if (args.semantics or args.pyi) else None
+        readiness_payload = _wrap_readiness_report(args.paths) if args.wrap_readiness else None
+        _attach_wrap_readiness(parse_payload, readiness_payload)
+        _attach_wrap_readiness(semantic_payload, readiness_payload)
     except FortranParseError as exc:
         if args.debug_traceback or _env_flag("FORTRAN_PARSER_DEBUG"):
             raise
         print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
         return 1
+    except (SyntaxError, ValueError) as exc:
+        if args.debug_traceback or _env_flag("X2PY_DEBUG"):
+            raise
+        print(f"x2py: error: {exc}", file=sys.stderr)
+        return 1
 
-    payload = parse_payload or {} if args.parse else semantic_payload or {}
+    if args.parse:
+        payload = parse_payload or {}
+    elif args.semantics or args.pyi:
+        payload = semantic_payload or {}
+    else:
+        payload = readiness_payload or {}
 
     if args.out is not None:
         if args.json and args.pyi:
@@ -273,7 +357,20 @@ def main() -> int:
         return 0
 
     if args.wrap_readiness:
-        print(_format_wrap_readiness(parse_payload or {}))
+        if args.parse and not args.json:
+            print(_format_report(parse_payload or {}, show_vars=args.show_vars or args.vars_limit is not None, print_limit=print_limit))
+            print()
+            print(_format_semantic_readiness(readiness_payload or {}))
+        elif args.pyi and not args.json:
+            print_pyi_output(_format_pyi_report(semantic_payload or {}))
+            print()
+            print(_format_semantic_readiness(readiness_payload or {}))
+        elif args.parse or args.semantics or args.pyi:
+            print(json.dumps(payload, indent=2))
+        elif args.json:
+            print(json.dumps(readiness_payload or {}, indent=2))
+        else:
+            print(_format_semantic_readiness(readiness_payload or {}))
     elif args.pyi and not args.json:
         print_pyi_output(_format_pyi_report(semantic_payload or {}))
     elif args.parse and not (args.semantics or args.json or args.pyi):

@@ -21,6 +21,7 @@ from semantics.fortran2ir import (
     resolve_semantic_compile_time_values,
 )
 from semantics.pyi_parser import convert_pyi_to_ir, load_pyi_file, parse_pyi_text
+from semantics.readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
 
 from .cli import main
 
@@ -36,6 +37,8 @@ __all__ = (
     "FortranProgram",
     "FortranProject",
     "FortranSubmodule",
+    "assess_pyi_wrap_readiness",
+    "assess_semantic_wrap_readiness",
     "assess_wrap_readiness",
     "collect_semantic_compile_time_requirements",
     "convert_pyi_to_ir",

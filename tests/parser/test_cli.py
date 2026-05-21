@@ -103,12 +103,37 @@ end module many_procs
 
 
 def test_cli_wrap_readiness_output():
-    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--parse", "--wrap-readiness"]
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--wrap-readiness"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert f"File: {TEST_FILE}" in res.stdout
+    assert "Source: fortran" in res.stdout
     assert "Wrappable: yes" in res.stdout
-    assert "No wrap-readiness blockers detected." in res.stdout
+    assert "No semantic readiness blockers detected." in res.stdout
     assert "Modules:" not in res.stdout
+
+
+def test_cli_wrap_readiness_json_output():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--wrap-readiness", "--json"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+    assert payload[str(TEST_FILE)]["source_kind"] == "fortran"
+    assert payload[str(TEST_FILE)]["wrap_readiness"]["wrappable"] is True
+
+
+def test_cli_parse_can_include_semantic_wrap_readiness():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--parse", "--wrap-readiness"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    assert "subroutine add1" in res.stdout
+    assert "Source: fortran" in res.stdout
+    assert "Wrappable: yes" in res.stdout
+
+
+def test_cli_semantics_can_include_semantic_wrap_readiness():
+    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--semantics", "--wrap-readiness"]
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+    assert payload[str(TEST_FILE)]["semantic_modules"]
+    assert payload[str(TEST_FILE)]["wrap_readiness"]["wrappable"] is True
 
 
 def test_cli_json_out(tmp_path: Path):
@@ -305,11 +330,11 @@ def test_cli_semantics_without_json_output():
     assert "semantic_modules" in payload[str(TEST_FILE)]
 
 
-def test_cli_semantics_json_requires_parse():
+def test_cli_semantics_json_output():
     cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--semantics", "--json"]
-    res = subprocess.run(cmd, capture_output=True, text=True)
-    assert res.returncode == 2
-    assert "JSON output currently supports only the parsing stage" in res.stderr
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+    assert payload[str(TEST_FILE)]["semantic_modules"]
 
 
 def test_cli_pyi_output():
@@ -507,7 +532,9 @@ def test_cli_help_includes_examples():
     assert "python -m x2py path/to/file.f90 --parse" in res.stdout
     assert "python -m x2py path/to/file.f90 --parse --show-vars" in res.stdout
     assert "python -m x2py path/to/file.f90 --parse --print-limit 50" in res.stdout
-    assert "python -m x2py path/to/file.f90 --parse --wrap-readiness" in res.stdout
+    assert "python -m x2py path/to/file.f90 --wrap-readiness" in res.stdout
+    assert "python -m x2py path/to/file.f90 --semantics --wrap-readiness" in res.stdout
+    assert "python -m x2py path/to/module.pyi --wrap-readiness" in res.stdout
     assert "python -m x2py path/to/file.f90 --pyi --out module.pyi" in res.stdout
 
 
@@ -846,9 +873,6 @@ def test_x2py_print_pyi_output_uses_rich_and_falls_back(monkeypatch, capsys):
 @pytest.mark.parametrize(
     ("extra_args", "message"),
     [
-        (["--wrap-readiness"], "--wrap-readiness requires --parse"),
-        (["--parse", "--wrap-readiness", "--json"], "--wrap-readiness cannot be combined with --json"),
-        (["--parse", "--wrap-readiness", "--out"], "--wrap-readiness cannot be combined with --out"),
         ([], "Select at least one stage flag"),
     ],
 )
@@ -956,7 +980,7 @@ end module m
     assert capsys.readouterr().out == ""
     assert json.loads(json_out.read_text(encoding="utf-8")).get(str(f90)) is not None
 
-    monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--parse", "--wrap-readiness"])
+    monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--wrap-readiness"])
     assert x2py_cli.main() == 0
     assert "Wrappable: yes" in capsys.readouterr().out
 
