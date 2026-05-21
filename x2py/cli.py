@@ -7,6 +7,8 @@ import sys
 from dataclasses import asdict, fields, is_dataclass
 from pathlib import Path
 
+from c_parser.cli import format_c_report, parse_c_report
+from c_parser.models import CParseError
 from fortran_parser.models import FortranParseError
 from fortran_parser.parser import FortranParser
 from fortran_parser.cli import _format_report
@@ -242,6 +244,8 @@ def main() -> int:
             "    python -m x2py path/to/src_dir --parse --print-limit 20\n"
             "  Print parser JSON:\n"
             "    python -m x2py path/to/file.f90 --parse --json\n"
+            "  Parse C skeleton JSON:\n"
+            "    python -m x2py path/to/api.h --language c --parse --json\n"
             "  Write parser JSON:\n"
             "    python -m x2py path/to/file.f90 --parse --json --out report.json\n"
             "  Write one JSON file next to each source:\n"
@@ -265,7 +269,13 @@ def main() -> int:
             "      pip install rich"
         ),
     )
-    parser.add_argument("paths", nargs="+", help="Fortran source file(s), .pyi file(s), or directory path(s)")
+    parser.add_argument("paths", nargs="+", help="Source file(s), .pyi file(s), or directory path(s)")
+    parser.add_argument(
+        "--language",
+        choices=("fortran", "c"),
+        default="fortran",
+        help="Frontend language. Defaults to fortran; C currently supports only --parse skeleton output.",
+    )
     parser.add_argument("--parse", action="store_true", help="Run and output parser stage report")
     parser.add_argument(
         "--show-vars",
@@ -297,6 +307,18 @@ def main() -> int:
     parser.add_argument("--debug-traceback", action="store_true", help="Re-raise parser errors for debug")
     args = parser.parse_args()
 
+    if args.language == "c":
+        if not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
+            parser.error("--language c requires --parse; C semantics and .pyi output are not supported yet")
+        if args.semantics:
+            parser.error("--semantics is not supported for --language c yet")
+        if args.pyi:
+            parser.error("--pyi is not supported for --language c yet")
+        if args.wrap_readiness:
+            parser.error("--wrap-readiness is semantic-layer output and is not supported for --language c yet")
+        if args.show_vars or args.print_limit is not None or args.vars_limit is not None:
+            parser.error("--show-vars/--print-limit are Fortran-only and are not supported for --language c")
+
     if args.out is not None and not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
         parser.error("--out requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness")
 
@@ -311,10 +333,19 @@ def main() -> int:
         parser.error("Select at least one stage flag: --parse, --semantics, --pyi, or --wrap-readiness")
 
     try:
-        parse_payload = _parse_report(args.paths) if args.parse else None
+        parse_payload = (
+            parse_c_report(args.paths)
+            if args.parse and args.language == "c"
+            else _parse_report(args.paths) if args.parse else None
+        )
         semantic_payload = _semantic_report(args.paths) if (args.semantics or args.pyi) else None
         readiness_payload = _wrap_readiness_report(args.paths) if args.wrap_readiness else None
         _attach_wrap_readiness(semantic_payload, readiness_payload)
+    except CParseError as exc:
+        if args.debug_traceback or _env_flag("C_PARSER_DEBUG"):
+            raise
+        print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
+        return 1
     except FortranParseError as exc:
         if args.debug_traceback or _env_flag("FORTRAN_PARSER_DEBUG"):
             raise
@@ -378,7 +409,10 @@ def main() -> int:
     elif args.pyi and not args.json:
         print_pyi_output(_format_pyi_report(semantic_payload or {}))
     elif args.parse and not (args.semantics or args.json or args.pyi):
-        print(_format_report(parse_payload or {}, show_vars=args.show_vars or args.vars_limit is not None, print_limit=print_limit))
+        if args.language == "c":
+            print(format_c_report(parse_payload or {}))
+        else:
+            print(_format_report(parse_payload or {}, show_vars=args.show_vars or args.vars_limit is not None, print_limit=print_limit))
     else:
         print(json.dumps(payload, indent=2))
 

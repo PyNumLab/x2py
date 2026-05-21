@@ -1,11 +1,43 @@
 # C Parser CLI Workflow Plan
 
-Status: planning only. No C parser CLI implementation exists in this branch
-yet.
+Status: C parser skeleton implemented. The CLI command shape and stable empty
+parse report exist, but no real C declarations are parsed yet.
 
 The C parser CLI workflow should be designed before parser implementation so
 future parser work lands behind a stable command shape, output schema, and
 diagnostic contract.
+
+## Current Status
+
+Implemented skeleton commands:
+
+```bash
+python -m x2py path/to/api.h --language c --parse
+python -m x2py path/to/api.h --language c --parse --json
+python -m x2py path/to/api.h --language c --parse --out report.json
+```
+
+The skeleton accepts explicit `.c` and `.h` files, plus directories in
+explicit C mode. Directory scanning in C mode only collects `.c` and `.h`
+files. Auto-detection is deferred, so omitting `--language` keeps the current
+Fortran behavior.
+
+The C parser output differs from Fortran parser output by using C-specific
+top-level sections: `functions`, `structs`, `unions`, `enums`, `typedefs`,
+`globals`, `macros`, `includes`, and `diagnostics`. During the skeleton phase
+all of those lists are empty and `parser_status` is `"skeleton"`.
+
+Unsupported C stages:
+
+```bash
+python -m x2py path/to/api.h --language c --semantics
+python -m x2py path/to/api.h --language c --pyi
+python -m x2py path/to/api.h --language c --wrap-readiness
+```
+
+These commands return clear argparse errors until C semantic IR conversion and
+`.pyi` generation are implemented. Fortran-only parse display flags such as
+`--show-vars` and `--print-limit` are rejected in C mode.
 
 ## Current CLI Baseline
 
@@ -56,7 +88,7 @@ Rationale:
 - It lets Fortran remain the default during the long C parser stabilization
   period.
 
-Optional short alias:
+Optional short alias, not implemented in the skeleton:
 
 ```bash
 x2py <path ...> --parse-c
@@ -87,6 +119,11 @@ Initial flags:
 --no-color
 --debug-traceback
 ```
+
+Skeleton behavior also accepts `--no-color`. `CParseError` already supports
+compiler-style diagnostic formatting and the `C_PARSER_DEBUG` environment
+variable, although the skeleton parser does not yet raise syntax diagnostics
+for declaration-shaped input.
 
 C-specific flags to add only when needed:
 
@@ -128,8 +165,10 @@ File: include/example.h
   Unions: 0
   Enums: 0
   Typedefs: 0
+  Globals: 0
   Macros: 0
   Includes: 0
+  Diagnostics: 0
   Parser status: skeleton
 ```
 
@@ -138,8 +177,10 @@ JSON output:
 ```json
 {
   "include/example.h": {
+    "filename": "include/example.h",
     "language": "c",
     "parser_status": "skeleton",
+    "preprocessing": "raw",
     "functions": [],
     "structs": [],
     "unions": [],
@@ -164,7 +205,9 @@ the concepts differ. Proposed top-level per-file keys:
 
 ```text
 language
+filename
 parser_status
+preprocessing
 functions
 structs
 unions
@@ -235,7 +278,7 @@ Default CLI behavior:
 Debug behavior:
 
 - `--debug-traceback` re-raises the error
-- a C-specific env var such as `C_PARSER_DEBUG=1` may be added
+- `C_PARSER_DEBUG=1` re-raises C parser errors
 - `FORTRAN_PARSER_DEBUG` should not control C behavior
 - a generic `X2PY_DEBUG=1` may be considered later
 
@@ -247,19 +290,19 @@ Color behavior:
 
 ## CLI Test Expectations
 
-Phase 1 should add CLI tests before real parsing:
+Phase 1 has CLI tests before real parsing:
 
 - Existing Fortran CLI tests still pass unchanged.
 - `python -m x2py --help` lists `--language`.
 - `python -m x2py <file.c> --language c --parse` is accepted.
-- `python -m x2py <file.c> --parse-c` is accepted only if the alias is added.
+- `python -m x2py <file.c> --parse-c` is not implemented in the skeleton.
 - `--language c --parse --json` emits stable skeleton JSON.
 - `--language c --parse --out report.json` writes JSON and suppresses stdout.
-- `--language c --parse --no-color` affects C diagnostics.
-- `--language c --parse --debug-traceback` re-raises `CParseError` once the
-  error class exists.
-- `--show-vars` remains Fortran-specific or is rejected for C until a C
-  equivalent exists.
+- `--language c --parse --no-color` is accepted; real diagnostic color tests
+  will matter once parser errors can be raised by C syntax.
+- `--language c --parse --debug-traceback` is accepted.
+- `--show-vars` and `--print-limit` are rejected in C mode until C-specific
+  display controls exist.
 - `--semantics` with `--language c` is rejected until C semantic conversion is
   implemented.
 - `--pyi` with `--language c` is rejected until C `.pyi` emission is
@@ -267,10 +310,15 @@ Phase 1 should add CLI tests before real parsing:
 
 ## Integration Order
 
-1. Add CLI language selection behind explicit flags.
-2. Keep Fortran as default behavior.
-3. Add a skeleton C report provider with no parser logic.
-4. Add C-specific docs for command shape and placeholder output.
-5. Add CLI tests around discovery, stable command behavior, JSON, output
-   files, and diagnostics.
-6. Only then begin parser package/model work.
+Completed skeleton order:
+
+1. Added CLI language selection behind explicit flags.
+2. Kept Fortran as default behavior.
+3. Added a C parser package and skeleton C report provider with no grammar
+   parsing.
+4. Added C-specific docs for command shape and placeholder output.
+5. Added CLI/API tests around discovery, stable command behavior, JSON, output
+   files, public entrypoints, and diagnostic formatting.
+
+Next implementation work should begin with lexer/preprocessor and declaration
+model behavior while keeping the explicit `--language c` gate in place.

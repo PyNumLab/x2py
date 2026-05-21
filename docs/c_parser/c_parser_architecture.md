@@ -1,11 +1,41 @@
 # C Parser Architecture Plan
 
-Status: planning only. No C parser implementation exists in this branch yet.
+Status: skeleton implemented. The `c_parser` package, typed skeleton models,
+public skeleton entrypoints, and explicit `x2py --language c --parse` CLI path
+exist. Real C grammar parsing is still deferred.
 
-This document records the target architecture for a future C parser frontend in
-x2py. The design is based on inspection of the current Fortran parser,
-semantic IR conversion layer, `.pyi` parser/printer, CLI, tests, and fixture
-workflow.
+This document records the target architecture for the C parser frontend in
+x2py. The initial skeleton now exists, and the remaining sections describe the
+architecture it should grow into. The design is based on inspection of the
+current Fortran parser, semantic IR conversion layer, `.pyi` parser/printer,
+CLI, tests, and fixture workflow.
+
+## Current Implementation Snapshot
+
+Implemented now:
+
+- `c_parser/` package exists and is included in package discovery.
+- `c_parser.models` defines JSON-stable skeleton dataclasses and `CParseError`.
+- `c_parser.parser` exposes `CParser`, `parse_c_file`, and `parse_c_project`.
+- `c_parser.cli` provides C-specific skeleton report formatting.
+- `x2py.cli` dispatches `--language c --parse` to the C skeleton path.
+- `--language c --semantics`, `--language c --pyi`, and C wrap-readiness are
+  rejected until semantic conversion exists.
+- Focused skeleton CLI/API tests are unskipped while broader roadmap tests
+  remain skipped.
+
+Deferred:
+
+- lexer and lightweight preprocessing behavior
+- declaration/declarator parsing
+- function, struct, union, enum, typedef, global, macro, and include extraction
+- include graph and project type resolution
+- C semantic readiness, semantic IR conversion, and `.pyi` output
+
+Documentation rule: any future C parser implementation change must update all
+affected docs under `docs/c_parser/` in the same change. This applies to model,
+parser, CLI, test, fixture, semantic, and `.pyi` changes; documentation updates
+should not wait for a separate request.
 
 ## Inspected Repository Areas
 
@@ -104,10 +134,10 @@ for `.i` files or macro-expanded views, but the x2py C frontend still needs its
 own typed parser models, source-location handling, diagnostics, and project
 indexes. Invoking a compiler must not replace the grammar-style parser.
 
-## Target Package Layout
+## Package Layout
 
-The future implementation should live in a separate package so it does not
-destabilize the Fortran parser:
+The implementation lives in a separate package so it does not destabilize the
+Fortran parser:
 
 ```text
 c_parser/
@@ -123,59 +153,63 @@ c_parser/
   utils.py
 ```
 
-Planned responsibilities:
+Current and planned responsibilities:
 
 - `c_parser/models.py`
-  - Typed parser models.
-  - `CParseError` and compiler-style diagnostic rendering.
-  - JSON-stable dataclasses for files, translation units, declarations, types,
-    functions, macros/constants, and project indexes.
+  - Implemented: typed skeleton parser models, `CParseError`, compiler-style
+    diagnostic rendering, and JSON-stable dataclass serialization.
+  - Planned: richer source facts for declarations, types, functions,
+    macros/constants, and project indexes.
 - `c_parser/lexer.py`
-  - Tokenization and source-location preservation.
+  - Placeholder now.
+  - Planned: tokenization and source-location preservation.
   - Comment removal that preserves line mapping.
   - String/character literal awareness.
   - Line continuation handling for backslash-newline.
 - `c_parser/preprocessor.py`
-  - Lightweight preprocessing metadata.
+  - Placeholder now.
+  - Planned: lightweight preprocessing metadata.
   - Include directive collection.
   - Conditional branch tracking.
   - Object-like macro collection where safe.
   - Explicit diagnostics for unsupported macro patterns.
 - `c_parser/parser.py`
-  - Grammar-style recursive parser.
-  - Translation-unit visitor.
-  - Declaration, declarator, function, struct, union, enum, typedef, and global
-    variable visitors.
-  - Shared declaration/declarator parser.
-  - Module-level convenience wrappers.
+  - Implemented: skeleton `CParser`, `parse_c_file`, and `parse_c_project`.
+  - Planned: grammar-style recursive parser, translation-unit visitor,
+    declaration/declarator/function/composite-type visitors, and shared
+    declaration/declarator parsing.
 - `c_parser/project.py`
-  - File discovery for `.c`, `.h`, and possibly `.i`.
+  - Placeholder now.
+  - Planned: file discovery for `.c`, `.h`, and possibly `.i`.
   - Include graph construction.
   - Header/source association.
   - Cross-file type and typedef resolution.
 - `c_parser/type_resolver.py`
-  - C primitive type normalization.
+  - Placeholder now.
+  - Planned: C primitive type normalization.
   - Qualifier/storage-class handling.
   - Typedef chain resolution.
   - Pointer/array/function-pointer type helpers.
   - Safe constant expression folding for simple compile-time values.
 - `c_parser/cli.py`
-  - C-specific report formatting and serialization helpers.
-  - Called by `x2py.cli` behind explicit C flags.
+  - Implemented: skeleton report formatting and serialization helpers called by
+    `x2py.cli` behind explicit C flags.
+  - Planned: richer human output once real C facts are populated.
 - `c_parser/utils.py`
-  - Top-level splitting helpers for comma, parentheses, brackets, braces, and
-    declarator fragments.
+  - Placeholder now.
+  - Planned: top-level splitting helpers for comma, parentheses, brackets,
+    braces, and declarator fragments.
 
 ## Public API Shape
 
-The public C API should mirror the Fortran style but remain C-specific:
+The public C API mirrors the Fortran style but remains C-specific:
 
 ```python
-parse_c_file(source_or_path, filename=None, macro_defines=None, include_dirs=None, encoding="utf-8") -> CFile
-parse_c_project(files, include_dirs=None, macro_defines=None, encoding="utf-8") -> CProject
+parse_c_file(source_or_path, filename=None, macro_defines=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile
+parse_c_project(files, include_dirs=None, macro_defines=None, preprocessing="raw", encoding="utf-8") -> CProject
 ```
 
-Expected companion class:
+Implemented companion class:
 
 ```python
 class CParser:
@@ -183,14 +217,13 @@ class CParser:
     def visit_project(...): ...
 ```
 
-The initial implementation should not re-export these from `x2py.__init__`
-until the API is useful and tested. During early phases, it may be acceptable to
-expose the skeleton only under `c_parser` and integrate the CLI with explicit
-flags.
+These entrypoints are exposed from `c_parser`, not re-exported from
+`x2py.__init__`. Keeping the skeleton API under `c_parser` avoids making the
+top-level x2py API promise C behavior before real parsing exists.
 
 ## Core Model Families
 
-Proposed parser models:
+Implemented skeleton parser models:
 
 - `CSourceLocation`
   - `filename`
@@ -215,67 +248,74 @@ Proposed parser models:
   - `typedef_name`
   - `pointers`
   - `arrays`
-  - `function_pointer`
+  - `kind`
   - `source_text`
+  - `resolved`
 - `CPointer`
   - `qualifiers`
-  - `level`
 - `CArray`
   - `size`
-  - `is_static`
-  - `qualifiers`
+  - `static`
 - `CParameter`
   - `name`
   - `type`
   - `source_location`
-  - `is_variadic_marker`
 - `CFunction`
   - `name`
   - `return_type`
   - `parameters`
-  - `storage_class`
-  - `qualifiers`
-  - `is_variadic`
+  - `storage`
+  - `specifiers`
+  - `variadic`
   - `is_definition`
-  - `body_span`
   - `source_location`
 - `CField`
   - `name`
   - `type`
-  - `bit_width`
   - `source_location`
 - `CStruct`
   - `name`
   - `fields`
-  - `is_union`
-  - `is_anonymous`
-  - `typedef_names`
+  - `anonymous_id`
+  - `opaque`
+  - `source_location`
+- `CUnion`
+  - `name`
+  - `fields`
+  - `anonymous_id`
   - `source_location`
 - `CEnum`
   - `name`
-  - `enumerators`
-  - `typedef_names`
+  - `constants`
+  - `anonymous_id`
   - `source_location`
 - `CEnumerator`
   - `name`
   - `value`
-  - `symbolic_value`
   - `source_location`
 - `CTypedef`
   - `name`
-  - `target_type`
+  - `type`
+  - `source_location`
+- `CGlobal`
+  - `name`
+  - `type`
   - `source_location`
 - `CMacro`
   - `name`
   - `value`
-  - `macro_kind`
-  - `parameters`
-  - `is_safe_constant`
+  - `function_like`
+  - `source_location`
+- `CInclude`
+  - `target`
+  - `kind`
+  - `resolved_path`
   - `source_location`
 - `CFile`
   - `filename`
-  - `source`
-  - `encoding`
+  - `language`
+  - `parser_status`
+  - `preprocessing`
   - `functions`
   - `structs`
   - `unions`
@@ -285,16 +325,21 @@ Proposed parser models:
   - `macros`
   - `includes`
   - `diagnostics`
-  - `symbols`
 - `CProject`
   - `files`
   - `functions`
-  - `types`
+  - `structs`
+  - `unions`
+  - `enums`
   - `typedefs`
+  - `globals`
   - `macros`
-  - `include_graph`
-  - `header_source_pairs`
-  - `diagnostics`
+  - `includes`
+
+Future parser phases can add fields such as source spans, bit widths, function
+pointer metadata, conditional-region metadata, include graphs, and project
+diagnostics when the corresponding behavior lands. Additions should be
+documented and tested with stable serialization expectations.
 
 ## Grammar-Style Parsing Strategy
 
@@ -418,7 +463,15 @@ Initial non-goal:
 C project parsing should account for include graphs instead of Fortran `use`
 graphs.
 
-Planned behavior:
+Skeleton behavior:
+
+- `parse_c_project` accepts mappings, explicit paths, and directories.
+- Directory mode currently discovers `.c` and `.h` files only.
+- Returned `CProject` objects contain parsed empty `CFile` skeletons.
+- Include graphs, cross-file indexes, and type resolution are not populated
+  yet.
+
+Planned behavior after project-resolution phases:
 
 - Collect `.c`, `.h`, and eventually `.i` files from explicit paths or
   directories.

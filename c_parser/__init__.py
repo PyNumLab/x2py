@@ -1,0 +1,50 @@
+# -*- coding: utf-8 -*-
+"""Public C parser skeleton package."""
+
+from .models import (
+    CArray,
+    CDiagnostic,
+    CEnum,
+    CEnumerator,
+    CField,
+    CFile,
+    CFunction,
+    CGlobal,
+    CInclude,
+    CMacro,
+    CParameter,
+    CParseError,
+    CPointer,
+    CProject,
+    CSourceLocation,
+    CStruct,
+    CTypeRef,
+    CTypedef,
+    CUnion,
+)
+from .parser import CParser, parse_c_file, parse_c_project
+
+__all__ = (
+    "CArray",
+    "CDiagnostic",
+    "CEnum",
+    "CEnumerator",
+    "CField",
+    "CFile",
+    "CFunction",
+    "CGlobal",
+    "CInclude",
+    "CMacro",
+    "CParameter",
+    "CParseError",
+    "CPointer",
+    "CParser",
+    "CProject",
+    "CSourceLocation",
+    "CStruct",
+    "CTypeRef",
+    "CTypedef",
+    "CUnion",
+    "parse_c_file",
+    "parse_c_project",
+)
