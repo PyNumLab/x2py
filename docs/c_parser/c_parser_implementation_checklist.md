@@ -1,6 +1,8 @@
 # C Parser Implementation Checklist
 
-Status: planning checklist. No parser implementation exists in this branch yet.
+Status: implementation checklist with Phase 1 skeleton and selected Phase 3
+skeleton work complete. The `c_parser` package and explicit C parse skeleton
+exist, but real C grammar parsing is not implemented yet.
 
 This checklist is intentionally detailed so future work can proceed one branch,
 one checklist item, and one tested capability at a time. The C parser initiative
@@ -35,6 +37,10 @@ stable.
       source locations, diagnostics, or project indexes.
 - [ ] Preserve the semantic IR layer as the source of truth.
 - [ ] Treat documentation as a first-class deliverable in every phase.
+- [ ] Whenever C parser behavior, models, CLI behavior, tests, fixture
+      workflows, semantic integration, or `.pyi` behavior change, update every
+      affected file under `docs/c_parser/` in the same change. Do not wait for
+      a separate documentation request.
 - [ ] Update this checklist when implementation reality changes.
 
 ## Phase 0: Repository Inspection, Branch Setup, And Roadmap
@@ -141,11 +147,11 @@ Scope:
 
 ### Phase 0 Risks And Open Questions
 
-- [ ] Decide whether the future package should be named `c_parser` or another
+- [x] Decide whether the future package should be named `c_parser` or another
       name before code lands.
-- [ ] Decide whether `x2py.__init__` should expose C APIs during skeleton phase
+- [x] Decide whether `x2py.__init__` should expose C APIs during skeleton phase
       or wait until Phase 3 models are useful.
-- [ ] Decide whether C debug env var should be `C_PARSER_DEBUG` or generic
+- [x] Decide whether C debug env var should be `C_PARSER_DEBUG` or generic
       `X2PY_DEBUG`.
 
 ## Phase 1: CLI And Documentation Skeleton First
@@ -164,94 +170,94 @@ Scope:
 
 ### Documentation Tasks
 
-- [ ] Update `docs/c_parser/c_parser_cli_workflow.md` with implemented command
+- [x] Update `docs/c_parser/c_parser_cli_workflow.md` with implemented command
       examples.
-- [ ] Update `docs/c_parser/c_parser_reference.md` with skeleton CLI behavior.
-- [ ] Add a "Current Status" section showing which C features are placeholder
+- [x] Update `docs/c_parser/c_parser_reference.md` with skeleton CLI behavior.
+- [x] Add a "Current Status" section showing which C features are placeholder
       only.
-- [ ] Document how C parser output differs from Fortran parser output.
-- [ ] Document that auto-detection is deferred.
-- [ ] Document that `--language c` is required initially.
-- [ ] Document unsupported `--semantics --language c` behavior.
-- [ ] Document unsupported `--pyi --language c` behavior.
-- [ ] Document C parser diagnostics even if only skeleton diagnostics exist.
-- [ ] Add examples for parse tree, JSON, and output file behavior.
+- [x] Document how C parser output differs from Fortran parser output.
+- [x] Document that auto-detection is deferred.
+- [x] Document that `--language c` is required initially.
+- [x] Document unsupported `--semantics --language c` behavior.
+- [x] Document unsupported `--pyi --language c` behavior.
+- [x] Document C parser diagnostics even if only skeleton diagnostics exist.
+- [x] Add examples for parse tree, JSON, and output file behavior.
 
 ### CLI Design Tasks
 
-- [ ] Add `--language {fortran,c}` to `x2py.cli`.
-- [ ] Preserve current Fortran behavior when `--language` is omitted.
-- [ ] Make `--language fortran` equivalent to current behavior.
-- [ ] Add explicit C parse path behind `--language c --parse`.
-- [ ] Decide whether to add `--parse-c` alias in this phase.
+- [x] Add `--language {fortran,c}` to `x2py.cli`.
+- [x] Preserve current Fortran behavior when `--language` is omitted.
+- [x] Make `--language fortran` equivalent to current behavior.
+- [x] Add explicit C parse path behind `--language c --parse`.
+- [x] Decide not to add `--parse-c` alias in this phase.
 - [ ] If `--parse-c` is added, make it an alias for `--language c --parse`.
-- [ ] Reject `--language c` without a supported stage flag.
-- [ ] Reject `--language c --semantics` until Phase 10.
-- [ ] Reject `--language c --pyi` until Phase 11.
-- [ ] Reject Fortran-only flags in C mode if they do not apply.
-- [ ] Keep `--json` behavior stable for parse output.
-- [ ] Keep `--out` behavior stable for C parse JSON.
-- [ ] Keep `--no-color` accepted in C mode.
-- [ ] Keep `--debug-traceback` accepted in C mode.
-- [ ] Do not change `fortran_parser.cli` unless a compatibility reason is
+- [x] Reject `--language c` without a supported stage flag.
+- [x] Reject `--language c --semantics` until Phase 10.
+- [x] Reject `--language c --pyi` until Phase 11.
+- [x] Reject Fortran-only flags in C mode if they do not apply.
+- [x] Keep `--json` behavior stable for parse output.
+- [x] Keep `--out` behavior stable for C parse JSON.
+- [x] Keep `--no-color` accepted in C mode.
+- [x] Keep `--debug-traceback` accepted in C mode.
+- [x] Do not change `fortran_parser.cli` unless a compatibility reason is
       documented.
 
 ### Skeleton Report Tasks
 
-- [ ] Create a minimal C report provider without real parsing.
-- [ ] Ensure skeleton C report can accept `.c` and `.h` paths.
-- [ ] Ensure skeleton C report can accept directories only in explicit C mode.
-- [ ] Return `language: "c"` in C JSON output.
-- [ ] Return `parser_status: "skeleton"` in C JSON output.
-- [ ] Return empty `functions` list.
-- [ ] Return empty `structs` list.
-- [ ] Return empty `unions` list.
-- [ ] Return empty `enums` list.
-- [ ] Return empty `typedefs` list.
-- [ ] Return empty `globals` list.
-- [ ] Return empty `macros` list.
-- [ ] Return empty `includes` list.
-- [ ] Return empty `diagnostics` list unless a skeleton diagnostic is needed.
-- [ ] Human tree output should show zero-count C sections and skeleton status.
+- [x] Create a minimal C report provider without real parsing.
+- [x] Ensure skeleton C report can accept `.c` and `.h` paths.
+- [x] Ensure skeleton C report can accept directories only in explicit C mode.
+- [x] Return `language: "c"` in C JSON output.
+- [x] Return `parser_status: "skeleton"` in C JSON output.
+- [x] Return empty `functions` list.
+- [x] Return empty `structs` list.
+- [x] Return empty `unions` list.
+- [x] Return empty `enums` list.
+- [x] Return empty `typedefs` list.
+- [x] Return empty `globals` list.
+- [x] Return empty `macros` list.
+- [x] Return empty `includes` list.
+- [x] Return empty `diagnostics` list unless a skeleton diagnostic is needed.
+- [x] Human tree output should show zero-count C sections and skeleton status.
 
 ### CLI Test Tasks
 
-- [ ] Add C CLI tests in a C-specific test file, for example
+- [x] Add C CLI tests in a C-specific test file, for example
       `tests/parser/test_c_cli_skeleton.py` or `tests/c_parser/test_cli.py`.
-- [ ] Test existing Fortran CLI behavior still passes.
-- [ ] Test `--help` shows `--language`.
-- [ ] Test `--language c --parse` accepts a temporary `.h` file.
-- [ ] Test `--language c --parse --json` emits valid JSON.
-- [ ] Test `--language c --parse --out report.json` writes JSON and suppresses
+- [x] Test existing Fortran CLI behavior still passes.
+- [x] Test `--help` shows `--language`.
+- [x] Test `--language c --parse` accepts a temporary `.h` file.
+- [x] Test `--language c --parse --json` emits valid JSON.
+- [x] Test `--language c --parse --out report.json` writes JSON and suppresses
       stdout.
-- [ ] Test `--language c --semantics` returns argparse error or clear
+- [x] Test `--language c --semantics` returns argparse error or clear
       unsupported-stage error.
-- [ ] Test `--language c --pyi` returns argparse error or clear
+- [x] Test `--language c --pyi` returns argparse error or clear
       unsupported-stage error.
-- [ ] Test `--language c --parse --show-vars` is rejected or ignored with
+- [x] Test `--language c --parse --show-vars` is rejected or ignored with
       documented behavior.
-- [ ] Test `--parse` without `--language` remains Fortran behavior.
+- [x] Test `--parse` without `--language` remains Fortran behavior.
 - [ ] If `--parse-c` is added, test it maps to C parse mode.
-- [ ] Test `--no-color` is accepted in C mode.
+- [x] Test `--no-color` is accepted in C mode.
 - [ ] Test `NO_COLOR=1` is honored once C diagnostics exist.
-- [ ] Test `--debug-traceback` is accepted in C mode.
+- [x] Test `--debug-traceback` is accepted in C mode.
 
 ### Phase 1 Definition Of Done
 
-- [ ] Users can discover C mode from CLI help.
-- [ ] Users can run a stable C parse skeleton command.
-- [ ] C JSON skeleton output has a documented schema.
-- [ ] Fortran CLI behavior is unchanged.
-- [ ] Documentation includes the exact command workflow.
-- [ ] Tests cover the skeleton command workflow.
+- [x] Users can discover C mode from CLI help.
+- [x] Users can run a stable C parse skeleton command.
+- [x] C JSON skeleton output has a documented schema.
+- [x] Fortran CLI behavior is unchanged.
+- [x] Documentation includes the exact command workflow.
+- [x] Tests cover the skeleton command workflow.
 
 ### Phase 1 Risks And Open Questions
 
-- [ ] Decide whether to implement a temporary skeleton module inside
+- [x] Decide whether to implement a temporary skeleton module inside
       `x2py.cli` or create `c_parser/cli.py` early.
-- [ ] Decide whether skeleton output should include zero-count sections in
+- [x] Decide whether skeleton output should include zero-count sections in
       human output or omit empty sections like Fortran.
-- [ ] Decide whether `--json` should eventually support semantic C output or
+- [x] Decide whether `--json` should eventually support semantic C output or
       stay parse-only.
 
 ## Phase 2: Testing Infrastructure
@@ -357,7 +363,7 @@ Scope:
 - [ ] C test directory structure is present.
 - [ ] C fixture directory structure is present.
 - [ ] C golden update workflow is documented.
-- [ ] Placeholder tests pass against skeleton behavior.
+- [x] Placeholder tests pass against skeleton behavior.
 - [ ] Fortran tests still pass.
 - [ ] No real parser claims are made without tests.
 
@@ -365,9 +371,9 @@ Scope:
 
 - [x] Run the skipped C roadmap suite and confirm it collects without importing
       `c_parser` at module import time.
-- [ ] Run C skeleton CLI tests.
-- [ ] Run existing parser CLI tests.
-- [ ] Run a small targeted test command, for example
+- [x] Run C skeleton CLI tests.
+- [x] Run existing parser CLI tests.
+- [x] Run a small targeted test command, for example
       `python -m pytest -q tests/parser/test_cli.py tests/parser/test_c_cli_skeleton.py`.
 - [ ] Do not update Fortran goldens.
 
@@ -393,104 +399,104 @@ Scope:
 
 ### Package Skeleton Tasks
 
-- [ ] Create `c_parser/__init__.py`.
-- [ ] Create `c_parser/__main__.py`.
-- [ ] Create `c_parser/models.py`.
-- [ ] Create `c_parser/parser.py`.
-- [ ] Create `c_parser/lexer.py`.
-- [ ] Create `c_parser/preprocessor.py`.
-- [ ] Create `c_parser/type_resolver.py`.
-- [ ] Create `c_parser/project.py`.
-- [ ] Create `c_parser/cli.py`.
-- [ ] Create `c_parser/utils.py`.
-- [ ] Add `c_parser*` to package discovery in `pyproject.toml`.
-- [ ] Add `c_parser` to coverage source when implementation begins.
-- [ ] Keep imports from `x2py.cli` explicit and isolated.
+- [x] Create `c_parser/__init__.py`.
+- [x] Create `c_parser/__main__.py`.
+- [x] Create `c_parser/models.py`.
+- [x] Create `c_parser/parser.py`.
+- [x] Create `c_parser/lexer.py`.
+- [x] Create `c_parser/preprocessor.py`.
+- [x] Create `c_parser/type_resolver.py`.
+- [x] Create `c_parser/project.py`.
+- [x] Create `c_parser/cli.py`.
+- [x] Create `c_parser/utils.py`.
+- [x] Add `c_parser*` to package discovery in `pyproject.toml`.
+- [x] Add `c_parser` to coverage source when implementation begins.
+- [x] Keep imports from `x2py.cli` explicit and isolated.
 
 ### Error Model Tasks
 
-- [ ] Implement `CParseError` as a `ValueError` subclass.
-- [ ] Include `filename`.
-- [ ] Include `line_number`.
-- [ ] Include `column`.
-- [ ] Include `source_line`.
-- [ ] Include `base_message`.
-- [ ] Include `code`.
-- [ ] Include parser raise location for debug diagnostics.
-- [ ] Implement `format_diagnostic(color=False, debug=None)`.
-- [ ] Use C diagnostic code prefix such as `CPARSE001`.
-- [ ] Add color handling equivalent to `FortranParseError`.
-- [ ] Add optional C debug env var.
-- [ ] Test C parse error attributes.
-- [ ] Test compiler-style diagnostic rendering.
+- [x] Implement `CParseError` as a `ValueError` subclass.
+- [x] Include `filename`.
+- [x] Include `line_number`.
+- [x] Include `column`.
+- [x] Include `source_line`.
+- [x] Include `base_message`.
+- [x] Include `code`.
+- [x] Include parser raise location for debug diagnostics.
+- [x] Implement `format_diagnostic(color=False, debug=None)`.
+- [x] Use C diagnostic code prefix such as `CPARSE001`.
+- [x] Add color handling equivalent to `FortranParseError`.
+- [x] Add optional C debug env var.
+- [x] Test C parse error attributes.
+- [x] Test compiler-style diagnostic rendering.
 - [ ] Test color and no-color behavior.
-- [ ] Test debug note behavior.
+- [x] Test debug note behavior.
 
 ### Model Tasks
 
-- [ ] Define `CSourceLocation`.
-- [ ] Define `CDiagnostic`.
-- [ ] Define `CTypeRef`.
-- [ ] Define `CPointer`.
-- [ ] Define `CArray`.
-- [ ] Define `CParameter`.
-- [ ] Define `CFunction`.
-- [ ] Define `CField`.
-- [ ] Define `CStruct`.
-- [ ] Define `CUnion` or use `CStruct(is_union=True)`.
-- [ ] Define `CEnum`.
-- [ ] Define `CEnumerator`.
-- [ ] Define `CTypedef`.
-- [ ] Define `CGlobal`.
-- [ ] Define `CMacro`.
-- [ ] Define `CInclude`.
-- [ ] Define `CFile`.
-- [ ] Define `CProject`.
-- [ ] Add helper properties for pointer depth.
-- [ ] Add helper properties for array rank.
-- [ ] Add helper properties for effective type text.
-- [ ] Add helper properties for `is_const_pointer`.
-- [ ] Add helper properties for `is_opaque_type`.
-- [ ] Add helper properties for source-location display.
+- [x] Define `CSourceLocation`.
+- [x] Define `CDiagnostic`.
+- [x] Define `CTypeRef`.
+- [x] Define `CPointer`.
+- [x] Define `CArray`.
+- [x] Define `CParameter`.
+- [x] Define `CFunction`.
+- [x] Define `CField`.
+- [x] Define `CStruct`.
+- [x] Define `CUnion` or use `CStruct(is_union=True)`.
+- [x] Define `CEnum`.
+- [x] Define `CEnumerator`.
+- [x] Define `CTypedef`.
+- [x] Define `CGlobal`.
+- [x] Define `CMacro`.
+- [x] Define `CInclude`.
+- [x] Define `CFile`.
+- [x] Define `CProject`.
+- [x] Add helper properties for pointer depth.
+- [x] Add helper properties for array rank.
+- [x] Add helper properties for effective type text.
+- [x] Add helper properties for `is_const_pointer`.
+- [x] Add helper properties for `is_opaque_type`.
+- [x] Add helper properties for source-location display.
 
 ### Serialization Tasks
 
-- [ ] Add `_to_dict` or equivalent serialization helper.
-- [ ] Avoid cycles in JSON.
-- [ ] Keep source locations JSON-serializable.
-- [ ] Decide whether sets serialize as sorted lists.
-- [ ] Ensure dataclass defaults produce stable JSON.
-- [ ] Add tests for empty `CFile` serialization.
+- [x] Add `_to_dict` or equivalent serialization helper.
+- [x] Avoid cycles in JSON.
+- [x] Keep source locations JSON-serializable.
+- [x] Decide whether sets serialize as sorted lists.
+- [x] Ensure dataclass defaults produce stable JSON.
+- [x] Add tests for empty `CFile` serialization.
 - [ ] Add tests for each model's minimal JSON shape.
 - [ ] Add tests for source-location serialization.
 - [ ] Add tests that unknown/unresolved metadata is preserved.
 
 ### Public API Skeleton Tasks
 
-- [ ] Implement `CParser` class.
-- [ ] Implement `CParser.visit_file` returning skeleton or model-only `CFile`.
-- [ ] Implement `CParser.visit_project` returning skeleton/model-only
+- [x] Implement `CParser` class.
+- [x] Implement `CParser.visit_file` returning skeleton or model-only `CFile`.
+- [x] Implement `CParser.visit_project` returning skeleton/model-only
       `CProject`.
-- [ ] Implement module-level `_DEFAULT_PARSER`.
-- [ ] Implement `parse_c_file`.
-- [ ] Implement `parse_c_project`.
-- [ ] Add public API tests for source strings.
-- [ ] Add public API tests for file paths.
-- [ ] Add public API tests for empty source.
-- [ ] Add public API tests for unknown suffix.
+- [x] Implement module-level `_DEFAULT_PARSER`.
+- [x] Implement `parse_c_file`.
+- [x] Implement `parse_c_project`.
+- [x] Add public API tests for source strings.
+- [x] Add public API tests for file paths.
+- [x] Add public API tests for empty source.
+- [x] Add public API tests for unknown suffix.
 
 ### Phase 3 Definition Of Done
 
-- [ ] `c_parser` imports cleanly.
-- [ ] Skeleton public APIs return typed models.
-- [ ] JSON serialization is stable and tested.
-- [ ] C CLI uses `c_parser` rather than a temporary inline provider.
-- [ ] Fortran parser API remains unchanged.
-- [ ] Docs describe the new package and API status.
+- [x] `c_parser` imports cleanly.
+- [x] Skeleton public APIs return typed models.
+- [x] JSON serialization is stable and tested.
+- [x] C CLI uses `c_parser` rather than a temporary inline provider.
+- [x] Fortran parser API remains unchanged.
+- [x] Docs describe the new package and API status.
 
 ### Phase 3 Risks And Open Questions
 
-- [ ] Decide whether `CUnion` should subclass/share `CStruct`.
+- [x] Decide whether `CUnion` should subclass/share `CStruct`.
 - [ ] Decide how to represent anonymous structs/unions/enums.
 - [ ] Decide whether macros belong in `CFile.macros` only or also symbols.
 - [ ] Decide whether `CTypeRef` should be a single recursive model or contain

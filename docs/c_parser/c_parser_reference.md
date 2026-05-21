@@ -1,6 +1,7 @@
 # C Parser Reference
 
-Status: planning reference. The C parser is not implemented yet.
+Status: skeleton reference. The `c_parser` package and explicit C CLI parse
+path exist, but no real C declarations are parsed yet.
 
 This document is the future home for the C parser user and developer reference.
 It should evolve into the C equivalent of `fortran_parser.md` as implementation
@@ -39,6 +40,27 @@ Possible later source form:
 
 Project input should accept explicit files and directories. Directory scanning
 must be explicit C mode at first to avoid changing Fortran CLI behavior.
+
+## Current Status
+
+Implemented:
+
+- `c_parser` package skeleton
+- typed empty C parser models
+- `CParser`, `parse_c_file`, and `parse_c_project`
+- `CParseError` with compiler-style diagnostic formatting
+- explicit `x2py --language c --parse` skeleton output
+- C JSON skeleton output and `--out` behavior
+- rejection of C `--semantics`, `--pyi`, and `--wrap-readiness`
+
+Placeholder only:
+
+- function extraction
+- declarations and declarators
+- structs, unions, enums, and typedef parsing
+- include and macro collection
+- project include graph and cross-file type resolution
+- semantic readiness, semantic IR conversion, and `.pyi` generation
 
 ## Planned Supported C Subset
 
@@ -110,7 +132,7 @@ Target module-level entrypoints:
 from c_parser import parse_c_file, parse_c_project
 ```
 
-Expected signatures:
+Implemented skeleton signatures:
 
 ```python
 parse_c_file(
@@ -118,6 +140,7 @@ parse_c_file(
     filename=None,
     macro_defines=None,
     include_dirs=None,
+    preprocessing="raw",
     encoding="utf-8",
 )
 
@@ -125,14 +148,15 @@ parse_c_project(
     files,
     include_dirs=None,
     macro_defines=None,
+    preprocessing="raw",
     encoding="utf-8",
 )
 
 ```
 
-These should return typed parser models and dictionaries analogous to the
-Fortran parser API. Re-export from `x2py` should wait until the API is tested
-and documented.
+These return typed parser models analogous to the Fortran parser API. During
+the skeleton phase they return empty C file/project models. Re-export from
+`x2py` is still deferred; users should import from `c_parser`.
 
 The parser itself should stay parse-only. If the C frontend later gains
 wrappability assessment, that should live in the semantic layer after C parser
@@ -146,9 +170,10 @@ Initial explicit mode:
 ```bash
 x2py path/to/api.h --language c --parse
 x2py path/to/api.h --language c --parse --json
+x2py path/to/api.h --language c --parse --out report.json
 ```
 
-Optional alias:
+Optional alias, not implemented in the skeleton:
 
 ```bash
 x2py path/to/api.h --parse-c
@@ -163,8 +188,10 @@ Per-file shape:
 ```text
 {
   "<path>": {
+    "filename": "<path>",
     "language": "c",
-    "parser_status": "implemented|partial|skeleton",
+    "parser_status": "skeleton",
+    "preprocessing": "raw",
     "functions": [],
     "structs": [],
     "unions": [],
@@ -212,9 +239,9 @@ facts to let later semantic work decide what is safe:
 Those facts should be stored in parser models, but not turned into a parser-side
 `wrappable` report.
 
-## Planned Error Handling
+## Error Handling
 
-The parser should define `CParseError` with:
+The parser defines `CParseError` with:
 
 - `filename`
 - `line_number`
@@ -223,9 +250,11 @@ The parser should define `CParseError` with:
 - `base_message`
 - `code`
 - internal parser raise location for debug mode
-- `format_diagnostic(color=False, debug=False)`
+- `format_diagnostic(color=False, debug=None)`
 
 The CLI should print compiler-style diagnostics without tracebacks by default.
+The skeleton has the error type and formatter, but real syntax diagnostics are
+not produced yet because grammar parsing is still deferred.
 
 ## Planned Testing Workflow
 
@@ -248,11 +277,13 @@ Test families should mirror the Fortran parser:
 - error fixture/golden tests
 - corpus parse-only tests
 
-The first committed C parser tests are skipped roadmap tests under
-`tests/parser/c/`. They are intentionally collected but skipped before the
-parser exists. Future implementation branches should unskip only the tests for
-the capability they implement, then merge those branches back into
-`c-parser/main`.
+The C test area now contains both unskipped skeleton tests and skipped roadmap
+tests under `tests/parser/c/`. The skeleton tests cover public entrypoints,
+empty model serialization, CLI discovery, JSON/output-file behavior, and
+unsupported C stages. The broader roadmap tests remain skipped until their
+matching implementation branches land. Future implementation branches should
+unskip only the tests for the capability they implement, then merge those
+branches back into `c-parser/main`.
 
 Fixture layout should be separate from Fortran:
 
@@ -283,13 +314,16 @@ The C parser documentation lives under:
 docs/c_parser/
 ```
 
-Current planning documents:
+Current documents:
 
 - `c_parser_reference.md`
 - `c_parser_architecture.md`
 - `c_parser_cli_workflow.md`
 - `c_parser_implementation_checklist.md`
+- `c_parser_main_merge_guard.md`
 
-Future implementation should update these docs in the same change whenever C
-parser behavior, public API, CLI output, fixture workflow, semantic conversion,
-or `.pyi` output changes.
+Documentation update rule: every C parser implementation change must update
+all affected files under `docs/c_parser/` in the same change. This includes
+changes to parser behavior, public API, models, CLI output, tests, fixture
+workflow, semantic conversion, semantic readiness, or `.pyi` output. Do not
+wait for a separate documentation request before updating these docs.

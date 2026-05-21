@@ -14,13 +14,13 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["fortran_parser*", "semantics*", "x2py*",]
+include = ["c_parser*", "fortran_parser*", "semantics*", "x2py*",]
 
 [project.scripts]
 x2py = "x2py.cli:main"
 
 [tool.coverage.run]
-source = ["fortran_parser", "semantics", "x2py"]
+source = ["c_parser", "fortran_parser", "semantics", "x2py"]
 branch = true
 parallel = true
 
