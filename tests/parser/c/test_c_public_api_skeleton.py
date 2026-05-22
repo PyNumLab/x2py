@@ -117,3 +117,21 @@ def test_c_parse_error_attributes_and_diagnostic_formatting():
     assert "bad.h:2:5: error[CPARSE001]: unexpected token" in diagnostic
     assert "2 | int broken(;" in diagnostic
     assert "note: parser raised at" in diagnostic
+
+
+def test_c_parse_error_color_and_no_color_formatting():
+    from c_parser import CParseError
+
+    err = CParseError(
+        "unexpected token",
+        filename="bad.h",
+        line_number=2,
+        column=5,
+        source_line="int broken(;",
+    )
+
+    plain = err.format_diagnostic(color=False)
+    colored = err.format_diagnostic(color=True)
+
+    assert "\x1b[" not in plain
+    assert "\x1b[" in colored

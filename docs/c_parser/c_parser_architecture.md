@@ -2,9 +2,9 @@
 
 Status: partial parser plus raw directive metadata implemented. The `c_parser`
 package, typed parser models, public entrypoints, explicit
-`x2py --language c --parse` CLI path, raw include/macro metadata collection,
-top-level source splitting, and a first simple declaration/function subset
-exist.
+`x2py --language c --parse` CLI path, raw include/macro/undef metadata
+collection, top-level source splitting, and a first simple
+declaration/function subset exist.
 
 This document records the target architecture for the C parser frontend in
 x2py. The initial skeleton has grown into a partial parser, and the remaining
@@ -27,16 +27,22 @@ Implemented now:
   records, exposes lightweight token records, and provides top-level splitting
   helpers that track braces, parentheses, brackets, and literals.
 - `c_parser.preprocessor` records raw `#include` directives, simple object-like
-  macros, and unsupported function-like macro diagnostics without expanding
-  macros.
+  macros, `#undef` directives, and unsupported function-like macro diagnostics
+  without expanding macros.
 - `c_parser.parser` parses simple globals, typedefs, function prototypes, and
-  function-definition signatures while skipping bodies.
+  function-definition signatures while skipping bodies. Function models include
+  `prototype_style`, and K&R-style function definitions raise focused
+  diagnostics.
 - `c_parser.cli` provides C-specific partial report formatting.
 - `x2py.cli` dispatches `--language c --parse` to the C parser path.
 - `--language c --semantics`, `--language c --pyi`, and C wrap-readiness are
   rejected until semantic conversion exists.
-- Focused partial CLI/API, declaration/function, and raw lexer/directive tests are
-  unskipped while broader roadmap tests remain skipped.
+- Focused partial CLI/API, declaration/function, diagnostic color, and raw
+  lexer/directive tests are unskipped while broader roadmap tests remain
+  skipped.
+- `tests/data/c/` contains C fixture scaffolding and general fixtures modeled
+  after the Fortran general fixture themes, with additional C-specific API
+  shapes.
 
 Deferred:
 
@@ -185,8 +191,8 @@ Current and planned responsibilities:
     them.
 - `c_parser/preprocessor.py`
   - Implemented: lightweight raw directive metadata for includes,
-    object-like macros, function-like macro diagnostics, and local include
-    resolution when a matching file is available.
+    object-like macros, `#undef` directives, function-like macro diagnostics,
+    and local include resolution when a matching file is available.
   - Planned: compiler-assisted preprocessing metadata and `#line`/linemarker
     source mapping for preprocessed input.
 - `c_parser/parser.py`
@@ -194,7 +200,9 @@ Current and planned responsibilities:
     translation-unit visiting, simple declaration/function visitors, simple
     declaration-specifier handling, and simple pointer/array declarator
     extraction. Helper methods live on `CParser` rather than as broad
-    module-level functions.
+    module-level functions. Current function models record prototype-style
+    versus unspecified empty parameter lists, and K&R-style definitions are
+    rejected with `CParseError`.
   - Planned: recursive declarator/function/composite-type visitors and a
     richer shared declaration/declarator backend.
 - `c_parser/project.py`
@@ -452,6 +460,7 @@ Raw-source mode target:
 - Fold backslash-newline continuations.
 - Record `#include` directives as structured include dependencies.
 - Record `#define` object-like macros for simple constants.
+- Record `#undef` directives as macro provenance.
 - Record function-like macros as unsupported or deferred metadata.
 - Record conditional directive presence as metadata only when needed for
   provenance.

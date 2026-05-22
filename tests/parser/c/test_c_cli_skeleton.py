@@ -2,6 +2,7 @@
 """C parser CLI coverage for the current partial subset."""
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -164,6 +165,37 @@ def test_cli_c_no_color_and_debug_traceback_flags_are_accepted(tmp_path: Path):
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     assert "Parser status: partial" in res.stdout
+
+
+def test_cli_c_no_color_and_no_color_env_format_parse_errors_without_ansi(tmp_path: Path):
+    source = tmp_path / "old_style.c"
+    source.write_text(
+        """
+int add(a, b)
+int a;
+int b;
+{
+    return a + b;
+}
+""",
+        encoding="utf-8",
+    )
+
+    base_cmd = [sys.executable, "-m", "x2py", str(source), "--language", "c", "--parse"]
+    no_color_res = subprocess.run(
+        [*base_cmd, "--no-color"],
+        capture_output=True,
+        text=True,
+    )
+    env = {**os.environ, "NO_COLOR": "1"}
+    env_res = subprocess.run(base_cmd, capture_output=True, text=True, env=env)
+
+    assert no_color_res.returncode == 1
+    assert "K&R style function definitions are not supported" in no_color_res.stderr
+    assert "\x1b[" not in no_color_res.stderr
+    assert env_res.returncode == 1
+    assert "K&R style function definitions are not supported" in env_res.stderr
+    assert "\x1b[" not in env_res.stderr
 
 
 def test_cli_without_language_keeps_fortran_default_behavior():

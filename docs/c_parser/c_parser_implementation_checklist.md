@@ -1,10 +1,11 @@
 # C Parser Implementation Checklist
 
-Status: implementation checklist with Phase 1 skeleton, selected Phase 3
-model work, Phase 4 raw lexer/directive metadata, and a first Phase 5/6
-partial declaration/function subset complete. The `c_parser` package and
-explicit C parse path exist, and simple globals, typedefs, function prototypes,
-and function-definition signatures are now parsed.
+Status: implementation checklist with Phase 1 skeleton, selected Phase 2
+fixture scaffolding, selected Phase 3 model/error work, Phase 4 raw
+lexer/directive metadata, and a first Phase 5/6 partial
+declaration/function subset complete. The `c_parser` package and explicit C
+parse path exist, and simple globals, typedefs, function prototypes, and
+function-definition signatures are now parsed.
 
 This checklist is intentionally detailed so future work can proceed one branch,
 one checklist item, and one tested capability at a time. The C parser initiative
@@ -14,10 +15,10 @@ stable.
 ## Progress Snapshot
 
 - Last updated: 2026-05-22
-- Checklist progress: 415/848 checked (48.9%).
+- Checklist progress: 443/848 checked (52.2%).
 - Current parser status: partial C parser with raw directive metadata, top-level
-  source splitting, simple declarations/globals/typedefs, and simple function
-  signatures.
+  source splitting, simple declarations/globals/typedefs, prototype-style
+  metadata, K&R diagnostics, and simple function signatures.
 
 ## Global Rules
 
@@ -250,7 +251,7 @@ Scope:
 - [x] Test `--parse` without `--language` remains Fortran behavior.
 - [ ] If `--parse-c` is added, test it maps to C parse mode.
 - [x] Test `--no-color` is accepted in C mode.
-- [ ] Test `NO_COLOR=1` is honored once C diagnostics exist.
+- [x] Test `NO_COLOR=1` is honored once C diagnostics exist.
 - [x] Test `--debug-traceback` is accepted in C mode.
 
 ### Phase 1 Definition Of Done
@@ -286,18 +287,18 @@ Scope:
 
 ### Test Layout Tasks
 
-- [ ] Create a dedicated C parser test area.
-- [ ] Choose between `tests/c_parser/` and `tests/parser/c/` for focused C
+- [x] Create a dedicated C parser test area.
+- [x] Choose between `tests/c_parser/` and `tests/parser/c/` for focused C
       parser tests.
-- [ ] Create `tests/data/c/general/`.
-- [ ] Create `tests/data/c/errors/parser/`.
-- [ ] Create `tests/data/c/corpus/`.
-- [ ] Create `tests/data/c/scientific/`.
+- [x] Create `tests/data/c/general/`.
+- [x] Create `tests/data/c/errors/parser/`.
+- [x] Create `tests/data/c/corpus/`.
+- [x] Create `tests/data/c/scientific/`.
 - [ ] Create `tests/parser/c/fixtures/general/`.
 - [ ] Create `tests/parser/c/fixtures/errors/`.
-- [ ] Keep C fixture data separate from Fortran fixture data.
-- [ ] Add README files explaining each C fixture directory.
-- [ ] Add small placeholder `.h` and `.c` fixture files only if tests need them.
+- [x] Keep C fixture data separate from Fortran fixture data.
+- [x] Add README files explaining each C fixture directory.
+- [x] Add small `.h` and `.c` fixture files for C fixture coverage.
 
 ### Skipped Roadmap Test Policy
 
@@ -372,7 +373,7 @@ Scope:
 ### Phase 2 Definition Of Done
 
 - [x] C test directory structure is present.
-- [ ] C fixture directory structure is present.
+- [x] C fixture directory structure is present.
 - [ ] C golden update workflow is documented.
 - [x] Partial parser and metadata tests pass against current behavior.
 - [ ] Fortran tests still pass.
@@ -444,7 +445,7 @@ Scope:
 - [x] Add optional C debug env var.
 - [x] Test C parse error attributes.
 - [x] Test compiler-style diagnostic rendering.
-- [ ] Test color and no-color behavior.
+- [x] Test color and no-color behavior.
 - [x] Test debug note behavior.
 
 ### Model Tasks
@@ -567,7 +568,7 @@ Scope:
 - [x] Recognize object-like `#define NAME value`.
 - [x] Recognize function-like `#define NAME(...) body`.
 - [x] Store function-like macros as unsupported/deferred metadata.
-- [ ] Recognize `#undef`.
+- [x] Recognize `#undef`.
 - [ ] Record conditional directive presence (`#ifdef`, `#ifndef`, `#if`,
       `#elif`, `#else`, `#endif`) as provenance metadata if needed.
 - [x] Do not select active branches in raw mode.
@@ -712,15 +713,15 @@ Scope:
 - [x] Preserve typedef references before project resolution.
 - [ ] Add tests for each declaration role.
 - [x] Add tests for declarations with multiple variables.
-- [ ] Add tests for declarations with initializers.
-- [ ] Add tests that local executable statements are not parsed as declarations.
-- [ ] Add exhaustive tests for every supported storage class.
+- [x] Add tests for declarations with initializers.
+- [x] Add tests that local executable statements are not parsed as declarations.
+- [x] Add exhaustive tests for every supported storage class.
 - [ ] Add exhaustive tests for every supported type qualifier.
 - [ ] Add exhaustive tests for every supported primitive spelling.
-- [ ] Add tests for typedef-name references outside `size_t`-style examples.
-- [ ] Add tests for `struct name`, `union name`, and `enum name` references in
+- [x] Add tests for typedef-name references outside `size_t`-style examples.
+- [x] Add tests for `struct name`, `union name`, and `enum name` references in
       globals and parameters.
-- [ ] Add tests for multidimensional arrays.
+- [x] Add tests for multidimensional arrays.
 - [ ] Add diagnostics for declarations ignored by the current partial parser.
 - [ ] Add structured source facts for declarations that depend on macros.
 
@@ -772,15 +773,15 @@ Scope:
 - [x] Parse storage class `static`.
 - [x] Add source locations.
 - [x] Add tests for simple prototypes.
-- [ ] Add tests for no-argument prototypes.
-- [ ] Add tests for `void` arguments.
+- [x] Add tests for no-argument prototypes.
+- [x] Add tests for `void` arguments.
 - [x] Add tests for pointer and array parameters.
 - [x] Add tests for const pointer variants.
 - [x] Add tests for variadic prototypes.
 - [ ] Add tests for function pointer parameters.
-- [ ] Add model field for prototype style so `int f(void)` and `int f()` can
+- [x] Add model field for prototype style so `int f(void)` and `int f()` can
       be distinguished.
-- [ ] Add tests that distinguish explicit `void` parameter lists from
+- [x] Add tests that distinguish explicit `void` parameter lists from
       unspecified empty parameter lists.
 - [ ] Add parser source facts or diagnostics for variadic functions.
 - [ ] Add parser source facts for callback candidates once function pointer
@@ -797,12 +798,12 @@ Scope:
 - [x] Skip body contents for wrapper metadata.
 - [x] Balance braces while respecting strings, chars, and comments.
 - [x] Ignore local declarations for exported signatures in v1.
-- [ ] Reject or diagnose K&R style function definitions initially.
+- [x] Reject or diagnose K&R style function definitions initially.
 - [x] Add tests for simple definitions.
 - [x] Add tests for nested braces in function body.
 - [x] Add tests for strings containing braces.
-- [ ] Add tests for K&R unsupported diagnostics.
-- [ ] Detect K&R definitions before body skipping hides the old-style
+- [x] Add tests for K&R unsupported diagnostics.
+- [x] Detect K&R definitions before body skipping hides the old-style
       declaration list.
 
 ### Function Deduplication Tasks
@@ -897,8 +898,8 @@ Scope:
 ### Typedef Tasks
 
 - [x] Parse primitive typedefs.
-- [ ] Parse pointer typedefs.
-- [ ] Parse array typedefs.
+- [x] Parse pointer typedefs.
+- [x] Parse array typedefs.
 - [ ] Parse function pointer typedefs.
 - [ ] Parse struct/union/enum typedefs.
 - [ ] Preserve alias chains before resolution.

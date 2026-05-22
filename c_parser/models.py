@@ -223,6 +223,7 @@ class CFunction:
     specifiers: list[str] = field(default_factory=list)
     variadic: bool = False
     is_definition: bool = False
+    prototype_style: str | None = None
     source_location: CSourceLocation | None = None
 
 
@@ -284,6 +285,7 @@ class CMacro:
     name: str
     value: str | None = None
     function_like: bool = False
+    directive: str = "define"
     source_location: CSourceLocation | None = None
 
 

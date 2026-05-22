@@ -39,7 +39,6 @@ int add(int a, int b)
     assert fn.source_span.end.line == 5
 
 
-@pytest.mark.skip(reason="prototype-style classification is not modeled yet.")
 def test_void_parameter_list_and_empty_parameter_list_are_distinguished():
     from c_parser import parse_c_file
 
@@ -65,7 +64,6 @@ def test_variadic_functions_are_parsed_as_source_facts():
     assert parsed.functions[0].variadic is True
 
 
-@pytest.mark.skip(reason="K&R function definition diagnostics need declaration-region slicing.")
 def test_old_style_knr_function_definition_raises_or_records_unsupported_diagnostic():
     from c_parser import CParseError, parse_c_file
 
