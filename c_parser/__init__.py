@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Public C parser skeleton package."""
+"""Public C parser package."""
 
 from .models import (
     CArray,

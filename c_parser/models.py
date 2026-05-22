@@ -299,7 +299,7 @@ class CInclude:
 class CFile:
     filename: str | None = None
     language: str = "c"
-    parser_status: str = "skeleton"
+    parser_status: str = "partial"
     preprocessing: str = "raw"
     functions: list[CFunction] = field(default_factory=list)
     structs: list[CStruct] = field(default_factory=list)
