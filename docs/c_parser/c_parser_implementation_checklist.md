@@ -1,8 +1,9 @@
 # C Parser Implementation Checklist
 
-Status: implementation checklist with Phase 1 skeleton and selected Phase 3
-skeleton work complete. The `c_parser` package and explicit C parse skeleton
-exist, but real C grammar parsing is not implemented yet.
+Status: implementation checklist with Phase 1 skeleton, selected Phase 3
+skeleton work, and Phase 4 raw lexer/directive metadata complete. The
+`c_parser` package and explicit C parse path exist, but real C declaration and
+function grammar parsing is not implemented yet.
 
 This checklist is intentionally detailed so future work can proceed one branch,
 one checklist item, and one tested capability at a time. The C parser initiative
@@ -215,9 +216,10 @@ Scope:
 - [x] Return empty `enums` list.
 - [x] Return empty `typedefs` list.
 - [x] Return empty `globals` list.
-- [x] Return empty `macros` list.
-- [x] Return empty `includes` list.
-- [x] Return empty `diagnostics` list unless a skeleton diagnostic is needed.
+- [x] Return `macros` list, empty until raw macro directives are found.
+- [x] Return `includes` list, empty until raw include directives are found.
+- [x] Return `diagnostics` list, empty unless skeleton or raw metadata
+      diagnostics are found.
 - [x] Human tree output should show zero-count C sections and skeleton status.
 
 ### CLI Test Tasks
@@ -295,14 +297,14 @@ Scope:
 - [x] Keep `c_parser` imports inside skipped test functions, not at module
       import time, so collection works before the package exists.
 - [x] Use the skipped tests as an executable checklist for future branches.
-- [ ] Unskip tests one capability at a time.
-- [ ] In each implementation branch, unskip only the tests covered by that
+- [x] Unskip tests one capability at a time.
+- [x] In each implementation branch, unskip only the tests covered by that
       branch.
 - [ ] Do not unskip broad fixture, corpus, semantic, or `.pyi` tests before
       the supporting workflow exists.
 - [ ] When a skipped test is unblocked, replace placeholder expectations with
       the exact implemented model fields if the final schema differs.
-- [ ] Keep the skipped C suite separate from existing Fortran tests.
+- [x] Keep the skipped C suite separate from existing Fortran tests.
 - [ ] Keep Fortran tests green whenever C tests are unskipped.
 
 ### Skipped Roadmap Test Files
@@ -340,8 +342,8 @@ Scope:
 
 ### Focused Test Buckets
 
-- [ ] Add lexer test file.
-- [ ] Add preprocessor test file.
+- [x] Add lexer test file.
+- [x] Add preprocessor test file.
 - [ ] Add declaration-specifier test file.
 - [ ] Add declarator test file.
 - [ ] Add function parser test file.
@@ -513,77 +515,79 @@ Scope:
 - Token/source normalization.
 - Comments, continuations, directives, includes, simple macro metadata.
 - No internal full macro expansion.
-- Raw-source parsing first; compiler-assisted preprocessing path planned for
-  macro-heavy APIs.
+- Raw-source directive metadata first; compiler-assisted preprocessing is the
+  required path when macros affect public declaration text.
 
 ### Lexer Tasks
 
-- [ ] Preserve original line numbers for all logical records.
-- [ ] Preserve original source lines for diagnostics.
-- [ ] Remove block comments `/* ... */` without losing line accounting.
-- [ ] Remove line comments `// ...`.
-- [ ] Avoid stripping comment markers inside string literals.
-- [ ] Avoid stripping comment markers inside character literals.
-- [ ] Handle escaped quotes inside literals.
-- [ ] Fold backslash-newline continuations.
-- [ ] Preserve preprocessor directive line locations.
-- [ ] Produce token records or logical line records with filename, line, column,
+- [x] Preserve original line numbers for all logical records.
+- [x] Preserve original source lines for diagnostics.
+- [x] Remove block comments `/* ... */` without losing line accounting.
+- [x] Remove line comments `// ...`.
+- [x] Avoid stripping comment markers inside string literals.
+- [x] Avoid stripping comment markers inside character literals.
+- [x] Handle escaped quotes inside literals.
+- [x] Fold backslash-newline continuations.
+- [x] Preserve preprocessor directive line locations.
+- [x] Produce token records or logical line records with filename, line, column,
       and text.
 - [ ] Track braces, parentheses, and brackets.
 - [ ] Add top-level split helpers aware of nesting and literals.
-- [ ] Add tests for comment stripping.
-- [ ] Add tests for multiline block comments.
-- [ ] Add tests for string literal comment markers.
-- [ ] Add tests for char literal escapes.
-- [ ] Add tests for backslash-newline continuations.
-- [ ] Add tests for line/column preservation.
+- [x] Add tests for comment stripping.
+- [x] Add tests for multiline block comments.
+- [x] Add tests for string literal comment markers.
+- [x] Add tests for char literal escapes.
+- [x] Add tests for backslash-newline continuations.
+- [x] Add tests for line/column preservation.
 
 ### Preprocessor Metadata Tasks
 
-- [ ] Recognize `#include "local.h"`.
-- [ ] Recognize `#include <system.h>`.
-- [ ] Store include spelling and include kind.
-- [ ] Resolve local includes relative to current file when possible.
-- [ ] Preserve unresolved includes as diagnostics, not hard errors by default.
-- [ ] Recognize object-like `#define NAME value`.
-- [ ] Recognize function-like `#define NAME(...) body`.
-- [ ] Store function-like macros as unsupported/deferred metadata.
+- [x] Recognize `#include "local.h"`.
+- [x] Recognize `#include <system.h>`.
+- [x] Store include spelling and include kind.
+- [x] Resolve local includes relative to current file when possible.
+- [x] Preserve unresolved includes as diagnostics, not hard errors by default.
+- [x] Recognize object-like `#define NAME value`.
+- [x] Recognize function-like `#define NAME(...) body`.
+- [x] Store function-like macros as unsupported/deferred metadata.
 - [ ] Recognize `#undef`.
-- [ ] Track `#ifdef`.
-- [ ] Track `#ifndef`.
-- [ ] Track `#if`.
-- [ ] Track `#elif`.
-- [ ] Track `#else`.
-- [ ] Track `#endif`.
-- [ ] Add branch condition sets to parsed external declarations.
-- [ ] Support optional `macro_defines` for active-branch selection.
-- [ ] Implement a tiny safe evaluator for simple `defined(NAME)`, `&&`, `||`,
-      `!`, `0`, and `1`.
-- [ ] Mark declarations that depend on unresolved macros.
+- [ ] Record conditional directive presence (`#ifdef`, `#ifndef`, `#if`,
+      `#elif`, `#else`, `#endif`) as provenance metadata if needed.
+- [ ] Do not select active branches in raw mode.
+- [ ] Do not implement a parser-side `defined(NAME)`, `&&`, `||`, `!`, `0`,
+      and `1` evaluator for C API extraction unless a later design explicitly
+      justifies it.
+- [ ] Mark macro-shaped declarations as unsupported/deferred in raw mode.
 - [ ] Store macro-dependency metadata in C parser models.
-- [ ] Store preprocessing mode metadata in `CFile`.
-- [ ] Store preprocessor configuration metadata such as macro defines and
-      include dirs.
-- [ ] Do not implement general macro expansion.
-- [ ] Do not expand token-paste or stringify macros.
-- [ ] Do not attempt recursive compiler-compatible macro expansion inside
+- [x] Store preprocessing mode metadata in `CFile`.
+- [ ] Store raw directive metadata separately from compiler-preprocessor
+      configuration metadata.
+- [x] Do not implement general macro expansion.
+- [x] Do not expand token-paste or stringify macros.
+- [x] Do not attempt recursive compiler-compatible macro expansion inside
       x2py.
-- [ ] Add tests for include collection.
-- [ ] Add tests for object-like macro collection.
-- [ ] Add tests for function-like macro diagnostics.
-- [ ] Add tests for conditional branch tracking.
-- [ ] Add tests for selected active branches.
-- [ ] Add tests for duplicate declarations in mutually exclusive branches.
+- [x] Add tests for include collection.
+- [x] Add tests for object-like macro collection.
+- [x] Add tests for function-like macro diagnostics.
+- [ ] Add tests that raw conditional directives do not select active branches.
+- [ ] Add tests that macro-generated declarations are deferred in raw mode.
 
 ### Compiler-Assisted Preprocessing Tasks
 
 - [ ] Design a preprocessed-input mode for `.i` files.
 - [ ] Design an optional compiler invocation mode for `cc -E` or `clang -E`.
+- [x] Document that compiler-assisted preprocessing is required when macros
+      affect names, types, declarators, attributes, storage classes, calling
+      conventions, visibility annotations, or active conditional branches.
 - [ ] Preserve `#line` markers from compiler-preprocessed input.
 - [ ] Map diagnostics from preprocessed declarations back to original files.
+- [ ] Map parsed model `source_location` fields from preprocessed declarations
+      back to original files.
 - [ ] Mark preprocessed declarations with origin metadata.
 - [ ] Store the preprocessor command/configuration in `CFile` or `CProject`.
 - [ ] Store original and preprocessed source paths when both exist.
+- [ ] Store macro defines, undefines, include dirs, and compiler/preprocessor
+      executable used to produce the preprocessed stream.
 - [ ] Add tests for parsing a simple `.i` file.
 - [ ] Add tests for `#line` source mapping.
 - [ ] Add tests that macro-generated declarations are parseable only when they
@@ -591,19 +595,21 @@ Scope:
 
 ### Phase 4 Definition Of Done
 
-- [ ] Lexer/preprocessor preserves source locations.
-- [ ] Includes and macros are collected as metadata.
-- [ ] Conditional branch tracking exists.
-- [ ] No arbitrary macro expansion is attempted.
-- [ ] Compiler-assisted preprocessing has a documented design path for
+- [x] Lexer/preprocessor preserves source locations.
+- [x] Includes and macros are collected as metadata.
+- [ ] Raw conditional directives are handled as metadata/provenance only, not
+      parser-side branch selection.
+- [x] No arbitrary macro expansion is attempted.
+- [x] Compiler-assisted preprocessing has a documented design path for
       macro-heavy APIs.
-- [ ] Tests cover comments, continuations, directives, and branch selection.
+- [ ] Tests cover comments, continuations, directive metadata, raw macro
+      deferral, and preprocessed line mapping.
 
 ### Phase 4 Risks And Open Questions
 
-- [ ] Decide whether to tokenize fully now or keep logical records until
+- [x] Decide whether to tokenize fully now or keep logical records until
       declarator parsing requires tokens.
-- [ ] Decide whether system headers are recorded only or optionally searched.
+- [x] Decide whether system headers are recorded only or optionally searched.
 - [ ] Decide whether `#pragma` should become diagnostics or metadata.
 - [ ] Decide whether compiler invocation belongs in Phase 4 or a later
       project-resolution phase.
@@ -1296,6 +1302,8 @@ Scope:
 - [ ] Do not support full compiler-grade C parsing.
 - [ ] Do not support full C preprocessor compatibility.
 - [ ] Do not support arbitrary macro expansion.
+- [ ] Do not parse macro-generated declarations from raw source as if they were
+      ordinary C declarations.
 - [ ] Do not support token-paste/stringify expansion.
 - [ ] Do not support all compiler extensions.
 - [ ] Do not support arbitrary GCC extensions.

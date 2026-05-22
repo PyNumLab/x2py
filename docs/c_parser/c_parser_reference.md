@@ -1,7 +1,8 @@
 # C Parser Reference
 
-Status: skeleton reference. The `c_parser` package and explicit C CLI parse
-path exist, but no real C declarations are parsed yet.
+Status: skeleton reference with raw directive metadata. The `c_parser` package
+and explicit C CLI parse path exist, and raw includes/simple macros are
+recorded, but no real C declarations are parsed yet.
 
 This document is the future home for the C parser user and developer reference.
 It should evolve into the C equivalent of `fortran_parser.md` as implementation
@@ -46,20 +47,26 @@ must be explicit C mode at first to avoid changing Fortran CLI behavior.
 Implemented:
 
 - `c_parser` package skeleton
-- typed empty C parser models
+- typed C parser models for skeleton parse reports and raw metadata
 - `CParser`, `parse_c_file`, and `parse_c_project`
 - `CParseError` with compiler-style diagnostic formatting
 - explicit `x2py --language c --parse` skeleton output
 - C JSON skeleton output and `--out` behavior
 - rejection of C `--semantics`, `--pyi`, and `--wrap-readiness`
+- raw lexer records with comment stripping, line-continuation folding, and
+  lightweight token source locations
+- raw `#include` collection for quoted and system includes
+- simple object-like `#define` macro collection
+- function-like macro metadata with unsupported diagnostics
 
 Placeholder only:
 
 - function extraction
 - declarations and declarators
 - structs, unions, enums, and typedef parsing
-- include and macro collection
 - project include graph and cross-file type resolution
+- preprocessed-input parsing with `#line`/linemarker source mapping
+- macro-expanded declaration parsing from preprocessed input
 - semantic readiness, semantic IR conversion, and `.pyi` generation
 
 ## Planned Supported C Subset
@@ -107,22 +114,43 @@ The initial C parser should explicitly report or defer:
 
 ## Planned Preprocessing Policy
 
-The C parser should have clear preprocessing modes instead of trying to become
-a full C preprocessor.
+The C parser should be preprocessor-aware, but it should not become a partial
+C preprocessor. Partial macro support is risky in C because macros can define
+function names, type names, attributes, calling conventions, parameter lists,
+and whole declarations. The parser must not infer a public API from unexpanded
+macro-shaped declarations.
 
-Raw-source mode should parse declarations that are visible without arbitrary
-macro expansion, collect includes, collect simple object-like constants, track
-conditional branches, and preserve macro-dependent declarations as parser model
-metadata.
+Raw-source mode means source normalization plus directive metadata:
 
-Compiler-assisted preprocessing should be the practical path for macro-heavy
-APIs. x2py may later accept `.i` files or invoke a configured compiler
-preprocessor such as `cc -E` or `clang -E`. In that mode, the parser should
-preserve `#line` mapping, record the preprocessor command/configuration, and
-mark declarations that came from preprocessed input.
+- strip comments and fold backslash-newline continuations while preserving
+  source locations
+- record `#include` directives as structured include dependencies
+- record simple object-like `#define` directives as macro metadata
+- record function-like macros as metadata with unsupported/deferred diagnostics
+- parse only declarations that are already visible as ordinary C without macro
+  expansion
+- do not select active conditional branches from `#if`/`#ifdef` in raw mode
+- do not expand macros, token pasting, stringification, or macro-generated
+  declarations
 
-This means macro-heavy APIs are not out of scope. The boundary is that x2py v1
-should not implement recursive, compiler-compatible macro expansion internally.
+Compiler-assisted preprocessing is the required path when macros affect the
+declaration text that the C parser needs to understand. Use preprocessed input
+when macros define or alter function names, return types, parameter types,
+declarators, attributes, storage classes, calling conventions, visibility
+annotations, or conditional API selection. x2py may later accept `.i` files or
+invoke a configured compiler preprocessor such as `cc -E` or `clang -E`.
+
+Preprocessed mode must preserve line mapping. That means the parser reads
+compiler-preprocessed text, including `#line`/linemarker directives, and maps
+every parsed declaration, source location, and diagnostic back to the original
+`.h` or `.c` file and line number where possible. Without this mapping, errors
+and JSON source locations would point at a generated `.i` file or temporary
+preprocessor stream instead of the user's source.
+
+This means macro-heavy APIs are still in scope. The boundary is that x2py v1
+should not implement recursive, compiler-compatible macro expansion
+internally; it should consume compiler-preprocessed output with preserved
+origin metadata.
 
 ## Planned Public API
 
@@ -155,8 +183,14 @@ parse_c_project(
 ```
 
 These return typed parser models analogous to the Fortran parser API. During
-the skeleton phase they return empty C file/project models. Re-export from
-`x2py` is still deferred; users should import from `c_parser`.
+the current skeleton phase, declaration-oriented lists such as `functions`,
+`structs`, and `typedefs` remain empty, while raw `includes`, `macros`, and
+metadata `diagnostics` may be populated. Re-export from `x2py` is still
+deferred; users should import from `c_parser`.
+
+`macro_defines` is reserved for future compiler-assisted preprocessing
+configuration. It must not mean that raw mode evaluates C preprocessor
+conditionals or expands macros internally.
 
 The parser itself should stay parse-only. If the C frontend later gains
 wrappability assessment, that should live in the semantic layer after C parser
@@ -208,7 +242,7 @@ Per-file shape:
 JSON compatibility rules:
 
 - prefer additive schema changes
-- include source locations once parser models exist
+- include source locations for populated include, macro, and diagnostic models
 - preserve unknown or unresolved information rather than dropping it silently
 - keep model fields stable enough for golden fixture testing
 - document every intentional schema break
@@ -254,7 +288,9 @@ The parser defines `CParseError` with:
 
 The CLI should print compiler-style diagnostics without tracebacks by default.
 The skeleton has the error type and formatter, but real syntax diagnostics are
-not produced yet because grammar parsing is still deferred.
+not produced yet because grammar parsing is still deferred. Raw directive
+collection can emit non-fatal metadata diagnostics, such as unresolved local
+includes or function-like macros that were recorded but not expanded.
 
 ## Planned Testing Workflow
 
@@ -277,10 +313,12 @@ Test families should mirror the Fortran parser:
 - error fixture/golden tests
 - corpus parse-only tests
 
-The C test area now contains both unskipped skeleton tests and skipped roadmap
-tests under `tests/parser/c/`. The skeleton tests cover public entrypoints,
-empty model serialization, CLI discovery, JSON/output-file behavior, and
-unsupported C stages. The broader roadmap tests remain skipped until their
+The C test area now contains both unskipped skeleton/raw-metadata tests and
+skipped roadmap tests under `tests/parser/c/`. The active tests cover public
+entrypoints, empty model serialization, CLI discovery, JSON/output-file
+behavior, unsupported C stages, comment stripping, line-continuation folding,
+include collection, simple macro collection, and unsupported function-like
+macro diagnostics. The broader roadmap tests remain skipped until their
 matching implementation branches land. Future implementation branches should
 unskip only the tests for the capability they implement, then merge those
 branches back into `c-parser/main`.
