@@ -8,6 +8,7 @@ from pathlib import Path
 from .lexer import (
     CTopLevelSegment,
     split_top_level_c_source,
+    strip_c_comments,
     top_level_partition,
     top_level_split,
 )
@@ -304,6 +305,70 @@ class CParser:
                 return False
         return True
 
+    def _raise_for_unsupported_old_style_definitions(
+        self,
+        source: str,
+        filename: str | None,
+    ) -> None:
+        source_lines = source.splitlines()
+        stripped_lines = strip_c_comments(source).splitlines()
+
+        for index, line in enumerate(stripped_lines):
+            text = line.strip()
+            parameter_bounds = self._find_parameter_list(text)
+            if parameter_bounds is None:
+                continue
+            open_index, close_index = parameter_bounds
+            before_parameters = text[:open_index].strip()
+            name_match = self._last_identifier(before_parameters)
+            if name_match is None:
+                continue
+            return_spec = before_parameters[: name_match.start()].strip()
+            if not return_spec or "(" in return_spec or ")" in return_spec:
+                continue
+
+            parameters_text = text[open_index + 1 : close_index].strip()
+            if not parameters_text or parameters_text == "void":
+                continue
+
+            parameters = [part.strip() for part in parameters_text.split(",")]
+            if not parameters or not all(re.fullmatch(r"[A-Za-z_]\w*", part) for part in parameters):
+                continue
+
+            saw_old_style_declaration = False
+            for follow in stripped_lines[index + 1 :]:
+                stripped = follow.strip()
+                if not stripped:
+                    continue
+                if stripped.startswith("{"):
+                    source_line = source_lines[index] if index < len(source_lines) else line
+                    raise CParseError(
+                        "K&R style function definitions are not supported",
+                        filename=filename,
+                        line_number=index + 1,
+                        column=max(line.find(name_match.group(0)) + 1, 1),
+                        source_line=source_line,
+                        code="CPARSE002",
+                    )
+                if stripped.endswith(";"):
+                    saw_old_style_declaration = True
+                    continue
+                break
+
+            if saw_old_style_declaration:
+                source_line = source_lines[index] if index < len(source_lines) else line
+                raise CParseError(
+                    "K&R style function definitions are not supported",
+                    filename=filename,
+                    line_number=index + 1,
+                    column=max(line.find(name_match.group(0)) + 1, 1),
+                    source_line=source_line,
+                    code="CPARSE002",
+                )
+
+    def _prototype_style(self, parameters_text: str) -> str:
+        return "unspecified" if not parameters_text.strip() else "prototype"
+
     def _parse_function(self, segment: CTopLevelSegment) -> CFunction | None:
         text = segment.text.strip()
         if text.startswith(("typedef ", "struct ", "union ", "enum ")):
@@ -347,6 +412,7 @@ class CParser:
             specifiers=function_specifiers,
             variadic=variadic,
             is_definition=segment.terminator == "block",
+            prototype_style=self._prototype_style(parameters_text),
             source_location=self._source_location(segment),
         )
 
@@ -387,6 +453,8 @@ class CParser:
         source: str,
         filename: str | None,
     ) -> tuple[list[CFunction], list[CTypedef], list[CGlobal]]:
+        self._raise_for_unsupported_old_style_definitions(source, filename)
+
         functions: list[CFunction] = []
         typedefs: list[CTypedef] = []
         globals_: list[CGlobal] = []

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """C lexer and lightweight preprocessing coverage."""
 
+from pathlib import Path
+
 import pytest
 
 
@@ -115,6 +117,24 @@ int version(void);
     assert macros["API_VERSION"].function_like is False
 
 
+def test_raw_mode_records_undef_directives_as_macro_provenance():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+#define API_FEATURE 1
+#undef API_FEATURE
+""",
+        filename="undefs.h",
+        preprocessing="raw",
+    )
+
+    assert [(macro.name, macro.directive, macro.value) for macro in parsed.macros] == [
+        ("API_FEATURE", "define", "1"),
+        ("API_FEATURE", "undef", None),
+    ]
+
+
 def test_raw_mode_marks_function_like_macros_as_unsupported_until_expanded():
     from c_parser import parse_c_file
 
@@ -131,6 +151,28 @@ API_DECL(int) exported(void);
     assert macros["API_DECL"].function_like is True
     assert parsed.functions == []
     assert any(diag.code == "C_UNSUPPORTED_FUNCTION_LIKE_MACRO" for diag in parsed.diagnostics)
+
+
+def test_raw_mode_fixture_keeps_macro_shaped_declaration_deferred_until_preprocessing():
+    from c_parser import parse_c_file
+
+    fixture = (
+        Path(__file__).resolve().parents[2]
+        / "data"
+        / "c"
+        / "general"
+        / "c_richer_features.h"
+    )
+
+    parsed = parse_c_file(fixture)
+
+    function_names = {fn.name for fn in parsed.functions}
+    assert "x2py_sort" not in function_names
+    assert any(
+        diag.code == "C_UNSUPPORTED_FUNCTION_LIKE_MACRO" and diag.unit_name == "X2PY_API"
+        for diag in parsed.diagnostics
+    )
+    assert any(macro.name == "X2PY_API" and macro.directive == "undef" for macro in parsed.macros)
 
 
 def test_raw_conditional_directives_do_not_select_active_branches():

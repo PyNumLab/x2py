@@ -12,6 +12,7 @@ from .models import CDiagnostic, CInclude, CMacro, CSourceLocation
 
 _INCLUDE_RE = re.compile(r'^\s*#\s*include\s*(?:"([^"]+)"|<([^>]+)>)')
 _DEFINE_RE = re.compile(r"^\s*#\s*define\s+([A-Za-z_]\w*)(\([^)]*\))?(?:\s+(.*))?$")
+_UNDEF_RE = re.compile(r"^\s*#\s*undef\s+([A-Za-z_]\w*)\s*$")
 
 
 @dataclass
@@ -121,6 +122,18 @@ def collect_preprocessor_metadata(
                         unit_name=name,
                     )
                 )
+            continue
+
+        undef_match = _UNDEF_RE.match(record.text)
+        if undef_match:
+            name = undef_match.group(1)
+            metadata.macros.append(
+                CMacro(
+                    name=name,
+                    directive="undef",
+                    source_location=_record_location(record),
+                )
+            )
 
     return metadata
 

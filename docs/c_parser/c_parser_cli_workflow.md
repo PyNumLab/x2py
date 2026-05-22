@@ -2,8 +2,9 @@
 
 Status: C parser partial subset plus raw directive metadata implemented. The
 CLI command shape exists and parse reports can include raw includes, simple
-macros, metadata diagnostics, simple globals, typedefs, function prototypes,
-and function-definition signatures.
+macros, `#undef` provenance, metadata diagnostics, simple globals, typedefs,
+function prototypes, prototype-style metadata, and function-definition
+signatures.
 
 The C parser CLI workflow should be designed before parser implementation so
 future parser work lands behind a stable command shape, output schema, and
@@ -30,7 +31,8 @@ top-level sections: `functions`, `structs`, `unions`, `enums`, `typedefs`,
 can populate `functions`, `typedefs`, and `globals` for the supported subset,
 while composite type sections remain empty. Raw `includes`, `macros`, and
 metadata `diagnostics` can also be populated. The parser reports
-`parser_status: "partial"`.
+`parser_status: "partial"`. C parse diagnostics, currently including
+unsupported K&R-style function definitions, honor `--no-color` and `NO_COLOR=1`.
 
 Unsupported C stages:
 
@@ -202,7 +204,8 @@ JSON output for a file without raw directives:
         "storage": [],
         "specifiers": [],
         "variadic": false,
-        "is_definition": false
+        "is_definition": false,
+        "prototype_style": "prototype"
       }
     ],
     "structs": [],

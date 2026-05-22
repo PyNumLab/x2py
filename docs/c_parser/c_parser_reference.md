@@ -61,10 +61,15 @@ Implemented:
 - raw `#include` collection for quoted and system includes
 - simple object-like `#define` macro collection
 - function-like macro metadata with unsupported diagnostics
+- raw `#undef` directive provenance in macro metadata
 - simple primitive, pointer, array, and qualifier type extraction
 - simple global variable and `typedef` extraction
 - simple function prototype extraction
+- prototype-style metadata distinguishing `int f(void)` from `int f()`
 - simple function-definition signature extraction with body skipping
+- unsupported K&R function-definition diagnostics
+- C fixture inputs under `tests/data/c/general/` plus C fixture directory
+  scaffolding for errors, corpus, and scientific APIs
 
 Placeholder only:
 
@@ -133,6 +138,7 @@ Raw-source mode means source normalization plus directive metadata:
   source locations
 - record `#include` directives as structured include dependencies
 - record simple object-like `#define` directives as macro metadata
+- record `#undef` directives as macro provenance
 - record function-like macros as metadata with unsupported/deferred diagnostics
 - parse only declarations that are already visible as ordinary C without macro
   expansion
@@ -193,8 +199,10 @@ These return typed parser models analogous to the Fortran parser API. The
 current partial phase can populate `functions`, `typedefs`, `globals`,
 `includes`, `macros`, and metadata `diagnostics`. Composite-type lists such as
 `structs`, `unions`, and `enums` remain empty until their dedicated parser
-phase lands. Re-export from `x2py` is still deferred; users should import from
-`c_parser`.
+phase lands. Functions include `prototype_style`, currently `"prototype"` for
+typed or explicit `void` parameter lists and `"unspecified"` for empty
+parameter lists such as `int f()`. Re-export from `x2py` is still deferred;
+users should import from `c_parser`.
 
 `macro_defines` is reserved for future compiler-assisted preprocessing
 configuration. It must not mean that raw mode evaluates C preprocessor
@@ -243,6 +251,7 @@ Per-file shape:
         "specifiers": [],
         "variadic": false,
         "is_definition": false,
+        "prototype_style": "prototype",
         "source_location": {"filename": "<path>", "line": 1, "...": "..."}
       }
     ],
@@ -308,8 +317,10 @@ The parser defines `CParseError` with:
 The CLI should print compiler-style diagnostics without tracebacks by default.
 The parser has the error type and formatter. Raw directive collection can emit
 non-fatal metadata diagnostics, such as unresolved local includes or
-function-like macros that were recorded but not expanded. The current grammar
-subset is intentionally tolerant for unsupported declaration forms; more hard
+function-like macros that were recorded but not expanded. K&R-style function
+definitions now raise `CParseError` because the current function parser only
+models prototype-style declarations and definitions. The current grammar subset
+is otherwise intentionally tolerant for unsupported declaration forms; more hard
 syntax errors should be added only with focused tests.
 
 ## Planned Testing Workflow
