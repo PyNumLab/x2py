@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Run the C parser skeleton CLI."""
+"""Run the C parser CLI."""
 
 from .cli import main
 

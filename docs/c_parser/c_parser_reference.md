@@ -1,8 +1,9 @@
 # C Parser Reference
 
-Status: skeleton reference with raw directive metadata. The `c_parser` package
-and explicit C CLI parse path exist, and raw includes/simple macros are
-recorded, but no real C declarations are parsed yet.
+Status: partial parser reference with raw directive metadata. The `c_parser`
+package and explicit C CLI parse path exist, raw includes/simple macros are
+recorded, and a first grammar-shaped subset parses simple declarations,
+typedefs, globals, function prototypes, and function-definition headers.
 
 This document is the future home for the C parser user and developer reference.
 It should evolve into the C equivalent of `fortran_parser.md` as implementation
@@ -46,24 +47,30 @@ must be explicit C mode at first to avoid changing Fortran CLI behavior.
 
 Implemented:
 
-- `c_parser` package skeleton
-- typed C parser models for skeleton parse reports and raw metadata
+- `c_parser` package
+- typed C parser models for partial parse reports and raw metadata
 - `CParser`, `parse_c_file`, and `parse_c_project`
 - `CParseError` with compiler-style diagnostic formatting
-- explicit `x2py --language c --parse` skeleton output
-- C JSON skeleton output and `--out` behavior
+- explicit `x2py --language c --parse` output
+- C JSON partial output and `--out` behavior
 - rejection of C `--semantics`, `--pyi`, and `--wrap-readiness`
 - raw lexer records with comment stripping, line-continuation folding, and
   lightweight token source locations
+- top-level source splitting that tracks braces, parentheses, brackets, and
+  string/character literals
 - raw `#include` collection for quoted and system includes
 - simple object-like `#define` macro collection
 - function-like macro metadata with unsupported diagnostics
+- simple primitive, pointer, array, and qualifier type extraction
+- simple global variable and `typedef` extraction
+- simple function prototype extraction
+- simple function-definition signature extraction with body skipping
 
 Placeholder only:
 
-- function extraction
-- declarations and declarators
-- structs, unions, enums, and typedef parsing
+- recursive declarator models for parenthesized pointer/array distinctions
+- function pointer declarators and callback metadata
+- structs, unions, enums, and complex typedef parsing
 - project include graph and cross-file type resolution
 - preprocessed-input parsing with `#line`/linemarker source mapping
 - macro-expanded declaration parsing from preprocessed input
@@ -160,7 +167,7 @@ Target module-level entrypoints:
 from c_parser import parse_c_file, parse_c_project
 ```
 
-Implemented skeleton signatures:
+Implemented signatures:
 
 ```python
 parse_c_file(
@@ -182,11 +189,12 @@ parse_c_project(
 
 ```
 
-These return typed parser models analogous to the Fortran parser API. During
-the current skeleton phase, declaration-oriented lists such as `functions`,
-`structs`, and `typedefs` remain empty, while raw `includes`, `macros`, and
-metadata `diagnostics` may be populated. Re-export from `x2py` is still
-deferred; users should import from `c_parser`.
+These return typed parser models analogous to the Fortran parser API. The
+current partial phase can populate `functions`, `typedefs`, `globals`,
+`includes`, `macros`, and metadata `diagnostics`. Composite-type lists such as
+`structs`, `unions`, and `enums` remain empty until their dedicated parser
+phase lands. Re-export from `x2py` is still deferred; users should import from
+`c_parser`.
 
 `macro_defines` is reserved for future compiler-assisted preprocessing
 configuration. It must not mean that raw mode evaluates C preprocessor
@@ -207,7 +215,7 @@ x2py path/to/api.h --language c --parse --json
 x2py path/to/api.h --language c --parse --out report.json
 ```
 
-Optional alias, not implemented in the skeleton:
+Optional alias, not implemented:
 
 ```bash
 x2py path/to/api.h --parse-c
@@ -224,9 +232,20 @@ Per-file shape:
   "<path>": {
     "filename": "<path>",
     "language": "c",
-    "parser_status": "skeleton",
+    "parser_status": "partial",
     "preprocessing": "raw",
-    "functions": [],
+    "functions": [
+      {
+        "name": "run",
+        "return_type": {"base": "int", "...": "..."},
+        "parameters": [],
+        "storage": [],
+        "specifiers": [],
+        "variadic": false,
+        "is_definition": false,
+        "source_location": {"filename": "<path>", "line": 1, "...": "..."}
+      }
+    ],
     "structs": [],
     "unions": [],
     "enums": [],
@@ -287,10 +306,11 @@ The parser defines `CParseError` with:
 - `format_diagnostic(color=False, debug=None)`
 
 The CLI should print compiler-style diagnostics without tracebacks by default.
-The skeleton has the error type and formatter, but real syntax diagnostics are
-not produced yet because grammar parsing is still deferred. Raw directive
-collection can emit non-fatal metadata diagnostics, such as unresolved local
-includes or function-like macros that were recorded but not expanded.
+The parser has the error type and formatter. Raw directive collection can emit
+non-fatal metadata diagnostics, such as unresolved local includes or
+function-like macros that were recorded but not expanded. The current grammar
+subset is intentionally tolerant for unsupported declaration forms; more hard
+syntax errors should be added only with focused tests.
 
 ## Planned Testing Workflow
 
@@ -313,15 +333,16 @@ Test families should mirror the Fortran parser:
 - error fixture/golden tests
 - corpus parse-only tests
 
-The C test area now contains both unskipped skeleton/raw-metadata tests and
-skipped roadmap tests under `tests/parser/c/`. The active tests cover public
-entrypoints, empty model serialization, CLI discovery, JSON/output-file
+The C test area now contains both unskipped partial-parser/raw-metadata tests
+and skipped roadmap tests under `tests/parser/c/`. The active tests cover
+public entrypoints, empty model serialization, CLI discovery, JSON/output-file
 behavior, unsupported C stages, comment stripping, line-continuation folding,
-include collection, simple macro collection, and unsupported function-like
-macro diagnostics. The broader roadmap tests remain skipped until their
-matching implementation branches land. Future implementation branches should
-unskip only the tests for the capability they implement, then merge those
-branches back into `c-parser/main`.
+top-level splitting, include collection, simple macro collection, macro-shaped
+declaration deferral, raw conditional branch non-selection, simple declarations,
+globals, typedefs, and simple function prototypes/definitions. The broader
+roadmap tests remain skipped until their matching implementation branches land.
+Future implementation branches should unskip only the tests for the capability
+they implement, then merge those branches back into `c-parser/main`.
 
 Fixture layout should be separate from Fortran:
 

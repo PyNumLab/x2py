@@ -35,6 +35,19 @@ class CToken:
     source_line: str | None = None
 
 
+@dataclass(frozen=True)
+class CTopLevelSegment:
+    """A top-level C declaration or function-definition header."""
+
+    text: str
+    terminator: str
+    filename: str | None = None
+    original_start_line: int = 1
+    original_end_line: int = 1
+    original_start_column: int = 1
+    original_source_line: str | None = None
+
+
 _TWO_CHAR_OPERATORS = {
     "++",
     "--",
@@ -56,6 +69,236 @@ _TWO_CHAR_OPERATORS = {
     "<<",
     ">>",
 }
+
+_BRACKET_PAIRS = {"(": ")", "[": "]", "{": "}"}
+_BRACKET_CLOSERS = {")": "(", "]": "[", "}": "{"}
+
+
+def _source_line(lines: list[str], line_number: int) -> str | None:
+    if 1 <= line_number <= len(lines):
+        return lines[line_number - 1]
+    return None
+
+
+def _advance_position(char: str, line: int, column: int) -> tuple[int, int]:
+    if char == "\n":
+        return line + 1, 1
+    return line, column + 1
+
+
+def _blank_preprocessor_directives(source: str) -> str:
+    """Replace preprocessor directive logical lines with spaces."""
+    out_lines: list[str] = []
+    in_directive = False
+    for line in source.splitlines(keepends=True):
+        stripped = line.lstrip()
+        starts_directive = stripped.startswith("#")
+        if in_directive or starts_directive:
+            newline = "\n" if line.endswith("\n") else ""
+            body = line[:-1] if newline else line
+            out_lines.append(" " * len(body) + newline)
+            in_directive = body.rstrip().endswith("\\")
+            continue
+        out_lines.append(line)
+        in_directive = False
+    return "".join(out_lines)
+
+
+def _scan_code_states(text: str):
+    state = "normal"
+    quote = ""
+    escaped = False
+    stack: list[str] = []
+
+    for index, char in enumerate(text):
+        if state in {"string", "char"}:
+            yield index, char, tuple(stack), state
+            if escaped:
+                escaped = False
+                continue
+            if char == "\\":
+                escaped = True
+                continue
+            if char == quote:
+                state = "normal"
+                quote = ""
+            continue
+
+        yield index, char, tuple(stack), state
+
+        if char in {'"', "'"}:
+            state = "string" if char == '"' else "char"
+            quote = char
+            escaped = False
+        elif char in _BRACKET_PAIRS:
+            stack.append(char)
+        elif char in _BRACKET_CLOSERS and stack and stack[-1] == _BRACKET_CLOSERS[char]:
+            stack.pop()
+
+
+def top_level_split(text: str, delimiter: str = ",") -> list[str]:
+    """Split on a delimiter that appears outside brackets and literals."""
+    if len(delimiter) != 1:
+        raise ValueError("top_level_split delimiter must be a single character")
+
+    parts: list[str] = []
+    start = 0
+    for index, char, stack, state in _scan_code_states(text):
+        if state == "normal" and not stack and char == delimiter:
+            part = text[start:index].strip()
+            if part:
+                parts.append(part)
+            start = index + 1
+
+    tail = text[start:].strip()
+    if tail:
+        parts.append(tail)
+    return parts
+
+
+def top_level_partition(text: str, delimiter: str = "=") -> tuple[str, str | None]:
+    """Partition once on a top-level delimiter outside brackets and literals."""
+    if len(delimiter) != 1:
+        raise ValueError("top_level_partition delimiter must be a single character")
+
+    for index, char, stack, state in _scan_code_states(text):
+        if state == "normal" and not stack and char == delimiter:
+            return text[:index].strip(), text[index + 1 :].strip()
+    return text.strip(), None
+
+
+def split_top_level_c_source(
+    source: str,
+    filename: str | None = None,
+    *,
+    skip_preprocessor: bool = True,
+) -> list[CTopLevelSegment]:
+    """Split C source into top-level declarations and definition headers."""
+    stripped = strip_c_comments(source)
+    if skip_preprocessor:
+        stripped = _blank_preprocessor_directives(stripped)
+
+    source_lines = source.splitlines()
+    segments: list[CTopLevelSegment] = []
+    start_index: int | None = None
+    start_line = 1
+    start_column = 1
+    line = 1
+    column = 1
+    i = 0
+    paren_depth = 0
+    bracket_depth = 0
+    brace_depth = 0
+    state = "normal"
+    quote = ""
+    escaped = False
+
+    while i < len(stripped):
+        char = stripped[i]
+
+        if state in {"string", "char"}:
+            if brace_depth == 0 and start_index is None and not char.isspace():
+                start_index = i
+                start_line = line
+                start_column = column
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                state = "normal"
+                quote = ""
+            line, column = _advance_position(char, line, column)
+            i += 1
+            continue
+
+        if char in {'"', "'"}:
+            if brace_depth == 0 and start_index is None and not char.isspace():
+                start_index = i
+                start_line = line
+                start_column = column
+            state = "string" if char == '"' else "char"
+            quote = char
+            escaped = False
+            line, column = _advance_position(char, line, column)
+            i += 1
+            continue
+
+        if brace_depth == 0 and start_index is None and not char.isspace():
+            start_index = i
+            start_line = line
+            start_column = column
+
+        if char == "(":
+            paren_depth += 1
+        elif char == ")" and paren_depth:
+            paren_depth -= 1
+        elif char == "[":
+            bracket_depth += 1
+        elif char == "]" and bracket_depth:
+            bracket_depth -= 1
+        elif char == "{" and paren_depth == 0 and bracket_depth == 0 and brace_depth == 0:
+            if start_index is not None:
+                header = stripped[start_index:i].strip()
+                if header:
+                    segments.append(
+                        CTopLevelSegment(
+                            text=header,
+                            terminator="block",
+                            filename=filename,
+                            original_start_line=start_line,
+                            original_end_line=line,
+                            original_start_column=start_column,
+                            original_source_line=_source_line(source_lines, start_line),
+                        )
+                    )
+            brace_depth = 1
+            start_index = None
+        elif char == "{" and brace_depth:
+            brace_depth += 1
+        elif char == "}" and brace_depth:
+            brace_depth -= 1
+        elif (
+            char == ";"
+            and paren_depth == 0
+            and bracket_depth == 0
+            and brace_depth == 0
+            and start_index is not None
+        ):
+            text = stripped[start_index:i].strip()
+            if text:
+                segments.append(
+                    CTopLevelSegment(
+                        text=text,
+                        terminator=";",
+                        filename=filename,
+                        original_start_line=start_line,
+                        original_end_line=line,
+                        original_start_column=start_column,
+                        original_source_line=_source_line(source_lines, start_line),
+                    )
+                )
+            start_index = None
+
+        line, column = _advance_position(char, line, column)
+        i += 1
+
+    if start_index is not None and brace_depth == 0:
+        text = stripped[start_index:].strip()
+        if text:
+            segments.append(
+                CTopLevelSegment(
+                    text=text,
+                    terminator="eof",
+                    filename=filename,
+                    original_start_line=start_line,
+                    original_end_line=line,
+                    original_start_column=start_column,
+                    original_source_line=_source_line(source_lines, start_line),
+                )
+            )
+
+    return segments
 
 
 def strip_c_comments(source: str) -> str:
@@ -178,12 +421,6 @@ def normalize_c_source(source: str, filename: str | None = None) -> NormalizedCS
     return NormalizedCSource(filename=filename, records=records)
 
 
-def _source_line(lines: list[str], line_number: int) -> str | None:
-    if 1 <= line_number <= len(lines):
-        return lines[line_number - 1]
-    return None
-
-
 def lex_c_source(source: str, filename: str | None = None) -> list[CToken]:
     """Tokenize a small C lexical subset for parser staging tests."""
     stripped = strip_c_comments(source)
@@ -294,8 +531,12 @@ def lex_c_source(source: str, filename: str | None = None) -> list[CToken]:
 __all__ = (
     "CLogicalRecord",
     "CToken",
+    "CTopLevelSegment",
     "NormalizedCSource",
     "lex_c_source",
     "normalize_c_source",
+    "split_top_level_c_source",
     "strip_c_comments",
+    "top_level_partition",
+    "top_level_split",
 )

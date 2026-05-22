@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""C parser CLI skeleton coverage."""
+"""C parser CLI coverage for the current partial subset."""
 
 import json
 import subprocess
@@ -25,8 +25,8 @@ def test_cli_c_parse_human_tree_output_for_header(tmp_path: Path):
 
     assert f"File: {header}" in res.stdout
     assert "Language: c" in res.stdout
-    assert "Functions: 0" in res.stdout
-    assert "Parser status: skeleton" in res.stdout
+    assert "Functions: 1" in res.stdout
+    assert "Parser status: partial" in res.stdout
 
 
 def test_cli_c_parse_json_stdout_for_header(tmp_path: Path):
@@ -39,8 +39,8 @@ def test_cli_c_parse_json_stdout_for_header(tmp_path: Path):
     file_payload = payload[str(header)]
 
     assert file_payload["language"] == "c"
-    assert file_payload["parser_status"] == "skeleton"
-    assert file_payload["functions"] == []
+    assert file_payload["parser_status"] == "partial"
+    assert [fn["name"] for fn in file_payload["functions"]] == ["add"]
     assert file_payload["structs"] == []
     assert file_payload["unions"] == []
     assert file_payload["enums"] == []
@@ -96,7 +96,7 @@ def test_cli_c_parse_json_out_writes_file_and_suppresses_stdout(tmp_path: Path):
 
     assert res.stdout == ""
     assert payload[str(header)]["language"] == "c"
-    assert payload[str(header)]["parser_status"] == "skeleton"
+    assert payload[str(header)]["parser_status"] == "partial"
 
 
 def test_cli_c_parse_out_without_json_writes_json_and_suppresses_stdout(tmp_path: Path):
@@ -119,7 +119,7 @@ def test_cli_c_parse_out_without_json_writes_json_and_suppresses_stdout(tmp_path
     payload = json.loads(output.read_text(encoding="utf-8"))
 
     assert res.stdout == ""
-    assert payload[str(header)]["parser_status"] == "skeleton"
+    assert payload[str(header)]["parser_status"] == "partial"
 
 
 def test_cli_c_semantic_stages_are_rejected_until_implemented(tmp_path: Path):
@@ -163,7 +163,7 @@ def test_cli_c_no_color_and_debug_traceback_flags_are_accepted(tmp_path: Path):
 
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
-    assert "Parser status: skeleton" in res.stdout
+    assert "Parser status: partial" in res.stdout
 
 
 def test_cli_without_language_keeps_fortran_default_behavior():

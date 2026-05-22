@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Planned C declaration-specifier and declarator parser tests."""
+"""C declaration-specifier and declarator parser tests."""
 
 import pytest
-
-pytestmark = pytest.mark.skip(
-    reason="C parser declaration roadmap tests; unskip with declaration/declarator implementation."
-)
 
 
 def test_declaration_specifiers_parse_primitive_signedness_and_widths():
@@ -68,6 +64,18 @@ def test_multiple_declarators_share_specifiers_but_keep_distinct_types():
     assert globals_by_name["right"].type.qualifiers == ["const"]
 
 
+def test_typedef_declaration_preserves_alias_and_underlying_type_text():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file("typedef unsigned long api_size;\n", filename="typedefs.h")
+
+    typedef = parsed.typedefs[0]
+    assert typedef.name == "api_size"
+    assert typedef.type.base == "unsigned long"
+    assert typedef.type.storage_class == ["typedef"]
+
+
+@pytest.mark.skip(reason="recursive pointer/array type layers are not implemented yet.")
 def test_parenthesized_declarators_distinguish_pointer_arrays_from_array_pointers():
     from c_parser import parse_c_file
 
@@ -86,6 +94,7 @@ extern int (*matrix)[4];
     assert values["matrix"].type.pointee.arrays[0].size == "4"
 
 
+@pytest.mark.skip(reason="function pointer declarators are not implemented yet.")
 def test_function_pointer_declarator_is_modeled_not_flattened():
     from c_parser import parse_c_file
 
@@ -115,4 +124,3 @@ extern int exported_add(int a, int b);
     assert functions["local_add"].storage == ["static"]
     assert "inline" in functions["local_add"].specifiers
     assert functions["exported_add"].storage == ["extern"]
-

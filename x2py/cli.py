@@ -244,7 +244,7 @@ def main() -> int:
             "    python -m x2py path/to/src_dir --parse --print-limit 20\n"
             "  Print parser JSON:\n"
             "    python -m x2py path/to/file.f90 --parse --json\n"
-            "  Parse C skeleton JSON:\n"
+            "  Parse C subset JSON:\n"
             "    python -m x2py path/to/api.h --language c --parse --json\n"
             "  Write parser JSON:\n"
             "    python -m x2py path/to/file.f90 --parse --json --out report.json\n"
@@ -274,7 +274,7 @@ def main() -> int:
         "--language",
         choices=("fortran", "c"),
         default="fortran",
-        help="Frontend language. Defaults to fortran; C currently supports only --parse skeleton output.",
+        help="Frontend language. Defaults to fortran; C currently supports partial --parse output.",
     )
     parser.add_argument("--parse", action="store_true", help="Run and output parser stage report")
     parser.add_argument(

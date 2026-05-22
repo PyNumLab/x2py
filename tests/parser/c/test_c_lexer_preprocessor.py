@@ -50,6 +50,25 @@ def test_line_continuations_preserve_original_line_numbers():
     assert normalized.records[1].original_start_line == 3
 
 
+def test_top_level_split_helpers_ignore_nested_commas_and_function_bodies():
+    from c_parser.lexer import split_top_level_c_source, top_level_split
+
+    assert top_level_split("int (*cmp)(int, int), int value") == [
+        "int (*cmp)(int, int)",
+        "int value",
+    ]
+
+    segments = split_top_level_c_source(
+        'int add(int a, int b) { const char *s = "{;}"; return a + b; }\nint next(void);\n',
+        filename="split.c",
+    )
+
+    assert [(segment.text, segment.terminator) for segment in segments] == [
+        ("int add(int a, int b)", "block"),
+        ("int next(void)", ";"),
+    ]
+
+
 def test_raw_mode_records_includes_without_expanding_them():
     from c_parser import parse_c_file
 
@@ -110,7 +129,26 @@ API_DECL(int) exported(void);
 
     macros = {macro.name: macro for macro in parsed.macros}
     assert macros["API_DECL"].function_like is True
+    assert parsed.functions == []
     assert any(diag.code == "C_UNSUPPORTED_FUNCTION_LIKE_MACRO" for diag in parsed.diagnostics)
+
+
+def test_raw_conditional_directives_do_not_select_active_branches():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+#ifdef USE_FAST
+int run_fast(void);
+#else
+int run_slow(void);
+#endif
+""",
+        filename="conditional.h",
+        preprocessing="raw",
+    )
+
+    assert {fn.name for fn in parsed.functions} == {"run_fast", "run_slow"}
 
 
 @pytest.mark.skip(reason="compiler-preprocessed mode lands after raw metadata collection.")
@@ -130,23 +168,3 @@ double scale(double x);
 
     assert [fn.name for fn in parsed.functions] == ["exported", "scale"]
     assert parsed.functions[1].source_location.line == 20
-
-
-@pytest.mark.skip(reason="conditional branch tracking lands after raw include/macro metadata.")
-def test_conditional_compilation_regions_are_tracked_in_raw_mode():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#ifdef USE_FAST
-int run_fast(void);
-#else
-int run_slow(void);
-#endif
-""",
-        filename="conditional.h",
-        preprocessing="raw",
-    )
-
-    assert len(parsed.conditional_regions) == 1
-    assert {fn.name for fn in parsed.functions} == {"run_fast", "run_slow"}

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""C parser public API skeleton coverage."""
+"""C parser public API coverage for the current partial subset."""
 
 from pathlib import Path
 
 
-def test_parse_c_file_accepts_inline_source_and_returns_typed_skeleton():
+def test_parse_c_file_accepts_inline_source_and_returns_typed_model():
     from c_parser import CFile, parse_c_file
 
     parsed = parse_c_file("int add(int a, int b);\n", filename="inline.h")
@@ -12,8 +12,8 @@ def test_parse_c_file_accepts_inline_source_and_returns_typed_skeleton():
     assert isinstance(parsed, CFile)
     assert parsed.filename == "inline.h"
     assert parsed.language == "c"
-    assert parsed.parser_status == "skeleton"
-    assert parsed.functions == []
+    assert parsed.parser_status == "partial"
+    assert [fn.name for fn in parsed.functions] == ["add"]
 
 
 def test_parse_c_file_accepts_path_input_and_preserves_filename(tmp_path: Path):
@@ -25,7 +25,7 @@ def test_parse_c_file_accepts_path_input_and_preserves_filename(tmp_path: Path):
     parsed = parse_c_file(header)
 
     assert parsed.filename == str(header)
-    assert parsed.functions == []
+    assert [fn.name for fn in parsed.functions] == ["scale"]
 
 
 def test_parse_c_file_accepts_empty_source_and_unknown_suffix():
@@ -51,7 +51,7 @@ def test_parse_c_project_accepts_mapping_sources():
     assert isinstance(project, CProject)
     assert set(project.files) == {"types.h", "api.h"}
     assert project.files["api.h"].language == "c"
-    assert project.functions == {}
+    assert set(project.functions) == {"answer"}
 
 
 def test_parse_c_project_accepts_directory_input_with_c_and_h_files(tmp_path: Path):
@@ -74,7 +74,7 @@ def test_c_file_serialization_is_json_stable():
     assert parsed.to_dict() == {
         "filename": "empty.c",
         "language": "c",
-        "parser_status": "skeleton",
+        "parser_status": "partial",
         "preprocessing": "raw",
         "functions": [],
         "structs": [],

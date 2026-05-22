@@ -54,13 +54,13 @@ def format_c_report(report: dict[str, dict]) -> str:
         lines.append(f"  Macros: {len(parsed.get('macros') or [])}")
         lines.append(f"  Includes: {len(parsed.get('includes') or [])}")
         lines.append(f"  Diagnostics: {len(parsed.get('diagnostics') or [])}")
-        lines.append(f"  Parser status: {parsed.get('parser_status', 'skeleton')}")
+        lines.append(f"  Parser status: {parsed.get('parser_status', 'partial')}")
         lines.append("")
     return "\n".join(lines).rstrip()
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="C parser skeleton CLI.")
+    parser = argparse.ArgumentParser(description="C parser CLI for the implemented C subset.")
     parser.add_argument("paths", nargs="+", help="C source/header file(s) or directory path(s)")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
     parser.add_argument("--out", type=str, help="Write parser JSON to a file")

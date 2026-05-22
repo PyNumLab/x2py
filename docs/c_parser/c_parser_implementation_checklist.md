@@ -1,14 +1,23 @@
 # C Parser Implementation Checklist
 
 Status: implementation checklist with Phase 1 skeleton, selected Phase 3
-skeleton work, and Phase 4 raw lexer/directive metadata complete. The
-`c_parser` package and explicit C parse path exist, but real C declaration and
-function grammar parsing is not implemented yet.
+model work, Phase 4 raw lexer/directive metadata, and a first Phase 5/6
+partial declaration/function subset complete. The `c_parser` package and
+explicit C parse path exist, and simple globals, typedefs, function prototypes,
+and function-definition signatures are now parsed.
 
 This checklist is intentionally detailed so future work can proceed one branch,
 one checklist item, and one tested capability at a time. The C parser initiative
 must remain isolated from project `main` until the frontend is mature and
 stable.
+
+## Progress Snapshot
+
+- Last updated: 2026-05-22
+- Checklist progress: 415/848 checked (48.9%).
+- Current parser status: partial C parser with raw directive metadata, top-level
+  source splitting, simple declarations/globals/typedefs, and simple function
+  signatures.
 
 ## Global Rules
 
@@ -17,32 +26,32 @@ stable.
 - [ ] Do not merge C parser work directly into project `main`.
 - [ ] Keep the Fortran parser behavior unchanged unless a future task
       explicitly requires shared infrastructure changes.
-- [ ] Put C parser implementation in a separate `c_parser` package.
-- [ ] Keep C parser tests separated from existing Fortran tests.
-- [ ] Gate all integration through explicit C flags or C-specific APIs.
+- [x] Put C parser implementation in a separate `c_parser` package.
+- [x] Keep C parser tests separated from existing Fortran tests.
+- [x] Gate all integration through explicit C flags or C-specific APIs.
 - [ ] Keep any C wrappability assessment in the semantic layer, not inside the
       parser package.
 - [ ] Implement C parsing as a grammar-style recursive parser with scoped
       visitors, source slicing, shared declaration/declarator parsing helpers,
       and typed model objects.
-- [ ] Store initial C-specific facts in `c_parser/models.py`; defer semantic IR
+- [x] Store initial C-specific facts in `c_parser/models.py`; defer semantic IR
       extensions until the C parser models prove what information is needed.
 - [ ] Keep the C parser main-merge guard active for C parser branches and
       paths.
 - [ ] Require the `c-parser-ready-for-main` label only for the final approved
       merge into project `main`.
-- [ ] Do not implement a giant regex parser.
-- [ ] Do not implement a whole-file scanner as the core architecture.
-- [ ] Do not make libclang the only parser architecture.
+- [x] Do not implement a giant regex parser.
+- [x] Do not implement a whole-file scanner as the core architecture.
+- [x] Do not make libclang the only parser architecture.
 - [ ] Do not make compiler preprocessing a replacement for x2py parser models,
       source locations, diagnostics, or project indexes.
-- [ ] Preserve the semantic IR layer as the source of truth.
-- [ ] Treat documentation as a first-class deliverable in every phase.
+- [x] Preserve the semantic IR layer as the source of truth.
+- [x] Treat documentation as a first-class deliverable in every phase.
 - [ ] Whenever C parser behavior, models, CLI behavior, tests, fixture
       workflows, semantic integration, or `.pyi` behavior change, update every
       affected file under `docs/c_parser/` in the same change. Do not wait for
       a separate documentation request.
-- [ ] Update this checklist when implementation reality changes.
+- [x] Update this checklist when implementation reality changes.
 
 ## Phase 0: Repository Inspection, Branch Setup, And Roadmap
 
@@ -300,9 +309,9 @@ Scope:
 - [x] Unskip tests one capability at a time.
 - [x] In each implementation branch, unskip only the tests covered by that
       branch.
-- [ ] Do not unskip broad fixture, corpus, semantic, or `.pyi` tests before
+- [x] Do not unskip broad fixture, corpus, semantic, or `.pyi` tests before
       the supporting workflow exists.
-- [ ] When a skipped test is unblocked, replace placeholder expectations with
+- [x] When a skipped test is unblocked, replace placeholder expectations with
       the exact implemented model fields if the final schema differs.
 - [x] Keep the skipped C suite separate from existing Fortran tests.
 - [ ] Keep Fortran tests green whenever C tests are unskipped.
@@ -344,30 +353,30 @@ Scope:
 
 - [x] Add lexer test file.
 - [x] Add preprocessor test file.
-- [ ] Add declaration-specifier test file.
-- [ ] Add declarator test file.
-- [ ] Add function parser test file.
-- [ ] Add struct/union/enum parser test file.
-- [ ] Add typedef parser test file.
-- [ ] Add macro/constant parser test file.
-- [ ] Add project/include parser test file.
-- [ ] Add semantic readiness test file when C semantic conversion exists.
-- [ ] Add public entrypoint test file.
+- [x] Add declaration-specifier test file.
+- [x] Add declarator test file.
+- [x] Add function parser test file.
+- [x] Add struct/union/enum parser test file.
+- [x] Add typedef parser test file.
+- [x] Add macro/constant parser test file.
+- [x] Add project/include parser test file.
+- [x] Add semantic readiness test file when C semantic conversion exists.
+- [x] Add public entrypoint test file.
 - [ ] Add developer tutorial test file once internal helpers exist.
-- [ ] Add CLI test file.
-- [ ] Add fixture/golden test file.
-- [ ] Add error fixture/golden test file.
+- [x] Add CLI test file.
+- [x] Add fixture/golden test file.
+- [x] Add error fixture/golden test file.
 - [ ] Add semantic conversion tests in Phase 10.
 - [ ] Add `.pyi` tests in Phase 11.
 
 ### Phase 2 Definition Of Done
 
-- [ ] C test directory structure is present.
+- [x] C test directory structure is present.
 - [ ] C fixture directory structure is present.
 - [ ] C golden update workflow is documented.
-- [x] Placeholder tests pass against skeleton behavior.
+- [x] Partial parser and metadata tests pass against current behavior.
 - [ ] Fortran tests still pass.
-- [ ] No real parser claims are made without tests.
+- [x] No real parser claims are made without tests.
 
 ### Phase 2 Test Expectations
 
@@ -377,13 +386,13 @@ Scope:
 - [x] Run existing parser CLI tests.
 - [x] Run a small targeted test command, for example
       `python -m pytest -q tests/parser/test_cli.py tests/parser/test_c_cli_skeleton.py`.
-- [ ] Do not update Fortran goldens.
+- [x] Do not update Fortran goldens.
 
 ### Phase 2 Risks And Open Questions
 
-- [ ] Decide how much C fixture data is appropriate before parser behavior
+- [x] Decide how much C fixture data is appropriate before parser behavior
       exists.
-- [ ] Decide whether C parser tests should live alongside Fortran parser tests
+- [x] Decide whether C parser tests should live alongside Fortran parser tests
       or under a new top-level C test package.
 
 ## Phase 3: Parser Package Skeleton, Models, And Serialization Contracts
@@ -414,6 +423,10 @@ Scope:
 - [x] Add `c_parser*` to package discovery in `pyproject.toml`.
 - [x] Add `c_parser` to coverage source when implementation begins.
 - [x] Keep imports from `x2py.cli` explicit and isolated.
+- [x] Keep parser orchestration and helper internals on `CParser`, matching the
+      Fortran parser class structure.
+- [ ] Split `CParser` internals into smaller visitor/helper classes only if the
+      class grows past what remains readable.
 
 ### Error Model Tasks
 
@@ -473,12 +486,12 @@ Scope:
 - [ ] Add tests for source-location serialization.
 - [ ] Add tests that unknown/unresolved metadata is preserved.
 
-### Public API Skeleton Tasks
+### Public API Skeleton And Partial Parser Tasks
 
 - [x] Implement `CParser` class.
-- [x] Implement `CParser.visit_file` returning skeleton or model-only `CFile`.
-- [x] Implement `CParser.visit_project` returning skeleton/model-only
-      `CProject`.
+- [x] Implement `CParser.visit_file` returning partial parser `CFile` models.
+- [x] Implement `CParser.visit_project` returning partial parser `CProject`
+      models.
 - [x] Implement module-level `_DEFAULT_PARSER`.
 - [x] Implement `parse_c_file`.
 - [x] Implement `parse_c_project`.
@@ -486,11 +499,15 @@ Scope:
 - [x] Add public API tests for file paths.
 - [x] Add public API tests for empty source.
 - [x] Add public API tests for unknown suffix.
+- [x] Change parser status from `skeleton` to `partial` once real declaration
+      and function facts are populated.
+- [x] Add tests that public API output contains parsed functions and project
+      indexes for the supported subset.
 
 ### Phase 3 Definition Of Done
 
 - [x] `c_parser` imports cleanly.
-- [x] Skeleton public APIs return typed models.
+- [x] Partial public APIs return typed models.
 - [x] JSON serialization is stable and tested.
 - [x] C CLI uses `c_parser` rather than a temporary inline provider.
 - [x] Fortran parser API remains unchanged.
@@ -531,8 +548,8 @@ Scope:
 - [x] Preserve preprocessor directive line locations.
 - [x] Produce token records or logical line records with filename, line, column,
       and text.
-- [ ] Track braces, parentheses, and brackets.
-- [ ] Add top-level split helpers aware of nesting and literals.
+- [x] Track braces, parentheses, and brackets.
+- [x] Add top-level split helpers aware of nesting and literals.
 - [x] Add tests for comment stripping.
 - [x] Add tests for multiline block comments.
 - [x] Add tests for string literal comment markers.
@@ -553,11 +570,11 @@ Scope:
 - [ ] Recognize `#undef`.
 - [ ] Record conditional directive presence (`#ifdef`, `#ifndef`, `#if`,
       `#elif`, `#else`, `#endif`) as provenance metadata if needed.
-- [ ] Do not select active branches in raw mode.
+- [x] Do not select active branches in raw mode.
 - [ ] Do not implement a parser-side `defined(NAME)`, `&&`, `||`, `!`, `0`,
       and `1` evaluator for C API extraction unless a later design explicitly
       justifies it.
-- [ ] Mark macro-shaped declarations as unsupported/deferred in raw mode.
+- [x] Mark macro-shaped declarations as unsupported/deferred in raw mode.
 - [ ] Store macro-dependency metadata in C parser models.
 - [x] Store preprocessing mode metadata in `CFile`.
 - [ ] Store raw directive metadata separately from compiler-preprocessor
@@ -569,8 +586,8 @@ Scope:
 - [x] Add tests for include collection.
 - [x] Add tests for object-like macro collection.
 - [x] Add tests for function-like macro diagnostics.
-- [ ] Add tests that raw conditional directives do not select active branches.
-- [ ] Add tests that macro-generated declarations are deferred in raw mode.
+- [x] Add tests that raw conditional directives do not select active branches.
+- [x] Add tests that macro-generated declarations are deferred in raw mode.
 
 ### Compiler-Assisted Preprocessing Tasks
 
@@ -628,81 +645,90 @@ Scope:
 
 ### Declaration Specifier Tasks
 
-- [ ] Parse storage class `typedef`.
-- [ ] Parse storage class `extern`.
-- [ ] Parse storage class `static`.
-- [ ] Parse storage class `register`.
-- [ ] Parse storage class `_Thread_local`.
-- [ ] Parse qualifier `const`.
-- [ ] Parse qualifier `restrict`.
-- [ ] Parse qualifier `volatile`.
-- [ ] Parse qualifier `_Atomic` as basic metadata.
-- [ ] Parse `void`.
-- [ ] Parse `char`.
-- [ ] Parse `signed char`.
-- [ ] Parse `unsigned char`.
-- [ ] Parse `short`.
-- [ ] Parse `short int`.
-- [ ] Parse `unsigned short`.
-- [ ] Parse `int`.
-- [ ] Parse `unsigned`.
-- [ ] Parse `unsigned int`.
-- [ ] Parse `long`.
-- [ ] Parse `long int`.
-- [ ] Parse `unsigned long`.
-- [ ] Parse `long long`.
-- [ ] Parse `unsigned long long`.
-- [ ] Parse `float`.
-- [ ] Parse `double`.
-- [ ] Parse `long double`.
-- [ ] Parse `_Bool`.
-- [ ] Parse `_Complex` as deferred or supported with explicit tests.
-- [ ] Parse `struct name`.
-- [ ] Parse `union name`.
-- [ ] Parse `enum name`.
-- [ ] Parse typedef-name references.
-- [ ] Preserve original declaration specifier text.
+- [x] Parse storage class `typedef`.
+- [x] Parse storage class `extern`.
+- [x] Parse storage class `static`.
+- [x] Parse storage class `register`.
+- [x] Parse storage class `_Thread_local`.
+- [x] Parse qualifier `const`.
+- [x] Parse qualifier `restrict`.
+- [x] Parse qualifier `volatile`.
+- [x] Parse qualifier `_Atomic` as basic metadata.
+- [x] Parse `void`.
+- [x] Parse `char`.
+- [x] Parse `signed char`.
+- [x] Parse `unsigned char`.
+- [x] Parse `short`.
+- [x] Parse `short int`.
+- [x] Parse `unsigned short`.
+- [x] Parse `int`.
+- [x] Parse `unsigned`.
+- [x] Parse `unsigned int`.
+- [x] Parse `long`.
+- [x] Parse `long int`.
+- [x] Parse `unsigned long`.
+- [x] Parse `long long`.
+- [x] Parse `unsigned long long`.
+- [x] Parse `float`.
+- [x] Parse `double`.
+- [x] Parse `long double`.
+- [x] Parse `_Bool`.
+- [x] Parse `_Complex` as deferred or supported with explicit tests.
+- [x] Parse `struct name`.
+- [x] Parse `union name`.
+- [x] Parse `enum name`.
+- [x] Parse typedef-name references.
+- [x] Preserve original declaration specifier text.
 - [ ] Diagnose unknown specifier sequences.
 
 ### Declarator Tasks
 
-- [ ] Parse identifier declarators.
-- [ ] Parse pointer declarators.
-- [ ] Parse pointer qualifiers.
-- [ ] Parse array declarators.
-- [ ] Parse multidimensional array declarators.
-- [ ] Parse static array parameter qualifiers, for example `int a[static 4]`.
+- [x] Parse identifier declarators.
+- [x] Parse pointer declarators.
+- [x] Parse pointer qualifiers.
+- [x] Parse array declarators.
+- [x] Parse multidimensional array declarators.
+- [x] Parse static array parameter qualifiers, for example `int a[static 4]`.
 - [ ] Parse parenthesized declarators.
 - [ ] Parse function declarators.
 - [ ] Parse function pointer declarators.
-- [ ] Parse abstract declarators where needed for unnamed parameters.
-- [ ] Parse multiple declarators in one declaration.
-- [ ] Keep declarator entity order stable.
-- [ ] Preserve original declarator source text.
-- [ ] Add source locations for each declared entity.
+- [x] Parse abstract declarators where needed for unnamed parameters.
+- [x] Parse multiple declarators in one declaration.
+- [x] Keep declarator entity order stable.
+- [x] Preserve original declarator source text.
+- [x] Add source locations for each declared entity.
 - [ ] Reject or diagnose unsupported declarator forms explicitly.
 
 ### Shared Declaration Backend Tasks
 
-- [ ] Implement a helper analogous to `_helper_parse_declaration_line`.
-- [ ] Feed procedure parameters through the same declaration backend.
-- [ ] Feed function return types through the same declaration backend.
+- [x] Implement a helper analogous to `_helper_parse_declaration_line`.
+- [x] Feed procedure parameters through the same declaration backend.
+- [x] Feed function return types through the same declaration backend.
 - [ ] Feed struct/union fields through the same declaration backend.
-- [ ] Feed typedefs through the same declaration backend.
-- [ ] Feed global variables/constants through the same declaration backend.
-- [ ] Apply declaration specifiers to declarator-derived type layers.
-- [ ] Normalize C type spelling into `CTypeRef`.
-- [ ] Preserve typedef references before project resolution.
+- [x] Feed typedefs through the same declaration backend.
+- [x] Feed global variables/constants through the same declaration backend.
+- [x] Apply declaration specifiers to declarator-derived type layers.
+- [x] Normalize C type spelling into `CTypeRef`.
+- [x] Preserve typedef references before project resolution.
 - [ ] Add tests for each declaration role.
-- [ ] Add tests for declarations with multiple variables.
+- [x] Add tests for declarations with multiple variables.
 - [ ] Add tests for declarations with initializers.
 - [ ] Add tests that local executable statements are not parsed as declarations.
+- [ ] Add exhaustive tests for every supported storage class.
+- [ ] Add exhaustive tests for every supported type qualifier.
+- [ ] Add exhaustive tests for every supported primitive spelling.
+- [ ] Add tests for typedef-name references outside `size_t`-style examples.
+- [ ] Add tests for `struct name`, `union name`, and `enum name` references in
+      globals and parameters.
+- [ ] Add tests for multidimensional arrays.
+- [ ] Add diagnostics for declarations ignored by the current partial parser.
+- [ ] Add structured source facts for declarations that depend on macros.
 
 ### Phase 5 Definition Of Done
 
-- [ ] Shared declaration/declarator parser exists.
-- [ ] It is used by all declaration roles available so far.
-- [ ] Primitive, pointer, array, typedef-name, and tag references have tests.
+- [x] Shared declaration/declarator parser exists.
+- [x] It is used by all declaration roles available so far.
+- [x] Primitive, pointer, array, typedef-name, and tag references have tests.
 - [ ] Unsupported declaration-shaped input raises `CParseError` or structured
       diagnostics.
 
@@ -727,46 +753,57 @@ Scope:
 
 ### Function Prototype Tasks
 
-- [ ] Classify top-level declarations ending with `;` as possible prototypes.
-- [ ] Parse return type through declaration/declarator backend.
-- [ ] Parse function name.
-- [ ] Parse ordered parameter list.
-- [ ] Preserve parameter names.
-- [ ] Preserve unnamed parameter types when legal.
-- [ ] Parse `void` parameter list as zero parameters.
-- [ ] Parse variadic marker `...`.
-- [ ] Mark `is_variadic`.
-- [ ] Parse pointer parameters.
-- [ ] Parse array parameters.
+- [x] Classify top-level declarations ending with `;` as possible prototypes.
+- [x] Parse return type through declaration/declarator backend.
+- [x] Parse function name.
+- [x] Parse ordered parameter list.
+- [x] Preserve parameter names.
+- [x] Preserve unnamed parameter types when legal.
+- [x] Parse `void` parameter list as zero parameters.
+- [x] Parse variadic marker `...`.
+- [x] Mark `is_variadic`.
+- [x] Parse pointer parameters.
+- [x] Parse array parameters.
 - [ ] Parse function pointer parameters.
-- [ ] Parse `const` parameters.
-- [ ] Parse `restrict` parameters.
-- [ ] Parse `volatile` parameters.
-- [ ] Parse storage class `extern`.
-- [ ] Parse storage class `static`.
-- [ ] Add source locations.
-- [ ] Add tests for simple prototypes.
+- [x] Parse `const` parameters.
+- [x] Parse `restrict` parameters.
+- [x] Parse `volatile` parameters.
+- [x] Parse storage class `extern`.
+- [x] Parse storage class `static`.
+- [x] Add source locations.
+- [x] Add tests for simple prototypes.
 - [ ] Add tests for no-argument prototypes.
 - [ ] Add tests for `void` arguments.
-- [ ] Add tests for pointer and array parameters.
-- [ ] Add tests for const pointer variants.
-- [ ] Add tests for variadic prototypes.
+- [x] Add tests for pointer and array parameters.
+- [x] Add tests for const pointer variants.
+- [x] Add tests for variadic prototypes.
 - [ ] Add tests for function pointer parameters.
+- [ ] Add model field for prototype style so `int f(void)` and `int f()` can
+      be distinguished.
+- [ ] Add tests that distinguish explicit `void` parameter lists from
+      unspecified empty parameter lists.
+- [ ] Add parser source facts or diagnostics for variadic functions.
+- [ ] Add parser source facts for callback candidates once function pointer
+      parameters are supported.
 
 ### Function Definition Tasks
 
-- [ ] Classify top-level declarator followed by `{` as function definition.
-- [ ] Parse signature from the definition header.
-- [ ] Preserve `is_definition=True`.
+- [x] Classify top-level declarator followed by `{` as function definition.
+- [x] Parse signature from the definition header.
+- [x] Preserve `is_definition=True`.
 - [ ] Preserve body source span.
-- [ ] Skip body contents for wrapper metadata.
-- [ ] Balance braces while respecting strings, chars, and comments.
-- [ ] Ignore local declarations for exported signatures in v1.
+- [ ] Add `CSourceSpan` or equivalent start/end model before preserving body
+      spans.
+- [x] Skip body contents for wrapper metadata.
+- [x] Balance braces while respecting strings, chars, and comments.
+- [x] Ignore local declarations for exported signatures in v1.
 - [ ] Reject or diagnose K&R style function definitions initially.
-- [ ] Add tests for simple definitions.
-- [ ] Add tests for nested braces in function body.
-- [ ] Add tests for strings containing braces.
+- [x] Add tests for simple definitions.
+- [x] Add tests for nested braces in function body.
+- [x] Add tests for strings containing braces.
 - [ ] Add tests for K&R unsupported diagnostics.
+- [ ] Detect K&R definitions before body skipping hides the old-style
+      declaration list.
 
 ### Function Deduplication Tasks
 
@@ -779,13 +816,15 @@ Scope:
 - [ ] Add tests for prototype plus definition.
 - [ ] Add tests for conflicting prototypes.
 - [ ] Add tests for duplicate definitions.
+- [ ] Preserve declaration order before deduplicating prototypes and
+      definitions.
 
 ### Phase 6 Definition Of Done
 
-- [ ] Basic C function signatures parse from `.h` and `.c`.
-- [ ] Function bodies are skipped safely.
+- [x] Basic C function signatures parse from `.h` and `.c`.
+- [x] Function bodies are skipped safely.
 - [ ] Variadic and function pointer cases are represented and diagnosed.
-- [ ] CLI human and JSON output show functions.
+- [x] CLI human and JSON output show functions.
 - [ ] Parser diagnostics report no-functions only when appropriate.
 
 ### Phase 6 Risks And Open Questions
@@ -857,7 +896,7 @@ Scope:
 
 ### Typedef Tasks
 
-- [ ] Parse primitive typedefs.
+- [x] Parse primitive typedefs.
 - [ ] Parse pointer typedefs.
 - [ ] Parse array typedefs.
 - [ ] Parse function pointer typedefs.
@@ -865,6 +904,7 @@ Scope:
 - [ ] Preserve alias chains before resolution.
 - [ ] Detect duplicate typedefs in same scope.
 - [ ] Add tests for typedef chains.
+- [x] Add tests for primitive typedefs.
 - [ ] Add tests for opaque handle typedefs.
 - [ ] Add tests for function pointer typedef diagnostics.
 
@@ -897,14 +937,14 @@ Scope:
 
 ### File Discovery Tasks
 
-- [ ] Discover `.c` files in C mode.
-- [ ] Discover `.h` files in C mode.
+- [x] Discover `.c` files in C mode.
+- [x] Discover `.h` files in C mode.
 - [ ] Decide whether `.i` is included now or later.
-- [ ] Keep Fortran directory scanning unchanged.
-- [ ] Support explicit file lists.
-- [ ] Support directory recursion only in explicit C mode.
-- [ ] Preserve deterministic file ordering.
-- [ ] Add tests for file discovery.
+- [x] Keep Fortran directory scanning unchanged.
+- [x] Support explicit file lists.
+- [x] Support directory recursion only in explicit C mode.
+- [x] Preserve deterministic file ordering.
+- [x] Add tests for file discovery.
 
 ### Include Resolution Tasks
 
@@ -922,16 +962,22 @@ Scope:
 
 ### Project Index Tasks
 
-- [ ] Index functions by name and file.
-- [ ] Index typedefs by name.
+- [x] Index functions by name.
+- [ ] Index functions by file.
+- [x] Index typedefs by name.
 - [ ] Index struct tags by tag namespace.
 - [ ] Index union tags by tag namespace.
 - [ ] Index enum tags by tag namespace.
 - [ ] Index enum constants in ordinary identifier namespace.
-- [ ] Index macros/constants separately.
+- [x] Index macros/constants separately.
+- [x] Index globals by name.
 - [ ] Detect duplicate definitions.
 - [ ] Distinguish compatible redeclarations from conflicts.
 - [ ] Add tests for duplicate handling.
+- [ ] Add tests for project-level function indexes.
+- [ ] Add tests for project-level typedef indexes.
+- [ ] Add tests for project-level global indexes.
+- [ ] Add tests for project-level macro indexes.
 
 ### Type Resolution Tasks
 
@@ -1256,13 +1302,13 @@ Scope:
 - [ ] Run semantic tests.
 - [ ] Run `.pyi` tests.
 - [ ] Run C corpus parse-only tests.
-- [ ] Run CLI tests.
+- [x] Run CLI tests.
 - [ ] Run golden fixture tests.
 - [ ] Confirm Fortran tests still pass.
 - [ ] Audit JSON schema stability.
 - [ ] Audit error diagnostic stability.
-- [ ] Audit docs for implemented behavior.
-- [ ] Remove stale skeleton wording where implementation has matured.
+- [x] Audit docs for implemented behavior.
+- [x] Remove stale skeleton wording where implementation has matured.
 - [ ] Add developer tutorial for C parser internals.
 - [ ] Add public API reference examples.
 

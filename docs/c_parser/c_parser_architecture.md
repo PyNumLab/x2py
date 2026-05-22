@@ -1,13 +1,15 @@
 # C Parser Architecture Plan
 
-Status: skeleton plus raw directive metadata implemented. The `c_parser`
-package, typed skeleton models, public skeleton entrypoints, explicit
-`x2py --language c --parse` CLI path, and raw include/macro metadata collection
-exist. Real C declaration and function grammar parsing is still deferred.
+Status: partial parser plus raw directive metadata implemented. The `c_parser`
+package, typed parser models, public entrypoints, explicit
+`x2py --language c --parse` CLI path, raw include/macro metadata collection,
+top-level source splitting, and a first simple declaration/function subset
+exist.
 
 This document records the target architecture for the C parser frontend in
-x2py. The initial skeleton now exists, and the remaining sections describe the
-architecture it should grow into. The design is based on inspection of the
+x2py. The initial skeleton has grown into a partial parser, and the remaining
+sections describe the architecture it should grow into. The design is based on
+inspection of the
 current Fortran parser, semantic IR conversion layer, `.pyi` parser/printer,
 CLI, tests, and fixture workflow.
 
@@ -16,24 +18,31 @@ CLI, tests, and fixture workflow.
 Implemented now:
 
 - `c_parser/` package exists and is included in package discovery.
-- `c_parser.models` defines JSON-stable skeleton dataclasses and `CParseError`.
+- `c_parser.models` defines JSON-stable parser dataclasses and `CParseError`.
 - `c_parser.parser` exposes `CParser`, `parse_c_file`, and `parse_c_project`.
+- `c_parser.parser` keeps parser helpers on `CParser`, matching the Fortran
+  parser's stateful class structure; module-level functions are limited to
+  public entrypoints and small path helpers.
 - `c_parser.lexer` strips comments safely, folds backslash-newline logical
-  records, and exposes lightweight token records for the implemented subset.
+  records, exposes lightweight token records, and provides top-level splitting
+  helpers that track braces, parentheses, brackets, and literals.
 - `c_parser.preprocessor` records raw `#include` directives, simple object-like
   macros, and unsupported function-like macro diagnostics without expanding
   macros.
-- `c_parser.cli` provides C-specific skeleton report formatting.
-- `x2py.cli` dispatches `--language c --parse` to the C skeleton path.
+- `c_parser.parser` parses simple globals, typedefs, function prototypes, and
+  function-definition signatures while skipping bodies.
+- `c_parser.cli` provides C-specific partial report formatting.
+- `x2py.cli` dispatches `--language c --parse` to the C parser path.
 - `--language c --semantics`, `--language c --pyi`, and C wrap-readiness are
   rejected until semantic conversion exists.
-- Focused skeleton CLI/API and raw lexer/directive metadata tests are
+- Focused partial CLI/API, declaration/function, and raw lexer/directive tests are
   unskipped while broader roadmap tests remain skipped.
 
 Deferred:
 
-- declaration/declarator parsing
-- function, struct, union, enum, typedef, and global extraction
+- recursive/parenthesized declarator parsing
+- function pointer and callback metadata
+- struct, union, and enum extraction
 - preprocessed-input support, line mapping, and macro-expanded declaration
   parsing
 - include graph and project type resolution
@@ -163,15 +172,17 @@ c_parser/
 Current and planned responsibilities:
 
 - `c_parser/models.py`
-  - Implemented: typed skeleton parser models, `CParseError`, compiler-style
+  - Implemented: typed parser models, `CParseError`, compiler-style
     diagnostic rendering, and JSON-stable dataclass serialization.
-  - Planned: richer source facts for declarations, types, functions,
+  - Planned: richer source facts for recursive declarators, composite types,
     macros/constants, and project indexes.
 - `c_parser/lexer.py`
   - Implemented: safe comment removal that preserves line mapping, logical
     record folding for backslash-newline, string/character literal awareness,
-    and lightweight tokens with source locations.
-  - Planned: richer token/nesting helpers as declarator parsing requires them.
+    lightweight tokens with source locations, top-level splitting, and
+    delimiter splitting aware of nesting and literals.
+  - Planned: richer token helpers as recursive declarator parsing requires
+    them.
 - `c_parser/preprocessor.py`
   - Implemented: lightweight raw directive metadata for includes,
     object-like macros, function-like macro diagnostics, and local include
@@ -179,10 +190,13 @@ Current and planned responsibilities:
   - Planned: compiler-assisted preprocessing metadata and `#line`/linemarker
     source mapping for preprocessed input.
 - `c_parser/parser.py`
-  - Implemented: skeleton `CParser`, `parse_c_file`, and `parse_c_project`.
-  - Planned: grammar-style recursive parser, translation-unit visitor,
-    declaration/declarator/function/composite-type visitors, and shared
-    declaration/declarator parsing.
+  - Implemented: `CParser`, `parse_c_file`, `parse_c_project`,
+    translation-unit visiting, simple declaration/function visitors, simple
+    declaration-specifier handling, and simple pointer/array declarator
+    extraction. Helper methods live on `CParser` rather than as broad
+    module-level functions.
+  - Planned: recursive declarator/function/composite-type visitors and a
+    richer shared declaration/declarator backend.
 - `c_parser/project.py`
   - Placeholder now.
   - Planned: file discovery for `.c`, `.h`, and possibly `.i`.
@@ -197,13 +211,12 @@ Current and planned responsibilities:
   - Pointer/array/function-pointer type helpers.
   - Safe constant expression folding for simple compile-time values.
 - `c_parser/cli.py`
-  - Implemented: skeleton report formatting and serialization helpers called by
+  - Implemented: report formatting and serialization helpers called by
     `x2py.cli` behind explicit C flags.
-  - Planned: richer human output once real C facts are populated.
+  - Planned: richer human output as more C facts are populated.
 - `c_parser/utils.py`
   - Placeholder now.
-  - Planned: top-level splitting helpers for comma, parentheses, brackets,
-    braces, and declarator fragments.
+  - Planned: shared helpers that are not parser-state dependent.
 
 ## Public API Shape
 
@@ -227,12 +240,12 @@ class CParser:
 ```
 
 These entrypoints are exposed from `c_parser`, not re-exported from
-`x2py.__init__`. Keeping the skeleton API under `c_parser` avoids making the
-top-level x2py API promise C behavior before real parsing exists.
+`x2py.__init__`. Keeping the API under `c_parser` avoids making the top-level
+x2py API promise stable C behavior before the frontend matures.
 
 ## Core Model Families
 
-Implemented skeleton parser models:
+Implemented parser models:
 
 - `CSourceLocation`
   - `filename`
@@ -366,7 +379,7 @@ regions:
 - struct/union/enum definitions
 - compound statement bodies
 
-The C parser should parse external declarations by slicing top-level grammar
+The C parser parses external declarations by slicing top-level grammar
 regions, not by scanning the full file repeatedly. The high-level flow should
 be:
 
@@ -481,14 +494,15 @@ Initial non-goal:
 C project parsing should account for include graphs instead of Fortran `use`
 graphs.
 
-Skeleton behavior:
+Current behavior:
 
 - `parse_c_project` accepts mappings, explicit paths, and directories.
 - Directory mode currently discovers `.c` and `.h` files only.
-- Returned `CProject` objects contain `CFile` skeletons with raw include,
-  macro, and metadata diagnostics populated per file.
-- Include graphs, cross-file indexes, declaration indexes, and type resolution
-  are not populated yet.
+- Returned `CProject` objects contain `CFile` parser models with raw include,
+  macro, metadata diagnostics, and supported declarations populated per file.
+- Basic project-level indexes are populated for parsed functions, typedefs,
+  globals, macros, and includes.
+- Include graphs, duplicate analysis, and type resolution are not populated yet.
 
 Planned behavior after project-resolution phases:
 
