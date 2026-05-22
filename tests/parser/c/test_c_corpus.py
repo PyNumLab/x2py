@@ -72,7 +72,7 @@ def test_cjson_source_file_parse_skips_function_bodies_safely():
     parsed = parse_c_file(_CJSON_DIR / "cJSON.c")
 
     assert any(fn.name == "cJSON_Parse" for fn in parsed.functions)
-    assert all(fn.body is None for fn in parsed.functions)
+    assert not any(hasattr(fn, "body") for fn in parsed.functions)
 
 
 def test_cjson_project_parse_links_header_and_source():

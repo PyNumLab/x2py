@@ -4,7 +4,7 @@ Status: C parser partial subset plus raw directive metadata implemented. The
 CLI command shape exists and parse reports can include raw includes, simple
 macros, `#undef` provenance, metadata diagnostics, simple globals, typedefs,
 function prototypes, prototype-style metadata, and function-definition
-signatures.
+signatures with start/end locations.
 
 The C parser CLI workflow should be designed before parser implementation so
 future parser work lands behind a stable command shape, output schema, and
@@ -33,6 +33,9 @@ while composite type sections remain empty. Raw `includes`, `macros`, and
 metadata `diagnostics` can also be populated. The parser reports
 `parser_status: "partial"`. C parse diagnostics, currently including
 unsupported K&R-style function definitions, honor `--no-color` and `NO_COLOR=1`.
+Function definitions do not store executable body text; they preserve a
+direct `start` location and `end` location from the signature start through the
+closing brace.
 
 Unsupported C stages:
 
@@ -205,7 +208,9 @@ JSON output for a file without raw directives:
         "specifiers": [],
         "variadic": false,
         "is_definition": false,
-        "prototype_style": "prototype"
+        "prototype_style": "prototype",
+        "start": {"filename": "include/example.h", "line": 1, "...": "..."},
+        "end": null
       }
     ],
     "structs": [],
@@ -345,7 +350,8 @@ The active CLI/parser tests cover the current partial subset:
 - raw comment stripping, line-continuation folding, top-level splitting,
   include collection, simple macro collection, function-like macro diagnostics,
   conditional non-selection, simple declarations, globals, typedefs, and
-  function signatures are covered by focused C tests.
+  function signatures with definition start/end locations are covered by focused C
+  tests.
 - `--show-vars` and `--print-limit` are rejected in C mode until C-specific
   display controls exist.
 - `--semantics` with `--language c` is rejected until C semantic conversion is
@@ -368,6 +374,8 @@ Completed order:
    macros.
 7. Added top-level splitting and a first partial grammar subset for simple
    globals, typedefs, function prototypes, and function-definition headers.
+8. Added function-definition start/end locations while continuing to skip
+   executable bodies.
 
 Next implementation work should continue with richer declarator support,
 preprocessed-input line mapping, composite types, and project resolution while

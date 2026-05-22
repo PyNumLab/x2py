@@ -4,8 +4,9 @@ Status: implementation checklist with Phase 1 skeleton, selected Phase 2
 fixture scaffolding, selected Phase 3 model/error work, Phase 4 raw
 lexer/directive metadata, and a first Phase 5/6 partial
 declaration/function subset complete. The `c_parser` package and explicit C
-parse path exist, and simple globals, typedefs, function prototypes, and
-function-definition signatures are now parsed.
+parse path exist, and simple globals, typedefs, function prototypes,
+function-definition signatures, and function-definition start/end locations are now
+parsed.
 
 This checklist is intentionally detailed so future work can proceed one branch,
 one checklist item, and one tested capability at a time. The C parser initiative
@@ -15,10 +16,11 @@ stable.
 ## Progress Snapshot
 
 - Last updated: 2026-05-22
-- Checklist progress: 443/848 checked (52.2%).
+- Checklist progress: 445/848 checked (52.5%).
 - Current parser status: partial C parser with raw directive metadata, top-level
   source splitting, simple declarations/globals/typedefs, prototype-style
-  metadata, K&R diagnostics, and simple function signatures.
+  metadata, K&R diagnostics, simple function signatures, and start/end
+  locations for function definitions.
 
 ## Global Rules
 
@@ -792,10 +794,10 @@ Scope:
 - [x] Classify top-level declarator followed by `{` as function definition.
 - [x] Parse signature from the definition header.
 - [x] Preserve `is_definition=True`.
-- [ ] Preserve body source span.
-- [ ] Add `CSourceSpan` or equivalent start/end model before preserving body
-      spans.
-- [x] Skip body contents for wrapper metadata.
+- [x] Preserve function-definition start/end locations.
+- [x] Add direct `start`/`end` model fields before preserving definition
+      ranges.
+- [x] Skip function body contents for wrapper metadata.
 - [x] Balance braces while respecting strings, chars, and comments.
 - [x] Ignore local declarations for exported signatures in v1.
 - [x] Reject or diagnose K&R style function definitions initially.

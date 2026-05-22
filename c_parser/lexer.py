@@ -45,7 +45,9 @@ class CTopLevelSegment:
     original_start_line: int = 1
     original_end_line: int = 1
     original_start_column: int = 1
+    original_end_column: int = 1
     original_source_line: str | None = None
+    original_end_source_line: str | None = None
 
 
 _TWO_CHAR_OPERATORS = {
@@ -192,6 +194,10 @@ def split_top_level_c_source(
     state = "normal"
     quote = ""
     escaped = False
+    block_header: str | None = None
+    block_start_line = 1
+    block_start_column = 1
+    block_source_line: str | None = None
 
     while i < len(stripped):
         char = stripped[i]
@@ -241,23 +247,32 @@ def split_top_level_c_source(
             if start_index is not None:
                 header = stripped[start_index:i].strip()
                 if header:
-                    segments.append(
-                        CTopLevelSegment(
-                            text=header,
-                            terminator="block",
-                            filename=filename,
-                            original_start_line=start_line,
-                            original_end_line=line,
-                            original_start_column=start_column,
-                            original_source_line=_source_line(source_lines, start_line),
-                        )
-                    )
+                    block_header = header
+                    block_start_line = start_line
+                    block_start_column = start_column
+                    block_source_line = _source_line(source_lines, start_line)
             brace_depth = 1
             start_index = None
         elif char == "{" and brace_depth:
             brace_depth += 1
         elif char == "}" and brace_depth:
             brace_depth -= 1
+            if brace_depth == 0 and block_header:
+                segments.append(
+                    CTopLevelSegment(
+                        text=block_header,
+                        terminator="block",
+                        filename=filename,
+                        original_start_line=block_start_line,
+                        original_end_line=line,
+                        original_start_column=block_start_column,
+                        original_end_column=column,
+                        original_source_line=block_source_line,
+                        original_end_source_line=_source_line(source_lines, line),
+                    )
+                )
+                block_header = None
+                block_source_line = None
         elif (
             char == ";"
             and paren_depth == 0
@@ -275,7 +290,9 @@ def split_top_level_c_source(
                         original_start_line=start_line,
                         original_end_line=line,
                         original_start_column=start_column,
+                        original_end_column=column,
                         original_source_line=_source_line(source_lines, start_line),
+                        original_end_source_line=_source_line(source_lines, line),
                     )
                 )
             start_index = None
@@ -294,7 +311,9 @@ def split_top_level_c_source(
                     original_start_line=start_line,
                     original_end_line=line,
                     original_start_column=start_column,
+                    original_end_column=column,
                     original_source_line=_source_line(source_lines, start_line),
+                    original_end_source_line=_source_line(source_lines, line),
                 )
             )
 

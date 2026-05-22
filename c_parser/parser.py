@@ -86,6 +86,14 @@ class CParser:
             source_line=segment.original_source_line,
         )
 
+    def _end_location(self, segment: CTopLevelSegment) -> CSourceLocation:
+        return CSourceLocation(
+            filename=segment.filename,
+            line=segment.original_end_line,
+            column=segment.original_end_column,
+            source_line=segment.original_end_source_line,
+        )
+
     def _last_identifier(self, text: str) -> re.Match[str] | None:
         bracket_depth = 0
         allowed_spans: list[tuple[int, int]] = []
@@ -414,6 +422,8 @@ class CParser:
             is_definition=segment.terminator == "block",
             prototype_style=self._prototype_style(parameters_text),
             source_location=self._source_location(segment),
+            start=self._source_location(segment),
+            end=self._end_location(segment) if segment.terminator == "block" else None,
         )
 
     def _parse_declaration(self, segment: CTopLevelSegment) -> tuple[list[CTypedef], list[CGlobal]]:
