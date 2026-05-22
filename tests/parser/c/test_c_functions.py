@@ -18,8 +18,7 @@ def test_function_prototypes_preserve_return_type_parameter_order_and_names():
     assert [param.name for param in fn.parameters] == ["n", "x", "y"]
 
 
-@pytest.mark.skip(reason="function body source spans are not modeled yet.")
-def test_function_definitions_skip_bodies_but_preserve_source_span():
+def test_function_definitions_skip_bodies_but_preserve_start_and_end_locations():
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
@@ -34,9 +33,10 @@ int add(int a, int b)
 
     fn = parsed.functions[0]
     assert fn.name == "add"
-    assert fn.body is None
-    assert fn.source_span.start.line == 2
-    assert fn.source_span.end.line == 5
+    assert fn.start is not None
+    assert fn.end is not None
+    assert fn.start.line == 2
+    assert fn.end.line == 5
 
 
 def test_void_parameter_list_and_empty_parameter_list_are_distinguished():

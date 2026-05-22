@@ -225,6 +225,8 @@ class CFunction:
     is_definition: bool = False
     prototype_style: str | None = None
     source_location: CSourceLocation | None = None
+    start: CSourceLocation | None = None
+    end: CSourceLocation | None = None
 
 
 @dataclass

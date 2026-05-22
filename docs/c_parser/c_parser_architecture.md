@@ -4,7 +4,7 @@ Status: partial parser plus raw directive metadata implemented. The `c_parser`
 package, typed parser models, public entrypoints, explicit
 `x2py --language c --parse` CLI path, raw include/macro/undef metadata
 collection, top-level source splitting, and a first simple
-declaration/function subset exist.
+declaration/function subset with function-definition start/end locations exist.
 
 This document records the target architecture for the C parser frontend in
 x2py. The initial skeleton has grown into a partial parser, and the remaining
@@ -25,14 +25,16 @@ Implemented now:
   public entrypoints and small path helpers.
 - `c_parser.lexer` strips comments safely, folds backslash-newline logical
   records, exposes lightweight token records, and provides top-level splitting
-  helpers that track braces, parentheses, brackets, and literals.
+  helpers that track braces, parentheses, brackets, literals, and
+  function-definition end locations.
 - `c_parser.preprocessor` records raw `#include` directives, simple object-like
   macros, `#undef` directives, and unsupported function-like macro diagnostics
   without expanding macros.
 - `c_parser.parser` parses simple globals, typedefs, function prototypes, and
   function-definition signatures while skipping bodies. Function models include
-  `prototype_style`, and K&R-style function definitions raise focused
-  diagnostics.
+  `prototype_style`; definitions preserve direct `start` and `end` locations
+  from the signature start through the closing brace; and K&R-style function
+  definitions raise focused diagnostics.
 - `c_parser.cli` provides C-specific partial report formatting.
 - `x2py.cli` dispatches `--language c --parse` to the C parser path.
 - `--language c --semantics`, `--language c --pyi`, and C wrap-readiness are
@@ -185,8 +187,8 @@ Current and planned responsibilities:
 - `c_parser/lexer.py`
   - Implemented: safe comment removal that preserves line mapping, logical
     record folding for backslash-newline, string/character literal awareness,
-    lightweight tokens with source locations, top-level splitting, and
-    delimiter splitting aware of nesting and literals.
+    lightweight tokens with source locations, top-level splitting with block
+    end locations, and delimiter splitting aware of nesting and literals.
   - Planned: richer token helpers as recursive declarator parsing requires
     them.
 - `c_parser/preprocessor.py`
@@ -201,8 +203,9 @@ Current and planned responsibilities:
     declaration-specifier handling, and simple pointer/array declarator
     extraction. Helper methods live on `CParser` rather than as broad
     module-level functions. Current function models record prototype-style
-    versus unspecified empty parameter lists, and K&R-style definitions are
-    rejected with `CParseError`.
+    versus unspecified empty parameter lists, function definitions preserve
+    start/end locations, and K&R-style definitions are rejected with
+    `CParseError`.
   - Planned: recursive declarator/function/composite-type visitors and a
     richer shared declaration/declarator backend.
 - `c_parser/project.py`
@@ -298,7 +301,10 @@ Implemented parser models:
   - `specifiers`
   - `variadic`
   - `is_definition`
+  - `prototype_style`
   - `source_location`
+  - `start`
+  - `end`
 - `CField`
   - `name`
   - `type`
@@ -366,10 +372,10 @@ Implemented parser models:
   - `macros`
   - `includes`
 
-Future parser phases can add fields such as source spans, bit widths, function
-pointer metadata, conditional-region metadata, include graphs, and project
-diagnostics when the corresponding behavior lands. Additions should be
-documented and tested with stable serialization expectations.
+Future parser phases can add fields such as bit widths, function pointer
+metadata, conditional-region metadata, include graphs, and project diagnostics
+when the corresponding behavior lands. Additions should be documented and
+tested with stable serialization expectations.
 
 ## Grammar-Style Parsing Strategy
 
@@ -408,7 +414,7 @@ be:
 7. Use a shared declaration-specifier and declarator parser to build type
    references for functions, parameters, fields, globals, and typedefs.
 8. Ignore executable function bodies except where needed to find the matching
-   brace and preserve source spans.
+   brace and preserve function start/end locations.
 
 ## Declarator-Centered Design
 

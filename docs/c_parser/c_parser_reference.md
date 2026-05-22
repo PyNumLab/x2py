@@ -3,7 +3,8 @@
 Status: partial parser reference with raw directive metadata. The `c_parser`
 package and explicit C CLI parse path exist, raw includes/simple macros are
 recorded, and a first grammar-shaped subset parses simple declarations,
-typedefs, globals, function prototypes, and function-definition headers.
+typedefs, globals, function prototypes, and function-definition headers with
+start/end locations.
 
 This document is the future home for the C parser user and developer reference.
 It should evolve into the C equivalent of `fortran_parser.md` as implementation
@@ -67,6 +68,8 @@ Implemented:
 - simple function prototype extraction
 - prototype-style metadata distinguishing `int f(void)` from `int f()`
 - simple function-definition signature extraction with body skipping
+- start/end locations for function definitions, from the signature start
+  through the closing brace
 - unsupported K&R function-definition diagnostics
 - C fixture inputs under `tests/data/c/general/` plus C fixture directory
   scaffolding for errors, corpus, and scientific APIs
@@ -201,8 +204,9 @@ current partial phase can populate `functions`, `typedefs`, `globals`,
 `structs`, `unions`, and `enums` remain empty until their dedicated parser
 phase lands. Functions include `prototype_style`, currently `"prototype"` for
 typed or explicit `void` parameter lists and `"unspecified"` for empty
-parameter lists such as `int f()`. Re-export from `x2py` is still deferred;
-users should import from `c_parser`.
+parameter lists such as `int f()`. Function definitions do not store
+executable body text; they include direct `start` and `end` locations.
+Re-export from `x2py` is still deferred; users should import from `c_parser`.
 
 `macro_defines` is reserved for future compiler-assisted preprocessing
 configuration. It must not mean that raw mode evaluates C preprocessor
@@ -252,7 +256,9 @@ Per-file shape:
         "variadic": false,
         "is_definition": false,
         "prototype_style": "prototype",
-        "source_location": {"filename": "<path>", "line": 1, "...": "..."}
+        "source_location": {"filename": "<path>", "line": 1, "...": "..."},
+        "start": {"filename": "<path>", "line": 1, "...": "..."},
+        "end": null
       }
     ],
     "structs": [],
@@ -350,10 +356,11 @@ public entrypoints, empty model serialization, CLI discovery, JSON/output-file
 behavior, unsupported C stages, comment stripping, line-continuation folding,
 top-level splitting, include collection, simple macro collection, macro-shaped
 declaration deferral, raw conditional branch non-selection, simple declarations,
-globals, typedefs, and simple function prototypes/definitions. The broader
-roadmap tests remain skipped until their matching implementation branches land.
-Future implementation branches should unskip only the tests for the capability
-they implement, then merge those branches back into `c-parser/main`.
+globals, typedefs, and simple function prototypes/definitions, including
+function-definition start/end locations. The broader roadmap tests remain skipped
+until their matching implementation branches land. Future implementation
+branches should unskip only the tests for the capability they implement, then
+merge those branches back into `c-parser/main`.
 
 Fixture layout should be separate from Fortran:
 
