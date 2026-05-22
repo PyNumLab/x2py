@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from .models import CFile, CProject
+from .preprocessor import collect_preprocessor_metadata
 
 
 _C_SOURCE_SUFFIXES = {".c", ".h"}
@@ -32,9 +33,8 @@ def _collect_c_paths(path: Path) -> list[Path]:
 class CParser:
     """C parser skeleton entrypoint.
 
-    This class intentionally returns typed empty models. Grammar parsing lands
-    in later phases after the public API, CLI, and serialization contracts are
-    stable.
+    This class intentionally limits itself to typed skeleton models and raw
+    preprocessing metadata. Declaration grammar parsing lands in later phases.
     """
 
     def visit_file(
@@ -47,16 +47,26 @@ class CParser:
         preprocessing: str = "raw",
         encoding: str = "utf-8",
     ) -> CFile:
-        del macro_defines, include_dirs
+        del macro_defines
         if _looks_like_existing_source_path(source_or_path):
             path = Path(source_or_path)
             if filename is None:
                 filename = str(path)
-            path.read_text(encoding=encoding)
+            source = path.read_text(encoding=encoding)
         else:
-            str(source_or_path)
+            source = str(source_or_path)
 
-        return CFile(filename=filename, preprocessing=preprocessing)
+        parsed = CFile(filename=filename, preprocessing=preprocessing)
+        if preprocessing == "raw":
+            metadata = collect_preprocessor_metadata(
+                source,
+                filename=filename,
+                include_dirs=include_dirs,
+            )
+            parsed.includes = metadata.includes
+            parsed.macros = metadata.macros
+            parsed.diagnostics = metadata.diagnostics
+        return parsed
 
     def visit_project(
         self,

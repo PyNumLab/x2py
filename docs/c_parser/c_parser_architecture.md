@@ -1,8 +1,9 @@
 # C Parser Architecture Plan
 
-Status: skeleton implemented. The `c_parser` package, typed skeleton models,
-public skeleton entrypoints, and explicit `x2py --language c --parse` CLI path
-exist. Real C grammar parsing is still deferred.
+Status: skeleton plus raw directive metadata implemented. The `c_parser`
+package, typed skeleton models, public skeleton entrypoints, explicit
+`x2py --language c --parse` CLI path, and raw include/macro metadata collection
+exist. Real C declaration and function grammar parsing is still deferred.
 
 This document records the target architecture for the C parser frontend in
 x2py. The initial skeleton now exists, and the remaining sections describe the
@@ -17,18 +18,24 @@ Implemented now:
 - `c_parser/` package exists and is included in package discovery.
 - `c_parser.models` defines JSON-stable skeleton dataclasses and `CParseError`.
 - `c_parser.parser` exposes `CParser`, `parse_c_file`, and `parse_c_project`.
+- `c_parser.lexer` strips comments safely, folds backslash-newline logical
+  records, and exposes lightweight token records for the implemented subset.
+- `c_parser.preprocessor` records raw `#include` directives, simple object-like
+  macros, and unsupported function-like macro diagnostics without expanding
+  macros.
 - `c_parser.cli` provides C-specific skeleton report formatting.
 - `x2py.cli` dispatches `--language c --parse` to the C skeleton path.
 - `--language c --semantics`, `--language c --pyi`, and C wrap-readiness are
   rejected until semantic conversion exists.
-- Focused skeleton CLI/API tests are unskipped while broader roadmap tests
-  remain skipped.
+- Focused skeleton CLI/API and raw lexer/directive metadata tests are
+  unskipped while broader roadmap tests remain skipped.
 
 Deferred:
 
-- lexer and lightweight preprocessing behavior
 - declaration/declarator parsing
-- function, struct, union, enum, typedef, global, macro, and include extraction
+- function, struct, union, enum, typedef, and global extraction
+- preprocessed-input support, line mapping, and macro-expanded declaration
+  parsing
 - include graph and project type resolution
 - C semantic readiness, semantic IR conversion, and `.pyi` output
 
@@ -161,18 +168,16 @@ Current and planned responsibilities:
   - Planned: richer source facts for declarations, types, functions,
     macros/constants, and project indexes.
 - `c_parser/lexer.py`
-  - Placeholder now.
-  - Planned: tokenization and source-location preservation.
-  - Comment removal that preserves line mapping.
-  - String/character literal awareness.
-  - Line continuation handling for backslash-newline.
+  - Implemented: safe comment removal that preserves line mapping, logical
+    record folding for backslash-newline, string/character literal awareness,
+    and lightweight tokens with source locations.
+  - Planned: richer token/nesting helpers as declarator parsing requires them.
 - `c_parser/preprocessor.py`
-  - Placeholder now.
-  - Planned: lightweight preprocessing metadata.
-  - Include directive collection.
-  - Conditional branch tracking.
-  - Object-like macro collection where safe.
-  - Explicit diagnostics for unsupported macro patterns.
+  - Implemented: lightweight raw directive metadata for includes,
+    object-like macros, function-like macro diagnostics, and local include
+    resolution when a matching file is available.
+  - Planned: compiler-assisted preprocessing metadata and `#line`/linemarker
+    source mapping for preprocessed input.
 - `c_parser/parser.py`
   - Implemented: skeleton `CParser`, `parse_c_file`, and `parse_c_project`.
   - Planned: grammar-style recursive parser, translation-unit visitor,
@@ -208,6 +213,10 @@ The public C API mirrors the Fortran style but remains C-specific:
 parse_c_file(source_or_path, filename=None, macro_defines=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile
 parse_c_project(files, include_dirs=None, macro_defines=None, preprocessing="raw", encoding="utf-8") -> CProject
 ```
+
+`macro_defines` is reserved for future compiler-assisted preprocessing
+configuration. It must not cause raw mode to evaluate C preprocessor
+conditionals or expand macros inside x2py.
 
 Implemented companion class:
 
@@ -414,12 +423,15 @@ This is the C equivalent of the Fortran parser's shared declaration backend.
 The C frontend must be preprocessor-aware without trying to be a full C
 preprocessor in v1.
 
-The practical rule is: x2py should not own full preprocessor correctness.
-Macro-heavy APIs are still in scope, but the supported path for those APIs is
-compiler-assisted preprocessing. The parser should support both raw-source
-mode and a later preprocessed-input mode, and should store the facts it learns
-from either mode in C parser models before any semantic IR conversion is
-attempted.
+The practical rule is: x2py should not own preprocessor correctness. Partial
+macro expansion is especially dangerous in C because macros can participate in
+function names, type names, declarators, attributes, calling conventions,
+visibility annotations, and entire declarations. Raw mode must therefore avoid
+guessing what macro-expanded declarations mean. Macro-heavy APIs are still in
+scope, but the supported path for those APIs is compiler-assisted preprocessing
+with line mapping. The parser should support both raw-source mode and a later
+preprocessed-input mode, and should store the facts it learns from either mode
+in C parser models before any semantic IR conversion is attempted.
 
 Raw-source mode target:
 
@@ -428,12 +440,13 @@ Raw-source mode target:
 - Record `#include` directives as structured include dependencies.
 - Record `#define` object-like macros for simple constants.
 - Record function-like macros as unsupported or deferred metadata.
-- Track `#if`, `#ifdef`, `#ifndef`, `#elif`, `#else`, `#endif` condition sets
-  similarly to the Fortran duplicate-check branch tracking.
-- Allow optional `macro_defines` to select active branches.
-- Preserve inactive branch diagnostics when macro selection is not requested.
-- Parse ordinary declarations visible without macro expansion.
-- Mark declaration regions that depend on unresolved macros.
+- Record conditional directive presence as metadata only when needed for
+  provenance.
+- Parse ordinary declarations only when they are visible without macro
+  expansion.
+- Mark macro-shaped declaration regions as unsupported/deferred rather than
+  treating them as parsed declarations.
+- Do not select active branches from `#if`/`#ifdef` in raw mode.
 
 Compiler-assisted preprocessing target:
 
@@ -441,6 +454,8 @@ Compiler-assisted preprocessing target:
   such as `cc -E` or `clang -E`.
 - Preserve `#line` marker information so diagnostics can map preprocessed
   declarations back to original files.
+- Treat `#line`/linemarker directives as the source of truth for
+  `source_location` fields after preprocessing.
 - Store both the original input path and the preprocessed origin metadata on
   parsed models.
 - Mark declarations discovered only after preprocessing with
@@ -450,6 +465,9 @@ Compiler-assisted preprocessing target:
   different public APIs.
 - Treat function-like macros as metadata in raw mode, but allow their expanded
   declarations to be parsed when they appear in compiler-preprocessed input.
+- Require preprocessed input whenever public declarations depend on macros for
+  names, types, declarators, attributes, storage classes, calling conventions,
+  visibility annotations, or active conditional branches.
 
 Initial non-goal:
 
@@ -467,9 +485,10 @@ Skeleton behavior:
 
 - `parse_c_project` accepts mappings, explicit paths, and directories.
 - Directory mode currently discovers `.c` and `.h` files only.
-- Returned `CProject` objects contain parsed empty `CFile` skeletons.
-- Include graphs, cross-file indexes, and type resolution are not populated
-  yet.
+- Returned `CProject` objects contain `CFile` skeletons with raw include,
+  macro, and metadata diagnostics populated per file.
+- Include graphs, cross-file indexes, declaration indexes, and type resolution
+  are not populated yet.
 
 Planned behavior after project-resolution phases:
 

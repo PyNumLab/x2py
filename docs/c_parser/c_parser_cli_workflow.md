@@ -1,7 +1,8 @@
 # C Parser CLI Workflow Plan
 
-Status: C parser skeleton implemented. The CLI command shape and stable empty
-parse report exist, but no real C declarations are parsed yet.
+Status: C parser skeleton plus raw directive metadata implemented. The CLI
+command shape exists and parse reports can include raw includes, simple macros,
+and metadata diagnostics, but no real C declarations are parsed yet.
 
 The C parser CLI workflow should be designed before parser implementation so
 future parser work lands behind a stable command shape, output schema, and
@@ -9,7 +10,7 @@ diagnostic contract.
 
 ## Current Status
 
-Implemented skeleton commands:
+Implemented commands:
 
 ```bash
 python -m x2py path/to/api.h --language c --parse
@@ -24,8 +25,10 @@ Fortran behavior.
 
 The C parser output differs from Fortran parser output by using C-specific
 top-level sections: `functions`, `structs`, `unions`, `enums`, `typedefs`,
-`globals`, `macros`, `includes`, and `diagnostics`. During the skeleton phase
-all of those lists are empty and `parser_status` is `"skeleton"`.
+`globals`, `macros`, `includes`, and `diagnostics`. During the current skeleton
+phase, declaration-oriented lists remain empty. Raw `includes`, `macros`, and
+metadata `diagnostics` can be populated, while `parser_status` remains
+`"skeleton"` until declaration grammar parsing lands.
 
 Unsupported C stages:
 
@@ -129,8 +132,6 @@ C-specific flags to add only when needed:
 
 ```text
 --include-dir PATH
---define NAME[=VALUE]
---undef NAME
 --show-macros
 --show-includes
 --print-limit N
@@ -144,12 +145,20 @@ Potential later flags:
 --header-mode
 --source-mode
 --preprocessed
+--preprocess-command PATH_OR_COMMAND
+--define NAME[=VALUE]
+--undef NAME
 ```
+
+`--define` and `--undef` should belong to compiler-assisted preprocessing, not
+to raw parser-side macro evaluation. Raw C mode records directives and parses
+ordinary visible declarations only; it does not select `#if` branches or expand
+macros.
 
 ## Early Skeleton Behavior
 
-Phase 1 may implement CLI structure before a real parser exists. Skeleton
-behavior should be intentionally stable:
+Phase 1 implemented CLI structure before a real declaration parser existed.
+The command behavior remains intentionally stable:
 
 ```bash
 x2py include/example.h --language c --parse
@@ -172,7 +181,7 @@ File: include/example.h
   Parser status: skeleton
 ```
 
-JSON output:
+JSON output for a file without raw directives:
 
 ```json
 {
@@ -197,6 +206,21 @@ JSON output:
 The skeleton should not claim C files are wrappable. If C readiness is added
 later, it should follow the semantics-owned readiness boundary used elsewhere
 in x2py, not become parser JSON.
+
+For raw directives, the same JSON shape is used, but `includes`, `macros`, and
+`diagnostics` may contain populated model dictionaries. Function-like macros
+are recorded as macro metadata and also produce a non-fatal
+`C_UNSUPPORTED_FUNCTION_LIKE_MACRO` diagnostic. Local quoted includes are
+resolved relative to the current file when possible; unresolved local includes
+produce `C_UNRESOLVED_INCLUDE` diagnostics instead of hard failures.
+
+Raw mode must not claim support for macro-generated declarations. If macros
+affect function names, types, parameters, attributes, storage classes, calling
+conventions, visibility annotations, or active conditional branches, the user
+should provide compiler-preprocessed input later through a `.i` file or an
+explicit preprocessor command. That preprocessed path must preserve
+`#line`/linemarker mappings so parser diagnostics and JSON `source_location`
+fields still point back to the original `.h` or `.c` file.
 
 ## JSON Parse Schema
 
@@ -296,11 +320,15 @@ Phase 1 has CLI tests before real parsing:
 - `python -m x2py --help` lists `--language`.
 - `python -m x2py <file.c> --language c --parse` is accepted.
 - `python -m x2py <file.c> --parse-c` is not implemented in the skeleton.
-- `--language c --parse --json` emits stable skeleton JSON.
+- `--language c --parse --json` emits stable skeleton JSON with raw
+  include/macro metadata when present.
 - `--language c --parse --out report.json` writes JSON and suppresses stdout.
 - `--language c --parse --no-color` is accepted; real diagnostic color tests
   will matter once parser errors can be raised by C syntax.
 - `--language c --parse --debug-traceback` is accepted.
+- raw comment stripping, line-continuation folding, include collection, simple
+  macro collection, and function-like macro diagnostics are covered by focused
+  C tests.
 - `--show-vars` and `--print-limit` are rejected in C mode until C-specific
   display controls exist.
 - `--semantics` with `--language c` is rejected until C semantic conversion is
@@ -319,6 +347,11 @@ Completed skeleton order:
 4. Added C-specific docs for command shape and placeholder output.
 5. Added CLI/API tests around discovery, stable command behavior, JSON, output
    files, public entrypoints, and diagnostic formatting.
+6. Added raw lexer/directive metadata collection for comments,
+   continuations, includes, simple macros, and unsupported function-like
+   macros.
 
-Next implementation work should begin with lexer/preprocessor and declaration
-model behavior while keeping the explicit `--language c` gate in place.
+Next implementation work should continue with preprocessed-input line mapping,
+declaration/declarator parsing for ordinary visible C declarations, and
+function signature extraction while keeping the explicit `--language c` gate in
+place.

@@ -51,6 +51,29 @@ def test_cli_c_parse_json_stdout_for_header(tmp_path: Path):
     assert file_payload["diagnostics"] == []
 
 
+def test_cli_c_parse_json_reports_raw_preprocessor_metadata(tmp_path: Path):
+    header = tmp_path / "api.h"
+    types = tmp_path / "api_types.h"
+    types.write_text("typedef int api_int;\n", encoding="utf-8")
+    header.write_text(
+        '#include "api_types.h"\n#define API_VERSION 3\n#define API_DECL(ret) ret\n',
+        encoding="utf-8",
+    )
+    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--parse", "--json"]
+
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+    file_payload = payload[str(header)]
+
+    assert file_payload["includes"][0]["target"] == "api_types.h"
+    assert file_payload["includes"][0]["kind"] == "local"
+    assert file_payload["includes"][0]["resolved_path"] == str(types)
+    macros = {macro["name"]: macro for macro in file_payload["macros"]}
+    assert macros["API_VERSION"]["value"] == "3"
+    assert macros["API_DECL"]["function_like"] is True
+    assert file_payload["diagnostics"][0]["code"] == "C_UNSUPPORTED_FUNCTION_LIKE_MACRO"
+
+
 def test_cli_c_parse_json_out_writes_file_and_suppresses_stdout(tmp_path: Path):
     header = tmp_path / "api.h"
     output = tmp_path / "report.json"
