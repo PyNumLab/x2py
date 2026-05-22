@@ -141,6 +141,33 @@ def test_parameters_preserve_struct_union_and_enum_references():
     assert params["status"].type.tag_name == "status"
 
 
+def test_forward_struct_declarations_are_recorded_as_opaque_source_facts():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+struct handle;
+struct handle *open_handle(void);
+void close_handle(struct handle *handle);
+""",
+        filename="opaque.h",
+    )
+
+    assert len(parsed.structs) == 1
+    handle = parsed.structs[0]
+    assert handle.name == "handle"
+    assert handle.opaque is True
+    assert handle.fields == []
+    assert handle.source_location is not None
+    assert handle.source_location.line == 2
+
+    functions = {fn.name: fn for fn in parsed.functions}
+    assert functions["open_handle"].return_type.tag_kind == "struct"
+    assert functions["open_handle"].return_type.tag_name == "handle"
+    assert functions["open_handle"].return_type.pointers
+    assert functions["close_handle"].parameters[0].type.tag_name == "handle"
+
+
 def test_storage_classes_and_qualifiers_are_recorded_for_globals():
     from c_parser import parse_c_file
 

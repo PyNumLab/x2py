@@ -5,8 +5,8 @@ fixture scaffolding, selected Phase 3 model/error work, Phase 4 raw
 lexer/directive metadata, and a first Phase 5/6 partial
 declaration/function subset complete. The `c_parser` package and explicit C
 parse path exist, and simple globals, typedefs, function prototypes,
-function-definition signatures, and function-definition start/end locations are now
-parsed.
+function-definition signatures, function-definition start/end locations, and
+forward `struct name;` declarations are now parsed.
 
 This checklist is intentionally detailed so future work can proceed one branch,
 one checklist item, and one tested capability at a time. The C parser initiative
@@ -15,12 +15,14 @@ stable.
 
 ## Progress Snapshot
 
-- Last updated: 2026-05-22
-- Checklist progress: 445/848 checked (52.5%).
+- Last updated: 2026-05-23
+- Checklist progress: 449/848 checked (52.9%).
 - Current parser status: partial C parser with raw directive metadata, top-level
   source splitting, simple declarations/globals/typedefs, prototype-style
   metadata, K&R diagnostics, simple function signatures, and start/end
-  locations for function definitions.
+  locations for function definitions. Forward struct declarations are recorded
+  as opaque `CStruct` source facts and indexed by struct tag name at project
+  level.
 
 ## Global Rules
 
@@ -850,7 +852,7 @@ Scope:
 ### Struct Tasks
 
 - [ ] Parse named `struct name { ... };`.
-- [ ] Parse forward declaration `struct name;`.
+- [x] Parse forward declaration `struct name;`.
 - [ ] Parse anonymous `struct { ... }`.
 - [ ] Parse typedef anonymous struct `typedef struct { ... } name;`.
 - [ ] Parse typedef named struct `typedef struct tag name;`.
@@ -861,9 +863,9 @@ Scope:
 - [ ] Parse bitfields as metadata with semantic limitations.
 - [ ] Preserve field order.
 - [ ] Preserve source locations.
-- [ ] Mark incomplete structs.
+- [x] Mark incomplete structs.
 - [ ] Add tests for named structs.
-- [ ] Add tests for forward declarations.
+- [x] Add tests for forward declarations.
 - [ ] Add tests for typedef structs.
 - [ ] Add tests for pointer fields.
 - [ ] Add tests for array fields.
@@ -968,7 +970,7 @@ Scope:
 - [x] Index functions by name.
 - [ ] Index functions by file.
 - [x] Index typedefs by name.
-- [ ] Index struct tags by tag namespace.
+- [x] Index struct tags by tag namespace.
 - [ ] Index union tags by tag namespace.
 - [ ] Index enum tags by tag namespace.
 - [ ] Index enum constants in ordinary identifier namespace.

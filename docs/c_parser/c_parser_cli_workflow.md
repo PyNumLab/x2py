@@ -3,8 +3,8 @@
 Status: C parser partial subset plus raw directive metadata implemented. The
 CLI command shape exists and parse reports can include raw includes, simple
 macros, `#undef` provenance, metadata diagnostics, simple globals, typedefs,
-function prototypes, prototype-style metadata, and function-definition
-signatures with start/end locations.
+forward struct declarations, function prototypes, prototype-style metadata, and
+function-definition signatures with start/end locations.
 
 The C parser CLI workflow should be designed before parser implementation so
 future parser work lands behind a stable command shape, output schema, and
@@ -28,9 +28,10 @@ behavior.
 The C parser output differs from Fortran parser output by using C-specific
 top-level sections: `functions`, `structs`, `unions`, `enums`, `typedefs`,
 `globals`, `macros`, `includes`, and `diagnostics`. The current partial parser
-can populate `functions`, `typedefs`, and `globals` for the supported subset,
-while composite type sections remain empty. Raw `includes`, `macros`, and
-metadata `diagnostics` can also be populated. The parser reports
+can populate `functions`, `typedefs`, `globals`, and `structs` for forward
+struct declarations in the supported subset, while full composite definitions,
+unions, and enums remain deferred. Raw `includes`, `macros`, and metadata
+`diagnostics` can also be populated. The parser reports
 `parser_status: "partial"`. C parse diagnostics, currently including
 unsupported K&R-style function definitions, honor `--no-color` and `NO_COLOR=1`.
 Function definitions do not store executable body text; they preserve a
@@ -349,9 +350,9 @@ The active CLI/parser tests cover the current partial subset:
 - `--language c --parse --debug-traceback` is accepted.
 - raw comment stripping, line-continuation folding, top-level splitting,
   include collection, simple macro collection, function-like macro diagnostics,
-  conditional non-selection, simple declarations, globals, typedefs, and
-  function signatures with definition start/end locations are covered by focused C
-  tests.
+  conditional non-selection, simple declarations, globals, typedefs, forward
+  struct declarations, and function signatures with definition start/end
+  locations are covered by focused C tests.
 - `--show-vars` and `--print-limit` are rejected in C mode until C-specific
   display controls exist.
 - `--semantics` with `--language c` is rejected until C semantic conversion is
@@ -376,6 +377,7 @@ Completed order:
    globals, typedefs, function prototypes, and function-definition headers.
 8. Added function-definition start/end locations while continuing to skip
    executable bodies.
+9. Added forward `struct name;` extraction as opaque struct source facts.
 
 Next implementation work should continue with richer declarator support,
 preprocessed-input line mapping, composite types, and project resolution while

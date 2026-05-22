@@ -4,7 +4,8 @@ Status: partial parser reference with raw directive metadata. The `c_parser`
 package and explicit C CLI parse path exist, raw includes/simple macros are
 recorded, and a first grammar-shaped subset parses simple declarations,
 typedefs, globals, function prototypes, and function-definition headers with
-start/end locations.
+start/end locations. Forward `struct name;` declarations are recorded as
+opaque struct source facts.
 
 This document is the future home for the C parser user and developer reference.
 It should evolve into the C equivalent of `fortran_parser.md` as implementation
@@ -65,6 +66,7 @@ Implemented:
 - raw `#undef` directive provenance in macro metadata
 - simple primitive, pointer, array, and qualifier type extraction
 - simple global variable and `typedef` extraction
+- forward `struct name;` extraction as opaque `CStruct` records
 - simple function prototype extraction
 - prototype-style metadata distinguishing `int f(void)` from `int f()`
 - simple function-definition signature extraction with body skipping
@@ -78,7 +80,7 @@ Placeholder only:
 
 - recursive declarator models for parenthesized pointer/array distinctions
 - function pointer declarators and callback metadata
-- structs, unions, enums, and complex typedef parsing
+- struct definitions, unions, enums, and complex typedef parsing
 - project include graph and cross-file type resolution
 - preprocessed-input parsing with `#line`/linemarker source mapping
 - macro-expanded declaration parsing from preprocessed input
@@ -199,10 +201,12 @@ parse_c_project(
 ```
 
 These return typed parser models analogous to the Fortran parser API. The
-current partial phase can populate `functions`, `typedefs`, `globals`,
-`includes`, `macros`, and metadata `diagnostics`. Composite-type lists such as
-`structs`, `unions`, and `enums` remain empty until their dedicated parser
-phase lands. Functions include `prototype_style`, currently `"prototype"` for
+current partial phase can populate `functions`, `structs` for forward
+declarations, `typedefs`, `globals`, `includes`, `macros`, and metadata
+`diagnostics`. Forward `struct name;` declarations are stored as opaque
+`CStruct` records with source locations. `unions`, `enums`, and full struct
+definitions remain deferred until their dedicated parser phase lands. Functions
+include `prototype_style`, currently `"prototype"` for
 typed or explicit `void` parameter lists and `"unspecified"` for empty
 parameter lists such as `int f()`. Function definitions do not store
 executable body text; they include direct `start` and `end` locations.

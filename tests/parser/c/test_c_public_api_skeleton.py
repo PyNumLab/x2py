@@ -54,6 +54,21 @@ def test_parse_c_project_accepts_mapping_sources():
     assert set(project.functions) == {"answer"}
 
 
+def test_parse_c_project_indexes_forward_structs_by_tag_name():
+    from c_parser import parse_c_project
+
+    project = parse_c_project(
+        {
+            "types.h": "struct handle;\n",
+            "api.h": "struct handle *open_handle(void);\n",
+        }
+    )
+
+    assert set(project.structs) == {"handle"}
+    assert project.structs["handle"].opaque is True
+    assert project.files["types.h"].structs[0].name == "handle"
+
+
 def test_parse_c_project_accepts_directory_input_with_c_and_h_files(tmp_path: Path):
     from c_parser import parse_c_project
 

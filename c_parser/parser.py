@@ -22,6 +22,7 @@ from .models import (
     CPointer,
     CProject,
     CSourceLocation,
+    CStruct,
     CTypeRef,
     CTypedef,
 )
@@ -32,6 +33,7 @@ _C_SOURCE_SUFFIXES = {".c", ".h"}
 _IDENTIFIER_RE = re.compile(r"[A-Za-z_]\w*")
 _POINTER_TAIL_RE = re.compile(r"((?:\s*\*\s*(?:(?:const|restrict|volatile|_Atomic)\s*)*)+)$")
 _ARRAY_RE = re.compile(r"\[([^\]]*)\]")
+_STRUCT_FORWARD_RE = re.compile(r"^struct\s+([A-Za-z_]\w*)\s*$")
 _STORAGE_CLASSES = {"typedef", "extern", "static", "register", "_Thread_local"}
 _TYPE_QUALIFIERS = {"const", "restrict", "volatile", "_Atomic"}
 _FUNCTION_SPECIFIERS = {"inline", "_Noreturn"}
@@ -379,7 +381,7 @@ class CParser:
 
     def _parse_function(self, segment: CTopLevelSegment) -> CFunction | None:
         text = segment.text.strip()
-        if text.startswith(("typedef ", "struct ", "union ", "enum ")):
+        if text.startswith("typedef "):
             return None
 
         parameter_bounds = self._find_parameter_list(text)
@@ -426,6 +428,17 @@ class CParser:
             end=self._end_location(segment) if segment.terminator == "block" else None,
         )
 
+    def _parse_forward_struct(self, segment: CTopLevelSegment) -> CStruct | None:
+        text = segment.text.strip()
+        match = _STRUCT_FORWARD_RE.fullmatch(text)
+        if match is None:
+            return None
+        return CStruct(
+            name=match.group(1),
+            opaque=True,
+            source_location=self._source_location(segment),
+        )
+
     def _parse_declaration(self, segment: CTopLevelSegment) -> tuple[list[CTypedef], list[CGlobal]]:
         text = segment.text.strip()
         if not text or text.startswith(("struct ", "union ", "enum ")):
@@ -462,10 +475,11 @@ class CParser:
         self,
         source: str,
         filename: str | None,
-    ) -> tuple[list[CFunction], list[CTypedef], list[CGlobal]]:
+    ) -> tuple[list[CFunction], list[CStruct], list[CTypedef], list[CGlobal]]:
         self._raise_for_unsupported_old_style_definitions(source, filename)
 
         functions: list[CFunction] = []
+        structs: list[CStruct] = []
         typedefs: list[CTypedef] = []
         globals_: list[CGlobal] = []
 
@@ -476,17 +490,24 @@ class CParser:
                 continue
             if segment.terminator != ";":
                 continue
+            forward_struct = self._parse_forward_struct(segment)
+            if forward_struct is not None:
+                structs.append(forward_struct)
+                continue
             parsed_typedefs, parsed_globals = self._parse_declaration(segment)
             typedefs.extend(parsed_typedefs)
             globals_.extend(parsed_globals)
 
-        return functions, typedefs, globals_
+        return functions, structs, typedefs, globals_
 
     def _build_project(self, parsed_files: dict[str, CFile]) -> CProject:
         project = CProject(files=parsed_files)
         for file in parsed_files.values():
             for function in file.functions:
                 project.functions[function.name] = function
+            for struct in file.structs:
+                if struct.name is not None:
+                    project.structs[struct.name] = struct
             for typedef in file.typedefs:
                 project.typedefs[typedef.name] = typedef
             for global_ in file.globals:
@@ -526,8 +547,9 @@ class CParser:
             parsed.includes = metadata.includes
             parsed.macros = metadata.macros
             parsed.diagnostics = metadata.diagnostics
-            functions, typedefs, globals_ = self._parse_translation_unit(source, filename)
+            functions, structs, typedefs, globals_ = self._parse_translation_unit(source, filename)
             parsed.functions = functions
+            parsed.structs = structs
             parsed.typedefs = typedefs
             parsed.globals = globals_
         return parsed

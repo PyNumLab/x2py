@@ -4,7 +4,8 @@ Status: partial parser plus raw directive metadata implemented. The `c_parser`
 package, typed parser models, public entrypoints, explicit
 `x2py --language c --parse` CLI path, raw include/macro/undef metadata
 collection, top-level source splitting, and a first simple
-declaration/function subset with function-definition start/end locations exist.
+declaration/function subset with function-definition start/end locations and
+forward struct declarations exist.
 
 This document records the target architecture for the C parser frontend in
 x2py. The initial skeleton has grown into a partial parser, and the remaining
@@ -30,11 +31,12 @@ Implemented now:
 - `c_parser.preprocessor` records raw `#include` directives, simple object-like
   macros, `#undef` directives, and unsupported function-like macro diagnostics
   without expanding macros.
-- `c_parser.parser` parses simple globals, typedefs, function prototypes, and
-  function-definition signatures while skipping bodies. Function models include
-  `prototype_style`; definitions preserve direct `start` and `end` locations
-  from the signature start through the closing brace; and K&R-style function
-  definitions raise focused diagnostics.
+- `c_parser.parser` parses simple globals, typedefs, forward struct
+  declarations, function prototypes, and function-definition signatures while
+  skipping bodies. Forward structs are recorded as opaque `CStruct` source
+  facts. Function models include `prototype_style`; definitions preserve direct
+  `start` and `end` locations from the signature start through the closing
+  brace; and K&R-style function definitions raise focused diagnostics.
 - `c_parser.cli` provides C-specific partial report formatting.
 - `x2py.cli` dispatches `--language c --parse` to the C parser path.
 - `--language c --semantics`, `--language c --pyi`, and C wrap-readiness are
@@ -50,7 +52,7 @@ Deferred:
 
 - recursive/parenthesized declarator parsing
 - function pointer and callback metadata
-- struct, union, and enum extraction
+- full struct definition, union, and enum extraction
 - preprocessed-input support, line mapping, and macro-expanded declaration
   parsing
 - include graph and project type resolution
@@ -407,7 +409,7 @@ be:
    - typedef
    - function prototype
    - function definition
-   - struct/union/enum definition
+   - forward struct declaration or struct/union/enum definition
    - global variable/static const
    - unsupported/macro-dependent declaration
 6. Dispatch to a small visitor for that declaration kind.
