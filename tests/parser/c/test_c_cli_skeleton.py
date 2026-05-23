@@ -46,7 +46,7 @@ def test_cli_c_parse_json_stdout_for_header(tmp_path: Path):
     assert file_payload["unions"] == []
     assert file_payload["enums"] == []
     assert file_payload["typedefs"] == []
-    assert file_payload["globals"] == []
+    assert file_payload["variables"] == []
     assert file_payload["macros"] == []
     assert file_payload["includes"] == []
     assert file_payload["diagnostics"] == []

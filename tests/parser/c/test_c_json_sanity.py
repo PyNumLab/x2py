@@ -35,7 +35,7 @@ def test_c_json_fixtures_have_stable_top_level_shape():
         "unions",
         "enums",
         "typedefs",
-        "globals",
+        "variables",
         "macros",
         "includes",
         "diagnostics",
@@ -50,7 +50,7 @@ def test_c_json_functions_have_names_types_and_source_locations():
     for path, payload in _iter_json_payloads():
         for fn in payload.get("functions", []):
             assert fn["name"], f"function without name in {path}"
-            assert fn["return_type"], f"function without return type in {path}"
+            assert fn["result_type"], f"function without result type in {path}"
             assert isinstance(fn["parameters"], list)
             assert fn["source_location"]["line"] >= 1
             assert fn["source_location"]["column"] >= 1
@@ -73,4 +73,3 @@ def test_c_json_diagnostics_have_codes_locations_and_severities():
             assert diagnostic.get("message")
             if diagnostic.get("source_location"):
                 assert diagnostic["source_location"]["line"] >= 1
-

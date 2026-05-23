@@ -42,7 +42,7 @@ def test_project_resolves_typedefs_across_headers_and_sources(tmp_path: Path):
 
     project = parse_c_project(tmp_path)
 
-    assert project.functions["count"].return_type.resolved.base == "unsigned long"
+    assert project.functions["count"].result_type.type is project.typedefs["api_size"].type
 
 
 def test_project_resolves_struct_tags_across_includes(tmp_path: Path):
@@ -54,8 +54,8 @@ def test_project_resolves_struct_tags_across_includes(tmp_path: Path):
     project = parse_c_project(tmp_path)
 
     param_type = project.functions["step"].parameters[0].type
-    assert param_type.tag == "state"
-    assert param_type.resolved.fields[0].name == "id"
+    assert param_type.components[-1] is project.structs["state"]
+    assert param_type.components[-1].members[0].name == "id"
 
 
 def test_include_guards_do_not_duplicate_symbols(tmp_path: Path):
@@ -97,4 +97,3 @@ def test_header_source_pairing_links_matching_stems(tmp_path: Path):
     project = parse_c_project(tmp_path)
 
     assert project.header_source_pairs["solver.h"] == {"solver.c"}
-

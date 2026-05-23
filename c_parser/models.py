@@ -46,16 +46,28 @@ def _enable_windows_ansi() -> None:  # pragma: no cover - Windows-only console s
         colorama.just_fix_windows_console()
 
 
-def c_model_to_dict(obj: Any) -> Any:
+def c_model_to_dict(obj: Any, _seen: set[int] | None = None) -> Any:
     """Convert C parser dataclasses into stable JSON-compatible values."""
+    if _seen is None:
+        _seen = set()
+    if isinstance(obj, CQualifier):
+        return obj.spelling
+    if isinstance(obj, CType):
+        if isinstance(obj, (CStruct, CUnion, CEnum, CTypedef)) and id(obj) in _seen:
+            return {"reference": obj.reference_name}
+        if isinstance(obj, (CStruct, CUnion, CEnum, CTypedef)):
+            _seen.add(id(obj))
+        payload = {"model": type(obj).__name__}
+        payload.update({f.name: c_model_to_dict(getattr(obj, f.name), _seen) for f in fields(obj)})
+        return payload
     if is_dataclass(obj):
-        return {f.name: c_model_to_dict(getattr(obj, f.name)) for f in fields(obj)}
+        return {f.name: c_model_to_dict(getattr(obj, f.name), _seen) for f in fields(obj)}
     if isinstance(obj, list):
-        return [c_model_to_dict(v) for v in obj]
+        return [c_model_to_dict(v, _seen) for v in obj]
     if isinstance(obj, dict):
-        return {k: c_model_to_dict(v) for k, v in obj.items()}
+        return {k: c_model_to_dict(v, _seen) for k, v in obj.items()}
     if isinstance(obj, set):
-        return sorted(c_model_to_dict(v) for v in obj)
+        return sorted(c_model_to_dict(v, _seen) for v in obj)
     return obj
 
 
@@ -153,104 +165,243 @@ class CDiagnostic:
     unit_name: str | None = None
 
 
-@dataclass
-class CPointer:
-    qualifiers: list[str] = field(default_factory=list)
+@dataclass(frozen=True)
+class CQualifier:
+    spelling: str
 
 
-@dataclass
-class CArray:
-    size: str | None = None
-    static: bool = False
+@dataclass(frozen=True)
+class CConst(CQualifier):
+    spelling: str = "const"
 
 
-@dataclass
-class CTypeRef:
-    base: str | None = None
-    qualifiers: list[str] = field(default_factory=list)
-    storage_class: list[str] = field(default_factory=list)
-    sign: str | None = None
-    width: str | None = None
-    tag_kind: str | None = None
-    tag_name: str | None = None
-    typedef_name: str | None = None
-    pointers: list[CPointer] = field(default_factory=list)
-    arrays: list[CArray] = field(default_factory=list)
-    kind: str = "type"
+@dataclass(frozen=True)
+class CVolatile(CQualifier):
+    spelling: str = "volatile"
+
+
+@dataclass(frozen=True)
+class CRestrict(CQualifier):
+    spelling: str = "restrict"
+
+
+@dataclass(frozen=True)
+class CAtomic(CQualifier):
+    spelling: str = "_Atomic"
+
+
+@dataclass(kw_only=True)
+class CType:
+    qualifiers: list[CQualifier] = field(default_factory=list)
     source_text: str = ""
-    resolved: Any = None
+
+
+@dataclass
+class CUnknownType(CType):
+    spelling: str = "unknown"
+
+
+@dataclass
+class CVoid(CType):
+    pass
+
+
+@dataclass
+class CBool(CType):
+    pass
+
+
+@dataclass
+class CChar(CType):
+    pass
+
+
+@dataclass
+class CSignedChar(CType):
+    pass
+
+
+@dataclass
+class CUnsignedChar(CType):
+    pass
+
+
+@dataclass
+class CShort(CType):
+    pass
+
+
+@dataclass
+class CUnsignedShort(CType):
+    pass
+
+
+@dataclass
+class CInt(CType):
+    pass
+
+
+@dataclass
+class CUnsignedInt(CType):
+    pass
+
+
+@dataclass
+class CLong(CType):
+    pass
+
+
+@dataclass
+class CUnsignedLong(CType):
+    pass
+
+
+@dataclass
+class CLongLong(CType):
+    pass
+
+
+@dataclass
+class CUnsignedLongLong(CType):
+    pass
+
+
+@dataclass
+class CFloat(CType):
+    pass
+
+
+@dataclass
+class CDouble(CType):
+    pass
+
+
+@dataclass
+class CLongDouble(CType):
+    pass
+
+
+@dataclass
+class CFloatComplex(CType):
+    pass
+
+
+@dataclass
+class CDoubleComplex(CType):
+    pass
+
+
+@dataclass
+class CLongDoubleComplex(CType):
+    pass
+
+
+@dataclass
+class CPointer(CType):
+    pass
+
+
+@dataclass
+class CArray(CType):
+    bound: str | None = None
+    is_static_minimum: bool = False
+    is_variable_length: bool = False
+    is_flexible: bool = False
+
+
+@dataclass
+class CFunctionType(CType):
+    result_type: CType = field(default_factory=CVoid)
+    parameter_types: list[CType] = field(default_factory=list)
+    is_variadic: bool = False
+    prototype_style: str | None = None
+
+
+@dataclass
+class CComposedType(CType):
+    components: list[CType] = field(default_factory=list)
 
     @property
     def pointer_depth(self) -> int:
-        return len(self.pointers)
+        return sum(isinstance(component, CPointer) for component in self.components)
 
     @property
     def array_rank(self) -> int:
-        return len(self.arrays)
+        return sum(isinstance(component, CArray) for component in self.components)
 
-    @property
-    def effective_type_text(self) -> str:
-        if self.source_text:
-            return self.source_text
-        if self.typedef_name:
-            return self.typedef_name
-        if self.tag_kind and self.tag_name:
-            return f"{self.tag_kind} {self.tag_name}"
-        return self.base or "unknown"
 
-    @property
-    def is_const_pointer(self) -> bool:
-        return bool(self.pointers) and "const" in self.qualifiers
-
-    @property
-    def is_opaque_type(self) -> bool:
-        return bool(self.tag_kind and self.tag_name and self.resolved is None)
+def _contains_function_pointer(type_: CType) -> bool:
+    if not isinstance(type_, CComposedType):
+        return False
+    for index, component in enumerate(type_.components):
+        if isinstance(component, CPointer) and any(
+            isinstance(later, CFunctionType) for later in type_.components[index + 1 :]
+        ):
+            return True
+    return False
 
 
 @dataclass
 class CParameter:
     name: str | None = None
-    type: CTypeRef = field(default_factory=CTypeRef)
+    type: CType = field(default_factory=CVoid)
+    declared_type: CType | None = None
     source_location: CSourceLocation | None = None
+    callback_policy: Any = None
+
+    @property
+    def callback_candidate(self) -> bool:
+        return _contains_function_pointer(self.type)
 
 
 @dataclass
 class CFunction:
     name: str
-    return_type: CTypeRef = field(default_factory=CTypeRef)
+    result_type: CType = field(default_factory=CVoid)
     parameters: list[CParameter] = field(default_factory=list)
     storage: list[str] = field(default_factory=list)
     specifiers: list[str] = field(default_factory=list)
-    variadic: bool = False
+    is_variadic: bool = False
     is_definition: bool = False
     prototype_style: str | None = None
     source_location: CSourceLocation | None = None
     start: CSourceLocation | None = None
     end: CSourceLocation | None = None
 
+    @property
+    def type(self) -> CFunctionType:
+        return CFunctionType(
+            result_type=self.result_type,
+            parameter_types=[parameter.type for parameter in self.parameters],
+            is_variadic=self.is_variadic,
+            prototype_style=self.prototype_style,
+        )
+
 
 @dataclass
-class CField:
+class CStruct(CType):
     name: str | None = None
-    type: CTypeRef = field(default_factory=CTypeRef)
-    source_location: CSourceLocation | None = None
-
-
-@dataclass
-class CStruct:
-    name: str | None = None
-    fields: list[CField] = field(default_factory=list)
+    members: list["CVariable"] = field(default_factory=list)
     anonymous_id: str | None = None
-    opaque: bool = False
+    is_incomplete: bool = False
     source_location: CSourceLocation | None = None
+
+    @property
+    def reference_name(self) -> str:
+        return f"struct {self.name}" if self.name else self.anonymous_id or "anonymous struct"
 
 
 @dataclass
-class CUnion:
+class CUnion(CType):
     name: str | None = None
-    fields: list[CField] = field(default_factory=list)
+    members: list["CVariable"] = field(default_factory=list)
     anonymous_id: str | None = None
+    is_incomplete: bool = False
     source_location: CSourceLocation | None = None
+
+    @property
+    def reference_name(self) -> str:
+        return f"union {self.name}" if self.name else self.anonymous_id or "anonymous union"
 
 
 @dataclass
@@ -261,25 +412,46 @@ class CEnumerator:
 
 
 @dataclass
-class CEnum:
+class CEnum(CType):
     name: str | None = None
     constants: list[CEnumerator] = field(default_factory=list)
     anonymous_id: str | None = None
     source_location: CSourceLocation | None = None
 
-
-@dataclass
-class CTypedef:
-    name: str
-    type: CTypeRef = field(default_factory=CTypeRef)
-    source_location: CSourceLocation | None = None
+    @property
+    def reference_name(self) -> str:
+        return f"enum {self.name}" if self.name else self.anonymous_id or "anonymous enum"
 
 
 @dataclass
-class CGlobal:
+class CTypedef(CType):
     name: str
-    type: CTypeRef = field(default_factory=CTypeRef)
+    type: CType | None = None
     source_location: CSourceLocation | None = None
+
+    @property
+    def reference_name(self) -> str:
+        return self.name
+
+
+@dataclass
+class CInitializer:
+    source_text: str
+
+
+@dataclass
+class CVariable:
+    name: str | None
+    type: CType = field(default_factory=CVoid)
+    storage: list[str] = field(default_factory=list)
+    initializer: CInitializer | None = None
+    bit_width: str | None = None
+    source_location: CSourceLocation | None = None
+    callback_policy: Any = None
+
+    @property
+    def callback_candidate(self) -> bool:
+        return _contains_function_pointer(self.type)
 
 
 @dataclass
@@ -310,7 +482,7 @@ class CFile:
     unions: list[CUnion] = field(default_factory=list)
     enums: list[CEnum] = field(default_factory=list)
     typedefs: list[CTypedef] = field(default_factory=list)
-    globals: list[CGlobal] = field(default_factory=list)
+    variables: list[CVariable] = field(default_factory=list)
     macros: list[CMacro] = field(default_factory=list)
     includes: list[CInclude] = field(default_factory=list)
     diagnostics: list[CDiagnostic] = field(default_factory=list)
@@ -327,7 +499,7 @@ class CProject:
     unions: dict[str, CUnion] = field(default_factory=dict)
     enums: dict[str, CEnum] = field(default_factory=dict)
     typedefs: dict[str, CTypedef] = field(default_factory=dict)
-    globals: dict[str, CGlobal] = field(default_factory=dict)
+    variables: dict[str, CVariable] = field(default_factory=dict)
     macros: dict[str, CMacro] = field(default_factory=dict)
     includes: dict[str, CInclude] = field(default_factory=dict)
 

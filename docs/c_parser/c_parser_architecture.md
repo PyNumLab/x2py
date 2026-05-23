@@ -4,7 +4,9 @@ Status: partial parser plus raw directive metadata implemented. The `c_parser`
 package, typed parser models, public entrypoints, explicit
 `x2py --language c --parse` CLI path, raw include/macro/undef metadata
 collection, top-level source splitting, and a first simple
-declaration/function subset with function-definition start/end locations exist.
+declaration/function subset with function-definition start/end locations and
+aggregate declarations exist. Declarators are parsed through a recursive
+grammar-style path for pointer, array, function, and parenthesized combinations.
 
 This document records the target architecture for the C parser frontend in
 x2py. The initial skeleton has grown into a partial parser, and the remaining
@@ -30,11 +32,28 @@ Implemented now:
 - `c_parser.preprocessor` records raw `#include` directives, simple object-like
   macros, `#undef` directives, and unsupported function-like macro diagnostics
   without expanding macros.
-- `c_parser.parser` parses simple globals, typedefs, function prototypes, and
-  function-definition signatures while skipping bodies. Function models include
-  `prototype_style`; definitions preserve direct `start` and `end` locations
-  from the signature start through the closing brace; and K&R-style function
-  definitions raise focused diagnostics.
+- `c_parser.parser` parses variables, typedefs, incomplete `struct`/`union`
+  tags, basic struct/union/enum definitions, function prototypes, and
+  function-definition signatures while skipping bodies. Declarator handling
+  follows the C declarator grammar for pointer prefixes, parenthesized direct
+  declarators, and array/function suffixes, including functions returning
+  function pointers and arrays of callback pointers. Incomplete tags are
+  recorded as `CStruct` or `CUnion` objects with `is_incomplete=True`.
+  Declaration types are represented by concrete `CType` subclasses:
+  primitives, `CPointer`, `CArray`, `CFunctionType`, and
+  `CComposedType`. Aggregate members are `CVariable` objects using that same
+  type path and preserve arrays, callback candidates, and bit-width text.
+  Inline tag definitions followed by aliases or objects produce concrete
+  `CTypedef` or `CVariable` records linked to the aggregate object. Function
+  models expose `result_type` and named `parameters`; their derived
+  `CFunctionType` is the nameless callable signature. Selected unsupported
+  declaration forms, including attributes, alignment specifiers,
+  `_Atomic(type)`, nested aggregate member definitions, and static assertions,
+  are reported as diagnostics with
+  explicit `unit_kind` values. A declarator must be fully consumed before a
+  concrete object is returned; unknown suffixes become diagnostics. Definitions preserve direct
+  `start` and `end` locations from the signature start through the closing
+  brace; and K&R-style function definitions raise focused diagnostics.
 - `c_parser.cli` provides C-specific partial report formatting.
 - `x2py.cli` dispatches `--language c --parse` to the C parser path.
 - `--language c --semantics`, `--language c --pyi`, and C wrap-readiness are
@@ -48,11 +67,18 @@ Implemented now:
 
 Deferred:
 
-- recursive/parenthesized declarator parsing
-- function pointer and callback metadata
-- struct, union, and enum extraction
+- typedef/tag resolution beyond an inline aggregate declaration and callback
+  policy metadata, for example resolving `size_t count(void);` to a prior
+  `typedef unsigned long size_t;`
+- parameter adjustment and flexible array member classification, for example
+  `void process(int values[4]);` and
+  `struct packet { unsigned size; unsigned char data[]; };`
+- nested aggregate member definitions, braced initializers, compiler
+  attributes, alignment specifiers, and `_Atomic(type)` declarations, for
+  example `struct outer { struct { int x; } inner; };` and
+  `int values[3] = {1, 2, 3};`
 - preprocessed-input support, line mapping, and macro-expanded declaration
-  parsing
+  parsing, for example `API(int) run(void);` after macro expansion
 - include graph and project type resolution
 - C semantic readiness, semantic IR conversion, and `.pyi` output
 
@@ -181,16 +207,17 @@ Current and planned responsibilities:
 
 - `c_parser/models.py`
   - Implemented: typed parser models, `CParseError`, compiler-style
-    diagnostic rendering, and JSON-stable dataclass serialization.
-  - Planned: richer source facts for recursive declarators, composite types,
-    macros/constants, and project indexes.
+    diagnostic rendering, concrete `CType` composition, and JSON-stable
+    dataclass serialization.
+  - Planned: resolved symbol links, richer macro/preprocessing provenance,
+    parameter-adjustment facts, and project indexes.
 - `c_parser/lexer.py`
   - Implemented: safe comment removal that preserves line mapping, logical
     record folding for backslash-newline, string/character literal awareness,
     lightweight tokens with source locations, top-level splitting with block
     end locations, and delimiter splitting aware of nesting and literals.
-  - Planned: richer token helpers as recursive declarator parsing requires
-    them.
+  - Planned: richer token helpers as extension and initializer-expression
+    parsing require them.
 - `c_parser/preprocessor.py`
   - Implemented: lightweight raw directive metadata for includes,
     object-like macros, `#undef` directives, function-like macro diagnostics,
@@ -199,15 +226,14 @@ Current and planned responsibilities:
     source mapping for preprocessed input.
 - `c_parser/parser.py`
   - Implemented: `CParser`, `parse_c_file`, `parse_c_project`,
-    translation-unit visiting, simple declaration/function visitors, simple
-    declaration-specifier handling, and simple pointer/array declarator
-    extraction. Helper methods live on `CParser` rather than as broad
-    module-level functions. Current function models record prototype-style
-    versus unspecified empty parameter lists, function definitions preserve
-    start/end locations, and K&R-style definitions are rejected with
-    `CParseError`.
-  - Planned: recursive declarator/function/composite-type visitors and a
-    richer shared declaration/declarator backend.
+    translation-unit visiting, declaration/function visitors, grammar-shaped
+    recursive declarator parsing, concrete `CType` construction, and aggregate
+    member extraction. Helper methods live on `CParser` rather than as broad
+    module-level functions. Function models record prototype-style versus
+    unspecified empty parameter lists, function definitions preserve start/end
+    locations, and K&R-style definitions are rejected with `CParseError`.
+  - Planned: symbol resolution, parameter array/function adjustment, and
+    additional declaration-specifier and extension coverage.
 - `c_parser/project.py`
   - Placeholder now.
   - Planned: file discovery for `.c`, `.h`, and possibly `.i`.
@@ -216,11 +242,11 @@ Current and planned responsibilities:
   - Cross-file type and typedef resolution.
 - `c_parser/type_resolver.py`
   - Placeholder now.
-  - Planned: C primitive type normalization.
-  - Qualifier/storage-class handling.
-  - Typedef chain resolution.
-  - Pointer/array/function-pointer type helpers.
-  - Safe constant expression folding for simple compile-time values.
+  - Planned: resolve the concrete primitive/tag/typedef types constructed by
+    the parser across declarations and files.
+  - Resolve typedef chains and aggregate references.
+  - Validate or adjust parameter array/function forms.
+  - Safely fold simple compile-time constant expressions.
 - `c_parser/cli.py`
   - Implemented: report formatting and serialization helpers called by
     `x2py.cli` behind explicit C flags.
@@ -256,87 +282,56 @@ x2py API promise stable C behavior before the frontend matures.
 
 ## Core Model Families
 
-Implemented parser models:
+All declared types inherit from `CType`, which stores `qualifiers` and
+`source_text`. Type qualifiers are concrete values: `CConst`, `CVolatile`,
+`CRestrict`, and `CAtomic`.
 
-- `CSourceLocation`
-  - `filename`
-  - `line`
-  - `column`
-  - `source_line`
-- `CDiagnostic`
-  - `code`
-  - `message`
-  - `severity`
-  - `location`
-  - `unit_kind`
-  - `unit_name`
-- `CTypeRef`
-  - `base`
-  - `qualifiers`
-  - `storage_class`
-  - `sign`
-  - `width`
-  - `tag_kind`
-  - `tag_name`
-  - `typedef_name`
-  - `pointers`
-  - `arrays`
-  - `kind`
-  - `source_text`
-  - `resolved`
-- `CPointer`
-  - `qualifiers`
-- `CArray`
-  - `size`
-  - `static`
-- `CParameter`
-  - `name`
-  - `type`
-  - `source_location`
-- `CFunction`
-  - `name`
-  - `return_type`
-  - `parameters`
-  - `storage`
-  - `specifiers`
-  - `variadic`
-  - `is_definition`
-  - `prototype_style`
-  - `source_location`
-  - `start`
-  - `end`
-- `CField`
-  - `name`
-  - `type`
-  - `source_location`
-- `CStruct`
-  - `name`
-  - `fields`
-  - `anonymous_id`
-  - `opaque`
-  - `source_location`
-- `CUnion`
-  - `name`
-  - `fields`
-  - `anonymous_id`
-  - `source_location`
-- `CEnum`
-  - `name`
-  - `constants`
-  - `anonymous_id`
-  - `source_location`
-- `CEnumerator`
-  - `name`
-  - `value`
-  - `source_location`
-- `CTypedef`
-  - `name`
-  - `type`
-  - `source_location`
-- `CGlobal`
-  - `name`
-  - `type`
-  - `source_location`
+The implemented primitive `CType` subclasses are:
+
+- `CVoid`, `CBool`, `CChar`, `CSignedChar`, and `CUnsignedChar`
+- `CShort`, `CUnsignedShort`, `CInt`, and `CUnsignedInt`
+- `CLong`, `CUnsignedLong`, `CLongLong`, and `CUnsignedLongLong`
+- `CFloat`, `CDouble`, and `CLongDouble`
+- `CFloatComplex`, `CDoubleComplex`, and `CLongDoubleComplex`
+
+Derived and named `CType` subclasses are:
+
+- `CPointer`, whose qualifiers apply to that pointer component
+- `CArray`, with `bound`, `is_static_minimum`, `is_variable_length`, and
+  `is_flexible`; bound/static/VLA metadata is populated now, while
+  flexible-array-member parsing and validation are deferred
+- `CFunctionType`, the nameless callable signature with `result_type`,
+  `parameter_types`, `is_variadic`, and `prototype_style`
+- `CComposedType`, whose `components` are read from the declared name outward
+- `CStruct`, `CUnion`, and `CEnum`, which are tag types as well as aggregate
+  declaration objects
+- `CTypedef`, which represents either a declared alias with its underlying
+  `type`, or an unresolved typedef-name use until symbol resolution is added
+- `CUnknownType`, which preserves an unrecognized type spelling
+
+For example, composition order distinguishes the following declarations:
+
+```python
+int *values[4];       # CComposedType([CArray(bound="4"), CPointer(), CInt()])
+int (*matrix)[4];     # CComposedType([CPointer(), CArray(bound="4"), CInt()])
+int *(*table)[4];     # CComposedType([CPointer(), CArray(bound="4"), CPointer(), CInt()])
+```
+
+Declaration objects are separate from the type components:
+
+- `CVariable` has `name`, `type`, `storage`, optional `initializer`, optional
+  `bit_width`, and source/callback metadata. Struct and union `members` are
+  also `CVariable` objects; there is no separate field class.
+- `CFunction` has `name`, `result_type`, named `parameters`, storage and
+  function specifiers, `is_variadic`, prototype style, and source/definition
+  locations. Its `type` property builds the corresponding nameless
+  `CFunctionType`.
+- `CParameter` has a source name, a `type`, and a reserved `declared_type` for
+  later C parameter adjustment handling.
+- `CInitializer` preserves initializer source text without claiming evaluation.
+- `CStruct` and `CUnion` expose `members` and `is_incomplete`; `CEnum` exposes
+  `constants`; `CEnumerator` preserves enumerator name and value text.
+- `CTypedef` has its alias name and declared `type`.
 - `CMacro`
   - `name`
   - `value`
@@ -357,7 +352,7 @@ Implemented parser models:
   - `unions`
   - `enums`
   - `typedefs`
-  - `globals`
+  - `variables`
   - `macros`
   - `includes`
   - `diagnostics`
@@ -368,14 +363,20 @@ Implemented parser models:
   - `unions`
   - `enums`
   - `typedefs`
-  - `globals`
+  - `variables`
   - `macros`
   - `includes`
 
-Future parser phases can add fields such as bit widths, function pointer
-metadata, conditional-region metadata, include graphs, and project diagnostics
-when the corresponding behavior lands. Additions should be documented and
-tested with stable serialization expectations.
+Serialization uses `"model"` to identify concrete `CType` nodes; `"type"` is
+reserved for semantic type relationships such as `CVariable.type` and
+`CTypedef.type`. Concrete qualifier objects serialize using their canonical
+spellings, such as `"const"`. Reused aggregate/typedef objects serialize as
+references to avoid cycles.
+
+Future parser phases can add symbol links, parameter adjustment, conditional
+region metadata, include graphs, and project diagnostics when the corresponding
+behavior lands. Additions should be documented and tested with stable
+serialization expectations.
 
 ## Grammar-Style Parsing Strategy
 
@@ -407,21 +408,24 @@ be:
    - typedef
    - function prototype
    - function definition
-   - struct/union/enum definition
-   - global variable/static const
+   - forward struct declaration or struct/union/enum definition
+   - file-scope variable/static const
    - unsupported/macro-dependent declaration
 6. Dispatch to a small visitor for that declaration kind.
 7. Use a shared declaration-specifier and declarator parser to build type
-   references for functions, parameters, fields, globals, and typedefs.
+   references for functions, parameters, members, variables, and typedefs.
 8. Ignore executable function bodies except where needed to find the matching
    brace and preserve function start/end locations.
 
 ## Declarator-Centered Design
 
-C type syntax is declarator-centered. The future parser should make declarator
-parsing a first-class subsystem, not a pile of ad hoc string splitting.
+C type syntax is declarator-centered. Declarator parsing stays a first-class
+subsystem, not a pile of ad hoc string splitting. The current parser applies
+one recursive declarator path to variables, typedefs, function signatures,
+parameters, and aggregate members; future work should extend that grammar-shaped
+path rather than adding parallel splitting rules.
 
-Required layered pieces:
+Layered pieces:
 
 - declaration specifier parser
   - storage classes: `extern`, `static`, `typedef`, `register`, `_Thread_local`
@@ -441,7 +445,7 @@ Required layered pieces:
   - anonymous abstract declarators where needed
 - entity applier
   - convert one declaration specifier plus one declarator into a typed model
-  - reuse this for function returns, parameters, fields, globals, and typedefs
+  - reuse this for function returns, parameters, members, variables, and typedefs
 
 This is the C equivalent of the Fortran parser's shared declaration backend.
 
@@ -516,7 +520,7 @@ Current behavior:
 - Returned `CProject` objects contain `CFile` parser models with raw include,
   macro, metadata diagnostics, and supported declarations populated per file.
 - Basic project-level indexes are populated for parsed functions, typedefs,
-  globals, macros, and includes.
+  variables, macros, and includes.
 - Include graphs, duplicate analysis, and type resolution are not populated yet.
 
 Planned behavior after project-resolution phases:
@@ -561,9 +565,10 @@ These should become parser diagnostics or parser metadata, not a parser-side
 ## Parser-First Model Policy
 
 For the current planning horizon, the C parser should store C-specific facts in
-`c_parser/models.py`. This includes preprocessing origin, macro dependencies,
-function pointer signatures, callback-like parameters, pointer qualifiers,
-ownership ambiguity, include dependencies, and typedef resolution state.
+`c_parser/models.py`. It currently stores function-pointer signatures,
+callback-candidate markers, type qualifiers, raw include dependencies, and
+unresolved typedef/tag uses. Later phases should add preprocessing origin,
+macro dependencies, ownership policy, and resolved symbol links.
 
 Semantic IR conversion is deliberately later work. When that phase starts, the
 IR model may need extensions for C pointer ownership, unsigned integer types,
