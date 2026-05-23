@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""C declaration-specifier and declarator parser tests."""
+"""C declaration-specifier and composed-type parser tests."""
 
 import pytest
 
 
-def test_declaration_specifiers_parse_primitive_signedness_and_widths():
-    from c_parser import parse_c_file
+def test_primitive_specifiers_create_concrete_primitive_types():
+    from c_parser import CBool, CShort, CUnsignedLongLong, parse_c_file
 
     parsed = parse_c_file(
         """
@@ -16,71 +16,125 @@ _Bool enabled(void);
         filename="primitives.h",
     )
 
-    functions = {fn.name: fn for fn in parsed.functions}
-    assert functions["next_id"].return_type.base == "unsigned long long"
-    assert functions["clamp_short"].parameters[0].type.base == "signed short"
-    assert functions["enabled"].return_type.base == "_Bool"
+    functions = {function.name: function for function in parsed.functions}
+    assert isinstance(functions["next_id"].result_type, CUnsignedLongLong)
+    assert isinstance(functions["clamp_short"].parameters[0].type, CShort)
+    assert isinstance(functions["enabled"].result_type, CBool)
 
 
-def test_pointer_qualifiers_are_preserved_in_order():
-    from c_parser import parse_c_file
+@pytest.mark.parametrize(
+    ("spelling", "expected_name"),
+    [
+        ("void", "CVoid"),
+        ("_Bool", "CBool"),
+        ("char", "CChar"),
+        ("signed char", "CSignedChar"),
+        ("unsigned char", "CUnsignedChar"),
+        ("short", "CShort"),
+        ("short int", "CShort"),
+        ("signed short", "CShort"),
+        ("signed short int", "CShort"),
+        ("unsigned short", "CUnsignedShort"),
+        ("unsigned short int", "CUnsignedShort"),
+        ("int", "CInt"),
+        ("signed", "CInt"),
+        ("signed int", "CInt"),
+        ("unsigned", "CUnsignedInt"),
+        ("unsigned int", "CUnsignedInt"),
+        ("long", "CLong"),
+        ("long int", "CLong"),
+        ("signed long", "CLong"),
+        ("signed long int", "CLong"),
+        ("unsigned long", "CUnsignedLong"),
+        ("unsigned long int", "CUnsignedLong"),
+        ("long long", "CLongLong"),
+        ("long long int", "CLongLong"),
+        ("signed long long", "CLongLong"),
+        ("signed long long int", "CLongLong"),
+        ("unsigned long long", "CUnsignedLongLong"),
+        ("unsigned long long int", "CUnsignedLongLong"),
+        ("float", "CFloat"),
+        ("double", "CDouble"),
+        ("long double", "CLongDouble"),
+        ("float _Complex", "CFloatComplex"),
+        ("_Complex", "CDoubleComplex"),
+        ("double _Complex", "CDoubleComplex"),
+        ("long double _Complex", "CLongDoubleComplex"),
+    ],
+)
+def test_every_supported_primitive_spelling_creates_a_concrete_ctype(spelling, expected_name):
+    import c_parser
+    from c_parser import CType, parse_c_file
+
+    function = parse_c_file(f"{spelling} primitive(void);\n", filename="primitive_table.h").functions[0]
+    expected = getattr(c_parser, expected_name)
+
+    assert isinstance(function.result_type, expected)
+    assert isinstance(function.result_type, CType)
+
+
+def test_pointer_qualifiers_belong_to_the_component_they_qualify():
+    from c_parser import CComposedType, CConst, CDouble, CPointer, CRestrict, parse_c_file
 
     parsed = parse_c_file(
         "void copy(const double * restrict src, double * restrict dst);\n",
         filename="qualifiers.h",
     )
 
-    params = {param.name: param for param in parsed.functions[0].parameters}
-    assert params["src"].type.qualifiers == ["const"]
-    assert params["src"].type.pointers[0].qualifiers == ["restrict"]
-    assert params["dst"].type.pointers[0].qualifiers == ["restrict"]
+    params = {parameter.name: parameter for parameter in parsed.functions[0].parameters}
+    src = params["src"].type
+    dst = params["dst"].type
+    assert isinstance(src, CComposedType)
+    assert isinstance(src.components[0], CPointer)
+    assert src.components[0].qualifiers == [CRestrict()]
+    assert isinstance(src.components[1], CDouble)
+    assert src.components[1].qualifiers == [CConst()]
+    assert dst.components[0].qualifiers == [CRestrict()]
 
 
-def test_array_declarators_preserve_dimensions_and_static_bounds():
-    from c_parser import parse_c_file
+def test_array_components_preserve_bounds_static_minimum_and_qualifiers():
+    from c_parser import CArray, CComposedType, CConst, parse_c_file
 
     parsed = parse_c_file(
-        "void solve(size_t n, double a[static 4], const int shape[2]);\n",
+        "void solve(size_t n, double a[static 4], const int shape[2], int work[const *]);\n",
         filename="arrays.h",
     )
 
-    params = {param.name: param for param in parsed.functions[0].parameters}
-    assert params["a"].type.arrays[0].size == "4"
-    assert params["a"].type.arrays[0].static is True
-    assert params["shape"].type.arrays[0].size == "2"
+    params = {parameter.name: parameter for parameter in parsed.functions[0].parameters}
+    a = params["a"].type
+    shape = params["shape"].type
+    work = params["work"].type
+    assert isinstance(a, CComposedType)
+    assert isinstance(a.components[0], CArray)
+    assert a.components[0].bound == "4"
+    assert a.components[0].is_static_minimum is True
+    assert shape.components[0].bound == "2"
+    assert shape.components[-1].qualifiers == [CConst()]
+    assert work.components[0].qualifiers == [CConst()]
+    assert work.components[0].is_variable_length is True
 
 
-def test_multiple_declarators_share_specifiers_but_keep_distinct_types():
-    from c_parser import parse_c_file
+def test_multiple_declarators_share_specifiers_but_have_distinct_compositions():
+    from c_parser import CArray, CComposedType, CConst, CInt, CPointer, parse_c_file
 
-    parsed = parse_c_file(
-        "extern const int *left, right[4];\n",
-        filename="globals.h",
-    )
+    parsed = parse_c_file("extern const int *left, right[4];\n", filename="variables.h")
 
-    globals_by_name = {glob.name: glob for glob in parsed.globals}
-    assert globals_by_name["left"].type.pointers
-    assert globals_by_name["right"].type.arrays[0].size == "4"
-    assert globals_by_name["right"].type.qualifiers == ["const"]
-
-
-def test_typedef_declaration_preserves_alias_and_underlying_type_text():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file("typedef unsigned long api_size;\n", filename="typedefs.h")
-
-    typedef = parsed.typedefs[0]
-    assert typedef.name == "api_size"
-    assert typedef.type.base == "unsigned long"
-    assert typedef.type.storage_class == ["typedef"]
+    variables = {variable.name: variable for variable in parsed.variables}
+    assert variables["left"].storage == ["extern"]
+    assert isinstance(variables["left"].type, CComposedType)
+    assert [type(component) for component in variables["left"].type.components] == [CPointer, CInt]
+    assert [type(component) for component in variables["right"].type.components] == [CArray, CInt]
+    assert variables["right"].type.components[0].bound == "4"
+    assert variables["right"].type.components[-1].qualifiers == [CConst()]
 
 
-def test_pointer_array_typedefs_and_typedef_name_references_are_preserved():
-    from c_parser import parse_c_file
+def test_typedefs_and_typedef_references_are_concrete_types():
+    from c_parser import CArray, CComposedType, CDouble, CPointer, CStruct, CTypedef, CUnsignedLong, parse_c_file
 
     parsed = parse_c_file(
         """
 struct state;
+typedef unsigned long api_size;
 typedef const struct state *state_ref;
 typedef double vector3[3];
 typedef vector3 basis3[3];
@@ -91,17 +145,20 @@ void set_basis(basis3 basis);
     )
 
     typedefs = {typedef.name: typedef for typedef in parsed.typedefs}
-    assert typedefs["state_ref"].type.tag_kind == "struct"
-    assert typedefs["state_ref"].type.tag_name == "state"
-    assert typedefs["state_ref"].type.pointers
-    assert typedefs["vector3"].type.arrays[0].size == "3"
-    assert typedefs["basis3"].type.typedef_name == "vector3"
-    assert typedefs["basis3"].type.arrays[0].size == "3"
-    assert parsed.functions[1].parameters[0].type.typedef_name == "basis3"
+    assert isinstance(typedefs["api_size"].type, CUnsignedLong)
+    state_ref = typedefs["state_ref"].type
+    assert isinstance(state_ref, CComposedType)
+    assert [type(component) for component in state_ref.components] == [CPointer, CStruct]
+    assert state_ref.components[-1].name == "state"
+    assert isinstance(typedefs["vector3"].type.components[0], CArray)
+    assert isinstance(typedefs["vector3"].type.components[-1], CDouble)
+    assert isinstance(typedefs["basis3"].type.components[-1], CTypedef)
+    assert typedefs["basis3"].type.components[-1].name == "vector3"
+    assert isinstance(parsed.functions[1].parameters[0].type, CTypedef)
 
 
-def test_globals_with_initializers_multidimensional_arrays_and_tag_refs_parse():
-    from c_parser import parse_c_file
+def test_variables_preserve_initializer_text_arrays_and_concrete_tag_types():
+    from c_parser import CArray, CComposedType, CEnum, CInt, CStruct, CUnion, parse_c_file
 
     parsed = parse_c_file(
         """
@@ -111,38 +168,39 @@ const enum status last_status = STATUS_OK;
 double matrix[3][4];
 int answer = 42;
 """,
-        filename="globals_richer.h",
+        filename="variables_richer.h",
     )
 
-    globals_by_name = {glob.name: glob for glob in parsed.globals}
-    assert globals_by_name["global_state"].type.tag_kind == "struct"
-    assert globals_by_name["global_state"].type.tag_name == "state"
-    assert globals_by_name["global_state"].type.pointers
-    assert globals_by_name["global_scalar"].type.tag_kind == "union"
-    assert globals_by_name["last_status"].type.tag_kind == "enum"
-    assert [array.size for array in globals_by_name["matrix"].type.arrays] == ["3", "4"]
-    assert globals_by_name["answer"].type.base == "int"
+    variables = {variable.name: variable for variable in parsed.variables}
+    assert isinstance(variables["global_state"].type.components[-1], CStruct)
+    assert variables["global_state"].type.components[-1].name == "state"
+    assert variables["global_state"].initializer.source_text == "0"
+    assert isinstance(variables["global_scalar"].type.components[-1], CUnion)
+    assert isinstance(variables["last_status"].type, CEnum)
+    assert variables["last_status"].initializer.source_text == "STATUS_OK"
+    assert [component.bound for component in variables["matrix"].type.components[:2]] == ["3", "4"]
+    assert all(isinstance(component, CArray) for component in variables["matrix"].type.components[:2])
+    assert isinstance(variables["answer"].type, CInt)
+    assert variables["answer"].initializer.source_text == "42"
 
 
-def test_parameters_preserve_struct_union_and_enum_references():
-    from c_parser import parse_c_file
+def test_parameters_preserve_concrete_struct_union_and_enum_uses():
+    from c_parser import CEnum, CStruct, CUnion, parse_c_file
 
     parsed = parse_c_file(
         "void consume(const struct state *s, union scalar *u, enum status status);\n",
         filename="tag_params.h",
     )
 
-    params = {param.name: param for param in parsed.functions[0].parameters}
-    assert params["s"].type.tag_kind == "struct"
-    assert params["s"].type.tag_name == "state"
-    assert params["u"].type.tag_kind == "union"
-    assert params["u"].type.tag_name == "scalar"
-    assert params["status"].type.tag_kind == "enum"
-    assert params["status"].type.tag_name == "status"
+    params = {parameter.name: parameter for parameter in parsed.functions[0].parameters}
+    assert isinstance(params["s"].type.components[-1], CStruct)
+    assert params["s"].type.components[-1].name == "state"
+    assert isinstance(params["u"].type.components[-1], CUnion)
+    assert isinstance(params["status"].type, CEnum)
 
 
-def test_forward_struct_declarations_are_recorded_as_opaque_source_facts():
-    from c_parser import parse_c_file
+def test_incomplete_structs_and_pointer_uses_are_concrete_objects():
+    from c_parser import CComposedType, CPointer, CStruct, parse_c_file
 
     parsed = parse_c_file(
         """
@@ -153,23 +211,22 @@ void close_handle(struct handle *handle);
         filename="opaque.h",
     )
 
-    assert len(parsed.structs) == 1
     handle = parsed.structs[0]
+    assert isinstance(handle, CStruct)
     assert handle.name == "handle"
-    assert handle.opaque is True
-    assert handle.fields == []
-    assert handle.source_location is not None
-    assert handle.source_location.line == 2
+    assert handle.is_incomplete is True
+    assert handle.members == []
 
-    functions = {fn.name: fn for fn in parsed.functions}
-    assert functions["open_handle"].return_type.tag_kind == "struct"
-    assert functions["open_handle"].return_type.tag_name == "handle"
-    assert functions["open_handle"].return_type.pointers
-    assert functions["close_handle"].parameters[0].type.tag_name == "handle"
+    functions = {function.name: function for function in parsed.functions}
+    result = functions["open_handle"].result_type
+    assert isinstance(result, CComposedType)
+    assert isinstance(result.components[0], CPointer)
+    assert isinstance(result.components[1], CStruct)
+    assert result.components[1].name == "handle"
 
 
-def test_storage_classes_and_qualifiers_are_recorded_for_globals():
-    from c_parser import parse_c_file
+def test_storage_is_declaration_metadata_and_qualifiers_are_type_metadata():
+    from c_parser import CAtomic, CConst, CUnsignedLong, CVolatile, parse_c_file
 
     parsed = parse_c_file(
         """
@@ -177,83 +234,189 @@ extern int api_errno;
 static const double scale_factor = 1.0;
 _Thread_local unsigned long tls_counter;
 register volatile int scratch;
+_Atomic int atomic_counter;
 """,
-        filename="storage_globals.h",
+        filename="storage_variables.h",
     )
 
-    globals_by_name = {glob.name: glob for glob in parsed.globals}
-    assert globals_by_name["api_errno"].type.storage_class == ["extern"]
-    assert globals_by_name["scale_factor"].type.storage_class == ["static"]
-    assert globals_by_name["scale_factor"].type.qualifiers == ["const"]
-    assert globals_by_name["tls_counter"].type.storage_class == ["_Thread_local"]
-    assert globals_by_name["scratch"].type.storage_class == ["register"]
-    assert globals_by_name["scratch"].type.qualifiers == ["volatile"]
+    variables = {variable.name: variable for variable in parsed.variables}
+    assert variables["api_errno"].storage == ["extern"]
+    assert variables["scale_factor"].storage == ["static"]
+    assert variables["scale_factor"].type.qualifiers == [CConst()]
+    assert variables["tls_counter"].storage == ["_Thread_local"]
+    assert isinstance(variables["tls_counter"].type, CUnsignedLong)
+    assert variables["scratch"].storage == ["register"]
+    assert variables["scratch"].type.qualifiers == [CVolatile()]
+    assert variables["atomic_counter"].type.qualifiers == [CAtomic()]
 
 
-def test_function_bodies_do_not_contribute_local_declarations_to_globals():
+def test_function_bodies_do_not_contribute_local_variables():
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
         """
-int compute(int x)
-{
-    int local_value = x + 1;
-    return local_value;
-}
+int compute(int x) { int local_value = x + 1; return local_value; }
 extern int exported_value;
 """,
         filename="locals.c",
     )
 
-    assert [global_.name for global_ in parsed.globals] == ["exported_value"]
+    assert [variable.name for variable in parsed.variables] == ["exported_value"]
 
 
-@pytest.mark.skip(reason="recursive pointer/array type layers are not implemented yet.")
-def test_parenthesized_declarators_distinguish_pointer_arrays_from_array_pointers():
-    from c_parser import parse_c_file
+def test_declarations_return_concrete_objects_instead_of_kind_fields():
+    from c_parser import CArray, CFunction, CFunctionType, CInt, CPointer, CStruct, CTypedef, CVariable, parse_c_file
 
     parsed = parse_c_file(
         """
+struct handle;
+typedef int (*compare_fn)(const void *, const void *);
 extern int *values[4];
 extern int (*matrix)[4];
+int add(int a, int b);
+void sort_items(int (*fallback)(const void *, const void *));
 """,
-        filename="paren_decl.h",
+        filename="declaration_matrix.h",
     )
 
-    values = {glob.name: glob for glob in parsed.globals}
-    assert values["values"].type.arrays[0].size == "4"
-    assert values["values"].type.element_type.pointers
-    assert values["matrix"].type.pointers
-    assert values["matrix"].type.pointee.arrays[0].size == "4"
+    assert isinstance(parsed.structs[0], CStruct)
+    assert all(isinstance(typedef, CTypedef) for typedef in parsed.typedefs)
+    assert all(isinstance(variable, CVariable) for variable in parsed.variables)
+    assert all(isinstance(function, CFunction) for function in parsed.functions)
+
+    compare = parsed.typedefs[0].type
+    assert [type(component) for component in compare.components] == [CPointer, CFunctionType]
+    values, matrix = parsed.variables
+    assert [type(component) for component in values.type.components] == [CArray, CPointer, CInt]
+    assert [type(component) for component in matrix.type.components] == [CPointer, CArray, CInt]
+    assert parsed.functions[1].parameters[0].callback_candidate is True
 
 
-@pytest.mark.skip(reason="function pointer declarators are not implemented yet.")
-def test_function_pointer_declarator_is_modeled_not_flattened():
-    from c_parser import parse_c_file
+def test_composite_definitions_are_concrete_objects_and_static_assert_is_diagnostic():
+    from c_parser import CEnum, CStruct, CUnion, CVariable, parse_c_file
 
     parsed = parse_c_file(
-        "typedef int (*compare_fn)(const void *a, const void *b);\n",
+        """
+struct point { double x; double y; };
+union value { int i; double d; };
+enum status { STATUS_OK = 0 };
+_Static_assert(sizeof(int) == 4, "expected int width");
+""",
+        filename="composites.h",
+    )
+
+    assert isinstance(parsed.structs[0], CStruct)
+    assert all(isinstance(member, CVariable) for member in parsed.structs[0].members)
+    assert [member.name for member in parsed.structs[0].members] == ["x", "y"]
+    assert isinstance(parsed.unions[0], CUnion)
+    assert isinstance(parsed.enums[0], CEnum)
+    assert [diagnostic.unit_kind for diagnostic in parsed.diagnostics] == ["static_assert"]
+
+
+def test_parenthesized_declarators_preserve_pointer_array_order():
+    from c_parser import CArray, CInt, CPointer, parse_c_file
+
+    parsed = parse_c_file("extern int *values[4];\nextern int (*matrix)[4];\n", filename="paren_decl.h")
+    variables = {variable.name: variable for variable in parsed.variables}
+
+    assert [type(component) for component in variables["values"].type.components] == [CArray, CPointer, CInt]
+    assert [type(component) for component in variables["matrix"].type.components] == [CPointer, CArray, CInt]
+
+
+def test_function_type_discards_placeholder_parameter_names():
+    from c_parser import CFunctionType, CPointer, parse_c_file
+
+    parsed = parse_c_file(
+        "typedef int (*compare_fn)(const void *left, const void *right);\n",
         filename="callback_typedef.h",
     )
 
-    typedef = parsed.typedefs[0]
-    assert typedef.name == "compare_fn"
-    assert typedef.type.kind == "function_pointer"
-    assert [param.name for param in typedef.type.parameters] == ["a", "b"]
+    type_ = parsed.typedefs[0].type
+    assert isinstance(type_.components[0], CPointer)
+    signature = type_.components[1]
+    assert isinstance(signature, CFunctionType)
+    assert len(signature.parameter_types) == 2
+    assert not hasattr(signature, "parameters")
 
 
-def test_storage_class_and_inline_attributes_are_recorded():
+def test_recursive_compositions_cover_tables_callback_arrays_and_function_results():
+    from c_parser import CArray, CFunctionType, CInt, CPointer, parse_c_file
+
+    parsed = parse_c_file(
+        """
+extern int *(*table)[4];
+typedef int (*callback_table[8])(int);
+int (*factory(void))(int);
+int direct(void), *value;
+""",
+        filename="recursive_declarators.h",
+    )
+
+    variables = {variable.name: variable for variable in parsed.variables}
+    assert [type(component) for component in variables["table"].type.components] == [
+        CPointer,
+        CArray,
+        CPointer,
+        CInt,
+    ]
+    assert [type(component) for component in variables["value"].type.components] == [CPointer, CInt]
+    callbacks = parsed.typedefs[0].type
+    assert [type(component) for component in callbacks.components] == [CArray, CPointer, CFunctionType]
+    functions = {function.name: function for function in parsed.functions}
+    assert set(functions) == {"factory", "direct"}
+    assert [type(component) for component in functions["factory"].result_type.components] == [
+        CPointer,
+        CFunctionType,
+    ]
+
+
+def test_unimplemented_declaration_extensions_are_diagnosed_not_partially_modeled():
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
         """
-static inline int local_add(int a, int b) { return a + b; }
-extern int exported_add(int a, int b);
+int visible __attribute__((visibility("default")));
+int outdated [[deprecated]];
+_Alignas(16) int aligned_value;
+_Atomic(int) atomic_value;
 """,
+        filename="extensions.h",
+    )
+
+    assert parsed.variables == []
+    assert [diagnostic.unit_kind for diagnostic in parsed.diagnostics] == [
+        "attribute_declaration",
+        "attribute_declaration",
+        "alignment_declaration",
+        "atomic_type_declaration",
+    ]
+
+
+def test_unconsumed_declarator_suffixes_are_diagnosed_not_silently_discarded():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        'extern int retained, pinned asm("r0");\nint run(int value asm("r0"));\n',
+        filename="declarator_extensions.h",
+    )
+
+    assert [variable.name for variable in parsed.variables] == ["retained"]
+    assert parsed.functions == []
+    assert [diagnostic.code for diagnostic in parsed.diagnostics] == [
+        "C_UNSUPPORTED_DECLARATOR",
+        "C_UNSUPPORTED_DECLARATOR",
+    ]
+
+
+def test_storage_class_and_inline_specifiers_are_recorded_on_functions():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        "static inline int local_add(int a, int b) { return a + b; }\nextern int exported_add(int a, int b);\n",
         filename="storage.c",
     )
 
-    functions = {fn.name: fn for fn in parsed.functions}
+    functions = {function.name: function for function in parsed.functions}
     assert functions["local_add"].storage == ["static"]
     assert "inline" in functions["local_add"].specifiers
     assert functions["exported_add"].storage == ["extern"]

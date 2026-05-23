@@ -61,9 +61,9 @@ def test_cjson_callback_hook_fields_are_modeled_with_policy_placeholders():
 
     assert "cJSON_Hooks" in {struct.name for struct in parsed.structs}
     hooks = next(struct for struct in parsed.structs if struct.name == "cJSON_Hooks")
-    callback_fields = [field for field in hooks.fields if field.type.kind == "function_pointer"]
-    assert callback_fields
-    assert all(field.callback_policy is None for field in callback_fields)
+    callback_members = [member for member in hooks.members if member.callback_candidate]
+    assert callback_members
+    assert all(member.callback_policy is None for member in callback_members)
 
 
 def test_cjson_source_file_parse_skips_function_bodies_safely():

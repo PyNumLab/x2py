@@ -4,9 +4,14 @@ Status: implementation checklist with Phase 1 skeleton, selected Phase 2
 fixture scaffolding, selected Phase 3 model/error work, Phase 4 raw
 lexer/directive metadata, and a first Phase 5/6 partial
 declaration/function subset complete. The `c_parser` package and explicit C
-parse path exist, and simple globals, typedefs, function prototypes,
+parse path exist, and simple variables, typedefs, function prototypes,
 function-definition signatures, function-definition start/end locations, and
-forward `struct name;` declarations are now parsed.
+incomplete `struct`/`union` declarations and basic aggregate definitions are
+now parsed. Declarators use a recursive grammar-style parser for pointer,
+array, function, and parenthesized combinations. Declaration types are concrete
+`CType` subclasses combined by `CComposedType`; aggregate members are
+`CVariable` objects using the same declared-type path. Selected unsupported
+extensions are diagnosed.
 
 This checklist is intentionally detailed so future work can proceed one branch,
 one checklist item, and one tested capability at a time. The C parser initiative
@@ -16,13 +21,18 @@ stable.
 ## Progress Snapshot
 
 - Last updated: 2026-05-23
-- Checklist progress: 449/848 checked (52.9%).
+- Checklist progress: 512/848 checked (60.4%).
 - Current parser status: partial C parser with raw directive metadata, top-level
-  source splitting, simple declarations/globals/typedefs, prototype-style
+  source splitting, simple declarations/variables/typedefs, prototype-style
   metadata, K&R diagnostics, simple function signatures, and start/end
-  locations for function definitions. Forward struct declarations are recorded
-  as opaque `CStruct` source facts and indexed by struct tag name at project
-  level.
+  locations for function definitions. Incomplete struct/union declarations are
+  recorded as `CStruct`/`CUnion` values with `is_incomplete=True`; named tags
+  are indexed at project level. Parenthesized declarators, function pointer
+  typedefs/parameters, callback members, and functions returning function
+  pointers are represented with concrete `CType` objects and
+  `CComposedType.components`. Primitive specifiers have concrete type classes,
+  and functions, variables, typedefs, and aggregates are distinguished by
+  their concrete declaration objects rather than a kind field.
 
 ## Global Rules
 
@@ -36,7 +46,7 @@ stable.
 - [x] Gate all integration through explicit C flags or C-specific APIs.
 - [ ] Keep any C wrappability assessment in the semantic layer, not inside the
       parser package.
-- [ ] Implement C parsing as a grammar-style recursive parser with scoped
+- [x] Implement C parsing as a grammar-style recursive parser with scoped
       visitors, source slicing, shared declaration/declarator parsing helpers,
       and typed model objects.
 - [x] Store initial C-specific facts in `c_parser/models.py`; defer semantic IR
@@ -229,7 +239,7 @@ Scope:
 - [x] Return empty `unions` list.
 - [x] Return empty `enums` list.
 - [x] Return empty `typedefs` list.
-- [x] Return empty `globals` list.
+- [x] Return empty `variables` list.
 - [x] Return `macros` list, empty until raw macro directives are found.
 - [x] Return `includes` list, empty until raw include directives are found.
 - [x] Return `diagnostics` list, empty unless skeleton or raw metadata
@@ -456,27 +466,30 @@ Scope:
 
 - [x] Define `CSourceLocation`.
 - [x] Define `CDiagnostic`.
-- [x] Define `CTypeRef`.
-- [x] Define `CPointer`.
-- [x] Define `CArray`.
+- [x] Define concrete `CType` subclasses, including all supported primitive
+      scalar and complex types.
+- [x] Define `CQualifier` objects (`CConst`, `CVolatile`, `CRestrict`, and
+      `CAtomic`).
+- [x] Define `CPointer`, `CArray`, `CFunctionType`, and `CComposedType`.
 - [x] Define `CParameter`.
 - [x] Define `CFunction`.
-- [x] Define `CField`.
+- [x] Use `CVariable` for struct and union members rather than a separate
+      field object.
 - [x] Define `CStruct`.
 - [x] Define `CUnion` or use `CStruct(is_union=True)`.
 - [x] Define `CEnum`.
 - [x] Define `CEnumerator`.
 - [x] Define `CTypedef`.
-- [x] Define `CGlobal`.
+- [x] Define `CVariable`.
 - [x] Define `CMacro`.
 - [x] Define `CInclude`.
 - [x] Define `CFile`.
 - [x] Define `CProject`.
 - [x] Add helper properties for pointer depth.
 - [x] Add helper properties for array rank.
-- [x] Add helper properties for effective type text.
-- [x] Add helper properties for `is_const_pointer`.
-- [x] Add helper properties for `is_opaque_type`.
+- [x] Preserve effective declaration type source text.
+- [x] Store qualifiers on the exact `CType` component they qualify.
+- [x] Record incomplete aggregate tags with `is_incomplete=True`.
 - [x] Add helper properties for source-location display.
 
 ### Serialization Tasks
@@ -488,7 +501,7 @@ Scope:
 - [x] Ensure dataclass defaults produce stable JSON.
 - [x] Add tests for empty `CFile` serialization.
 - [ ] Add tests for each model's minimal JSON shape.
-- [ ] Add tests for source-location serialization.
+- [x] Add tests for source-location serialization.
 - [ ] Add tests that unknown/unresolved metadata is preserved.
 
 ### Public API Skeleton And Partial Parser Tasks
@@ -521,10 +534,10 @@ Scope:
 ### Phase 3 Risks And Open Questions
 
 - [x] Decide whether `CUnion` should subclass/share `CStruct`.
-- [ ] Decide how to represent anonymous structs/unions/enums.
+- [x] Decide how to represent anonymous structs/unions/enums.
 - [ ] Decide whether macros belong in `CFile.macros` only or also symbols.
-- [ ] Decide whether `CTypeRef` should be a single recursive model or contain
-      normalized pointer/array/function layers.
+- [x] Decide on concrete `CType` objects and name-outward
+      `CComposedType.components` instead of a kind-driven type reference.
 
 ## Phase 4: Lexer And Lightweight Preprocessor
 
@@ -694,40 +707,62 @@ Scope:
 - [x] Parse array declarators.
 - [x] Parse multidimensional array declarators.
 - [x] Parse static array parameter qualifiers, for example `int a[static 4]`.
-- [ ] Parse parenthesized declarators.
-- [ ] Parse function declarators.
-- [ ] Parse function pointer declarators.
+- [x] Parse parenthesized declarators.
+- [x] Parse function declarators.
+- [x] Parse function pointer declarators.
 - [x] Parse abstract declarators where needed for unnamed parameters.
 - [x] Parse multiple declarators in one declaration.
 - [x] Keep declarator entity order stable.
 - [x] Preserve original declarator source text.
 - [x] Add source locations for each declared entity.
-- [ ] Reject or diagnose unsupported declarator forms explicitly.
+- [x] Reject or diagnose unsupported declarator forms explicitly.
 
 ### Shared Declaration Backend Tasks
 
 - [x] Implement a helper analogous to `_helper_parse_declaration_line`.
 - [x] Feed procedure parameters through the same declaration backend.
 - [x] Feed function return types through the same declaration backend.
-- [ ] Feed struct/union fields through the same declaration backend.
+- [x] Feed struct/union members through the same declaration backend.
 - [x] Feed typedefs through the same declaration backend.
-- [x] Feed global variables/constants through the same declaration backend.
+- [x] Feed file-scope variables/constants through the same declaration backend.
 - [x] Apply declaration specifiers to declarator-derived type layers.
-- [x] Normalize C type spelling into `CTypeRef`.
+- [x] Normalize supported C type spelling into concrete `CType` subclasses.
 - [x] Preserve typedef references before project resolution.
-- [ ] Add tests for each declaration role.
+- [x] Add tests for each declaration role.
 - [x] Add tests for declarations with multiple variables.
 - [x] Add tests for declarations with initializers.
 - [x] Add tests that local executable statements are not parsed as declarations.
 - [x] Add exhaustive tests for every supported storage class.
-- [ ] Add exhaustive tests for every supported type qualifier.
-- [ ] Add exhaustive tests for every supported primitive spelling.
+- [x] Add exhaustive tests for every supported type qualifier.
+- [x] Add exhaustive tests for every supported primitive spelling.
 - [x] Add tests for typedef-name references outside `size_t`-style examples.
 - [x] Add tests for `struct name`, `union name`, and `enum name` references in
-      globals and parameters.
+      variables and parameters.
 - [x] Add tests for multidimensional arrays.
 - [ ] Add diagnostics for declarations ignored by the current partial parser.
 - [ ] Add structured source facts for declarations that depend on macros.
+
+Known declaration implementation gaps, with representative syntax:
+
+- parameter array/function adjustment:
+  `void process(int values[4], int callback(int));`
+- flexible array member classification and validation:
+  `struct packet { unsigned size; unsigned char data[]; };`
+- braced/designated initializer preservation:
+  `int values[3] = {1, 2, 3};`
+- nested anonymous aggregate members:
+  `struct outer { struct { int x; } inner; };`
+- cross-declaration resolution/conflict behavior:
+  `typedef unsigned long size_t; size_t count(void);`
+- preprocessed declarations with line mapping:
+  `#define API(ret) ret` followed by `API(int) run(void);`
+
+Represented shapes still needing dedicated active regression tests:
+
+- multi-level qualifier placement:
+  `const int * const * volatile chain;`
+- unnamed and zero-width bit-fields:
+  `struct flags { unsigned : 0; unsigned mode : 3; };`
 
 ### Phase 5 Definition Of Done
 
@@ -739,10 +774,10 @@ Scope:
 
 ### Phase 5 Risks And Open Questions
 
-- [ ] Function pointer parsing is complex; decide which forms are supported in
-      extraction and which only produce diagnostics.
-- [ ] Typedef-name recognition may require project/type context; decide how to
-      represent unresolved names before Phase 8.
+- [x] Represent the currently supported pointer/array/function declarator
+      combinations as concrete type components and diagnose unconsumed forms.
+- [x] Represent unresolved typedef-name uses as `CTypedef` type objects until
+      project/type resolution is implemented.
 
 ## Phase 6: Function Parsing
 
@@ -769,7 +804,7 @@ Scope:
 - [x] Mark `is_variadic`.
 - [x] Parse pointer parameters.
 - [x] Parse array parameters.
-- [ ] Parse function pointer parameters.
+- [x] Parse function pointer parameters.
 - [x] Parse `const` parameters.
 - [x] Parse `restrict` parameters.
 - [x] Parse `volatile` parameters.
@@ -782,13 +817,13 @@ Scope:
 - [x] Add tests for pointer and array parameters.
 - [x] Add tests for const pointer variants.
 - [x] Add tests for variadic prototypes.
-- [ ] Add tests for function pointer parameters.
+- [x] Add tests for function pointer parameters.
 - [x] Add model field for prototype style so `int f(void)` and `int f()` can
       be distinguished.
 - [x] Add tests that distinguish explicit `void` parameter lists from
       unspecified empty parameter lists.
-- [ ] Add parser source facts or diagnostics for variadic functions.
-- [ ] Add parser source facts for callback candidates once function pointer
+- [x] Add parser source facts for variadic functions through `is_variadic`.
+- [x] Add parser source facts for callback candidates once function pointer
       parameters are supported.
 
 ### Function Definition Tasks
@@ -828,7 +863,8 @@ Scope:
 
 - [x] Basic C function signatures parse from `.h` and `.c`.
 - [x] Function bodies are skipped safely.
-- [ ] Variadic and function pointer cases are represented and diagnosed.
+- [x] Variadic and supported function pointer cases are represented as typed
+      source facts.
 - [x] CLI human and JSON output show functions.
 - [ ] Parser diagnostics report no-functions only when appropriate.
 
@@ -851,79 +887,81 @@ Scope:
 
 ### Struct Tasks
 
-- [ ] Parse named `struct name { ... };`.
+- [x] Parse named `struct name { ... };`.
 - [x] Parse forward declaration `struct name;`.
-- [ ] Parse anonymous `struct { ... }`.
-- [ ] Parse typedef anonymous struct `typedef struct { ... } name;`.
-- [ ] Parse typedef named struct `typedef struct tag name;`.
-- [ ] Parse fields with shared declaration backend.
-- [ ] Parse pointer fields.
-- [ ] Parse array fields.
-- [ ] Parse nested anonymous structs as unsupported or metadata.
-- [ ] Parse bitfields as metadata with semantic limitations.
-- [ ] Preserve field order.
-- [ ] Preserve source locations.
+- [x] Parse anonymous `struct { ... }`.
+- [x] Parse typedef anonymous struct `typedef struct { ... } name;`.
+- [x] Parse typedef named struct `typedef struct tag name;`.
+- [x] Parse members with shared declaration backend.
+- [x] Parse pointer members.
+- [x] Parse array members.
+- [x] Parse nested anonymous structs as unsupported or metadata.
+- [x] Parse bit-fields as member metadata with semantic limitations.
+- [x] Preserve member order.
+- [ ] Preserve precise per-member source locations; members currently carry
+      the enclosing aggregate declaration location.
 - [x] Mark incomplete structs.
-- [ ] Add tests for named structs.
+- [x] Add tests for named structs.
 - [x] Add tests for forward declarations.
-- [ ] Add tests for typedef structs.
-- [ ] Add tests for pointer fields.
-- [ ] Add tests for array fields.
+- [x] Add tests for typedef structs.
+- [x] Add tests for pointer members.
+- [x] Add tests for array members.
 - [ ] Add tests for bitfield diagnostics.
 
 ### Union Tasks
 
-- [ ] Parse named unions.
-- [ ] Parse forward union declarations.
-- [ ] Parse anonymous unions.
-- [ ] Parse typedef unions.
-- [ ] Parse union fields with shared declaration backend.
-- [ ] Mark union fields distinctly from struct fields.
+- [x] Parse named unions.
+- [x] Parse forward union declarations.
+- [x] Parse anonymous unions.
+- [x] Parse typedef unions.
+- [x] Parse union members with shared declaration backend.
+- [x] Retain union member ownership through the containing `CUnion`.
 - [ ] Add diagnostics for by-value unions if unsafe.
-- [ ] Add tests for named unions.
-- [ ] Add tests for typedef unions.
+- [x] Add tests for named unions.
+- [x] Add tests for typedef unions.
 - [ ] Add tests for union diagnostics.
 
 ### Enum Tasks
 
-- [ ] Parse named enums.
-- [ ] Parse anonymous enums.
-- [ ] Parse typedef enums.
-- [ ] Parse enumerator names.
-- [ ] Parse explicit enumerator values.
-- [ ] Preserve symbolic enumerator values.
+- [x] Parse named enums.
+- [x] Parse anonymous enums.
+- [x] Parse typedef enums.
+- [x] Parse enumerator names.
+- [x] Parse explicit enumerator values.
+- [x] Preserve symbolic enumerator values.
 - [ ] Safely fold simple integer expressions.
-- [ ] Preserve expression text when folding is unsafe.
-- [ ] Add tests for plain enums.
-- [ ] Add tests for explicit values.
-- [ ] Add tests for expression values.
-- [ ] Add tests for typedef enums.
+- [x] Preserve expression text when folding is unsafe.
+- [x] Add tests for plain enums.
+- [x] Add tests for explicit values.
+- [x] Add tests for expression values.
+- [x] Add tests for typedef enums.
 
 ### Typedef Tasks
 
 - [x] Parse primitive typedefs.
 - [x] Parse pointer typedefs.
 - [x] Parse array typedefs.
-- [ ] Parse function pointer typedefs.
-- [ ] Parse struct/union/enum typedefs.
-- [ ] Preserve alias chains before resolution.
+- [x] Parse function pointer typedefs.
+- [x] Parse struct/union/enum typedefs.
+- [x] Preserve alias chains before resolution.
 - [ ] Detect duplicate typedefs in same scope.
-- [ ] Add tests for typedef chains.
+- [x] Add tests for typedef chains.
 - [x] Add tests for primitive typedefs.
-- [ ] Add tests for opaque handle typedefs.
+- [x] Add tests for opaque handle typedefs.
 - [ ] Add tests for function pointer typedef diagnostics.
 
 ### Phase 7 Definition Of Done
 
-- [ ] C composite and typedef models are populated from basic fixtures.
-- [ ] Shared declaration backend handles fields and typedefs.
-- [ ] Incomplete/anonymous/bitfield cases are represented or diagnosed.
+- [x] C composite and typedef models are populated from basic fixtures.
+- [x] Shared declaration backend handles members and typedefs.
+- [ ] Validate remaining bit-field/flexible-member cases beyond the basic
+      incomplete, anonymous, and named bit-field forms already represented.
 - [ ] JSON goldens cover composite type schema.
-- [ ] Docs list supported and unsupported composite forms.
+- [x] Docs list supported and unsupported composite forms.
 
 ### Phase 7 Risks And Open Questions
 
-- [ ] Decide when anonymous structs should become generated internal names.
+- [x] Decide when anonymous structs should become generated internal names.
 - [ ] Decide how much enum expression folding is safe without compiler
       semantics.
 - [ ] Decide how unions map to semantic IR, if at all in v1.
@@ -971,17 +1009,17 @@ Scope:
 - [ ] Index functions by file.
 - [x] Index typedefs by name.
 - [x] Index struct tags by tag namespace.
-- [ ] Index union tags by tag namespace.
-- [ ] Index enum tags by tag namespace.
+- [x] Index union tags by tag namespace.
+- [x] Index enum tags by tag namespace.
 - [ ] Index enum constants in ordinary identifier namespace.
 - [x] Index macros/constants separately.
-- [x] Index globals by name.
+- [x] Index variables by name.
 - [ ] Detect duplicate definitions.
 - [ ] Distinguish compatible redeclarations from conflicts.
 - [ ] Add tests for duplicate handling.
 - [ ] Add tests for project-level function indexes.
 - [ ] Add tests for project-level typedef indexes.
-- [ ] Add tests for project-level global indexes.
+- [ ] Add tests for project-level file-scope variable indexes.
 - [ ] Add tests for project-level macro indexes.
 
 ### Type Resolution Tasks
@@ -1089,7 +1127,7 @@ Scope:
 - [ ] Assign union field blockers to union units.
 - [ ] Assign enum value blockers to enum units.
 - [ ] Assign typedef blockers to typedef units.
-- [ ] Assign include/macro/global blockers to file units when no narrower owner
+- [ ] Assign include/macro/file-scope-variable blockers to file units when no narrower owner
       exists.
 - [ ] Use qualified names where available.
 - [ ] Avoid per-unit ready flags; keep readiness file-level like Fortran.
@@ -1282,8 +1320,8 @@ Scope:
 - [ ] Treat cJSON corpus tests as parse-only at first.
 - [ ] Use cJSON to exercise typedef structs, recursive pointers, `const char *`
       APIs, `size_t`, public declaration macros, numeric/string constants,
-      and callback hook fields.
-- [ ] Keep callback hook fields modeled in `c_parser/models.py`, with
+      and callback hook members.
+- [ ] Keep callback hook members modeled in `c_parser/models.py`, with
       semantic readiness requiring explicit user `.pyi` callback policy metadata
       before claiming they are wrappable.
 - [ ] Add zlib or another macro-heavier C library only after

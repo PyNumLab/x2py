@@ -50,7 +50,7 @@ def format_c_report(report: dict[str, dict]) -> str:
         lines.append(f"  Unions: {len(parsed.get('unions') or [])}")
         lines.append(f"  Enums: {len(parsed.get('enums') or [])}")
         lines.append(f"  Typedefs: {len(parsed.get('typedefs') or [])}")
-        lines.append(f"  Globals: {len(parsed.get('globals') or [])}")
+        lines.append(f"  Variables: {len(parsed.get('variables') or [])}")
         lines.append(f"  Macros: {len(parsed.get('macros') or [])}")
         lines.append(f"  Includes: {len(parsed.get('includes') or [])}")
         lines.append(f"  Diagnostics: {len(parsed.get('diagnostics') or [])}")

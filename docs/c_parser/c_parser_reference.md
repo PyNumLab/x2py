@@ -3,9 +3,11 @@
 Status: partial parser reference with raw directive metadata. The `c_parser`
 package and explicit C CLI parse path exist, raw includes/simple macros are
 recorded, and a first grammar-shaped subset parses simple declarations,
-typedefs, globals, function prototypes, and function-definition headers with
-start/end locations. Forward `struct name;` declarations are recorded as
-opaque struct source facts.
+typedefs, variables, function prototypes, and function-definition headers with
+start/end locations. Incomplete struct/union declarations and basic
+struct/union/enum definitions are represented as concrete objects, and
+declarators are parsed through a recursive grammar-style path for pointer,
+array, function, and parenthesized combinations.
 
 This document is the future home for the C parser user and developer reference.
 It should evolve into the C equivalent of `fortran_parser.md` as implementation
@@ -64,9 +66,19 @@ Implemented:
 - simple object-like `#define` macro collection
 - function-like macro metadata with unsupported diagnostics
 - raw `#undef` directive provenance in macro metadata
-- simple primitive, pointer, array, and qualifier type extraction
-- simple global variable and `typedef` extraction
-- forward `struct name;` extraction as opaque `CStruct` records
+- concrete primitive `CType` objects, pointer/array composition, and concrete
+  qualifier objects
+- recursive declarator extraction for parenthesized pointer/array precedence
+- nameless `CFunctionType` signatures for function pointer typedefs and
+  parameter source facts
+- simple file-scope variable and `typedef` extraction
+- incomplete `struct name;` and `union name;` extraction as concrete tag types
+  with `is_incomplete=True`
+- named and anonymous struct/union/enum definitions
+- aggregate member extraction as `CVariable` objects through the declarator backend, including pointer,
+  array, callback-pointer, and bitfield source facts
+- inline tag typedef aliases and trailing tag object declarators as separate
+  concrete models
 - simple function prototype extraction
 - prototype-style metadata distinguishing `int f(void)` from `int f()`
 - simple function-definition signature extraction with body skipping
@@ -76,11 +88,13 @@ Implemented:
 - C fixture inputs under `tests/data/c/general/` plus C fixture directory
   scaffolding for errors, corpus, and scientific APIs
 
-Placeholder only:
+Still deferred:
 
-- recursive declarator models for parenthesized pointer/array distinctions
-- function pointer declarators and callback metadata
-- struct definitions, unions, enums, and complex typedef parsing
+- callback policy metadata beyond parser-side callback candidates
+- nested aggregate member definitions and broad compiler-extension declarators
+- parameter array/function adjustment, flexible-array-member validation, and
+  braced/designated initializer preservation
+- cross-declaration and cross-file typedef/tag resolution
 - project include graph and cross-file type resolution
 - preprocessed-input parsing with `#line`/linemarker source mapping
 - macro-expanded declaration parsing from preprocessed input
@@ -94,7 +108,7 @@ The initial supported subset should focus on stable wrapper-relevant APIs:
 - function definitions with extractable signatures
 - primitive C scalar types
 - pointers
-- arrays in parameters and fields
+- arrays in parameters and aggregate members
 - `const`, `restrict`, and `volatile` qualifiers
 - `static` and `extern` storage classes where wrapper-relevant
 - `struct` definitions
@@ -170,9 +184,9 @@ should not implement recursive, compiler-compatible macro expansion
 internally; it should consume compiler-preprocessed output with preserved
 origin metadata.
 
-## Planned Public API
+## Public API
 
-Target module-level entrypoints:
+Implemented module-level entrypoints:
 
 ```python
 from c_parser import parse_c_file, parse_c_project
@@ -201,11 +215,54 @@ parse_c_project(
 ```
 
 These return typed parser models analogous to the Fortran parser API. The
-current partial phase can populate `functions`, `structs` for forward
-declarations, `typedefs`, `globals`, `includes`, `macros`, and metadata
-`diagnostics`. Forward `struct name;` declarations are stored as opaque
-`CStruct` records with source locations. `unions`, `enums`, and full struct
-definitions remain deferred until their dedicated parser phase lands. Functions
+current partial phase can populate `functions`, `structs`, `unions`, `enums`,
+`typedefs`, `variables`, `includes`, `macros`, and metadata `diagnostics`.
+Incomplete `struct name;` and `union name;` declarations are concrete
+`CStruct`/`CUnion` types with `is_incomplete=True` and source locations. The
+parser returns concrete objects instead of a declaration-kind tag:
+`CFunction`, `CVariable`, `CTypedef`, `CStruct`, `CUnion`, and `CEnum`.
+A declaration such as
+`typedef struct node { int value; } node_t;` produces a `CStruct` plus a
+`CTypedef`, while `struct point { int x; } origin;` produces a `CStruct` plus
+a `CVariable`.
+
+All types inherit from `CType`. Implemented primitive type classes are
+`CVoid`, `CBool`, `CChar`, `CSignedChar`, `CUnsignedChar`, `CShort`,
+`CUnsignedShort`, `CInt`, `CUnsignedInt`, `CLong`, `CUnsignedLong`,
+`CLongLong`, `CUnsignedLongLong`, `CFloat`, `CDouble`, `CLongDouble`,
+`CFloatComplex`, `CDoubleComplex`, and `CLongDoubleComplex`. Qualifiers are
+`CConst`, `CVolatile`, `CRestrict`, and `CAtomic`, attached to the precise
+type component they qualify. `_Atomic int value;` is stored with a `CAtomic`
+qualifier; the distinct `_Atomic(int) value;` type-specifier form remains
+diagnosed as unsupported.
+
+Nested declarators are `CComposedType` objects whose `components` are read
+from the declared name outward:
+
+```python
+int *values[4];       # CComposedType([CArray(bound="4"), CPointer(), CInt()])
+int (*matrix)[4];     # CComposedType([CPointer(), CArray(bound="4"), CInt()])
+int *(*table)[4];     # CComposedType([CPointer(), CArray(bound="4"), CPointer(), CInt()])
+```
+
+`CFunction` has `result_type` and named `CParameter` objects. Its `.type`
+property provides the corresponding nameless `CFunctionType`, which is also
+used inside pointer typedefs and variables:
+
+```python
+int add(int a, int b);     # CFunction(name="add", result_type=CInt(), parameters=[...])
+int (*compare)(int, int);  # CVariable(type=CComposedType([CPointer(), CFunctionType(...)]))
+```
+
+Callback-bearing parameters are marked as parser-side callback candidates,
+without claiming semantic wrappability. Struct and union `members` are
+`CVariable` objects; optional `bit_width` and `initializer` fields preserve
+source facts without inventing separate field or valued-variable classes.
+Selected unsupported forms, such as static assertions,
+attributes, alignment specifiers, `_Atomic(type)`, and nested aggregate member
+definitions, are reported in `diagnostics` with explicit `unit_kind` values.
+Unconsumed declarator suffixes are also diagnosed instead of producing partial
+objects. Functions
 include `prototype_style`, currently `"prototype"` for
 typed or explicit `void` parameter lists and `"unspecified"` for empty
 parameter lists such as `int f()`. Function definitions do not store
@@ -221,7 +278,7 @@ wrappability assessment, that should live in the semantic layer after C parser
 models are converted to semantic IR or edited `.pyi` policy is loaded, matching
 the current Fortran and `.pyi` readiness boundary.
 
-## Planned CLI Usage
+## CLI Usage
 
 Initial explicit mode:
 
@@ -239,7 +296,7 @@ x2py path/to/api.h --parse-c
 
 Auto-detection should come later, after the frontend is stable.
 
-## Planned JSON Output
+## Current JSON Output
 
 Per-file shape:
 
@@ -253,11 +310,11 @@ Per-file shape:
     "functions": [
       {
         "name": "run",
-        "return_type": {"base": "int", "...": "..."},
+        "result_type": {"model": "CInt", "qualifiers": [], "source_text": "int"},
         "parameters": [],
         "storage": [],
         "specifiers": [],
-        "variadic": false,
+        "is_variadic": false,
         "is_definition": false,
         "prototype_style": "prototype",
         "source_location": {"filename": "<path>", "line": 1, "...": "..."},
@@ -269,7 +326,7 @@ Per-file shape:
     "unions": [],
     "enums": [],
     "typedefs": [],
-    "globals": [],
+    "variables": [],
     "macros": [],
     "includes": [],
     "diagnostics": []
@@ -280,7 +337,13 @@ Per-file shape:
 JSON compatibility rules:
 
 - prefer additive schema changes
-- include source locations for populated include, macro, and diagnostic models
+- serialize concrete `CType` identity using `"model"`; reserve `"type"` for
+  actual type relationships such as `CTypedef.type`
+- serialize qualifier objects as canonical spellings such as `"const"`
+- include `source_location` for declaration/directive records and `location`
+  for diagnostics
+- emit references for reused aggregate or typedef objects rather than
+  recursive JSON cycles
 - preserve unknown or unresolved information rather than dropping it silently
 - keep model fields stable enough for golden fixture testing
 - document every intentional schema break
@@ -329,9 +392,9 @@ The parser has the error type and formatter. Raw directive collection can emit
 non-fatal metadata diagnostics, such as unresolved local includes or
 function-like macros that were recorded but not expanded. K&R-style function
 definitions now raise `CParseError` because the current function parser only
-models prototype-style declarations and definitions. The current grammar subset
-is otherwise intentionally tolerant for unsupported declaration forms; more hard
-syntax errors should be added only with focused tests.
+models prototype-style declarations and definitions. Known unsupported
+declaration extensions are diagnosed rather than partially modeled; additional
+syntax diagnostics should be added only with focused tests.
 
 ## Planned Testing Workflow
 
@@ -360,11 +423,61 @@ public entrypoints, empty model serialization, CLI discovery, JSON/output-file
 behavior, unsupported C stages, comment stripping, line-continuation folding,
 top-level splitting, include collection, simple macro collection, macro-shaped
 declaration deferral, raw conditional branch non-selection, simple declarations,
-globals, typedefs, and simple function prototypes/definitions, including
+variables, typedefs, recursive declarator composition, aggregate definitions,
+members, enums, and simple function prototypes/definitions, including
 function-definition start/end locations. The broader roadmap tests remain skipped
 until their matching implementation branches land. Future implementation
 branches should unskip only the tests for the capability they implement, then
 merge those branches back into `c-parser/main`.
+
+### Declaration Coverage Boundary
+
+Active declaration tests currently cover:
+
+- every implemented primitive spelling mapped to its concrete `CType`
+- all qualifier objects, storage metadata, simple expression initializers, and
+  multiple declarators
+- pointer/array precedence, multidimensional arrays, parameter VLA/static
+  metadata, function pointers, callback arrays, and functions returning
+  function pointers
+- functions, variables, typedefs, struct/union members, enums, incomplete
+  tags, inline aggregate aliases, anonymous aggregate typedefs, and recursive
+  struct pointers
+- concrete-type JSON serialization, source locations, and cycle-safe aggregate
+  references
+- diagnostics for selected unsupported attributes, alignment, `_Atomic(type)`,
+  nested aggregate definitions, K&R definitions, and trailing declarator
+  extensions
+
+This is enough coverage for the currently implemented subset, not for all C
+declarations.
+
+### Missing Implementation With Examples
+
+| Capability | C example | Current parser boundary | Needed behavior |
+| --- | --- | --- | --- |
+| Parameter adjustment | `void process(int values[4], int callback(int));` | Preserves the declared array and function parameter types; it does not expose C's adjusted pointer parameter type. | Keep `declared_type`, and expose the adjusted effective type (`int *` and pointer-to-function). |
+| Flexible array members | `struct packet { unsigned size; unsigned char data[]; };` | Represents `data` as `CArray(bound=None)` but does not set `is_flexible` or validate that it is a legal final struct member. | Mark the flexible member and diagnose illegal placement or union usage. |
+| Braced/designated initializers | `int values[3] = {1, 2, 3};` and `struct point origin = {.x = 1, .y = 2};` | Simple initializer text such as `int answer = 42;` is preserved; braced forms are not reliably emitted as `CVariable` initializer facts. | Parse or preserve balanced initializer source without treating its braces as an aggregate declaration. |
+| Nested aggregate members | `struct outer { struct { int x; } inner; };` | Produces an unsupported-member diagnostic and does not model `inner`. | Build an anonymous `CStruct`/`CUnion` type used by the member variable. |
+| Typedef/tag resolution | `typedef unsigned long size_t; size_t count(void);` and `struct state { int id; }; void step(struct state *s);` | Preserves uses as unresolved `CTypedef` or incomplete tag-type objects unless attached inline. | Link uses to declarations across a file/project and diagnose conflicts. |
+| Preprocessed declarations | `#define API(ret) ret` followed by `API(int) run(void);` | Raw mode records macro metadata and does not claim the expanded declaration; preprocessed input with line mapping is not implemented. | Accept compiler-expanded input and map each declaration back through `#line` markers. |
+| Additional extension families | `int run(void) __attribute__((visibility("default")));` | Known attribute/alignment/`_Atomic(type)` forms are diagnosed; broader compiler extensions are not modeled. | Add fixture-driven support or a focused diagnostic for each required extension family. |
+
+### Represented But Requiring Stronger Tests
+
+These forms are not absent from the model, but need explicit active regression
+tests before they can be treated as stable:
+
+```c
+const int * const * volatile chain;
+struct flags { unsigned : 0; unsigned mode : 3; };
+```
+
+The current parser creates distinct qualified `CPointer` components for
+`chain`, and creates a `CVariable(name=None, bit_width="0")` for the unnamed
+zero-width bit-field. Tests should lock down those shapes and any later
+semantic validation rules.
 
 Fixture layout should be separate from Fortran:
 
@@ -385,7 +498,7 @@ The first real-world corpus target should be cJSON, pinned to an exact release
 or commit with license and source provenance. cJSON is small enough for early
 stabilization while still covering typedef structs, recursive pointers, public
 macro declaration wrappers, constants, `const char *` APIs, `size_t`, and
-callback hook fields.
+callback hook members.
 
 ## Planned Documentation Set
 

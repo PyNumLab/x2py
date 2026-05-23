@@ -65,8 +65,21 @@ def test_parse_c_project_indexes_forward_structs_by_tag_name():
     )
 
     assert set(project.structs) == {"handle"}
-    assert project.structs["handle"].opaque is True
+    assert project.structs["handle"].is_incomplete is True
     assert project.files["types.h"].structs[0].name == "handle"
+
+
+def test_parse_c_project_indexes_named_union_and_enum_tags():
+    from c_parser import parse_c_project
+
+    project = parse_c_project(
+        {
+            "types.h": "union value { int i; }; enum status { STATUS_OK = 0 };",
+        }
+    )
+
+    assert set(project.unions) == {"value"}
+    assert set(project.enums) == {"status"}
 
 
 def test_parse_c_project_accepts_directory_input_with_c_and_h_files(tmp_path: Path):
@@ -96,11 +109,52 @@ def test_c_file_serialization_is_json_stable():
         "unions": [],
         "enums": [],
         "typedefs": [],
-        "globals": [],
+        "variables": [],
         "macros": [],
         "includes": [],
         "diagnostics": [],
     }
+
+
+def test_concrete_type_serialization_preserves_semantic_type_fields_and_locations():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        "typedef int (*compare_fn)(const void *, const void *);\n"
+        "compare_fn select_compare(void);\n",
+        filename="types.h",
+    )
+    payload = parsed.to_dict()
+
+    typedef = payload["typedefs"][0]
+    assert typedef["model"] == "CTypedef"
+    assert typedef["type"]["model"] == "CComposedType"
+    assert typedef["type"]["components"][0]["model"] == "CPointer"
+    assert typedef["type"]["components"][1]["model"] == "CFunctionType"
+    assert typedef["type"]["components"][1]["result_type"]["model"] == "CInt"
+    first_parameter = typedef["type"]["components"][1]["parameter_types"][0]
+    assert first_parameter["components"][-1]["qualifiers"] == ["const"]
+    assert typedef["source_location"]["filename"] == "types.h"
+    assert typedef["source_location"]["line"] == 1
+
+    function = payload["functions"][0]
+    assert function["result_type"]["model"] == "CTypedef"
+    assert function["result_type"]["name"] == "compare_fn"
+    assert function["source_location"]["line"] == 2
+
+
+def test_inline_aggregate_typedef_serialization_uses_references_without_cycles():
+    from c_parser import parse_c_file
+
+    payload = parse_c_file(
+        "typedef struct node { struct node *next; } node_t;\n",
+        filename="node.h",
+    ).to_dict()
+
+    assert payload["structs"][0]["model"] == "CStruct"
+    assert payload["structs"][0]["members"][0]["type"]["components"][-1]["model"] == "CStruct"
+    assert payload["typedefs"][0]["model"] == "CTypedef"
+    assert payload["typedefs"][0]["type"] == {"reference": "struct node"}
 
 
 def test_public_c_parser_entrypoints_do_not_include_parser_side_readiness():

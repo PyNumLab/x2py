@@ -2,13 +2,14 @@
 
 Status: C parser partial subset plus raw directive metadata implemented. The
 CLI command shape exists and parse reports can include raw includes, simple
-macros, `#undef` provenance, metadata diagnostics, simple globals, typedefs,
-forward struct declarations, function prototypes, prototype-style metadata, and
-function-definition signatures with start/end locations.
+macros, `#undef` provenance, metadata diagnostics, variables, typedefs,
+aggregate declarations, function prototypes, prototype-style metadata, and
+function-definition signatures with start/end locations. Declarator output can
+represent parenthesized pointer/array precedence through concrete
+`CComposedType` components and nameless `CFunctionType` signatures.
 
-The C parser CLI workflow should be designed before parser implementation so
-future parser work lands behind a stable command shape, output schema, and
-diagnostic contract.
+This document records the implemented C parse command shape, output schema,
+and diagnostic contract, plus deferred CLI behavior.
 
 ## Current Status
 
@@ -27,11 +28,19 @@ behavior.
 
 The C parser output differs from Fortran parser output by using C-specific
 top-level sections: `functions`, `structs`, `unions`, `enums`, `typedefs`,
-`globals`, `macros`, `includes`, and `diagnostics`. The current partial parser
-can populate `functions`, `typedefs`, `globals`, and `structs` for forward
-struct declarations in the supported subset, while full composite definitions,
-unions, and enums remain deferred. Raw `includes`, `macros`, and metadata
-`diagnostics` can also be populated. The parser reports
+`variables`, `macros`, `includes`, and `diagnostics`. The current partial parser
+can populate `functions`, `typedefs`, `variables`, `structs`, `unions`, and
+`enums` in the supported subset. Typedefs, variables, parameters, and aggregate
+members can include concrete composed types for pointer/array/function forms,
+including function pointers and functions returning function pointers. Raw
+`includes`, `macros`, and metadata `diagnostics` can also be
+populated. The object class distinguishes declarations (`CFunction`,
+`CVariable`, `CTypedef`, `CStruct`, `CUnion`, or `CEnum`), and incomplete tag
+declarations set `is_incomplete=True`.
+Known unsupported declaration forms such as declaration attributes, alignment
+specifiers, `_Atomic(type)`, nested aggregate member definitions, and static assertions are
+reported in diagnostics with explicit `unit_kind` values; unconsumed declarator
+suffixes are diagnosed instead of silently omitted. The parser reports
 `parser_status: "partial"`. C parse diagnostics, currently including
 unsupported K&R-style function definitions, honor `--no-color` and `NO_COLOR=1`.
 Function definitions do not store executable body text; they preserve a
@@ -118,7 +127,7 @@ Auto-detection should wait until C parser behavior is mature enough to handle
 mixed source trees predictably. Until then, `--parse` without `--language`
 should keep existing Fortran behavior.
 
-## Planned Flags
+## Flags And Deferred Options
 
 Initial flags:
 
@@ -182,7 +191,7 @@ File: include/example.h
   Unions: 0
   Enums: 0
   Typedefs: 0
-  Globals: 0
+  Variables: 0
   Macros: 0
   Includes: 0
   Diagnostics: 0
@@ -201,15 +210,18 @@ JSON output for a file without raw directives:
     "functions": [
       {
         "name": "run",
-        "return_type": {
-          "base": "int"
+        "result_type": {
+          "model": "CInt",
+          "qualifiers": [],
+          "source_text": "int"
         },
         "parameters": [],
         "storage": [],
         "specifiers": [],
-        "variadic": false,
+        "is_variadic": false,
         "is_definition": false,
         "prototype_style": "prototype",
+        "source_location": {"filename": "include/example.h", "line": 1, "...": "..."},
         "start": {"filename": "include/example.h", "line": 1, "...": "..."},
         "end": null
       }
@@ -218,7 +230,7 @@ JSON output for a file without raw directives:
     "unions": [],
     "enums": [],
     "typedefs": [],
-    "globals": [],
+    "variables": [],
     "macros": [],
     "includes": [],
     "diagnostics": []
@@ -247,8 +259,8 @@ fields still point back to the original `.h` or `.c` file.
 
 ## JSON Parse Schema
 
-The C parse JSON should be per-file and should not reuse Fortran key names when
-the concepts differ. Proposed top-level per-file keys:
+The C parse JSON is per-file and does not reuse Fortran key names when the
+concepts differ. Current top-level per-file keys:
 
 ```text
 language
@@ -260,13 +272,15 @@ structs
 unions
 enums
 typedefs
-globals
+variables
 macros
 includes
 diagnostics
 ```
 
-Every model should include source-location metadata once implementation begins:
+Declaration/directive records include `source_location`; diagnostics use
+`location`. Concrete type components preserve `source_text` rather than their
+own source-location object:
 
 ```text
 source_location: {
@@ -275,12 +289,26 @@ source_location: {
   column: int | null,
   source_line: str | null
 }
+
+location: {
+  filename: str | null,
+  line: int | null,
+  column: int | null,
+  source_line: str | null
+}
 ```
+
+Concrete `CType` values serialize with a `"model"` discriminator, for example
+`{"model": "CInt", "qualifiers": [], "source_text": "int"}`. The `"type"`
+key is reserved for a semantic relationship such as a `CVariable` or
+`CTypedef` pointing to its declared type. Qualifier objects serialize as
+canonical spelling strings such as `"const"`. Aggregate/typedef object reuse
+emits a reference rather than a recursive JSON cycle.
 
 ## Human Tree Output
 
-The tree should mirror the Fortran parser style: compact by default, expanded
-with explicit flags.
+The current human tree is the count-only report shown above. A later expanded
+tree could mirror the Fortran parser style:
 
 Initial mature output shape:
 
@@ -293,7 +321,7 @@ File: src/api.c
     - int add(int a, int b)
     - void scale(double *x, size_t n)
   Structs: 1
-    - struct vector (fields=2)
+    - struct vector (members=2)
   Typedefs: 1
     - vector_t -> struct vector
   Macros: 1
@@ -305,8 +333,8 @@ documentation, not in the parser CLI workflow.
 
 ## Diagnostics Behavior
 
-C parser errors should use a `CParseError` model with the same user experience
-as `FortranParseError`:
+Fatal C syntax errors use `CParseError` with the same user experience as
+`FortranParseError`:
 
 ```text
 src/api.h:12:5: error[CPARSE001]: Unsupported declaration.
@@ -321,6 +349,9 @@ Default CLI behavior:
 - exit with status code `1`
 - do not show Python traceback
 - colorize when color is enabled
+
+Unsupported but recoverable declarations and raw preprocessor limitations are
+stored as non-fatal `CDiagnostic` entries in the parse report instead.
 
 Debug behavior:
 
@@ -350,9 +381,11 @@ The active CLI/parser tests cover the current partial subset:
 - `--language c --parse --debug-traceback` is accepted.
 - raw comment stripping, line-continuation folding, top-level splitting,
   include collection, simple macro collection, function-like macro diagnostics,
-  conditional non-selection, simple declarations, globals, typedefs, forward
-  struct declarations, and function signatures with definition start/end
-  locations are covered by focused C tests.
+  conditional non-selection, simple declarations, variables, typedefs,
+  parenthesized declarators, function pointer typedefs/parameters, recursive
+  declarator combinations, concrete declaration objects, aggregate
+  definitions/members/enumerators, incomplete struct/union tags, and function
+  signatures with definition start/end locations are covered by focused C tests.
 - `--show-vars` and `--print-limit` are rejected in C mode until C-specific
   display controls exist.
 - `--semantics` with `--language c` is rejected until C semantic conversion is
@@ -374,11 +407,20 @@ Completed order:
    continuations, includes, simple macros, and unsupported function-like
    macros.
 7. Added top-level splitting and a first partial grammar subset for simple
-   globals, typedefs, function prototypes, and function-definition headers.
+   variables, typedefs, function prototypes, and function-definition headers.
 8. Added function-definition start/end locations while continuing to skip
    executable bodies.
-9. Added forward `struct name;` extraction as opaque struct source facts.
+9. Added forward `struct name;` extraction as incomplete `CStruct` source facts.
+10. Replaced ad hoc declarator splitting with a recursive grammar-style
+    declarator parser for pointer prefixes, parenthesized direct declarators,
+    and array/function suffixes.
+11. Classified each declarator from its recursive type and added basic
+    struct/union/enum declarations, members, tag typedefs, and trailing tag
+    variables as concrete parser models.
+12. Replaced generic type references and declaration-kind tags with concrete
+    `CType` subclasses, `CComposedType` components, and concrete declaration
+    objects.
 
-Next implementation work should continue with richer declarator support,
-preprocessed-input line mapping, composite types, and project resolution while
-keeping the explicit `--language c` gate in place.
+Next implementation work should continue with tag/typedef resolution,
+preprocessed-input line mapping, compiler extension policy, and project
+resolution while keeping the explicit `--language c` gate in place.

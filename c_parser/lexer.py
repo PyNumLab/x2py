@@ -169,6 +169,15 @@ def top_level_partition(text: str, delimiter: str = "=") -> tuple[str, str | Non
     return text.strip(), None
 
 
+def _is_aggregate_definition_header(header: str) -> bool:
+    """Identify a tag definition before deciding that a brace starts a body."""
+    compact = " ".join(header.split())
+    if "(" in compact or "=" in compact:
+        return False
+    words = compact.split()
+    return any(word in {"struct", "union", "enum"} for word in words)
+
+
 def split_top_level_c_source(
     source: str,
     filename: str | None = None,
@@ -198,6 +207,7 @@ def split_top_level_c_source(
     block_start_line = 1
     block_start_column = 1
     block_source_line: str | None = None
+    aggregate_block = False
 
     while i < len(stripped):
         char = stripped[i]
@@ -251,13 +261,15 @@ def split_top_level_c_source(
                     block_start_line = start_line
                     block_start_column = start_column
                     block_source_line = _source_line(source_lines, start_line)
+                    aggregate_block = _is_aggregate_definition_header(header)
             brace_depth = 1
-            start_index = None
+            if not aggregate_block:
+                start_index = None
         elif char == "{" and brace_depth:
             brace_depth += 1
         elif char == "}" and brace_depth:
             brace_depth -= 1
-            if brace_depth == 0 and block_header:
+            if brace_depth == 0 and block_header and not aggregate_block:
                 segments.append(
                     CTopLevelSegment(
                         text=block_header,
@@ -296,6 +308,9 @@ def split_top_level_c_source(
                     )
                 )
             start_index = None
+            block_header = None
+            block_source_line = None
+            aggregate_block = False
 
         line, column = _advance_position(char, line, column)
         i += 1
