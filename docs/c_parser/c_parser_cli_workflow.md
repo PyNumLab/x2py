@@ -57,6 +57,8 @@ member placement and flexible union members produce
 `parser_status: "partial"`. C parse diagnostics, currently including
 unsupported K&R-style function definitions and invalid primitive-specifier
 combinations such as `unsigned float`, honor `--no-color` and `NO_COLOR=1`.
+Active CLI regression tests also verify that `--debug-traceback` and
+`C_PARSER_DEBUG=1` re-raise fatal C parse errors for debugging.
 Function definitions do not store executable body text; they preserve a
 direct `start` location and `end` location from the signature start through the
 closing brace. Compatible repeated top-level declarations are merged;

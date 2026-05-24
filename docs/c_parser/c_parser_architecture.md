@@ -77,8 +77,8 @@ Implemented now:
   rejected until semantic conversion exists.
 - Focused partial CLI/API, declaration/function, diagnostic color, project
   include/index, raw lexer/directive, project golden, error golden, and JSON
-  schema tests are active while corpus, semantic, and `.pyi` roadmap tests
-  remain skipped.
+  schema tests are active. Remaining parser-suite skips are limited to the
+  pinned corpus roadmap and compiler-preprocessed `.i`/`#line` behavior.
 - `tests/data/c/` contains general fixtures modeled after the Fortran general
   fixture themes, additional C-specific API shapes, fatal diagnostic inputs,
   and real-world cJSON/jsmn/tinyexpr/linmath/NanoSVG/stb inputs whose partial

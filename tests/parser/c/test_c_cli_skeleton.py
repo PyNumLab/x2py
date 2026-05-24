@@ -210,6 +210,44 @@ def test_cli_c_invalid_primitive_specifier_sequence_is_fatal(tmp_path: Path):
     assert "\x1b[" not in res.stderr
 
 
+def test_cli_c_debug_traceback_reraises_parse_errors(tmp_path: Path):
+    header = tmp_path / "invalid_specifiers.h"
+    header.write_text("unsigned float value;\n", encoding="utf-8")
+    cmd = [
+        sys.executable,
+        "-m",
+        "x2py",
+        str(header),
+        "--language",
+        "c",
+        "--parse",
+        "--debug-traceback",
+    ]
+
+    res = subprocess.run(cmd, capture_output=True, text=True)
+
+    assert res.returncode == 1
+    assert "Traceback" in res.stderr
+    assert "CParseError" in res.stderr
+
+
+def test_cli_c_debug_env_reraises_parse_errors(tmp_path: Path):
+    header = tmp_path / "invalid_specifiers.h"
+    header.write_text("unsigned float value;\n", encoding="utf-8")
+    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--parse"]
+
+    res = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "C_PARSER_DEBUG": "1"},
+    )
+
+    assert res.returncode == 1
+    assert "Traceback" in res.stderr
+    assert "CParseError" in res.stderr
+
+
 def test_cli_without_language_keeps_fortran_default_behavior():
     fixture = Path(__file__).resolve().parents[2] / "data" / "fortran" / "general" / "basic_subroutine.f90"
     cmd = [sys.executable, "-m", "x2py", str(fixture), "--parse"]
