@@ -95,6 +95,20 @@ def test_function_pointer_parameter_is_a_callback_candidate_with_nameless_signat
     assert len(signature.parameter_types) == 2
 
 
+def test_function_parameter_preserves_declaration_and_adjusts_to_callback_pointer():
+    from c_parser import CComposedType, CFunctionType, CPointer, parse_c_file
+
+    parsed = parse_c_file("void apply(int callback(int));\n", filename="adjusted_callback.h")
+
+    callback = parsed.functions[0].parameters[0]
+    assert isinstance(callback.declared_type, CFunctionType)
+    assert isinstance(callback.type, CComposedType)
+    assert [type(component) for component in callback.type.components] == [CPointer, CFunctionType]
+    assert callback.type.components[1] is callback.declared_type
+    assert callback.callback_candidate is True
+    assert parsed.functions[0].type.parameter_types[0] is callback.type
+
+
 @pytest.mark.skip(reason="function pointer typedef resolution is not implemented yet.")
 def test_callback_typedef_parameter_links_to_typedef_signature():
     from c_parser import CFunctionType, CTypedef, parse_c_file

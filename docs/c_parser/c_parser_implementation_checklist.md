@@ -15,6 +15,8 @@ extensions are diagnosed, and invalid primitive-specifier combinations raise
 `CParseError` without treating unresolved single typedef-name uses as invalid.
 Aggregate members carry their own source locations, and flexible array
 members are classified and checked for supported struct/union constraints.
+Function parameters preserve written array/function forms in `declared_type`
+while exposing C-adjusted pointer forms in `type`.
 
 This checklist is intentionally detailed so future work can proceed one branch,
 one checklist item, and one tested capability at a time. The C parser initiative
@@ -24,7 +26,7 @@ stable.
 ## Progress Snapshot
 
 - Last updated: 2026-05-24
-- Checklist progress: 516/848 checked (60.8%).
+- Checklist progress: 517/849 checked (60.9%).
 - Current parser status: partial C parser with raw directive metadata, top-level
   source splitting, simple declarations/variables/typedefs, prototype-style
   metadata, K&R diagnostics, simple function signatures, and start/end
@@ -39,7 +41,9 @@ stable.
   distinguished by their concrete declaration objects rather than a kind field.
   Struct and union fields now preserve per-member locations; legal final
   flexible struct members are marked through `CArray.is_flexible`, with error
-  diagnostics for invalid placement or union use.
+  diagnostics for invalid placement or union use. Array and function
+  parameter declarations preserve their source form in `declared_type` while
+  their effective `type` applies C parameter-to-pointer adjustment.
 
 ## Global Rules
 
@@ -729,6 +733,8 @@ Scope:
 
 - [x] Implement a helper analogous to `_helper_parse_declaration_line`.
 - [x] Feed procedure parameters through the same declaration backend.
+- [x] Preserve array/function parameter `declared_type` while exposing the
+      C-adjusted pointer `type`.
 - [x] Feed function return types through the same declaration backend.
 - [x] Feed struct/union members through the same declaration backend.
 - [x] Feed typedefs through the same declaration backend.
@@ -752,8 +758,6 @@ Scope:
 
 Known declaration implementation gaps, with representative syntax:
 
-- parameter array/function adjustment:
-  `void process(int values[4], int callback(int));`
 - braced/designated initializer preservation:
   `int values[3] = {1, 2, 3};`
 - nested anonymous aggregate members:
