@@ -35,7 +35,7 @@ stable.
 ## Progress Snapshot
 
 - Last updated: 2026-05-24
-- Checklist progress: 586/856 checked (68.5%).
+- Checklist progress: 590/856 checked (68.9%).
 - Current parser status: partial C parser with raw directive metadata, top-level
   source splitting, simple declarations/variables/typedefs, prototype-style
   metadata, K&R diagnostics, simple function signatures, and start/end
@@ -804,7 +804,7 @@ Represented shapes still needing dedicated active regression tests:
 - [x] Shared declaration/declarator parser exists.
 - [x] It is used by all declaration roles available so far.
 - [x] Primitive, pointer, array, typedef-name, and tag references have tests.
-- [ ] Unsupported declaration-shaped input raises `CParseError` or structured
+- [x] Unsupported declaration-shaped input raises `CParseError` or structured
       diagnostics.
 
 ### Phase 5 Risks And Open Questions
@@ -1147,9 +1147,9 @@ Scope:
 - [ ] Report function pointer parameters.
 - [ ] Report callback typedef parameters.
 - [ ] Report missing callback `.pyi` policy.
-- [ ] Report macro-dependent declarations.
-- [ ] Report unsupported attributes.
-- [ ] Report unsupported compiler extensions.
+- [x] Report macro-dependent declarations.
+- [x] Report unsupported attributes.
+- [x] Report unsupported compiler extensions.
 - [ ] Report unsupported bitfields.
 - [ ] Report pointer ownership ambiguity.
 - [ ] Report non-const pointer mutability ambiguity.

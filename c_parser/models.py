@@ -478,6 +478,7 @@ class CMacroDependency:
     name: str
     context: str = "declaration"
     source_location: CSourceLocation | None = None
+    source_text: str = ""
 
 
 @dataclass

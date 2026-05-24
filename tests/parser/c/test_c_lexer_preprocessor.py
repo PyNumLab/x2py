@@ -151,6 +151,7 @@ API_DECL(int) exported(void);
     assert macros["API_DECL"].function_like is True
     assert parsed.functions == []
     assert any(diag.code == "C_UNSUPPORTED_FUNCTION_LIKE_MACRO" for diag in parsed.diagnostics)
+    assert any(diag.code == "C_MACRO_DEPENDENT_DECLARATION" for diag in parsed.diagnostics)
 
 
 def test_raw_mode_fixture_keeps_macro_shaped_declaration_deferred_until_preprocessing():
@@ -213,7 +214,33 @@ API_DECL(int) exported(void);
     assert [(item.name, item.context) for item in parsed.macro_dependencies] == [
         ("API_DECL", "declaration")
     ]
+    assert parsed.macro_dependencies[0].source_text == "API_DECL(int) exported(void)"
     assert parsed.macro_dependencies[0].source_location.line == 3
+    assert [(diag.code, diag.unit_kind, diag.unit_name) for diag in parsed.diagnostics] == [
+        ("C_UNSUPPORTED_FUNCTION_LIKE_MACRO", "macro", "API_DECL"),
+        ("C_MACRO_DEPENDENT_DECLARATION", "macro_dependent_declaration", "API_DECL"),
+    ]
+
+
+def test_raw_mode_macro_initializers_do_not_hide_parseable_declarations():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+#define INIT(value) value
+int answer = INIT(42);
+""",
+        filename="macro_initializer.h",
+        preprocessing="raw",
+    )
+
+    assert [variable.name for variable in parsed.variables] == ["answer"]
+    assert parsed.variables[0].initializer is not None
+    assert parsed.variables[0].initializer.source_text == "INIT(42)"
+    assert parsed.macro_dependencies == []
+    assert [diagnostic.code for diagnostic in parsed.diagnostics] == [
+        "C_UNSUPPORTED_FUNCTION_LIKE_MACRO"
+    ]
 
 
 @pytest.mark.skip(reason="compiler-preprocessed mode lands after raw metadata collection.")

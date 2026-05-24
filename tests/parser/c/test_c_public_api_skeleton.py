@@ -191,9 +191,11 @@ def test_model_json_shapes_cover_directive_include_macro_and_diagnostic_fields()
     assert payload["macros"][0]["name"] == "API"
     assert payload["macros"][0]["function_like"] is True
     assert payload["macro_dependencies"][0]["name"] == "API"
+    assert payload["macro_dependencies"][0]["source_text"] == "API(int) run(void)"
     assert {diagnostic["code"] for diagnostic in payload["diagnostics"]} >= {
         "C_UNRESOLVED_INCLUDE",
         "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+        "C_MACRO_DEPENDENT_DECLARATION",
     }
 
 
