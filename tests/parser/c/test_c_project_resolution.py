@@ -3,6 +3,8 @@
 
 from pathlib import Path
 
+import pytest
+
 
 def test_project_include_graph_tracks_local_system_missing_and_cycles(tmp_path: Path):
     from c_parser import parse_c_project
@@ -37,6 +39,20 @@ def test_project_resolves_quoted_includes_through_include_dirs(tmp_path: Path):
     assert include.target == "types.h"
     assert include.resolved_path == str(types)
     assert project.unresolved_includes[str(api)] == set()
+
+
+@pytest.mark.skip(
+    reason="Directory discovery of preprocessed .i inputs is deferred with preprocessed mode."
+)
+def test_parse_c_project_directory_discovers_preprocessed_i_files(tmp_path: Path):
+    from c_parser import parse_c_project
+
+    (tmp_path / "api.c").write_text("int from_source(void);\n", encoding="utf-8")
+    (tmp_path / "generated.i").write_text("int generated(void);\n", encoding="utf-8")
+
+    project = parse_c_project(tmp_path)
+
+    assert set(project.files) == {"api.c", "generated.i"}
 
 
 def test_project_indexes_functions_by_file_and_enum_constants(tmp_path: Path):

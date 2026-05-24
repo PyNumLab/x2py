@@ -129,19 +129,19 @@ def test_function_parameter_preserves_declaration_and_adjusts_to_callback_pointe
     assert parsed.functions[0].type.parameter_types[0] is callback.type
 
 
-@pytest.mark.skip(reason="function pointer typedef resolution is not implemented yet.")
-def test_callback_typedef_parameter_links_to_typedef_signature():
-    from c_parser import CFunctionType, CTypedef, parse_c_file
+def test_project_resolves_callback_typedef_parameter_to_typedef_signature():
+    from c_parser import CFunctionType, CTypedef, parse_c_project
 
-    parsed = parse_c_file(
-        """
+    project = parse_c_project(
+        {
+            "callback_typedef.h": """
 typedef int (*compare_fn)(const void *a, const void *b);
 void sort_items(void *items, compare_fn compare);
-""",
-        filename="callback_typedef.h",
+"""
+        }
     )
 
-    referenced = parsed.functions[0].parameters[1].type
+    referenced = project.functions["sort_items"].parameters[1].type
     assert isinstance(referenced, CTypedef)
     assert isinstance(referenced.type.components[1], CFunctionType)
 

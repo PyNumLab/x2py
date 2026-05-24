@@ -218,6 +218,16 @@ def test_public_c_parser_entrypoints_do_not_include_parser_side_readiness():
     assert not hasattr(c_parser, "assess_c_wrap_readiness")
 
 
+def test_c_parser_instance_entrypoints_match_public_functions():
+    from c_parser import CParser, parse_c_file, parse_c_project
+
+    source = "int answer(void);\n"
+    parser = CParser()
+
+    assert parser.visit_file(source, filename="api.h") == parse_c_file(source, filename="api.h")
+    assert parser.visit_project({"api.h": source}) == parse_c_project({"api.h": source})
+
+
 def test_c_parse_error_attributes_and_diagnostic_formatting():
     from c_parser import CParseError
 

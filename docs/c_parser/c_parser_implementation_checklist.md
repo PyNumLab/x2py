@@ -372,16 +372,19 @@ Scope:
 - [x] Keep the skipped C suite separate from existing Fortran tests.
 - [x] Keep Fortran tests green whenever C tests are unskipped.
 
-### Skipped Roadmap Test Files
+### Roadmap And Active Test Files
 
 - [x] Create `tests/parser/c/README.md` with the staged unskip policy.
-- [x] Create `tests/parser/c/test_c_public_entrypoints.py`.
-- [x] Create `tests/parser/c/test_c_cli.py`.
+- [x] Consolidate implemented public API roadmap coverage into
+      `tests/parser/c/test_c_public_api_skeleton.py`.
+- [x] Consolidate implemented CLI roadmap coverage into
+      `tests/parser/c/test_c_cli_skeleton.py`.
 - [x] Create `tests/parser/c/test_c_lexer_preprocessor.py`.
 - [x] Create `tests/parser/c/test_c_declarations_and_declarators.py`.
 - [x] Create `tests/parser/c/test_c_functions.py`.
 - [x] Create `tests/parser/c/test_c_structs_unions_enums_typedefs.py`.
-- [x] Create `tests/parser/c/test_c_project_includes.py`.
+- [x] Consolidate implemented project/include roadmap coverage into
+      `tests/parser/c/test_c_project_resolution.py`.
 - [x] Create `tests/semantics/test_c_semantic_readiness.py` or equivalent
       semantic-layer coverage for C wrappability once that layer exists.
 - [x] Create `tests/parser/c/test_c_fixture_suite.py`.
