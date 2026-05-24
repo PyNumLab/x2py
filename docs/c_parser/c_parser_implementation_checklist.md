@@ -408,7 +408,8 @@ Scope:
       inputs.
 - [x] Regenerate all fixtures with the standalone golden script.
 - [x] Regenerate selected fixtures with the standalone golden script.
-- [x] Keep golden regeneration out of the comparison tests.
+- [x] Regenerate full C golden suites from comparison tests when
+      `C_PARSER_UPDATE_GOLDENS=1` is set.
 - [x] Create a C error golden generator.
 - [x] Store expected error type, message fragments, diagnostic fragments, and
       parser entrypoint metadata.

@@ -2,6 +2,7 @@
 """C parser grouped-project fixture/golden regression tests."""
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -64,6 +65,15 @@ def _expected_path_for_project(data_subdir: str, project_key: Path) -> Path:
     return (_FIXTURES_DIR / data_subdir / project_key).with_suffix(".json")
 
 
+def _load_expected(expected_path: Path) -> dict:
+    return json.loads(expected_path.read_text(encoding="utf-8"))
+
+
+def _dump_expected(path: Path, parsed: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(parsed, indent=2) + "\n", encoding="utf-8")
+
+
 def _normalize_resolved_paths(value):
     if isinstance(value, dict):
         resolved_path = value.get("resolved_path")
@@ -101,6 +111,10 @@ def _serialize_project(fixtures: list[Path]) -> dict:
     return _normalize_resolved_paths(_parse_project(fixtures).to_dict())
 
 
+def _update_mode_enabled() -> bool:
+    return os.getenv("C_PARSER_UPDATE_GOLDENS", "0") == "1"
+
+
 @pytest.mark.parametrize("data_subdir", _FIXTURE_GROUPS)
 def test_c_fixture_golden_suite_has_inputs(data_subdir):
     fixtures = sorted((_DATA_DIR / data_subdir).glob("*"))
@@ -125,7 +139,11 @@ def test_c_fixture_golden_suite_compares_project_json(data_subdir):
         expected_path = _expected_path_for_project(data_subdir, project_key)
         parsed = _serialize_project(fixtures)
 
-        expected = json.loads(expected_path.read_text(encoding="utf-8"))
+        if _update_mode_enabled():
+            _dump_expected(expected_path, parsed)
+            continue
+
+        expected = _load_expected(expected_path)
         assert parsed == expected
 
 
