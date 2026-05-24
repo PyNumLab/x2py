@@ -51,7 +51,10 @@ Implemented now:
   `_Atomic(type)`, nested aggregate member definitions, and static assertions,
   are reported as diagnostics with
   explicit `unit_kind` values. A declarator must be fully consumed before a
-  concrete object is returned; unknown suffixes become diagnostics. Definitions preserve direct
+  concrete object is returned; unknown suffixes become diagnostics. Primitive
+  specifier order is normalized, and invalid combinations such as
+  `unsigned float` raise `CParseError` with code `CPARSE003` while a single
+  unresolved typedef-like name remains deferred. Definitions preserve direct
   `start` and `end` locations from the signature start through the closing
   brace; and K&R-style function definitions raise focused diagnostics.
 - `c_parser.cli` provides C-specific partial report formatting.
@@ -231,7 +234,8 @@ Current and planned responsibilities:
     member extraction. Helper methods live on `CParser` rather than as broad
     module-level functions. Function models record prototype-style versus
     unspecified empty parameter lists, function definitions preserve start/end
-    locations, and K&R-style definitions are rejected with `CParseError`.
+    locations, K&R-style definitions are rejected with `CParseError`, and
+    invalid primitive-specifier combinations are rejected with `CPARSE003`.
   - Planned: symbol resolution, parameter array/function adjustment, and
     additional declaration-specifier and extension coverage.
 - `c_parser/project.py`
@@ -307,7 +311,8 @@ Derived and named `CType` subclasses are:
   declaration objects
 - `CTypedef`, which represents either a declared alias with its underlying
   `type`, or an unresolved typedef-name use until symbol resolution is added
-- `CUnknownType`, which preserves an unrecognized type spelling
+- `CUnknownType`, retained for type states that cannot yet be modeled; invalid
+  primitive-specifier combinations no longer become `CUnknownType`
 
 For example, composition order distinguishes the following declarations:
 

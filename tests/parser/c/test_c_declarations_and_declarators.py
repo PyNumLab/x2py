@@ -73,6 +73,54 @@ def test_every_supported_primitive_spelling_creates_a_concrete_ctype(spelling, e
     assert isinstance(function.result_type, CType)
 
 
+@pytest.mark.parametrize(
+    ("spelling", "expected_name"),
+    [
+        ("int unsigned", "CUnsignedInt"),
+        ("int long unsigned", "CUnsignedLong"),
+        ("double long", "CLongDouble"),
+        ("_Complex float", "CFloatComplex"),
+    ],
+)
+def test_valid_reordered_primitive_specifiers_are_normalized(spelling, expected_name):
+    import c_parser
+    from c_parser import parse_c_file
+
+    function = parse_c_file(f"{spelling} primitive(void);\n", filename="reordered_primitives.h").functions[0]
+
+    assert isinstance(function.result_type, getattr(c_parser, expected_name))
+    assert function.result_type.source_text == spelling
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "unsigned float value;\n",
+        "void bad(long char value);\n",
+        "struct bad { signed unsigned value; };\n",
+        "unsigned float bad(void) { return 0; }\n",
+    ],
+)
+def test_invalid_primitive_specifier_sequences_raise_parse_errors(source):
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError, match="Invalid type specifier sequence") as error:
+        parse_c_file(source, filename="invalid_specifiers.h")
+
+    assert error.value.code == "CPARSE003"
+    assert "invalid_specifiers.h:1:1: error[CPARSE003]" in error.value.format_diagnostic(color=False)
+
+
+def test_unresolved_single_typedef_name_is_preserved_until_resolution():
+    from c_parser import CTypedef, parse_c_file
+
+    parsed = parse_c_file("external_type value;\n", filename="deferred_typedef.h")
+
+    assert isinstance(parsed.variables[0].type, CTypedef)
+    assert parsed.variables[0].type.name == "external_type"
+    assert parsed.diagnostics == []
+
+
 def test_pointer_qualifiers_belong_to_the_component_they_qualify():
     from c_parser import CComposedType, CConst, CDouble, CPointer, CRestrict, parse_c_file
 

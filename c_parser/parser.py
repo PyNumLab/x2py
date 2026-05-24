@@ -131,6 +131,10 @@ _PRIMITIVE_TYPES = {
     "double _Complex": CDoubleComplex,
     "long double _Complex": CLongDoubleComplex,
 }
+_PRIMITIVE_TYPE_SIGNATURES = {
+    tuple(sorted(spelling.split())): type_class
+    for spelling, type_class in _PRIMITIVE_TYPES.items()
+}
 
 
 @dataclass
@@ -161,6 +165,10 @@ class _ParsedDeclarator:
 
 
 class _UnsupportedDeclaratorSyntax(ValueError):
+    pass
+
+
+class _InvalidSpecifierSequence(ValueError):
     pass
 
 
@@ -236,6 +244,20 @@ class CParser:
     def _qualifiers(self, spellings: list[str]) -> list:
         return [_QUALIFIER_CLASSES[spelling]() for spelling in spellings]
 
+    def _invalid_specifier_error(
+        self,
+        segment: CTopLevelSegment,
+        message: str,
+    ) -> CParseError:
+        return CParseError(
+            message,
+            filename=segment.filename,
+            line_number=segment.original_start_line,
+            column=segment.original_start_column,
+            source_line=segment.original_source_line,
+            code="CPARSE003",
+        )
+
     def _parse_specifiers(self, spec_text: str) -> tuple[CType, list[str], list[str]]:
         words = self._specifier_words(spec_text)
         storage: list[str] = []
@@ -266,23 +288,21 @@ class CParser:
             type_: CType = tag_type(**tag_kwargs)
         elif type_words:
             spelling = " ".join(type_words)
-            primitive = _PRIMITIVE_TYPES.get(spelling)
+            primitive = _PRIMITIVE_TYPE_SIGNATURES.get(tuple(sorted(type_words)))
             if primitive is not None:
                 type_ = primitive(
                     qualifiers=self._qualifiers(qualifiers),
                     source_text=" ".join([*qualifiers, *type_words]),
                 )
-            elif len(type_words) == 1:
+            elif len(type_words) == 1 and type_words[0] not in _PRIMITIVE_WORDS:
                 type_ = CTypedef(
                     name=type_words[0],
                     qualifiers=self._qualifiers(qualifiers),
                     source_text=" ".join([*qualifiers, *type_words]),
                 )
             else:
-                type_ = CUnknownType(
-                    spelling=spelling,
-                    qualifiers=self._qualifiers(qualifiers),
-                    source_text=" ".join([*qualifiers, *type_words]),
+                raise _InvalidSpecifierSequence(
+                    f"Invalid type specifier sequence {spelling!r}."
                 )
         else:
             type_ = CUnknownType(
@@ -739,10 +759,13 @@ class CParser:
         spec_text, declarator = self._split_declaration_specifiers(text)
         if not spec_text or not declarator:
             return None
-        name, function_type, storage, function_specifiers, direct_function = self._build_declared_type(
-            spec_text,
-            declarator,
-        )
+        try:
+            name, function_type, storage, function_specifiers, direct_function = self._build_declared_type(
+                spec_text,
+                declarator,
+            )
+        except _InvalidSpecifierSequence as error:
+            raise self._invalid_specifier_error(segment, str(error)) from None
         if name is None or not isinstance(function_type, CFunctionType) or direct_function is None:
             return None
         parameter_bounds = self._find_parameter_list(text)
@@ -858,6 +881,8 @@ class CParser:
                     spec_text,
                     declaration,
                 )
+            except _InvalidSpecifierSequence as error:
+                raise self._invalid_specifier_error(segment, str(error)) from None
             except _UnsupportedDeclaratorSyntax as error:
                 diagnostics.append(self._declarator_diagnostic(segment, str(error)))
                 continue
@@ -958,6 +983,8 @@ class CParser:
                         spec_text,
                         declaration,
                     )
+                except _InvalidSpecifierSequence as error:
+                    raise self._invalid_specifier_error(segment, str(error)) from None
                 except _UnsupportedDeclaratorSyntax as error:
                     diagnostics.append(self._field_diagnostic(segment, owner_kind, str(error)))
                     continue

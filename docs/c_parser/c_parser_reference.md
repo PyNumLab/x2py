@@ -68,6 +68,8 @@ Implemented:
 - raw `#undef` directive provenance in macro metadata
 - concrete primitive `CType` objects, pointer/array composition, and concrete
   qualifier objects
+- order-insensitive primitive specifier matching with `CPARSE003` errors for
+  invalid combinations such as `unsigned float`
 - recursive declarator extraction for parenthesized pointer/array precedence
 - nameless `CFunctionType` signatures for function pointer typedefs and
   parameter source facts
@@ -234,7 +236,11 @@ All types inherit from `CType`. Implemented primitive type classes are
 `CConst`, `CVolatile`, `CRestrict`, and `CAtomic`, attached to the precise
 type component they qualify. `_Atomic int value;` is stored with a `CAtomic`
 qualifier; the distinct `_Atomic(int) value;` type-specifier form remains
-diagnosed as unsupported.
+diagnosed as unsupported. Equivalent primitive orderings, such as
+`int unsigned` and `double long`, map to the same concrete type while
+invalid combinations, such as `unsigned float`, raise `CParseError` with
+code `CPARSE003`. A single unresolved typedef-name use remains a `CTypedef`
+until resolution can establish whether a matching declaration exists.
 
 Nested declarators are `CComposedType` objects whose `components` are read
 from the declared name outward:
@@ -392,7 +398,9 @@ The parser has the error type and formatter. Raw directive collection can emit
 non-fatal metadata diagnostics, such as unresolved local includes or
 function-like macros that were recorded but not expanded. K&R-style function
 definitions now raise `CParseError` because the current function parser only
-models prototype-style declarations and definitions. Known unsupported
+models prototype-style declarations and definitions. Invalid primitive
+specifier combinations also raise `CParseError` (`CPARSE003`) because their
+invalidity does not depend on later typedef resolution. Known unsupported
 declaration extensions are diagnosed rather than partially modeled; additional
 syntax diagnostics should be added only with focused tests.
 
@@ -434,7 +442,8 @@ merge those branches back into `c-parser/main`.
 
 Active declaration tests currently cover:
 
-- every implemented primitive spelling mapped to its concrete `CType`
+- every implemented primitive spelling and selected reordered equivalent
+  spellings mapped to their concrete `CType`
 - all qualifier objects, storage metadata, simple expression initializers, and
   multiple declarators
 - pointer/array precedence, multidimensional arrays, parameter VLA/static
@@ -448,6 +457,8 @@ Active declaration tests currently cover:
 - diagnostics for selected unsupported attributes, alignment, `_Atomic(type)`,
   nested aggregate definitions, K&R definitions, and trailing declarator
   extensions
+- fatal diagnostics for invalid primitive-specifier combinations while
+  unresolved single typedef-name uses remain deferred
 
 This is enough coverage for the currently implemented subset, not for all C
 declarations.
