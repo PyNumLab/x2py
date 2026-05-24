@@ -42,7 +42,8 @@ specifiers, `_Atomic(type)`, nested aggregate member definitions, and static ass
 reported in diagnostics with explicit `unit_kind` values; unconsumed declarator
 suffixes are diagnosed instead of silently omitted. The parser reports
 `parser_status: "partial"`. C parse diagnostics, currently including
-unsupported K&R-style function definitions, honor `--no-color` and `NO_COLOR=1`.
+unsupported K&R-style function definitions and invalid primitive-specifier
+combinations such as `unsigned float`, honor `--no-color` and `NO_COLOR=1`.
 Function definitions do not store executable body text; they preserve a
 direct `start` location and `end` location from the signature start through the
 closing brace.
@@ -142,8 +143,10 @@ Initial flags:
 
 Current C behavior also accepts `--no-color`. `CParseError` supports
 compiler-style diagnostic formatting and the `C_PARSER_DEBUG` environment
-variable. The current grammar subset is tolerant for unsupported declaration
-forms; targeted syntax diagnostics should be added alongside focused tests.
+variable. The current grammar subset is tolerant for recoverable unsupported
+declaration forms, but invalid primitive-specifier combinations raise
+`CPARSE003`; unresolved single typedef-name uses are deferred until type
+resolution can determine whether a declaration exists.
 
 C-specific flags to add only when needed:
 
@@ -352,6 +355,14 @@ Default CLI behavior:
 
 Unsupported but recoverable declarations and raw preprocessor limitations are
 stored as non-fatal `CDiagnostic` entries in the parse report instead.
+Invalid primitive-specifier combinations that are independent of symbol
+resolution are fatal:
+
+```text
+src/api.h:12:1: error[CPARSE003]: Invalid type specifier sequence 'unsigned float'.
+12 | unsigned float value;
+   | ^
+```
 
 Debug behavior:
 
@@ -386,6 +397,8 @@ The active CLI/parser tests cover the current partial subset:
   declarator combinations, concrete declaration objects, aggregate
   definitions/members/enumerators, incomplete struct/union tags, and function
   signatures with definition start/end locations are covered by focused C tests.
+- valid reordered primitive specifiers and fatal invalid primitive-specifier
+  combinations are covered by focused C tests.
 - `--show-vars` and `--print-limit` are rejected in C mode until C-specific
   display controls exist.
 - `--semantics` with `--language c` is rejected until C semantic conversion is
@@ -420,6 +433,9 @@ Completed order:
 12. Replaced generic type references and declaration-kind tags with concrete
     `CType` subclasses, `CComposedType` components, and concrete declaration
     objects.
+13. Added order-insensitive primitive specifier validation and `CPARSE003`
+    errors for invalid primitive combinations while retaining unresolved
+    typedef-name references for later resolution.
 
 Next implementation work should continue with tag/typedef resolution,
 preprocessed-input line mapping, compiler extension policy, and project

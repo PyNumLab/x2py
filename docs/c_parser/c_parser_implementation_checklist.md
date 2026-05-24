@@ -11,7 +11,8 @@ now parsed. Declarators use a recursive grammar-style parser for pointer,
 array, function, and parenthesized combinations. Declaration types are concrete
 `CType` subclasses combined by `CComposedType`; aggregate members are
 `CVariable` objects using the same declared-type path. Selected unsupported
-extensions are diagnosed.
+extensions are diagnosed, and invalid primitive-specifier combinations raise
+`CParseError` without treating unresolved single typedef-name uses as invalid.
 
 This checklist is intentionally detailed so future work can proceed one branch,
 one checklist item, and one tested capability at a time. The C parser initiative
@@ -20,8 +21,8 @@ stable.
 
 ## Progress Snapshot
 
-- Last updated: 2026-05-23
-- Checklist progress: 512/848 checked (60.4%).
+- Last updated: 2026-05-24
+- Checklist progress: 513/848 checked (60.5%).
 - Current parser status: partial C parser with raw directive metadata, top-level
   source splitting, simple declarations/variables/typedefs, prototype-style
   metadata, K&R diagnostics, simple function signatures, and start/end
@@ -31,8 +32,9 @@ stable.
   typedefs/parameters, callback members, and functions returning function
   pointers are represented with concrete `CType` objects and
   `CComposedType.components`. Primitive specifiers have concrete type classes,
-  and functions, variables, typedefs, and aggregates are distinguished by
-  their concrete declaration objects rather than a kind field.
+  valid spelling permutations are normalized, invalid combinations raise
+  `CPARSE003`, and functions, variables, typedefs, and aggregates are
+  distinguished by their concrete declaration objects rather than a kind field.
 
 ## Global Rules
 
@@ -697,7 +699,8 @@ Scope:
 - [x] Parse `enum name`.
 - [x] Parse typedef-name references.
 - [x] Preserve original declaration specifier text.
-- [ ] Diagnose unknown specifier sequences.
+- [x] Diagnose invalid primitive specifier sequences while deferring unresolved
+      single typedef-name references to project/type resolution.
 
 ### Declarator Tasks
 
