@@ -83,6 +83,8 @@ Implemented:
 - aggregate member extraction as `CVariable` objects through the declarator
   backend, including pointer, array, callback-pointer, flexible-array, and
   bit-field source facts with per-member locations
+- conservative parser diagnostics for function signatures that use unions by
+  value, while pointer-to-union signatures remain ordinary parser facts
 - inline tag typedef aliases and trailing tag object declarators as separate
   concrete models
 - simple function prototype extraction
@@ -167,7 +169,9 @@ Raw-source mode means source normalization plus directive metadata:
 - record `#include` directives as structured include dependencies
 - record simple object-like `#define` directives as macro metadata
 - record `#undef` directives as macro provenance
-- record conditional and pragma directives as raw provenance metadata
+- record conditional and pragma directives as raw provenance metadata,
+  including OpenMP declaration pragmas such as `#pragma omp declare simd` and
+  `#pragma omp declare target`
 - record function-like macros as metadata with unsupported/deferred diagnostics
 - record function-like wrappers and object-like declaration prefixes as
   macro-dependency metadata without claiming they were parsed
@@ -290,8 +294,9 @@ member in a struct is marked as `CArray(is_flexible=True)`; non-final,
 sole-member, and union incomplete-array member forms are retained with
 `C_INVALID_FLEXIBLE_ARRAY_MEMBER` error diagnostics.
 Selected unsupported forms, such as static assertions,
-attributes, alignment specifiers, `_Atomic(type)`, and nested aggregate member
-definitions, are reported in `diagnostics` with explicit `unit_kind` values.
+attributes, alignment specifiers, `_Atomic(type)`, C++-shaped declarations,
+and nested aggregate member definitions, are reported in `diagnostics` with
+explicit `unit_kind` values.
 Unconsumed declarator suffixes are also diagnosed instead of producing partial
 objects. Functions
 include `prototype_style`, currently `"prototype"` for
@@ -506,8 +511,8 @@ Active declaration tests currently cover:
 - concrete-type JSON serialization, source locations, and cycle-safe aggregate
   references
 - diagnostics for selected unsupported attributes, alignment, `_Atomic(type)`,
-  nested aggregate definitions, K&R definitions, and trailing declarator
-  extensions
+  C++-shaped declarations, nested aggregate definitions, K&R definitions, and
+  trailing declarator extensions
 - fatal diagnostics for invalid primitive-specifier combinations while
   unresolved single typedef-name uses remain deferred
 
@@ -524,18 +529,17 @@ declarations.
 | Preprocessed declarations | `#define API(ret) ret` followed by `API(int) run(void);` | Raw mode records macro metadata and does not claim the expanded declaration; preprocessed input with line mapping is not implemented. | Accept compiler-expanded input and map each declaration back through `#line` markers. |
 | Additional extension families | `int run(void) __attribute__((visibility("default")));` | Known attribute/alignment/`_Atomic(type)` forms are diagnosed; broader compiler extensions are not modeled. | Add fixture-driven support or a focused diagnostic for each required extension family. |
 
-### Represented But Requiring Stronger Tests
+### Represented With Focused Tests
 
-These forms are not absent from the model, but need explicit active regression
-tests before they can be treated as stable:
+These forms are represented by the current parser and have dedicated active
+regression tests:
 
 ```c
 const int * const * volatile chain;
 ```
 
 The current parser creates distinct qualified `CPointer` components for
-`chain`; dedicated active regression coverage for that multi-level qualifier
-shape remains to be added.
+`chain`, preserving each qualifier on the exact component it qualifies.
 
 Fixture layout should be separate from Fortran:
 

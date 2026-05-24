@@ -6811,6 +6811,19 @@
       },
       "unit_kind": "union_field",
       "unit_name": null
+    },
+    {
+      "code": "C_UNION_BY_VALUE",
+      "message": "Function 'stbcc__clump_find' uses union type(s) by value: union@stb/stb_connected_components.h:229:1. Use an explicit pointer or defer wrapper policy to the semantic layer.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_connected_components.h",
+        "line": 321,
+        "column": 1,
+        "source_line": "static stbcc__global_clumpid stbcc__clump_find(stbcc_grid *g, stbcc__global_clumpid n)"
+      },
+      "unit_kind": "function",
+      "unit_name": "stbcc__clump_find"
     }
   ]
 }

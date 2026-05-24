@@ -31,8 +31,9 @@ Implemented now:
   helpers that track braces, parentheses, brackets, literals, and
   function-definition end locations.
 - `c_parser.preprocessor` records raw `#include` directives, simple object-like
-  macros, `#undef` directives, conditional/pragma directive provenance, and
-  unsupported function-like macro diagnostics without expanding macros.
+  macros, `#undef` directives, conditional/pragma directive provenance
+  including OpenMP declaration pragmas, and unsupported function-like macro
+  diagnostics without expanding macros.
 - `c_parser.parser` parses variables, typedefs, incomplete `struct`/`union`
   tags, basic struct/union/enum definitions, function prototypes, and
   function-definition signatures while skipping bodies. Declarator handling
@@ -46,7 +47,9 @@ Implemented now:
   type path and preserve arrays, callback candidates, bit-width text, and
   member-level source locations. Supported flexible final struct members set
   `CArray.is_flexible=True`; invalid flexible-member placement and union use
-  produce `C_INVALID_FLEXIBLE_ARRAY_MEMBER` diagnostics.
+  produce `C_INVALID_FLEXIBLE_ARRAY_MEMBER` diagnostics. Function signatures
+  that use unions by value produce `C_UNION_BY_VALUE` diagnostics while
+  pointer-to-union signatures remain parsed normally.
   Inline tag definitions followed by aliases or objects produce concrete
   `CTypedef` or `CVariable` records linked to the aggregate object. Function
   models expose `result_type` and named `parameters`; their derived
@@ -56,8 +59,8 @@ Implemented now:
   unexpanded object-like macros are deferred as macro dependencies rather than
   misreported as invalid type sequences. Selected unsupported declaration
   forms, including attributes, alignment specifiers,
-  `_Atomic(type)`, nested aggregate member definitions, and static assertions,
-  are reported as diagnostics with
+  `_Atomic(type)`, C++-shaped declarations, nested aggregate member
+  definitions, and static assertions, are reported as diagnostics with
   explicit `unit_kind` values. A declarator must be fully consumed before a
   concrete object is returned; unknown suffixes become diagnostics. Primitive
   specifier order is normalized, and invalid combinations such as

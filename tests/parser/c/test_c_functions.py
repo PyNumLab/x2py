@@ -183,6 +183,42 @@ int solve(int value)
     assert parsed.diagnostics == []
 
 
+def test_inline_function_body_in_header_is_recorded_as_definition():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        "static inline int add_one(int value) { return value + 1; }\n",
+        filename="inline_api.h",
+    )
+
+    function = parsed.functions[0]
+    assert function.name == "add_one"
+    assert function.storage == ["static"]
+    assert function.specifiers == ["inline"]
+    assert function.is_definition is True
+    assert function.start.line == 1
+    assert function.end.line == 1
+
+
+def test_function_declaration_attributes_are_diagnosed_until_extension_support_lands():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        'int exported(void) __attribute__((visibility("default")));\n'
+        "int deprecated(void) [[deprecated]];\n",
+        filename="function_attributes.h",
+    )
+
+    assert parsed.functions == []
+    assert [
+        (diagnostic.code, diagnostic.unit_kind, diagnostic.location.line)
+        for diagnostic in parsed.diagnostics
+    ] == [
+        ("C_UNSUPPORTED_DECLARATION", "attribute_declaration", 1),
+        ("C_UNSUPPORTED_DECLARATION", "attribute_declaration", 2),
+    ]
+
+
 def test_conflicting_function_prototypes_report_diagnostic():
     from c_parser import parse_c_file
 

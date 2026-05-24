@@ -143,6 +143,22 @@ def test_pointer_qualifiers_belong_to_the_component_they_qualify():
     assert dst.components[0].qualifiers == [CRestrict()]
 
 
+def test_multi_level_qualifiers_stay_on_their_exact_type_components():
+    from c_parser import CComposedType, CConst, CInt, CPointer, CVolatile, parse_c_file
+
+    parsed = parse_c_file(
+        "const int * const * volatile chain;\n",
+        filename="multi_level_qualifiers.h",
+    )
+
+    chain = parsed.variables[0].type
+    assert isinstance(chain, CComposedType)
+    assert [type(component) for component in chain.components] == [CPointer, CPointer, CInt]
+    assert chain.components[0].qualifiers == [CVolatile()]
+    assert chain.components[1].qualifiers == [CConst()]
+    assert chain.components[2].qualifiers == [CConst()]
+
+
 def test_array_parameters_preserve_declarations_and_expose_adjusted_pointer_types():
     from c_parser import CArray, CComposedType, CConst, CDouble, CInt, CPointer, parse_c_file
 
@@ -456,6 +472,22 @@ def test_function_type_discards_placeholder_parameter_names():
     assert not hasattr(signature, "parameters")
 
 
+def test_conflicting_function_pointer_typedefs_report_diagnostic():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        "typedef int (*callback_fn)(int);\n"
+        "typedef double (*callback_fn)(double);\n",
+        filename="callback_typedef_conflict.h",
+    )
+
+    assert [typedef.name for typedef in parsed.typedefs] == ["callback_fn"]
+    assert [
+        (diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name)
+        for diagnostic in parsed.diagnostics
+    ] == [("C_CONFLICTING_TYPEDEF", "typedef", "callback_fn")]
+
+
 def test_recursive_compositions_cover_tables_callback_arrays_and_function_results():
     from c_parser import CArray, CFunctionType, CInt, CPointer, parse_c_file
 
@@ -507,6 +539,35 @@ _Atomic(int) atomic_value;
         "alignment_declaration",
         "atomic_type_declaration",
     ]
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "using size_type = int;\n",
+        "using namespace api;\n",
+        "namespace api { int run(void); }\n",
+        "namespace api = other;\n",
+        "template <typename T> T identity(T value);\n",
+        "class widget;\n",
+        "public:\n",
+    ],
+)
+def test_cxx_declaration_shapes_are_diagnosed_not_partially_modeled(source):
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(source, filename="cxx_shapes.h")
+
+    assert parsed.functions == []
+    assert parsed.structs == []
+    assert parsed.unions == []
+    assert parsed.enums == []
+    assert parsed.typedefs == []
+    assert parsed.variables == []
+    assert [
+        (diagnostic.code, diagnostic.unit_kind, diagnostic.location.line)
+        for diagnostic in parsed.diagnostics
+    ] == [("C_UNSUPPORTED_DECLARATION", "cxx_declaration", 1)]
 
 
 def test_braced_initializer_declarations_are_diagnosed_not_declarator_failures():
