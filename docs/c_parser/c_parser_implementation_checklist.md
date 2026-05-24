@@ -804,7 +804,7 @@ Represented shapes still needing dedicated active regression tests:
 - [x] Shared declaration/declarator parser exists.
 - [x] It is used by all declaration roles available so far.
 - [x] Primitive, pointer, array, typedef-name, and tag references have tests.
-- [ ] Unsupported declaration-shaped input raises `CParseError` or structured
+- [x] Unsupported declaration-shaped input raises `CParseError` or structured
       diagnostics.
 
 ### Phase 5 Risks And Open Questions
@@ -1147,9 +1147,9 @@ Scope:
 - [ ] Report function pointer parameters.
 - [ ] Report callback typedef parameters.
 - [ ] Report missing callback `.pyi` policy.
-- [ ] Report macro-dependent declarations.
-- [ ] Report unsupported attributes.
-- [ ] Report unsupported compiler extensions.
+- [x] Report macro-dependent declarations.
+- [x] Report unsupported attributes.
+- [x] Report unsupported compiler extensions.
 - [ ] Report unsupported bitfields.
 - [ ] Report pointer ownership ambiguity.
 - [ ] Report non-const pointer mutability ambiguity.
