@@ -36,7 +36,7 @@ stable.
 ## Progress Snapshot
 
 - Last updated: 2026-05-24
-- Checklist progress: 623/873 checked (71.4%).
+- Checklist progress: 622/872 checked (71.3%).
 - Current parser status: partial C parser with raw directive metadata, top-level
   source splitting, simple declarations/variables/typedefs, prototype-style
   metadata, K&R diagnostics, simple function signatures, and start/end
@@ -406,12 +406,9 @@ Scope:
       header to dependent header.
 - [x] Generate separate one-file project goldens for STB single-file library
       inputs.
-- [x] Support updating all fixtures.
-- [x] Support updating selected fixtures.
-- [x] Add an environment variable update flow, for example
-      `C_PARSER_UPDATE_GOLDENS=1`.
-- [x] Document whether C uses `C_PARSER_UPDATE_GOLDENS` or a generic
-      `X2PY_UPDATE_GOLDENS`.
+- [x] Regenerate all fixtures with the standalone golden script.
+- [x] Regenerate selected fixtures with the standalone golden script.
+- [x] Keep golden regeneration out of the comparison tests.
 - [x] Create a C error golden generator.
 - [x] Store expected error type, message fragments, diagnostic fragments, and
       parser entrypoint metadata.
