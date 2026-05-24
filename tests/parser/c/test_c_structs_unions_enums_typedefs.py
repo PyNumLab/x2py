@@ -33,6 +33,32 @@ def test_typedef_struct_alias_refers_to_the_concrete_struct_object():
     assert parsed.typedefs[0].type is parsed.structs[0]
 
 
+def test_forward_struct_declaration_is_completed_by_later_definition():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        "struct state;\nstruct state { int id; };\n",
+        filename="complete_struct.h",
+    )
+
+    assert [struct.name for struct in parsed.structs] == ["state"]
+    assert parsed.structs[0].is_incomplete is False
+    assert parsed.structs[0].members[0].name == "id"
+    assert parsed.diagnostics == []
+
+
+def test_duplicate_complete_tag_definitions_report_diagnostics():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        "struct state { int id; };\nstruct state { int id; };\n",
+        filename="duplicate_struct.h",
+    )
+
+    assert [struct.name for struct in parsed.structs] == ["state"]
+    assert any(diag.code == "C_DUPLICATE_TAG_DEFINITION" for diag in parsed.diagnostics)
+
+
 def test_anonymous_struct_typedef_gets_stable_anonymous_id():
     from c_parser import parse_c_file
 

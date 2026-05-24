@@ -162,7 +162,10 @@ Raw-source mode means source normalization plus directive metadata:
 - record `#include` directives as structured include dependencies
 - record simple object-like `#define` directives as macro metadata
 - record `#undef` directives as macro provenance
+- record conditional and pragma directives as raw provenance metadata
 - record function-like macros as metadata with unsupported/deferred diagnostics
+- record macro-shaped declarations as macro-dependency metadata without
+  claiming they were parsed
 - parse only declarations that are already visible as ordinary C without macro
   expansion
 - do not select active conditional branches from `#if`/`#ifdef` in raw mode
@@ -290,7 +293,23 @@ include `prototype_style`, currently `"prototype"` for
 typed or explicit `void` parameter lists and `"unspecified"` for empty
 parameter lists such as `int f()`. Function definitions do not store
 executable body text; they include direct `start` and `end` locations.
+Compatible top-level function redeclarations are merged, and a matching
+prototype plus definition prefers the definition while retaining the prototype
+location in `declaration_locations`. File-scope tentative variable
+declarations such as `int i; int i;` are merged; a later initialized
+definition such as `int i = 1;` is preferred over an earlier tentative
+declaration. Duplicate initialized variables, duplicate function definitions,
+duplicate complete tag definitions, and incompatible top-level redeclarations
+produce diagnostics. Local declarations inside function bodies are ignored
+because body contents are intentionally skipped.
 Re-export from `x2py` is still deferred; users should import from `c_parser`.
+
+Project-level facts require `parse_c_project(...)`, not just
+`parse_c_file(...)`. A single file can report its own raw directives, includes,
+macros, declarations, diagnostics, and unresolved typedef/tag references. A
+project parse sees multiple files together and can populate include graphs,
+system include records, unresolved include sets, functions by file, enum
+constants, likely header/source pairs, and basic cross-file typedef/tag links.
 
 `macro_defines` is reserved for future compiler-assisted preprocessing
 configuration. It must not mean that raw mode evaluates C preprocessor
@@ -447,10 +466,12 @@ and skipped roadmap tests under `tests/parser/c/`. The active tests cover
 public entrypoints, empty model serialization, CLI discovery, JSON/output-file
 behavior, unsupported C stages, comment stripping, line-continuation folding,
 top-level splitting, include collection, simple macro collection, macro-shaped
-declaration deferral, raw conditional branch non-selection, simple declarations,
-variables, typedefs, recursive declarator composition, aggregate definitions,
-members, enums, and simple function prototypes/definitions, including
-function-definition start/end locations. The broader roadmap tests remain skipped
+declaration deferral, raw conditional branch non-selection and provenance,
+macro-dependency metadata, project include/index behavior, simple declarations,
+variables, typedefs, top-level redeclaration diagnostics, recursive declarator
+composition, aggregate definitions, members, enums, and simple function
+prototypes/definitions, including function-definition start/end locations. The
+broader roadmap tests remain skipped
 until their matching implementation branches land. Future implementation
 branches should unskip only the tests for the capability they implement, then
 merge those branches back into `c-parser/main`.

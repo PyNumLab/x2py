@@ -2,7 +2,9 @@
 
 Status: C parser partial subset plus raw directive metadata implemented. The
 CLI command shape exists and parse reports can include raw includes, simple
-macros, `#undef` provenance, metadata diagnostics, variables, typedefs,
+macros, `#undef` and conditional directive provenance, top-level
+redeclaration diagnostics, project include/index metadata, diagnostics,
+variables, typedefs,
 aggregate declarations, function prototypes, prototype-style metadata, and
 function-definition signatures with start/end locations. Declarator output can
 represent parenthesized pointer/array precedence through concrete
@@ -37,8 +39,13 @@ including function pointers, functions returning function pointers, and
 legal final flexible struct members marked with `is_flexible=True`. Array and
 function parameters preserve written `declared_type` forms while effective
 `type` values use pointer adjustment. Raw
-`includes`, `macros`, and metadata `diagnostics` can also be
-populated. The object class distinguishes declarations (`CFunction`,
+`includes`, `macros`, `raw_directives`, `macro_dependencies`, and metadata
+`diagnostics` can also be populated. `parse_c_project(...)` additionally
+populates project-level include/index fields such as `include_graph`,
+`system_includes`, `unresolved_includes`, `functions_by_file`,
+`enum_constants`, and `header_source_pairs`. Those fields require project
+context; a single-file parse only records the local file facts.
+The object class distinguishes declarations (`CFunction`,
 `CVariable`, `CTypedef`, `CStruct`, `CUnion`, or `CEnum`), and incomplete tag
 declarations set `is_incomplete=True`.
 Known unsupported declaration forms such as declaration attributes, alignment
@@ -52,7 +59,12 @@ unsupported K&R-style function definitions and invalid primitive-specifier
 combinations such as `unsigned float`, honor `--no-color` and `NO_COLOR=1`.
 Function definitions do not store executable body text; they preserve a
 direct `start` location and `end` location from the signature start through the
-closing brace.
+closing brace. Compatible repeated top-level declarations are merged;
+prototype-plus-definition records prefer the definition and preserve prototype
+locations in `declaration_locations`. File-scope tentative declarations such
+as `int i; int i;` are also merged. Duplicate definitions and incompatible
+top-level redeclarations are reported as diagnostics. Local declarations inside
+function bodies are not parsed.
 
 Unsupported C stages:
 
@@ -232,7 +244,8 @@ JSON output for a file without raw directives:
         "prototype_style": "prototype",
         "source_location": {"filename": "include/example.h", "line": 1, "...": "..."},
         "start": {"filename": "include/example.h", "line": 1, "...": "..."},
-        "end": null
+        "end": null,
+        "declaration_locations": []
       }
     ],
     "structs": [],
@@ -242,6 +255,8 @@ JSON output for a file without raw directives:
     "variables": [],
     "macros": [],
     "includes": [],
+    "raw_directives": [],
+    "macro_dependencies": [],
     "diagnostics": []
   }
 }
@@ -251,12 +266,15 @@ The parser should not claim C files are wrappable. If C readiness is added
 later, it should follow the semantics-owned readiness boundary used elsewhere
 in x2py, not become parser JSON.
 
-For raw directives, the same JSON shape is used, but `includes`, `macros`, and
-`diagnostics` may contain populated model dictionaries. Function-like macros
-are recorded as macro metadata and also produce a non-fatal
-`C_UNSUPPORTED_FUNCTION_LIKE_MACRO` diagnostic. Local quoted includes are
-resolved relative to the current file when possible; unresolved local includes
-produce `C_UNRESOLVED_INCLUDE` diagnostics instead of hard failures.
+For raw directives, the same JSON shape is used, but `includes`, `macros`,
+`raw_directives`, `macro_dependencies`, and `diagnostics` may contain populated
+model dictionaries. Function-like macros are recorded as macro metadata and
+also produce a non-fatal `C_UNSUPPORTED_FUNCTION_LIKE_MACRO` diagnostic.
+Macro-shaped declarations are marked through `macro_dependencies` without
+being parsed as expanded declarations. Local quoted includes are resolved
+relative to the current file or configured include dirs when possible;
+unresolved local includes produce `C_UNRESOLVED_INCLUDE` diagnostics instead
+of hard failures.
 
 Raw mode must not claim support for macro-generated declarations. If macros
 affect function names, types, parameters, attributes, storage classes, calling
@@ -284,6 +302,8 @@ typedefs
 variables
 macros
 includes
+raw_directives
+macro_dependencies
 diagnostics
 ```
 

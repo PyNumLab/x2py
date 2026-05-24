@@ -7,18 +7,21 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .lexer import CLogicalRecord, NormalizedCSource, normalize_c_source
-from .models import CDiagnostic, CInclude, CMacro, CSourceLocation
+from .models import CDiagnostic, CInclude, CMacro, CRawDirective, CSourceLocation
 
 
 _INCLUDE_RE = re.compile(r'^\s*#\s*include\s*(?:"([^"]+)"|<([^>]+)>)')
 _DEFINE_RE = re.compile(r"^\s*#\s*define\s+([A-Za-z_]\w*)(\([^)]*\))?(?:\s+(.*))?$")
 _UNDEF_RE = re.compile(r"^\s*#\s*undef\s+([A-Za-z_]\w*)\s*$")
+_DIRECTIVE_RE = re.compile(r"^\s*#\s*([A-Za-z_]\w*)\b(.*)$")
+_RAW_PROVENANCE_DIRECTIVES = {"if", "ifdef", "ifndef", "elif", "else", "endif", "pragma"}
 
 
 @dataclass
 class CPreprocessorMetadata:
     includes: list[CInclude] = field(default_factory=list)
     macros: list[CMacro] = field(default_factory=list)
+    raw_directives: list[CRawDirective] = field(default_factory=list)
     diagnostics: list[CDiagnostic] = field(default_factory=list)
 
 
@@ -66,6 +69,19 @@ def collect_preprocessor_metadata(
     metadata = CPreprocessorMetadata()
 
     for record in normalized.records:
+        directive_match = _DIRECTIVE_RE.match(record.text)
+        if directive_match:
+            directive, argument = directive_match.groups()
+            if directive in _RAW_PROVENANCE_DIRECTIVES:
+                metadata.raw_directives.append(
+                    CRawDirective(
+                        directive=directive,
+                        argument=argument.strip() or None,
+                        source_location=_record_location(record),
+                    )
+                )
+                continue
+
         include_match = _INCLUDE_RE.match(record.text)
         if include_match:
             local_target, system_target = include_match.groups()

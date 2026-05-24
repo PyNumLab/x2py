@@ -191,6 +191,29 @@ int run_slow(void);
     )
 
     assert {fn.name for fn in parsed.functions} == {"run_fast", "run_slow"}
+    assert [(item.directive, item.argument) for item in parsed.raw_directives] == [
+        ("ifdef", "USE_FAST"),
+        ("else", None),
+        ("endif", None),
+    ]
+
+
+def test_raw_mode_records_macro_dependency_metadata_for_macro_shaped_declarations():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+#define API_DECL(ret) ret
+API_DECL(int) exported(void);
+""",
+        filename="macro_dependency.h",
+        preprocessing="raw",
+    )
+
+    assert [(item.name, item.context) for item in parsed.macro_dependencies] == [
+        ("API_DECL", "declaration")
+    ]
+    assert parsed.macro_dependencies[0].source_location.line == 3
 
 
 @pytest.mark.skip(reason="compiler-preprocessed mode lands after raw metadata collection.")

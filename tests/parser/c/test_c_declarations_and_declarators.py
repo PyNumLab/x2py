@@ -220,6 +220,60 @@ void set_basis(basis3 basis);
     assert isinstance(parsed.functions[1].parameters[0].type, CTypedef)
 
 
+def test_repeated_file_scope_tentative_variable_declarations_merge():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file("int i;\nint i;\n", filename="tentative.c")
+
+    assert [variable.name for variable in parsed.variables] == ["i"]
+    assert parsed.variables[0].initializer is None
+    assert [location.line for location in parsed.variables[0].declaration_locations] == [2]
+    assert parsed.diagnostics == []
+
+
+def test_tentative_variable_declaration_followed_by_definition_prefers_definition():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file("int i;\nint i = 1;\n", filename="definition.c")
+
+    assert [variable.name for variable in parsed.variables] == ["i"]
+    assert parsed.variables[0].initializer.source_text == "1"
+    assert parsed.variables[0].source_location.line == 2
+    assert [location.line for location in parsed.variables[0].declaration_locations] == [1]
+    assert parsed.diagnostics == []
+
+
+def test_duplicate_initialized_file_scope_variables_report_diagnostic():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file("int i = 1;\nint i = 2;\n", filename="duplicate_variables.c")
+
+    assert [variable.name for variable in parsed.variables] == ["i"]
+    assert parsed.variables[0].initializer.source_text == "1"
+    assert any(diag.code == "C_DUPLICATE_VARIABLE_DEFINITION" for diag in parsed.diagnostics)
+
+
+def test_conflicting_file_scope_variable_declarations_report_diagnostic():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file("int i;\ndouble i;\n", filename="conflicting_variables.c")
+
+    assert [variable.name for variable in parsed.variables] == ["i"]
+    assert any(diag.code == "C_CONFLICTING_VARIABLE_DECLARATION" for diag in parsed.diagnostics)
+
+
+def test_compatible_repeated_typedefs_merge_but_conflicting_typedefs_diagnose():
+    from c_parser import parse_c_file
+
+    compatible = parse_c_file("typedef int count_t;\ntypedef int count_t;\n", filename="typedefs.h")
+    conflicting = parse_c_file("typedef int count_t;\ntypedef double count_t;\n", filename="bad_typedefs.h")
+
+    assert [typedef.name for typedef in compatible.typedefs] == ["count_t"]
+    assert [location.line for location in compatible.typedefs[0].declaration_locations] == [2]
+    assert compatible.diagnostics == []
+    assert any(diag.code == "C_CONFLICTING_TYPEDEF" for diag in conflicting.diagnostics)
+
+
 def test_variables_preserve_initializer_text_arrays_and_concrete_tag_types():
     from c_parser import CArray, CComposedType, CEnum, CInt, CStruct, CUnion, parse_c_file
 
