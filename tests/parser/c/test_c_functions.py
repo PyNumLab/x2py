@@ -139,3 +139,53 @@ def test_function_returning_pointer_to_const_struct_is_preserved():
     assert isinstance(result.components[0], CPointer)
     assert isinstance(result.components[1], CStruct)
     assert result.components[1].qualifiers == [CConst()]
+
+
+def test_matching_prototype_and_definition_merge_and_prefer_definition():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+int solve(int value);
+int solve(int value)
+{
+    return value;
+}
+""",
+        filename="redeclarations.c",
+    )
+
+    assert [function.name for function in parsed.functions] == ["solve"]
+    function = parsed.functions[0]
+    assert function.is_definition is True
+    assert function.source_location.line == 3
+    assert [location.line for location in function.declaration_locations] == [2]
+    assert parsed.diagnostics == []
+
+
+def test_conflicting_function_prototypes_report_diagnostic():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        "int work(int value);\ndouble work(double value);\n",
+        filename="conflicting_functions.h",
+    )
+
+    assert [function.name for function in parsed.functions] == ["work"]
+    assert any(diag.code == "C_CONFLICTING_FUNCTION_DECLARATION" for diag in parsed.diagnostics)
+
+
+def test_duplicate_function_definitions_report_diagnostic():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+int value(void) { return 1; }
+int value(void) { return 2; }
+""",
+        filename="duplicate_functions.c",
+    )
+
+    assert [function.name for function in parsed.functions] == ["value"]
+    assert parsed.functions[0].is_definition is True
+    assert any(diag.code == "C_DUPLICATE_FUNCTION_DEFINITION" for diag in parsed.diagnostics)

@@ -112,6 +112,8 @@ def test_c_file_serialization_is_json_stable():
         "variables": [],
         "macros": [],
         "includes": [],
+        "raw_directives": [],
+        "macro_dependencies": [],
         "diagnostics": [],
     }
 
@@ -172,6 +174,38 @@ def test_inline_aggregate_typedef_serialization_uses_references_without_cycles()
     assert payload["structs"][0]["members"][0]["type"]["components"][-1]["model"] == "CStruct"
     assert payload["typedefs"][0]["model"] == "CTypedef"
     assert payload["typedefs"][0]["type"] == {"reference": "struct node"}
+
+
+def test_model_json_shapes_cover_directive_include_macro_and_diagnostic_fields():
+    from c_parser import parse_c_file
+
+    payload = parse_c_file(
+        '#ifdef FEATURE\n#include "missing.h"\n#define API(ret) ret\nAPI(int) run(void);\n#endif\n',
+        filename="metadata.h",
+    ).to_dict()
+
+    assert payload["raw_directives"][0]["directive"] == "ifdef"
+    assert payload["raw_directives"][0]["argument"] == "FEATURE"
+    assert payload["includes"][0]["target"] == "missing.h"
+    assert payload["includes"][0]["resolved_path"] is None
+    assert payload["macros"][0]["name"] == "API"
+    assert payload["macros"][0]["function_like"] is True
+    assert payload["macro_dependencies"][0]["name"] == "API"
+    assert {diagnostic["code"] for diagnostic in payload["diagnostics"]} >= {
+        "C_UNRESOLVED_INCLUDE",
+        "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+    }
+
+
+def test_unresolved_typedef_reference_metadata_is_preserved_in_json():
+    from c_parser import parse_c_file
+
+    payload = parse_c_file("api_size count(void);\n", filename="unresolved.h").to_dict()
+
+    result_type = payload["functions"][0]["result_type"]
+    assert result_type["model"] == "CTypedef"
+    assert result_type["name"] == "api_size"
+    assert result_type["type"] is None
 
 
 def test_public_c_parser_entrypoints_do_not_include_parser_side_readiness():

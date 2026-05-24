@@ -2,8 +2,9 @@
 
 Status: partial parser plus raw directive metadata implemented. The `c_parser`
 package, typed parser models, public entrypoints, explicit
-`x2py --language c --parse` CLI path, raw include/macro/undef metadata
-collection, top-level source splitting, and a first simple
+`x2py --language c --parse` CLI path, raw include/macro/undef/conditional
+metadata collection, top-level redeclaration handling, project include/index
+reporting, top-level source splitting, and a first simple
 declaration/function subset with function-definition start/end locations and
 aggregate declarations exist. Declarators are parsed through a recursive
 grammar-style path for pointer, array, function, and parenthesized combinations.
@@ -30,8 +31,8 @@ Implemented now:
   helpers that track braces, parentheses, brackets, literals, and
   function-definition end locations.
 - `c_parser.preprocessor` records raw `#include` directives, simple object-like
-  macros, `#undef` directives, and unsupported function-like macro diagnostics
-  without expanding macros.
+  macros, `#undef` directives, conditional/pragma directive provenance, and
+  unsupported function-like macro diagnostics without expanding macros.
 - `c_parser.parser` parses variables, typedefs, incomplete `struct`/`union`
   tags, basic struct/union/enum definitions, function prototypes, and
   function-definition signatures while skipping bodies. Declarator handling
@@ -62,22 +63,28 @@ Implemented now:
   unresolved typedef-like name remains deferred. Definitions preserve direct
   `start` and `end` locations from the signature start through the closing
   brace; and K&R-style function definitions raise focused diagnostics.
+- Top-level redeclaration handling merges compatible repeated declarations,
+  completes incomplete struct/union tags when a later definition is parsed,
+  prefers compatible function or variable definitions over earlier
+  declarations, preserves related declaration locations, and reports duplicate
+  definitions or incompatible redeclarations as diagnostics. Local declarations
+  inside function bodies remain out of scope because bodies are skipped.
 - `c_parser.cli` provides C-specific partial report formatting.
 - `x2py.cli` dispatches `--language c --parse` to the C parser path.
 - `--language c --semantics`, `--language c --pyi`, and C wrap-readiness are
   rejected until semantic conversion exists.
-- Focused partial CLI/API, declaration/function, diagnostic color, and raw
-  lexer/directive tests are unskipped while broader roadmap tests remain
-  skipped.
+- Focused partial CLI/API, declaration/function, diagnostic color, project
+  include/index, and raw lexer/directive tests are unskipped while broader
+  roadmap tests remain skipped.
 - `tests/data/c/` contains C fixture scaffolding and general fixtures modeled
   after the Fortran general fixture themes, with additional C-specific API
   shapes.
 
 Deferred:
 
-- typedef/tag resolution beyond an inline aggregate declaration and callback
-  policy metadata, for example resolving `size_t count(void);` to a prior
-  `typedef unsigned long size_t;`
+- full typedef/tag resolution policy beyond basic project-level link-up and
+  callback policy metadata, for example conflict diagnostics, active
+  conditional branches, and semantic wrappability decisions
 - nested aggregate member definitions, braced initializers, compiler
   attributes, alignment specifiers, and `_Atomic(type)` declarations, for
   example `struct outer { struct { int x; } inner; };` and
@@ -328,24 +335,34 @@ int *(*table)[4];     # CComposedType([CPointer(), CArray(bound="4"), CPointer()
 Declaration objects are separate from the type components:
 
 - `CVariable` has `name`, `type`, `storage`, optional `initializer`, optional
-  `bit_width`, and source/callback metadata. Struct and union `members` are
-  also `CVariable` objects with per-member locations; there is no separate
-  field class.
+  `bit_width`, source/callback metadata, and related declaration locations.
+  Struct and union `members` are also `CVariable` objects with per-member
+  locations; there is no separate field class.
 - `CFunction` has `name`, `result_type`, named `parameters`, storage and
   function specifiers, `is_variadic`, prototype style, and source/definition
-  locations. Its `type` property builds the corresponding nameless
-  `CFunctionType`.
+  locations plus related declaration locations. Its `type` property builds the
+  corresponding nameless `CFunctionType`.
 - `CParameter` has a source name, written `declared_type`, and effective
   `type`; outer array parameters and direct function parameters adjust to
   pointer `type` values while their source form is retained.
 - `CInitializer` preserves initializer source text without claiming evaluation.
 - `CStruct` and `CUnion` expose `members` and `is_incomplete`; `CEnum` exposes
   `constants`; `CEnumerator` preserves enumerator name and value text.
-- `CTypedef` has its alias name and declared `type`.
+- `CTypedef` has its alias name, declared `type`, and related declaration
+  locations.
 - `CMacro`
   - `name`
   - `value`
   - `function_like`
+  - `directive`
+  - `source_location`
+- `CRawDirective`
+  - `directive`
+  - `argument`
+  - `source_location`
+- `CMacroDependency`
+  - `name`
+  - `context`
   - `source_location`
 - `CInclude`
   - `target`
@@ -365,6 +382,8 @@ Declaration objects are separate from the type components:
   - `variables`
   - `macros`
   - `includes`
+  - `raw_directives`
+  - `macro_dependencies`
   - `diagnostics`
 - `CProject`
   - `files`
@@ -376,6 +395,13 @@ Declaration objects are separate from the type components:
   - `variables`
   - `macros`
   - `includes`
+  - `functions_by_file`
+  - `enum_constants`
+  - `include_graph`
+  - `system_includes`
+  - `unresolved_includes`
+  - `header_source_pairs`
+  - `diagnostics`
 
 Serialization uses `"model"` to identify concrete `CType` nodes; `"type"` is
 reserved for semantic type relationships such as `CVariable.type` and
@@ -383,8 +409,8 @@ reserved for semantic type relationships such as `CVariable.type` and
 spellings, such as `"const"`. Reused aggregate/typedef objects serialize as
 references to avoid cycles.
 
-Future parser phases can add symbol links, conditional region metadata,
-include graphs, and project diagnostics when the corresponding
+Future parser phases can deepen symbol links, duplicate/conflict diagnostics,
+conditional region ownership, and project diagnostics when the corresponding
 behavior lands. Additions should be documented and tested with stable
 serialization expectations.
 
@@ -530,18 +556,25 @@ Current behavior:
 - Returned `CProject` objects contain `CFile` parser models with raw include,
   macro, metadata diagnostics, and supported declarations populated per file.
 - Basic project-level indexes are populated for parsed functions, typedefs,
-  variables, macros, and includes.
-- Include graphs, duplicate analysis, and type resolution are not populated yet.
+  variables, macros, includes, functions by file, and enum constants.
+- Quoted local includes are recorded in an `include_graph`; system includes
+  are recorded separately. Unresolved quoted includes remain diagnostics
+  rather than hard failures, and include cycles are represented as graph edges
+  without recursive traversal.
+- Likely header/source pairs are reported by matching stems and direct source
+  includes.
+- Basic cross-file typedef and struct/union/enum tag references are linked to
+  project index objects after all files are parsed. Original type spelling is
+  preserved in the model `source_text`.
+- Duplicate/conflict analysis is not populated yet.
 
 Planned behavior after project-resolution phases:
 
 - Collect `.c`, `.h`, and eventually `.i` files from explicit paths or
   directories.
 - Parse headers and sources into `CFile` models.
-- Build an include graph keyed by normalized path.
-- Preserve unresolved includes as diagnostics.
-- Associate likely header/source pairs by basename and include relation.
-- Resolve typedefs, structs, unions, enums, and constants across parsed files.
+- Deepen include graph behavior where normalized paths are ambiguous.
+- Deepen duplicate/conflict diagnostics.
 - Track duplicate symbols by C namespace:
   - ordinary identifiers
   - typedef names

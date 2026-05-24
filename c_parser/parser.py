@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 from collections.abc import Mapping, Sequence
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from .lexer import (
     CTopLevelSegment,
@@ -58,8 +58,10 @@ from .models import (
     CLongDouble,
     CLongDoubleComplex,
     CLongLong,
+    CMacroDependency,
 )
 from .preprocessor import collect_preprocessor_metadata
+from .type_resolver import resolve_project_types
 
 
 _C_SOURCE_SUFFIXES = {".c", ".h"}
@@ -192,6 +194,25 @@ def _collect_c_paths(path: Path) -> list[Path]:
     )
 
 
+def _posix_key(path: str | Path | PurePosixPath) -> str:
+    return PurePosixPath(str(path)).as_posix()
+
+
+def _include_key_from_current(current_key: str, target: str) -> str:
+    current_parent = PurePosixPath(current_key).parent
+    if str(current_parent) == ".":
+        return _posix_key(target)
+    return _posix_key(current_parent / target)
+
+
+def _is_header_key(key: str) -> bool:
+    return PurePosixPath(key).suffix.lower() == ".h"
+
+
+def _is_source_key(key: str) -> bool:
+    return PurePosixPath(key).suffix.lower() == ".c"
+
+
 class CParser:
     """C parser entrypoint for the currently implemented C subset.
 
@@ -220,8 +241,385 @@ class CParser:
     def _source_location(self, segment: CTopLevelSegment) -> CSourceLocation:
         return self._source_location_at(segment, 0)
 
+    def _macro_dependencies(
+        self,
+        source: str,
+        filename: str | None,
+        macro_names: set[str],
+    ) -> list[CMacroDependency]:
+        dependencies: list[CMacroDependency] = []
+        if not macro_names:
+            return dependencies
+
+        for segment in split_top_level_c_source(source, filename=filename):
+            text = segment.text.strip()
+            if not text:
+                continue
+            for macro_name in sorted(macro_names):
+                if re.search(rf"\b{re.escape(macro_name)}\s*\(", text):
+                    dependencies.append(
+                        CMacroDependency(
+                            name=macro_name,
+                            context="declaration",
+                            source_location=self._source_location(segment),
+                        )
+                    )
+                    break
+        return dependencies
+
     def _has_unsupported_declaration_marker(self, text: str) -> bool:
         return any(marker in text for marker in _UNSUPPORTED_DECLARATION_MARKERS)
+
+    def _redeclaration_diagnostic(
+        self,
+        code: str,
+        message: str,
+        location: CSourceLocation | None,
+        unit_kind: str,
+        unit_name: str | None,
+    ) -> CDiagnostic:
+        return CDiagnostic(
+            code=code,
+            message=message,
+            severity="error",
+            location=location,
+            unit_kind=unit_kind,
+            unit_name=unit_name,
+        )
+
+    def _append_declaration_location(
+        self,
+        locations: list[CSourceLocation],
+        location: CSourceLocation | None,
+    ) -> None:
+        if location is not None and location not in locations:
+            locations.append(location)
+
+    def _type_key(self, type_: CType, seen: set[int] | None = None) -> tuple:
+        if seen is None:
+            seen = set()
+        object_id = id(type_)
+        if object_id in seen:
+            return ("cycle", type(type_).__name__, getattr(type_, "reference_name", None))
+        seen.add(object_id)
+
+        qualifiers = tuple(qualifier.spelling for qualifier in getattr(type_, "qualifiers", []))
+        if isinstance(type_, CComposedType):
+            return (
+                "CComposedType",
+                tuple(self._type_key(component, seen) for component in type_.components),
+                qualifiers,
+            )
+        if isinstance(type_, CFunctionType):
+            return (
+                "CFunctionType",
+                self._type_key(type_.result_type, seen),
+                tuple(self._type_key(parameter_type, seen) for parameter_type in type_.parameter_types),
+                type_.is_variadic,
+                qualifiers,
+            )
+        if isinstance(type_, CPointer):
+            return ("CPointer", qualifiers)
+        if isinstance(type_, CArray):
+            return (
+                "CArray",
+                type_.bound,
+                type_.is_static_minimum,
+                type_.is_variable_length,
+                type_.is_flexible,
+                qualifiers,
+            )
+        if isinstance(type_, CTypedef):
+            if type_.type is not None:
+                return ("CTypedef", self._type_key(type_.type, seen), qualifiers)
+            return ("CTypedef", type_.name, qualifiers)
+        if isinstance(type_, CStruct):
+            return ("CStruct", type_.name, type_.anonymous_id, qualifiers)
+        if isinstance(type_, CUnion):
+            return ("CUnion", type_.name, type_.anonymous_id, qualifiers)
+        if isinstance(type_, CEnum):
+            return ("CEnum", type_.name, type_.anonymous_id, qualifiers)
+        return (type(type_).__name__, qualifiers)
+
+    def _types_compatible(self, left: CType, right: CType) -> bool:
+        return self._type_key(left) == self._type_key(right)
+
+    def _unspecified_function_declaration(self, function: CFunction) -> bool:
+        return function.prototype_style == "unspecified" and not function.parameters
+
+    def _functions_compatible(self, left: CFunction, right: CFunction) -> bool:
+        if not self._types_compatible(left.result_type, right.result_type):
+            return False
+        if self._unspecified_function_declaration(left) or self._unspecified_function_declaration(right):
+            return True
+        if left.is_variadic != right.is_variadic or len(left.parameters) != len(right.parameters):
+            return False
+        return all(
+            self._types_compatible(left_param.type, right_param.type)
+            for left_param, right_param in zip(left.parameters, right.parameters)
+        )
+
+    def _merge_function_declaration(
+        self,
+        existing: CFunction,
+        incoming: CFunction,
+    ) -> CFunction:
+        if incoming.is_definition and not existing.is_definition:
+            merged = incoming
+            for location in existing.declaration_locations:
+                self._append_declaration_location(merged.declaration_locations, location)
+            self._append_declaration_location(merged.declaration_locations, existing.source_location)
+            return merged
+
+        for location in incoming.declaration_locations:
+            self._append_declaration_location(existing.declaration_locations, location)
+        self._append_declaration_location(existing.declaration_locations, incoming.source_location)
+        return existing
+
+    def _deduplicate_functions(
+        self,
+        functions: list[CFunction],
+        diagnostics: list[CDiagnostic],
+    ) -> list[CFunction]:
+        by_name: dict[str, CFunction] = {}
+        order: list[str] = []
+
+        for function in functions:
+            existing = by_name.get(function.name)
+            if existing is None:
+                by_name[function.name] = function
+                order.append(function.name)
+                continue
+
+            if not self._functions_compatible(existing, function):
+                diagnostics.append(
+                    self._redeclaration_diagnostic(
+                        "C_CONFLICTING_FUNCTION_DECLARATION",
+                        f"Conflicting declarations for function {function.name!r}.",
+                        function.source_location,
+                        "function",
+                        function.name,
+                    )
+                )
+                continue
+
+            if existing.is_definition and function.is_definition:
+                diagnostics.append(
+                    self._redeclaration_diagnostic(
+                        "C_DUPLICATE_FUNCTION_DEFINITION",
+                        f"Duplicate definition for function {function.name!r}.",
+                        function.source_location,
+                        "function",
+                        function.name,
+                    )
+                )
+                continue
+
+            by_name[function.name] = self._merge_function_declaration(existing, function)
+
+        return [by_name[name] for name in order]
+
+    def _is_variable_definition(self, variable: CVariable) -> bool:
+        return variable.initializer is not None
+
+    def _merge_variable_declaration(
+        self,
+        existing: CVariable,
+        incoming: CVariable,
+    ) -> CVariable:
+        if self._is_variable_definition(incoming) and not self._is_variable_definition(existing):
+            merged = incoming
+            for location in existing.declaration_locations:
+                self._append_declaration_location(merged.declaration_locations, location)
+            self._append_declaration_location(merged.declaration_locations, existing.source_location)
+            return merged
+
+        for location in incoming.declaration_locations:
+            self._append_declaration_location(existing.declaration_locations, location)
+        self._append_declaration_location(existing.declaration_locations, incoming.source_location)
+        return existing
+
+    def _deduplicate_variables(
+        self,
+        variables: list[CVariable],
+        diagnostics: list[CDiagnostic],
+    ) -> list[CVariable]:
+        by_name: dict[str, CVariable] = {}
+        order: list[str] = []
+
+        for variable in variables:
+            if variable.name is None:
+                continue
+            existing = by_name.get(variable.name)
+            if existing is None:
+                by_name[variable.name] = variable
+                order.append(variable.name)
+                continue
+
+            if not self._types_compatible(existing.type, variable.type):
+                diagnostics.append(
+                    self._redeclaration_diagnostic(
+                        "C_CONFLICTING_VARIABLE_DECLARATION",
+                        f"Conflicting declarations for variable {variable.name!r}.",
+                        variable.source_location,
+                        "variable",
+                        variable.name,
+                    )
+                )
+                continue
+
+            if self._is_variable_definition(existing) and self._is_variable_definition(variable):
+                diagnostics.append(
+                    self._redeclaration_diagnostic(
+                        "C_DUPLICATE_VARIABLE_DEFINITION",
+                        f"Duplicate definition for variable {variable.name!r}.",
+                        variable.source_location,
+                        "variable",
+                        variable.name,
+                    )
+                )
+                continue
+
+            by_name[variable.name] = self._merge_variable_declaration(existing, variable)
+
+        return [by_name[name] for name in order]
+
+    def _deduplicate_typedefs(
+        self,
+        typedefs: list[CTypedef],
+        diagnostics: list[CDiagnostic],
+    ) -> list[CTypedef]:
+        by_name: dict[str, CTypedef] = {}
+        order: list[str] = []
+
+        for typedef in typedefs:
+            existing = by_name.get(typedef.name)
+            if existing is None:
+                by_name[typedef.name] = typedef
+                order.append(typedef.name)
+                continue
+
+            if existing.type is None or typedef.type is None or not self._types_compatible(existing.type, typedef.type):
+                diagnostics.append(
+                    self._redeclaration_diagnostic(
+                        "C_CONFLICTING_TYPEDEF",
+                        f"Conflicting typedef declarations for {typedef.name!r}.",
+                        typedef.source_location,
+                        "typedef",
+                        typedef.name,
+                    )
+                )
+                continue
+
+            for location in typedef.declaration_locations:
+                self._append_declaration_location(existing.declaration_locations, location)
+            self._append_declaration_location(existing.declaration_locations, typedef.source_location)
+
+        return [by_name[name] for name in order]
+
+    def _deduplicate_structs(
+        self,
+        structs: list[CStruct],
+        diagnostics: list[CDiagnostic],
+    ) -> list[CStruct]:
+        by_name: dict[str, CStruct] = {}
+        ordered: list[CStruct] = []
+
+        for struct in structs:
+            if struct.name is None:
+                ordered.append(struct)
+                continue
+            existing = by_name.get(struct.name)
+            if existing is None:
+                by_name[struct.name] = struct
+                ordered.append(struct)
+                continue
+            if existing.is_incomplete and not struct.is_incomplete:
+                index = ordered.index(existing)
+                ordered[index] = struct
+                by_name[struct.name] = struct
+                continue
+            if not existing.is_incomplete and not struct.is_incomplete:
+                diagnostics.append(
+                    self._redeclaration_diagnostic(
+                        "C_DUPLICATE_TAG_DEFINITION",
+                        f"Duplicate definition for struct tag {struct.name!r}.",
+                        struct.source_location,
+                        "struct",
+                        struct.name,
+                    )
+                )
+        return ordered
+
+    def _deduplicate_unions(
+        self,
+        unions: list[CUnion],
+        diagnostics: list[CDiagnostic],
+    ) -> list[CUnion]:
+        by_name: dict[str, CUnion] = {}
+        ordered: list[CUnion] = []
+
+        for union in unions:
+            if union.name is None:
+                ordered.append(union)
+                continue
+            existing = by_name.get(union.name)
+            if existing is None:
+                by_name[union.name] = union
+                ordered.append(union)
+                continue
+            if existing.is_incomplete and not union.is_incomplete:
+                index = ordered.index(existing)
+                ordered[index] = union
+                by_name[union.name] = union
+                continue
+            if not existing.is_incomplete and not union.is_incomplete:
+                diagnostics.append(
+                    self._redeclaration_diagnostic(
+                        "C_DUPLICATE_TAG_DEFINITION",
+                        f"Duplicate definition for union tag {union.name!r}.",
+                        union.source_location,
+                        "union",
+                        union.name,
+                    )
+                )
+        return ordered
+
+    def _deduplicate_enums(
+        self,
+        enums: list[CEnum],
+        diagnostics: list[CDiagnostic],
+    ) -> list[CEnum]:
+        by_name: dict[str, CEnum] = {}
+        ordered: list[CEnum] = []
+
+        for enum in enums:
+            if enum.name is None:
+                ordered.append(enum)
+                continue
+            existing = by_name.get(enum.name)
+            if existing is None:
+                by_name[enum.name] = enum
+                ordered.append(enum)
+                continue
+            diagnostics.append(
+                self._redeclaration_diagnostic(
+                    "C_DUPLICATE_TAG_DEFINITION",
+                    f"Duplicate definition for enum tag {enum.name!r}.",
+                    enum.source_location,
+                    "enum",
+                    enum.name,
+                )
+            )
+        return ordered
+
+    def _normalize_redeclarations(self, parsed: CFile) -> None:
+        parsed.structs = self._deduplicate_structs(parsed.structs, parsed.diagnostics)
+        parsed.unions = self._deduplicate_unions(parsed.unions, parsed.diagnostics)
+        parsed.enums = self._deduplicate_enums(parsed.enums, parsed.diagnostics)
+        parsed.typedefs = self._deduplicate_typedefs(parsed.typedefs, parsed.diagnostics)
+        parsed.variables = self._deduplicate_variables(parsed.variables, parsed.diagnostics)
+        parsed.functions = self._deduplicate_functions(parsed.functions, parsed.diagnostics)
 
     def _end_location(self, segment: CTopLevelSegment) -> CSourceLocation:
         return CSourceLocation(
@@ -930,7 +1328,14 @@ class CParser:
                 type_ = self._use_aggregate_definition(type_, resolved)
             location = self._source_location(segment)
             if "typedef" in storage:
-                typedefs.append(CTypedef(name=name, type=type_, source_location=location))
+                typedefs.append(
+                    CTypedef(
+                        name=name,
+                        type=type_,
+                        source_location=location,
+                        source_text=name,
+                    )
+                )
             elif isinstance(type_, CFunctionType) and direct_function is not None:
                 functions.append(
                     self._function_from_type(
@@ -1345,27 +1750,178 @@ class CParser:
 
     def _build_project(self, parsed_files: dict[str, CFile]) -> CProject:
         project = CProject(files=parsed_files)
-        for file in parsed_files.values():
-            for function in file.functions:
-                project.functions[function.name] = function
+        all_functions: list[CFunction] = []
+        for filename, file in parsed_files.items():
+            project.functions_by_file[filename] = [function.name for function in file.functions]
+            all_functions.extend(file.functions)
             for struct in file.structs:
                 if struct.name is not None:
-                    project.structs[struct.name] = struct
+                    self._index_struct(project, struct, project.diagnostics)
             for union in file.unions:
                 if union.name is not None:
-                    project.unions[union.name] = union
+                    self._index_union(project, union, project.diagnostics)
             for enum in file.enums:
                 if enum.name is not None:
-                    project.enums[enum.name] = enum
+                    self._index_enum(project, enum, project.diagnostics)
+                for constant in enum.constants:
+                    project.enum_constants[constant.name] = constant
             for typedef in file.typedefs:
                 project.typedefs[typedef.name] = typedef
             for variable in file.variables:
-                project.variables[variable.name] = variable
+                if variable.name is not None:
+                    project.variables[variable.name] = variable
             for macro in file.macros:
                 project.macros[macro.name] = macro
             for include in file.includes:
-                project.includes[f"{file.filename or ''}:{include.target}"] = include
+                project.includes[f"{filename}:{include.target}"] = include
+            project.diagnostics.extend(file.diagnostics)
+            self._index_file_includes(project, filename, file)
+        self._index_header_source_pairs(project)
+        resolve_project_types(project)
+        project.functions = {
+            function.name: function
+            for function in self._deduplicate_functions(all_functions, project.diagnostics)
+        }
         return project
+
+    def _index_struct(
+        self,
+        project: CProject,
+        struct: CStruct,
+        diagnostics: list[CDiagnostic],
+    ) -> None:
+        if struct.name is None:
+            return
+        existing = project.structs.get(struct.name)
+        if existing is None or (existing.is_incomplete and not struct.is_incomplete):
+            project.structs[struct.name] = struct
+        elif not existing.is_incomplete and not struct.is_incomplete:
+            diagnostics.append(
+                self._redeclaration_diagnostic(
+                    "C_DUPLICATE_TAG_DEFINITION",
+                    f"Duplicate definition for struct tag {struct.name!r}.",
+                    struct.source_location,
+                    "struct",
+                    struct.name,
+                )
+            )
+
+    def _index_union(
+        self,
+        project: CProject,
+        union: CUnion,
+        diagnostics: list[CDiagnostic],
+    ) -> None:
+        if union.name is None:
+            return
+        existing = project.unions.get(union.name)
+        if existing is None or (existing.is_incomplete and not union.is_incomplete):
+            project.unions[union.name] = union
+        elif not existing.is_incomplete and not union.is_incomplete:
+            diagnostics.append(
+                self._redeclaration_diagnostic(
+                    "C_DUPLICATE_TAG_DEFINITION",
+                    f"Duplicate definition for union tag {union.name!r}.",
+                    union.source_location,
+                    "union",
+                    union.name,
+                )
+            )
+
+    def _index_enum(
+        self,
+        project: CProject,
+        enum: CEnum,
+        diagnostics: list[CDiagnostic],
+    ) -> None:
+        if enum.name is None:
+            return
+        existing = project.enums.get(enum.name)
+        if existing is None:
+            project.enums[enum.name] = enum
+        else:
+            diagnostics.append(
+                self._redeclaration_diagnostic(
+                    "C_DUPLICATE_TAG_DEFINITION",
+                    f"Duplicate definition for enum tag {enum.name!r}.",
+                    enum.source_location,
+                    "enum",
+                    enum.name,
+                )
+            )
+
+    def _include_graph_target(
+        self,
+        parsed_files: dict[str, CFile],
+        filename: str,
+        target: str,
+        resolved_path: str | None,
+    ) -> str:
+        local_key = _include_key_from_current(filename, target)
+        if local_key in parsed_files:
+            return local_key
+
+        basename_matches = [key for key in parsed_files if PurePosixPath(key).name == target]
+        if len(basename_matches) == 1:
+            return basename_matches[0]
+
+        if resolved_path:
+            resolved_name = Path(resolved_path).name
+            resolved_matches = [key for key in parsed_files if PurePosixPath(key).name == resolved_name]
+            if len(resolved_matches) == 1:
+                return resolved_matches[0]
+            return str(Path(resolved_path))
+
+        return local_key
+
+    def _index_file_includes(
+        self,
+        project: CProject,
+        filename: str,
+        file: CFile,
+    ) -> None:
+        local_targets: set[str] = set()
+        system_targets: set[str] = set()
+        unresolved_targets: set[str] = set()
+
+        for include in file.includes:
+            if include.kind == "system":
+                system_targets.add(include.target)
+                continue
+
+            target = self._include_graph_target(
+                project.files,
+                filename,
+                include.target,
+                include.resolved_path,
+            )
+            local_targets.add(target)
+            if include.resolved_path is None and target not in project.files:
+                unresolved_targets.add(include.target)
+
+        project.include_graph[filename] = local_targets
+        project.system_includes[filename] = system_targets
+        project.unresolved_includes[filename] = unresolved_targets
+
+    def _index_header_source_pairs(self, project: CProject) -> None:
+        headers = [key for key in project.files if _is_header_key(key)]
+        sources = [key for key in project.files if _is_source_key(key)]
+
+        for header in headers:
+            project.header_source_pairs.setdefault(header, set())
+
+        for header in headers:
+            header_path = PurePosixPath(header)
+            header_stem = header_path.with_suffix("")
+            for source in sources:
+                source_path = PurePosixPath(source)
+                if source_path.with_suffix("") == header_stem:
+                    project.header_source_pairs[header].add(source)
+
+        for source in sources:
+            for included in project.include_graph.get(source, set()):
+                if included in project.files and _is_header_key(included):
+                    project.header_source_pairs.setdefault(included, set()).add(source)
 
     def visit_file(
         self,
@@ -1378,8 +1934,10 @@ class CParser:
         encoding: str = "utf-8",
     ) -> CFile:
         del macro_defines
+        source_path: Path | None = None
         if _looks_like_existing_source_path(source_or_path):
             path = Path(source_or_path)
+            source_path = path
             if filename is None:
                 filename = str(path)
             source = path.read_text(encoding=encoding)
@@ -1388,13 +1946,22 @@ class CParser:
 
         parsed = CFile(filename=filename, parser_status="partial", preprocessing=preprocessing)
         if preprocessing == "raw":
+            effective_include_dirs = list(include_dirs or ())
+            if source_path is not None:
+                effective_include_dirs.insert(0, source_path.parent)
             metadata = collect_preprocessor_metadata(
                 source,
                 filename=filename,
-                include_dirs=include_dirs,
+                include_dirs=effective_include_dirs,
             )
             parsed.includes = metadata.includes
             parsed.macros = metadata.macros
+            parsed.raw_directives = metadata.raw_directives
+            parsed.macro_dependencies = self._macro_dependencies(
+                source,
+                filename,
+                {macro.name for macro in metadata.macros if macro.function_like},
+            )
             parsed.diagnostics = metadata.diagnostics
             functions, structs, unions, enums, typedefs, variables, parser_diagnostics = self._parse_translation_unit(
                 source,
@@ -1407,6 +1974,7 @@ class CParser:
             parsed.typedefs = typedefs
             parsed.variables = variables
             parsed.diagnostics.extend(parser_diagnostics)
+            self._normalize_redeclarations(parsed)
         return parsed
 
     def visit_project(

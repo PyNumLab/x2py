@@ -367,6 +367,7 @@ class CFunction:
     source_location: CSourceLocation | None = None
     start: CSourceLocation | None = None
     end: CSourceLocation | None = None
+    declaration_locations: list[CSourceLocation] = field(default_factory=list)
 
     @property
     def type(self) -> CFunctionType:
@@ -428,6 +429,7 @@ class CTypedef(CType):
     name: str
     type: CType | None = None
     source_location: CSourceLocation | None = None
+    declaration_locations: list[CSourceLocation] = field(default_factory=list)
 
     @property
     def reference_name(self) -> str:
@@ -448,6 +450,7 @@ class CVariable:
     bit_width: str | None = None
     source_location: CSourceLocation | None = None
     callback_policy: Any = None
+    declaration_locations: list[CSourceLocation] = field(default_factory=list)
 
     @property
     def callback_candidate(self) -> bool:
@@ -460,6 +463,20 @@ class CMacro:
     value: str | None = None
     function_like: bool = False
     directive: str = "define"
+    source_location: CSourceLocation | None = None
+
+
+@dataclass
+class CRawDirective:
+    directive: str
+    argument: str | None = None
+    source_location: CSourceLocation | None = None
+
+
+@dataclass
+class CMacroDependency:
+    name: str
+    context: str = "declaration"
     source_location: CSourceLocation | None = None
 
 
@@ -485,6 +502,8 @@ class CFile:
     variables: list[CVariable] = field(default_factory=list)
     macros: list[CMacro] = field(default_factory=list)
     includes: list[CInclude] = field(default_factory=list)
+    raw_directives: list[CRawDirective] = field(default_factory=list)
+    macro_dependencies: list[CMacroDependency] = field(default_factory=list)
     diagnostics: list[CDiagnostic] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -502,6 +521,13 @@ class CProject:
     variables: dict[str, CVariable] = field(default_factory=dict)
     macros: dict[str, CMacro] = field(default_factory=dict)
     includes: dict[str, CInclude] = field(default_factory=dict)
+    functions_by_file: dict[str, list[str]] = field(default_factory=dict)
+    enum_constants: dict[str, CEnumerator] = field(default_factory=dict)
+    include_graph: dict[str, set[str]] = field(default_factory=dict)
+    system_includes: dict[str, set[str]] = field(default_factory=dict)
+    unresolved_includes: dict[str, set[str]] = field(default_factory=dict)
+    header_source_pairs: dict[str, set[str]] = field(default_factory=dict)
+    diagnostics: list[CDiagnostic] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return c_model_to_dict(self)

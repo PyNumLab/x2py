@@ -2,8 +2,10 @@
 
 Status: implementation checklist with Phase 1 skeleton, selected Phase 2
 fixture scaffolding, selected Phase 3 model/error work, Phase 4 raw
-lexer/directive metadata, and a first Phase 5/6 partial
-declaration/function subset complete. The `c_parser` package and explicit C
+lexer/directive metadata, a first Phase 5/6 partial declaration/function
+subset including top-level redeclaration handling, and selected Phase 8 project
+include/index work complete. The
+`c_parser` package and explicit C
 parse path exist, and simple variables, typedefs, function prototypes,
 function-definition signatures, function-definition start/end locations, and
 incomplete `struct`/`union` declarations and basic aggregate definitions are
@@ -16,7 +18,14 @@ extensions are diagnosed, and invalid primitive-specifier combinations raise
 Aggregate members carry their own source locations, and flexible array
 members are classified and checked for supported struct/union constraints.
 Function parameters preserve written array/function forms in `declared_type`
-while exposing C-adjusted pointer forms in `type`.
+while exposing C-adjusted pointer forms in `type`. Raw conditional directives
+and macro-shaped declarations are stored as metadata. Project parsing now
+records include graphs, system and unresolved includes, functions by file,
+enum constants, header/source pairings, and basic cross-file typedef/tag
+resolution with incomplete tag completion. Compatible top-level prototypes,
+tentative file-scope variables, and repeated typedefs are merged; duplicate
+definitions and incompatible redeclarations produce diagnostics. Local
+declarations inside function bodies are intentionally ignored.
 
 This checklist is intentionally detailed so future work can proceed one branch,
 one checklist item, and one tested capability at a time. The C parser initiative
@@ -26,7 +35,7 @@ stable.
 ## Progress Snapshot
 
 - Last updated: 2026-05-24
-- Checklist progress: 517/849 checked (60.9%).
+- Checklist progress: 586/856 checked (68.5%).
 - Current parser status: partial C parser with raw directive metadata, top-level
   source splitting, simple declarations/variables/typedefs, prototype-style
   metadata, K&R diagnostics, simple function signatures, and start/end
@@ -43,7 +52,14 @@ stable.
   flexible struct members are marked through `CArray.is_flexible`, with error
   diagnostics for invalid placement or union use. Array and function
   parameter declarations preserve their source form in `declared_type` while
-  their effective `type` applies C parameter-to-pointer adjustment.
+  their effective `type` applies C parameter-to-pointer adjustment. Raw
+  conditional directives and macro-shaped declaration dependencies are recorded
+  as metadata. `parse_c_project` returns project include/index facts and
+  resolves basic cross-file typedef and tag references while preserving
+  unresolved references for later diagnostics. Top-level compatible
+  redeclarations are merged, matching prototypes plus definitions prefer the
+  definition while preserving declaration locations, and duplicate/conflicting
+  top-level declarations produce diagnostics.
 
 ## Global Rules
 
@@ -340,7 +356,7 @@ Scope:
 - [x] When a skipped test is unblocked, replace placeholder expectations with
       the exact implemented model fields if the final schema differs.
 - [x] Keep the skipped C suite separate from existing Fortran tests.
-- [ ] Keep Fortran tests green whenever C tests are unskipped.
+- [x] Keep Fortran tests green whenever C tests are unskipped.
 
 ### Skipped Roadmap Test Files
 
@@ -401,7 +417,7 @@ Scope:
 - [x] C fixture directory structure is present.
 - [ ] C golden update workflow is documented.
 - [x] Partial parser and metadata tests pass against current behavior.
-- [ ] Fortran tests still pass.
+- [x] Fortran tests still pass.
 - [x] No real parser claims are made without tests.
 
 ### Phase 2 Test Expectations
@@ -513,7 +529,7 @@ Scope:
 - [x] Add tests for empty `CFile` serialization.
 - [ ] Add tests for each model's minimal JSON shape.
 - [x] Add tests for source-location serialization.
-- [ ] Add tests that unknown/unresolved metadata is preserved.
+- [x] Add tests that unknown/unresolved metadata is preserved.
 
 ### Public API Skeleton And Partial Parser Tasks
 
@@ -597,16 +613,16 @@ Scope:
 - [x] Recognize function-like `#define NAME(...) body`.
 - [x] Store function-like macros as unsupported/deferred metadata.
 - [x] Recognize `#undef`.
-- [ ] Record conditional directive presence (`#ifdef`, `#ifndef`, `#if`,
+- [x] Record conditional directive presence (`#ifdef`, `#ifndef`, `#if`,
       `#elif`, `#else`, `#endif`) as provenance metadata if needed.
 - [x] Do not select active branches in raw mode.
-- [ ] Do not implement a parser-side `defined(NAME)`, `&&`, `||`, `!`, `0`,
+- [x] Do not implement a parser-side `defined(NAME)`, `&&`, `||`, `!`, `0`,
       and `1` evaluator for C API extraction unless a later design explicitly
       justifies it.
 - [x] Mark macro-shaped declarations as unsupported/deferred in raw mode.
-- [ ] Store macro-dependency metadata in C parser models.
+- [x] Store macro-dependency metadata in C parser models.
 - [x] Store preprocessing mode metadata in `CFile`.
-- [ ] Store raw directive metadata separately from compiler-preprocessor
+- [x] Store raw directive metadata separately from compiler-preprocessor
       configuration metadata.
 - [x] Do not implement general macro expansion.
 - [x] Do not expand token-paste or stringify macros.
@@ -643,7 +659,7 @@ Scope:
 
 - [x] Lexer/preprocessor preserves source locations.
 - [x] Includes and macros are collected as metadata.
-- [ ] Raw conditional directives are handled as metadata/provenance only, not
+- [x] Raw conditional directives are handled as metadata/provenance only, not
       parser-side branch selection.
 - [x] No arbitrary macro expansion is attempted.
 - [x] Compiler-assisted preprocessing has a documented design path for
@@ -756,6 +772,17 @@ Scope:
 - [ ] Add diagnostics for declarations ignored by the current partial parser.
 - [ ] Add structured source facts for declarations that depend on macros.
 
+### Top-Level Redeclaration Tasks
+
+- [x] Merge compatible repeated file-scope tentative variable declarations.
+- [x] Prefer initialized file-scope definitions over earlier tentative
+      declarations.
+- [x] Diagnose duplicate initialized file-scope variable definitions.
+- [x] Diagnose conflicting file-scope variable redeclarations.
+- [x] Complete incomplete struct tags from later same-file definitions.
+- [x] Complete incomplete union tags from later same-file definitions.
+- [x] Keep local declarations inside function bodies ignored in v1.
+
 Known declaration implementation gaps, with representative syntax:
 
 - braced/designated initializer preservation:
@@ -855,16 +882,16 @@ Scope:
 
 ### Function Deduplication Tasks
 
-- [ ] Merge matching prototype and definition in the same file.
-- [ ] Prefer definition metadata where useful.
-- [ ] Preserve both source locations if helpful.
-- [ ] Detect conflicting declarations.
-- [ ] Detect duplicate definitions.
+- [x] Merge matching prototype and definition in the same file.
+- [x] Prefer definition metadata where useful.
+- [x] Preserve both source locations if helpful.
+- [x] Detect conflicting declarations.
+- [x] Detect duplicate definitions.
 - [ ] Allow same function under mutually exclusive preprocessor branches.
-- [ ] Add tests for prototype plus definition.
-- [ ] Add tests for conflicting prototypes.
-- [ ] Add tests for duplicate definitions.
-- [ ] Preserve declaration order before deduplicating prototypes and
+- [x] Add tests for prototype plus definition.
+- [x] Add tests for conflicting prototypes.
+- [x] Add tests for duplicate definitions.
+- [x] Preserve declaration order before deduplicating prototypes and
       definitions.
 
 ### Phase 6 Definition Of Done
@@ -953,7 +980,7 @@ Scope:
 - [x] Parse function pointer typedefs.
 - [x] Parse struct/union/enum typedefs.
 - [x] Preserve alias chains before resolution.
-- [ ] Detect duplicate typedefs in same scope.
+- [x] Detect duplicate typedefs in same scope.
 - [x] Add tests for typedef chains.
 - [x] Add tests for primitive typedefs.
 - [x] Add tests for opaque handle typedefs.
@@ -1000,68 +1027,68 @@ Scope:
 
 ### Include Resolution Tasks
 
-- [ ] Resolve quoted includes relative to current file.
-- [ ] Resolve quoted includes through `include_dirs`.
-- [ ] Record unresolved quoted includes.
-- [ ] Record system includes without requiring local resolution by default.
-- [ ] Build `include_graph`.
-- [ ] Detect include cycles without crashing.
-- [ ] Preserve include spelling and resolved path separately.
-- [ ] Add tests for local includes.
-- [ ] Add tests for include dirs.
-- [ ] Add tests for missing includes.
-- [ ] Add tests for include cycles.
+- [x] Resolve quoted includes relative to current file.
+- [x] Resolve quoted includes through `include_dirs`.
+- [x] Record unresolved quoted includes.
+- [x] Record system includes without requiring local resolution by default.
+- [x] Build `include_graph`.
+- [x] Detect include cycles without crashing.
+- [x] Preserve include spelling and resolved path separately.
+- [x] Add tests for local includes.
+- [x] Add tests for include dirs.
+- [x] Add tests for missing includes.
+- [x] Add tests for include cycles.
 
 ### Project Index Tasks
 
 - [x] Index functions by name.
-- [ ] Index functions by file.
+- [x] Index functions by file.
 - [x] Index typedefs by name.
 - [x] Index struct tags by tag namespace.
 - [x] Index union tags by tag namespace.
 - [x] Index enum tags by tag namespace.
-- [ ] Index enum constants in ordinary identifier namespace.
+- [x] Index enum constants in ordinary identifier namespace.
 - [x] Index macros/constants separately.
 - [x] Index variables by name.
-- [ ] Detect duplicate definitions.
-- [ ] Distinguish compatible redeclarations from conflicts.
-- [ ] Add tests for duplicate handling.
-- [ ] Add tests for project-level function indexes.
-- [ ] Add tests for project-level typedef indexes.
-- [ ] Add tests for project-level file-scope variable indexes.
-- [ ] Add tests for project-level macro indexes.
+- [x] Detect duplicate definitions.
+- [x] Distinguish compatible redeclarations from conflicts.
+- [x] Add tests for duplicate handling.
+- [x] Add tests for project-level function indexes.
+- [x] Add tests for project-level typedef indexes.
+- [x] Add tests for project-level file-scope variable indexes.
+- [x] Add tests for project-level macro indexes.
 
 ### Type Resolution Tasks
 
-- [ ] Resolve typedef chains.
-- [ ] Detect typedef cycles.
-- [ ] Resolve struct tag references.
-- [ ] Resolve union tag references.
-- [ ] Resolve enum tag references.
-- [ ] Resolve opaque pointer typedefs.
-- [ ] Preserve unresolved references for later semantic diagnostics.
-- [ ] Do not lose original spelling during resolution.
-- [ ] Add tests for cross-file typedef resolution.
-- [ ] Add tests for cross-file struct resolution.
-- [ ] Add tests for opaque handles.
-- [ ] Add tests for unresolved references.
+- [x] Resolve typedef chains.
+- [x] Detect typedef cycles.
+- [x] Resolve struct tag references.
+- [x] Resolve union tag references.
+- [x] Resolve enum tag references.
+- [x] Resolve opaque pointer typedefs.
+- [x] Preserve unresolved references for later semantic diagnostics.
+- [x] Do not lose original spelling during resolution.
+- [x] Add tests for cross-file typedef resolution.
+- [x] Add tests for cross-file struct resolution.
+- [x] Add tests for opaque handles.
+- [x] Add tests for unresolved references.
 
 ### Header/Source Pairing Tasks
 
-- [ ] Pair `foo.c` with `foo.h` by basename.
-- [ ] Pair source with headers it includes.
-- [ ] Preserve many-to-many relationships.
-- [ ] Use pairings for reporting, not for hidden behavior.
-- [ ] Add tests for header/source pairing.
+- [x] Pair `foo.c` with `foo.h` by basename.
+- [x] Pair source with headers it includes.
+- [x] Preserve many-to-many relationships.
+- [x] Use pairings for reporting, not for hidden behavior.
+- [x] Add tests for header/source pairing.
 
 ### Phase 8 Definition Of Done
 
-- [ ] `parse_c_project` returns a populated `CProject`.
-- [ ] Include graph is stable and serialized.
-- [ ] Cross-file typedef/tag resolution works for basic projects.
-- [ ] Missing project context becomes parser or semantic diagnostics as
+- [x] `parse_c_project` returns a populated `CProject`.
+- [x] Include graph is stable and serialized.
+- [x] Cross-file typedef/tag resolution works for basic projects.
+- [x] Missing project context becomes parser or semantic diagnostics as
       appropriate.
-- [ ] Tests cover directory and file-list parsing.
+- [x] Tests cover directory and file-list parsing.
 
 ### Phase 8 Risks And Open Questions
 
@@ -1350,13 +1377,13 @@ Scope:
 
 ### Regression Hardening Tasks
 
-- [ ] Run full parser tests.
+- [x] Run full parser tests.
 - [ ] Run semantic tests.
 - [ ] Run `.pyi` tests.
 - [ ] Run C corpus parse-only tests.
 - [x] Run CLI tests.
 - [ ] Run golden fixture tests.
-- [ ] Confirm Fortran tests still pass.
+- [x] Confirm Fortran tests still pass.
 - [ ] Audit JSON schema stability.
 - [ ] Audit error diagnostic stability.
 - [x] Audit docs for implemented behavior.
