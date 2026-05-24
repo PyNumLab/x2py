@@ -13,8 +13,9 @@ now parsed. Declarators use a recursive grammar-style parser for pointer,
 array, function, and parenthesized combinations. Declaration types are concrete
 `CType` subclasses combined by `CComposedType`; aggregate members are
 `CVariable` objects using the same declared-type path. Selected unsupported
-extensions are diagnosed, and invalid primitive-specifier combinations raise
-`CParseError` without treating unresolved single typedef-name uses as invalid.
+extensions and C++-shaped declarations are diagnosed, and invalid
+primitive-specifier combinations raise `CParseError` without treating
+unresolved single typedef-name uses as invalid.
 Aggregate members carry their own source locations, and flexible array
 members are classified and checked for supported struct/union constraints.
 Function parameters preserve written array/function forms in `declared_type`
@@ -36,7 +37,7 @@ stable.
 ## Progress Snapshot
 
 - Last updated: 2026-05-24
-- Checklist progress: 622/872 checked (71.3%).
+- Checklist progress: 630/872 checked (72.2%).
 - Current parser status: partial C parser with raw directive metadata, top-level
   source splitting, simple declarations/variables/typedefs, prototype-style
   metadata, K&R diagnostics, simple function signatures, and start/end
@@ -51,16 +52,19 @@ stable.
   distinguished by their concrete declaration objects rather than a kind field.
   Struct and union fields now preserve per-member locations; legal final
   flexible struct members are marked through `CArray.is_flexible`, with error
-  diagnostics for invalid placement or union use. Array and function
-  parameter declarations preserve their source form in `declared_type` while
-  their effective `type` applies C parameter-to-pointer adjustment. Raw
-  conditional directives and macro-shaped declaration dependencies, including
-  object-like declaration prefixes, are recorded as metadata. `parse_c_project`
+  diagnostics for invalid placement or union use, and function signatures that
+  use unions by value produce conservative parser diagnostics. Array and
+  function parameter declarations preserve their source form in `declared_type`
+  while their effective `type` applies C parameter-to-pointer adjustment. Raw
+  conditional directives, pragmas including OpenMP declaration pragmas, and
+  macro-shaped declaration dependencies, including object-like declaration
+  prefixes, are recorded as metadata. `parse_c_project`
   returns project include/index facts and
   resolves basic cross-file typedef and tag references while preserving
   unresolved references for later diagnostics. Top-level compatible
   redeclarations are merged, matching prototypes plus definitions prefer the
-  definition while preserving declaration locations, and duplicate/conflicting
+  definition while preserving declaration locations, C++-shaped declarations
+  are diagnosed instead of modeled as C objects, and duplicate/conflicting
   top-level declarations produce diagnostics.
 
 ## Global Rules
@@ -550,7 +554,7 @@ Scope:
 - [x] Decide whether sets serialize as sorted lists.
 - [x] Ensure dataclass defaults produce stable JSON.
 - [x] Add tests for empty `CFile` serialization.
-- [ ] Add tests for each model's minimal JSON shape.
+- [x] Add tests for each model's minimal JSON shape.
 - [x] Add tests for source-location serialization.
 - [x] Add tests that unknown/unresolved metadata is preserved.
 
@@ -700,7 +704,7 @@ Scope:
 - [x] Decide whether to tokenize fully now or keep logical records until
       declarator parsing requires tokens.
 - [x] Decide whether system headers are recorded only or optionally searched.
-- [ ] Decide whether `#pragma` should become diagnostics or metadata.
+- [x] Decide whether `#pragma` should become diagnostics or metadata.
 - [ ] Decide whether compiler invocation belongs in Phase 4 or a later
       project-resolution phase.
 
@@ -797,7 +801,7 @@ Scope:
 - [x] Add tests for `struct name`, `union name`, and `enum name` references in
       variables and parameters.
 - [x] Add tests for multidimensional arrays.
-- [ ] Add diagnostics for declarations ignored by the current partial parser.
+- [x] Add diagnostics for declarations ignored by the current partial parser.
 - [ ] Add structured source facts for declarations that depend on macros.
 
 ### Top-Level Redeclaration Tasks
@@ -822,7 +826,7 @@ Known declaration implementation gaps, with representative syntax:
 - preprocessed declarations with line mapping:
   `#define API(ret) ret` followed by `API(int) run(void);`
 
-Represented shapes still needing dedicated active regression tests:
+Represented shapes with dedicated active regression tests:
 
 - multi-level qualifier placement:
   `const int * const * volatile chain;`
@@ -933,9 +937,9 @@ Scope:
 
 ### Phase 6 Risks And Open Questions
 
-- [ ] Decide whether inline functions in headers are definitions or prototypes
+- [x] Decide whether inline functions in headers are definitions or prototypes
       for wrapper purposes.
-- [ ] Decide how to handle attributes in function declarations before full
+- [x] Decide how to handle attributes in function declarations before full
       extension support exists.
 
 ## Phase 7: Structs, Unions, Enums, And Typedefs
@@ -980,10 +984,10 @@ Scope:
 - [x] Parse typedef unions.
 - [x] Parse union members with shared declaration backend.
 - [x] Retain union member ownership through the containing `CUnion`.
-- [ ] Add diagnostics for by-value unions if unsafe.
+- [x] Add diagnostics for by-value unions if unsafe.
 - [x] Add tests for named unions.
 - [x] Add tests for typedef unions.
-- [ ] Add tests for union diagnostics.
+- [x] Add tests for union diagnostics.
 
 ### Enum Tasks
 
@@ -1012,7 +1016,7 @@ Scope:
 - [x] Add tests for typedef chains.
 - [x] Add tests for primitive typedefs.
 - [x] Add tests for opaque handle typedefs.
-- [ ] Add tests for function pointer typedef diagnostics.
+- [x] Add tests for function pointer typedef diagnostics.
 
 ### Phase 7 Definition Of Done
 

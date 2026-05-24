@@ -78,6 +78,8 @@ _UNSUPPORTED_DECLARATION_MARKERS = (
     "alignas",
     "_Atomic(",
 )
+_CXX_DECLARATION_KEYWORDS = {"using", "namespace", "template", "class"}
+_CXX_ACCESS_SPECIFIERS = {"public", "private", "protected"}
 _PRIMITIVE_WORDS = {
     "void",
     "char",
@@ -211,6 +213,20 @@ def _is_header_key(key: str) -> bool:
 
 def _is_source_key(key: str) -> bool:
     return PurePosixPath(key).suffix.lower() == ".c"
+
+
+def _looks_like_cxx_declaration(text: str) -> bool:
+    stripped = text.lstrip()
+    identifier = _IDENTIFIER_RE.match(stripped)
+    if identifier is None:
+        return False
+
+    word = identifier.group(0)
+    if word in _CXX_DECLARATION_KEYWORDS:
+        return True
+    if word in _CXX_ACCESS_SPECIFIERS:
+        return stripped[identifier.end() :].lstrip().startswith(":")
+    return False
 
 
 class CParser:
@@ -1423,6 +1439,72 @@ class CParser:
             unit_name=None,
         )
 
+    def _union_by_value_names(self, type_: CType) -> set[str]:
+        if isinstance(type_, CUnion):
+            return {type_.reference_name}
+        if isinstance(type_, CTypedef) and type_.type is not None:
+            return self._union_by_value_names(type_.type)
+        if isinstance(type_, CFunctionType):
+            names = set()
+            names.update(self._union_by_value_names(type_.result_type))
+            for parameter_type in type_.parameter_types:
+                names.update(self._union_by_value_names(parameter_type))
+            return names
+        if isinstance(type_, CComposedType):
+            names = set()
+            protected_by_indirection = False
+            for component in type_.components:
+                if isinstance(component, (CPointer, CArray)):
+                    protected_by_indirection = True
+                    continue
+                if isinstance(component, CFunctionType):
+                    names.update(self._union_by_value_names(component))
+                    protected_by_indirection = False
+                    continue
+                if isinstance(component, CUnion) and not protected_by_indirection:
+                    names.add(component.reference_name)
+                protected_by_indirection = False
+            return names
+        return set()
+
+    def _union_by_value_diagnostics(self, function: CFunction) -> list[CDiagnostic]:
+        union_names = self._union_by_value_names(function.result_type)
+        for parameter in function.parameters:
+            union_names.update(self._union_by_value_names(parameter.type))
+        if not union_names:
+            return []
+
+        formatted = ", ".join(sorted(union_names))
+        return [
+            CDiagnostic(
+                code="C_UNION_BY_VALUE",
+                message=(
+                    f"Function {function.name!r} uses union type(s) by value: {formatted}. "
+                    "Use an explicit pointer or defer wrapper policy to the semantic layer."
+                ),
+                severity="warning",
+                location=function.source_location,
+                unit_kind="function",
+                unit_name=function.name,
+            )
+        ]
+
+    def _append_union_by_value_diagnostics(
+        self,
+        function: CFunction,
+        diagnostics: list[CDiagnostic],
+    ) -> None:
+        for diagnostic in self._union_by_value_diagnostics(function):
+            already_present = any(
+                existing.code == diagnostic.code
+                and existing.unit_kind == diagnostic.unit_kind
+                and existing.unit_name == diagnostic.unit_name
+                and existing.location == diagnostic.location
+                for existing in diagnostics
+            )
+            if not already_present:
+                diagnostics.append(diagnostic)
+
     def _field_diagnostic(
         self,
         segment: CTopLevelSegment,
@@ -1676,6 +1758,7 @@ class CParser:
             or "}" in text
             or text.startswith("_Static_assert")
             or self._has_unsupported_declaration_marker(text)
+            or _looks_like_cxx_declaration(text)
         ):
             return [], [], [], []
 
@@ -1708,6 +1791,9 @@ class CParser:
         if self._is_braced_initializer_declaration(segment):
             kind = "braced_initializer_declaration"
             message = "Braced or designated initializer declarations are not supported yet."
+        elif _looks_like_cxx_declaration(text):
+            kind = "cxx_declaration"
+            message = "C++ declaration syntax is not supported by the C parser."
         elif text.startswith("struct "):
             kind = "struct_definition"
             message = "Struct definitions are not supported yet."
@@ -1785,6 +1871,11 @@ class CParser:
                     )
                 )
                 continue
+            if _looks_like_cxx_declaration(segment.text):
+                unsupported = self._unsupported_declaration_diagnostic(segment)
+                if unsupported is not None:
+                    diagnostics.append(unsupported)
+                continue
             tag_definition = self._parse_tag_definition(segment)
             if tag_definition is not None:
                 aggregate, parsed_functions, parsed_typedefs, parsed_variables, parsed_diagnostics = tag_definition
@@ -1812,6 +1903,7 @@ class CParser:
                     continue
                 if function is not None:
                     functions.append(function)
+                    self._append_union_by_value_diagnostics(function, diagnostics)
                     continue
                 unsupported = self._unsupported_declaration_diagnostic(segment)
                 if unsupported is not None:
@@ -1830,6 +1922,8 @@ class CParser:
             functions.extend(parsed_functions)
             typedefs.extend(parsed_typedefs)
             variables.extend(parsed_variables)
+            for function in parsed_functions:
+                self._append_union_by_value_diagnostics(function, diagnostics)
             diagnostics.extend(declarator_diagnostics)
             if (
                 not parsed_functions
@@ -1877,6 +1971,8 @@ class CParser:
             function.name: function
             for function in self._deduplicate_functions(all_functions, project.diagnostics)
         }
+        for function in project.functions.values():
+            self._append_union_by_value_diagnostics(function, project.diagnostics)
         return project
 
     def _index_struct(

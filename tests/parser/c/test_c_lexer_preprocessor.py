@@ -199,6 +199,53 @@ int run_slow(void);
     ]
 
 
+def test_raw_mode_records_pragmas_as_metadata_without_hiding_declarations():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+#pragma once
+#pragma GCC diagnostic push
+int configured(void);
+""",
+        filename="pragmas.h",
+        preprocessing="raw",
+    )
+
+    assert [fn.name for fn in parsed.functions] == ["configured"]
+    assert [(item.directive, item.argument) for item in parsed.raw_directives] == [
+        ("pragma", "once"),
+        ("pragma", "GCC diagnostic push"),
+    ]
+    assert parsed.raw_directives[0].source_location.line == 2
+
+
+def test_raw_mode_openmp_declaration_pragmas_do_not_hide_declarations():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+#pragma omp declare simd
+int saxpy(int n, const float *x, float *y);
+
+#pragma omp declare target
+extern int omp_global;
+int omp_helper(void);
+#pragma omp end declare target
+""",
+        filename="openmp_pragmas.h",
+        preprocessing="raw",
+    )
+
+    assert [fn.name for fn in parsed.functions] == ["saxpy", "omp_helper"]
+    assert [variable.name for variable in parsed.variables] == ["omp_global"]
+    assert [(item.directive, item.argument) for item in parsed.raw_directives] == [
+        ("pragma", "omp declare simd"),
+        ("pragma", "omp declare target"),
+        ("pragma", "omp end declare target"),
+    ]
+
+
 def test_raw_mode_records_macro_dependency_metadata_for_macro_shaped_declarations():
     from c_parser import parse_c_file
 

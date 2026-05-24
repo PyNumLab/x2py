@@ -90,6 +90,51 @@ def test_anonymous_union_typedef_refers_to_the_concrete_union_object():
     assert parsed.typedefs[0].type is parsed.unions[0]
 
 
+def test_function_signatures_using_unions_by_value_report_diagnostics():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+union value { int i; double d; };
+int consume(union value value);
+union value make_value(void);
+void consume_pointer(union value *value);
+""",
+        filename="union_by_value.h",
+    )
+
+    assert [function.name for function in parsed.functions] == [
+        "consume",
+        "make_value",
+        "consume_pointer",
+    ]
+    assert [
+        (diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name, diagnostic.location.line)
+        for diagnostic in parsed.diagnostics
+    ] == [
+        ("C_UNION_BY_VALUE", "function", "consume", 3),
+        ("C_UNION_BY_VALUE", "function", "make_value", 4),
+    ]
+
+
+def test_project_reports_union_by_value_through_resolved_typedefs():
+    from c_parser import parse_c_project
+
+    project = parse_c_project(
+        {
+            "value.h": "typedef union value { int i; } value_t;\n",
+            "api.h": "value_t consume_alias(value_t value);\nvoid consume_alias_pointer(value_t *value);\n",
+        }
+    )
+
+    assert set(project.functions) == {"consume_alias", "consume_alias_pointer"}
+    assert [
+        (diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name, diagnostic.location.line)
+        for diagnostic in project.diagnostics
+        if diagnostic.code == "C_UNION_BY_VALUE"
+    ] == [("C_UNION_BY_VALUE", "function", "consume_alias", 1)]
+
+
 def test_incomplete_union_and_tag_typedef_aliases_use_concrete_tag_classes():
     from c_parser import CStruct, CUnion, parse_c_file
 
