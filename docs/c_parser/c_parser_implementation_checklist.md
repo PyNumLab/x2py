@@ -13,6 +13,8 @@ array, function, and parenthesized combinations. Declaration types are concrete
 `CVariable` objects using the same declared-type path. Selected unsupported
 extensions are diagnosed, and invalid primitive-specifier combinations raise
 `CParseError` without treating unresolved single typedef-name uses as invalid.
+Aggregate members carry their own source locations, and flexible array
+members are classified and checked for supported struct/union constraints.
 
 This checklist is intentionally detailed so future work can proceed one branch,
 one checklist item, and one tested capability at a time. The C parser initiative
@@ -22,7 +24,7 @@ stable.
 ## Progress Snapshot
 
 - Last updated: 2026-05-24
-- Checklist progress: 513/848 checked (60.5%).
+- Checklist progress: 516/848 checked (60.8%).
 - Current parser status: partial C parser with raw directive metadata, top-level
   source splitting, simple declarations/variables/typedefs, prototype-style
   metadata, K&R diagnostics, simple function signatures, and start/end
@@ -35,6 +37,9 @@ stable.
   valid spelling permutations are normalized, invalid combinations raise
   `CPARSE003`, and functions, variables, typedefs, and aggregates are
   distinguished by their concrete declaration objects rather than a kind field.
+  Struct and union fields now preserve per-member locations; legal final
+  flexible struct members are marked through `CArray.is_flexible`, with error
+  diagnostics for invalid placement or union use.
 
 ## Global Rules
 
@@ -749,8 +754,6 @@ Known declaration implementation gaps, with representative syntax:
 
 - parameter array/function adjustment:
   `void process(int values[4], int callback(int));`
-- flexible array member classification and validation:
-  `struct packet { unsigned size; unsigned char data[]; };`
 - braced/designated initializer preservation:
   `int values[3] = {1, 2, 3};`
 - nested anonymous aggregate members:
@@ -764,8 +767,6 @@ Represented shapes still needing dedicated active regression tests:
 
 - multi-level qualifier placement:
   `const int * const * volatile chain;`
-- unnamed and zero-width bit-fields:
-  `struct flags { unsigned : 0; unsigned mode : 3; };`
 
 ### Phase 5 Definition Of Done
 
@@ -897,19 +898,20 @@ Scope:
 - [x] Parse typedef named struct `typedef struct tag name;`.
 - [x] Parse members with shared declaration backend.
 - [x] Parse pointer members.
-- [x] Parse array members.
+- [x] Parse array members, including legal flexible final struct members with
+      invalid-placement and union diagnostics.
 - [x] Parse nested anonymous structs as unsupported or metadata.
 - [x] Parse bit-fields as member metadata with semantic limitations.
 - [x] Preserve member order.
-- [ ] Preserve precise per-member source locations; members currently carry
-      the enclosing aggregate declaration location.
+- [x] Preserve precise per-member source locations.
 - [x] Mark incomplete structs.
 - [x] Add tests for named structs.
 - [x] Add tests for forward declarations.
 - [x] Add tests for typedef structs.
 - [x] Add tests for pointer members.
 - [x] Add tests for array members.
-- [ ] Add tests for bitfield diagnostics.
+- [x] Add tests for named, unnamed, and zero-width bit-field source facts and
+      locations; defer ABI/wrappability diagnostics to the semantic layer.
 
 ### Union Tasks
 
@@ -957,8 +959,8 @@ Scope:
 
 - [x] C composite and typedef models are populated from basic fixtures.
 - [x] Shared declaration backend handles members and typedefs.
-- [ ] Validate remaining bit-field/flexible-member cases beyond the basic
-      incomplete, anonymous, and named bit-field forms already represented.
+- [x] Validate legal and invalid flexible-array-member placement and retain
+      named, unnamed, and zero-width bit-field source facts with tests.
 - [ ] JSON goldens cover composite type schema.
 - [x] Docs list supported and unsupported composite forms.
 

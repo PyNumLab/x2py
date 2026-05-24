@@ -42,7 +42,10 @@ Implemented now:
   Declaration types are represented by concrete `CType` subclasses:
   primitives, `CPointer`, `CArray`, `CFunctionType`, and
   `CComposedType`. Aggregate members are `CVariable` objects using that same
-  type path and preserve arrays, callback candidates, and bit-width text.
+  type path and preserve arrays, callback candidates, bit-width text, and
+  member-level source locations. Supported flexible final struct members set
+  `CArray.is_flexible=True`; invalid flexible-member placement and union use
+  produce `C_INVALID_FLEXIBLE_ARRAY_MEMBER` diagnostics.
   Inline tag definitions followed by aliases or objects produce concrete
   `CTypedef` or `CVariable` records linked to the aggregate object. Function
   models expose `result_type` and named `parameters`; their derived
@@ -73,9 +76,7 @@ Deferred:
 - typedef/tag resolution beyond an inline aggregate declaration and callback
   policy metadata, for example resolving `size_t count(void);` to a prior
   `typedef unsigned long size_t;`
-- parameter adjustment and flexible array member classification, for example
-  `void process(int values[4]);` and
-  `struct packet { unsigned size; unsigned char data[]; };`
+- parameter adjustment, for example `void process(int values[4]);`
 - nested aggregate member definitions, braced initializers, compiler
   attributes, alignment specifiers, and `_Atomic(type)` declarations, for
   example `struct outer { struct { int x; } inner; };` and
@@ -302,8 +303,8 @@ Derived and named `CType` subclasses are:
 
 - `CPointer`, whose qualifiers apply to that pointer component
 - `CArray`, with `bound`, `is_static_minimum`, `is_variable_length`, and
-  `is_flexible`; bound/static/VLA metadata is populated now, while
-  flexible-array-member parsing and validation are deferred
+  `is_flexible`; supported final flexible struct members are classified now,
+  and invalid placement or union use produces a parser diagnostic
 - `CFunctionType`, the nameless callable signature with `result_type`,
   `parameter_types`, `is_variadic`, and `prototype_style`
 - `CComposedType`, whose `components` are read from the declared name outward
@@ -326,7 +327,8 @@ Declaration objects are separate from the type components:
 
 - `CVariable` has `name`, `type`, `storage`, optional `initializer`, optional
   `bit_width`, and source/callback metadata. Struct and union `members` are
-  also `CVariable` objects; there is no separate field class.
+  also `CVariable` objects with per-member locations; there is no separate
+  field class.
 - `CFunction` has `name`, `result_type`, named `parameters`, storage and
   function specifiers, `is_variadic`, prototype style, and source/definition
   locations. Its `type` property builds the corresponding nameless

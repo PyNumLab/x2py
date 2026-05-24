@@ -32,7 +32,8 @@ top-level sections: `functions`, `structs`, `unions`, `enums`, `typedefs`,
 can populate `functions`, `typedefs`, `variables`, `structs`, `unions`, and
 `enums` in the supported subset. Typedefs, variables, parameters, and aggregate
 members can include concrete composed types for pointer/array/function forms,
-including function pointers and functions returning function pointers. Raw
+including function pointers, functions returning function pointers, and
+legal final flexible struct members marked with `is_flexible=True`. Raw
 `includes`, `macros`, and metadata `diagnostics` can also be
 populated. The object class distinguishes declarations (`CFunction`,
 `CVariable`, `CTypedef`, `CStruct`, `CUnion`, or `CEnum`), and incomplete tag
@@ -40,7 +41,9 @@ declarations set `is_incomplete=True`.
 Known unsupported declaration forms such as declaration attributes, alignment
 specifiers, `_Atomic(type)`, nested aggregate member definitions, and static assertions are
 reported in diagnostics with explicit `unit_kind` values; unconsumed declarator
-suffixes are diagnosed instead of silently omitted. The parser reports
+suffixes are diagnosed instead of silently omitted. Invalid flexible array
+member placement and flexible union members produce
+`C_INVALID_FLEXIBLE_ARRAY_MEMBER` error diagnostics at the field location. The parser reports
 `parser_status: "partial"`. C parse diagnostics, currently including
 unsupported K&R-style function definitions and invalid primitive-specifier
 combinations such as `unsigned float`, honor `--no-color` and `NO_COLOR=1`.
@@ -399,6 +402,9 @@ The active CLI/parser tests cover the current partial subset:
   signatures with definition start/end locations are covered by focused C tests.
 - valid reordered primitive specifiers and fatal invalid primitive-specifier
   combinations are covered by focused C tests.
+- flexible array member classification/validation, per-member source
+  locations, and named/unnamed/zero-width bit-field source facts are covered
+  by focused C tests.
 - `--show-vars` and `--print-limit` are rejected in C mode until C-specific
   display controls exist.
 - `--semantics` with `--language c` is rejected until C semantic conversion is
@@ -436,6 +442,8 @@ Completed order:
 13. Added order-insensitive primitive specifier validation and `CPARSE003`
     errors for invalid primitive combinations while retaining unresolved
     typedef-name references for later resolution.
+14. Added field-level source locations, flexible array member classification
+    and invalid-use diagnostics, plus explicit bit-field regression coverage.
 
 Next implementation work should continue with tag/typedef resolution,
 preprocessed-input line mapping, compiler extension policy, and project
