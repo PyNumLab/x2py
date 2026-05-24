@@ -1,0 +1,2029 @@
+{
+  "files": {
+    "stb/stb_easy_font.h": {
+      "filename": "stb/stb_easy_font.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "print_string",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "x",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float x"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float x"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "y",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float y"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float y"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "text",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *text",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *text",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "r",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float r"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float r"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "g",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float g"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float g"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "b",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float b"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float b"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 91,
+            "column": 1,
+            "source_line": "void print_string(float x, float y, char *text, float r, float g, float b)"
+          },
+          "start": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 91,
+            "column": 1,
+            "source_line": "void print_string(float x, float y, char *text, float r, float g, float b)"
+          },
+          "end": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 103,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_easy_font_draw_segs",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "x",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float x"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float x"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "y",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float y"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float y"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "segs",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *segs",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *segs",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "num_segs",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int num_segs"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int num_segs"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "vertical",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int vertical"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int vertical"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "c",
+              "type": {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "stb_easy_font_color",
+                "name": "stb_easy_font_color",
+                "type": {
+                  "model": "CStruct",
+                  "qualifiers": [],
+                  "source_text": "",
+                  "name": null,
+                  "members": [
+                    {
+                      "name": "c",
+                      "type": {
+                        "model": "CComposedType",
+                        "qualifiers": [],
+                        "source_text": "unsigned char c[4]",
+                        "components": [
+                          {
+                            "model": "CArray",
+                            "qualifiers": [],
+                            "source_text": "",
+                            "bound": "4",
+                            "is_static_minimum": false,
+                            "is_variable_length": false,
+                            "is_flexible": false
+                          },
+                          {
+                            "model": "CUnsignedChar",
+                            "qualifiers": [],
+                            "source_text": "unsigned char"
+                          }
+                        ]
+                      },
+                      "storage": [],
+                      "initializer": null,
+                      "bit_width": null,
+                      "source_location": {
+                        "filename": "stb/stb_easy_font.h",
+                        "line": 170,
+                        "column": 4,
+                        "source_line": "   unsigned char c[4];"
+                      },
+                      "callback_policy": null,
+                      "declaration_locations": []
+                    }
+                  ],
+                  "anonymous_id": "struct@stb/stb_easy_font.h:168:1",
+                  "is_incomplete": false,
+                  "source_location": {
+                    "filename": "stb/stb_easy_font.h",
+                    "line": 168,
+                    "column": 1,
+                    "source_line": "typedef struct"
+                  }
+                },
+                "source_location": {
+                  "filename": "stb/stb_easy_font.h",
+                  "line": 168,
+                  "column": 1,
+                  "source_line": "typedef struct"
+                },
+                "declaration_locations": []
+              },
+              "declared_type": {
+                "reference": "stb_easy_font_color"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "vbuf",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *vbuf",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *vbuf",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "vbuf_size",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int vbuf_size"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int vbuf_size"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "offset",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int offset"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int offset"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 173,
+            "column": 1,
+            "source_line": "static int stb_easy_font_draw_segs(float x, float y, unsigned char *segs, int num_segs, int vertical, stb_easy_font_color c, char *vbuf, int vbuf_size, int offset)"
+          },
+          "start": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 173,
+            "column": 1,
+            "source_line": "static int stb_easy_font_draw_segs(float x, float y, unsigned char *segs, int num_segs, int vertical, stb_easy_font_color c, char *vbuf, int vbuf_size, int offset)"
+          },
+          "end": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 191,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_easy_font_spacing",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "spacing",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float spacing"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float spacing"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 194,
+            "column": 1,
+            "source_line": "static void stb_easy_font_spacing(float spacing)"
+          },
+          "start": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 194,
+            "column": 1,
+            "source_line": "static void stb_easy_font_spacing(float spacing)"
+          },
+          "end": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 197,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_easy_font_print",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "x",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float x"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float x"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "y",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float y"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float y"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "text",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *text",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *text",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "color",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char color[4]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char color[4]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "4",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "vertex_buffer",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *vertex_buffer",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *vertex_buffer",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "vbuf_size",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int vbuf_size"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int vbuf_size"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 199,
+            "column": 1,
+            "source_line": "static int stb_easy_font_print(float x, float y, char *text, unsigned char color[4], void *vertex_buffer, int vbuf_size)"
+          },
+          "start": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 199,
+            "column": 1,
+            "source_line": "static int stb_easy_font_print(float x, float y, char *text, unsigned char color[4], void *vertex_buffer, int vbuf_size)"
+          },
+          "end": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 228,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_easy_font_width",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "text",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *text",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *text",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 230,
+            "column": 1,
+            "source_line": "static int stb_easy_font_width(char *text)"
+          },
+          "start": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 230,
+            "column": 1,
+            "source_line": "static int stb_easy_font_width(char *text)"
+          },
+          "end": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 246,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_easy_font_height",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "text",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *text",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *text",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 248,
+            "column": 1,
+            "source_line": "static int stb_easy_font_height(char *text)"
+          },
+          "start": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 248,
+            "column": 1,
+            "source_line": "static int stb_easy_font_height(char *text)"
+          },
+          "end": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 262,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        }
+      ],
+      "structs": [
+        {
+          "model": "CStruct",
+          "qualifiers": [],
+          "source_text": "",
+          "name": "stb_easy_font_info_struct",
+          "members": [
+            {
+              "name": "advance",
+              "type": {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char advance"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "stb/stb_easy_font.h",
+                "line": 113,
+                "column": 5,
+                "source_line": "    unsigned char advance;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "h_seg",
+              "type": {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char h_seg"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "stb/stb_easy_font.h",
+                "line": 114,
+                "column": 5,
+                "source_line": "    unsigned char h_seg;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "v_seg",
+              "type": {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char v_seg"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "stb/stb_easy_font.h",
+                "line": 115,
+                "column": 5,
+                "source_line": "    unsigned char v_seg;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            }
+          ],
+          "anonymous_id": null,
+          "is_incomplete": false,
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 112,
+            "column": 1,
+            "source_line": "static struct stb_easy_font_info_struct {"
+          }
+        },
+        {
+          "reference": "struct@stb/stb_easy_font.h:168:1"
+        }
+      ],
+      "unions": [],
+      "enums": [],
+      "typedefs": [
+        {
+          "reference": "stb_easy_font_color"
+        }
+      ],
+      "variables": [
+        {
+          "name": "stb_easy_font_charinfo",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static struct stb_easy_font_info_struct stb_easy_font_charinfo[96]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "96",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "reference": "struct stb_easy_font_info_struct"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": ""
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 112,
+            "column": 1,
+            "source_line": "static struct stb_easy_font_info_struct {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_easy_font_spacing_val",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "static float stb_easy_font_spacing_val"
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "0"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 193,
+            "column": 1,
+            "source_line": "static float stb_easy_font_spacing_val = 0;"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        }
+      ],
+      "macros": [
+        {
+          "name": "INCLUDE_STB_EASY_FONT_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 107,
+            "column": 1,
+            "source_line": "#define INCLUDE_STB_EASY_FONT_H"
+          }
+        }
+      ],
+      "includes": [
+        {
+          "target": "stdlib.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 109,
+            "column": 1,
+            "source_line": "#include <stdlib.h>"
+          }
+        },
+        {
+          "target": "math.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 110,
+            "column": 1,
+            "source_line": "#include <math.h>"
+          }
+        }
+      ],
+      "raw_directives": [
+        {
+          "directive": "if",
+          "argument": "0",
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 85,
+            "column": 1,
+            "source_line": "#if 0"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 104,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "INCLUDE_STB_EASY_FONT_H",
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 106,
+            "column": 1,
+            "source_line": "#ifndef INCLUDE_STB_EASY_FONT_H"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 263,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        }
+      ],
+      "macro_dependencies": [],
+      "diagnostics": [
+        {
+          "code": "C_UNSUPPORTED_DECLARATION",
+          "message": "Braced or designated initializer declarations are not supported yet.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 143,
+            "column": 1,
+            "source_line": "static unsigned char stb_easy_font_hseg[214] = {"
+          },
+          "unit_kind": "braced_initializer_declaration",
+          "unit_name": null
+        },
+        {
+          "code": "C_UNSUPPORTED_DECLARATION",
+          "message": "Braced or designated initializer declarations are not supported yet.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_easy_font.h",
+            "line": 155,
+            "column": 1,
+            "source_line": "static unsigned char stb_easy_font_vseg[253] = {"
+          },
+          "unit_kind": "braced_initializer_declaration",
+          "unit_name": null
+        }
+      ]
+    }
+  },
+  "functions": {
+    "print_string": {
+      "name": "print_string",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "x",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float x"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float x"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "y",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float y"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float y"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "text",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *text",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *text",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "r",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float r"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float r"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "g",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float g"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float g"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "b",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float b"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float b"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 91,
+        "column": 1,
+        "source_line": "void print_string(float x, float y, char *text, float r, float g, float b)"
+      },
+      "start": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 91,
+        "column": 1,
+        "source_line": "void print_string(float x, float y, char *text, float r, float g, float b)"
+      },
+      "end": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 103,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_easy_font_draw_segs": {
+      "name": "stb_easy_font_draw_segs",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "x",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float x"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float x"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "y",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float y"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float y"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "segs",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *segs",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *segs",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "num_segs",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int num_segs"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int num_segs"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "vertical",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int vertical"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int vertical"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "c",
+          "type": {
+            "reference": "stb_easy_font_color"
+          },
+          "declared_type": {
+            "reference": "stb_easy_font_color"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "vbuf",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *vbuf",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *vbuf",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "vbuf_size",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int vbuf_size"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int vbuf_size"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "offset",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int offset"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int offset"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 173,
+        "column": 1,
+        "source_line": "static int stb_easy_font_draw_segs(float x, float y, unsigned char *segs, int num_segs, int vertical, stb_easy_font_color c, char *vbuf, int vbuf_size, int offset)"
+      },
+      "start": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 173,
+        "column": 1,
+        "source_line": "static int stb_easy_font_draw_segs(float x, float y, unsigned char *segs, int num_segs, int vertical, stb_easy_font_color c, char *vbuf, int vbuf_size, int offset)"
+      },
+      "end": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 191,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_easy_font_spacing": {
+      "name": "stb_easy_font_spacing",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "spacing",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float spacing"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float spacing"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 194,
+        "column": 1,
+        "source_line": "static void stb_easy_font_spacing(float spacing)"
+      },
+      "start": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 194,
+        "column": 1,
+        "source_line": "static void stb_easy_font_spacing(float spacing)"
+      },
+      "end": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 197,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_easy_font_print": {
+      "name": "stb_easy_font_print",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "x",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float x"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float x"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "y",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float y"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float y"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "text",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *text",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *text",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "color",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char color[4]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char color[4]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "4",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "vertex_buffer",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "void *vertex_buffer",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CVoid",
+                "qualifiers": [],
+                "source_text": "void"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "void *vertex_buffer",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CVoid",
+                "qualifiers": [],
+                "source_text": "void"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "vbuf_size",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int vbuf_size"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int vbuf_size"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 199,
+        "column": 1,
+        "source_line": "static int stb_easy_font_print(float x, float y, char *text, unsigned char color[4], void *vertex_buffer, int vbuf_size)"
+      },
+      "start": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 199,
+        "column": 1,
+        "source_line": "static int stb_easy_font_print(float x, float y, char *text, unsigned char color[4], void *vertex_buffer, int vbuf_size)"
+      },
+      "end": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 228,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_easy_font_width": {
+      "name": "stb_easy_font_width",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "text",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *text",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *text",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 230,
+        "column": 1,
+        "source_line": "static int stb_easy_font_width(char *text)"
+      },
+      "start": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 230,
+        "column": 1,
+        "source_line": "static int stb_easy_font_width(char *text)"
+      },
+      "end": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 246,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_easy_font_height": {
+      "name": "stb_easy_font_height",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "text",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *text",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *text",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 248,
+        "column": 1,
+        "source_line": "static int stb_easy_font_height(char *text)"
+      },
+      "start": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 248,
+        "column": 1,
+        "source_line": "static int stb_easy_font_height(char *text)"
+      },
+      "end": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 262,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    }
+  },
+  "structs": {
+    "stb_easy_font_info_struct": {
+      "reference": "struct stb_easy_font_info_struct"
+    }
+  },
+  "unions": {},
+  "enums": {},
+  "typedefs": {
+    "stb_easy_font_color": {
+      "reference": "stb_easy_font_color"
+    }
+  },
+  "variables": {
+    "stb_easy_font_charinfo": {
+      "name": "stb_easy_font_charinfo",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static struct stb_easy_font_info_struct stb_easy_font_charinfo[96]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "96",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "reference": "struct stb_easy_font_info_struct"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": ""
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 112,
+        "column": 1,
+        "source_line": "static struct stb_easy_font_info_struct {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stb_easy_font_spacing_val": {
+      "name": "stb_easy_font_spacing_val",
+      "type": {
+        "model": "CFloat",
+        "qualifiers": [],
+        "source_text": "static float stb_easy_font_spacing_val"
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "0"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 193,
+        "column": 1,
+        "source_line": "static float stb_easy_font_spacing_val = 0;"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    }
+  },
+  "macros": {
+    "INCLUDE_STB_EASY_FONT_H": {
+      "name": "INCLUDE_STB_EASY_FONT_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 107,
+        "column": 1,
+        "source_line": "#define INCLUDE_STB_EASY_FONT_H"
+      }
+    }
+  },
+  "includes": {
+    "stb/stb_easy_font.h:stdlib.h": {
+      "target": "stdlib.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 109,
+        "column": 1,
+        "source_line": "#include <stdlib.h>"
+      }
+    },
+    "stb/stb_easy_font.h:math.h": {
+      "target": "math.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 110,
+        "column": 1,
+        "source_line": "#include <math.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "stb/stb_easy_font.h": [
+      "print_string",
+      "stb_easy_font_draw_segs",
+      "stb_easy_font_spacing",
+      "stb_easy_font_print",
+      "stb_easy_font_width",
+      "stb_easy_font_height"
+    ]
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "stb/stb_easy_font.h": []
+  },
+  "system_includes": {
+    "stb/stb_easy_font.h": [
+      "math.h",
+      "stdlib.h"
+    ]
+  },
+  "unresolved_includes": {
+    "stb/stb_easy_font.h": []
+  },
+  "header_source_pairs": {
+    "stb/stb_easy_font.h": []
+  },
+  "diagnostics": [
+    {
+      "code": "C_UNSUPPORTED_DECLARATION",
+      "message": "Braced or designated initializer declarations are not supported yet.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 143,
+        "column": 1,
+        "source_line": "static unsigned char stb_easy_font_hseg[214] = {"
+      },
+      "unit_kind": "braced_initializer_declaration",
+      "unit_name": null
+    },
+    {
+      "code": "C_UNSUPPORTED_DECLARATION",
+      "message": "Braced or designated initializer declarations are not supported yet.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_easy_font.h",
+        "line": 155,
+        "column": 1,
+        "source_line": "static unsigned char stb_easy_font_vseg[253] = {"
+      },
+      "unit_kind": "braced_initializer_declaration",
+      "unit_name": null
+    }
+  ]
+}

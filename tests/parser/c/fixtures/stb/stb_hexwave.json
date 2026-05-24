@@ -1,0 +1,2320 @@
+{
+  "files": {
+    "stb/stb_hexwave.h": {
+      "filename": "stb/stb_hexwave.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "hex_add_oversampled_bleplike",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "output",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *output",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *output",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "time_since_transition",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float time_since_transition"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float time_since_transition"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "scale",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float scale"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float scale"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "data",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *data",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *data",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 315,
+            "column": 1,
+            "source_line": "static void hex_add_oversampled_bleplike(float *output, float time_since_transition, float scale, float *data)"
+          },
+          "start": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 315,
+            "column": 1,
+            "source_line": "static void hex_add_oversampled_bleplike(float *output, float time_since_transition, float scale, float *data)"
+          },
+          "end": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 331,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "hex_blep",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "output",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *output",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *output",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "time_since_transition",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float time_since_transition"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float time_since_transition"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "scale",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float scale"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float scale"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 333,
+            "column": 1,
+            "source_line": "static void hex_blep (float *output, float time_since_transition, float scale)"
+          },
+          "start": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 333,
+            "column": 1,
+            "source_line": "static void hex_blep (float *output, float time_since_transition, float scale)"
+          },
+          "end": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 336,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "hex_blamp",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "output",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *output",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *output",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "time_since_transition",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float time_since_transition"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float time_since_transition"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "scale",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float scale"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float scale"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 338,
+            "column": 1,
+            "source_line": "static void hex_blamp(float *output, float time_since_transition, float scale)"
+          },
+          "start": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 338,
+            "column": 1,
+            "source_line": "static void hex_blamp(float *output, float time_since_transition, float scale)"
+          },
+          "end": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 341,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "hexwave_generate_linesegs",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "vert",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "hexvert vert[9]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "hexvert",
+                    "name": "hexvert",
+                    "type": {
+                      "model": "CStruct",
+                      "qualifiers": [],
+                      "source_text": "",
+                      "name": null,
+                      "members": [
+                        {
+                          "name": "t",
+                          "type": {
+                            "model": "CFloat",
+                            "qualifiers": [],
+                            "source_text": "float t"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_hexwave.h",
+                            "line": 345,
+                            "column": 4,
+                            "source_line": "   float t,v,s; // time, value, slope"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "v",
+                          "type": {
+                            "model": "CFloat",
+                            "qualifiers": [],
+                            "source_text": "float v"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_hexwave.h",
+                            "line": 345,
+                            "column": 4,
+                            "source_line": "   float t,v,s; // time, value, slope"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "s",
+                          "type": {
+                            "model": "CFloat",
+                            "qualifiers": [],
+                            "source_text": "float s"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_hexwave.h",
+                            "line": 345,
+                            "column": 4,
+                            "source_line": "   float t,v,s; // time, value, slope"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        }
+                      ],
+                      "anonymous_id": "struct@stb/stb_hexwave.h:343:1",
+                      "is_incomplete": false,
+                      "source_location": {
+                        "filename": "stb/stb_hexwave.h",
+                        "line": 343,
+                        "column": 1,
+                        "source_line": "typedef struct"
+                      }
+                    },
+                    "source_location": {
+                      "filename": "stb/stb_hexwave.h",
+                      "line": 343,
+                      "column": 1,
+                      "source_line": "typedef struct"
+                    },
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "hexvert vert[9]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "9",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "reference": "hexvert"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "hex",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "HexWave *hex",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "HexWave",
+                    "name": "HexWave",
+                    "type": {
+                      "model": "CStruct",
+                      "qualifiers": [],
+                      "source_text": "",
+                      "name": "HexWave",
+                      "members": [
+                        {
+                          "name": "t",
+                          "type": {
+                            "model": "CFloat",
+                            "qualifiers": [],
+                            "source_text": "float t"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_hexwave.h",
+                            "line": 269,
+                            "column": 4,
+                            "source_line": "   float t, prev_dt;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "prev_dt",
+                          "type": {
+                            "model": "CFloat",
+                            "qualifiers": [],
+                            "source_text": "float prev_dt"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_hexwave.h",
+                            "line": 269,
+                            "column": 4,
+                            "source_line": "   float t, prev_dt;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "current",
+                          "type": {
+                            "model": "CTypedef",
+                            "qualifiers": [],
+                            "source_text": "HexWaveParameters",
+                            "name": "HexWaveParameters",
+                            "type": {
+                              "model": "CStruct",
+                              "qualifiers": [],
+                              "source_text": "",
+                              "name": null,
+                              "members": [
+                                {
+                                  "name": "reflect",
+                                  "type": {
+                                    "model": "CInt",
+                                    "qualifiers": [],
+                                    "source_text": "int reflect"
+                                  },
+                                  "storage": [],
+                                  "initializer": null,
+                                  "bit_width": null,
+                                  "source_location": {
+                                    "filename": "stb/stb_hexwave.h",
+                                    "line": 261,
+                                    "column": 4,
+                                    "source_line": "   int   reflect;"
+                                  },
+                                  "callback_policy": null,
+                                  "declaration_locations": []
+                                },
+                                {
+                                  "name": "peak_time",
+                                  "type": {
+                                    "model": "CFloat",
+                                    "qualifiers": [],
+                                    "source_text": "float peak_time"
+                                  },
+                                  "storage": [],
+                                  "initializer": null,
+                                  "bit_width": null,
+                                  "source_location": {
+                                    "filename": "stb/stb_hexwave.h",
+                                    "line": 262,
+                                    "column": 4,
+                                    "source_line": "   float peak_time;"
+                                  },
+                                  "callback_policy": null,
+                                  "declaration_locations": []
+                                },
+                                {
+                                  "name": "zero_wait",
+                                  "type": {
+                                    "model": "CFloat",
+                                    "qualifiers": [],
+                                    "source_text": "float zero_wait"
+                                  },
+                                  "storage": [],
+                                  "initializer": null,
+                                  "bit_width": null,
+                                  "source_location": {
+                                    "filename": "stb/stb_hexwave.h",
+                                    "line": 263,
+                                    "column": 4,
+                                    "source_line": "   float zero_wait;"
+                                  },
+                                  "callback_policy": null,
+                                  "declaration_locations": []
+                                },
+                                {
+                                  "name": "half_height",
+                                  "type": {
+                                    "model": "CFloat",
+                                    "qualifiers": [],
+                                    "source_text": "float half_height"
+                                  },
+                                  "storage": [],
+                                  "initializer": null,
+                                  "bit_width": null,
+                                  "source_location": {
+                                    "filename": "stb/stb_hexwave.h",
+                                    "line": 264,
+                                    "column": 4,
+                                    "source_line": "   float half_height;"
+                                  },
+                                  "callback_policy": null,
+                                  "declaration_locations": []
+                                }
+                              ],
+                              "anonymous_id": "struct@stb/stb_hexwave.h:259:1",
+                              "is_incomplete": false,
+                              "source_location": {
+                                "filename": "stb/stb_hexwave.h",
+                                "line": 259,
+                                "column": 1,
+                                "source_line": "typedef struct"
+                              }
+                            },
+                            "source_location": {
+                              "filename": "stb/stb_hexwave.h",
+                              "line": 259,
+                              "column": 1,
+                              "source_line": "typedef struct"
+                            },
+                            "declaration_locations": []
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_hexwave.h",
+                            "line": 270,
+                            "column": 4,
+                            "source_line": "   HexWaveParameters current, pending;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "pending",
+                          "type": {
+                            "reference": "HexWaveParameters"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_hexwave.h",
+                            "line": 270,
+                            "column": 4,
+                            "source_line": "   HexWaveParameters current, pending;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "have_pending",
+                          "type": {
+                            "model": "CInt",
+                            "qualifiers": [],
+                            "source_text": "int have_pending"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_hexwave.h",
+                            "line": 271,
+                            "column": 4,
+                            "source_line": "   int have_pending;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "buffer",
+                          "type": {
+                            "model": "CComposedType",
+                            "qualifiers": [],
+                            "source_text": "float buffer[STB_HEXWAVE_MAX_BLEP_LENGTH]",
+                            "components": [
+                              {
+                                "model": "CArray",
+                                "qualifiers": [],
+                                "source_text": "",
+                                "bound": "STB_HEXWAVE_MAX_BLEP_LENGTH",
+                                "is_static_minimum": false,
+                                "is_variable_length": false,
+                                "is_flexible": false
+                              },
+                              {
+                                "model": "CFloat",
+                                "qualifiers": [],
+                                "source_text": "float"
+                              }
+                            ]
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_hexwave.h",
+                            "line": 272,
+                            "column": 4,
+                            "source_line": "   float buffer[STB_HEXWAVE_MAX_BLEP_LENGTH];"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        }
+                      ],
+                      "anonymous_id": null,
+                      "is_incomplete": false,
+                      "source_location": {
+                        "filename": "stb/stb_hexwave.h",
+                        "line": 267,
+                        "column": 1,
+                        "source_line": "struct HexWave"
+                      }
+                    },
+                    "source_location": {
+                      "filename": "stb/stb_hexwave.h",
+                      "line": 226,
+                      "column": 1,
+                      "source_line": "typedef struct HexWave HexWave;"
+                    },
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "HexWave *hex",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "HexWave"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "dt",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float dt"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float dt"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 350,
+            "column": 1,
+            "source_line": "static void hexwave_generate_linesegs(hexvert vert[9], HexWave *hex, float dt)"
+          },
+          "start": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 350,
+            "column": 1,
+            "source_line": "static void hexwave_generate_linesegs(hexvert vert[9], HexWave *hex, float dt)"
+          },
+          "end": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 416,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        }
+      ],
+      "structs": [
+        {
+          "reference": "struct@stb/stb_hexwave.h:259:1"
+        },
+        {
+          "reference": "struct HexWave"
+        },
+        {
+          "model": "CStruct",
+          "qualifiers": [],
+          "source_text": "",
+          "name": null,
+          "members": [
+            {
+              "name": "width",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int width"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "stb/stb_hexwave.h",
+                "line": 309,
+                "column": 4,
+                "source_line": "   int width;       // width of fixup in samples"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "oversample",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int oversample"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "stb/stb_hexwave.h",
+                "line": 310,
+                "column": 4,
+                "source_line": "   int oversample;  // number of oversampled versions (there's actually one more to allow lerpign)"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "blep",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *blep",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "stb/stb_hexwave.h",
+                "line": 311,
+                "column": 4,
+                "source_line": "   float *blep;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "blamp",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *blamp",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "stb/stb_hexwave.h",
+                "line": 312,
+                "column": 4,
+                "source_line": "   float *blamp;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            }
+          ],
+          "anonymous_id": "struct@stb/stb_hexwave.h:307:1",
+          "is_incomplete": false,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 307,
+            "column": 1,
+            "source_line": "static struct"
+          }
+        },
+        {
+          "reference": "struct@stb/stb_hexwave.h:343:1"
+        }
+      ],
+      "unions": [],
+      "enums": [],
+      "typedefs": [
+        {
+          "reference": "HexWave"
+        },
+        {
+          "reference": "HexWaveParameters"
+        },
+        {
+          "reference": "hexvert"
+        }
+      ],
+      "variables": [
+        {
+          "name": "hexblep",
+          "type": {
+            "reference": "struct@stb/stb_hexwave.h:307:1"
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": null,
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 307,
+            "column": 1,
+            "source_line": "static struct"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        }
+      ],
+      "macros": [
+        {
+          "name": "STB_INCLUDE_STB_HEXWAVE_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 214,
+            "column": 1,
+            "source_line": "#define STB_INCLUDE_STB_HEXWAVE_H"
+          }
+        },
+        {
+          "name": "STB_HEXWAVE_MAX_BLEP_LENGTH",
+          "value": "64",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 217,
+            "column": 1,
+            "source_line": "#define STB_HEXWAVE_MAX_BLEP_LENGTH   64 // good enough for anybody"
+          }
+        },
+        {
+          "name": "STB_HEXWAVE_DEF",
+          "value": "static",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 221,
+            "column": 1,
+            "source_line": "#define STB_HEXWAVE_DEF static"
+          }
+        },
+        {
+          "name": "STB_HEXWAVE_DEF",
+          "value": "extern",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 223,
+            "column": 1,
+            "source_line": "#define STB_HEXWAVE_DEF extern"
+          }
+        },
+        {
+          "name": "hexwave_clamp",
+          "value": "((v) < (a) ? (a) : (v) > (b) ? (b) : (v))",
+          "function_like": true,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 285,
+            "column": 1,
+            "source_line": "#define hexwave_clamp(v,a,b)   ((v) < (a) ? (a) : (v) > (b) ? (b) : (v))"
+          }
+        }
+      ],
+      "includes": [
+        {
+          "target": "stdlib.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 279,
+            "column": 1,
+            "source_line": "#include <stdlib.h> // malloc,free"
+          }
+        },
+        {
+          "target": "string.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 282,
+            "column": 1,
+            "source_line": "#include <string.h> // memset,memcpy,memmove"
+          }
+        },
+        {
+          "target": "math.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 283,
+            "column": 1,
+            "source_line": "#include <math.h>   // sin,cos,fabs"
+          }
+        }
+      ],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "STB_INCLUDE_STB_HEXWAVE_H",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 213,
+            "column": 1,
+            "source_line": "#ifndef STB_INCLUDE_STB_HEXWAVE_H"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "STB_HEXWAVE_MAX_BLEP_LENGTH",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 216,
+            "column": 1,
+            "source_line": "#ifndef STB_HEXWAVE_MAX_BLEP_LENGTH"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 218,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_HEXWAVE_STATIC",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 220,
+            "column": 1,
+            "source_line": "#ifdef STB_HEXWAVE_STATIC"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 222,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 224,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 274,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_HEXWAVE_IMPLEMENTATION",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 276,
+            "column": 1,
+            "source_line": "#ifdef STB_HEXWAVE_IMPLEMENTATION"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "STB_HEXWAVE_NO_ALLOCATION",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 278,
+            "column": 1,
+            "source_line": "#ifndef STB_HEXWAVE_NO_ALLOCATION"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 280,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "STB_HEXWAVE_NO_ALLOCATION",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 548,
+            "column": 4,
+            "source_line": "   #ifndef STB_HEXWAVE_NO_ALLOCATION"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 553,
+            "column": 4,
+            "source_line": "   #endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_HEXWAVE_NO_ALLOCATION",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 563,
+            "column": 1,
+            "source_line": "#ifdef STB_HEXWAVE_NO_ALLOCATION"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 565,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 567,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "STB_HEXWAVE_NO_ALLOCATION",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 578,
+            "column": 7,
+            "source_line": "      #ifndef STB_HEXWAVE_NO_ALLOCATION"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 581,
+            "column": 7,
+            "source_line": "      #endif"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "STB_HEXWAVE_NO_ALLOCATION",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 633,
+            "column": 4,
+            "source_line": "   #ifndef STB_HEXWAVE_NO_ALLOCATION"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 636,
+            "column": 4,
+            "source_line": "   #endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 638,
+            "column": 1,
+            "source_line": "#endif // STB_HEXWAVE_IMPLEMENTATION"
+          }
+        }
+      ],
+      "macro_dependencies": [
+        {
+          "name": "STB_HEXWAVE_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 228,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_init(int width, int oversample, float *user_buffer);"
+          },
+          "source_text": "STB_HEXWAVE_DEF void hexwave_init(int width, int oversample, float *user_buffer)"
+        },
+        {
+          "name": "STB_HEXWAVE_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 238,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_shutdown(float *user_buffer);"
+          },
+          "source_text": "STB_HEXWAVE_DEF void hexwave_shutdown(float *user_buffer)"
+        },
+        {
+          "name": "STB_HEXWAVE_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 241,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_create(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait);"
+          },
+          "source_text": "STB_HEXWAVE_DEF void hexwave_create(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait)"
+        },
+        {
+          "name": "STB_HEXWAVE_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 249,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_change(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait);"
+          },
+          "source_text": "STB_HEXWAVE_DEF void hexwave_change(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait)"
+        },
+        {
+          "name": "STB_HEXWAVE_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 252,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_generate_samples(float *output, int num_samples, HexWave *hex, float freq);"
+          },
+          "source_text": "STB_HEXWAVE_DEF void hexwave_generate_samples(float *output, int num_samples, HexWave *hex, float freq)"
+        },
+        {
+          "name": "STB_HEXWAVE_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 287,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_change(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait)"
+          },
+          "source_text": "STB_HEXWAVE_DEF void hexwave_change(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait)"
+        },
+        {
+          "name": "STB_HEXWAVE_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 297,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_create(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait)"
+          },
+          "source_text": "STB_HEXWAVE_DEF void hexwave_create(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait)"
+        },
+        {
+          "name": "STB_HEXWAVE_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 418,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_generate_samples(float *output, int num_samples, HexWave *hex, float freq)"
+          },
+          "source_text": "STB_HEXWAVE_DEF void hexwave_generate_samples(float *output, int num_samples, HexWave *hex, float freq)"
+        },
+        {
+          "name": "STB_HEXWAVE_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 546,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_shutdown(float *user_buffer)"
+          },
+          "source_text": "STB_HEXWAVE_DEF void hexwave_shutdown(float *user_buffer)"
+        },
+        {
+          "name": "STB_HEXWAVE_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 557,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_init(int width, int oversample, float *user_buffer)"
+          },
+          "source_text": "STB_HEXWAVE_DEF void hexwave_init(int width, int oversample, float *user_buffer)"
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+          "message": "Function-like macro 'hexwave_clamp' is recorded but not expanded.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 285,
+            "column": 1,
+            "source_line": "#define hexwave_clamp(v,a,b)   ((v) < (a) ? (a) : (v) > (b) ? (b) : (v))"
+          },
+          "unit_kind": "macro",
+          "unit_name": "hexwave_clamp"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 228,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_init(int width, int oversample, float *user_buffer);"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STB_HEXWAVE_DEF"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 238,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_shutdown(float *user_buffer);"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STB_HEXWAVE_DEF"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 241,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_create(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait);"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STB_HEXWAVE_DEF"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 249,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_change(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait);"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STB_HEXWAVE_DEF"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 252,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_generate_samples(float *output, int num_samples, HexWave *hex, float freq);"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STB_HEXWAVE_DEF"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 287,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_change(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STB_HEXWAVE_DEF"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 297,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_create(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STB_HEXWAVE_DEF"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 418,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_generate_samples(float *output, int num_samples, HexWave *hex, float freq)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STB_HEXWAVE_DEF"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 546,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_shutdown(float *user_buffer)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STB_HEXWAVE_DEF"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_hexwave.h",
+            "line": 557,
+            "column": 1,
+            "source_line": "STB_HEXWAVE_DEF void hexwave_init(int width, int oversample, float *user_buffer)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STB_HEXWAVE_DEF"
+        }
+      ]
+    }
+  },
+  "functions": {
+    "hex_add_oversampled_bleplike": {
+      "name": "hex_add_oversampled_bleplike",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "output",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "float *output",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "float *output",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "time_since_transition",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float time_since_transition"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float time_since_transition"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "scale",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float scale"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float scale"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "data",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "float *data",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "float *data",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 315,
+        "column": 1,
+        "source_line": "static void hex_add_oversampled_bleplike(float *output, float time_since_transition, float scale, float *data)"
+      },
+      "start": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 315,
+        "column": 1,
+        "source_line": "static void hex_add_oversampled_bleplike(float *output, float time_since_transition, float scale, float *data)"
+      },
+      "end": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 331,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "hex_blep": {
+      "name": "hex_blep",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "output",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "float *output",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "float *output",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "time_since_transition",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float time_since_transition"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float time_since_transition"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "scale",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float scale"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float scale"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 333,
+        "column": 1,
+        "source_line": "static void hex_blep (float *output, float time_since_transition, float scale)"
+      },
+      "start": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 333,
+        "column": 1,
+        "source_line": "static void hex_blep (float *output, float time_since_transition, float scale)"
+      },
+      "end": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 336,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "hex_blamp": {
+      "name": "hex_blamp",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "output",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "float *output",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "float *output",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "time_since_transition",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float time_since_transition"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float time_since_transition"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "scale",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float scale"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float scale"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 338,
+        "column": 1,
+        "source_line": "static void hex_blamp(float *output, float time_since_transition, float scale)"
+      },
+      "start": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 338,
+        "column": 1,
+        "source_line": "static void hex_blamp(float *output, float time_since_transition, float scale)"
+      },
+      "end": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 341,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "hexwave_generate_linesegs": {
+      "name": "hexwave_generate_linesegs",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "vert",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "hexvert vert[9]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "hexvert"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "hexvert vert[9]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "9",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "reference": "hexvert"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "hex",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "HexWave *hex",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "HexWave"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "HexWave *hex",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "HexWave"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "dt",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float dt"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float dt"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 350,
+        "column": 1,
+        "source_line": "static void hexwave_generate_linesegs(hexvert vert[9], HexWave *hex, float dt)"
+      },
+      "start": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 350,
+        "column": 1,
+        "source_line": "static void hexwave_generate_linesegs(hexvert vert[9], HexWave *hex, float dt)"
+      },
+      "end": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 416,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    }
+  },
+  "structs": {
+    "HexWave": {
+      "reference": "struct HexWave"
+    }
+  },
+  "unions": {},
+  "enums": {},
+  "typedefs": {
+    "HexWave": {
+      "reference": "HexWave"
+    },
+    "HexWaveParameters": {
+      "reference": "HexWaveParameters"
+    },
+    "hexvert": {
+      "reference": "hexvert"
+    }
+  },
+  "variables": {
+    "hexblep": {
+      "name": "hexblep",
+      "type": {
+        "reference": "struct@stb/stb_hexwave.h:307:1"
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": null,
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 307,
+        "column": 1,
+        "source_line": "static struct"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    }
+  },
+  "macros": {
+    "STB_INCLUDE_STB_HEXWAVE_H": {
+      "name": "STB_INCLUDE_STB_HEXWAVE_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 214,
+        "column": 1,
+        "source_line": "#define STB_INCLUDE_STB_HEXWAVE_H"
+      }
+    },
+    "STB_HEXWAVE_MAX_BLEP_LENGTH": {
+      "name": "STB_HEXWAVE_MAX_BLEP_LENGTH",
+      "value": "64",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 217,
+        "column": 1,
+        "source_line": "#define STB_HEXWAVE_MAX_BLEP_LENGTH   64 // good enough for anybody"
+      }
+    },
+    "STB_HEXWAVE_DEF": {
+      "name": "STB_HEXWAVE_DEF",
+      "value": "extern",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 223,
+        "column": 1,
+        "source_line": "#define STB_HEXWAVE_DEF extern"
+      }
+    },
+    "hexwave_clamp": {
+      "name": "hexwave_clamp",
+      "value": "((v) < (a) ? (a) : (v) > (b) ? (b) : (v))",
+      "function_like": true,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 285,
+        "column": 1,
+        "source_line": "#define hexwave_clamp(v,a,b)   ((v) < (a) ? (a) : (v) > (b) ? (b) : (v))"
+      }
+    }
+  },
+  "includes": {
+    "stb/stb_hexwave.h:stdlib.h": {
+      "target": "stdlib.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 279,
+        "column": 1,
+        "source_line": "#include <stdlib.h> // malloc,free"
+      }
+    },
+    "stb/stb_hexwave.h:string.h": {
+      "target": "string.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 282,
+        "column": 1,
+        "source_line": "#include <string.h> // memset,memcpy,memmove"
+      }
+    },
+    "stb/stb_hexwave.h:math.h": {
+      "target": "math.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 283,
+        "column": 1,
+        "source_line": "#include <math.h>   // sin,cos,fabs"
+      }
+    }
+  },
+  "functions_by_file": {
+    "stb/stb_hexwave.h": [
+      "hex_add_oversampled_bleplike",
+      "hex_blep",
+      "hex_blamp",
+      "hexwave_generate_linesegs"
+    ]
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "stb/stb_hexwave.h": []
+  },
+  "system_includes": {
+    "stb/stb_hexwave.h": [
+      "math.h",
+      "stdlib.h",
+      "string.h"
+    ]
+  },
+  "unresolved_includes": {
+    "stb/stb_hexwave.h": []
+  },
+  "header_source_pairs": {
+    "stb/stb_hexwave.h": []
+  },
+  "diagnostics": [
+    {
+      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+      "message": "Function-like macro 'hexwave_clamp' is recorded but not expanded.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 285,
+        "column": 1,
+        "source_line": "#define hexwave_clamp(v,a,b)   ((v) < (a) ? (a) : (v) > (b) ? (b) : (v))"
+      },
+      "unit_kind": "macro",
+      "unit_name": "hexwave_clamp"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 228,
+        "column": 1,
+        "source_line": "STB_HEXWAVE_DEF void hexwave_init(int width, int oversample, float *user_buffer);"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STB_HEXWAVE_DEF"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 238,
+        "column": 1,
+        "source_line": "STB_HEXWAVE_DEF void hexwave_shutdown(float *user_buffer);"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STB_HEXWAVE_DEF"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 241,
+        "column": 1,
+        "source_line": "STB_HEXWAVE_DEF void hexwave_create(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait);"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STB_HEXWAVE_DEF"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 249,
+        "column": 1,
+        "source_line": "STB_HEXWAVE_DEF void hexwave_change(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait);"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STB_HEXWAVE_DEF"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 252,
+        "column": 1,
+        "source_line": "STB_HEXWAVE_DEF void hexwave_generate_samples(float *output, int num_samples, HexWave *hex, float freq);"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STB_HEXWAVE_DEF"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 287,
+        "column": 1,
+        "source_line": "STB_HEXWAVE_DEF void hexwave_change(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STB_HEXWAVE_DEF"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 297,
+        "column": 1,
+        "source_line": "STB_HEXWAVE_DEF void hexwave_create(HexWave *hex, int reflect, float peak_time, float half_height, float zero_wait)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STB_HEXWAVE_DEF"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 418,
+        "column": 1,
+        "source_line": "STB_HEXWAVE_DEF void hexwave_generate_samples(float *output, int num_samples, HexWave *hex, float freq)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STB_HEXWAVE_DEF"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 546,
+        "column": 1,
+        "source_line": "STB_HEXWAVE_DEF void hexwave_shutdown(float *user_buffer)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STB_HEXWAVE_DEF"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STB_HEXWAVE_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_hexwave.h",
+        "line": 557,
+        "column": 1,
+        "source_line": "STB_HEXWAVE_DEF void hexwave_init(int width, int oversample, float *user_buffer)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STB_HEXWAVE_DEF"
+    }
+  ]
+}

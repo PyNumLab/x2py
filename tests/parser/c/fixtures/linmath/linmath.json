@@ -1,0 +1,1841 @@
+{
+  "files": {
+    "linmath/linmath.h": {
+      "filename": "linmath/linmath.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [],
+      "structs": [],
+      "unions": [],
+      "enums": [],
+      "typedefs": [
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "mat4x4",
+          "name": "mat4x4",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "typedef vec4 mat4x4[4]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "4",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "vec4",
+                "name": "vec4",
+                "type": null,
+                "source_location": null,
+                "declaration_locations": []
+              }
+            ]
+          },
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 105,
+            "column": 1,
+            "source_line": "typedef vec4 mat4x4[4];"
+          },
+          "declaration_locations": []
+        },
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "quat",
+          "name": "quat",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "typedef float quat[4]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "4",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float"
+              }
+            ]
+          },
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 442,
+            "column": 1,
+            "source_line": "typedef float quat[4];"
+          },
+          "declaration_locations": []
+        }
+      ],
+      "variables": [],
+      "macros": [
+        {
+          "name": "LINMATH_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 2,
+            "column": 1,
+            "source_line": "#define LINMATH_H"
+          }
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "value": "static",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 9,
+            "column": 1,
+            "source_line": "#define LINMATH_H_FUNC static"
+          }
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "value": "static inline",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 11,
+            "column": 1,
+            "source_line": "#define LINMATH_H_FUNC static inline"
+          }
+        },
+        {
+          "name": "LINMATH_H_DEFINE_VEC",
+          "value": "typedef float vec##n[n]; LINMATH_H_FUNC void vec##n##_add(vec##n r, vec##n const a, vec##n const b) { int i; for(i=0; i<n; ++i) r[i] = a[i] + b[i]; } LINMATH_H_FUNC void vec##n##_sub(vec##n r, vec##n const a, vec##n const b) { int i; for(i=0; i<n; ++i) r[i] = a[i] - b[i]; } LINMATH_H_FUNC void vec##n##_scale(vec##n r, vec##n const v, float const s) { int i; for(i=0; i<n; ++i) r[i] = v[i] * s; } LINMATH_H_FUNC float vec##n##_mul_inner(vec##n const a, vec##n const b) { float p = 0.f; int i; for(i=0; i<n; ++i) p += b[i]*a[i]; return p; } LINMATH_H_FUNC float vec##n##_len(vec##n const v) { return sqrtf(vec##n##_mul_inner(v,v)); } LINMATH_H_FUNC void vec##n##_norm(vec##n r, vec##n const v) { float k = 1.f / vec##n##_len(v); vec##n##_scale(r, v, k); } LINMATH_H_FUNC void vec##n##_min(vec##n r, vec##n const a, vec##n const b) { int i; for(i=0; i<n; ++i) r[i] = a[i]<b[i] ? a[i] : b[i]; } LINMATH_H_FUNC void vec##n##_max(vec##n r, vec##n const a, vec##n const b) { int i; for(i=0; i<n; ++i) r[i] = a[i]>b[i] ? a[i] : b[i]; } LINMATH_H_FUNC void vec##n##_dup(vec##n r, vec##n const src) { int i; for(i=0; i<n; ++i) r[i] = src[i]; }",
+          "function_like": true,
+          "directive": "define",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 14,
+            "column": 1,
+            "source_line": "#define LINMATH_H_DEFINE_VEC(n) \\"
+          }
+        },
+        {
+          "name": "quat_add",
+          "value": "vec4_add",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 443,
+            "column": 1,
+            "source_line": "#define quat_add vec4_add"
+          }
+        },
+        {
+          "name": "quat_sub",
+          "value": "vec4_sub",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 444,
+            "column": 1,
+            "source_line": "#define quat_sub vec4_sub"
+          }
+        },
+        {
+          "name": "quat_norm",
+          "value": "vec4_norm",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 445,
+            "column": 1,
+            "source_line": "#define quat_norm vec4_norm"
+          }
+        },
+        {
+          "name": "quat_scale",
+          "value": "vec4_scale",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 446,
+            "column": 1,
+            "source_line": "#define quat_scale vec4_scale"
+          }
+        },
+        {
+          "name": "quat_mul_inner",
+          "value": "vec4_mul_inner",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 447,
+            "column": 1,
+            "source_line": "#define quat_mul_inner vec4_mul_inner"
+          }
+        }
+      ],
+      "includes": [
+        {
+          "target": "string.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 4,
+            "column": 1,
+            "source_line": "#include <string.h>"
+          }
+        },
+        {
+          "target": "math.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 5,
+            "column": 1,
+            "source_line": "#include <math.h>"
+          }
+        },
+        {
+          "target": "string.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 6,
+            "column": 1,
+            "source_line": "#include <string.h>"
+          }
+        }
+      ],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "LINMATH_H",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 1,
+            "column": 1,
+            "source_line": "#ifndef LINMATH_H"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "LINMATH_NO_INLINE",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 8,
+            "column": 1,
+            "source_line": "#ifdef LINMATH_NO_INLINE"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 10,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 12,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 605,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        }
+      ],
+      "macro_dependencies": [
+        {
+          "name": "LINMATH_H_DEFINE_VEC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 70,
+            "column": 1,
+            "source_line": "LINMATH_H_DEFINE_VEC(2)"
+          },
+          "source_text": "LINMATH_H_DEFINE_VEC(2)\nLINMATH_H_DEFINE_VEC(3)\nLINMATH_H_DEFINE_VEC(4)\n\nLINMATH_H_FUNC void vec3_mul_cross(vec3 r, vec3 const a, vec3 const b)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 81,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void vec3_reflect(vec3 r, vec3 const v, vec3 const n)"
+          },
+          "source_text": "LINMATH_H_FUNC void vec3_reflect(vec3 r, vec3 const v, vec3 const n)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 89,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void vec4_mul_cross(vec4 r, vec4 const a, vec4 const b)"
+          },
+          "source_text": "LINMATH_H_FUNC void vec4_mul_cross(vec4 r, vec4 const a, vec4 const b)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 97,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void vec4_reflect(vec4 r, vec4 const v, vec4 const n)"
+          },
+          "source_text": "LINMATH_H_FUNC void vec4_reflect(vec4 r, vec4 const v, vec4 const n)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 106,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_identity(mat4x4 M)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_identity(mat4x4 M)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 113,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_dup(mat4x4 M, mat4x4 const N)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_dup(mat4x4 M, mat4x4 const N)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 119,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_row(vec4 r, mat4x4 const M, int i)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_row(vec4 r, mat4x4 const M, int i)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 125,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_col(vec4 r, mat4x4 const M, int i)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_col(vec4 r, mat4x4 const M, int i)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 131,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_transpose(mat4x4 M, mat4x4 const N)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_transpose(mat4x4 M, mat4x4 const N)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 140,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_add(mat4x4 M, mat4x4 const a, mat4x4 const b)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_add(mat4x4 M, mat4x4 const a, mat4x4 const b)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 146,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_sub(mat4x4 M, mat4x4 const a, mat4x4 const b)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_sub(mat4x4 M, mat4x4 const a, mat4x4 const b)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 152,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_scale(mat4x4 M, mat4x4 const a, float k)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_scale(mat4x4 M, mat4x4 const a, float k)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 158,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_scale_aniso(mat4x4 M, mat4x4 const a, float x, float y, float z)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_scale_aniso(mat4x4 M, mat4x4 const a, float x, float y, float z)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 165,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_mul(mat4x4 M, mat4x4 const a, mat4x4 const b)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_mul(mat4x4 M, mat4x4 const a, mat4x4 const b)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 176,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_mul_vec4(vec4 r, mat4x4 const M, vec4 const v)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_mul_vec4(vec4 r, mat4x4 const M, vec4 const v)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 185,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_translate(mat4x4 T, float x, float y, float z)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_translate(mat4x4 T, float x, float y, float z)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 192,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_translate_in_place(mat4x4 M, float x, float y, float z)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_translate_in_place(mat4x4 M, float x, float y, float z)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 202,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_from_vec3_mul_outer(mat4x4 M, vec3 const a, vec3 const b)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_from_vec3_mul_outer(mat4x4 M, vec3 const a, vec3 const b)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 208,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_rotate(mat4x4 R, mat4x4 const M, float x, float y, float z, float angle)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_rotate(mat4x4 R, mat4x4 const M, float x, float y, float z, float angle)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 242,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_rotate_X(mat4x4 Q, mat4x4 const M, float angle)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_rotate_X(mat4x4 Q, mat4x4 const M, float angle)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 254,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_rotate_Y(mat4x4 Q, mat4x4 const M, float angle)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_rotate_Y(mat4x4 Q, mat4x4 const M, float angle)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 266,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_rotate_Z(mat4x4 Q, mat4x4 const M, float angle)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_rotate_Z(mat4x4 Q, mat4x4 const M, float angle)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 278,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_invert(mat4x4 T, mat4x4 const M)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_invert(mat4x4 T, mat4x4 const M)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 319,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_orthonormalize(mat4x4 R, mat4x4 const M)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_orthonormalize(mat4x4 R, mat4x4 const M)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 342,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_frustum(mat4x4 M, float l, float r, float b, float t, float n, float f)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_frustum(mat4x4 M, float l, float r, float b, float t, float n, float f)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 358,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_ortho(mat4x4 M, float l, float r, float b, float t, float n, float f)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_ortho(mat4x4 M, float l, float r, float b, float t, float n, float f)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 374,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_perspective(mat4x4 m, float y_fov, float aspect, float n, float f)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_perspective(mat4x4 m, float y_fov, float aspect, float n, float f)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 400,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_look_at(mat4x4 m, vec3 const eye, vec3 const center, vec3 const up)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_look_at(mat4x4 m, vec3 const eye, vec3 const center, vec3 const up)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 449,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void quat_identity(quat q)"
+          },
+          "source_text": "LINMATH_H_FUNC void quat_identity(quat q)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 454,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void quat_mul(quat r, quat const p, quat const q)"
+          },
+          "source_text": "LINMATH_H_FUNC void quat_mul(quat r, quat const p, quat const q)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 467,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void quat_conj(quat r, quat const q)"
+          },
+          "source_text": "LINMATH_H_FUNC void quat_conj(quat r, quat const q)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 474,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void quat_rotate(quat r, float angle, vec3 const axis) {"
+          },
+          "source_text": "LINMATH_H_FUNC void quat_rotate(quat r, float angle, vec3 const axis)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 482,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void quat_mul_vec3(vec3 r, quat const q, vec3 const v)"
+          },
+          "source_text": "LINMATH_H_FUNC void quat_mul_vec3(vec3 r, quat const q, vec3 const v)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 502,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_from_quat(mat4x4 M, quat const q)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_from_quat(mat4x4 M, quat const q)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 532,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4o_mul_quat(mat4x4 R, mat4x4 const M, quat const q)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4o_mul_quat(mat4x4 R, mat4x4 const M, quat const q)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 546,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void quat_from_mat4x4(quat q, mat4x4 const M)"
+          },
+          "source_text": "LINMATH_H_FUNC void quat_from_mat4x4(quat q, mat4x4 const M)"
+        },
+        {
+          "name": "LINMATH_H_FUNC",
+          "context": "declaration",
+          "source_location": {
+            "filename": "linmath/linmath.h",
+            "line": 576,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_arcball(mat4x4 R, mat4x4 const M, vec2 const _a, vec2 const _b, float s)"
+          },
+          "source_text": "LINMATH_H_FUNC void mat4x4_arcball(mat4x4 R, mat4x4 const M, vec2 const _a, vec2 const _b, float s)"
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+          "message": "Function-like macro 'LINMATH_H_DEFINE_VEC' is recorded but not expanded.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 14,
+            "column": 1,
+            "source_line": "#define LINMATH_H_DEFINE_VEC(n) \\"
+          },
+          "unit_kind": "macro",
+          "unit_name": "LINMATH_H_DEFINE_VEC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on function-like macro 'LINMATH_H_DEFINE_VEC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 70,
+            "column": 1,
+            "source_line": "LINMATH_H_DEFINE_VEC(2)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_DEFINE_VEC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 81,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void vec3_reflect(vec3 r, vec3 const v, vec3 const n)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 89,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void vec4_mul_cross(vec4 r, vec4 const a, vec4 const b)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 97,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void vec4_reflect(vec4 r, vec4 const v, vec4 const n)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 106,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_identity(mat4x4 M)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 113,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_dup(mat4x4 M, mat4x4 const N)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 119,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_row(vec4 r, mat4x4 const M, int i)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 125,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_col(vec4 r, mat4x4 const M, int i)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 131,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_transpose(mat4x4 M, mat4x4 const N)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 140,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_add(mat4x4 M, mat4x4 const a, mat4x4 const b)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 146,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_sub(mat4x4 M, mat4x4 const a, mat4x4 const b)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 152,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_scale(mat4x4 M, mat4x4 const a, float k)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 158,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_scale_aniso(mat4x4 M, mat4x4 const a, float x, float y, float z)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 165,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_mul(mat4x4 M, mat4x4 const a, mat4x4 const b)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 176,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_mul_vec4(vec4 r, mat4x4 const M, vec4 const v)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 185,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_translate(mat4x4 T, float x, float y, float z)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 192,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_translate_in_place(mat4x4 M, float x, float y, float z)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 202,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_from_vec3_mul_outer(mat4x4 M, vec3 const a, vec3 const b)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 208,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_rotate(mat4x4 R, mat4x4 const M, float x, float y, float z, float angle)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 242,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_rotate_X(mat4x4 Q, mat4x4 const M, float angle)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 254,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_rotate_Y(mat4x4 Q, mat4x4 const M, float angle)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 266,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_rotate_Z(mat4x4 Q, mat4x4 const M, float angle)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 278,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_invert(mat4x4 T, mat4x4 const M)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 319,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_orthonormalize(mat4x4 R, mat4x4 const M)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 342,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_frustum(mat4x4 M, float l, float r, float b, float t, float n, float f)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 358,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_ortho(mat4x4 M, float l, float r, float b, float t, float n, float f)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 374,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_perspective(mat4x4 m, float y_fov, float aspect, float n, float f)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 400,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_look_at(mat4x4 m, vec3 const eye, vec3 const center, vec3 const up)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 449,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void quat_identity(quat q)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 454,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void quat_mul(quat r, quat const p, quat const q)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 467,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void quat_conj(quat r, quat const q)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 474,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void quat_rotate(quat r, float angle, vec3 const axis) {"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 482,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void quat_mul_vec3(vec3 r, quat const q, vec3 const v)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 502,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_from_quat(mat4x4 M, quat const q)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 532,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4o_mul_quat(mat4x4 R, mat4x4 const M, quat const q)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 546,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void quat_from_mat4x4(quat q, mat4x4 const M)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "linmath/linmath.h",
+            "line": 576,
+            "column": 1,
+            "source_line": "LINMATH_H_FUNC void mat4x4_arcball(mat4x4 R, mat4x4 const M, vec2 const _a, vec2 const _b, float s)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "LINMATH_H_FUNC"
+        }
+      ]
+    }
+  },
+  "functions": {},
+  "structs": {},
+  "unions": {},
+  "enums": {},
+  "typedefs": {
+    "mat4x4": {
+      "reference": "mat4x4"
+    },
+    "quat": {
+      "reference": "quat"
+    }
+  },
+  "variables": {},
+  "macros": {
+    "LINMATH_H": {
+      "name": "LINMATH_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "linmath/linmath.h",
+        "line": 2,
+        "column": 1,
+        "source_line": "#define LINMATH_H"
+      }
+    },
+    "LINMATH_H_FUNC": {
+      "name": "LINMATH_H_FUNC",
+      "value": "static inline",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "linmath/linmath.h",
+        "line": 11,
+        "column": 1,
+        "source_line": "#define LINMATH_H_FUNC static inline"
+      }
+    },
+    "LINMATH_H_DEFINE_VEC": {
+      "name": "LINMATH_H_DEFINE_VEC",
+      "value": "typedef float vec##n[n]; LINMATH_H_FUNC void vec##n##_add(vec##n r, vec##n const a, vec##n const b) { int i; for(i=0; i<n; ++i) r[i] = a[i] + b[i]; } LINMATH_H_FUNC void vec##n##_sub(vec##n r, vec##n const a, vec##n const b) { int i; for(i=0; i<n; ++i) r[i] = a[i] - b[i]; } LINMATH_H_FUNC void vec##n##_scale(vec##n r, vec##n const v, float const s) { int i; for(i=0; i<n; ++i) r[i] = v[i] * s; } LINMATH_H_FUNC float vec##n##_mul_inner(vec##n const a, vec##n const b) { float p = 0.f; int i; for(i=0; i<n; ++i) p += b[i]*a[i]; return p; } LINMATH_H_FUNC float vec##n##_len(vec##n const v) { return sqrtf(vec##n##_mul_inner(v,v)); } LINMATH_H_FUNC void vec##n##_norm(vec##n r, vec##n const v) { float k = 1.f / vec##n##_len(v); vec##n##_scale(r, v, k); } LINMATH_H_FUNC void vec##n##_min(vec##n r, vec##n const a, vec##n const b) { int i; for(i=0; i<n; ++i) r[i] = a[i]<b[i] ? a[i] : b[i]; } LINMATH_H_FUNC void vec##n##_max(vec##n r, vec##n const a, vec##n const b) { int i; for(i=0; i<n; ++i) r[i] = a[i]>b[i] ? a[i] : b[i]; } LINMATH_H_FUNC void vec##n##_dup(vec##n r, vec##n const src) { int i; for(i=0; i<n; ++i) r[i] = src[i]; }",
+      "function_like": true,
+      "directive": "define",
+      "source_location": {
+        "filename": "linmath/linmath.h",
+        "line": 14,
+        "column": 1,
+        "source_line": "#define LINMATH_H_DEFINE_VEC(n) \\"
+      }
+    },
+    "quat_add": {
+      "name": "quat_add",
+      "value": "vec4_add",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "linmath/linmath.h",
+        "line": 443,
+        "column": 1,
+        "source_line": "#define quat_add vec4_add"
+      }
+    },
+    "quat_sub": {
+      "name": "quat_sub",
+      "value": "vec4_sub",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "linmath/linmath.h",
+        "line": 444,
+        "column": 1,
+        "source_line": "#define quat_sub vec4_sub"
+      }
+    },
+    "quat_norm": {
+      "name": "quat_norm",
+      "value": "vec4_norm",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "linmath/linmath.h",
+        "line": 445,
+        "column": 1,
+        "source_line": "#define quat_norm vec4_norm"
+      }
+    },
+    "quat_scale": {
+      "name": "quat_scale",
+      "value": "vec4_scale",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "linmath/linmath.h",
+        "line": 446,
+        "column": 1,
+        "source_line": "#define quat_scale vec4_scale"
+      }
+    },
+    "quat_mul_inner": {
+      "name": "quat_mul_inner",
+      "value": "vec4_mul_inner",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "linmath/linmath.h",
+        "line": 447,
+        "column": 1,
+        "source_line": "#define quat_mul_inner vec4_mul_inner"
+      }
+    }
+  },
+  "includes": {
+    "linmath/linmath.h:string.h": {
+      "target": "string.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "linmath/linmath.h",
+        "line": 6,
+        "column": 1,
+        "source_line": "#include <string.h>"
+      }
+    },
+    "linmath/linmath.h:math.h": {
+      "target": "math.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "linmath/linmath.h",
+        "line": 5,
+        "column": 1,
+        "source_line": "#include <math.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "linmath/linmath.h": []
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "linmath/linmath.h": []
+  },
+  "system_includes": {
+    "linmath/linmath.h": [
+      "math.h",
+      "string.h"
+    ]
+  },
+  "unresolved_includes": {
+    "linmath/linmath.h": []
+  },
+  "header_source_pairs": {
+    "linmath/linmath.h": []
+  },
+  "diagnostics": [
+    {
+      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+      "message": "Function-like macro 'LINMATH_H_DEFINE_VEC' is recorded but not expanded.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 14,
+        "column": 1,
+        "source_line": "#define LINMATH_H_DEFINE_VEC(n) \\"
+      },
+      "unit_kind": "macro",
+      "unit_name": "LINMATH_H_DEFINE_VEC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on function-like macro 'LINMATH_H_DEFINE_VEC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 70,
+        "column": 1,
+        "source_line": "LINMATH_H_DEFINE_VEC(2)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_DEFINE_VEC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 81,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void vec3_reflect(vec3 r, vec3 const v, vec3 const n)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 89,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void vec4_mul_cross(vec4 r, vec4 const a, vec4 const b)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 97,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void vec4_reflect(vec4 r, vec4 const v, vec4 const n)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 106,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_identity(mat4x4 M)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 113,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_dup(mat4x4 M, mat4x4 const N)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 119,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_row(vec4 r, mat4x4 const M, int i)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 125,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_col(vec4 r, mat4x4 const M, int i)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 131,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_transpose(mat4x4 M, mat4x4 const N)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 140,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_add(mat4x4 M, mat4x4 const a, mat4x4 const b)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 146,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_sub(mat4x4 M, mat4x4 const a, mat4x4 const b)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 152,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_scale(mat4x4 M, mat4x4 const a, float k)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 158,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_scale_aniso(mat4x4 M, mat4x4 const a, float x, float y, float z)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 165,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_mul(mat4x4 M, mat4x4 const a, mat4x4 const b)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 176,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_mul_vec4(vec4 r, mat4x4 const M, vec4 const v)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 185,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_translate(mat4x4 T, float x, float y, float z)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 192,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_translate_in_place(mat4x4 M, float x, float y, float z)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 202,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_from_vec3_mul_outer(mat4x4 M, vec3 const a, vec3 const b)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 208,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_rotate(mat4x4 R, mat4x4 const M, float x, float y, float z, float angle)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 242,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_rotate_X(mat4x4 Q, mat4x4 const M, float angle)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 254,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_rotate_Y(mat4x4 Q, mat4x4 const M, float angle)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 266,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_rotate_Z(mat4x4 Q, mat4x4 const M, float angle)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 278,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_invert(mat4x4 T, mat4x4 const M)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 319,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_orthonormalize(mat4x4 R, mat4x4 const M)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 342,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_frustum(mat4x4 M, float l, float r, float b, float t, float n, float f)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 358,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_ortho(mat4x4 M, float l, float r, float b, float t, float n, float f)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 374,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_perspective(mat4x4 m, float y_fov, float aspect, float n, float f)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 400,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_look_at(mat4x4 m, vec3 const eye, vec3 const center, vec3 const up)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 449,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void quat_identity(quat q)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 454,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void quat_mul(quat r, quat const p, quat const q)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 467,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void quat_conj(quat r, quat const q)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 474,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void quat_rotate(quat r, float angle, vec3 const axis) {"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 482,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void quat_mul_vec3(vec3 r, quat const q, vec3 const v)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 502,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_from_quat(mat4x4 M, quat const q)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 532,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4o_mul_quat(mat4x4 R, mat4x4 const M, quat const q)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 546,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void quat_from_mat4x4(quat q, mat4x4 const M)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'LINMATH_H_FUNC'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "linmath/linmath.h",
+        "line": 576,
+        "column": 1,
+        "source_line": "LINMATH_H_FUNC void mat4x4_arcball(mat4x4 R, mat4x4 const M, vec2 const _a, vec2 const _b, float s)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "LINMATH_H_FUNC"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
-# C Parser Test Roadmap
+# C Parser Tests
 
-This directory contains the planned C parser test suite. The tests are
-intentionally skipped until the corresponding parser capability exists.
+This directory contains active tests for the implemented partial C parser and
+skipped roadmap tests for later parser, corpus, semantic, and `.pyi` work.
 
 Unskip tests one capability at a time on a short-lived `c-parser/*` branch, then
 merge only into `c-parser/main`.
@@ -14,3 +14,61 @@ Guidelines:
 - unskip the smallest useful group of tests with each implementation branch
 - add fixtures and goldens only when the corresponding schema is stable
 - keep cJSON as the first real-world corpus target once corpus tests start
+
+## Parser Goldens
+
+Active parser goldens cover grouped projects from `tests/data/c/general/`,
+`tests/data/c/json/`, `tests/data/c/tinyexpr/`, `tests/data/c/linmath/`, and
+`tests/data/c/nanosvg/`, plus top-level C inputs from `tests/data/c/stb/`.
+Files sharing a stem are parsed together as a project, with a `.c`
+translation-unit input ordered before its `.h` sibling.
+Explicit dependent header groups are ordered with the included header before
+the dependent header, as in `nanosvg.h` then `nanosvgrast.h`. A source or
+header without a matching sibling is serialized as a one-file project.
+STB inputs remain separate one-file projects because that distribution is a
+collection of independent single-file libraries.
+The current parser records the resolved include edge but parses each project
+member separately; it does not yet preprocess header contents into the source
+translation unit.
+The third-party-library inputs are realistic regression inputs for the partial
+parser; diagnostics in their goldens are expected and do not claim full
+library support.
+
+Each logical project produces one output, for example `math_api.json` for
+`math_api.c` plus `math_api.h`, `cJSON.json` for the cJSON pair, and
+`jsmn.json` or `linmath.json` for unpaired headers. The NanoSVG header pair
+produces `nanosvg.json`; STB produces one golden per top-level library input.
+
+Regenerate all parser goldens with:
+
+```bash
+python -m tests.parser.c.generate_c_parser_goldens
+```
+
+Regenerate selected projects by naming either input relative to
+`tests/data/c/`; matching siblings are included automatically:
+
+```bash
+python -m tests.parser.c.generate_c_parser_goldens general/math_api.c json/cJSON.h
+```
+
+The fixture comparison test also supports the explicit update mode:
+
+```bash
+C_PARSER_UPDATE_GOLDENS=1 python -m pytest -q tests/parser/c/test_c_fixture_suite.py
+```
+
+## Error Goldens
+
+Fatal diagnostic fixtures live in `tests/data/c/errors/parser/` and their
+expected metadata lives in `fixtures/errors/`. Regenerate them with:
+
+```bash
+python -m tests.parser.c.errors.generate_c_parser_error_goldens
+```
+
+or update through the active regression test:
+
+```bash
+C_PARSER_UPDATE_GOLDENS=1 python -m pytest -q tests/parser/c/test_c_error_fixture_suite.py
+```

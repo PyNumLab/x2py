@@ -65,6 +65,7 @@ Implemented:
 - raw `#include` collection for quoted and system includes
 - simple object-like `#define` macro collection
 - function-like macro metadata with unsupported diagnostics
+- object-like declaration-prefix macro dependencies deferred in raw mode
 - raw `#undef` directive provenance in macro metadata
 - concrete primitive `CType` objects, pointer/array composition, and concrete
   qualifier objects
@@ -90,8 +91,12 @@ Implemented:
 - start/end locations for function definitions, from the signature start
   through the closing brace
 - unsupported K&R function-definition diagnostics
-- C fixture inputs under `tests/data/c/general/` plus C fixture directory
-  scaffolding for errors, corpus, and scientific APIs
+- C parser project JSON goldens and fatal diagnostic goldens generated from
+  stable `CProject.to_dict()` and `CParseError` output
+- C fixture inputs under `tests/data/c/general/`, diagnostic inputs under
+  `tests/data/c/errors/parser/`, and partial-parser regression inputs under
+  `tests/data/c/json/`, `tests/data/c/tinyexpr/`, `tests/data/c/linmath/`,
+  `tests/data/c/nanosvg/`, and top-level C inputs from `tests/data/c/stb/`
 
 Still deferred:
 
@@ -164,8 +169,8 @@ Raw-source mode means source normalization plus directive metadata:
 - record `#undef` directives as macro provenance
 - record conditional and pragma directives as raw provenance metadata
 - record function-like macros as metadata with unsupported/deferred diagnostics
-- record macro-shaped declarations as macro-dependency metadata without
-  claiming they were parsed
+- record function-like wrappers and object-like declaration prefixes as
+  macro-dependency metadata without claiming they were parsed
 - parse only declarations that are already visible as ordinary C without macro
   expansion
 - do not select active conditional branches from `#if`/`#ifdef` in raw mode
@@ -431,8 +436,8 @@ The parser defines `CParseError` with:
 
 The CLI should print compiler-style diagnostics without tracebacks by default.
 The parser has the error type and formatter. Raw directive collection can emit
-non-fatal metadata diagnostics, such as unresolved local includes or
-function-like macros that were recorded but not expanded. K&R-style function
+non-fatal metadata diagnostics, such as unresolved local includes or macros
+that affect declarations but were recorded rather than expanded. K&R-style function
 definitions now raise `CParseError` because the current function parser only
 models prototype-style declarations and definitions. Invalid primitive
 specifier combinations also raise `CParseError` (`CPARSE003`) because their
@@ -469,10 +474,13 @@ top-level splitting, include collection, simple macro collection, macro-shaped
 declaration deferral, raw conditional branch non-selection and provenance,
 macro-dependency metadata, project include/index behavior, simple declarations,
 variables, typedefs, top-level redeclaration diagnostics, recursive declarator
-composition, aggregate definitions, members, enums, and simple function
-prototypes/definitions, including function-definition start/end locations. The
-broader roadmap tests remain skipped
-until their matching implementation branches land. Future implementation
+composition, aggregate definitions, members, enums, simple function
+prototypes/definitions, function-definition start/end locations, JSON golden
+serialization, and fatal diagnostic goldens. The `json` regression inputs
+intentionally retain recoverable diagnostics from unsupported constructs; they
+do not claim complete library parsing. Corpus, semantic, and `.pyi` roadmap
+tests remain skipped until their matching implementation branches land. Future
+implementation
 branches should unskip only the tests for the capability they implement, then
 merge those branches back into `c-parser/main`.
 
@@ -532,21 +540,54 @@ Fixture layout should be separate from Fortran:
 ```text
 tests/data/c/
   general/
+  json/
+  tinyexpr/
+  linmath/
+  nanosvg/
+  stb/
   errors/parser/
   corpus/
   scientific/
 
 tests/parser/c/
   fixtures/
-  errors/
+    general/
+    json/
+    errors/
   generate_c_parser_goldens.py
+  errors/generate_c_parser_error_goldens.py
 ```
+
+Parser goldens group same-stem `.c` and `.h` inputs as one project, with the
+`.c` translation unit ordered before its header input to mirror compilation;
+explicit header dependency groups put included headers before dependent
+headers, such as `nanosvg.h` before `nanosvgrast.h`; an input without a
+sibling is parsed as a one-file project. Golden filenames use the project
+stem, such as `api.json` or `jsmn.json`. Goldens can be regenerated for all
+active projects with
+`python -m tests.parser.c.generate_c_parser_goldens` or for selected paths
+relative to `tests/data/c/` by adding either member filename; any matching
+sibling is included automatically. Fatal diagnostic goldens are regenerated
+with
+`python -m tests.parser.c.errors.generate_c_parser_error_goldens`.
+The active fixture tests also honor `C_PARSER_UPDATE_GOLDENS=1`; C does not
+use a generic update environment variable. Until include-expanded parsing is
+implemented, a paired project records the source-to-header include edge but
+parses the `.c` and `.h` members separately.
+
+STB is treated as a family of independent single-file libraries: each
+top-level `.h` or `.c` input generates its own one-file project golden rather
+than being merged into one large project.
 
 The first real-world corpus target should be cJSON, pinned to an exact release
 or commit with license and source provenance. cJSON is small enough for early
 stabilization while still covering typedef structs, recursive pointers, public
 macro declaration wrappers, constants, `const char *` APIs, `size_t`, and
-callback hook members.
+callback hook members. Library files currently under `tests/data/c/json/`,
+`tests/data/c/tinyexpr/`, `tests/data/c/linmath/`, and
+`tests/data/c/nanosvg/`, plus STB top-level inputs under `tests/data/c/stb/`,
+are regression inputs only until corresponding corpus provenance requirements
+are met.
 
 ## Planned Documentation Set
 

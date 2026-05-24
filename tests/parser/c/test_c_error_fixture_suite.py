@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Planned C parser error fixture and diagnostic golden tests."""
+"""C parser error fixture and diagnostic golden regression tests."""
 
 import json
 import os
@@ -7,15 +7,15 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skip(
-    reason="C parser error fixture roadmap tests; unskip when CParseError and error goldens exist."
-)
-
 
 _TESTS_DIR = Path(__file__).resolve().parents[2]
 _ERRORS_DIR = _TESTS_DIR / "data" / "c" / "errors" / "parser"
 _EXPECTED_ERRORS_DIR = Path(__file__).parent / "fixtures" / "errors"
 _SOURCE_SUFFIXES = {".c", ".h", ".i"}
+
+
+def _expected_path_for_fixture(fixture: Path) -> Path:
+    return _EXPECTED_ERRORS_DIR / f"{fixture.name}.json"
 
 
 def _load_expected_error(expected_path: Path) -> dict:
@@ -28,11 +28,18 @@ def test_c_error_fixture_suite_has_fixtures():
 
 
 def test_c_error_fixtures_have_matching_expected_json():
-    fixture_stems = {path.stem for path in _ERRORS_DIR.glob("*") if path.suffix.lower() in _SOURCE_SUFFIXES}
-    expected_stems = {path.stem for path in _EXPECTED_ERRORS_DIR.glob("*.json")}
+    if os.getenv("C_PARSER_UPDATE_GOLDENS", "0") == "1":
+        pytest.skip("Golden outputs are being updated by the diagnostic comparison test.")
 
-    assert not sorted(fixture_stems - expected_stems)
-    assert not sorted(expected_stems - fixture_stems)
+    fixture_outputs = {
+        f"{path.name}.json"
+        for path in _ERRORS_DIR.glob("*")
+        if path.suffix.lower() in _SOURCE_SUFFIXES
+    }
+    expected_outputs = {path.name for path in _EXPECTED_ERRORS_DIR.glob("*.json")}
+
+    assert not sorted(fixture_outputs - expected_outputs)
+    assert not sorted(expected_outputs - fixture_outputs)
 
 
 def test_c_error_fixture_suite_reports_expected_diagnostics():
@@ -43,7 +50,7 @@ def test_c_error_fixture_suite_reports_expected_diagnostics():
     for fixture in sorted(_ERRORS_DIR.glob("*")):
         if fixture.suffix.lower() not in _SOURCE_SUFFIXES:
             continue
-        expected_path = _EXPECTED_ERRORS_DIR / f"{fixture.stem}.json"
+        expected_path = _expected_path_for_fixture(fixture)
         source = fixture.read_text(encoding="utf-8")
 
         if update_mode:
@@ -59,10 +66,13 @@ def test_c_error_fixture_suite_reports_expected_diagnostics():
                     exc_info.value.source_line.strip() if exc_info.value.source_line else "",
                 ],
             }
+            expected_path.parent.mkdir(parents=True, exist_ok=True)
             expected_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
             continue
 
         expected = _load_expected_error(expected_path)
+        assert expected["parser"] == "parse_c_file"
+        assert expected["error_type"] == "CParseError"
         with pytest.raises(CParseError) as exc_info:
             parse_c_file(source, filename=fixture.name)
 
@@ -72,4 +82,3 @@ def test_c_error_fixture_suite_reports_expected_diagnostics():
         for fragment in expected.get("diagnostic_contains", []):
             if fragment:
                 assert fragment in diagnostic
-

@@ -1,0 +1,577 @@
+{
+  "files": {
+    "general/constants.h": {
+      "filename": "general/constants.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "coordinate_axis_name",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "axis",
+              "type": {
+                "model": "CEnum",
+                "qualifiers": [],
+                "source_text": "",
+                "name": "coordinate_axis",
+                "constants": [
+                  {
+                    "name": "COORD_X",
+                    "value": "0",
+                    "source_location": {
+                      "filename": "general/constants.h",
+                      "line": 12,
+                      "column": 1,
+                      "source_line": "enum coordinate_axis {"
+                    }
+                  },
+                  {
+                    "name": "COORD_Y",
+                    "value": "1",
+                    "source_location": {
+                      "filename": "general/constants.h",
+                      "line": 12,
+                      "column": 1,
+                      "source_line": "enum coordinate_axis {"
+                    }
+                  },
+                  {
+                    "name": "COORD_Z",
+                    "value": "2",
+                    "source_location": {
+                      "filename": "general/constants.h",
+                      "line": 12,
+                      "column": 1,
+                      "source_line": "enum coordinate_axis {"
+                    }
+                  }
+                ],
+                "anonymous_id": null,
+                "source_location": {
+                  "filename": "general/constants.h",
+                  "line": 12,
+                  "column": 1,
+                  "source_line": "enum coordinate_axis {"
+                }
+              },
+              "declared_type": {
+                "reference": "enum coordinate_axis"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "extern"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/constants.h",
+            "line": 20,
+            "column": 1,
+            "source_line": "extern const char *coordinate_axis_name(enum coordinate_axis axis);"
+          },
+          "start": {
+            "filename": "general/constants.h",
+            "line": 20,
+            "column": 1,
+            "source_line": "extern const char *coordinate_axis_name(enum coordinate_axis axis);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "coordinate_axis_count",
+          "result_type": {
+            "model": "CTypedef",
+            "qualifiers": [],
+            "source_text": "size_t",
+            "name": "size_t",
+            "type": null,
+            "source_location": null,
+            "declaration_locations": []
+          },
+          "parameters": [],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/constants.h",
+            "line": 21,
+            "column": 1,
+            "source_line": "size_t coordinate_axis_count(void);"
+          },
+          "start": {
+            "filename": "general/constants.h",
+            "line": 21,
+            "column": 1,
+            "source_line": "size_t coordinate_axis_count(void);"
+          },
+          "end": null,
+          "declaration_locations": []
+        }
+      ],
+      "structs": [],
+      "unions": [],
+      "enums": [
+        {
+          "reference": "enum coordinate_axis"
+        }
+      ],
+      "typedefs": [
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "c_int_like",
+          "name": "c_int_like",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "typedef int c_int_like"
+          },
+          "source_location": {
+            "filename": "general/constants.h",
+            "line": 9,
+            "column": 1,
+            "source_line": "typedef int c_int_like;"
+          },
+          "declaration_locations": []
+        },
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "c_double_like",
+          "name": "c_double_like",
+          "type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "typedef double c_double_like"
+          },
+          "source_location": {
+            "filename": "general/constants.h",
+            "line": 10,
+            "column": 1,
+            "source_line": "typedef double c_double_like;"
+          },
+          "declaration_locations": []
+        }
+      ],
+      "variables": [
+        {
+          "name": "nmax",
+          "type": {
+            "reference": "c_int_like"
+          },
+          "storage": [
+            "extern"
+          ],
+          "initializer": null,
+          "bit_width": null,
+          "source_location": {
+            "filename": "general/constants.h",
+            "line": 18,
+            "column": 1,
+            "source_line": "extern c_int_like nmax;"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "origin",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "extern c_double_like origin[3]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "reference": "c_double_like"
+              }
+            ]
+          },
+          "storage": [
+            "extern"
+          ],
+          "initializer": null,
+          "bit_width": null,
+          "source_location": {
+            "filename": "general/constants.h",
+            "line": 19,
+            "column": 1,
+            "source_line": "extern c_double_like origin[3];"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        }
+      ],
+      "macros": [
+        {
+          "name": "X2PY_GENERAL_CONSTANTS_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "general/constants.h",
+            "line": 2,
+            "column": 1,
+            "source_line": "#define X2PY_GENERAL_CONSTANTS_H"
+          }
+        },
+        {
+          "name": "X2PY_GENERAL_NMAX",
+          "value": "100",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "general/constants.h",
+            "line": 6,
+            "column": 1,
+            "source_line": "#define X2PY_GENERAL_NMAX 100"
+          }
+        },
+        {
+          "name": "X2PY_GENERAL_ORIGIN_RANK",
+          "value": "3",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "general/constants.h",
+            "line": 7,
+            "column": 1,
+            "source_line": "#define X2PY_GENERAL_ORIGIN_RANK 3"
+          }
+        }
+      ],
+      "includes": [
+        {
+          "target": "stddef.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "general/constants.h",
+            "line": 4,
+            "column": 1,
+            "source_line": "#include <stddef.h>"
+          }
+        }
+      ],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "X2PY_GENERAL_CONSTANTS_H",
+          "source_location": {
+            "filename": "general/constants.h",
+            "line": 1,
+            "column": 1,
+            "source_line": "#ifndef X2PY_GENERAL_CONSTANTS_H"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "general/constants.h",
+            "line": 23,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        }
+      ],
+      "macro_dependencies": [],
+      "diagnostics": []
+    }
+  },
+  "functions": {
+    "coordinate_axis_name": {
+      "name": "coordinate_axis_name",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "const char",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CChar",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const char"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "axis",
+          "type": {
+            "reference": "enum coordinate_axis"
+          },
+          "declared_type": {
+            "reference": "enum coordinate_axis"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "extern"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/constants.h",
+        "line": 20,
+        "column": 1,
+        "source_line": "extern const char *coordinate_axis_name(enum coordinate_axis axis);"
+      },
+      "start": {
+        "filename": "general/constants.h",
+        "line": 20,
+        "column": 1,
+        "source_line": "extern const char *coordinate_axis_name(enum coordinate_axis axis);"
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "coordinate_axis_count": {
+      "name": "coordinate_axis_count",
+      "result_type": {
+        "reference": "size_t"
+      },
+      "parameters": [],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/constants.h",
+        "line": 21,
+        "column": 1,
+        "source_line": "size_t coordinate_axis_count(void);"
+      },
+      "start": {
+        "filename": "general/constants.h",
+        "line": 21,
+        "column": 1,
+        "source_line": "size_t coordinate_axis_count(void);"
+      },
+      "end": null,
+      "declaration_locations": []
+    }
+  },
+  "structs": {},
+  "unions": {},
+  "enums": {
+    "coordinate_axis": {
+      "reference": "enum coordinate_axis"
+    }
+  },
+  "typedefs": {
+    "c_int_like": {
+      "reference": "c_int_like"
+    },
+    "c_double_like": {
+      "reference": "c_double_like"
+    }
+  },
+  "variables": {
+    "nmax": {
+      "name": "nmax",
+      "type": {
+        "reference": "c_int_like"
+      },
+      "storage": [
+        "extern"
+      ],
+      "initializer": null,
+      "bit_width": null,
+      "source_location": {
+        "filename": "general/constants.h",
+        "line": 18,
+        "column": 1,
+        "source_line": "extern c_int_like nmax;"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "origin": {
+      "name": "origin",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "extern c_double_like origin[3]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "3",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "reference": "c_double_like"
+          }
+        ]
+      },
+      "storage": [
+        "extern"
+      ],
+      "initializer": null,
+      "bit_width": null,
+      "source_location": {
+        "filename": "general/constants.h",
+        "line": 19,
+        "column": 1,
+        "source_line": "extern c_double_like origin[3];"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    }
+  },
+  "macros": {
+    "X2PY_GENERAL_CONSTANTS_H": {
+      "name": "X2PY_GENERAL_CONSTANTS_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "general/constants.h",
+        "line": 2,
+        "column": 1,
+        "source_line": "#define X2PY_GENERAL_CONSTANTS_H"
+      }
+    },
+    "X2PY_GENERAL_NMAX": {
+      "name": "X2PY_GENERAL_NMAX",
+      "value": "100",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "general/constants.h",
+        "line": 6,
+        "column": 1,
+        "source_line": "#define X2PY_GENERAL_NMAX 100"
+      }
+    },
+    "X2PY_GENERAL_ORIGIN_RANK": {
+      "name": "X2PY_GENERAL_ORIGIN_RANK",
+      "value": "3",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "general/constants.h",
+        "line": 7,
+        "column": 1,
+        "source_line": "#define X2PY_GENERAL_ORIGIN_RANK 3"
+      }
+    }
+  },
+  "includes": {
+    "general/constants.h:stddef.h": {
+      "target": "stddef.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "general/constants.h",
+        "line": 4,
+        "column": 1,
+        "source_line": "#include <stddef.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "general/constants.h": [
+      "coordinate_axis_name",
+      "coordinate_axis_count"
+    ]
+  },
+  "enum_constants": {
+    "COORD_X": {
+      "name": "COORD_X",
+      "value": "0",
+      "source_location": {
+        "filename": "general/constants.h",
+        "line": 12,
+        "column": 1,
+        "source_line": "enum coordinate_axis {"
+      }
+    },
+    "COORD_Y": {
+      "name": "COORD_Y",
+      "value": "1",
+      "source_location": {
+        "filename": "general/constants.h",
+        "line": 12,
+        "column": 1,
+        "source_line": "enum coordinate_axis {"
+      }
+    },
+    "COORD_Z": {
+      "name": "COORD_Z",
+      "value": "2",
+      "source_location": {
+        "filename": "general/constants.h",
+        "line": 12,
+        "column": 1,
+        "source_line": "enum coordinate_axis {"
+      }
+    }
+  },
+  "include_graph": {
+    "general/constants.h": []
+  },
+  "system_includes": {
+    "general/constants.h": [
+      "stddef.h"
+    ]
+  },
+  "unresolved_includes": {
+    "general/constants.h": []
+  },
+  "header_source_pairs": {
+    "general/constants.h": []
+  },
+  "diagnostics": []
+}

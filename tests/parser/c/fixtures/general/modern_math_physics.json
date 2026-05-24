@@ -1,0 +1,2508 @@
+{
+  "files": {
+    "general/modern_math_physics.c": {
+      "filename": "general/modern_math_physics.c",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "init_particle",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "p",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "modern_particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "modern_particle",
+                    "name": "modern_particle",
+                    "type": {
+                      "model": "CStruct",
+                      "qualifiers": [],
+                      "source_text": "",
+                      "name": "modern_particle",
+                      "members": [
+                        {
+                          "name": "id",
+                          "type": {
+                            "model": "CInt",
+                            "qualifiers": [],
+                            "source_text": "int id"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "general/modern_math_physics.h",
+                            "line": 7,
+                            "column": 5,
+                            "source_line": "    int id;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "mass",
+                          "type": {
+                            "model": "CDouble",
+                            "qualifiers": [],
+                            "source_text": "double mass"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "general/modern_math_physics.h",
+                            "line": 8,
+                            "column": 5,
+                            "source_line": "    double mass;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "position",
+                          "type": {
+                            "model": "CComposedType",
+                            "qualifiers": [],
+                            "source_text": "double position[3]",
+                            "components": [
+                              {
+                                "model": "CArray",
+                                "qualifiers": [],
+                                "source_text": "",
+                                "bound": "3",
+                                "is_static_minimum": false,
+                                "is_variable_length": false,
+                                "is_flexible": false
+                              },
+                              {
+                                "model": "CDouble",
+                                "qualifiers": [],
+                                "source_text": "double"
+                              }
+                            ]
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "general/modern_math_physics.h",
+                            "line": 9,
+                            "column": 5,
+                            "source_line": "    double position[3];"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        }
+                      ],
+                      "anonymous_id": null,
+                      "is_incomplete": false,
+                      "source_location": {
+                        "filename": "general/modern_math_physics.h",
+                        "line": 6,
+                        "column": 1,
+                        "source_line": "struct modern_particle {"
+                      }
+                    },
+                    "source_location": {
+                      "filename": "general/modern_math_physics.h",
+                      "line": 16,
+                      "column": 1,
+                      "source_line": "typedef struct modern_particle modern_particle;"
+                    },
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "modern_particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "modern_particle"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "pid",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int pid"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int pid"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "mass",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double mass"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double mass"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double x"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double x"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "y",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double y"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double y"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "z",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double z"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double z"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/modern_math_physics.c",
+            "line": 8,
+            "column": 1,
+            "source_line": "void init_particle(modern_particle *p, int pid, double mass, double x, double y, double z)"
+          },
+          "start": {
+            "filename": "general/modern_math_physics.c",
+            "line": 8,
+            "column": 1,
+            "source_line": "void init_particle(modern_particle *p, int pid, double mass, double x, double y, double z)"
+          },
+          "end": {
+            "filename": "general/modern_math_physics.c",
+            "line": 16,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/modern_math_physics.h",
+              "line": 19,
+              "column": 1,
+              "source_line": "void init_particle(modern_particle *p, int pid, double mass, double x, double y, double z);"
+            }
+          ]
+        },
+        {
+          "name": "kinetic_energy",
+          "result_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double"
+          },
+          "parameters": [
+            {
+              "name": "p",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const modern_particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "modern_particle"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const modern_particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "modern_particle"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "vx",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double vx"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double vx"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "vy",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double vy"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double vy"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "vz",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double vz"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double vz"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/modern_math_physics.c",
+            "line": 18,
+            "column": 1,
+            "source_line": "double kinetic_energy(const modern_particle *p, double vx, double vy, double vz)"
+          },
+          "start": {
+            "filename": "general/modern_math_physics.c",
+            "line": 18,
+            "column": 1,
+            "source_line": "double kinetic_energy(const modern_particle *p, double vx, double vy, double vz)"
+          },
+          "end": {
+            "filename": "general/modern_math_physics.c",
+            "line": 21,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/modern_math_physics.h",
+              "line": 20,
+              "column": 1,
+              "source_line": "double kinetic_energy(const modern_particle *p, double vx, double vy, double vz);"
+            }
+          ]
+        },
+        {
+          "name": "scale_vector",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "v",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double v[static 1]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double v[static 1]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "1",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "alpha",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double alpha"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double alpha"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/modern_math_physics.c",
+            "line": 23,
+            "column": 1,
+            "source_line": "void scale_vector(int n, double v[static 1], double alpha)"
+          },
+          "start": {
+            "filename": "general/modern_math_physics.c",
+            "line": 23,
+            "column": 1,
+            "source_line": "void scale_vector(int n, double v[static 1], double alpha)"
+          },
+          "end": {
+            "filename": "general/modern_math_physics.c",
+            "line": 28,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/modern_math_physics.h",
+              "line": 21,
+              "column": 1,
+              "source_line": "void scale_vector(int n, double v[static 1], double alpha);"
+            }
+          ]
+        },
+        {
+          "name": "dot3",
+          "result_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double"
+          },
+          "parameters": [
+            {
+              "name": "a",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double a[static 3]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double a[static 3]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "b",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double b[static 3]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double b[static 3]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/modern_math_physics.c",
+            "line": 30,
+            "column": 1,
+            "source_line": "double dot3(const double a[static 3], const double b[static 3])"
+          },
+          "start": {
+            "filename": "general/modern_math_physics.c",
+            "line": 30,
+            "column": 1,
+            "source_line": "double dot3(const double a[static 3], const double b[static 3])"
+          },
+          "end": {
+            "filename": "general/modern_math_physics.c",
+            "line": 33,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/modern_math_physics.h",
+              "line": 22,
+              "column": 1,
+              "source_line": "double dot3(const double a[static 3], const double b[static 3]);"
+            }
+          ]
+        },
+        {
+          "name": "fill_identity3_modern",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "a",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double a[static 3][3]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double a[static 3][3]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/modern_math_physics.c",
+            "line": 35,
+            "column": 1,
+            "source_line": "void fill_identity3_modern(double a[static 3][3])"
+          },
+          "start": {
+            "filename": "general/modern_math_physics.c",
+            "line": 35,
+            "column": 1,
+            "source_line": "void fill_identity3_modern(double a[static 3][3])"
+          },
+          "end": {
+            "filename": "general/modern_math_physics.c",
+            "line": 42,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/modern_math_physics.h",
+              "line": 23,
+              "column": 1,
+              "source_line": "void fill_identity3_modern(double a[static 3][3]);"
+            }
+          ]
+        },
+        {
+          "name": "normalize_particle",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "p",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "modern_particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "modern_particle"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "modern_particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "modern_particle"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/modern_math_physics.c",
+            "line": 44,
+            "column": 1,
+            "source_line": "void normalize_particle(modern_particle *p)"
+          },
+          "start": {
+            "filename": "general/modern_math_physics.c",
+            "line": 44,
+            "column": 1,
+            "source_line": "void normalize_particle(modern_particle *p)"
+          },
+          "end": {
+            "filename": "general/modern_math_physics.c",
+            "line": 52,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/modern_math_physics.h",
+              "line": 24,
+              "column": 1,
+              "source_line": "void normalize_particle(modern_particle *p);"
+            }
+          ]
+        }
+      ],
+      "structs": [],
+      "unions": [],
+      "enums": [],
+      "typedefs": [],
+      "variables": [
+        {
+          "name": "modern_counter",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int modern_counter"
+          },
+          "storage": [],
+          "initializer": {
+            "source_text": "0"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "general/modern_math_physics.c",
+            "line": 5,
+            "column": 1,
+            "source_line": "int modern_counter = 0;"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "hidden_scale",
+          "type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "static double hidden_scale"
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "1.0"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "general/modern_math_physics.c",
+            "line": 6,
+            "column": 1,
+            "source_line": "static double hidden_scale = 1.0;"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        }
+      ],
+      "macros": [],
+      "includes": [
+        {
+          "target": "modern_math_physics.h",
+          "kind": "local",
+          "resolved_path": "general/modern_math_physics.h",
+          "source_location": {
+            "filename": "general/modern_math_physics.c",
+            "line": 1,
+            "column": 1,
+            "source_line": "#include \"modern_math_physics.h\""
+          }
+        },
+        {
+          "target": "math.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "general/modern_math_physics.c",
+            "line": 3,
+            "column": 1,
+            "source_line": "#include <math.h>"
+          }
+        }
+      ],
+      "raw_directives": [],
+      "macro_dependencies": [],
+      "diagnostics": []
+    },
+    "general/modern_math_physics.h": {
+      "filename": "general/modern_math_physics.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "init_particle",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "p",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "modern_particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "modern_particle"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "modern_particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "modern_particle"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "pid",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int pid"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int pid"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "mass",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double mass"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double mass"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double x"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double x"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "y",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double y"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double y"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "z",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double z"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double z"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/modern_math_physics.h",
+            "line": 19,
+            "column": 1,
+            "source_line": "void init_particle(modern_particle *p, int pid, double mass, double x, double y, double z);"
+          },
+          "start": {
+            "filename": "general/modern_math_physics.h",
+            "line": 19,
+            "column": 1,
+            "source_line": "void init_particle(modern_particle *p, int pid, double mass, double x, double y, double z);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "kinetic_energy",
+          "result_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double"
+          },
+          "parameters": [
+            {
+              "name": "p",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const modern_particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "modern_particle"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const modern_particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "modern_particle"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "vx",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double vx"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double vx"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "vy",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double vy"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double vy"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "vz",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double vz"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double vz"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/modern_math_physics.h",
+            "line": 20,
+            "column": 1,
+            "source_line": "double kinetic_energy(const modern_particle *p, double vx, double vy, double vz);"
+          },
+          "start": {
+            "filename": "general/modern_math_physics.h",
+            "line": 20,
+            "column": 1,
+            "source_line": "double kinetic_energy(const modern_particle *p, double vx, double vy, double vz);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "scale_vector",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "v",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double v[static 1]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double v[static 1]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "1",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "alpha",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double alpha"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double alpha"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/modern_math_physics.h",
+            "line": 21,
+            "column": 1,
+            "source_line": "void scale_vector(int n, double v[static 1], double alpha);"
+          },
+          "start": {
+            "filename": "general/modern_math_physics.h",
+            "line": 21,
+            "column": 1,
+            "source_line": "void scale_vector(int n, double v[static 1], double alpha);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "dot3",
+          "result_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double"
+          },
+          "parameters": [
+            {
+              "name": "a",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double a[static 3]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double a[static 3]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "b",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double b[static 3]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double b[static 3]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/modern_math_physics.h",
+            "line": 22,
+            "column": 1,
+            "source_line": "double dot3(const double a[static 3], const double b[static 3]);"
+          },
+          "start": {
+            "filename": "general/modern_math_physics.h",
+            "line": 22,
+            "column": 1,
+            "source_line": "double dot3(const double a[static 3], const double b[static 3]);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "fill_identity3_modern",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "a",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double a[static 3][3]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double a[static 3][3]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/modern_math_physics.h",
+            "line": 23,
+            "column": 1,
+            "source_line": "void fill_identity3_modern(double a[static 3][3]);"
+          },
+          "start": {
+            "filename": "general/modern_math_physics.h",
+            "line": 23,
+            "column": 1,
+            "source_line": "void fill_identity3_modern(double a[static 3][3]);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "normalize_particle",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "p",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "modern_particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "modern_particle"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "modern_particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "modern_particle"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/modern_math_physics.h",
+            "line": 24,
+            "column": 1,
+            "source_line": "void normalize_particle(modern_particle *p);"
+          },
+          "start": {
+            "filename": "general/modern_math_physics.h",
+            "line": 24,
+            "column": 1,
+            "source_line": "void normalize_particle(modern_particle *p);"
+          },
+          "end": null,
+          "declaration_locations": []
+        }
+      ],
+      "structs": [
+        {
+          "reference": "struct modern_particle"
+        },
+        {
+          "model": "CStruct",
+          "qualifiers": [],
+          "source_text": "",
+          "name": "vector3",
+          "members": [
+            {
+              "name": "values",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double values[3]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "general/modern_math_physics.h",
+                "line": 13,
+                "column": 5,
+                "source_line": "    double values[3];"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            }
+          ],
+          "anonymous_id": null,
+          "is_incomplete": false,
+          "source_location": {
+            "filename": "general/modern_math_physics.h",
+            "line": 12,
+            "column": 1,
+            "source_line": "struct vector3 {"
+          }
+        }
+      ],
+      "unions": [],
+      "enums": [],
+      "typedefs": [
+        {
+          "reference": "modern_particle"
+        },
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "vector3",
+          "name": "vector3",
+          "type": {
+            "reference": "struct vector3"
+          },
+          "source_location": {
+            "filename": "general/modern_math_physics.h",
+            "line": 17,
+            "column": 1,
+            "source_line": "typedef struct vector3 vector3;"
+          },
+          "declaration_locations": []
+        }
+      ],
+      "variables": [
+        {
+          "name": "modern_counter",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "extern int modern_counter"
+          },
+          "storage": [
+            "extern"
+          ],
+          "initializer": null,
+          "bit_width": null,
+          "source_location": {
+            "filename": "general/modern_math_physics.h",
+            "line": 4,
+            "column": 1,
+            "source_line": "extern int modern_counter;"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        }
+      ],
+      "macros": [
+        {
+          "name": "X2PY_GENERAL_MODERN_MATH_PHYSICS_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "general/modern_math_physics.h",
+            "line": 2,
+            "column": 1,
+            "source_line": "#define X2PY_GENERAL_MODERN_MATH_PHYSICS_H"
+          }
+        }
+      ],
+      "includes": [],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "X2PY_GENERAL_MODERN_MATH_PHYSICS_H",
+          "source_location": {
+            "filename": "general/modern_math_physics.h",
+            "line": 1,
+            "column": 1,
+            "source_line": "#ifndef X2PY_GENERAL_MODERN_MATH_PHYSICS_H"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "general/modern_math_physics.h",
+            "line": 26,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        }
+      ],
+      "macro_dependencies": [],
+      "diagnostics": []
+    }
+  },
+  "functions": {
+    "init_particle": {
+      "name": "init_particle",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "p",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "modern_particle *p",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "modern_particle"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "modern_particle *p",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "modern_particle"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "pid",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int pid"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int pid"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "mass",
+          "type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double mass"
+          },
+          "declared_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double mass"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "x",
+          "type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double x"
+          },
+          "declared_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double x"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "y",
+          "type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double y"
+          },
+          "declared_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double y"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "z",
+          "type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double z"
+          },
+          "declared_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double z"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/modern_math_physics.c",
+        "line": 8,
+        "column": 1,
+        "source_line": "void init_particle(modern_particle *p, int pid, double mass, double x, double y, double z)"
+      },
+      "start": {
+        "filename": "general/modern_math_physics.c",
+        "line": 8,
+        "column": 1,
+        "source_line": "void init_particle(modern_particle *p, int pid, double mass, double x, double y, double z)"
+      },
+      "end": {
+        "filename": "general/modern_math_physics.c",
+        "line": 16,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/modern_math_physics.h",
+          "line": 19,
+          "column": 1,
+          "source_line": "void init_particle(modern_particle *p, int pid, double mass, double x, double y, double z);"
+        }
+      ]
+    },
+    "kinetic_energy": {
+      "name": "kinetic_energy",
+      "result_type": {
+        "model": "CDouble",
+        "qualifiers": [],
+        "source_text": "double"
+      },
+      "parameters": [
+        {
+          "name": "p",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const modern_particle *p",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "modern_particle"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const modern_particle *p",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "modern_particle"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "vx",
+          "type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double vx"
+          },
+          "declared_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double vx"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "vy",
+          "type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double vy"
+          },
+          "declared_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double vy"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "vz",
+          "type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double vz"
+          },
+          "declared_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double vz"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/modern_math_physics.c",
+        "line": 18,
+        "column": 1,
+        "source_line": "double kinetic_energy(const modern_particle *p, double vx, double vy, double vz)"
+      },
+      "start": {
+        "filename": "general/modern_math_physics.c",
+        "line": 18,
+        "column": 1,
+        "source_line": "double kinetic_energy(const modern_particle *p, double vx, double vy, double vz)"
+      },
+      "end": {
+        "filename": "general/modern_math_physics.c",
+        "line": 21,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/modern_math_physics.h",
+          "line": 20,
+          "column": 1,
+          "source_line": "double kinetic_energy(const modern_particle *p, double vx, double vy, double vz);"
+        }
+      ]
+    },
+    "scale_vector": {
+      "name": "scale_vector",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "n",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "v",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double v[static 1]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double v[static 1]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "1",
+                "is_static_minimum": true,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "alpha",
+          "type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double alpha"
+          },
+          "declared_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double alpha"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/modern_math_physics.c",
+        "line": 23,
+        "column": 1,
+        "source_line": "void scale_vector(int n, double v[static 1], double alpha)"
+      },
+      "start": {
+        "filename": "general/modern_math_physics.c",
+        "line": 23,
+        "column": 1,
+        "source_line": "void scale_vector(int n, double v[static 1], double alpha)"
+      },
+      "end": {
+        "filename": "general/modern_math_physics.c",
+        "line": 28,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/modern_math_physics.h",
+          "line": 21,
+          "column": 1,
+          "source_line": "void scale_vector(int n, double v[static 1], double alpha);"
+        }
+      ]
+    },
+    "dot3": {
+      "name": "dot3",
+      "result_type": {
+        "model": "CDouble",
+        "qualifiers": [],
+        "source_text": "double"
+      },
+      "parameters": [
+        {
+          "name": "a",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double a[static 3]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double a[static 3]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": true,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "b",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double b[static 3]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double b[static 3]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": true,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/modern_math_physics.c",
+        "line": 30,
+        "column": 1,
+        "source_line": "double dot3(const double a[static 3], const double b[static 3])"
+      },
+      "start": {
+        "filename": "general/modern_math_physics.c",
+        "line": 30,
+        "column": 1,
+        "source_line": "double dot3(const double a[static 3], const double b[static 3])"
+      },
+      "end": {
+        "filename": "general/modern_math_physics.c",
+        "line": 33,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/modern_math_physics.h",
+          "line": 22,
+          "column": 1,
+          "source_line": "double dot3(const double a[static 3], const double b[static 3]);"
+        }
+      ]
+    },
+    "fill_identity3_modern": {
+      "name": "fill_identity3_modern",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "a",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double a[static 3][3]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double a[static 3][3]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": true,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/modern_math_physics.c",
+        "line": 35,
+        "column": 1,
+        "source_line": "void fill_identity3_modern(double a[static 3][3])"
+      },
+      "start": {
+        "filename": "general/modern_math_physics.c",
+        "line": 35,
+        "column": 1,
+        "source_line": "void fill_identity3_modern(double a[static 3][3])"
+      },
+      "end": {
+        "filename": "general/modern_math_physics.c",
+        "line": 42,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/modern_math_physics.h",
+          "line": 23,
+          "column": 1,
+          "source_line": "void fill_identity3_modern(double a[static 3][3]);"
+        }
+      ]
+    },
+    "normalize_particle": {
+      "name": "normalize_particle",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "p",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "modern_particle *p",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "modern_particle"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "modern_particle *p",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "modern_particle"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/modern_math_physics.c",
+        "line": 44,
+        "column": 1,
+        "source_line": "void normalize_particle(modern_particle *p)"
+      },
+      "start": {
+        "filename": "general/modern_math_physics.c",
+        "line": 44,
+        "column": 1,
+        "source_line": "void normalize_particle(modern_particle *p)"
+      },
+      "end": {
+        "filename": "general/modern_math_physics.c",
+        "line": 52,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/modern_math_physics.h",
+          "line": 24,
+          "column": 1,
+          "source_line": "void normalize_particle(modern_particle *p);"
+        }
+      ]
+    }
+  },
+  "structs": {
+    "modern_particle": {
+      "reference": "struct modern_particle"
+    },
+    "vector3": {
+      "reference": "struct vector3"
+    }
+  },
+  "unions": {},
+  "enums": {},
+  "typedefs": {
+    "modern_particle": {
+      "reference": "modern_particle"
+    },
+    "vector3": {
+      "reference": "vector3"
+    }
+  },
+  "variables": {
+    "modern_counter": {
+      "name": "modern_counter",
+      "type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "extern int modern_counter"
+      },
+      "storage": [
+        "extern"
+      ],
+      "initializer": null,
+      "bit_width": null,
+      "source_location": {
+        "filename": "general/modern_math_physics.h",
+        "line": 4,
+        "column": 1,
+        "source_line": "extern int modern_counter;"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "hidden_scale": {
+      "name": "hidden_scale",
+      "type": {
+        "model": "CDouble",
+        "qualifiers": [],
+        "source_text": "static double hidden_scale"
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "1.0"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "general/modern_math_physics.c",
+        "line": 6,
+        "column": 1,
+        "source_line": "static double hidden_scale = 1.0;"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    }
+  },
+  "macros": {
+    "X2PY_GENERAL_MODERN_MATH_PHYSICS_H": {
+      "name": "X2PY_GENERAL_MODERN_MATH_PHYSICS_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "general/modern_math_physics.h",
+        "line": 2,
+        "column": 1,
+        "source_line": "#define X2PY_GENERAL_MODERN_MATH_PHYSICS_H"
+      }
+    }
+  },
+  "includes": {
+    "general/modern_math_physics.c:modern_math_physics.h": {
+      "target": "modern_math_physics.h",
+      "kind": "local",
+      "resolved_path": "general/modern_math_physics.h",
+      "source_location": {
+        "filename": "general/modern_math_physics.c",
+        "line": 1,
+        "column": 1,
+        "source_line": "#include \"modern_math_physics.h\""
+      }
+    },
+    "general/modern_math_physics.c:math.h": {
+      "target": "math.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "general/modern_math_physics.c",
+        "line": 3,
+        "column": 1,
+        "source_line": "#include <math.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "general/modern_math_physics.c": [
+      "init_particle",
+      "kinetic_energy",
+      "scale_vector",
+      "dot3",
+      "fill_identity3_modern",
+      "normalize_particle"
+    ],
+    "general/modern_math_physics.h": [
+      "init_particle",
+      "kinetic_energy",
+      "scale_vector",
+      "dot3",
+      "fill_identity3_modern",
+      "normalize_particle"
+    ]
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "general/modern_math_physics.c": [
+      "general/modern_math_physics.h"
+    ],
+    "general/modern_math_physics.h": []
+  },
+  "system_includes": {
+    "general/modern_math_physics.c": [
+      "math.h"
+    ],
+    "general/modern_math_physics.h": []
+  },
+  "unresolved_includes": {
+    "general/modern_math_physics.c": [],
+    "general/modern_math_physics.h": []
+  },
+  "header_source_pairs": {
+    "general/modern_math_physics.h": [
+      "general/modern_math_physics.c"
+    ]
+  },
+  "diagnostics": []
+}

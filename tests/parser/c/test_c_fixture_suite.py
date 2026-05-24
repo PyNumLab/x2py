@@ -1,59 +1,120 @@
 # -*- coding: utf-8 -*-
-"""Planned C parser fixture/golden tests."""
+"""C parser grouped-project fixture/golden regression tests."""
 
-from dataclasses import asdict, is_dataclass
 import json
 import os
 from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skip(
-    reason="C parser fixture roadmap tests; unskip when C parser goldens exist."
-)
-
-
 _TESTS_DIR = Path(__file__).resolve().parents[2]
 _DATA_DIR = _TESTS_DIR / "data" / "c"
 _FIXTURES_DIR = Path(__file__).parent / "fixtures"
 _SOURCE_SUFFIXES = {".c", ".h", ".i"}
+_SOURCE_ORDER = {".c": 0, ".h": 1, ".i": 2}
+_FIXTURE_GROUPS = ("general", "json", "tinyexpr", "linmath", "nanosvg", "stb")
+_PROJECT_OVERRIDES = {
+    "nanosvg": {
+        "nanosvg": ("nanosvg.h", "nanosvgrast.h"),
+    },
+}
+
+
+def _parser_filename_for_fixture(fixture: Path) -> str:
+    return fixture.relative_to(_DATA_DIR).as_posix()
+
+
+def _fixture_sort_key(fixture: Path) -> tuple[int, str]:
+    return (_SOURCE_ORDER.get(fixture.suffix.lower(), 99), fixture.as_posix())
+
+
+def _project_key(fixture: Path, root: Path) -> Path:
+    relative = fixture.relative_to(root)
+    for project_name, filenames in _PROJECT_OVERRIDES.get(root.name, {}).items():
+        if relative.name in filenames:
+            return Path(project_name)
+    return relative.with_suffix("")
+
+
+def _project_groups(root: Path) -> list[tuple[Path, list[Path]]]:
+    grouped: dict[Path, list[Path]] = {}
+    for fixture in sorted(root.rglob("*"), key=_fixture_sort_key):
+        if fixture.is_file() and fixture.suffix.lower() in _SOURCE_SUFFIXES:
+            grouped.setdefault(_project_key(fixture, root), []).append(fixture)
+    projects = []
+    for project_key, fixtures in sorted(grouped.items()):
+        override = _PROJECT_OVERRIDES.get(root.name, {}).get(project_key.name)
+        if override is not None:
+            order = {filename: index for index, filename in enumerate(override)}
+            fixtures = sorted(fixtures, key=lambda fixture: order[fixture.name])
+        else:
+            fixtures = sorted(fixtures, key=_fixture_sort_key)
+        projects.append((project_key, fixtures))
+    return projects
 
 
 def _source_json_relpaths(root: Path) -> set[Path]:
-    return {
-        path.relative_to(root).with_suffix(".json")
-        for path in root.rglob("*")
-        if path.is_file() and path.suffix.lower() in _SOURCE_SUFFIXES
-    }
+    return {project_key.with_suffix(".json") for project_key, _ in _project_groups(root)}
 
 
 def _fixture_json_relpaths(root: Path) -> set[Path]:
     return {path.relative_to(root) for path in root.rglob("*.json") if path.is_file()}
 
 
-def _to_jsonable(value):
-    if is_dataclass(value):
-        return asdict(value)
-    if hasattr(value, "to_dict"):
-        return value.to_dict()
+def _expected_path_for_project(data_subdir: str, project_key: Path) -> Path:
+    return (_FIXTURES_DIR / data_subdir / project_key).with_suffix(".json")
+
+
+def _normalize_resolved_paths(value):
+    if isinstance(value, dict):
+        resolved_path = value.get("resolved_path")
+        if resolved_path:
+            try:
+                value["resolved_path"] = Path(resolved_path).relative_to(_DATA_DIR).as_posix()
+            except ValueError:
+                pass
+        for key, nested in value.items():
+            value[key] = _normalize_resolved_paths(nested)
+    elif isinstance(value, list):
+        return [_normalize_resolved_paths(nested) for nested in value]
+    elif isinstance(value, str):
+        try:
+            path = Path(value)
+            if path.is_absolute():
+                return path.relative_to(_DATA_DIR).as_posix()
+        except ValueError:
+            pass
     return value
 
 
-def test_c_fixture_golden_suite_has_general_fixtures():
-    fixtures = sorted((_DATA_DIR / "general").glob("*"))
+def _parse_project(fixtures: list[Path]):
+    from c_parser import parse_c_project
+
+    sources = {
+        _parser_filename_for_fixture(fixture): fixture.read_text(encoding="utf-8")
+        for fixture in sorted(fixtures, key=_fixture_sort_key)
+    }
+    include_dirs = sorted({fixture.parent for fixture in fixtures})
+    return parse_c_project(sources, include_dirs=include_dirs)
+
+
+def _serialize_project(fixtures: list[Path]) -> dict:
+    return _normalize_resolved_paths(_parse_project(fixtures).to_dict())
+
+
+@pytest.mark.parametrize("data_subdir", _FIXTURE_GROUPS)
+def test_c_fixture_golden_suite_has_inputs(data_subdir):
+    fixtures = sorted((_DATA_DIR / data_subdir).glob("*"))
     assert any(path.suffix.lower() in _SOURCE_SUFFIXES for path in fixtures)
 
 
-@pytest.mark.parametrize(
-    ("data_subdir", "fixture_subdir"),
-    [
-        ("general", "general"),
-        ("scientific", "scientific"),
-    ],
-)
-def test_c_parser_fixtures_match_data_files_one_to_one(data_subdir, fixture_subdir):
+@pytest.mark.parametrize("data_subdir", _FIXTURE_GROUPS)
+def test_c_parser_project_goldens_match_fixture_stems_one_to_one(data_subdir):
+    if os.getenv("C_PARSER_UPDATE_GOLDENS", "0") == "1":
+        pytest.skip("Golden outputs are being updated by the comparison test.")
+
     data_root = _DATA_DIR / data_subdir
-    fixture_root = _FIXTURES_DIR / fixture_subdir
+    fixture_root = _FIXTURES_DIR / data_subdir
 
     expected = _source_json_relpaths(data_root)
     actual = _fixture_json_relpaths(fixture_root)
@@ -62,18 +123,16 @@ def test_c_parser_fixtures_match_data_files_one_to_one(data_subdir, fixture_subd
     assert not sorted(actual - expected)
 
 
-def test_c_fixture_golden_suite_compares_model_json():
-    from c_parser import parse_c_file
-
+@pytest.mark.parametrize("data_subdir", _FIXTURE_GROUPS)
+def test_c_fixture_golden_suite_compares_project_json(data_subdir):
     update_mode = os.getenv("C_PARSER_UPDATE_GOLDENS", "0") == "1"
 
-    for fixture in sorted((_DATA_DIR / "general").glob("*")):
-        if fixture.suffix.lower() not in _SOURCE_SUFFIXES:
-            continue
-        expected_path = (_FIXTURES_DIR / "general" / fixture.name).with_suffix(".json")
-        parsed = _to_jsonable(parse_c_file(fixture.read_text(encoding="utf-8"), filename=fixture.name))
+    for project_key, fixtures in _project_groups(_DATA_DIR / data_subdir):
+        expected_path = _expected_path_for_project(data_subdir, project_key)
+        parsed = _serialize_project(fixtures)
 
         if update_mode:
+            expected_path.parent.mkdir(parents=True, exist_ok=True)
             expected_path.write_text(json.dumps(parsed, indent=2) + "\n", encoding="utf-8")
             continue
 
@@ -82,12 +141,37 @@ def test_c_fixture_golden_suite_compares_model_json():
 
 
 def test_c_fixture_golden_suite_keeps_source_locations_stable():
-    from c_parser import parse_c_file
+    project = _parse_project(
+        [
+            _DATA_DIR / "general" / "basic_array_update.h",
+            _DATA_DIR / "general" / "basic_array_update.c",
+        ]
+    )
+    function = project.files["general/basic_array_update.h"].functions[0]
 
-    fixture = _DATA_DIR / "general" / "basic_functions.h"
-    parsed = parse_c_file(fixture)
+    assert function.source_location.filename == "general/basic_array_update.h"
+    assert function.source_location.line >= 1
+    assert function.source_location.column >= 1
 
-    assert parsed.functions[0].source_location.filename.endswith("basic_functions.h")
-    assert parsed.functions[0].source_location.line >= 1
-    assert parsed.functions[0].source_location.column >= 1
 
+def test_c_fixture_golden_suite_groups_matching_source_and_header_source_first():
+    fixtures = [
+        _DATA_DIR / "json" / "cJSON.h",
+        _DATA_DIR / "json" / "cJSON.c",
+    ]
+    project = _parse_project(fixtures)
+
+    assert list(project.files) == ["json/cJSON.c", "json/cJSON.h"]
+    assert project.header_source_pairs["json/cJSON.h"] == {"json/cJSON.c"}
+
+
+def test_c_fixture_golden_suite_groups_dependent_headers_dependency_first():
+    project = _parse_project(
+        [
+            _DATA_DIR / "nanosvg" / "nanosvg.h",
+            _DATA_DIR / "nanosvg" / "nanosvgrast.h",
+        ]
+    )
+
+    assert list(project.files) == ["nanosvg/nanosvg.h", "nanosvg/nanosvgrast.h"]
+    assert project.include_graph["nanosvg/nanosvgrast.h"] == {"nanosvg/nanosvg.h"}

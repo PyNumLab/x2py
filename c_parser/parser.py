@@ -245,14 +245,19 @@ class CParser:
         self,
         source: str,
         filename: str | None,
-        macro_names: set[str],
+        function_like_macro_names: set[str],
+        object_like_macro_names: set[str] | None = None,
     ) -> list[CMacroDependency]:
         dependencies: list[CMacroDependency] = []
-        if not macro_names:
+        if not function_like_macro_names and not object_like_macro_names:
             return dependencies
 
         for segment in split_top_level_c_source(source, filename=filename):
-            dependency = self._segment_macro_dependency(segment, macro_names)
+            dependency = self._segment_macro_dependency(
+                segment,
+                function_like_macro_names,
+                object_like_macro_names,
+            )
             if dependency is not None:
                 dependencies.append(dependency)
         return dependencies
@@ -260,15 +265,29 @@ class CParser:
     def _segment_macro_dependency(
         self,
         segment: CTopLevelSegment,
-        macro_names: set[str],
+        function_like_macro_names: set[str],
+        object_like_macro_names: set[str] | None = None,
     ) -> CMacroDependency | None:
         text = segment.text.strip()
         if not text:
             return None
         declaration_text, initializer = top_level_partition(text, "=")
         scan_text = declaration_text if initializer is not None else text
-        for macro_name in sorted(macro_names):
+        for macro_name in sorted(function_like_macro_names):
             if re.search(rf"\b{re.escape(macro_name)}\s*\(", scan_text):
+                return CMacroDependency(
+                    name=macro_name,
+                    context="declaration",
+                    source_text=text,
+                    source_location=self._source_location(segment),
+                )
+        for macro_name in sorted(object_like_macro_names or set()):
+            prefix_words = _STORAGE_CLASSES | _TYPE_QUALIFIERS | _FUNCTION_SPECIFIERS
+            prefix_pattern = "|".join(re.escape(word) for word in sorted(prefix_words))
+            if re.match(
+                rf"^(?:(?:{prefix_pattern})\s+)*{re.escape(macro_name)}\b",
+                scan_text,
+            ):
                 return CMacroDependency(
                     name=macro_name,
                     context="declaration",
@@ -281,11 +300,14 @@ class CParser:
         self,
         segment: CTopLevelSegment,
         dependency: CMacroDependency,
+        *,
+        function_like: bool,
     ) -> CDiagnostic:
+        macro_kind = "function-like" if function_like else "object-like"
         return CDiagnostic(
             code="C_MACRO_DEPENDENT_DECLARATION",
             message=(
-                f"Declaration depends on function-like macro {dependency.name!r}; "
+                f"Declaration depends on {macro_kind} macro {dependency.name!r}; "
                 "provide preprocessed input to parse it."
             ),
             severity="warning",
@@ -1160,6 +1182,8 @@ class CParser:
 
         for index, line in enumerate(stripped_lines):
             text = line.strip()
+            if text.startswith("#"):
+                continue
             parameter_bounds = self._find_parameter_list(text)
             if parameter_bounds is None:
                 continue
@@ -1167,6 +1191,8 @@ class CParser:
             before_parameters = text[:open_index].strip()
             name_match = self._last_identifier(before_parameters)
             if name_match is None:
+                continue
+            if name_match.group(0) in {"if", "for", "while", "switch"}:
                 continue
             return_spec = before_parameters[: name_match.start()].strip()
             if not return_spec or "(" in return_spec or ")" in return_spec:
@@ -1722,6 +1748,7 @@ class CParser:
         filename: str | None,
         *,
         function_like_macros: set[str] | None = None,
+        object_like_macros: set[str] | None = None,
     ) -> tuple[
         list[CFunction],
         list[CStruct],
@@ -1741,12 +1768,21 @@ class CParser:
         variables: list[CVariable] = []
         diagnostics: list[CDiagnostic] = []
 
-        macro_names = function_like_macros or set()
+        function_like_names = function_like_macros or set()
+        object_like_names = object_like_macros or set()
         for segment in split_top_level_c_source(source, filename=filename):
-            macro_dependency = self._segment_macro_dependency(segment, macro_names)
+            macro_dependency = self._segment_macro_dependency(
+                segment,
+                function_like_names,
+                object_like_names,
+            )
             if macro_dependency is not None:
                 diagnostics.append(
-                    self._macro_dependent_declaration_diagnostic(segment, macro_dependency)
+                    self._macro_dependent_declaration_diagnostic(
+                        segment,
+                        macro_dependency,
+                        function_like=macro_dependency.name in function_like_names,
+                    )
                 )
                 continue
             tag_definition = self._parse_tag_definition(segment)
@@ -2017,16 +2053,23 @@ class CParser:
             parsed.macros = metadata.macros
             parsed.raw_directives = metadata.raw_directives
             function_like_macro_names = {macro.name for macro in metadata.macros if macro.function_like}
+            object_like_macro_names = {
+                macro.name
+                for macro in metadata.macros
+                if macro.directive == "define" and not macro.function_like
+            }
             parsed.macro_dependencies = self._macro_dependencies(
                 source,
                 filename,
                 function_like_macro_names,
+                object_like_macro_names,
             )
             parsed.diagnostics = metadata.diagnostics
             functions, structs, unions, enums, typedefs, variables, parser_diagnostics = self._parse_translation_unit(
                 source,
                 filename,
                 function_like_macros=function_like_macro_names,
+                object_like_macros=object_like_macro_names,
             )
             parsed.functions = functions
             parsed.structs = structs

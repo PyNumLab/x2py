@@ -1,7 +1,7 @@
 # C Parser Implementation Checklist
 
-Status: implementation checklist with Phase 1 skeleton, selected Phase 2
-fixture scaffolding, selected Phase 3 model/error work, Phase 4 raw
+Status: implementation checklist with Phase 1 skeleton, Phase 2 parser/error
+golden workflow, selected Phase 3 model/error work, Phase 4 raw
 lexer/directive metadata, a first Phase 5/6 partial declaration/function
 subset including top-level redeclaration handling, and selected Phase 8 project
 include/index work complete. The
@@ -19,7 +19,8 @@ Aggregate members carry their own source locations, and flexible array
 members are classified and checked for supported struct/union constraints.
 Function parameters preserve written array/function forms in `declared_type`
 while exposing C-adjusted pointer forms in `type`. Raw conditional directives
-and macro-shaped declarations are stored as metadata. Project parsing now
+and macro-shaped declarations, including object-like declaration prefixes, are
+stored as metadata. Project parsing now
 records include graphs, system and unresolved includes, functions by file,
 enum constants, header/source pairings, and basic cross-file typedef/tag
 resolution with incomplete tag completion. Compatible top-level prototypes,
@@ -35,7 +36,7 @@ stable.
 ## Progress Snapshot
 
 - Last updated: 2026-05-24
-- Checklist progress: 590/856 checked (68.9%).
+- Checklist progress: 623/873 checked (71.4%).
 - Current parser status: partial C parser with raw directive metadata, top-level
   source splitting, simple declarations/variables/typedefs, prototype-style
   metadata, K&R diagnostics, simple function signatures, and start/end
@@ -53,8 +54,9 @@ stable.
   diagnostics for invalid placement or union use. Array and function
   parameter declarations preserve their source form in `declared_type` while
   their effective `type` applies C parameter-to-pointer adjustment. Raw
-  conditional directives and macro-shaped declaration dependencies are recorded
-  as metadata. `parse_c_project` returns project include/index facts and
+  conditional directives and macro-shaped declaration dependencies, including
+  object-like declaration prefixes, are recorded as metadata. `parse_c_project`
+  returns project include/index facts and
   resolves basic cross-file typedef and tag references while preserving
   unresolved references for later diagnostics. Top-level compatible
   redeclarations are merged, matching prototypes plus definitions prefer the
@@ -335,8 +337,20 @@ Scope:
 - [x] Create `tests/data/c/errors/parser/`.
 - [x] Create `tests/data/c/corpus/`.
 - [x] Create `tests/data/c/scientific/`.
-- [ ] Create `tests/parser/c/fixtures/general/`.
-- [ ] Create `tests/parser/c/fixtures/errors/`.
+- [x] Add `tests/data/c/json/` real-world partial-parser regression inputs.
+- [x] Add `tests/data/c/tinyexpr/` real-world partial-parser regression inputs.
+- [x] Add `tests/data/c/linmath/` header-only partial-parser regression input.
+- [x] Add `tests/data/c/nanosvg/` dependent-header partial-parser regression
+      inputs.
+- [x] Add top-level `tests/data/c/stb/` single-file library regression inputs
+      without vendoring nested repository metadata as fixtures.
+- [x] Create `tests/parser/c/fixtures/general/`.
+- [x] Create `tests/parser/c/fixtures/json/`.
+- [x] Create `tests/parser/c/fixtures/tinyexpr/`.
+- [x] Create `tests/parser/c/fixtures/linmath/`.
+- [x] Create `tests/parser/c/fixtures/nanosvg/`.
+- [x] Create `tests/parser/c/fixtures/stb/`.
+- [x] Create `tests/parser/c/fixtures/errors/`.
 - [x] Keep C fixture data separate from Fortran fixture data.
 - [x] Add README files explaining each C fixture directory.
 - [x] Add small `.h` and `.c` fixture files for C fixture coverage.
@@ -377,18 +391,26 @@ Scope:
 
 ### Golden Workflow Tasks
 
-- [ ] Create `tests/parser/c/generate_c_parser_goldens.py`.
-- [ ] Mirror the Fortran parser golden generator structure.
-- [ ] Serialize only dataclass/JSON-stable C parse models.
-- [ ] Strip parent/back-reference fields if future models need them.
-- [ ] Support updating all fixtures.
-- [ ] Support updating selected fixtures.
-- [ ] Add an environment variable update flow, for example
+- [x] Create `tests/parser/c/generate_c_parser_goldens.py`.
+- [x] Mirror the Fortran parser golden generator structure.
+- [x] Serialize only dataclass/JSON-stable C parse models.
+- [x] Strip parent/back-reference fields if future models need them.
+- [x] Generate one `CProject` golden per same-stem fixture group, pairing
+      `.c` and `.h` inputs when both exist.
+- [x] Order `.c` before its matched `.h` project input to mirror compilation
+      while include-expanded parsing remains deferred.
+- [x] Support explicit dependent-header project groups ordered from included
+      header to dependent header.
+- [x] Generate separate one-file project goldens for STB single-file library
+      inputs.
+- [x] Support updating all fixtures.
+- [x] Support updating selected fixtures.
+- [x] Add an environment variable update flow, for example
       `C_PARSER_UPDATE_GOLDENS=1`.
-- [ ] Document whether C uses `C_PARSER_UPDATE_GOLDENS` or a generic
+- [x] Document whether C uses `C_PARSER_UPDATE_GOLDENS` or a generic
       `X2PY_UPDATE_GOLDENS`.
-- [ ] Create a C error golden generator.
-- [ ] Store expected error type, message fragments, diagnostic fragments, and
+- [x] Create a C error golden generator.
+- [x] Store expected error type, message fragments, diagnostic fragments, and
       parser entrypoint metadata.
 
 ### Focused Test Buckets
@@ -415,7 +437,7 @@ Scope:
 
 - [x] C test directory structure is present.
 - [x] C fixture directory structure is present.
-- [ ] C golden update workflow is documented.
+- [x] C golden update workflow is documented.
 - [x] Partial parser and metadata tests pass against current behavior.
 - [x] Fortran tests still pass.
 - [x] No real parser claims are made without tests.
@@ -620,6 +642,8 @@ Scope:
       and `1` evaluator for C API extraction unless a later design explicitly
       justifies it.
 - [x] Mark macro-shaped declarations as unsupported/deferred in raw mode.
+- [x] Defer declarations prefixed by object-like macros in raw mode instead of
+      reporting invalid type specifier sequences.
 - [x] Store macro-dependency metadata in C parser models.
 - [x] Store preprocessing mode metadata in `CFile`.
 - [x] Store raw directive metadata separately from compiler-preprocessor
@@ -631,6 +655,9 @@ Scope:
 - [x] Add tests for include collection.
 - [x] Add tests for object-like macro collection.
 - [x] Add tests for function-like macro diagnostics.
+- [x] Add tests for object-like macro declaration-prefix deferral.
+- [x] Do not misclassify `#if MACRO(...)` or body `else if (...)` forms as
+      K&R-style definitions.
 - [x] Add tests that raw conditional directives do not select active branches.
 - [x] Add tests that macro-generated declarations are deferred in raw mode.
 
@@ -992,7 +1019,7 @@ Scope:
 - [x] Shared declaration backend handles members and typedefs.
 - [x] Validate legal and invalid flexible-array-member placement and retain
       named, unnamed, and zero-width bit-field source facts with tests.
-- [ ] JSON goldens cover composite type schema.
+- [x] JSON goldens cover composite type schema.
 - [x] Docs list supported and unsupported composite forms.
 
 ### Phase 7 Risks And Open Questions
@@ -1382,7 +1409,7 @@ Scope:
 - [ ] Run `.pyi` tests.
 - [ ] Run C corpus parse-only tests.
 - [x] Run CLI tests.
-- [ ] Run golden fixture tests.
+- [x] Run golden fixture tests.
 - [x] Confirm Fortran tests still pass.
 - [ ] Audit JSON schema stability.
 - [ ] Audit error diagnostic stability.
@@ -1396,7 +1423,7 @@ Scope:
 - [ ] Decide criteria for merging `c-parser/main` into project `main`.
 - [ ] Require green CI for Fortran and C suites.
 - [ ] Require docs updated for implemented subset.
-- [ ] Require fixture/golden workflow documented.
+- [x] Require fixture/golden workflow documented.
 - [ ] Require semantic and `.pyi` behavior documented.
 - [ ] Require explicit non-goals still documented.
 - [ ] Require migration notes for users.

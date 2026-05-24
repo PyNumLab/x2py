@@ -222,6 +222,46 @@ API_DECL(int) exported(void);
     ]
 
 
+def test_raw_mode_conditional_macro_directive_is_not_treated_as_knr_function():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+#define ENABLED(value) value
+#if ENABLED(API)
+typedef int api_value;
+#endif
+int run(void);
+""",
+        filename="conditional_macro.h",
+        preprocessing="raw",
+    )
+
+    assert [function.name for function in parsed.functions] == ["run"]
+    assert any(macro.name == "ENABLED" for macro in parsed.macros)
+
+
+def test_raw_mode_defers_declarations_prefixed_by_object_like_macros():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+#define API_INLINE inline
+static API_INLINE void run(void) {}
+""",
+        filename="object_macro_decl.h",
+        preprocessing="raw",
+    )
+
+    assert parsed.functions == []
+    assert [(item.name, item.context) for item in parsed.macro_dependencies] == [
+        ("API_INLINE", "declaration")
+    ]
+    assert [(diag.code, diag.unit_kind, diag.unit_name) for diag in parsed.diagnostics] == [
+        ("C_MACRO_DEPENDENT_DECLARATION", "macro_dependent_declaration", "API_INLINE"),
+    ]
+
+
 def test_raw_mode_macro_initializers_do_not_hide_parseable_declarations():
     from c_parser import parse_c_file
 

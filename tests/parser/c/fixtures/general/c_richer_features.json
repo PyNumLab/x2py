@@ -1,0 +1,1485 @@
+{
+  "files": {
+    "general/c_richer_features.h": {
+      "filename": "general/c_richer_features.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "x2py_fast_path",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 10,
+            "column": 1,
+            "source_line": "int x2py_fast_path(void);"
+          },
+          "start": {
+            "filename": "general/c_richer_features.h",
+            "line": 10,
+            "column": 1,
+            "source_line": "int x2py_fast_path(void);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "x2py_slow_path",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 12,
+            "column": 1,
+            "source_line": "int x2py_slow_path(void);"
+          },
+          "start": {
+            "filename": "general/c_richer_features.h",
+            "line": 12,
+            "column": 1,
+            "source_line": "int x2py_slow_path(void);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "x2py_register_callback",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "context",
+              "type": {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "x2py_context_handle",
+                "name": "x2py_context_handle",
+                "type": {
+                  "model": "CComposedType",
+                  "qualifiers": [],
+                  "source_text": "typedef struct x2py_context *x2py_context_handle",
+                  "components": [
+                    {
+                      "model": "CPointer",
+                      "qualifiers": [],
+                      "source_text": ""
+                    },
+                    {
+                      "model": "CStruct",
+                      "qualifiers": [],
+                      "source_text": "",
+                      "name": "x2py_context",
+                      "members": [],
+                      "anonymous_id": null,
+                      "is_incomplete": true,
+                      "source_location": {
+                        "filename": "general/c_richer_features.h",
+                        "line": 35,
+                        "column": 1,
+                        "source_line": "struct x2py_context;"
+                      }
+                    }
+                  ]
+                },
+                "source_location": {
+                  "filename": "general/c_richer_features.h",
+                  "line": 36,
+                  "column": 1,
+                  "source_line": "typedef struct x2py_context *x2py_context_handle;"
+                },
+                "declaration_locations": []
+              },
+              "declared_type": {
+                "reference": "x2py_context_handle"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "callback",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void (*callback)(void *userdata, enum x2py_status status)",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFunctionType",
+                    "qualifiers": [],
+                    "source_text": "void",
+                    "result_type": {
+                      "model": "CVoid",
+                      "qualifiers": [],
+                      "source_text": "void"
+                    },
+                    "parameter_types": [
+                      {
+                        "model": "CComposedType",
+                        "qualifiers": [],
+                        "source_text": "void *userdata",
+                        "components": [
+                          {
+                            "model": "CPointer",
+                            "qualifiers": [],
+                            "source_text": ""
+                          },
+                          {
+                            "model": "CVoid",
+                            "qualifiers": [],
+                            "source_text": "void"
+                          }
+                        ]
+                      },
+                      {
+                        "model": "CEnum",
+                        "qualifiers": [],
+                        "source_text": "",
+                        "name": "x2py_status",
+                        "constants": [
+                          {
+                            "name": "X2PY_STATUS_OK",
+                            "value": "0",
+                            "source_location": {
+                              "filename": "general/c_richer_features.h",
+                              "line": 17,
+                              "column": 1,
+                              "source_line": "enum x2py_status {"
+                            }
+                          },
+                          {
+                            "name": "X2PY_STATUS_RETRY",
+                            "value": "1",
+                            "source_location": {
+                              "filename": "general/c_richer_features.h",
+                              "line": 17,
+                              "column": 1,
+                              "source_line": "enum x2py_status {"
+                            }
+                          },
+                          {
+                            "name": "X2PY_STATUS_ERROR",
+                            "value": "-1",
+                            "source_location": {
+                              "filename": "general/c_richer_features.h",
+                              "line": 17,
+                              "column": 1,
+                              "source_line": "enum x2py_status {"
+                            }
+                          }
+                        ],
+                        "anonymous_id": null,
+                        "source_location": {
+                          "filename": "general/c_richer_features.h",
+                          "line": 17,
+                          "column": 1,
+                          "source_line": "enum x2py_status {"
+                        }
+                      }
+                    ],
+                    "is_variadic": false,
+                    "prototype_style": "prototype"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void (*callback)(void *userdata, enum x2py_status status)",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFunctionType",
+                    "qualifiers": [],
+                    "source_text": "void",
+                    "result_type": {
+                      "model": "CVoid",
+                      "qualifiers": [],
+                      "source_text": "void"
+                    },
+                    "parameter_types": [
+                      {
+                        "model": "CComposedType",
+                        "qualifiers": [],
+                        "source_text": "void *userdata",
+                        "components": [
+                          {
+                            "model": "CPointer",
+                            "qualifiers": [],
+                            "source_text": ""
+                          },
+                          {
+                            "model": "CVoid",
+                            "qualifiers": [],
+                            "source_text": "void"
+                          }
+                        ]
+                      },
+                      {
+                        "reference": "enum x2py_status"
+                      }
+                    ],
+                    "is_variadic": false,
+                    "prototype_style": "prototype"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "userdata",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *userdata",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *userdata",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 47,
+            "column": 1,
+            "source_line": "int x2py_register_callback("
+          },
+          "start": {
+            "filename": "general/c_richer_features.h",
+            "line": 47,
+            "column": 1,
+            "source_line": "int x2py_register_callback("
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "x2py_status_message",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "status",
+              "type": {
+                "reference": "enum x2py_status"
+              },
+              "declared_type": {
+                "reference": "enum x2py_status"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 53,
+            "column": 1,
+            "source_line": "const char *x2py_status_message(enum x2py_status status);"
+          },
+          "start": {
+            "filename": "general/c_richer_features.h",
+            "line": 53,
+            "column": 1,
+            "source_line": "const char *x2py_status_message(enum x2py_status status);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "x2py_fill_matrix",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "rows",
+              "type": {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "size_t rows",
+                "name": "size_t",
+                "type": null,
+                "source_location": null,
+                "declaration_locations": []
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "cols",
+              "type": {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "size_t cols",
+                "name": "size_t",
+                "type": null,
+                "source_location": null,
+                "declaration_locations": []
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "matrix",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double matrix[static rows][cols]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "cols",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double matrix[static rows][cols]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "rows",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "cols",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 54,
+            "column": 1,
+            "source_line": "void x2py_fill_matrix(size_t rows, size_t cols, double matrix[static rows][cols]);"
+          },
+          "start": {
+            "filename": "general/c_richer_features.h",
+            "line": 54,
+            "column": 1,
+            "source_line": "void x2py_fill_matrix(size_t rows, size_t cols, double matrix[static rows][cols]);"
+          },
+          "end": null,
+          "declaration_locations": []
+        }
+      ],
+      "structs": [
+        {
+          "model": "CStruct",
+          "qualifiers": [],
+          "source_text": "",
+          "name": "x2py_flags",
+          "members": [
+            {
+              "name": "ready",
+              "type": {
+                "model": "CUnsignedInt",
+                "qualifiers": [],
+                "source_text": "unsigned ready"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": "1",
+              "source_location": {
+                "filename": "general/c_richer_features.h",
+                "line": 30,
+                "column": 5,
+                "source_line": "    unsigned ready : 1;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "mode",
+              "type": {
+                "model": "CUnsignedInt",
+                "qualifiers": [],
+                "source_text": "unsigned mode"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": "3",
+              "source_location": {
+                "filename": "general/c_richer_features.h",
+                "line": 31,
+                "column": 5,
+                "source_line": "    unsigned mode : 3;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "reserved",
+              "type": {
+                "model": "CUnsignedInt",
+                "qualifiers": [],
+                "source_text": "unsigned reserved"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": "28",
+              "source_location": {
+                "filename": "general/c_richer_features.h",
+                "line": 32,
+                "column": 5,
+                "source_line": "    unsigned reserved : 28;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            }
+          ],
+          "anonymous_id": null,
+          "is_incomplete": false,
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 29,
+            "column": 1,
+            "source_line": "struct x2py_flags {"
+          }
+        },
+        {
+          "reference": "struct x2py_context"
+        }
+      ],
+      "unions": [
+        {
+          "model": "CUnion",
+          "qualifiers": [],
+          "source_text": "",
+          "name": "x2py_scalar",
+          "members": [
+            {
+              "name": "i32",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int i32"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "general/c_richer_features.h",
+                "line": 24,
+                "column": 5,
+                "source_line": "    int i32;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "u64",
+              "type": {
+                "model": "CUnsignedLong",
+                "qualifiers": [],
+                "source_text": "unsigned long u64"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "general/c_richer_features.h",
+                "line": 25,
+                "column": 5,
+                "source_line": "    unsigned long u64;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "f64",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double f64"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "general/c_richer_features.h",
+                "line": 26,
+                "column": 5,
+                "source_line": "    double f64;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            }
+          ],
+          "anonymous_id": null,
+          "is_incomplete": false,
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 23,
+            "column": 1,
+            "source_line": "union x2py_scalar {"
+          }
+        }
+      ],
+      "enums": [
+        {
+          "reference": "enum x2py_status"
+        }
+      ],
+      "typedefs": [
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "x2py_compare_fn",
+          "name": "x2py_compare_fn",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "typedef int (*x2py_compare_fn)(const void *left, const void *right)",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CFunctionType",
+                "qualifiers": [],
+                "source_text": "int",
+                "result_type": {
+                  "model": "CInt",
+                  "qualifiers": [],
+                  "source_text": "int"
+                },
+                "parameter_types": [
+                  {
+                    "model": "CComposedType",
+                    "qualifiers": [],
+                    "source_text": "const void *left",
+                    "components": [
+                      {
+                        "model": "CPointer",
+                        "qualifiers": [],
+                        "source_text": ""
+                      },
+                      {
+                        "model": "CVoid",
+                        "qualifiers": [
+                          "const"
+                        ],
+                        "source_text": "const void"
+                      }
+                    ]
+                  },
+                  {
+                    "model": "CComposedType",
+                    "qualifiers": [],
+                    "source_text": "const void *right",
+                    "components": [
+                      {
+                        "model": "CPointer",
+                        "qualifiers": [],
+                        "source_text": ""
+                      },
+                      {
+                        "model": "CVoid",
+                        "qualifiers": [
+                          "const"
+                        ],
+                        "source_text": "const void"
+                      }
+                    ]
+                  }
+                ],
+                "is_variadic": false,
+                "prototype_style": "prototype"
+              }
+            ]
+          },
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 15,
+            "column": 1,
+            "source_line": "typedef int (*x2py_compare_fn)(const void *left, const void *right);"
+          },
+          "declaration_locations": []
+        },
+        {
+          "reference": "x2py_context_handle"
+        }
+      ],
+      "variables": [],
+      "macros": [
+        {
+          "name": "X2PY_GENERAL_C_RICHER_FEATURES_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 2,
+            "column": 1,
+            "source_line": "#define X2PY_GENERAL_C_RICHER_FEATURES_H"
+          }
+        },
+        {
+          "name": "X2PY_API",
+          "value": "ret",
+          "function_like": true,
+          "directive": "define",
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 6,
+            "column": 1,
+            "source_line": "#define X2PY_API(ret) ret"
+          }
+        },
+        {
+          "name": "X2PY_STRINGIFY",
+          "value": "#value",
+          "function_like": true,
+          "directive": "define",
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 7,
+            "column": 1,
+            "source_line": "#define X2PY_STRINGIFY(value) #value"
+          }
+        },
+        {
+          "name": "X2PY_API",
+          "value": null,
+          "function_like": false,
+          "directive": "undef",
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 56,
+            "column": 1,
+            "source_line": "#undef X2PY_API"
+          }
+        }
+      ],
+      "includes": [
+        {
+          "target": "stddef.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 4,
+            "column": 1,
+            "source_line": "#include <stddef.h>"
+          }
+        }
+      ],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "X2PY_GENERAL_C_RICHER_FEATURES_H",
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 1,
+            "column": 1,
+            "source_line": "#ifndef X2PY_GENERAL_C_RICHER_FEATURES_H"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "X2PY_ENABLE_FAST_PATH",
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 9,
+            "column": 1,
+            "source_line": "#ifdef X2PY_ENABLE_FAST_PATH"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 11,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 13,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 58,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        }
+      ],
+      "macro_dependencies": [
+        {
+          "name": "X2PY_API",
+          "context": "declaration",
+          "source_location": {
+            "filename": "general/c_richer_features.h",
+            "line": 40,
+            "column": 1,
+            "source_line": "X2PY_API(int) x2py_sort("
+          },
+          "source_text": "X2PY_API(int) x2py_sort(\n    void *items,\n    size_t count,\n    size_t item_size,\n    x2py_compare_fn compare\n)"
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+          "message": "Function-like macro 'X2PY_API' is recorded but not expanded.",
+          "severity": "warning",
+          "location": {
+            "filename": "general/c_richer_features.h",
+            "line": 6,
+            "column": 1,
+            "source_line": "#define X2PY_API(ret) ret"
+          },
+          "unit_kind": "macro",
+          "unit_name": "X2PY_API"
+        },
+        {
+          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+          "message": "Function-like macro 'X2PY_STRINGIFY' is recorded but not expanded.",
+          "severity": "warning",
+          "location": {
+            "filename": "general/c_richer_features.h",
+            "line": 7,
+            "column": 1,
+            "source_line": "#define X2PY_STRINGIFY(value) #value"
+          },
+          "unit_kind": "macro",
+          "unit_name": "X2PY_STRINGIFY"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on function-like macro 'X2PY_API'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "general/c_richer_features.h",
+            "line": 40,
+            "column": 1,
+            "source_line": "X2PY_API(int) x2py_sort("
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "X2PY_API"
+        }
+      ]
+    }
+  },
+  "functions": {
+    "x2py_fast_path": {
+      "name": "x2py_fast_path",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/c_richer_features.h",
+        "line": 10,
+        "column": 1,
+        "source_line": "int x2py_fast_path(void);"
+      },
+      "start": {
+        "filename": "general/c_richer_features.h",
+        "line": 10,
+        "column": 1,
+        "source_line": "int x2py_fast_path(void);"
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "x2py_slow_path": {
+      "name": "x2py_slow_path",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/c_richer_features.h",
+        "line": 12,
+        "column": 1,
+        "source_line": "int x2py_slow_path(void);"
+      },
+      "start": {
+        "filename": "general/c_richer_features.h",
+        "line": 12,
+        "column": 1,
+        "source_line": "int x2py_slow_path(void);"
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "x2py_register_callback": {
+      "name": "x2py_register_callback",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "context",
+          "type": {
+            "reference": "x2py_context_handle"
+          },
+          "declared_type": {
+            "reference": "x2py_context_handle"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "callback",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "void (*callback)(void *userdata, enum x2py_status status)",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CFunctionType",
+                "qualifiers": [],
+                "source_text": "void",
+                "result_type": {
+                  "model": "CVoid",
+                  "qualifiers": [],
+                  "source_text": "void"
+                },
+                "parameter_types": [
+                  {
+                    "model": "CComposedType",
+                    "qualifiers": [],
+                    "source_text": "void *userdata",
+                    "components": [
+                      {
+                        "model": "CPointer",
+                        "qualifiers": [],
+                        "source_text": ""
+                      },
+                      {
+                        "model": "CVoid",
+                        "qualifiers": [],
+                        "source_text": "void"
+                      }
+                    ]
+                  },
+                  {
+                    "reference": "enum x2py_status"
+                  }
+                ],
+                "is_variadic": false,
+                "prototype_style": "prototype"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "void (*callback)(void *userdata, enum x2py_status status)",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CFunctionType",
+                "qualifiers": [],
+                "source_text": "void",
+                "result_type": {
+                  "model": "CVoid",
+                  "qualifiers": [],
+                  "source_text": "void"
+                },
+                "parameter_types": [
+                  {
+                    "model": "CComposedType",
+                    "qualifiers": [],
+                    "source_text": "void *userdata",
+                    "components": [
+                      {
+                        "model": "CPointer",
+                        "qualifiers": [],
+                        "source_text": ""
+                      },
+                      {
+                        "model": "CVoid",
+                        "qualifiers": [],
+                        "source_text": "void"
+                      }
+                    ]
+                  },
+                  {
+                    "reference": "enum x2py_status"
+                  }
+                ],
+                "is_variadic": false,
+                "prototype_style": "prototype"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "userdata",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "void *userdata",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CVoid",
+                "qualifiers": [],
+                "source_text": "void"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "void *userdata",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CVoid",
+                "qualifiers": [],
+                "source_text": "void"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/c_richer_features.h",
+        "line": 47,
+        "column": 1,
+        "source_line": "int x2py_register_callback("
+      },
+      "start": {
+        "filename": "general/c_richer_features.h",
+        "line": 47,
+        "column": 1,
+        "source_line": "int x2py_register_callback("
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "x2py_status_message": {
+      "name": "x2py_status_message",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "const char",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CChar",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const char"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "status",
+          "type": {
+            "reference": "enum x2py_status"
+          },
+          "declared_type": {
+            "reference": "enum x2py_status"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/c_richer_features.h",
+        "line": 53,
+        "column": 1,
+        "source_line": "const char *x2py_status_message(enum x2py_status status);"
+      },
+      "start": {
+        "filename": "general/c_richer_features.h",
+        "line": 53,
+        "column": 1,
+        "source_line": "const char *x2py_status_message(enum x2py_status status);"
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "x2py_fill_matrix": {
+      "name": "x2py_fill_matrix",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "rows",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "cols",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "matrix",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double matrix[static rows][cols]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "cols",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double matrix[static rows][cols]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "rows",
+                "is_static_minimum": true,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "cols",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/c_richer_features.h",
+        "line": 54,
+        "column": 1,
+        "source_line": "void x2py_fill_matrix(size_t rows, size_t cols, double matrix[static rows][cols]);"
+      },
+      "start": {
+        "filename": "general/c_richer_features.h",
+        "line": 54,
+        "column": 1,
+        "source_line": "void x2py_fill_matrix(size_t rows, size_t cols, double matrix[static rows][cols]);"
+      },
+      "end": null,
+      "declaration_locations": []
+    }
+  },
+  "structs": {
+    "x2py_flags": {
+      "reference": "struct x2py_flags"
+    },
+    "x2py_context": {
+      "reference": "struct x2py_context"
+    }
+  },
+  "unions": {
+    "x2py_scalar": {
+      "reference": "union x2py_scalar"
+    }
+  },
+  "enums": {
+    "x2py_status": {
+      "reference": "enum x2py_status"
+    }
+  },
+  "typedefs": {
+    "x2py_compare_fn": {
+      "reference": "x2py_compare_fn"
+    },
+    "x2py_context_handle": {
+      "reference": "x2py_context_handle"
+    }
+  },
+  "variables": {},
+  "macros": {
+    "X2PY_GENERAL_C_RICHER_FEATURES_H": {
+      "name": "X2PY_GENERAL_C_RICHER_FEATURES_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "general/c_richer_features.h",
+        "line": 2,
+        "column": 1,
+        "source_line": "#define X2PY_GENERAL_C_RICHER_FEATURES_H"
+      }
+    },
+    "X2PY_API": {
+      "name": "X2PY_API",
+      "value": null,
+      "function_like": false,
+      "directive": "undef",
+      "source_location": {
+        "filename": "general/c_richer_features.h",
+        "line": 56,
+        "column": 1,
+        "source_line": "#undef X2PY_API"
+      }
+    },
+    "X2PY_STRINGIFY": {
+      "name": "X2PY_STRINGIFY",
+      "value": "#value",
+      "function_like": true,
+      "directive": "define",
+      "source_location": {
+        "filename": "general/c_richer_features.h",
+        "line": 7,
+        "column": 1,
+        "source_line": "#define X2PY_STRINGIFY(value) #value"
+      }
+    }
+  },
+  "includes": {
+    "general/c_richer_features.h:stddef.h": {
+      "target": "stddef.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "general/c_richer_features.h",
+        "line": 4,
+        "column": 1,
+        "source_line": "#include <stddef.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "general/c_richer_features.h": [
+      "x2py_fast_path",
+      "x2py_slow_path",
+      "x2py_register_callback",
+      "x2py_status_message",
+      "x2py_fill_matrix"
+    ]
+  },
+  "enum_constants": {
+    "X2PY_STATUS_OK": {
+      "name": "X2PY_STATUS_OK",
+      "value": "0",
+      "source_location": {
+        "filename": "general/c_richer_features.h",
+        "line": 17,
+        "column": 1,
+        "source_line": "enum x2py_status {"
+      }
+    },
+    "X2PY_STATUS_RETRY": {
+      "name": "X2PY_STATUS_RETRY",
+      "value": "1",
+      "source_location": {
+        "filename": "general/c_richer_features.h",
+        "line": 17,
+        "column": 1,
+        "source_line": "enum x2py_status {"
+      }
+    },
+    "X2PY_STATUS_ERROR": {
+      "name": "X2PY_STATUS_ERROR",
+      "value": "-1",
+      "source_location": {
+        "filename": "general/c_richer_features.h",
+        "line": 17,
+        "column": 1,
+        "source_line": "enum x2py_status {"
+      }
+    }
+  },
+  "include_graph": {
+    "general/c_richer_features.h": []
+  },
+  "system_includes": {
+    "general/c_richer_features.h": [
+      "stddef.h"
+    ]
+  },
+  "unresolved_includes": {
+    "general/c_richer_features.h": []
+  },
+  "header_source_pairs": {
+    "general/c_richer_features.h": []
+  },
+  "diagnostics": [
+    {
+      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+      "message": "Function-like macro 'X2PY_API' is recorded but not expanded.",
+      "severity": "warning",
+      "location": {
+        "filename": "general/c_richer_features.h",
+        "line": 6,
+        "column": 1,
+        "source_line": "#define X2PY_API(ret) ret"
+      },
+      "unit_kind": "macro",
+      "unit_name": "X2PY_API"
+    },
+    {
+      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+      "message": "Function-like macro 'X2PY_STRINGIFY' is recorded but not expanded.",
+      "severity": "warning",
+      "location": {
+        "filename": "general/c_richer_features.h",
+        "line": 7,
+        "column": 1,
+        "source_line": "#define X2PY_STRINGIFY(value) #value"
+      },
+      "unit_kind": "macro",
+      "unit_name": "X2PY_STRINGIFY"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on function-like macro 'X2PY_API'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "general/c_richer_features.h",
+        "line": 40,
+        "column": 1,
+        "source_line": "X2PY_API(int) x2py_sort("
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "X2PY_API"
+    }
+  ]
+}

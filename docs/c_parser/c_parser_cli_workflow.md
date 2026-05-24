@@ -191,7 +191,8 @@ Potential later flags:
 `--define` and `--undef` should belong to compiler-assisted preprocessing, not
 to raw parser-side macro evaluation. Raw C mode records directives and parses
 ordinary visible declarations only; it does not select `#if` branches or expand
-macros.
+macros. A declaration prefixed by an unexpanded object-like macro is deferred
+as macro-dependent rather than treated as an invalid type sequence.
 
 ## Current Partial Behavior
 
@@ -270,8 +271,9 @@ For raw directives, the same JSON shape is used, but `includes`, `macros`,
 `raw_directives`, `macro_dependencies`, and `diagnostics` may contain populated
 model dictionaries. Function-like macros are recorded as macro metadata and
 also produce a non-fatal `C_UNSUPPORTED_FUNCTION_LIKE_MACRO` diagnostic.
-Macro-shaped declarations are marked through `macro_dependencies` without
-being parsed as expanded declarations. Local quoted includes are resolved
+Function-like declaration wrappers and object-like declaration prefixes are
+marked through `macro_dependencies` without being parsed as expanded
+declarations. Local quoted includes are resolved
 relative to the current file or configured include dirs when possible;
 unresolved local includes produce `C_UNRESOLVED_INCLUDE` diagnostics instead
 of hard failures.
@@ -418,6 +420,7 @@ The active CLI/parser tests cover the current partial subset:
 - `--language c --parse --debug-traceback` is accepted.
 - raw comment stripping, line-continuation folding, top-level splitting,
   include collection, simple macro collection, function-like macro diagnostics,
+  object-like macro declaration-prefix deferral,
   conditional non-selection, simple declarations, variables, typedefs,
   parenthesized declarators, function pointer typedefs/parameters, recursive
   declarator combinations, concrete declaration objects, aggregate

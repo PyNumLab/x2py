@@ -1,0 +1,994 @@
+{
+  "files": {
+    "general/mesh.h": {
+      "filename": "general/mesh.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "node_move",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "node",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct node *node",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CStruct",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "name": "node",
+                    "members": [
+                      {
+                        "name": "id",
+                        "type": {
+                          "model": "CInt",
+                          "qualifiers": [],
+                          "source_text": "int id"
+                        },
+                        "storage": [],
+                        "initializer": null,
+                        "bit_width": null,
+                        "source_location": {
+                          "filename": "general/mesh.h",
+                          "line": 7,
+                          "column": 5,
+                          "source_line": "    int id;"
+                        },
+                        "callback_policy": null,
+                        "declaration_locations": []
+                      },
+                      {
+                        "name": "xyz",
+                        "type": {
+                          "model": "CComposedType",
+                          "qualifiers": [],
+                          "source_text": "double xyz[3]",
+                          "components": [
+                            {
+                              "model": "CArray",
+                              "qualifiers": [],
+                              "source_text": "",
+                              "bound": "3",
+                              "is_static_minimum": false,
+                              "is_variable_length": false,
+                              "is_flexible": false
+                            },
+                            {
+                              "model": "CDouble",
+                              "qualifiers": [],
+                              "source_text": "double"
+                            }
+                          ]
+                        },
+                        "storage": [],
+                        "initializer": null,
+                        "bit_width": null,
+                        "source_location": {
+                          "filename": "general/mesh.h",
+                          "line": 8,
+                          "column": 5,
+                          "source_line": "    double xyz[3];"
+                        },
+                        "callback_policy": null,
+                        "declaration_locations": []
+                      }
+                    ],
+                    "anonymous_id": null,
+                    "is_incomplete": false,
+                    "source_location": {
+                      "filename": "general/mesh.h",
+                      "line": 6,
+                      "column": 1,
+                      "source_line": "struct node {"
+                    }
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct node *node",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "struct node"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "delta",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double delta[static 3]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double delta[static 3]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/mesh.h",
+            "line": 19,
+            "column": 1,
+            "source_line": "void node_move(struct node *node, const double delta[static 3]);"
+          },
+          "start": {
+            "filename": "general/mesh.h",
+            "line": 19,
+            "column": 1,
+            "source_line": "void node_move(struct node *node, const double delta[static 3]);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "mesh_init",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "mesh",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct mesh *mesh",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CStruct",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "name": "mesh",
+                    "members": [
+                      {
+                        "name": "nnodes",
+                        "type": {
+                          "model": "CTypedef",
+                          "qualifiers": [],
+                          "source_text": "size_t nnodes",
+                          "name": "size_t",
+                          "type": null,
+                          "source_location": null,
+                          "declaration_locations": []
+                        },
+                        "storage": [],
+                        "initializer": null,
+                        "bit_width": null,
+                        "source_location": {
+                          "filename": "general/mesh.h",
+                          "line": 12,
+                          "column": 5,
+                          "source_line": "    size_t nnodes;"
+                        },
+                        "callback_policy": null,
+                        "declaration_locations": []
+                      },
+                      {
+                        "name": "nodes",
+                        "type": {
+                          "model": "CComposedType",
+                          "qualifiers": [],
+                          "source_text": "struct node *nodes",
+                          "components": [
+                            {
+                              "model": "CPointer",
+                              "qualifiers": [],
+                              "source_text": ""
+                            },
+                            {
+                              "reference": "struct node"
+                            }
+                          ]
+                        },
+                        "storage": [],
+                        "initializer": null,
+                        "bit_width": null,
+                        "source_location": {
+                          "filename": "general/mesh.h",
+                          "line": 13,
+                          "column": 5,
+                          "source_line": "    struct node *nodes;"
+                        },
+                        "callback_policy": null,
+                        "declaration_locations": []
+                      }
+                    ],
+                    "anonymous_id": null,
+                    "is_incomplete": false,
+                    "source_location": {
+                      "filename": "general/mesh.h",
+                      "line": 11,
+                      "column": 1,
+                      "source_line": "struct mesh {"
+                    }
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct mesh *mesh",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "struct mesh"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "nnodes",
+              "type": {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "size_t nnodes",
+                "name": "size_t",
+                "type": null,
+                "source_location": null,
+                "declaration_locations": []
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/mesh.h",
+            "line": 20,
+            "column": 1,
+            "source_line": "int mesh_init(struct mesh *mesh, size_t nnodes);"
+          },
+          "start": {
+            "filename": "general/mesh.h",
+            "line": 20,
+            "column": 1,
+            "source_line": "int mesh_init(struct mesh *mesh, size_t nnodes);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "mesh_clear",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "mesh",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct mesh *mesh",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "struct mesh"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct mesh *mesh",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "struct mesh"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/mesh.h",
+            "line": 21,
+            "column": 1,
+            "source_line": "void mesh_clear(struct mesh *mesh);"
+          },
+          "start": {
+            "filename": "general/mesh.h",
+            "line": 21,
+            "column": 1,
+            "source_line": "void mesh_clear(struct mesh *mesh);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "mesh_node_at",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct node",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct node"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "mesh",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct mesh *mesh",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "struct mesh"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct mesh *mesh",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "struct mesh"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "index",
+              "type": {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "size_t index",
+                "name": "size_t",
+                "type": null,
+                "source_location": null,
+                "declaration_locations": []
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/mesh.h",
+            "line": 22,
+            "column": 1,
+            "source_line": "struct node *mesh_node_at(struct mesh *mesh, size_t index);"
+          },
+          "start": {
+            "filename": "general/mesh.h",
+            "line": 22,
+            "column": 1,
+            "source_line": "struct node *mesh_node_at(struct mesh *mesh, size_t index);"
+          },
+          "end": null,
+          "declaration_locations": []
+        }
+      ],
+      "structs": [
+        {
+          "reference": "struct node"
+        },
+        {
+          "reference": "struct mesh"
+        }
+      ],
+      "unions": [],
+      "enums": [],
+      "typedefs": [
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "node",
+          "name": "node",
+          "type": {
+            "reference": "struct node"
+          },
+          "source_location": {
+            "filename": "general/mesh.h",
+            "line": 16,
+            "column": 1,
+            "source_line": "typedef struct node node;"
+          },
+          "declaration_locations": []
+        },
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "mesh",
+          "name": "mesh",
+          "type": {
+            "reference": "struct mesh"
+          },
+          "source_location": {
+            "filename": "general/mesh.h",
+            "line": 17,
+            "column": 1,
+            "source_line": "typedef struct mesh mesh;"
+          },
+          "declaration_locations": []
+        }
+      ],
+      "variables": [],
+      "macros": [
+        {
+          "name": "X2PY_GENERAL_MESH_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "general/mesh.h",
+            "line": 2,
+            "column": 1,
+            "source_line": "#define X2PY_GENERAL_MESH_H"
+          }
+        }
+      ],
+      "includes": [
+        {
+          "target": "stddef.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "general/mesh.h",
+            "line": 4,
+            "column": 1,
+            "source_line": "#include <stddef.h>"
+          }
+        }
+      ],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "X2PY_GENERAL_MESH_H",
+          "source_location": {
+            "filename": "general/mesh.h",
+            "line": 1,
+            "column": 1,
+            "source_line": "#ifndef X2PY_GENERAL_MESH_H"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "general/mesh.h",
+            "line": 24,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        }
+      ],
+      "macro_dependencies": [],
+      "diagnostics": []
+    }
+  },
+  "functions": {
+    "node_move": {
+      "name": "node_move",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "node",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct node *node",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct node"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct node *node",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct node"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "delta",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double delta[static 3]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double delta[static 3]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": true,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/mesh.h",
+        "line": 19,
+        "column": 1,
+        "source_line": "void node_move(struct node *node, const double delta[static 3]);"
+      },
+      "start": {
+        "filename": "general/mesh.h",
+        "line": 19,
+        "column": 1,
+        "source_line": "void node_move(struct node *node, const double delta[static 3]);"
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "mesh_init": {
+      "name": "mesh_init",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "mesh",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct mesh *mesh",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct mesh"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct mesh *mesh",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct mesh"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "nnodes",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/mesh.h",
+        "line": 20,
+        "column": 1,
+        "source_line": "int mesh_init(struct mesh *mesh, size_t nnodes);"
+      },
+      "start": {
+        "filename": "general/mesh.h",
+        "line": 20,
+        "column": 1,
+        "source_line": "int mesh_init(struct mesh *mesh, size_t nnodes);"
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "mesh_clear": {
+      "name": "mesh_clear",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "mesh",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct mesh *mesh",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct mesh"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct mesh *mesh",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct mesh"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/mesh.h",
+        "line": 21,
+        "column": 1,
+        "source_line": "void mesh_clear(struct mesh *mesh);"
+      },
+      "start": {
+        "filename": "general/mesh.h",
+        "line": 21,
+        "column": 1,
+        "source_line": "void mesh_clear(struct mesh *mesh);"
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "mesh_node_at": {
+      "name": "mesh_node_at",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "struct node",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "struct node"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "mesh",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct mesh *mesh",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct mesh"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct mesh *mesh",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct mesh"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "index",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/mesh.h",
+        "line": 22,
+        "column": 1,
+        "source_line": "struct node *mesh_node_at(struct mesh *mesh, size_t index);"
+      },
+      "start": {
+        "filename": "general/mesh.h",
+        "line": 22,
+        "column": 1,
+        "source_line": "struct node *mesh_node_at(struct mesh *mesh, size_t index);"
+      },
+      "end": null,
+      "declaration_locations": []
+    }
+  },
+  "structs": {
+    "node": {
+      "reference": "struct node"
+    },
+    "mesh": {
+      "reference": "struct mesh"
+    }
+  },
+  "unions": {},
+  "enums": {},
+  "typedefs": {
+    "node": {
+      "reference": "node"
+    },
+    "mesh": {
+      "reference": "mesh"
+    }
+  },
+  "variables": {},
+  "macros": {
+    "X2PY_GENERAL_MESH_H": {
+      "name": "X2PY_GENERAL_MESH_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "general/mesh.h",
+        "line": 2,
+        "column": 1,
+        "source_line": "#define X2PY_GENERAL_MESH_H"
+      }
+    }
+  },
+  "includes": {
+    "general/mesh.h:stddef.h": {
+      "target": "stddef.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "general/mesh.h",
+        "line": 4,
+        "column": 1,
+        "source_line": "#include <stddef.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "general/mesh.h": [
+      "node_move",
+      "mesh_init",
+      "mesh_clear",
+      "mesh_node_at"
+    ]
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "general/mesh.h": []
+  },
+  "system_includes": {
+    "general/mesh.h": [
+      "stddef.h"
+    ]
+  },
+  "unresolved_includes": {
+    "general/mesh.h": []
+  },
+  "header_source_pairs": {
+    "general/mesh.h": []
+  },
+  "diagnostics": []
+}

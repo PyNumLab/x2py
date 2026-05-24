@@ -1,0 +1,4093 @@
+{
+  "files": {
+    "stb/stb_include.h": {
+      "filename": "stb/stb_include.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "stb_include_string",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "str",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *str",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *str",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "inject",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *inject",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *inject",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "path_to_includes",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *path_to_includes",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *path_to_includes",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "filename",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *filename",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *filename",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "error",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char error[256]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char error[256]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "256",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 184,
+            "column": 1,
+            "source_line": "char *stb_include_string(char *str, char *inject, char *path_to_includes, char *filename, char error[256])"
+          },
+          "start": {
+            "filename": "stb/stb_include.h",
+            "line": 184,
+            "column": 1,
+            "source_line": "char *stb_include_string(char *str, char *inject, char *path_to_includes, char *filename, char error[256])"
+          },
+          "end": {
+            "filename": "stb/stb_include.h",
+            "line": 251,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "stb/stb_include.h",
+              "line": 41,
+              "column": 1,
+              "source_line": "char *stb_include_string(char *str, char *inject, char *path_to_includes, char *filename_for_line_directive, char error[256]);"
+            }
+          ]
+        },
+        {
+          "name": "stb_include_strings",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "strs",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char **strs",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char **strs",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "count",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int count"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int count"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "inject",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *inject",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *inject",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "path_to_includes",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *path_to_includes",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *path_to_includes",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "filename",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *filename",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *filename",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "error",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char error[256]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char error[256]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "256",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 253,
+            "column": 1,
+            "source_line": "char *stb_include_strings(char **strs, int count, char *inject, char *path_to_includes, char *filename, char error[256])"
+          },
+          "start": {
+            "filename": "stb/stb_include.h",
+            "line": 253,
+            "column": 1,
+            "source_line": "char *stb_include_strings(char **strs, int count, char *inject, char *path_to_includes, char *filename, char error[256])"
+          },
+          "end": {
+            "filename": "stb/stb_include.h",
+            "line": 270,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "stb/stb_include.h",
+              "line": 44,
+              "column": 1,
+              "source_line": "char *stb_include_strings(char **strs, int count, char *inject, char *path_to_includes, char *filename_for_line_directive, char error[256]);"
+            }
+          ]
+        },
+        {
+          "name": "stb_include_file",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "filename",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *filename",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *filename",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "inject",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *inject",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *inject",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "path_to_includes",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *path_to_includes",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *path_to_includes",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "error",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char error[256]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char error[256]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "256",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 272,
+            "column": 1,
+            "source_line": "char *stb_include_file(char *filename, char *inject, char *path_to_includes, char error[256])"
+          },
+          "start": {
+            "filename": "stb/stb_include.h",
+            "line": 272,
+            "column": 1,
+            "source_line": "char *stb_include_file(char *filename, char *inject, char *path_to_includes, char error[256])"
+          },
+          "end": {
+            "filename": "stb/stb_include.h",
+            "line": 286,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "stb/stb_include.h",
+              "line": 48,
+              "column": 1,
+              "source_line": "char *stb_include_file(char *filename, char *inject, char *path_to_includes, char error[256]);"
+            }
+          ]
+        },
+        {
+          "name": "stb_include_load_file",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "filename",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *filename",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *filename",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "plen",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "size_t *plen",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "size_t",
+                    "name": "size_t",
+                    "type": null,
+                    "source_location": null,
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "size_t *plen",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "size_t"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 59,
+            "column": 1,
+            "source_line": "static char *stb_include_load_file(char *filename, size_t *plen)"
+          },
+          "start": {
+            "filename": "stb/stb_include.h",
+            "line": 59,
+            "column": 1,
+            "source_line": "static char *stb_include_load_file(char *filename, size_t *plen)"
+          },
+          "end": {
+            "filename": "stb/stb_include.h",
+            "line": 75,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_include_append_include",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "include_info",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "include_info",
+                "name": "include_info",
+                "type": {
+                  "model": "CStruct",
+                  "qualifiers": [],
+                  "source_text": "",
+                  "name": null,
+                  "members": [
+                    {
+                      "name": "offset",
+                      "type": {
+                        "model": "CInt",
+                        "qualifiers": [],
+                        "source_text": "int offset"
+                      },
+                      "storage": [],
+                      "initializer": null,
+                      "bit_width": null,
+                      "source_location": {
+                        "filename": "stb/stb_include.h",
+                        "line": 79,
+                        "column": 4,
+                        "source_line": "   int offset;"
+                      },
+                      "callback_policy": null,
+                      "declaration_locations": []
+                    },
+                    {
+                      "name": "end",
+                      "type": {
+                        "model": "CInt",
+                        "qualifiers": [],
+                        "source_text": "int end"
+                      },
+                      "storage": [],
+                      "initializer": null,
+                      "bit_width": null,
+                      "source_location": {
+                        "filename": "stb/stb_include.h",
+                        "line": 80,
+                        "column": 4,
+                        "source_line": "   int end;"
+                      },
+                      "callback_policy": null,
+                      "declaration_locations": []
+                    },
+                    {
+                      "name": "filename",
+                      "type": {
+                        "model": "CComposedType",
+                        "qualifiers": [],
+                        "source_text": "char *filename",
+                        "components": [
+                          {
+                            "model": "CPointer",
+                            "qualifiers": [],
+                            "source_text": ""
+                          },
+                          {
+                            "model": "CChar",
+                            "qualifiers": [],
+                            "source_text": "char"
+                          }
+                        ]
+                      },
+                      "storage": [],
+                      "initializer": null,
+                      "bit_width": null,
+                      "source_location": {
+                        "filename": "stb/stb_include.h",
+                        "line": 81,
+                        "column": 4,
+                        "source_line": "   char *filename;"
+                      },
+                      "callback_policy": null,
+                      "declaration_locations": []
+                    },
+                    {
+                      "name": "next_line_after",
+                      "type": {
+                        "model": "CInt",
+                        "qualifiers": [],
+                        "source_text": "int next_line_after"
+                      },
+                      "storage": [],
+                      "initializer": null,
+                      "bit_width": null,
+                      "source_location": {
+                        "filename": "stb/stb_include.h",
+                        "line": 82,
+                        "column": 4,
+                        "source_line": "   int next_line_after;"
+                      },
+                      "callback_policy": null,
+                      "declaration_locations": []
+                    }
+                  ],
+                  "anonymous_id": "struct@stb/stb_include.h:77:1",
+                  "is_incomplete": false,
+                  "source_location": {
+                    "filename": "stb/stb_include.h",
+                    "line": 77,
+                    "column": 1,
+                    "source_line": "typedef struct"
+                  }
+                },
+                "source_location": {
+                  "filename": "stb/stb_include.h",
+                  "line": 77,
+                  "column": 1,
+                  "source_line": "typedef struct"
+                },
+                "declaration_locations": []
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "array",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "include_info *array",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "include_info"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "include_info *array",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "include_info"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "len",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int len"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int len"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "offset",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int offset"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int offset"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "end",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int end"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int end"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "filename",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *filename",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *filename",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "next_line",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int next_line"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int next_line"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 85,
+            "column": 1,
+            "source_line": "static include_info *stb_include_append_include(include_info *array, int len, int offset, int end, char *filename, int next_line)"
+          },
+          "start": {
+            "filename": "stb/stb_include.h",
+            "line": 85,
+            "column": 1,
+            "source_line": "static include_info *stb_include_append_include(include_info *array, int len, int offset, int end, char *filename, int next_line)"
+          },
+          "end": {
+            "filename": "stb/stb_include.h",
+            "line": 93,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_include_free_includes",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "array",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "include_info *array",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "include_info"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "include_info *array",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "include_info"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "len",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int len"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int len"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 95,
+            "column": 1,
+            "source_line": "static void stb_include_free_includes(include_info *array, int len)"
+          },
+          "start": {
+            "filename": "stb/stb_include.h",
+            "line": 95,
+            "column": 1,
+            "source_line": "static void stb_include_free_includes(include_info *array, int len)"
+          },
+          "end": {
+            "filename": "stb/stb_include.h",
+            "line": 101,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_include_isspace",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "ch",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int ch"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int ch"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 103,
+            "column": 1,
+            "source_line": "static int stb_include_isspace(int ch)"
+          },
+          "start": {
+            "filename": "stb/stb_include.h",
+            "line": 103,
+            "column": 1,
+            "source_line": "static int stb_include_isspace(int ch)"
+          },
+          "end": {
+            "filename": "stb/stb_include.h",
+            "line": 106,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_include_find_includes",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "text",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *text",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *text",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "plist",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "include_info **plist",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "include_info"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "include_info **plist",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "include_info"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 109,
+            "column": 1,
+            "source_line": "static int stb_include_find_includes(char *text, include_info **plist)"
+          },
+          "start": {
+            "filename": "stb/stb_include.h",
+            "line": 109,
+            "column": 1,
+            "source_line": "static int stb_include_find_includes(char *text, include_info **plist)"
+          },
+          "end": {
+            "filename": "stb/stb_include.h",
+            "line": 158,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_include_itoa",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "str",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char str[9]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char str[9]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "9",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 161,
+            "column": 1,
+            "source_line": "static void stb_include_itoa(char str[9], int n)"
+          },
+          "start": {
+            "filename": "stb/stb_include.h",
+            "line": 161,
+            "column": 1,
+            "source_line": "static void stb_include_itoa(char str[9], int n)"
+          },
+          "end": {
+            "filename": "stb/stb_include.h",
+            "line": 174,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_include_append",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "str",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *str",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *str",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "curlen",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "size_t *curlen",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "size_t",
+                    "name": "size_t",
+                    "type": null,
+                    "source_location": null,
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "size_t *curlen",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "size_t"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "addstr",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *addstr",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *addstr",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "addlen",
+              "type": {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "size_t addlen",
+                "name": "size_t",
+                "type": null,
+                "source_location": null,
+                "declaration_locations": []
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 176,
+            "column": 1,
+            "source_line": "static char *stb_include_append(char *str, size_t *curlen, char *addstr, size_t addlen)"
+          },
+          "start": {
+            "filename": "stb/stb_include.h",
+            "line": 176,
+            "column": 1,
+            "source_line": "static char *stb_include_append(char *str, size_t *curlen, char *addstr, size_t addlen)"
+          },
+          "end": {
+            "filename": "stb/stb_include.h",
+            "line": 182,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_include_preloaded",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "str",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *str",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *str",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "inject",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *inject",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *inject",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "includes",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *includes[][2]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "2",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char *includes[][2]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": null,
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "2",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "error",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char error[256]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char error[256]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "256",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 289,
+            "column": 1,
+            "source_line": "char *stb_include_preloaded(char *str, char *inject, char *includes[][2], char error[256])"
+          },
+          "start": {
+            "filename": "stb/stb_include.h",
+            "line": 289,
+            "column": 1,
+            "source_line": "char *stb_include_preloaded(char *str, char *inject, char *includes[][2], char error[256])"
+          },
+          "end": {
+            "filename": "stb/stb_include.h",
+            "line": 292,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        }
+      ],
+      "structs": [
+        {
+          "reference": "struct@stb/stb_include.h:77:1"
+        }
+      ],
+      "unions": [],
+      "enums": [],
+      "typedefs": [
+        {
+          "reference": "include_info"
+        }
+      ],
+      "variables": [],
+      "macros": [
+        {
+          "name": "STB_INCLUDE_STB_INCLUDE_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 38,
+            "column": 1,
+            "source_line": "#define STB_INCLUDE_STB_INCLUDE_H"
+          }
+        }
+      ],
+      "includes": [
+        {
+          "target": "stdio.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 55,
+            "column": 1,
+            "source_line": "#include <stdio.h>"
+          }
+        },
+        {
+          "target": "stdlib.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 56,
+            "column": 1,
+            "source_line": "#include <stdlib.h>"
+          }
+        },
+        {
+          "target": "string.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 57,
+            "column": 1,
+            "source_line": "#include <string.h>"
+          }
+        }
+      ],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "STB_INCLUDE_STB_INCLUDE_H",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 37,
+            "column": 1,
+            "source_line": "#ifndef STB_INCLUDE_STB_INCLUDE_H"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 50,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_INCLUDE_IMPLEMENTATION",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 53,
+            "column": 1,
+            "source_line": "#ifdef STB_INCLUDE_IMPLEMENTATION"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "STB_INCLUDE_LINE_NONE",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 195,
+            "column": 7,
+            "source_line": "      #ifndef STB_INCLUDE_LINE_NONE"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_INCLUDE_LINE_GLSL",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 196,
+            "column": 7,
+            "source_line": "      #ifdef STB_INCLUDE_LINE_GLSL"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 198,
+            "column": 7,
+            "source_line": "      #endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_INCLUDE_LINE_GLSL",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 203,
+            "column": 10,
+            "source_line": "         #ifdef STB_INCLUDE_LINE_GLSL"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 205,
+            "column": 10,
+            "source_line": "         #else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 212,
+            "column": 10,
+            "source_line": "         #endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 216,
+            "column": 7,
+            "source_line": "      #endif"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "STB_INCLUDE_LINE_NONE",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 234,
+            "column": 7,
+            "source_line": "      #ifndef STB_INCLUDE_LINE_NONE"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_INCLUDE_LINE_GLSL",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 238,
+            "column": 7,
+            "source_line": "      #ifdef STB_INCLUDE_LINE_GLSL"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 240,
+            "column": 7,
+            "source_line": "      #else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 242,
+            "column": 7,
+            "source_line": "      #endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 245,
+            "column": 7,
+            "source_line": "      #endif"
+          }
+        },
+        {
+          "directive": "if",
+          "argument": "0",
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 288,
+            "column": 1,
+            "source_line": "#if 0 // @TODO, GL_ARB_shader_language_include-style system that doesn't touch filesystem"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 293,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_include.h",
+            "line": 295,
+            "column": 1,
+            "source_line": "#endif // STB_INCLUDE_IMPLEMENTATION"
+          }
+        }
+      ],
+      "macro_dependencies": [],
+      "diagnostics": []
+    }
+  },
+  "functions": {
+    "stb_include_string": {
+      "name": "stb_include_string",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "char",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CChar",
+            "qualifiers": [],
+            "source_text": "char"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "str",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *str",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *str",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "inject",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *inject",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *inject",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "path_to_includes",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *path_to_includes",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *path_to_includes",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "filename",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *filename",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *filename",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "error",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char error[256]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char error[256]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "256",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 184,
+        "column": 1,
+        "source_line": "char *stb_include_string(char *str, char *inject, char *path_to_includes, char *filename, char error[256])"
+      },
+      "start": {
+        "filename": "stb/stb_include.h",
+        "line": 184,
+        "column": 1,
+        "source_line": "char *stb_include_string(char *str, char *inject, char *path_to_includes, char *filename, char error[256])"
+      },
+      "end": {
+        "filename": "stb/stb_include.h",
+        "line": 251,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "stb/stb_include.h",
+          "line": 41,
+          "column": 1,
+          "source_line": "char *stb_include_string(char *str, char *inject, char *path_to_includes, char *filename_for_line_directive, char error[256]);"
+        }
+      ]
+    },
+    "stb_include_strings": {
+      "name": "stb_include_strings",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "char",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CChar",
+            "qualifiers": [],
+            "source_text": "char"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "strs",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char **strs",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char **strs",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "count",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int count"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int count"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "inject",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *inject",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *inject",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "path_to_includes",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *path_to_includes",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *path_to_includes",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "filename",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *filename",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *filename",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "error",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char error[256]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char error[256]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "256",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 253,
+        "column": 1,
+        "source_line": "char *stb_include_strings(char **strs, int count, char *inject, char *path_to_includes, char *filename, char error[256])"
+      },
+      "start": {
+        "filename": "stb/stb_include.h",
+        "line": 253,
+        "column": 1,
+        "source_line": "char *stb_include_strings(char **strs, int count, char *inject, char *path_to_includes, char *filename, char error[256])"
+      },
+      "end": {
+        "filename": "stb/stb_include.h",
+        "line": 270,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "stb/stb_include.h",
+          "line": 44,
+          "column": 1,
+          "source_line": "char *stb_include_strings(char **strs, int count, char *inject, char *path_to_includes, char *filename_for_line_directive, char error[256]);"
+        }
+      ]
+    },
+    "stb_include_file": {
+      "name": "stb_include_file",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "char",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CChar",
+            "qualifiers": [],
+            "source_text": "char"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "filename",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *filename",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *filename",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "inject",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *inject",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *inject",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "path_to_includes",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *path_to_includes",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *path_to_includes",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "error",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char error[256]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char error[256]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "256",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 272,
+        "column": 1,
+        "source_line": "char *stb_include_file(char *filename, char *inject, char *path_to_includes, char error[256])"
+      },
+      "start": {
+        "filename": "stb/stb_include.h",
+        "line": 272,
+        "column": 1,
+        "source_line": "char *stb_include_file(char *filename, char *inject, char *path_to_includes, char error[256])"
+      },
+      "end": {
+        "filename": "stb/stb_include.h",
+        "line": 286,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "stb/stb_include.h",
+          "line": 48,
+          "column": 1,
+          "source_line": "char *stb_include_file(char *filename, char *inject, char *path_to_includes, char error[256]);"
+        }
+      ]
+    },
+    "stb_include_load_file": {
+      "name": "stb_include_load_file",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "char",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CChar",
+            "qualifiers": [],
+            "source_text": "char"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "filename",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *filename",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *filename",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "plen",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "size_t *plen",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "size_t"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "size_t *plen",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "size_t"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 59,
+        "column": 1,
+        "source_line": "static char *stb_include_load_file(char *filename, size_t *plen)"
+      },
+      "start": {
+        "filename": "stb/stb_include.h",
+        "line": 59,
+        "column": 1,
+        "source_line": "static char *stb_include_load_file(char *filename, size_t *plen)"
+      },
+      "end": {
+        "filename": "stb/stb_include.h",
+        "line": 75,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_include_append_include": {
+      "name": "stb_include_append_include",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "include_info",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "include_info"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "array",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "include_info *array",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "include_info"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "include_info *array",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "include_info"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "len",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int len"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int len"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "offset",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int offset"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int offset"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "end",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int end"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int end"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "filename",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *filename",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *filename",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "next_line",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int next_line"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int next_line"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 85,
+        "column": 1,
+        "source_line": "static include_info *stb_include_append_include(include_info *array, int len, int offset, int end, char *filename, int next_line)"
+      },
+      "start": {
+        "filename": "stb/stb_include.h",
+        "line": 85,
+        "column": 1,
+        "source_line": "static include_info *stb_include_append_include(include_info *array, int len, int offset, int end, char *filename, int next_line)"
+      },
+      "end": {
+        "filename": "stb/stb_include.h",
+        "line": 93,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_include_free_includes": {
+      "name": "stb_include_free_includes",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "array",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "include_info *array",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "include_info"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "include_info *array",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "include_info"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "len",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int len"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int len"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 95,
+        "column": 1,
+        "source_line": "static void stb_include_free_includes(include_info *array, int len)"
+      },
+      "start": {
+        "filename": "stb/stb_include.h",
+        "line": 95,
+        "column": 1,
+        "source_line": "static void stb_include_free_includes(include_info *array, int len)"
+      },
+      "end": {
+        "filename": "stb/stb_include.h",
+        "line": 101,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_include_isspace": {
+      "name": "stb_include_isspace",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "ch",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int ch"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int ch"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 103,
+        "column": 1,
+        "source_line": "static int stb_include_isspace(int ch)"
+      },
+      "start": {
+        "filename": "stb/stb_include.h",
+        "line": 103,
+        "column": 1,
+        "source_line": "static int stb_include_isspace(int ch)"
+      },
+      "end": {
+        "filename": "stb/stb_include.h",
+        "line": 106,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_include_find_includes": {
+      "name": "stb_include_find_includes",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "text",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *text",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *text",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "plist",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "include_info **plist",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "include_info"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "include_info **plist",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "include_info"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 109,
+        "column": 1,
+        "source_line": "static int stb_include_find_includes(char *text, include_info **plist)"
+      },
+      "start": {
+        "filename": "stb/stb_include.h",
+        "line": 109,
+        "column": 1,
+        "source_line": "static int stb_include_find_includes(char *text, include_info **plist)"
+      },
+      "end": {
+        "filename": "stb/stb_include.h",
+        "line": 158,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_include_itoa": {
+      "name": "stb_include_itoa",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "str",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char str[9]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char str[9]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "9",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "n",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 161,
+        "column": 1,
+        "source_line": "static void stb_include_itoa(char str[9], int n)"
+      },
+      "start": {
+        "filename": "stb/stb_include.h",
+        "line": 161,
+        "column": 1,
+        "source_line": "static void stb_include_itoa(char str[9], int n)"
+      },
+      "end": {
+        "filename": "stb/stb_include.h",
+        "line": 174,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_include_append": {
+      "name": "stb_include_append",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "char",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CChar",
+            "qualifiers": [],
+            "source_text": "char"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "str",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *str",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *str",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "curlen",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "size_t *curlen",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "size_t"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "size_t *curlen",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "size_t"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "addstr",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *addstr",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *addstr",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "addlen",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 176,
+        "column": 1,
+        "source_line": "static char *stb_include_append(char *str, size_t *curlen, char *addstr, size_t addlen)"
+      },
+      "start": {
+        "filename": "stb/stb_include.h",
+        "line": 176,
+        "column": 1,
+        "source_line": "static char *stb_include_append(char *str, size_t *curlen, char *addstr, size_t addlen)"
+      },
+      "end": {
+        "filename": "stb/stb_include.h",
+        "line": 182,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_include_preloaded": {
+      "name": "stb_include_preloaded",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "char",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CChar",
+            "qualifiers": [],
+            "source_text": "char"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "str",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *str",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *str",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "inject",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *inject",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *inject",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "includes",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *includes[][2]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "2",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char *includes[][2]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": null,
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "2",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "error",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char error[256]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char error[256]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "256",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 289,
+        "column": 1,
+        "source_line": "char *stb_include_preloaded(char *str, char *inject, char *includes[][2], char error[256])"
+      },
+      "start": {
+        "filename": "stb/stb_include.h",
+        "line": 289,
+        "column": 1,
+        "source_line": "char *stb_include_preloaded(char *str, char *inject, char *includes[][2], char error[256])"
+      },
+      "end": {
+        "filename": "stb/stb_include.h",
+        "line": 292,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    }
+  },
+  "structs": {},
+  "unions": {},
+  "enums": {},
+  "typedefs": {
+    "include_info": {
+      "reference": "include_info"
+    }
+  },
+  "variables": {},
+  "macros": {
+    "STB_INCLUDE_STB_INCLUDE_H": {
+      "name": "STB_INCLUDE_STB_INCLUDE_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 38,
+        "column": 1,
+        "source_line": "#define STB_INCLUDE_STB_INCLUDE_H"
+      }
+    }
+  },
+  "includes": {
+    "stb/stb_include.h:stdio.h": {
+      "target": "stdio.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 55,
+        "column": 1,
+        "source_line": "#include <stdio.h>"
+      }
+    },
+    "stb/stb_include.h:stdlib.h": {
+      "target": "stdlib.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 56,
+        "column": 1,
+        "source_line": "#include <stdlib.h>"
+      }
+    },
+    "stb/stb_include.h:string.h": {
+      "target": "string.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_include.h",
+        "line": 57,
+        "column": 1,
+        "source_line": "#include <string.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "stb/stb_include.h": [
+      "stb_include_string",
+      "stb_include_strings",
+      "stb_include_file",
+      "stb_include_load_file",
+      "stb_include_append_include",
+      "stb_include_free_includes",
+      "stb_include_isspace",
+      "stb_include_find_includes",
+      "stb_include_itoa",
+      "stb_include_append",
+      "stb_include_preloaded"
+    ]
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "stb/stb_include.h": []
+  },
+  "system_includes": {
+    "stb/stb_include.h": [
+      "stdio.h",
+      "stdlib.h",
+      "string.h"
+    ]
+  },
+  "unresolved_includes": {
+    "stb/stb_include.h": []
+  },
+  "header_source_pairs": {
+    "stb/stb_include.h": []
+  },
+  "diagnostics": []
+}

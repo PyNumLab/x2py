@@ -1,0 +1,4213 @@
+{
+  "files": {
+    "stb/stb_dxt.h": {
+      "filename": "stb/stb_dxt.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "stb__Mul8Bit",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "a",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int a"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int a"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "b",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int b"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int b"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 164,
+            "column": 1,
+            "source_line": "static int stb__Mul8Bit(int a, int b)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 164,
+            "column": 1,
+            "source_line": "static int stb__Mul8Bit(int a, int b)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 168,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb__From16Bit",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "out",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *out",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *out",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "v",
+              "type": {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short v"
+              },
+              "declared_type": {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short v"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 170,
+            "column": 1,
+            "source_line": "static void stb__From16Bit(unsigned char *out, unsigned short v)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 170,
+            "column": 1,
+            "source_line": "static void stb__From16Bit(unsigned char *out, unsigned short v)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 181,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb__As16Bit",
+          "result_type": {
+            "model": "CUnsignedShort",
+            "qualifiers": [],
+            "source_text": "unsigned short"
+          },
+          "parameters": [
+            {
+              "name": "r",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int r"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int r"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "g",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int g"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int g"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "b",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int b"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int b"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 183,
+            "column": 1,
+            "source_line": "static unsigned short stb__As16Bit(int r, int g, int b)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 183,
+            "column": 1,
+            "source_line": "static unsigned short stb__As16Bit(int r, int g, int b)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 186,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb__Lerp13",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "a",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int a"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int a"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "b",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int b"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int b"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 189,
+            "column": 1,
+            "source_line": "static int stb__Lerp13(int a, int b)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 189,
+            "column": 1,
+            "source_line": "static int stb__Lerp13(int a, int b)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 199,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb__Lerp13RGB",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "out",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *out",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *out",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "p1",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *p1",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *p1",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "p2",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *p2",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *p2",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 202,
+            "column": 1,
+            "source_line": "static void stb__Lerp13RGB(unsigned char *out, unsigned char *p1, unsigned char *p2)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 202,
+            "column": 1,
+            "source_line": "static void stb__Lerp13RGB(unsigned char *out, unsigned char *p1, unsigned char *p2)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 207,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb__EvalColors",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "color",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *color",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *color",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "c0",
+              "type": {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short c0"
+              },
+              "declared_type": {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short c0"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "c1",
+              "type": {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short c1"
+              },
+              "declared_type": {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short c1"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 211,
+            "column": 1,
+            "source_line": "static void stb__EvalColors(unsigned char *color,unsigned short c0,unsigned short c1)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 211,
+            "column": 1,
+            "source_line": "static void stb__EvalColors(unsigned char *color,unsigned short c0,unsigned short c1)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 217,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb__MatchColorsBlock",
+          "result_type": {
+            "model": "CUnsignedInt",
+            "qualifiers": [],
+            "source_text": "unsigned int"
+          },
+          "parameters": [
+            {
+              "name": "block",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *block",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *block",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "color",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *color",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *color",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 220,
+            "column": 1,
+            "source_line": "static unsigned int stb__MatchColorsBlock(unsigned char *block, unsigned char *color)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 220,
+            "column": 1,
+            "source_line": "static unsigned int stb__MatchColorsBlock(unsigned char *block, unsigned char *color)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 260,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb__OptimizeColorsBlock",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "block",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *block",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *block",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "pmax16",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned short *pmax16",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedShort",
+                    "qualifiers": [],
+                    "source_text": "unsigned short"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned short *pmax16",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedShort",
+                    "qualifiers": [],
+                    "source_text": "unsigned short"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "pmin16",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned short *pmin16",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedShort",
+                    "qualifiers": [],
+                    "source_text": "unsigned short"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned short *pmin16",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedShort",
+                    "qualifiers": [],
+                    "source_text": "unsigned short"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 263,
+            "column": 1,
+            "source_line": "static void stb__OptimizeColorsBlock(unsigned char *block, unsigned short *pmax16, unsigned short *pmin16)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 263,
+            "column": 1,
+            "source_line": "static void stb__OptimizeColorsBlock(unsigned char *block, unsigned short *pmax16, unsigned short *pmin16)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 367,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb__Quantize5",
+          "result_type": {
+            "model": "CUnsignedShort",
+            "qualifiers": [],
+            "source_text": "unsigned short"
+          },
+          "parameters": [
+            {
+              "name": "x",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float x"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float x"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 381,
+            "column": 1,
+            "source_line": "static unsigned short stb__Quantize5(float x)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 381,
+            "column": 1,
+            "source_line": "static unsigned short stb__Quantize5(float x)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 388,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb__Quantize6",
+          "result_type": {
+            "model": "CUnsignedShort",
+            "qualifiers": [],
+            "source_text": "unsigned short"
+          },
+          "parameters": [
+            {
+              "name": "x",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float x"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float x"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 390,
+            "column": 1,
+            "source_line": "static unsigned short stb__Quantize6(float x)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 390,
+            "column": 1,
+            "source_line": "static unsigned short stb__Quantize6(float x)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 397,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb__RefineBlock",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "block",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *block",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *block",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "pmax16",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned short *pmax16",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedShort",
+                    "qualifiers": [],
+                    "source_text": "unsigned short"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned short *pmax16",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedShort",
+                    "qualifiers": [],
+                    "source_text": "unsigned short"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "pmin16",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned short *pmin16",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedShort",
+                    "qualifiers": [],
+                    "source_text": "unsigned short"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned short *pmin16",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedShort",
+                    "qualifiers": [],
+                    "source_text": "unsigned short"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "mask",
+              "type": {
+                "model": "CUnsignedInt",
+                "qualifiers": [],
+                "source_text": "unsigned int mask"
+              },
+              "declared_type": {
+                "model": "CUnsignedInt",
+                "qualifiers": [],
+                "source_text": "unsigned int mask"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 402,
+            "column": 1,
+            "source_line": "static int stb__RefineBlock(unsigned char *block, unsigned short *pmax16, unsigned short *pmin16, unsigned int mask)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 402,
+            "column": 1,
+            "source_line": "static int stb__RefineBlock(unsigned char *block, unsigned short *pmax16, unsigned short *pmin16, unsigned int mask)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 476,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb__CompressColorBlock",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "dest",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *dest",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *dest",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "block",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *block",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *block",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "mode",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int mode"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int mode"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 479,
+            "column": 1,
+            "source_line": "static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, int mode)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 479,
+            "column": 1,
+            "source_line": "static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, int mode)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 544,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb__CompressAlphaBlock",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "dest",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *dest",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *dest",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "src",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *src",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *src",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "stride",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int stride"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int stride"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 547,
+            "column": 1,
+            "source_line": "static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src, int stride)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 547,
+            "column": 1,
+            "source_line": "static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src, int stride)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 597,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_compress_dxt_block",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "dest",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *dest",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *dest",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "src",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const unsigned char *src",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const unsigned char *src",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "alpha",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int alpha"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int alpha"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "mode",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int mode"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int mode"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 599,
+            "column": 1,
+            "source_line": "void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 599,
+            "column": 1,
+            "source_line": "void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 615,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_compress_bc4_block",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "dest",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *dest",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *dest",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "src",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const unsigned char *src",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const unsigned char *src",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 617,
+            "column": 1,
+            "source_line": "void stb_compress_bc4_block(unsigned char *dest, const unsigned char *src)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 617,
+            "column": 1,
+            "source_line": "void stb_compress_bc4_block(unsigned char *dest, const unsigned char *src)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 620,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_compress_bc5_block",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "dest",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *dest",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "unsigned char *dest",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [],
+                    "source_text": "unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "src",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const unsigned char *src",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const unsigned char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const unsigned char *src",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CUnsignedChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const unsigned char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 622,
+            "column": 1,
+            "source_line": "void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src)"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 622,
+            "column": 1,
+            "source_line": "void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src)"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 626,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "main",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "unspecified",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 634,
+            "column": 1,
+            "source_line": "int main()"
+          },
+          "start": {
+            "filename": "stb/stb_dxt.h",
+            "line": 634,
+            "column": 1,
+            "source_line": "int main()"
+          },
+          "end": {
+            "filename": "stb/stb_dxt.h",
+            "line": 676,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        }
+      ],
+      "structs": [],
+      "unions": [],
+      "enums": [],
+      "typedefs": [],
+      "variables": [],
+      "macros": [
+        {
+          "name": "STB_INCLUDE_STB_DXT_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 41,
+            "column": 1,
+            "source_line": "#define STB_INCLUDE_STB_DXT_H"
+          }
+        },
+        {
+          "name": "STBDDEF",
+          "value": "static",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 48,
+            "column": 1,
+            "source_line": "#define STBDDEF static"
+          }
+        },
+        {
+          "name": "STBDDEF",
+          "value": "extern",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 50,
+            "column": 1,
+            "source_line": "#define STBDDEF extern"
+          }
+        },
+        {
+          "name": "STB_DXT_NORMAL",
+          "value": "0",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 54,
+            "column": 1,
+            "source_line": "#define STB_DXT_NORMAL    0"
+          }
+        },
+        {
+          "name": "STB_DXT_DITHER",
+          "value": "1",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 55,
+            "column": 1,
+            "source_line": "#define STB_DXT_DITHER    1   // use dithering. was always dubious, now deprecated. does nothing!"
+          }
+        },
+        {
+          "name": "STB_DXT_HIGHQUAL",
+          "value": "2",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 56,
+            "column": 1,
+            "source_line": "#define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower."
+          }
+        },
+        {
+          "name": "STB_COMPRESS_DXT_BLOCK",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 62,
+            "column": 1,
+            "source_line": "#define STB_COMPRESS_DXT_BLOCK"
+          }
+        },
+        {
+          "name": "STBD_FABS",
+          "value": "fabs(x)",
+          "function_like": true,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 92,
+            "column": 1,
+            "source_line": "#define STBD_FABS(x)          fabs(x)"
+          }
+        }
+      ],
+      "includes": [
+        {
+          "target": "stdlib.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 85,
+            "column": 1,
+            "source_line": "#include <stdlib.h>"
+          }
+        },
+        {
+          "target": "math.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 88,
+            "column": 1,
+            "source_line": "#include <math.h>"
+          }
+        },
+        {
+          "target": "stdio.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 632,
+            "column": 1,
+            "source_line": "#include <stdio.h>"
+          }
+        }
+      ],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "STB_INCLUDE_STB_DXT_H",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 40,
+            "column": 1,
+            "source_line": "#ifndef STB_INCLUDE_STB_DXT_H"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "__cplusplus",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 43,
+            "column": 1,
+            "source_line": "#ifdef __cplusplus"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 45,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_DXT_STATIC",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 47,
+            "column": 1,
+            "source_line": "#ifdef STB_DXT_STATIC"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 49,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 51,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "__cplusplus",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 64,
+            "column": 1,
+            "source_line": "#ifdef __cplusplus"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 66,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 67,
+            "column": 1,
+            "source_line": "#endif // STB_INCLUDE_STB_DXT_H"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_DXT_IMPLEMENTATION",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 69,
+            "column": 1,
+            "source_line": "#ifdef STB_DXT_IMPLEMENTATION"
+          }
+        },
+        {
+          "directive": "if",
+          "argument": "!defined(STBD_FABS)",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 87,
+            "column": 1,
+            "source_line": "#if !defined(STBD_FABS)"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 89,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "STBD_FABS",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 91,
+            "column": 1,
+            "source_line": "#ifndef STBD_FABS"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 93,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_DXT_USE_ROUNDING_BIAS",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 191,
+            "column": 1,
+            "source_line": "#ifdef STB_DXT_USE_ROUNDING_BIAS"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 194,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 198,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 627,
+            "column": 1,
+            "source_line": "#endif // STB_DXT_IMPLEMENTATION"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_DXT_GENERATE_TABLES",
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 631,
+            "column": 1,
+            "source_line": "#ifdef STB_DXT_GENERATE_TABLES"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 677,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        }
+      ],
+      "macro_dependencies": [],
+      "diagnostics": [
+        {
+          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+          "message": "Function-like macro 'STBD_FABS' is recorded but not expanded.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 92,
+            "column": 1,
+            "source_line": "#define STBD_FABS(x)          fabs(x)"
+          },
+          "unit_kind": "macro",
+          "unit_name": "STBD_FABS"
+        },
+        {
+          "code": "C_UNSUPPORTED_DECLARATOR",
+          "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 44,
+            "column": 1,
+            "source_line": "extern \"C\" {"
+          },
+          "unit_kind": "declarator",
+          "unit_name": null
+        },
+        {
+          "code": "C_UNSUPPORTED_DECLARATION",
+          "message": "Braced or designated initializer declarations are not supported yet.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 95,
+            "column": 1,
+            "source_line": "static const unsigned char stb__OMatch5[256][2] = {"
+          },
+          "unit_kind": "braced_initializer_declaration",
+          "unit_name": null
+        },
+        {
+          "code": "C_UNSUPPORTED_DECLARATION",
+          "message": "Braced or designated initializer declarations are not supported yet.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 129,
+            "column": 1,
+            "source_line": "static const unsigned char stb__OMatch6[256][2] = {"
+          },
+          "unit_kind": "braced_initializer_declaration",
+          "unit_name": null
+        },
+        {
+          "code": "C_UNSUPPORTED_DECLARATION",
+          "message": "Braced or designated initializer declarations are not supported yet.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 369,
+            "column": 1,
+            "source_line": "static const float stb__midpoints5[32] = {"
+          },
+          "unit_kind": "braced_initializer_declaration",
+          "unit_name": null
+        },
+        {
+          "code": "C_UNSUPPORTED_DECLARATION",
+          "message": "Braced or designated initializer declarations are not supported yet.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_dxt.h",
+            "line": 374,
+            "column": 1,
+            "source_line": "static const float stb__midpoints6[64] = {"
+          },
+          "unit_kind": "braced_initializer_declaration",
+          "unit_name": null
+        }
+      ]
+    }
+  },
+  "functions": {
+    "stb__Mul8Bit": {
+      "name": "stb__Mul8Bit",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "a",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int a"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int a"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "b",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int b"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int b"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 164,
+        "column": 1,
+        "source_line": "static int stb__Mul8Bit(int a, int b)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 164,
+        "column": 1,
+        "source_line": "static int stb__Mul8Bit(int a, int b)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 168,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb__From16Bit": {
+      "name": "stb__From16Bit",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "out",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *out",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *out",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "v",
+          "type": {
+            "model": "CUnsignedShort",
+            "qualifiers": [],
+            "source_text": "unsigned short v"
+          },
+          "declared_type": {
+            "model": "CUnsignedShort",
+            "qualifiers": [],
+            "source_text": "unsigned short v"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 170,
+        "column": 1,
+        "source_line": "static void stb__From16Bit(unsigned char *out, unsigned short v)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 170,
+        "column": 1,
+        "source_line": "static void stb__From16Bit(unsigned char *out, unsigned short v)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 181,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb__As16Bit": {
+      "name": "stb__As16Bit",
+      "result_type": {
+        "model": "CUnsignedShort",
+        "qualifiers": [],
+        "source_text": "unsigned short"
+      },
+      "parameters": [
+        {
+          "name": "r",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int r"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int r"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "g",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int g"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int g"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "b",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int b"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int b"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 183,
+        "column": 1,
+        "source_line": "static unsigned short stb__As16Bit(int r, int g, int b)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 183,
+        "column": 1,
+        "source_line": "static unsigned short stb__As16Bit(int r, int g, int b)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 186,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb__Lerp13": {
+      "name": "stb__Lerp13",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "a",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int a"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int a"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "b",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int b"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int b"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 189,
+        "column": 1,
+        "source_line": "static int stb__Lerp13(int a, int b)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 189,
+        "column": 1,
+        "source_line": "static int stb__Lerp13(int a, int b)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 199,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb__Lerp13RGB": {
+      "name": "stb__Lerp13RGB",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "out",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *out",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *out",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "p1",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *p1",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *p1",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "p2",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *p2",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *p2",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 202,
+        "column": 1,
+        "source_line": "static void stb__Lerp13RGB(unsigned char *out, unsigned char *p1, unsigned char *p2)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 202,
+        "column": 1,
+        "source_line": "static void stb__Lerp13RGB(unsigned char *out, unsigned char *p1, unsigned char *p2)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 207,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb__EvalColors": {
+      "name": "stb__EvalColors",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "color",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *color",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *color",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "c0",
+          "type": {
+            "model": "CUnsignedShort",
+            "qualifiers": [],
+            "source_text": "unsigned short c0"
+          },
+          "declared_type": {
+            "model": "CUnsignedShort",
+            "qualifiers": [],
+            "source_text": "unsigned short c0"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "c1",
+          "type": {
+            "model": "CUnsignedShort",
+            "qualifiers": [],
+            "source_text": "unsigned short c1"
+          },
+          "declared_type": {
+            "model": "CUnsignedShort",
+            "qualifiers": [],
+            "source_text": "unsigned short c1"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 211,
+        "column": 1,
+        "source_line": "static void stb__EvalColors(unsigned char *color,unsigned short c0,unsigned short c1)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 211,
+        "column": 1,
+        "source_line": "static void stb__EvalColors(unsigned char *color,unsigned short c0,unsigned short c1)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 217,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb__MatchColorsBlock": {
+      "name": "stb__MatchColorsBlock",
+      "result_type": {
+        "model": "CUnsignedInt",
+        "qualifiers": [],
+        "source_text": "unsigned int"
+      },
+      "parameters": [
+        {
+          "name": "block",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *block",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *block",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "color",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *color",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *color",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 220,
+        "column": 1,
+        "source_line": "static unsigned int stb__MatchColorsBlock(unsigned char *block, unsigned char *color)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 220,
+        "column": 1,
+        "source_line": "static unsigned int stb__MatchColorsBlock(unsigned char *block, unsigned char *color)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 260,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb__OptimizeColorsBlock": {
+      "name": "stb__OptimizeColorsBlock",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "block",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *block",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *block",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "pmax16",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned short *pmax16",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned short *pmax16",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "pmin16",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned short *pmin16",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned short *pmin16",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 263,
+        "column": 1,
+        "source_line": "static void stb__OptimizeColorsBlock(unsigned char *block, unsigned short *pmax16, unsigned short *pmin16)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 263,
+        "column": 1,
+        "source_line": "static void stb__OptimizeColorsBlock(unsigned char *block, unsigned short *pmax16, unsigned short *pmin16)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 367,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb__Quantize5": {
+      "name": "stb__Quantize5",
+      "result_type": {
+        "model": "CUnsignedShort",
+        "qualifiers": [],
+        "source_text": "unsigned short"
+      },
+      "parameters": [
+        {
+          "name": "x",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float x"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float x"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 381,
+        "column": 1,
+        "source_line": "static unsigned short stb__Quantize5(float x)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 381,
+        "column": 1,
+        "source_line": "static unsigned short stb__Quantize5(float x)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 388,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb__Quantize6": {
+      "name": "stb__Quantize6",
+      "result_type": {
+        "model": "CUnsignedShort",
+        "qualifiers": [],
+        "source_text": "unsigned short"
+      },
+      "parameters": [
+        {
+          "name": "x",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float x"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float x"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 390,
+        "column": 1,
+        "source_line": "static unsigned short stb__Quantize6(float x)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 390,
+        "column": 1,
+        "source_line": "static unsigned short stb__Quantize6(float x)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 397,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb__RefineBlock": {
+      "name": "stb__RefineBlock",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "block",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *block",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *block",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "pmax16",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned short *pmax16",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned short *pmax16",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "pmin16",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned short *pmin16",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned short *pmin16",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedShort",
+                "qualifiers": [],
+                "source_text": "unsigned short"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "mask",
+          "type": {
+            "model": "CUnsignedInt",
+            "qualifiers": [],
+            "source_text": "unsigned int mask"
+          },
+          "declared_type": {
+            "model": "CUnsignedInt",
+            "qualifiers": [],
+            "source_text": "unsigned int mask"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 402,
+        "column": 1,
+        "source_line": "static int stb__RefineBlock(unsigned char *block, unsigned short *pmax16, unsigned short *pmin16, unsigned int mask)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 402,
+        "column": 1,
+        "source_line": "static int stb__RefineBlock(unsigned char *block, unsigned short *pmax16, unsigned short *pmin16, unsigned int mask)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 476,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb__CompressColorBlock": {
+      "name": "stb__CompressColorBlock",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "dest",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *dest",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *dest",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "block",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *block",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *block",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "mode",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int mode"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int mode"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 479,
+        "column": 1,
+        "source_line": "static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, int mode)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 479,
+        "column": 1,
+        "source_line": "static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, int mode)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 544,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb__CompressAlphaBlock": {
+      "name": "stb__CompressAlphaBlock",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "dest",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *dest",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *dest",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "src",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *src",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *src",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "stride",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int stride"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int stride"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 547,
+        "column": 1,
+        "source_line": "static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src, int stride)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 547,
+        "column": 1,
+        "source_line": "static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src, int stride)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 597,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_compress_dxt_block": {
+      "name": "stb_compress_dxt_block",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "dest",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *dest",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *dest",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "src",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const unsigned char *src",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const unsigned char *src",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "alpha",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int alpha"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int alpha"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "mode",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int mode"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int mode"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 599,
+        "column": 1,
+        "source_line": "void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 599,
+        "column": 1,
+        "source_line": "void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 615,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_compress_bc4_block": {
+      "name": "stb_compress_bc4_block",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "dest",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *dest",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *dest",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "src",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const unsigned char *src",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const unsigned char *src",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 617,
+        "column": 1,
+        "source_line": "void stb_compress_bc4_block(unsigned char *dest, const unsigned char *src)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 617,
+        "column": 1,
+        "source_line": "void stb_compress_bc4_block(unsigned char *dest, const unsigned char *src)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 620,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_compress_bc5_block": {
+      "name": "stb_compress_bc5_block",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "dest",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *dest",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char *dest",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "src",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const unsigned char *src",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const unsigned char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const unsigned char *src",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const unsigned char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 622,
+        "column": 1,
+        "source_line": "void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src)"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 622,
+        "column": 1,
+        "source_line": "void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src)"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 626,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "main": {
+      "name": "main",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "unspecified",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 634,
+        "column": 1,
+        "source_line": "int main()"
+      },
+      "start": {
+        "filename": "stb/stb_dxt.h",
+        "line": 634,
+        "column": 1,
+        "source_line": "int main()"
+      },
+      "end": {
+        "filename": "stb/stb_dxt.h",
+        "line": 676,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    }
+  },
+  "structs": {},
+  "unions": {},
+  "enums": {},
+  "typedefs": {},
+  "variables": {},
+  "macros": {
+    "STB_INCLUDE_STB_DXT_H": {
+      "name": "STB_INCLUDE_STB_DXT_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 41,
+        "column": 1,
+        "source_line": "#define STB_INCLUDE_STB_DXT_H"
+      }
+    },
+    "STBDDEF": {
+      "name": "STBDDEF",
+      "value": "extern",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 50,
+        "column": 1,
+        "source_line": "#define STBDDEF extern"
+      }
+    },
+    "STB_DXT_NORMAL": {
+      "name": "STB_DXT_NORMAL",
+      "value": "0",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 54,
+        "column": 1,
+        "source_line": "#define STB_DXT_NORMAL    0"
+      }
+    },
+    "STB_DXT_DITHER": {
+      "name": "STB_DXT_DITHER",
+      "value": "1",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 55,
+        "column": 1,
+        "source_line": "#define STB_DXT_DITHER    1   // use dithering. was always dubious, now deprecated. does nothing!"
+      }
+    },
+    "STB_DXT_HIGHQUAL": {
+      "name": "STB_DXT_HIGHQUAL",
+      "value": "2",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 56,
+        "column": 1,
+        "source_line": "#define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower."
+      }
+    },
+    "STB_COMPRESS_DXT_BLOCK": {
+      "name": "STB_COMPRESS_DXT_BLOCK",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 62,
+        "column": 1,
+        "source_line": "#define STB_COMPRESS_DXT_BLOCK"
+      }
+    },
+    "STBD_FABS": {
+      "name": "STBD_FABS",
+      "value": "fabs(x)",
+      "function_like": true,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 92,
+        "column": 1,
+        "source_line": "#define STBD_FABS(x)          fabs(x)"
+      }
+    }
+  },
+  "includes": {
+    "stb/stb_dxt.h:stdlib.h": {
+      "target": "stdlib.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 85,
+        "column": 1,
+        "source_line": "#include <stdlib.h>"
+      }
+    },
+    "stb/stb_dxt.h:math.h": {
+      "target": "math.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 88,
+        "column": 1,
+        "source_line": "#include <math.h>"
+      }
+    },
+    "stb/stb_dxt.h:stdio.h": {
+      "target": "stdio.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 632,
+        "column": 1,
+        "source_line": "#include <stdio.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "stb/stb_dxt.h": [
+      "stb__Mul8Bit",
+      "stb__From16Bit",
+      "stb__As16Bit",
+      "stb__Lerp13",
+      "stb__Lerp13RGB",
+      "stb__EvalColors",
+      "stb__MatchColorsBlock",
+      "stb__OptimizeColorsBlock",
+      "stb__Quantize5",
+      "stb__Quantize6",
+      "stb__RefineBlock",
+      "stb__CompressColorBlock",
+      "stb__CompressAlphaBlock",
+      "stb_compress_dxt_block",
+      "stb_compress_bc4_block",
+      "stb_compress_bc5_block",
+      "main"
+    ]
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "stb/stb_dxt.h": []
+  },
+  "system_includes": {
+    "stb/stb_dxt.h": [
+      "math.h",
+      "stdio.h",
+      "stdlib.h"
+    ]
+  },
+  "unresolved_includes": {
+    "stb/stb_dxt.h": []
+  },
+  "header_source_pairs": {
+    "stb/stb_dxt.h": []
+  },
+  "diagnostics": [
+    {
+      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+      "message": "Function-like macro 'STBD_FABS' is recorded but not expanded.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 92,
+        "column": 1,
+        "source_line": "#define STBD_FABS(x)          fabs(x)"
+      },
+      "unit_kind": "macro",
+      "unit_name": "STBD_FABS"
+    },
+    {
+      "code": "C_UNSUPPORTED_DECLARATOR",
+      "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 44,
+        "column": 1,
+        "source_line": "extern \"C\" {"
+      },
+      "unit_kind": "declarator",
+      "unit_name": null
+    },
+    {
+      "code": "C_UNSUPPORTED_DECLARATION",
+      "message": "Braced or designated initializer declarations are not supported yet.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 95,
+        "column": 1,
+        "source_line": "static const unsigned char stb__OMatch5[256][2] = {"
+      },
+      "unit_kind": "braced_initializer_declaration",
+      "unit_name": null
+    },
+    {
+      "code": "C_UNSUPPORTED_DECLARATION",
+      "message": "Braced or designated initializer declarations are not supported yet.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 129,
+        "column": 1,
+        "source_line": "static const unsigned char stb__OMatch6[256][2] = {"
+      },
+      "unit_kind": "braced_initializer_declaration",
+      "unit_name": null
+    },
+    {
+      "code": "C_UNSUPPORTED_DECLARATION",
+      "message": "Braced or designated initializer declarations are not supported yet.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 369,
+        "column": 1,
+        "source_line": "static const float stb__midpoints5[32] = {"
+      },
+      "unit_kind": "braced_initializer_declaration",
+      "unit_name": null
+    },
+    {
+      "code": "C_UNSUPPORTED_DECLARATION",
+      "message": "Braced or designated initializer declarations are not supported yet.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_dxt.h",
+        "line": 374,
+        "column": 1,
+        "source_line": "static const float stb__midpoints6[64] = {"
+      },
+      "unit_kind": "braced_initializer_declaration",
+      "unit_name": null
+    }
+  ]
+}

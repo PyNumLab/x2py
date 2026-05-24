@@ -1,0 +1,1538 @@
+{
+  "files": {
+    "general/math_api.c": {
+      "filename": "general/math_api.c",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "norm2",
+          "result_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double x[static 1]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double x[static 1]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "1",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/math_api.c",
+            "line": 5,
+            "column": 1,
+            "source_line": "double norm2(int n, const double x[static 1])"
+          },
+          "start": {
+            "filename": "general/math_api.c",
+            "line": 5,
+            "column": 1,
+            "source_line": "double norm2(int n, const double x[static 1])"
+          },
+          "end": {
+            "filename": "general/math_api.c",
+            "line": 12,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/math_api.h",
+              "line": 4,
+              "column": 1,
+              "source_line": "double norm2(int n, const double x[static 1]);"
+            }
+          ]
+        },
+        {
+          "name": "scale",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "alpha",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double alpha"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double alpha"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double x[static 1]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double x[static 1]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "1",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/math_api.c",
+            "line": 14,
+            "column": 1,
+            "source_line": "void scale(int n, double alpha, double x[static 1])"
+          },
+          "start": {
+            "filename": "general/math_api.c",
+            "line": 14,
+            "column": 1,
+            "source_line": "void scale(int n, double alpha, double x[static 1])"
+          },
+          "end": {
+            "filename": "general/math_api.c",
+            "line": 19,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/math_api.h",
+              "line": 5,
+              "column": 1,
+              "source_line": "void scale(int n, double alpha, double x[static 1]);"
+            }
+          ]
+        },
+        {
+          "name": "dot",
+          "result_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double *restrict x",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [
+                      "restrict"
+                    ],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double *restrict x",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [
+                      "restrict"
+                    ],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "y",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double *restrict y",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [
+                      "restrict"
+                    ],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double *restrict y",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [
+                      "restrict"
+                    ],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/math_api.c",
+            "line": 21,
+            "column": 1,
+            "source_line": "double dot(int n, const double *restrict x, const double *restrict y)"
+          },
+          "start": {
+            "filename": "general/math_api.c",
+            "line": 21,
+            "column": 1,
+            "source_line": "double dot(int n, const double *restrict x, const double *restrict y)"
+          },
+          "end": {
+            "filename": "general/math_api.c",
+            "line": 28,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/math_api.h",
+              "line": 6,
+              "column": 1,
+              "source_line": "double dot(int n, const double *restrict x, const double *restrict y);"
+            }
+          ]
+        },
+        {
+          "name": "fill_identity3",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "a",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double a[static 3][3]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double a[static 3][3]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/math_api.c",
+            "line": 30,
+            "column": 1,
+            "source_line": "void fill_identity3(double a[static 3][3])"
+          },
+          "start": {
+            "filename": "general/math_api.c",
+            "line": 30,
+            "column": 1,
+            "source_line": "void fill_identity3(double a[static 3][3])"
+          },
+          "end": {
+            "filename": "general/math_api.c",
+            "line": 37,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/math_api.h",
+              "line": 7,
+              "column": 1,
+              "source_line": "void fill_identity3(double a[static 3][3]);"
+            }
+          ]
+        }
+      ],
+      "structs": [],
+      "unions": [],
+      "enums": [],
+      "typedefs": [],
+      "variables": [],
+      "macros": [],
+      "includes": [
+        {
+          "target": "math_api.h",
+          "kind": "local",
+          "resolved_path": "general/math_api.h",
+          "source_location": {
+            "filename": "general/math_api.c",
+            "line": 1,
+            "column": 1,
+            "source_line": "#include \"math_api.h\""
+          }
+        },
+        {
+          "target": "math.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "general/math_api.c",
+            "line": 3,
+            "column": 1,
+            "source_line": "#include <math.h>"
+          }
+        }
+      ],
+      "raw_directives": [],
+      "macro_dependencies": [],
+      "diagnostics": []
+    },
+    "general/math_api.h": {
+      "filename": "general/math_api.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "norm2",
+          "result_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double x[static 1]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double x[static 1]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "1",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/math_api.h",
+            "line": 4,
+            "column": 1,
+            "source_line": "double norm2(int n, const double x[static 1]);"
+          },
+          "start": {
+            "filename": "general/math_api.h",
+            "line": 4,
+            "column": 1,
+            "source_line": "double norm2(int n, const double x[static 1]);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "scale",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "alpha",
+              "type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double alpha"
+              },
+              "declared_type": {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double alpha"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double x[static 1]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double x[static 1]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "1",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/math_api.h",
+            "line": 5,
+            "column": 1,
+            "source_line": "void scale(int n, double alpha, double x[static 1]);"
+          },
+          "start": {
+            "filename": "general/math_api.h",
+            "line": 5,
+            "column": 1,
+            "source_line": "void scale(int n, double alpha, double x[static 1]);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "dot",
+          "result_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double *restrict x",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [
+                      "restrict"
+                    ],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double *restrict x",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [
+                      "restrict"
+                    ],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "y",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double *restrict y",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [
+                      "restrict"
+                    ],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double *restrict y",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [
+                      "restrict"
+                    ],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/math_api.h",
+            "line": 6,
+            "column": 1,
+            "source_line": "double dot(int n, const double *restrict x, const double *restrict y);"
+          },
+          "start": {
+            "filename": "general/math_api.h",
+            "line": 6,
+            "column": 1,
+            "source_line": "double dot(int n, const double *restrict x, const double *restrict y);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "fill_identity3",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "a",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double a[static 3][3]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double a[static 3][3]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/math_api.h",
+            "line": 7,
+            "column": 1,
+            "source_line": "void fill_identity3(double a[static 3][3]);"
+          },
+          "start": {
+            "filename": "general/math_api.h",
+            "line": 7,
+            "column": 1,
+            "source_line": "void fill_identity3(double a[static 3][3]);"
+          },
+          "end": null,
+          "declaration_locations": []
+        }
+      ],
+      "structs": [],
+      "unions": [],
+      "enums": [],
+      "typedefs": [],
+      "variables": [],
+      "macros": [
+        {
+          "name": "X2PY_GENERAL_MATH_API_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "general/math_api.h",
+            "line": 2,
+            "column": 1,
+            "source_line": "#define X2PY_GENERAL_MATH_API_H"
+          }
+        }
+      ],
+      "includes": [],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "X2PY_GENERAL_MATH_API_H",
+          "source_location": {
+            "filename": "general/math_api.h",
+            "line": 1,
+            "column": 1,
+            "source_line": "#ifndef X2PY_GENERAL_MATH_API_H"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "general/math_api.h",
+            "line": 9,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        }
+      ],
+      "macro_dependencies": [],
+      "diagnostics": []
+    }
+  },
+  "functions": {
+    "norm2": {
+      "name": "norm2",
+      "result_type": {
+        "model": "CDouble",
+        "qualifiers": [],
+        "source_text": "double"
+      },
+      "parameters": [
+        {
+          "name": "n",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "x",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double x[static 1]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double x[static 1]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "1",
+                "is_static_minimum": true,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/math_api.c",
+        "line": 5,
+        "column": 1,
+        "source_line": "double norm2(int n, const double x[static 1])"
+      },
+      "start": {
+        "filename": "general/math_api.c",
+        "line": 5,
+        "column": 1,
+        "source_line": "double norm2(int n, const double x[static 1])"
+      },
+      "end": {
+        "filename": "general/math_api.c",
+        "line": 12,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/math_api.h",
+          "line": 4,
+          "column": 1,
+          "source_line": "double norm2(int n, const double x[static 1]);"
+        }
+      ]
+    },
+    "scale": {
+      "name": "scale",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "n",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "alpha",
+          "type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double alpha"
+          },
+          "declared_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double alpha"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "x",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double x[static 1]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double x[static 1]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "1",
+                "is_static_minimum": true,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/math_api.c",
+        "line": 14,
+        "column": 1,
+        "source_line": "void scale(int n, double alpha, double x[static 1])"
+      },
+      "start": {
+        "filename": "general/math_api.c",
+        "line": 14,
+        "column": 1,
+        "source_line": "void scale(int n, double alpha, double x[static 1])"
+      },
+      "end": {
+        "filename": "general/math_api.c",
+        "line": 19,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/math_api.h",
+          "line": 5,
+          "column": 1,
+          "source_line": "void scale(int n, double alpha, double x[static 1]);"
+        }
+      ]
+    },
+    "dot": {
+      "name": "dot",
+      "result_type": {
+        "model": "CDouble",
+        "qualifiers": [],
+        "source_text": "double"
+      },
+      "parameters": [
+        {
+          "name": "n",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "x",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double *restrict x",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [
+                  "restrict"
+                ],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double *restrict x",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [
+                  "restrict"
+                ],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "y",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double *restrict y",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [
+                  "restrict"
+                ],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double *restrict y",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [
+                  "restrict"
+                ],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/math_api.c",
+        "line": 21,
+        "column": 1,
+        "source_line": "double dot(int n, const double *restrict x, const double *restrict y)"
+      },
+      "start": {
+        "filename": "general/math_api.c",
+        "line": 21,
+        "column": 1,
+        "source_line": "double dot(int n, const double *restrict x, const double *restrict y)"
+      },
+      "end": {
+        "filename": "general/math_api.c",
+        "line": 28,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/math_api.h",
+          "line": 6,
+          "column": 1,
+          "source_line": "double dot(int n, const double *restrict x, const double *restrict y);"
+        }
+      ]
+    },
+    "fill_identity3": {
+      "name": "fill_identity3",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "a",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double a[static 3][3]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double a[static 3][3]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": true,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/math_api.c",
+        "line": 30,
+        "column": 1,
+        "source_line": "void fill_identity3(double a[static 3][3])"
+      },
+      "start": {
+        "filename": "general/math_api.c",
+        "line": 30,
+        "column": 1,
+        "source_line": "void fill_identity3(double a[static 3][3])"
+      },
+      "end": {
+        "filename": "general/math_api.c",
+        "line": 37,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/math_api.h",
+          "line": 7,
+          "column": 1,
+          "source_line": "void fill_identity3(double a[static 3][3]);"
+        }
+      ]
+    }
+  },
+  "structs": {},
+  "unions": {},
+  "enums": {},
+  "typedefs": {},
+  "variables": {},
+  "macros": {
+    "X2PY_GENERAL_MATH_API_H": {
+      "name": "X2PY_GENERAL_MATH_API_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "general/math_api.h",
+        "line": 2,
+        "column": 1,
+        "source_line": "#define X2PY_GENERAL_MATH_API_H"
+      }
+    }
+  },
+  "includes": {
+    "general/math_api.c:math_api.h": {
+      "target": "math_api.h",
+      "kind": "local",
+      "resolved_path": "general/math_api.h",
+      "source_location": {
+        "filename": "general/math_api.c",
+        "line": 1,
+        "column": 1,
+        "source_line": "#include \"math_api.h\""
+      }
+    },
+    "general/math_api.c:math.h": {
+      "target": "math.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "general/math_api.c",
+        "line": 3,
+        "column": 1,
+        "source_line": "#include <math.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "general/math_api.c": [
+      "norm2",
+      "scale",
+      "dot",
+      "fill_identity3"
+    ],
+    "general/math_api.h": [
+      "norm2",
+      "scale",
+      "dot",
+      "fill_identity3"
+    ]
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "general/math_api.c": [
+      "general/math_api.h"
+    ],
+    "general/math_api.h": []
+  },
+  "system_includes": {
+    "general/math_api.c": [
+      "math.h"
+    ],
+    "general/math_api.h": []
+  },
+  "unresolved_includes": {
+    "general/math_api.c": [],
+    "general/math_api.h": []
+  },
+  "header_source_pairs": {
+    "general/math_api.h": [
+      "general/math_api.c"
+    ]
+  },
+  "diagnostics": []
+}

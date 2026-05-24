@@ -1,0 +1,1766 @@
+{
+  "files": {
+    "stb/stb_rect_pack.h": {
+      "filename": "stb/stb_rect_pack.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "stbrp__skyline_find_min_y",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "c",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbrp_context *c",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "stbrp_context",
+                    "name": "stbrp_context",
+                    "type": null,
+                    "source_location": null,
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbrp_context *c",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "stbrp_context"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "first",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbrp_node *first",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "stbrp_node",
+                    "name": "stbrp_node",
+                    "type": null,
+                    "source_location": null,
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbrp_node *first",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "stbrp_node"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x0",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int x0"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int x0"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "width",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int width"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int width"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "pwaste",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "int *pwaste",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "int *pwaste",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 287,
+            "column": 1,
+            "source_line": "static int stbrp__skyline_find_min_y(stbrp_context *c, stbrp_node *first, int x0, int width, int *pwaste)"
+          },
+          "start": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 287,
+            "column": 1,
+            "source_line": "static int stbrp__skyline_find_min_y(stbrp_context *c, stbrp_node *first, int x0, int width, int *pwaste)"
+          },
+          "end": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 335,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stbrp__skyline_find_best_pos",
+          "result_type": {
+            "model": "CTypedef",
+            "qualifiers": [],
+            "source_text": "stbrp__findresult",
+            "name": "stbrp__findresult",
+            "type": {
+              "model": "CStruct",
+              "qualifiers": [],
+              "source_text": "",
+              "name": null,
+              "members": [
+                {
+                  "name": "x",
+                  "type": {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int x"
+                  },
+                  "storage": [],
+                  "initializer": null,
+                  "bit_width": null,
+                  "source_location": {
+                    "filename": "stb/stb_rect_pack.h",
+                    "line": 339,
+                    "column": 4,
+                    "source_line": "   int x,y;"
+                  },
+                  "callback_policy": null,
+                  "declaration_locations": []
+                },
+                {
+                  "name": "y",
+                  "type": {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int y"
+                  },
+                  "storage": [],
+                  "initializer": null,
+                  "bit_width": null,
+                  "source_location": {
+                    "filename": "stb/stb_rect_pack.h",
+                    "line": 339,
+                    "column": 4,
+                    "source_line": "   int x,y;"
+                  },
+                  "callback_policy": null,
+                  "declaration_locations": []
+                },
+                {
+                  "name": "prev_link",
+                  "type": {
+                    "model": "CComposedType",
+                    "qualifiers": [],
+                    "source_text": "stbrp_node **prev_link",
+                    "components": [
+                      {
+                        "model": "CPointer",
+                        "qualifiers": [],
+                        "source_text": ""
+                      },
+                      {
+                        "model": "CPointer",
+                        "qualifiers": [],
+                        "source_text": ""
+                      },
+                      {
+                        "model": "CTypedef",
+                        "qualifiers": [],
+                        "source_text": "stbrp_node",
+                        "name": "stbrp_node",
+                        "type": null,
+                        "source_location": null,
+                        "declaration_locations": []
+                      }
+                    ]
+                  },
+                  "storage": [],
+                  "initializer": null,
+                  "bit_width": null,
+                  "source_location": {
+                    "filename": "stb/stb_rect_pack.h",
+                    "line": 340,
+                    "column": 4,
+                    "source_line": "   stbrp_node **prev_link;"
+                  },
+                  "callback_policy": null,
+                  "declaration_locations": []
+                }
+              ],
+              "anonymous_id": "struct@stb/stb_rect_pack.h:337:1",
+              "is_incomplete": false,
+              "source_location": {
+                "filename": "stb/stb_rect_pack.h",
+                "line": 337,
+                "column": 1,
+                "source_line": "typedef struct"
+              }
+            },
+            "source_location": {
+              "filename": "stb/stb_rect_pack.h",
+              "line": 337,
+              "column": 1,
+              "source_line": "typedef struct"
+            },
+            "declaration_locations": []
+          },
+          "parameters": [
+            {
+              "name": "c",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbrp_context *c",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "stbrp_context",
+                    "name": "stbrp_context",
+                    "type": null,
+                    "source_location": null,
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbrp_context *c",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "stbrp_context"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "width",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int width"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int width"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "height",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int height"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int height"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 343,
+            "column": 1,
+            "source_line": "static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int width, int height)"
+          },
+          "start": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 343,
+            "column": 1,
+            "source_line": "static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int width, int height)"
+          },
+          "end": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 443,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stbrp__skyline_pack_rectangle",
+          "result_type": {
+            "reference": "stbrp__findresult"
+          },
+          "parameters": [
+            {
+              "name": "context",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbrp_context *context",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "stbrp_context",
+                    "name": "stbrp_context",
+                    "type": null,
+                    "source_location": null,
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbrp_context *context",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "stbrp_context"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "width",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int width"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int width"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "height",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int height"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int height"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 445,
+            "column": 1,
+            "source_line": "static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, int width, int height)"
+          },
+          "start": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 445,
+            "column": 1,
+            "source_line": "static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, int width, int height)"
+          },
+          "end": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 522,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        }
+      ],
+      "structs": [
+        {
+          "reference": "struct@stb/stb_rect_pack.h:337:1"
+        }
+      ],
+      "unions": [],
+      "enums": [
+        {
+          "model": "CEnum",
+          "qualifiers": [],
+          "source_text": "",
+          "name": null,
+          "constants": [
+            {
+              "name": "STBRP__INIT_skyline",
+              "value": "1",
+              "source_location": {
+                "filename": "stb/stb_rect_pack.h",
+                "line": 224,
+                "column": 1,
+                "source_line": "enum"
+              }
+            }
+          ],
+          "anonymous_id": "enum@stb/stb_rect_pack.h:224:1",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 224,
+            "column": 1,
+            "source_line": "enum"
+          }
+        }
+      ],
+      "typedefs": [
+        {
+          "reference": "stbrp__findresult"
+        }
+      ],
+      "variables": [],
+      "macros": [
+        {
+          "name": "STB_INCLUDE_STB_RECT_PACK_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 67,
+            "column": 1,
+            "source_line": "#define STB_INCLUDE_STB_RECT_PACK_H"
+          }
+        },
+        {
+          "name": "STB_RECT_PACK_VERSION",
+          "value": "1",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 69,
+            "column": 1,
+            "source_line": "#define STB_RECT_PACK_VERSION  1"
+          }
+        },
+        {
+          "name": "STBRP_DEF",
+          "value": "static",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 72,
+            "column": 1,
+            "source_line": "#define STBRP_DEF static"
+          }
+        },
+        {
+          "name": "STBRP_DEF",
+          "value": "extern",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 74,
+            "column": 1,
+            "source_line": "#define STBRP_DEF extern"
+          }
+        },
+        {
+          "name": "STBRP__MAXVAL",
+          "value": "0x7fffffff",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 87,
+            "column": 1,
+            "source_line": "#define STBRP__MAXVAL  0x7fffffff"
+          }
+        },
+        {
+          "name": "STBRP_SORT",
+          "value": "qsort",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 208,
+            "column": 1,
+            "source_line": "#define STBRP_SORT qsort"
+          }
+        },
+        {
+          "name": "STBRP_ASSERT",
+          "value": "assert",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 213,
+            "column": 1,
+            "source_line": "#define STBRP_ASSERT assert"
+          }
+        },
+        {
+          "name": "STBRP__NOTUSED",
+          "value": "(void)(v)",
+          "function_like": true,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 217,
+            "column": 1,
+            "source_line": "#define STBRP__NOTUSED(v)  (void)(v)"
+          }
+        },
+        {
+          "name": "STBRP__CDECL",
+          "value": "__cdecl",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 218,
+            "column": 1,
+            "source_line": "#define STBRP__CDECL       __cdecl"
+          }
+        },
+        {
+          "name": "STBRP__NOTUSED",
+          "value": "(void)sizeof(v)",
+          "function_like": true,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 220,
+            "column": 1,
+            "source_line": "#define STBRP__NOTUSED(v)  (void)sizeof(v)"
+          }
+        },
+        {
+          "name": "STBRP__CDECL",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 221,
+            "column": 1,
+            "source_line": "#define STBRP__CDECL"
+          }
+        }
+      ],
+      "includes": [
+        {
+          "target": "stdlib.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 207,
+            "column": 1,
+            "source_line": "#include <stdlib.h>"
+          }
+        },
+        {
+          "target": "assert.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 212,
+            "column": 1,
+            "source_line": "#include <assert.h>"
+          }
+        }
+      ],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "STB_INCLUDE_STB_RECT_PACK_H",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 66,
+            "column": 1,
+            "source_line": "#ifndef STB_INCLUDE_STB_RECT_PACK_H"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STBRP_STATIC",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 71,
+            "column": 1,
+            "source_line": "#ifdef STBRP_STATIC"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 73,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 75,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "__cplusplus",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 77,
+            "column": 1,
+            "source_line": "#ifdef __cplusplus"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 79,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "__cplusplus",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 194,
+            "column": 1,
+            "source_line": "#ifdef __cplusplus"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 196,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 198,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_RECT_PACK_IMPLEMENTATION",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 205,
+            "column": 1,
+            "source_line": "#ifdef STB_RECT_PACK_IMPLEMENTATION"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "STBRP_SORT",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 206,
+            "column": 1,
+            "source_line": "#ifndef STBRP_SORT"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 209,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "STBRP_ASSERT",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 211,
+            "column": 1,
+            "source_line": "#ifndef STBRP_ASSERT"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 214,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "_MSC_VER",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 216,
+            "column": 1,
+            "source_line": "#ifdef _MSC_VER"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 219,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 222,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "if",
+          "argument": "0",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 297,
+            "column": 4,
+            "source_line": "   #if 0"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 301,
+            "column": 4,
+            "source_line": "   #else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 303,
+            "column": 4,
+            "source_line": "   #endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "_DEBUG",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 497,
+            "column": 1,
+            "source_line": "#ifdef _DEBUG"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 519,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 581,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        }
+      ],
+      "macro_dependencies": [
+        {
+          "name": "STBRP_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 229,
+            "column": 1,
+            "source_line": "STBRP_DEF void stbrp_setup_heuristic(stbrp_context *context, int heuristic)"
+          },
+          "source_text": "STBRP_DEF void stbrp_setup_heuristic(stbrp_context *context, int heuristic)"
+        },
+        {
+          "name": "STBRP_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 241,
+            "column": 1,
+            "source_line": "STBRP_DEF void stbrp_setup_allow_out_of_mem(stbrp_context *context, int allow_out_of_mem)"
+          },
+          "source_text": "STBRP_DEF void stbrp_setup_allow_out_of_mem(stbrp_context *context, int allow_out_of_mem)"
+        },
+        {
+          "name": "STBRP_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 261,
+            "column": 1,
+            "source_line": "STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, stbrp_node *nodes, int num_nodes)"
+          },
+          "source_text": "STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, stbrp_node *nodes, int num_nodes)"
+        },
+        {
+          "name": "STBRP_DEF",
+          "context": "declaration",
+          "source_location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 542,
+            "column": 1,
+            "source_line": "STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)"
+          },
+          "source_text": "STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)"
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+          "message": "Function-like macro 'STBRP__NOTUSED' is recorded but not expanded.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 217,
+            "column": 1,
+            "source_line": "#define STBRP__NOTUSED(v)  (void)(v)"
+          },
+          "unit_kind": "macro",
+          "unit_name": "STBRP__NOTUSED"
+        },
+        {
+          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+          "message": "Function-like macro 'STBRP__NOTUSED' is recorded but not expanded.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 220,
+            "column": 1,
+            "source_line": "#define STBRP__NOTUSED(v)  (void)sizeof(v)"
+          },
+          "unit_kind": "macro",
+          "unit_name": "STBRP__NOTUSED"
+        },
+        {
+          "code": "C_UNSUPPORTED_DECLARATOR",
+          "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 78,
+            "column": 1,
+            "source_line": "extern \"C\" {"
+          },
+          "unit_kind": "declarator",
+          "unit_name": null
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STBRP_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 229,
+            "column": 1,
+            "source_line": "STBRP_DEF void stbrp_setup_heuristic(stbrp_context *context, int heuristic)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STBRP_DEF"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STBRP_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 241,
+            "column": 1,
+            "source_line": "STBRP_DEF void stbrp_setup_allow_out_of_mem(stbrp_context *context, int allow_out_of_mem)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STBRP_DEF"
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STBRP_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 261,
+            "column": 1,
+            "source_line": "STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, stbrp_node *nodes, int num_nodes)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STBRP_DEF"
+        },
+        {
+          "code": "C_UNSUPPORTED_DECLARATOR",
+          "message": "Unsupported declarator syntax after parsed type layers: 'rect_height_compare(const void *a, const void *b)'.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 524,
+            "column": 1,
+            "source_line": "static int STBRP__CDECL rect_height_compare(const void *a, const void *b)"
+          },
+          "unit_kind": "declarator",
+          "unit_name": null
+        },
+        {
+          "code": "C_UNSUPPORTED_DECLARATOR",
+          "message": "Unsupported declarator syntax after parsed type layers: 'rect_original_order(const void *a, const void *b)'.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 535,
+            "column": 1,
+            "source_line": "static int STBRP__CDECL rect_original_order(const void *a, const void *b)"
+          },
+          "unit_kind": "declarator",
+          "unit_name": null
+        },
+        {
+          "code": "C_MACRO_DEPENDENT_DECLARATION",
+          "message": "Declaration depends on object-like macro 'STBRP_DEF'; provide preprocessed input to parse it.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_rect_pack.h",
+            "line": 542,
+            "column": 1,
+            "source_line": "STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)"
+          },
+          "unit_kind": "macro_dependent_declaration",
+          "unit_name": "STBRP_DEF"
+        }
+      ]
+    }
+  },
+  "functions": {
+    "stbrp__skyline_find_min_y": {
+      "name": "stbrp__skyline_find_min_y",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "c",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "stbrp_context *c",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbrp_context"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "stbrp_context *c",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbrp_context"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "first",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "stbrp_node *first",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbrp_node"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "stbrp_node *first",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbrp_node"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "x0",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int x0"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int x0"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "width",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int width"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int width"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "pwaste",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "int *pwaste",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "int *pwaste",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 287,
+        "column": 1,
+        "source_line": "static int stbrp__skyline_find_min_y(stbrp_context *c, stbrp_node *first, int x0, int width, int *pwaste)"
+      },
+      "start": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 287,
+        "column": 1,
+        "source_line": "static int stbrp__skyline_find_min_y(stbrp_context *c, stbrp_node *first, int x0, int width, int *pwaste)"
+      },
+      "end": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 335,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stbrp__skyline_find_best_pos": {
+      "name": "stbrp__skyline_find_best_pos",
+      "result_type": {
+        "reference": "stbrp__findresult"
+      },
+      "parameters": [
+        {
+          "name": "c",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "stbrp_context *c",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbrp_context"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "stbrp_context *c",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbrp_context"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "width",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int width"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int width"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "height",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int height"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int height"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 343,
+        "column": 1,
+        "source_line": "static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int width, int height)"
+      },
+      "start": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 343,
+        "column": 1,
+        "source_line": "static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int width, int height)"
+      },
+      "end": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 443,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stbrp__skyline_pack_rectangle": {
+      "name": "stbrp__skyline_pack_rectangle",
+      "result_type": {
+        "reference": "stbrp__findresult"
+      },
+      "parameters": [
+        {
+          "name": "context",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "stbrp_context *context",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbrp_context"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "stbrp_context *context",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbrp_context"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "width",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int width"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int width"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "height",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int height"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int height"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 445,
+        "column": 1,
+        "source_line": "static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, int width, int height)"
+      },
+      "start": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 445,
+        "column": 1,
+        "source_line": "static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, int width, int height)"
+      },
+      "end": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 522,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    }
+  },
+  "structs": {},
+  "unions": {},
+  "enums": {},
+  "typedefs": {
+    "stbrp__findresult": {
+      "reference": "stbrp__findresult"
+    }
+  },
+  "variables": {},
+  "macros": {
+    "STB_INCLUDE_STB_RECT_PACK_H": {
+      "name": "STB_INCLUDE_STB_RECT_PACK_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 67,
+        "column": 1,
+        "source_line": "#define STB_INCLUDE_STB_RECT_PACK_H"
+      }
+    },
+    "STB_RECT_PACK_VERSION": {
+      "name": "STB_RECT_PACK_VERSION",
+      "value": "1",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 69,
+        "column": 1,
+        "source_line": "#define STB_RECT_PACK_VERSION  1"
+      }
+    },
+    "STBRP_DEF": {
+      "name": "STBRP_DEF",
+      "value": "extern",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 74,
+        "column": 1,
+        "source_line": "#define STBRP_DEF extern"
+      }
+    },
+    "STBRP__MAXVAL": {
+      "name": "STBRP__MAXVAL",
+      "value": "0x7fffffff",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 87,
+        "column": 1,
+        "source_line": "#define STBRP__MAXVAL  0x7fffffff"
+      }
+    },
+    "STBRP_SORT": {
+      "name": "STBRP_SORT",
+      "value": "qsort",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 208,
+        "column": 1,
+        "source_line": "#define STBRP_SORT qsort"
+      }
+    },
+    "STBRP_ASSERT": {
+      "name": "STBRP_ASSERT",
+      "value": "assert",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 213,
+        "column": 1,
+        "source_line": "#define STBRP_ASSERT assert"
+      }
+    },
+    "STBRP__NOTUSED": {
+      "name": "STBRP__NOTUSED",
+      "value": "(void)sizeof(v)",
+      "function_like": true,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 220,
+        "column": 1,
+        "source_line": "#define STBRP__NOTUSED(v)  (void)sizeof(v)"
+      }
+    },
+    "STBRP__CDECL": {
+      "name": "STBRP__CDECL",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 221,
+        "column": 1,
+        "source_line": "#define STBRP__CDECL"
+      }
+    }
+  },
+  "includes": {
+    "stb/stb_rect_pack.h:stdlib.h": {
+      "target": "stdlib.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 207,
+        "column": 1,
+        "source_line": "#include <stdlib.h>"
+      }
+    },
+    "stb/stb_rect_pack.h:assert.h": {
+      "target": "assert.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 212,
+        "column": 1,
+        "source_line": "#include <assert.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "stb/stb_rect_pack.h": [
+      "stbrp__skyline_find_min_y",
+      "stbrp__skyline_find_best_pos",
+      "stbrp__skyline_pack_rectangle"
+    ]
+  },
+  "enum_constants": {
+    "STBRP__INIT_skyline": {
+      "name": "STBRP__INIT_skyline",
+      "value": "1",
+      "source_location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 224,
+        "column": 1,
+        "source_line": "enum"
+      }
+    }
+  },
+  "include_graph": {
+    "stb/stb_rect_pack.h": []
+  },
+  "system_includes": {
+    "stb/stb_rect_pack.h": [
+      "assert.h",
+      "stdlib.h"
+    ]
+  },
+  "unresolved_includes": {
+    "stb/stb_rect_pack.h": []
+  },
+  "header_source_pairs": {
+    "stb/stb_rect_pack.h": []
+  },
+  "diagnostics": [
+    {
+      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+      "message": "Function-like macro 'STBRP__NOTUSED' is recorded but not expanded.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 217,
+        "column": 1,
+        "source_line": "#define STBRP__NOTUSED(v)  (void)(v)"
+      },
+      "unit_kind": "macro",
+      "unit_name": "STBRP__NOTUSED"
+    },
+    {
+      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+      "message": "Function-like macro 'STBRP__NOTUSED' is recorded but not expanded.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 220,
+        "column": 1,
+        "source_line": "#define STBRP__NOTUSED(v)  (void)sizeof(v)"
+      },
+      "unit_kind": "macro",
+      "unit_name": "STBRP__NOTUSED"
+    },
+    {
+      "code": "C_UNSUPPORTED_DECLARATOR",
+      "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 78,
+        "column": 1,
+        "source_line": "extern \"C\" {"
+      },
+      "unit_kind": "declarator",
+      "unit_name": null
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STBRP_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 229,
+        "column": 1,
+        "source_line": "STBRP_DEF void stbrp_setup_heuristic(stbrp_context *context, int heuristic)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STBRP_DEF"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STBRP_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 241,
+        "column": 1,
+        "source_line": "STBRP_DEF void stbrp_setup_allow_out_of_mem(stbrp_context *context, int allow_out_of_mem)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STBRP_DEF"
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STBRP_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 261,
+        "column": 1,
+        "source_line": "STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, stbrp_node *nodes, int num_nodes)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STBRP_DEF"
+    },
+    {
+      "code": "C_UNSUPPORTED_DECLARATOR",
+      "message": "Unsupported declarator syntax after parsed type layers: 'rect_height_compare(const void *a, const void *b)'.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 524,
+        "column": 1,
+        "source_line": "static int STBRP__CDECL rect_height_compare(const void *a, const void *b)"
+      },
+      "unit_kind": "declarator",
+      "unit_name": null
+    },
+    {
+      "code": "C_UNSUPPORTED_DECLARATOR",
+      "message": "Unsupported declarator syntax after parsed type layers: 'rect_original_order(const void *a, const void *b)'.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 535,
+        "column": 1,
+        "source_line": "static int STBRP__CDECL rect_original_order(const void *a, const void *b)"
+      },
+      "unit_kind": "declarator",
+      "unit_name": null
+    },
+    {
+      "code": "C_MACRO_DEPENDENT_DECLARATION",
+      "message": "Declaration depends on object-like macro 'STBRP_DEF'; provide preprocessed input to parse it.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_rect_pack.h",
+        "line": 542,
+        "column": 1,
+        "source_line": "STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)"
+      },
+      "unit_kind": "macro_dependent_declaration",
+      "unit_name": "STBRP_DEF"
+    }
+  ]
+}
