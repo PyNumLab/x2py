@@ -143,26 +143,38 @@ def test_pointer_qualifiers_belong_to_the_component_they_qualify():
     assert dst.components[0].qualifiers == [CRestrict()]
 
 
-def test_array_components_preserve_bounds_static_minimum_and_qualifiers():
-    from c_parser import CArray, CComposedType, CConst, parse_c_file
+def test_array_parameters_preserve_declarations_and_expose_adjusted_pointer_types():
+    from c_parser import CArray, CComposedType, CConst, CDouble, CInt, CPointer, parse_c_file
 
     parsed = parse_c_file(
-        "void solve(size_t n, double a[static 4], const int shape[2], int work[const *]);\n",
+        "void solve(size_t n, double a[static 4], const int shape[2], int work[const *], int matrix[3][4]);\n",
         filename="arrays.h",
     )
 
     params = {parameter.name: parameter for parameter in parsed.functions[0].parameters}
-    a = params["a"].type
-    shape = params["shape"].type
-    work = params["work"].type
-    assert isinstance(a, CComposedType)
-    assert isinstance(a.components[0], CArray)
-    assert a.components[0].bound == "4"
-    assert a.components[0].is_static_minimum is True
-    assert shape.components[0].bound == "2"
-    assert shape.components[-1].qualifiers == [CConst()]
-    assert work.components[0].qualifiers == [CConst()]
-    assert work.components[0].is_variable_length is True
+    a_declared = params["a"].declared_type
+    assert isinstance(a_declared, CComposedType)
+    assert [type(component) for component in a_declared.components] == [CArray, CDouble]
+    assert a_declared.components[0].bound == "4"
+    assert a_declared.components[0].is_static_minimum is True
+    assert [type(component) for component in params["a"].type.components] == [CPointer, CDouble]
+
+    shape_declared = params["shape"].declared_type
+    assert shape_declared.components[0].bound == "2"
+    assert shape_declared.components[-1].qualifiers == [CConst()]
+    assert [type(component) for component in params["shape"].type.components] == [CPointer, CInt]
+    assert params["shape"].type.components[-1].qualifiers == [CConst()]
+
+    work_declared = params["work"].declared_type
+    assert work_declared.components[0].qualifiers == [CConst()]
+    assert work_declared.components[0].is_variable_length is True
+    assert params["work"].type.components[0].qualifiers == [CConst()]
+
+    matrix_declared = params["matrix"].declared_type
+    assert [type(component) for component in matrix_declared.components] == [CArray, CArray, CInt]
+    assert [component.bound for component in matrix_declared.components[:2]] == ["3", "4"]
+    assert [type(component) for component in params["matrix"].type.components] == [CPointer, CArray, CInt]
+    assert params["matrix"].type.components[1].bound == "4"
 
 
 def test_multiple_declarators_share_specifiers_but_have_distinct_compositions():

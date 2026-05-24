@@ -49,7 +49,9 @@ Implemented now:
   Inline tag definitions followed by aliases or objects produce concrete
   `CTypedef` or `CVariable` records linked to the aggregate object. Function
   models expose `result_type` and named `parameters`; their derived
-  `CFunctionType` is the nameless callable signature. Selected unsupported
+  `CFunctionType` is the nameless callable signature. Array and function
+  parameter declarations preserve their written `declared_type` and expose
+  pointer-adjusted effective `type` values. Selected unsupported
   declaration forms, including attributes, alignment specifiers,
   `_Atomic(type)`, nested aggregate member definitions, and static assertions,
   are reported as diagnostics with
@@ -76,7 +78,6 @@ Deferred:
 - typedef/tag resolution beyond an inline aggregate declaration and callback
   policy metadata, for example resolving `size_t count(void);` to a prior
   `typedef unsigned long size_t;`
-- parameter adjustment, for example `void process(int values[4]);`
 - nested aggregate member definitions, braced initializers, compiler
   attributes, alignment specifiers, and `_Atomic(type)` declarations, for
   example `struct outer { struct { int x; } inner; };` and
@@ -212,9 +213,9 @@ Current and planned responsibilities:
 - `c_parser/models.py`
   - Implemented: typed parser models, `CParseError`, compiler-style
     diagnostic rendering, concrete `CType` composition, and JSON-stable
-    dataclass serialization.
+    dataclass serialization, including declared/effective parameter type facts.
   - Planned: resolved symbol links, richer macro/preprocessing provenance,
-    parameter-adjustment facts, and project indexes.
+    and project indexes.
 - `c_parser/lexer.py`
   - Implemented: safe comment removal that preserves line mapping, logical
     record folding for backslash-newline, string/character literal awareness,
@@ -237,8 +238,10 @@ Current and planned responsibilities:
     unspecified empty parameter lists, function definitions preserve start/end
     locations, K&R-style definitions are rejected with `CParseError`, and
     invalid primitive-specifier combinations are rejected with `CPARSE003`.
-  - Planned: symbol resolution, parameter array/function adjustment, and
-    additional declaration-specifier and extension coverage.
+    Array and function parameters preserve `declared_type` while effective
+    `type` uses C parameter adjustment.
+  - Planned: symbol resolution and additional declaration-specifier and
+    extension coverage.
 - `c_parser/project.py`
   - Placeholder now.
   - Planned: file discovery for `.c`, `.h`, and possibly `.i`.
@@ -250,7 +253,6 @@ Current and planned responsibilities:
   - Planned: resolve the concrete primitive/tag/typedef types constructed by
     the parser across declarations and files.
   - Resolve typedef chains and aggregate references.
-  - Validate or adjust parameter array/function forms.
   - Safely fold simple compile-time constant expressions.
 - `c_parser/cli.py`
   - Implemented: report formatting and serialization helpers called by
@@ -333,8 +335,9 @@ Declaration objects are separate from the type components:
   function specifiers, `is_variadic`, prototype style, and source/definition
   locations. Its `type` property builds the corresponding nameless
   `CFunctionType`.
-- `CParameter` has a source name, a `type`, and a reserved `declared_type` for
-  later C parameter adjustment handling.
+- `CParameter` has a source name, written `declared_type`, and effective
+  `type`; outer array parameters and direct function parameters adjust to
+  pointer `type` values while their source form is retained.
 - `CInitializer` preserves initializer source text without claiming evaluation.
 - `CStruct` and `CUnion` expose `members` and `is_incomplete`; `CEnum` exposes
   `constants`; `CEnumerator` preserves enumerator name and value text.
@@ -380,8 +383,8 @@ reserved for semantic type relationships such as `CVariable.type` and
 spellings, such as `"const"`. Reused aggregate/typedef objects serialize as
 references to avoid cycles.
 
-Future parser phases can add symbol links, parameter adjustment, conditional
-region metadata, include graphs, and project diagnostics when the corresponding
+Future parser phases can add symbol links, conditional region metadata,
+include graphs, and project diagnostics when the corresponding
 behavior lands. Additions should be documented and tested with stable
 serialization expectations.
 

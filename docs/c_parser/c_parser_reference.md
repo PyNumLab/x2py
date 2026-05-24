@@ -73,6 +73,8 @@ Implemented:
 - recursive declarator extraction for parenthesized pointer/array precedence
 - nameless `CFunctionType` signatures for function pointer typedefs and
   parameter source facts
+- parameter array/function adjustment that keeps written `declared_type` facts
+  and exposes effective pointer `type` facts
 - simple file-scope variable and `typedef` extraction
 - incomplete `struct name;` and `union name;` extraction as concrete tag types
   with `is_incomplete=True`
@@ -95,8 +97,7 @@ Still deferred:
 
 - callback policy metadata beyond parser-side callback candidates
 - nested aggregate member definitions and broad compiler-extension declarators
-- parameter array/function adjustment and braced/designated initializer
-  preservation
+- braced/designated initializer preservation
 - cross-declaration and cross-file typedef/tag resolution
 - project include graph and cross-file type resolution
 - preprocessed-input parsing with `#line`/linemarker source mapping
@@ -259,6 +260,17 @@ used inside pointer typedefs and variables:
 ```python
 int add(int a, int b);     # CFunction(name="add", result_type=CInt(), parameters=[...])
 int (*compare)(int, int);  # CVariable(type=CComposedType([CPointer(), CFunctionType(...)]))
+```
+
+Function parameters preserve both the written type and C's adjusted callable
+type:
+
+```python
+void process(int values[4], int callback(int));
+# values.declared_type: CComposedType([CArray(bound="4"), CInt()])
+# values.type:          CComposedType([CPointer(), CInt()])
+# callback.declared_type: CFunctionType(...)
+# callback.type:          CComposedType([CPointer(), CFunctionType(...)])
 ```
 
 Callback-bearing parameters are marked as parser-side callback candidates,
@@ -452,8 +464,9 @@ Active declaration tests currently cover:
 - all qualifier objects, storage metadata, simple expression initializers, and
   multiple declarators
 - pointer/array precedence, multidimensional arrays, parameter VLA/static
-  metadata, function pointers, callback arrays, and functions returning
-  function pointers
+  metadata and pointer adjustment, function-declared callback adjustment,
+  function pointers, callback arrays, and functions returning function
+  pointers
 - functions, variables, typedefs, struct/union members, enums, incomplete
   tags, inline aggregate aliases, anonymous aggregate typedefs, and recursive
   struct pointers
@@ -474,7 +487,6 @@ declarations.
 
 | Capability | C example | Current parser boundary | Needed behavior |
 | --- | --- | --- | --- |
-| Parameter adjustment | `void process(int values[4], int callback(int));` | Preserves the declared array and function parameter types; it does not expose C's adjusted pointer parameter type. | Keep `declared_type`, and expose the adjusted effective type (`int *` and pointer-to-function). |
 | Braced/designated initializers | `int values[3] = {1, 2, 3};` and `struct point origin = {.x = 1, .y = 2};` | Simple initializer text such as `int answer = 42;` is preserved; braced forms are not reliably emitted as `CVariable` initializer facts. | Parse or preserve balanced initializer source without treating its braces as an aggregate declaration. |
 | Nested aggregate members | `struct outer { struct { int x; } inner; };` | Produces an unsupported-member diagnostic and does not model `inner`. | Build an anonymous `CStruct`/`CUnion` type used by the member variable. |
 | Typedef/tag resolution | `typedef unsigned long size_t; size_t count(void);` and `struct state { int id; }; void step(struct state *s);` | Preserves uses as unresolved `CTypedef` or incomplete tag-type objects unless attached inline. | Link uses to declarations across a file/project and diagnose conflicts. |

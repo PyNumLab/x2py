@@ -625,6 +625,27 @@ class CParser:
         )
         return type_, function_specifiers
 
+    def _adjust_parameter_type(self, declared_type: CType) -> CType:
+        if isinstance(declared_type, CFunctionType):
+            return CComposedType(
+                components=[CPointer(), declared_type],
+                source_text=declared_type.source_text,
+            )
+        if (
+            isinstance(declared_type, CComposedType)
+            and declared_type.components
+            and isinstance(declared_type.components[0], CArray)
+        ):
+            outer_array = declared_type.components[0]
+            return CComposedType(
+                components=[
+                    CPointer(qualifiers=list(outer_array.qualifiers)),
+                    *declared_type.components[1:],
+                ],
+                source_text=declared_type.source_text,
+            )
+        return declared_type
+
     def _parse_parameter(self, text: str) -> CParameter | None:
         stripped = text.strip()
         if not stripped or stripped == "void":
@@ -638,7 +659,7 @@ class CParser:
         )
         return CParameter(
             name=name,
-            type=type_,
+            type=self._adjust_parameter_type(type_),
             declared_type=type_,
         )
 

@@ -6,7 +6,8 @@ macros, `#undef` provenance, metadata diagnostics, variables, typedefs,
 aggregate declarations, function prototypes, prototype-style metadata, and
 function-definition signatures with start/end locations. Declarator output can
 represent parenthesized pointer/array precedence through concrete
-`CComposedType` components and nameless `CFunctionType` signatures.
+`CComposedType` components and nameless `CFunctionType` signatures; function
+parameters expose both declared and C-adjusted effective type facts.
 
 This document records the implemented C parse command shape, output schema,
 and diagnostic contract, plus deferred CLI behavior.
@@ -33,7 +34,9 @@ can populate `functions`, `typedefs`, `variables`, `structs`, `unions`, and
 `enums` in the supported subset. Typedefs, variables, parameters, and aggregate
 members can include concrete composed types for pointer/array/function forms,
 including function pointers, functions returning function pointers, and
-legal final flexible struct members marked with `is_flexible=True`. Raw
+legal final flexible struct members marked with `is_flexible=True`. Array and
+function parameters preserve written `declared_type` forms while effective
+`type` values use pointer adjustment. Raw
 `includes`, `macros`, and metadata `diagnostics` can also be
 populated. The object class distinguishes declarations (`CFunction`,
 `CVariable`, `CTypedef`, `CStruct`, `CUnion`, or `CEnum`), and incomplete tag
@@ -405,6 +408,8 @@ The active CLI/parser tests cover the current partial subset:
 - flexible array member classification/validation, per-member source
   locations, and named/unnamed/zero-width bit-field source facts are covered
   by focused C tests.
+- array and function parameter declared/effective type adjustment is covered
+  by focused C tests.
 - `--show-vars` and `--print-limit` are rejected in C mode until C-specific
   display controls exist.
 - `--semantics` with `--language c` is rejected until C semantic conversion is
@@ -444,6 +449,8 @@ Completed order:
     typedef-name references for later resolution.
 14. Added field-level source locations, flexible array member classification
     and invalid-use diagnostics, plus explicit bit-field regression coverage.
+15. Added C array/function parameter adjustment while preserving written
+    parameter type facts in `declared_type`.
 
 Next implementation work should continue with tag/typedef resolution,
 preprocessed-input line mapping, compiler extension policy, and project

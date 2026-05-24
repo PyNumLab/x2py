@@ -143,6 +143,23 @@ def test_concrete_type_serialization_preserves_semantic_type_fields_and_location
     assert function["source_location"]["line"] == 2
 
 
+def test_parameter_adjustment_serialization_preserves_declared_and_effective_types():
+    from c_parser import parse_c_file
+
+    payload = parse_c_file(
+        "void process(int values[4], int callback(int));\n",
+        filename="adjustment.h",
+    ).to_dict()
+    values, callback = payload["functions"][0]["parameters"]
+
+    assert values["declared_type"]["components"][0]["model"] == "CArray"
+    assert values["declared_type"]["components"][0]["bound"] == "4"
+    assert values["type"]["components"][0]["model"] == "CPointer"
+    assert callback["declared_type"]["model"] == "CFunctionType"
+    assert callback["type"]["components"][0]["model"] == "CPointer"
+    assert callback["type"]["components"][1]["model"] == "CFunctionType"
+
+
 def test_inline_aggregate_typedef_serialization_uses_references_without_cycles():
     from c_parser import parse_c_file
 
