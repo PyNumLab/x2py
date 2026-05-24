@@ -48,6 +48,7 @@ class CTopLevelSegment:
     original_end_column: int = 1
     original_source_line: str | None = None
     original_end_source_line: str | None = None
+    original_source_lines: tuple[str, ...] = field(default_factory=tuple)
 
 
 _TWO_CHAR_OPERATORS = {
@@ -80,6 +81,10 @@ def _source_line(lines: list[str], line_number: int) -> str | None:
     if 1 <= line_number <= len(lines):
         return lines[line_number - 1]
     return None
+
+
+def _source_lines(lines: list[str], start_line: int, end_line: int) -> tuple[str, ...]:
+    return tuple(lines[start_line - 1 : end_line])
 
 
 def _advance_position(char: str, line: int, column: int) -> tuple[int, int]:
@@ -138,24 +143,31 @@ def _scan_code_states(text: str):
             stack.pop()
 
 
-def top_level_split(text: str, delimiter: str = ",") -> list[str]:
-    """Split on a delimiter that appears outside brackets and literals."""
+def top_level_split_with_offsets(text: str, delimiter: str = ",") -> list[tuple[str, int]]:
+    """Split outside nested syntax and preserve each trimmed fragment offset."""
     if len(delimiter) != 1:
-        raise ValueError("top_level_split delimiter must be a single character")
+        raise ValueError("top_level_split_with_offsets delimiter must be a single character")
 
-    parts: list[str] = []
+    parts: list[tuple[str, int]] = []
     start = 0
     for index, char, stack, state in _scan_code_states(text):
         if state == "normal" and not stack and char == delimiter:
-            part = text[start:index].strip()
+            raw_part = text[start:index]
+            part = raw_part.strip()
             if part:
-                parts.append(part)
+                parts.append((part, start + len(raw_part) - len(raw_part.lstrip())))
             start = index + 1
 
-    tail = text[start:].strip()
+    raw_tail = text[start:]
+    tail = raw_tail.strip()
     if tail:
-        parts.append(tail)
+        parts.append((tail, start + len(raw_tail) - len(raw_tail.lstrip())))
     return parts
+
+
+def top_level_split(text: str, delimiter: str = ",") -> list[str]:
+    """Split on a delimiter that appears outside brackets and literals."""
+    return [part for part, _offset in top_level_split_with_offsets(text, delimiter)]
 
 
 def top_level_partition(text: str, delimiter: str = "=") -> tuple[str, str | None]:
@@ -281,6 +293,7 @@ def split_top_level_c_source(
                         original_end_column=column,
                         original_source_line=block_source_line,
                         original_end_source_line=_source_line(source_lines, line),
+                        original_source_lines=_source_lines(source_lines, block_start_line, line),
                     )
                 )
                 block_header = None
@@ -305,6 +318,7 @@ def split_top_level_c_source(
                         original_end_column=column,
                         original_source_line=_source_line(source_lines, start_line),
                         original_end_source_line=_source_line(source_lines, line),
+                        original_source_lines=_source_lines(source_lines, start_line, line),
                     )
                 )
             start_index = None
@@ -329,6 +343,7 @@ def split_top_level_c_source(
                     original_end_column=column,
                     original_source_line=_source_line(source_lines, start_line),
                     original_end_source_line=_source_line(source_lines, line),
+                    original_source_lines=_source_lines(source_lines, start_line, line),
                 )
             )
 
@@ -573,4 +588,5 @@ __all__ = (
     "strip_c_comments",
     "top_level_partition",
     "top_level_split",
+    "top_level_split_with_offsets",
 )

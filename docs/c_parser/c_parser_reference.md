@@ -77,8 +77,9 @@ Implemented:
 - incomplete `struct name;` and `union name;` extraction as concrete tag types
   with `is_incomplete=True`
 - named and anonymous struct/union/enum definitions
-- aggregate member extraction as `CVariable` objects through the declarator backend, including pointer,
-  array, callback-pointer, and bitfield source facts
+- aggregate member extraction as `CVariable` objects through the declarator
+  backend, including pointer, array, callback-pointer, flexible-array, and
+  bit-field source facts with per-member locations
 - inline tag typedef aliases and trailing tag object declarators as separate
   concrete models
 - simple function prototype extraction
@@ -94,8 +95,8 @@ Still deferred:
 
 - callback policy metadata beyond parser-side callback candidates
 - nested aggregate member definitions and broad compiler-extension declarators
-- parameter array/function adjustment, flexible-array-member validation, and
-  braced/designated initializer preservation
+- parameter array/function adjustment and braced/designated initializer
+  preservation
 - cross-declaration and cross-file typedef/tag resolution
 - project include graph and cross-file type resolution
 - preprocessed-input parsing with `#line`/linemarker source mapping
@@ -264,6 +265,10 @@ Callback-bearing parameters are marked as parser-side callback candidates,
 without claiming semantic wrappability. Struct and union `members` are
 `CVariable` objects; optional `bit_width` and `initializer` fields preserve
 source facts without inventing separate field or valued-variable classes.
+Member records carry their own field location. A legal final incomplete array
+member in a struct is marked as `CArray(is_flexible=True)`; non-final,
+sole-member, and union incomplete-array member forms are retained with
+`C_INVALID_FLEXIBLE_ARRAY_MEMBER` error diagnostics.
 Selected unsupported forms, such as static assertions,
 attributes, alignment specifiers, `_Atomic(type)`, and nested aggregate member
 definitions, are reported in `diagnostics` with explicit `unit_kind` values.
@@ -452,6 +457,8 @@ Active declaration tests currently cover:
 - functions, variables, typedefs, struct/union members, enums, incomplete
   tags, inline aggregate aliases, anonymous aggregate typedefs, and recursive
   struct pointers
+- legal and invalid flexible array members, precise field locations, and
+  named/unnamed/zero-width bit-field source facts
 - concrete-type JSON serialization, source locations, and cycle-safe aggregate
   references
 - diagnostics for selected unsupported attributes, alignment, `_Atomic(type)`,
@@ -468,7 +475,6 @@ declarations.
 | Capability | C example | Current parser boundary | Needed behavior |
 | --- | --- | --- | --- |
 | Parameter adjustment | `void process(int values[4], int callback(int));` | Preserves the declared array and function parameter types; it does not expose C's adjusted pointer parameter type. | Keep `declared_type`, and expose the adjusted effective type (`int *` and pointer-to-function). |
-| Flexible array members | `struct packet { unsigned size; unsigned char data[]; };` | Represents `data` as `CArray(bound=None)` but does not set `is_flexible` or validate that it is a legal final struct member. | Mark the flexible member and diagnose illegal placement or union usage. |
 | Braced/designated initializers | `int values[3] = {1, 2, 3};` and `struct point origin = {.x = 1, .y = 2};` | Simple initializer text such as `int answer = 42;` is preserved; braced forms are not reliably emitted as `CVariable` initializer facts. | Parse or preserve balanced initializer source without treating its braces as an aggregate declaration. |
 | Nested aggregate members | `struct outer { struct { int x; } inner; };` | Produces an unsupported-member diagnostic and does not model `inner`. | Build an anonymous `CStruct`/`CUnion` type used by the member variable. |
 | Typedef/tag resolution | `typedef unsigned long size_t; size_t count(void);` and `struct state { int id; }; void step(struct state *s);` | Preserves uses as unresolved `CTypedef` or incomplete tag-type objects unless attached inline. | Link uses to declarations across a file/project and diagnose conflicts. |
@@ -482,13 +488,11 @@ tests before they can be treated as stable:
 
 ```c
 const int * const * volatile chain;
-struct flags { unsigned : 0; unsigned mode : 3; };
 ```
 
 The current parser creates distinct qualified `CPointer` components for
-`chain`, and creates a `CVariable(name=None, bit_width="0")` for the unnamed
-zero-width bit-field. Tests should lock down those shapes and any later
-semantic validation rules.
+`chain`; dedicated active regression coverage for that multi-level qualifier
+shape remains to be added.
 
 Fixture layout should be separate from Fortran:
 

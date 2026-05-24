@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """C aggregate type, enum, and typedef parser tests."""
 
+import pytest
+
 
 def test_named_struct_members_are_variables_in_source_order():
     from c_parser import CArray, CComposedType, CVariable, parse_c_file
@@ -164,6 +166,97 @@ def test_struct_members_use_same_components_for_callbacks_arrays_and_bitfields()
     assert enabled.bit_width == "1"
     assert isinstance(values.type.components[0], CArray)
     assert values.type.components[0].bound == "4"
+
+
+def test_struct_members_preserve_precise_locations_and_legal_flexible_array_metadata():
+    from c_parser import CArray, parse_c_file
+
+    parsed = parse_c_file(
+        """struct packet {
+    unsigned size;
+    unsigned char data[];
+};
+""",
+        filename="packet.h",
+    )
+
+    size, data = parsed.structs[0].members
+    assert [(member.source_location.line, member.source_location.column) for member in (size, data)] == [
+        (2, 5),
+        (3, 5),
+    ]
+    assert data.source_location.source_line == "    unsigned char data[];"
+    assert isinstance(data.type.components[0], CArray)
+    assert data.type.components[0].is_flexible is True
+    assert parsed.diagnostics == []
+
+
+@pytest.mark.parametrize(
+    ("source", "owner_name", "message"),
+    [
+        (
+            """struct bad {
+    unsigned char data[];
+    int tail;
+};
+""",
+            "structs",
+            "must be the final member",
+        ),
+        (
+            """struct bad {
+    unsigned char data[];
+};
+""",
+            "structs",
+            "requires a preceding named struct member",
+        ),
+        (
+            """union bad {
+    unsigned char data[];
+    int code;
+};
+""",
+            "unions",
+            "cannot be a flexible array member",
+        ),
+    ],
+)
+def test_invalid_flexible_array_members_are_diagnosed(source, owner_name, message):
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(source, filename="invalid_flexible.h")
+    aggregate = getattr(parsed, owner_name)[0]
+    data = aggregate.members[0]
+
+    assert data.type.components[0].is_flexible is False
+    assert [(diagnostic.code, diagnostic.severity) for diagnostic in parsed.diagnostics] == [
+        ("C_INVALID_FLEXIBLE_ARRAY_MEMBER", "error"),
+    ]
+    assert message in parsed.diagnostics[0].message
+    assert parsed.diagnostics[0].location.line == 2
+    assert parsed.diagnostics[0].unit_name == "data"
+
+
+def test_unnamed_and_zero_width_bitfields_preserve_source_facts_and_locations():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """struct flags {
+    unsigned : 0;
+    unsigned mode : 3;
+};
+""",
+        filename="bitfields.h",
+    )
+
+    zero_width, mode = parsed.structs[0].members
+    assert [(member.name, member.bit_width) for member in (zero_width, mode)] == [
+        (None, "0"),
+        ("mode", "3"),
+    ]
+    assert [member.source_location.line for member in (zero_width, mode)] == [2, 3]
+    assert parsed.diagnostics == []
 
 
 def test_nested_aggregate_member_definition_is_diagnosed_explicitly():

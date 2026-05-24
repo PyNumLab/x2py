@@ -12,6 +12,7 @@ from .lexer import (
     strip_c_comments,
     top_level_partition,
     top_level_split,
+    top_level_split_with_offsets,
 )
 from .models import (
     CArray,
@@ -198,13 +199,26 @@ class CParser:
     declarators, aggregate declarations, typedefs, and function signatures.
     """
 
-    def _source_location(self, segment: CTopLevelSegment) -> CSourceLocation:
+    def _source_location_at(self, segment: CTopLevelSegment, offset: int) -> CSourceLocation:
+        prefix = segment.text[:offset]
+        line_offset = prefix.count("\n")
+        line = segment.original_start_line + line_offset
+        if line_offset:
+            column = len(prefix.rsplit("\n", 1)[-1]) + 1
+        else:
+            column = segment.original_start_column + len(prefix)
+        source_line = segment.original_source_line
+        if line_offset and line_offset < len(segment.original_source_lines):
+            source_line = segment.original_source_lines[line_offset]
         return CSourceLocation(
             filename=segment.filename,
-            line=segment.original_start_line,
-            column=segment.original_start_column,
-            source_line=segment.original_source_line,
+            line=line,
+            column=column,
+            source_line=source_line,
         )
+
+    def _source_location(self, segment: CTopLevelSegment) -> CSourceLocation:
+        return self._source_location_at(segment, 0)
 
     def _has_unsupported_declaration_marker(self, text: str) -> bool:
         return any(marker in text for marker in _UNSUPPORTED_DECLARATION_MARKERS)
@@ -248,13 +262,16 @@ class CParser:
         self,
         segment: CTopLevelSegment,
         message: str,
+        *,
+        offset: int = 0,
     ) -> CParseError:
+        location = self._source_location_at(segment, offset)
         return CParseError(
             message,
-            filename=segment.filename,
-            line_number=segment.original_start_line,
-            column=segment.original_start_column,
-            source_line=segment.original_source_line,
+            filename=location.filename,
+            line_number=location.line,
+            column=location.column,
+            source_line=location.source_line,
             code="CPARSE003",
         )
 
@@ -932,31 +949,79 @@ class CParser:
         segment: CTopLevelSegment,
         owner_kind: str,
         message: str,
+        *,
+        offset: int = 0,
     ) -> CDiagnostic:
         return CDiagnostic(
             code="C_UNSUPPORTED_FIELD_DECLARATION",
             message=message,
             severity="warning",
-            location=self._source_location(segment),
+            location=self._source_location_at(segment, offset),
             unit_kind=f"{owner_kind}_field",
             unit_name=None,
         )
+
+    def _incomplete_array_component(self, type_: CType) -> CArray | None:
+        components = type_.components if isinstance(type_, CComposedType) else [type_]
+        if not components or not isinstance(components[0], CArray):
+            return None
+        array = components[0]
+        if array.bound is None and not array.is_variable_length:
+            return array
+        return None
+
+    def _validate_flexible_members(
+        self,
+        members: list[CVariable],
+        owner_kind: str,
+    ) -> list[CDiagnostic]:
+        diagnostics: list[CDiagnostic] = []
+        named_members = sum(member.name is not None for member in members)
+        for index, member in enumerate(members):
+            array = self._incomplete_array_component(member.type)
+            if array is None:
+                continue
+            if owner_kind == "struct" and index == len(members) - 1 and named_members > 1:
+                array.is_flexible = True
+                continue
+            if owner_kind == "union":
+                message = "A union member cannot be a flexible array member."
+            elif index != len(members) - 1:
+                message = "A flexible array member must be the final member of a struct."
+            else:
+                message = "A flexible array member requires a preceding named struct member."
+            diagnostics.append(
+                CDiagnostic(
+                    code="C_INVALID_FLEXIBLE_ARRAY_MEMBER",
+                    message=message,
+                    severity="error",
+                    location=member.source_location,
+                    unit_kind=f"{owner_kind}_field",
+                    unit_name=member.name,
+                )
+            )
+        return diagnostics
 
     def _parse_fields(
         self,
         body: str,
         segment: CTopLevelSegment,
         owner_kind: str,
+        *,
+        body_offset: int,
     ) -> tuple[list[CVariable], list[CDiagnostic]]:
         members: list[CVariable] = []
         diagnostics: list[CDiagnostic] = []
-        for text in top_level_split(body, ";"):
+        for text, field_offset in top_level_split_with_offsets(body, ";"):
+            member_offset = body_offset + field_offset
+            member_location = self._source_location_at(segment, member_offset)
             if self._has_unsupported_declaration_marker(text):
                 diagnostics.append(
                     self._field_diagnostic(
                         segment,
                         owner_kind,
                         "Declaration attributes and alignment specifiers are not supported in fields yet.",
+                        offset=member_offset,
                     )
                 )
                 continue
@@ -966,13 +1031,19 @@ class CParser:
                         segment,
                         owner_kind,
                         "Nested aggregate field definitions are not supported yet.",
+                        offset=member_offset,
                     )
                 )
                 continue
             spec_text, declarator_list = self._split_declaration_specifiers(text)
             if not spec_text or not declarator_list:
                 diagnostics.append(
-                    self._field_diagnostic(segment, owner_kind, "Unsupported field declaration.")
+                    self._field_diagnostic(
+                        segment,
+                        owner_kind,
+                        "Unsupported field declaration.",
+                        offset=member_offset,
+                    )
                 )
                 continue
             for declarator in top_level_split(declarator_list, ","):
@@ -984,23 +1055,31 @@ class CParser:
                         declaration,
                     )
                 except _InvalidSpecifierSequence as error:
-                    raise self._invalid_specifier_error(segment, str(error)) from None
+                    raise self._invalid_specifier_error(segment, str(error), offset=member_offset) from None
                 except _UnsupportedDeclaratorSyntax as error:
-                    diagnostics.append(self._field_diagnostic(segment, owner_kind, str(error)))
+                    diagnostics.append(
+                        self._field_diagnostic(segment, owner_kind, str(error), offset=member_offset)
+                    )
                     continue
                 if name is None and bit_width is None:
                     diagnostics.append(
-                        self._field_diagnostic(segment, owner_kind, "Unnamed field type is not supported.")
+                        self._field_diagnostic(
+                            segment,
+                            owner_kind,
+                            "Unnamed field type is not supported.",
+                            offset=member_offset,
+                        )
                     )
                     continue
                 members.append(
                     CVariable(
                         name=name,
                         type=type_,
-                        source_location=self._source_location(segment),
+                        source_location=member_location,
                         bit_width=bit_width,
                     )
                 )
+        diagnostics.extend(self._validate_flexible_members(members, owner_kind))
         return members, diagnostics
 
     def _parse_enumerators(self, body: str, segment: CTopLevelSegment) -> list[CEnumerator]:
@@ -1060,7 +1139,12 @@ class CParser:
                 source_location=location,
             )
         else:
-            members, diagnostics = self._parse_fields(body, segment, kind)
+            members, diagnostics = self._parse_fields(
+                body,
+                segment,
+                kind,
+                body_offset=open_index + 1,
+            )
             if kind == "struct":
                 aggregate = CStruct(
                     name=tag_name,
