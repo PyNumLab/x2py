@@ -509,6 +509,27 @@ _Atomic(int) atomic_value;
     ]
 
 
+def test_braced_initializer_declarations_are_diagnosed_not_declarator_failures():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        "struct config;\n"
+        "int values[3] = {1, 2, 3};\n"
+        "struct config cfg = {.enabled = 1};\n"
+        "int scalar = 1;\n",
+        filename="braced_initializers.h",
+    )
+
+    assert [variable.name for variable in parsed.variables] == ["scalar"]
+    assert [
+        (diagnostic.code, diagnostic.unit_kind, diagnostic.location.line)
+        for diagnostic in parsed.diagnostics
+    ] == [
+        ("C_UNSUPPORTED_DECLARATION", "braced_initializer_declaration", 2),
+        ("C_UNSUPPORTED_DECLARATION", "braced_initializer_declaration", 3),
+    ]
+
+
 def test_unconsumed_declarator_suffixes_are_diagnosed_not_silently_discarded():
     from c_parser import parse_c_file
 

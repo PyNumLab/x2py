@@ -252,20 +252,47 @@ class CParser:
             return dependencies
 
         for segment in split_top_level_c_source(source, filename=filename):
-            text = segment.text.strip()
-            if not text:
-                continue
-            for macro_name in sorted(macro_names):
-                if re.search(rf"\b{re.escape(macro_name)}\s*\(", text):
-                    dependencies.append(
-                        CMacroDependency(
-                            name=macro_name,
-                            context="declaration",
-                            source_location=self._source_location(segment),
-                        )
-                    )
-                    break
+            dependency = self._segment_macro_dependency(segment, macro_names)
+            if dependency is not None:
+                dependencies.append(dependency)
         return dependencies
+
+    def _segment_macro_dependency(
+        self,
+        segment: CTopLevelSegment,
+        macro_names: set[str],
+    ) -> CMacroDependency | None:
+        text = segment.text.strip()
+        if not text:
+            return None
+        declaration_text, initializer = top_level_partition(text, "=")
+        scan_text = declaration_text if initializer is not None else text
+        for macro_name in sorted(macro_names):
+            if re.search(rf"\b{re.escape(macro_name)}\s*\(", scan_text):
+                return CMacroDependency(
+                    name=macro_name,
+                    context="declaration",
+                    source_text=text,
+                    source_location=self._source_location(segment),
+                )
+        return None
+
+    def _macro_dependent_declaration_diagnostic(
+        self,
+        segment: CTopLevelSegment,
+        dependency: CMacroDependency,
+    ) -> CDiagnostic:
+        return CDiagnostic(
+            code="C_MACRO_DEPENDENT_DECLARATION",
+            message=(
+                f"Declaration depends on function-like macro {dependency.name!r}; "
+                "provide preprocessed input to parse it."
+            ),
+            severity="warning",
+            location=dependency.source_location or self._source_location(segment),
+            unit_kind="macro_dependent_declaration",
+            unit_name=dependency.name,
+        )
 
     def _has_unsupported_declaration_marker(self, text: str) -> bool:
         return any(marker in text for marker in _UNSUPPORTED_DECLARATION_MARKERS)
@@ -1632,6 +1659,18 @@ class CParser:
 
         return self._declarations_from_declarators(spec_text, declarator_list, segment)
 
+    def _is_braced_initializer_declaration(self, segment: CTopLevelSegment) -> bool:
+        text = segment.text.strip()
+        if not text:
+            return False
+        if "{" in text and "}" in text and "=" in text:
+            return True
+        if segment.terminator != "block":
+            return False
+
+        declaration, initializer = top_level_partition(text, "=")
+        return bool(declaration) and initializer is not None
+
     def _unsupported_declaration_diagnostic(self, segment: CTopLevelSegment) -> CDiagnostic | None:
         text = segment.text.strip()
         if not text:
@@ -1640,7 +1679,10 @@ class CParser:
         kind = "unsupported_declaration"
         message = "Unsupported C declaration form."
 
-        if text.startswith("struct "):
+        if self._is_braced_initializer_declaration(segment):
+            kind = "braced_initializer_declaration"
+            message = "Braced or designated initializer declarations are not supported yet."
+        elif text.startswith("struct "):
             kind = "struct_definition"
             message = "Struct definitions are not supported yet."
         elif text.startswith("union "):
@@ -1661,6 +1703,9 @@ class CParser:
         elif "_Atomic(" in text:
             kind = "atomic_type_declaration"
             message = "_Atomic(type) declarations are not supported yet."
+        elif "{" in text or "}" in text:
+            kind = "brace_declaration"
+            message = "Unsupported declaration containing braces."
 
         return CDiagnostic(
             code="C_UNSUPPORTED_DECLARATION",
@@ -1675,6 +1720,8 @@ class CParser:
         self,
         source: str,
         filename: str | None,
+        *,
+        function_like_macros: set[str] | None = None,
     ) -> tuple[
         list[CFunction],
         list[CStruct],
@@ -1694,7 +1741,14 @@ class CParser:
         variables: list[CVariable] = []
         diagnostics: list[CDiagnostic] = []
 
+        macro_names = function_like_macros or set()
         for segment in split_top_level_c_source(source, filename=filename):
+            macro_dependency = self._segment_macro_dependency(segment, macro_names)
+            if macro_dependency is not None:
+                diagnostics.append(
+                    self._macro_dependent_declaration_diagnostic(segment, macro_dependency)
+                )
+                continue
             tag_definition = self._parse_tag_definition(segment)
             if tag_definition is not None:
                 aggregate, parsed_functions, parsed_typedefs, parsed_variables, parsed_diagnostics = tag_definition
@@ -1708,6 +1762,11 @@ class CParser:
                 typedefs.extend(parsed_typedefs)
                 variables.extend(parsed_variables)
                 diagnostics.extend(parsed_diagnostics)
+                continue
+            if self._is_braced_initializer_declaration(segment):
+                unsupported = self._unsupported_declaration_diagnostic(segment)
+                if unsupported is not None:
+                    diagnostics.append(unsupported)
                 continue
             if segment.terminator != ";":
                 try:
@@ -1957,15 +2016,17 @@ class CParser:
             parsed.includes = metadata.includes
             parsed.macros = metadata.macros
             parsed.raw_directives = metadata.raw_directives
+            function_like_macro_names = {macro.name for macro in metadata.macros if macro.function_like}
             parsed.macro_dependencies = self._macro_dependencies(
                 source,
                 filename,
-                {macro.name for macro in metadata.macros if macro.function_like},
+                function_like_macro_names,
             )
             parsed.diagnostics = metadata.diagnostics
             functions, structs, unions, enums, typedefs, variables, parser_diagnostics = self._parse_translation_unit(
                 source,
                 filename,
+                function_like_macros=function_like_macro_names,
             )
             parsed.functions = functions
             parsed.structs = structs
