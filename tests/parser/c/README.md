@@ -49,7 +49,7 @@ produces `nanosvg.json`; STB produces one golden per top-level library input.
 Regenerate all parser goldens with:
 
 ```bash
-python -m tests.parser.c.generate_c_parser_goldens
+C_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser/c/test_c_fixture_suite.py
 ```
 
 Regenerate selected projects by naming either input relative to
@@ -65,9 +65,9 @@ Fatal diagnostic fixtures live in `tests/data/c/errors/parser/` and their
 expected metadata lives in `fixtures/errors/`. Regenerate them with:
 
 ```bash
-python -m tests.parser.c.errors.generate_c_parser_error_goldens
+C_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser/c/test_c_error_fixture_suite.py
 ```
 
-The comparison tests are read-only. Regenerate the expected files with the
-standalone generator, then rerun the tests to compare against the checked-in
-baselines.
+The standalone generator modules remain available for targeted refreshes, but
+the comparison tests also rewrite their checked-in baselines when
+`C_PARSER_UPDATE_GOLDENS=1` is set.
