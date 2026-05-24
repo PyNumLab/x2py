@@ -1,0 +1,766 @@
+{
+  "files": {
+    "general/basic_array_update.c": {
+      "filename": "general/basic_array_update.c",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "add1",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double x[static 1]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double x[static 1]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "1",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/basic_array_update.c",
+            "line": 3,
+            "column": 1,
+            "source_line": "void add1(int n, double x[static 1])"
+          },
+          "start": {
+            "filename": "general/basic_array_update.c",
+            "line": 3,
+            "column": 1,
+            "source_line": "void add1(int n, double x[static 1])"
+          },
+          "end": {
+            "filename": "general/basic_array_update.c",
+            "line": 8,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/basic_array_update.h",
+              "line": 4,
+              "column": 1,
+              "source_line": "void add1(int n, double x[static 1]);"
+            }
+          ]
+        },
+        {
+          "name": "add1_strided",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double *restrict x",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [
+                      "restrict"
+                    ],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double *restrict x",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [
+                      "restrict"
+                    ],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "incx",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int incx"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int incx"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/basic_array_update.c",
+            "line": 10,
+            "column": 1,
+            "source_line": "void add1_strided(int n, double *restrict x, int incx)"
+          },
+          "start": {
+            "filename": "general/basic_array_update.c",
+            "line": 10,
+            "column": 1,
+            "source_line": "void add1_strided(int n, double *restrict x, int incx)"
+          },
+          "end": {
+            "filename": "general/basic_array_update.c",
+            "line": 15,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/basic_array_update.h",
+              "line": 5,
+              "column": 1,
+              "source_line": "void add1_strided(int n, double *restrict x, int incx);"
+            }
+          ]
+        }
+      ],
+      "structs": [],
+      "unions": [],
+      "enums": [],
+      "typedefs": [],
+      "variables": [],
+      "macros": [],
+      "includes": [
+        {
+          "target": "basic_array_update.h",
+          "kind": "local",
+          "resolved_path": "general/basic_array_update.h",
+          "source_location": {
+            "filename": "general/basic_array_update.c",
+            "line": 1,
+            "column": 1,
+            "source_line": "#include \"basic_array_update.h\""
+          }
+        }
+      ],
+      "raw_directives": [],
+      "macro_dependencies": [],
+      "diagnostics": []
+    },
+    "general/basic_array_update.h": {
+      "filename": "general/basic_array_update.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "add1",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double x[static 1]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double x[static 1]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "1",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/basic_array_update.h",
+            "line": 4,
+            "column": 1,
+            "source_line": "void add1(int n, double x[static 1]);"
+          },
+          "start": {
+            "filename": "general/basic_array_update.h",
+            "line": 4,
+            "column": 1,
+            "source_line": "void add1(int n, double x[static 1]);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "add1_strided",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "x",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double *restrict x",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [
+                      "restrict"
+                    ],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "double *restrict x",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [
+                      "restrict"
+                    ],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [],
+                    "source_text": "double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "incx",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int incx"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int incx"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/basic_array_update.h",
+            "line": 5,
+            "column": 1,
+            "source_line": "void add1_strided(int n, double *restrict x, int incx);"
+          },
+          "start": {
+            "filename": "general/basic_array_update.h",
+            "line": 5,
+            "column": 1,
+            "source_line": "void add1_strided(int n, double *restrict x, int incx);"
+          },
+          "end": null,
+          "declaration_locations": []
+        }
+      ],
+      "structs": [],
+      "unions": [],
+      "enums": [],
+      "typedefs": [],
+      "variables": [],
+      "macros": [
+        {
+          "name": "X2PY_GENERAL_BASIC_ARRAY_UPDATE_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "general/basic_array_update.h",
+            "line": 2,
+            "column": 1,
+            "source_line": "#define X2PY_GENERAL_BASIC_ARRAY_UPDATE_H"
+          }
+        }
+      ],
+      "includes": [],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "X2PY_GENERAL_BASIC_ARRAY_UPDATE_H",
+          "source_location": {
+            "filename": "general/basic_array_update.h",
+            "line": 1,
+            "column": 1,
+            "source_line": "#ifndef X2PY_GENERAL_BASIC_ARRAY_UPDATE_H"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "general/basic_array_update.h",
+            "line": 7,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        }
+      ],
+      "macro_dependencies": [],
+      "diagnostics": []
+    }
+  },
+  "functions": {
+    "add1": {
+      "name": "add1",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "n",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "x",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double x[static 1]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double x[static 1]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "1",
+                "is_static_minimum": true,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/basic_array_update.c",
+        "line": 3,
+        "column": 1,
+        "source_line": "void add1(int n, double x[static 1])"
+      },
+      "start": {
+        "filename": "general/basic_array_update.c",
+        "line": 3,
+        "column": 1,
+        "source_line": "void add1(int n, double x[static 1])"
+      },
+      "end": {
+        "filename": "general/basic_array_update.c",
+        "line": 8,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/basic_array_update.h",
+          "line": 4,
+          "column": 1,
+          "source_line": "void add1(int n, double x[static 1]);"
+        }
+      ]
+    },
+    "add1_strided": {
+      "name": "add1_strided",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "n",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int n"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "x",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double *restrict x",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [
+                  "restrict"
+                ],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "double *restrict x",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [
+                  "restrict"
+                ],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [],
+                "source_text": "double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "incx",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int incx"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int incx"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/basic_array_update.c",
+        "line": 10,
+        "column": 1,
+        "source_line": "void add1_strided(int n, double *restrict x, int incx)"
+      },
+      "start": {
+        "filename": "general/basic_array_update.c",
+        "line": 10,
+        "column": 1,
+        "source_line": "void add1_strided(int n, double *restrict x, int incx)"
+      },
+      "end": {
+        "filename": "general/basic_array_update.c",
+        "line": 15,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/basic_array_update.h",
+          "line": 5,
+          "column": 1,
+          "source_line": "void add1_strided(int n, double *restrict x, int incx);"
+        }
+      ]
+    }
+  },
+  "structs": {},
+  "unions": {},
+  "enums": {},
+  "typedefs": {},
+  "variables": {},
+  "macros": {
+    "X2PY_GENERAL_BASIC_ARRAY_UPDATE_H": {
+      "name": "X2PY_GENERAL_BASIC_ARRAY_UPDATE_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "general/basic_array_update.h",
+        "line": 2,
+        "column": 1,
+        "source_line": "#define X2PY_GENERAL_BASIC_ARRAY_UPDATE_H"
+      }
+    }
+  },
+  "includes": {
+    "general/basic_array_update.c:basic_array_update.h": {
+      "target": "basic_array_update.h",
+      "kind": "local",
+      "resolved_path": "general/basic_array_update.h",
+      "source_location": {
+        "filename": "general/basic_array_update.c",
+        "line": 1,
+        "column": 1,
+        "source_line": "#include \"basic_array_update.h\""
+      }
+    }
+  },
+  "functions_by_file": {
+    "general/basic_array_update.c": [
+      "add1",
+      "add1_strided"
+    ],
+    "general/basic_array_update.h": [
+      "add1",
+      "add1_strided"
+    ]
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "general/basic_array_update.c": [
+      "general/basic_array_update.h"
+    ],
+    "general/basic_array_update.h": []
+  },
+  "system_includes": {
+    "general/basic_array_update.c": [],
+    "general/basic_array_update.h": []
+  },
+  "unresolved_includes": {
+    "general/basic_array_update.c": [],
+    "general/basic_array_update.h": []
+  },
+  "header_source_pairs": {
+    "general/basic_array_update.h": [
+      "general/basic_array_update.c"
+    ]
+  },
+  "diagnostics": []
+}

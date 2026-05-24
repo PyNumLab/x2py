@@ -52,8 +52,10 @@ Implemented now:
   models expose `result_type` and named `parameters`; their derived
   `CFunctionType` is the nameless callable signature. Array and function
   parameter declarations preserve their written `declared_type` and expose
-  pointer-adjusted effective `type` values. Selected unsupported
-  declaration forms, including attributes, alignment specifiers,
+  pointer-adjusted effective `type` values. Declarations prefixed by
+  unexpanded object-like macros are deferred as macro dependencies rather than
+  misreported as invalid type sequences. Selected unsupported declaration
+  forms, including attributes, alignment specifiers,
   `_Atomic(type)`, nested aggregate member definitions, and static assertions,
   are reported as diagnostics with
   explicit `unit_kind` values. A declarator must be fully consumed before a
@@ -74,11 +76,13 @@ Implemented now:
 - `--language c --semantics`, `--language c --pyi`, and C wrap-readiness are
   rejected until semantic conversion exists.
 - Focused partial CLI/API, declaration/function, diagnostic color, project
-  include/index, and raw lexer/directive tests are unskipped while broader
-  roadmap tests remain skipped.
-- `tests/data/c/` contains C fixture scaffolding and general fixtures modeled
-  after the Fortran general fixture themes, with additional C-specific API
-  shapes.
+  include/index, raw lexer/directive, project golden, error golden, and JSON
+  schema tests are active while corpus, semantic, and `.pyi` roadmap tests
+  remain skipped.
+- `tests/data/c/` contains general fixtures modeled after the Fortran general
+  fixture themes, additional C-specific API shapes, fatal diagnostic inputs,
+  and real-world cJSON/jsmn/tinyexpr/linmath/NanoSVG/stb inputs whose partial
+  project parse reports are covered by regression goldens.
 
 Deferred:
 
@@ -131,6 +135,8 @@ should not wait for a separate request.
 - `tests/pyi/test_pyi_fixture_suite.py`
 - `tests/parser/fortran/generate_fortran_parser_goldens.py`
 - `tests/parser/fortran/errors/generate_fortran_parser_error_goldens.py`
+- `tests/parser/c/generate_c_parser_goldens.py`
+- `tests/parser/c/errors/generate_c_parser_error_goldens.py`
 - `tests/semantics/generate_semantic_fixtures.py`
 - `tests/pyi/generate_pyi_fixtures.py`
 - `tests/_shared/fixture_outputs.py`
@@ -246,7 +252,8 @@ Current and planned responsibilities:
     locations, K&R-style definitions are rejected with `CParseError`, and
     invalid primitive-specifier combinations are rejected with `CPARSE003`.
     Array and function parameters preserve `declared_type` while effective
-    `type` uses C parameter adjustment.
+    `type` uses C parameter adjustment. Raw declarations beginning with an
+    object-like macro name are retained as macro-dependent diagnostics.
   - Planned: symbol resolution and additional declaration-specifier and
     extension coverage.
 - `c_parser/project.py`
@@ -512,8 +519,8 @@ Raw-source mode target:
   provenance.
 - Parse ordinary declarations only when they are visible without macro
   expansion.
-- Mark macro-shaped declaration regions as unsupported/deferred rather than
-  treating them as parsed declarations.
+- Mark function-like wrappers and object-like declaration-prefix regions as
+  unsupported/deferred rather than treating them as parsed declarations.
 - Do not select active branches from `#if`/`#ifdef` in raw mode.
 
 Compiler-assisted preprocessing target:

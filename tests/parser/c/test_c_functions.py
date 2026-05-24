@@ -78,6 +78,26 @@ int b;
         parse_c_file(source, filename="knr.c")
 
 
+def test_control_flow_conditions_inside_function_body_do_not_look_like_knr_definitions():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+int evaluate(int value)
+{
+    if (value)
+        value = 1;
+    else if (value)
+        value = 2;
+    return value;
+}
+""",
+        filename="control_flow.c",
+    )
+
+    assert [function.name for function in parsed.functions] == ["evaluate"]
+
+
 def test_function_pointer_parameter_is_a_callback_candidate_with_nameless_signature():
     from c_parser import CFunctionType, CInt, CPointer, parse_c_file
 

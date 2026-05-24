@@ -1,0 +1,1971 @@
+{
+  "files": {
+    "stb/stb_leakcheck.h": {
+      "filename": "stb/stb_leakcheck.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "stb_leakcheck_malloc",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "void",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CVoid",
+                "qualifiers": [],
+                "source_text": "void"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "sz",
+              "type": {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "size_t sz",
+                "name": "size_t",
+                "type": null,
+                "source_location": null,
+                "declaration_locations": []
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "file",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *file",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *file",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "line",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int line"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int line"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 37,
+            "column": 1,
+            "source_line": "void *stb_leakcheck_malloc(size_t sz, const char *file, int line)"
+          },
+          "start": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 37,
+            "column": 1,
+            "source_line": "void *stb_leakcheck_malloc(size_t sz, const char *file, int line)"
+          },
+          "end": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 50,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "stb/stb_leakcheck.h",
+              "line": 146,
+              "column": 1,
+              "source_line": "extern void * stb_leakcheck_malloc(size_t sz, const char *file, int line);"
+            }
+          ]
+        },
+        {
+          "name": "stb_leakcheck_free",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "ptr",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *ptr",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *ptr",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 52,
+            "column": 1,
+            "source_line": "void stb_leakcheck_free(void *ptr)"
+          },
+          "start": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 52,
+            "column": 1,
+            "source_line": "void stb_leakcheck_free(void *ptr)"
+          },
+          "end": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 68,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "stb/stb_leakcheck.h",
+              "line": 148,
+              "column": 1,
+              "source_line": "extern void   stb_leakcheck_free(void *ptr);"
+            }
+          ]
+        },
+        {
+          "name": "stb_leakcheck_realloc",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "void",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CVoid",
+                "qualifiers": [],
+                "source_text": "void"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "ptr",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *ptr",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *ptr",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "sz",
+              "type": {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "size_t sz",
+                "name": "size_t",
+                "type": null,
+                "source_location": null,
+                "declaration_locations": []
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "file",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *file",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *file",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "line",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int line"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int line"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 70,
+            "column": 1,
+            "source_line": "void *stb_leakcheck_realloc(void *ptr, size_t sz, const char *file, int line)"
+          },
+          "start": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 70,
+            "column": 1,
+            "source_line": "void *stb_leakcheck_realloc(void *ptr, size_t sz, const char *file, int line)"
+          },
+          "end": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 94,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "stb/stb_leakcheck.h",
+              "line": 147,
+              "column": 1,
+              "source_line": "extern void * stb_leakcheck_realloc(void *ptr, size_t sz, const char *file, int line);"
+            }
+          ]
+        },
+        {
+          "name": "stblkck_internal_print",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "reason",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *reason",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *reason",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "mi",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stb_leakcheck_malloc_info *mi",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "stb_leakcheck_malloc_info",
+                    "name": "stb_leakcheck_malloc_info",
+                    "type": {
+                      "model": "CStruct",
+                      "qualifiers": [],
+                      "source_text": "",
+                      "name": "malloc_info",
+                      "members": [
+                        {
+                          "name": "file",
+                          "type": {
+                            "model": "CComposedType",
+                            "qualifiers": [],
+                            "source_text": "const char *file",
+                            "components": [
+                              {
+                                "model": "CPointer",
+                                "qualifiers": [],
+                                "source_text": ""
+                              },
+                              {
+                                "model": "CChar",
+                                "qualifiers": [
+                                  "const"
+                                ],
+                                "source_text": "const char"
+                              }
+                            ]
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_leakcheck.h",
+                            "line": 29,
+                            "column": 4,
+                            "source_line": "   const char *file;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "line",
+                          "type": {
+                            "model": "CInt",
+                            "qualifiers": [],
+                            "source_text": "int line"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_leakcheck.h",
+                            "line": 30,
+                            "column": 4,
+                            "source_line": "   int line;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "size",
+                          "type": {
+                            "model": "CTypedef",
+                            "qualifiers": [],
+                            "source_text": "size_t size",
+                            "name": "size_t",
+                            "type": null,
+                            "source_location": null,
+                            "declaration_locations": []
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_leakcheck.h",
+                            "line": 31,
+                            "column": 4,
+                            "source_line": "   size_t size;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "next",
+                          "type": {
+                            "model": "CComposedType",
+                            "qualifiers": [],
+                            "source_text": "stb_leakcheck_malloc_info *next",
+                            "components": [
+                              {
+                                "model": "CPointer",
+                                "qualifiers": [],
+                                "source_text": ""
+                              },
+                              {
+                                "reference": "stb_leakcheck_malloc_info"
+                              }
+                            ]
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_leakcheck.h",
+                            "line": 32,
+                            "column": 4,
+                            "source_line": "   stb_leakcheck_malloc_info *next,*prev;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "prev",
+                          "type": {
+                            "model": "CComposedType",
+                            "qualifiers": [],
+                            "source_text": "stb_leakcheck_malloc_info *prev",
+                            "components": [
+                              {
+                                "model": "CPointer",
+                                "qualifiers": [],
+                                "source_text": ""
+                              },
+                              {
+                                "reference": "stb_leakcheck_malloc_info"
+                              }
+                            ]
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_leakcheck.h",
+                            "line": 32,
+                            "column": 4,
+                            "source_line": "   stb_leakcheck_malloc_info *next,*prev;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        }
+                      ],
+                      "anonymous_id": null,
+                      "is_incomplete": false,
+                      "source_location": {
+                        "filename": "stb/stb_leakcheck.h",
+                        "line": 27,
+                        "column": 1,
+                        "source_line": "struct malloc_info"
+                      }
+                    },
+                    "source_location": {
+                      "filename": "stb/stb_leakcheck.h",
+                      "line": 25,
+                      "column": 1,
+                      "source_line": "typedef struct malloc_info stb_leakcheck_malloc_info;"
+                    },
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stb_leakcheck_malloc_info *mi",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "stb_leakcheck_malloc_info"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 96,
+            "column": 1,
+            "source_line": "static void stblkck_internal_print(const char *reason, stb_leakcheck_malloc_info *mi)"
+          },
+          "start": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 96,
+            "column": 1,
+            "source_line": "static void stblkck_internal_print(const char *reason, stb_leakcheck_malloc_info *mi)"
+          },
+          "end": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 116,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "stb_leakcheck_dumpmem",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 118,
+            "column": 1,
+            "source_line": "void stb_leakcheck_dumpmem(void)"
+          },
+          "start": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 118,
+            "column": 1,
+            "source_line": "void stb_leakcheck_dumpmem(void)"
+          },
+          "end": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 134,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "stb/stb_leakcheck.h",
+              "line": 149,
+              "column": 1,
+              "source_line": "extern void   stb_leakcheck_dumpmem(void);"
+            }
+          ]
+        }
+      ],
+      "structs": [
+        {
+          "reference": "struct malloc_info"
+        }
+      ],
+      "unions": [],
+      "enums": [],
+      "typedefs": [
+        {
+          "reference": "stb_leakcheck_malloc_info"
+        }
+      ],
+      "variables": [
+        {
+          "name": "mi_head",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static stb_leakcheck_malloc_info *mi_head",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stb_leakcheck_malloc_info"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": null,
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 35,
+            "column": 1,
+            "source_line": "static stb_leakcheck_malloc_info *mi_head;"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        }
+      ],
+      "macros": [
+        {
+          "name": "STB_LEAKCHECK_IMPLEMENTATION",
+          "value": null,
+          "function_like": false,
+          "directive": "undef",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 7,
+            "column": 1,
+            "source_line": "#undef STB_LEAKCHECK_IMPLEMENTATION // don't implement more than once"
+          }
+        },
+        {
+          "name": "malloc",
+          "value": null,
+          "function_like": false,
+          "directive": "undef",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 11,
+            "column": 1,
+            "source_line": "#undef malloc"
+          }
+        },
+        {
+          "name": "free",
+          "value": null,
+          "function_like": false,
+          "directive": "undef",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 12,
+            "column": 1,
+            "source_line": "#undef free"
+          }
+        },
+        {
+          "name": "realloc",
+          "value": null,
+          "function_like": false,
+          "directive": "undef",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 13,
+            "column": 1,
+            "source_line": "#undef realloc"
+          }
+        },
+        {
+          "name": "STB_LEAKCHECK_OUTPUT_PIPE",
+          "value": "stdout",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 17,
+            "column": 1,
+            "source_line": "#define STB_LEAKCHECK_OUTPUT_PIPE stdout"
+          }
+        },
+        {
+          "name": "INCLUDE_STB_LEAKCHECK_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 138,
+            "column": 1,
+            "source_line": "#define INCLUDE_STB_LEAKCHECK_H"
+          }
+        },
+        {
+          "name": "malloc",
+          "value": "stb_leakcheck_malloc(sz, __FILE__, __LINE__)",
+          "function_like": true,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 142,
+            "column": 1,
+            "source_line": "#define malloc(sz)    stb_leakcheck_malloc(sz, __FILE__, __LINE__)"
+          }
+        },
+        {
+          "name": "free",
+          "value": "stb_leakcheck_free(p)",
+          "function_like": true,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 143,
+            "column": 1,
+            "source_line": "#define free(p)       stb_leakcheck_free(p)"
+          }
+        },
+        {
+          "name": "realloc",
+          "value": "stb_leakcheck_realloc(p,sz, __FILE__, __LINE__)",
+          "function_like": true,
+          "directive": "define",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 144,
+            "column": 1,
+            "source_line": "#define realloc(p,sz) stb_leakcheck_realloc(p,sz, __FILE__, __LINE__)"
+          }
+        }
+      ],
+      "includes": [
+        {
+          "target": "assert.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 20,
+            "column": 1,
+            "source_line": "#include <assert.h>"
+          }
+        },
+        {
+          "target": "string.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 21,
+            "column": 1,
+            "source_line": "#include <string.h>"
+          }
+        },
+        {
+          "target": "stdlib.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 22,
+            "column": 1,
+            "source_line": "#include <stdlib.h>"
+          }
+        },
+        {
+          "target": "stdio.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 23,
+            "column": 1,
+            "source_line": "#include <stdio.h>"
+          }
+        },
+        {
+          "target": "stddef.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 24,
+            "column": 1,
+            "source_line": "#include <stddef.h>"
+          }
+        },
+        {
+          "target": "stdlib.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 140,
+            "column": 1,
+            "source_line": "#include <stdlib.h> // we want to define the macros *after* stdlib to avoid a slew of errors"
+          }
+        }
+      ],
+      "raw_directives": [
+        {
+          "directive": "ifdef",
+          "argument": "STB_LEAKCHECK_IMPLEMENTATION",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 6,
+            "column": 1,
+            "source_line": "#ifdef STB_LEAKCHECK_IMPLEMENTATION"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "malloc",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 10,
+            "column": 1,
+            "source_line": "#ifdef malloc"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 14,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "STB_LEAKCHECK_OUTPUT_PIPE",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 16,
+            "column": 1,
+            "source_line": "#ifndef STB_LEAKCHECK_OUTPUT_PIPE"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 18,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "STB_LEAKCHECK_SHOWALL",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 57,
+            "column": 7,
+            "source_line": "      #ifndef STB_LEAKCHECK_SHOWALL"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 66,
+            "column": 7,
+            "source_line": "      #endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_LEAKCHECK_REALLOC_PRESERVE_MALLOC_FILELINE",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 82,
+            "column": 10,
+            "source_line": "         #ifdef STB_LEAKCHECK_REALLOC_PRESERVE_MALLOC_FILELINE"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 84,
+            "column": 10,
+            "source_line": "         #else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 86,
+            "column": 10,
+            "source_line": "         #endif"
+          }
+        },
+        {
+          "directive": "if",
+          "argument": "defined(_MSC_VER) && _MSC_VER < 1900",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 98,
+            "column": 1,
+            "source_line": "#if defined(_MSC_VER) && _MSC_VER < 1900 // 1900=VS 2015"
+          }
+        },
+        {
+          "directive": "if",
+          "argument": "_MSC_VER < 1400",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 103,
+            "column": 4,
+            "source_line": "   #if _MSC_VER < 1400 // before VS 2005"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 105,
+            "column": 4,
+            "source_line": "   #else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 107,
+            "column": 4,
+            "source_line": "   #endif"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 108,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "__MINGW32__",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 110,
+            "column": 4,
+            "source_line": "   #ifdef __MINGW32__"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 112,
+            "column": 4,
+            "source_line": "   #else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 114,
+            "column": 4,
+            "source_line": "   #endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 115,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "STB_LEAKCHECK_SHOWALL",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 126,
+            "column": 4,
+            "source_line": "   #ifdef STB_LEAKCHECK_SHOWALL"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 133,
+            "column": 4,
+            "source_line": "   #endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 135,
+            "column": 1,
+            "source_line": "#endif // STB_LEAKCHECK_IMPLEMENTATION"
+          }
+        },
+        {
+          "directive": "if",
+          "argument": "!defined(INCLUDE_STB_LEAKCHECK_H) || !defined(malloc)",
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 137,
+            "column": 1,
+            "source_line": "#if !defined(INCLUDE_STB_LEAKCHECK_H) || !defined(malloc)"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 151,
+            "column": 1,
+            "source_line": "#endif // INCLUDE_STB_LEAKCHECK_H"
+          }
+        }
+      ],
+      "macro_dependencies": [],
+      "diagnostics": [
+        {
+          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+          "message": "Function-like macro 'malloc' is recorded but not expanded.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 142,
+            "column": 1,
+            "source_line": "#define malloc(sz)    stb_leakcheck_malloc(sz, __FILE__, __LINE__)"
+          },
+          "unit_kind": "macro",
+          "unit_name": "malloc"
+        },
+        {
+          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+          "message": "Function-like macro 'free' is recorded but not expanded.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 143,
+            "column": 1,
+            "source_line": "#define free(p)       stb_leakcheck_free(p)"
+          },
+          "unit_kind": "macro",
+          "unit_name": "free"
+        },
+        {
+          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+          "message": "Function-like macro 'realloc' is recorded but not expanded.",
+          "severity": "warning",
+          "location": {
+            "filename": "stb/stb_leakcheck.h",
+            "line": 144,
+            "column": 1,
+            "source_line": "#define realloc(p,sz) stb_leakcheck_realloc(p,sz, __FILE__, __LINE__)"
+          },
+          "unit_kind": "macro",
+          "unit_name": "realloc"
+        }
+      ]
+    }
+  },
+  "functions": {
+    "stb_leakcheck_malloc": {
+      "name": "stb_leakcheck_malloc",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "void",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "sz",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "file",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *file",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *file",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "line",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int line"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int line"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 37,
+        "column": 1,
+        "source_line": "void *stb_leakcheck_malloc(size_t sz, const char *file, int line)"
+      },
+      "start": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 37,
+        "column": 1,
+        "source_line": "void *stb_leakcheck_malloc(size_t sz, const char *file, int line)"
+      },
+      "end": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 50,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "stb/stb_leakcheck.h",
+          "line": 146,
+          "column": 1,
+          "source_line": "extern void * stb_leakcheck_malloc(size_t sz, const char *file, int line);"
+        }
+      ]
+    },
+    "stb_leakcheck_free": {
+      "name": "stb_leakcheck_free",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "ptr",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "void *ptr",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CVoid",
+                "qualifiers": [],
+                "source_text": "void"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "void *ptr",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CVoid",
+                "qualifiers": [],
+                "source_text": "void"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 52,
+        "column": 1,
+        "source_line": "void stb_leakcheck_free(void *ptr)"
+      },
+      "start": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 52,
+        "column": 1,
+        "source_line": "void stb_leakcheck_free(void *ptr)"
+      },
+      "end": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 68,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "stb/stb_leakcheck.h",
+          "line": 148,
+          "column": 1,
+          "source_line": "extern void   stb_leakcheck_free(void *ptr);"
+        }
+      ]
+    },
+    "stb_leakcheck_realloc": {
+      "name": "stb_leakcheck_realloc",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "void",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "ptr",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "void *ptr",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CVoid",
+                "qualifiers": [],
+                "source_text": "void"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "void *ptr",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CVoid",
+                "qualifiers": [],
+                "source_text": "void"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "sz",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "file",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *file",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *file",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "line",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int line"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int line"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 70,
+        "column": 1,
+        "source_line": "void *stb_leakcheck_realloc(void *ptr, size_t sz, const char *file, int line)"
+      },
+      "start": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 70,
+        "column": 1,
+        "source_line": "void *stb_leakcheck_realloc(void *ptr, size_t sz, const char *file, int line)"
+      },
+      "end": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 94,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "stb/stb_leakcheck.h",
+          "line": 147,
+          "column": 1,
+          "source_line": "extern void * stb_leakcheck_realloc(void *ptr, size_t sz, const char *file, int line);"
+        }
+      ]
+    },
+    "stblkck_internal_print": {
+      "name": "stblkck_internal_print",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "reason",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *reason",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *reason",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "mi",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "stb_leakcheck_malloc_info *mi",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stb_leakcheck_malloc_info"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "stb_leakcheck_malloc_info *mi",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stb_leakcheck_malloc_info"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 96,
+        "column": 1,
+        "source_line": "static void stblkck_internal_print(const char *reason, stb_leakcheck_malloc_info *mi)"
+      },
+      "start": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 96,
+        "column": 1,
+        "source_line": "static void stblkck_internal_print(const char *reason, stb_leakcheck_malloc_info *mi)"
+      },
+      "end": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 116,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "stb_leakcheck_dumpmem": {
+      "name": "stb_leakcheck_dumpmem",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 118,
+        "column": 1,
+        "source_line": "void stb_leakcheck_dumpmem(void)"
+      },
+      "start": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 118,
+        "column": 1,
+        "source_line": "void stb_leakcheck_dumpmem(void)"
+      },
+      "end": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 134,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "stb/stb_leakcheck.h",
+          "line": 149,
+          "column": 1,
+          "source_line": "extern void   stb_leakcheck_dumpmem(void);"
+        }
+      ]
+    }
+  },
+  "structs": {
+    "malloc_info": {
+      "reference": "struct malloc_info"
+    }
+  },
+  "unions": {},
+  "enums": {},
+  "typedefs": {
+    "stb_leakcheck_malloc_info": {
+      "reference": "stb_leakcheck_malloc_info"
+    }
+  },
+  "variables": {
+    "mi_head": {
+      "name": "mi_head",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static stb_leakcheck_malloc_info *mi_head",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "stb_leakcheck_malloc_info"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": null,
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 35,
+        "column": 1,
+        "source_line": "static stb_leakcheck_malloc_info *mi_head;"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    }
+  },
+  "macros": {
+    "STB_LEAKCHECK_IMPLEMENTATION": {
+      "name": "STB_LEAKCHECK_IMPLEMENTATION",
+      "value": null,
+      "function_like": false,
+      "directive": "undef",
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 7,
+        "column": 1,
+        "source_line": "#undef STB_LEAKCHECK_IMPLEMENTATION // don't implement more than once"
+      }
+    },
+    "malloc": {
+      "name": "malloc",
+      "value": "stb_leakcheck_malloc(sz, __FILE__, __LINE__)",
+      "function_like": true,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 142,
+        "column": 1,
+        "source_line": "#define malloc(sz)    stb_leakcheck_malloc(sz, __FILE__, __LINE__)"
+      }
+    },
+    "free": {
+      "name": "free",
+      "value": "stb_leakcheck_free(p)",
+      "function_like": true,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 143,
+        "column": 1,
+        "source_line": "#define free(p)       stb_leakcheck_free(p)"
+      }
+    },
+    "realloc": {
+      "name": "realloc",
+      "value": "stb_leakcheck_realloc(p,sz, __FILE__, __LINE__)",
+      "function_like": true,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 144,
+        "column": 1,
+        "source_line": "#define realloc(p,sz) stb_leakcheck_realloc(p,sz, __FILE__, __LINE__)"
+      }
+    },
+    "STB_LEAKCHECK_OUTPUT_PIPE": {
+      "name": "STB_LEAKCHECK_OUTPUT_PIPE",
+      "value": "stdout",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 17,
+        "column": 1,
+        "source_line": "#define STB_LEAKCHECK_OUTPUT_PIPE stdout"
+      }
+    },
+    "INCLUDE_STB_LEAKCHECK_H": {
+      "name": "INCLUDE_STB_LEAKCHECK_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 138,
+        "column": 1,
+        "source_line": "#define INCLUDE_STB_LEAKCHECK_H"
+      }
+    }
+  },
+  "includes": {
+    "stb/stb_leakcheck.h:assert.h": {
+      "target": "assert.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 20,
+        "column": 1,
+        "source_line": "#include <assert.h>"
+      }
+    },
+    "stb/stb_leakcheck.h:string.h": {
+      "target": "string.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 21,
+        "column": 1,
+        "source_line": "#include <string.h>"
+      }
+    },
+    "stb/stb_leakcheck.h:stdlib.h": {
+      "target": "stdlib.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 140,
+        "column": 1,
+        "source_line": "#include <stdlib.h> // we want to define the macros *after* stdlib to avoid a slew of errors"
+      }
+    },
+    "stb/stb_leakcheck.h:stdio.h": {
+      "target": "stdio.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 23,
+        "column": 1,
+        "source_line": "#include <stdio.h>"
+      }
+    },
+    "stb/stb_leakcheck.h:stddef.h": {
+      "target": "stddef.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 24,
+        "column": 1,
+        "source_line": "#include <stddef.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "stb/stb_leakcheck.h": [
+      "stb_leakcheck_malloc",
+      "stb_leakcheck_free",
+      "stb_leakcheck_realloc",
+      "stblkck_internal_print",
+      "stb_leakcheck_dumpmem"
+    ]
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "stb/stb_leakcheck.h": []
+  },
+  "system_includes": {
+    "stb/stb_leakcheck.h": [
+      "assert.h",
+      "stddef.h",
+      "stdio.h",
+      "stdlib.h",
+      "string.h"
+    ]
+  },
+  "unresolved_includes": {
+    "stb/stb_leakcheck.h": []
+  },
+  "header_source_pairs": {
+    "stb/stb_leakcheck.h": []
+  },
+  "diagnostics": [
+    {
+      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+      "message": "Function-like macro 'malloc' is recorded but not expanded.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 142,
+        "column": 1,
+        "source_line": "#define malloc(sz)    stb_leakcheck_malloc(sz, __FILE__, __LINE__)"
+      },
+      "unit_kind": "macro",
+      "unit_name": "malloc"
+    },
+    {
+      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+      "message": "Function-like macro 'free' is recorded but not expanded.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 143,
+        "column": 1,
+        "source_line": "#define free(p)       stb_leakcheck_free(p)"
+      },
+      "unit_kind": "macro",
+      "unit_name": "free"
+    },
+    {
+      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
+      "message": "Function-like macro 'realloc' is recorded but not expanded.",
+      "severity": "warning",
+      "location": {
+        "filename": "stb/stb_leakcheck.h",
+        "line": 144,
+        "column": 1,
+        "source_line": "#define realloc(p,sz) stb_leakcheck_realloc(p,sz, __FILE__, __LINE__)"
+      },
+      "unit_kind": "macro",
+      "unit_name": "realloc"
+    }
+  ]
+}

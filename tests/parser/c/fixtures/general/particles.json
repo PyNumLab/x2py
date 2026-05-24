@@ -1,0 +1,1267 @@
+{
+  "files": {
+    "general/particles.c": {
+      "filename": "general/particles.c",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "particle_touch",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "p",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CStruct",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "name": "particle",
+                    "members": [
+                      {
+                        "name": "id",
+                        "type": {
+                          "model": "CInt",
+                          "qualifiers": [],
+                          "source_text": "int id"
+                        },
+                        "storage": [],
+                        "initializer": null,
+                        "bit_width": null,
+                        "source_location": {
+                          "filename": "general/particles.h",
+                          "line": 5,
+                          "column": 5,
+                          "source_line": "    int id;"
+                        },
+                        "callback_policy": null,
+                        "declaration_locations": []
+                      },
+                      {
+                        "name": "x",
+                        "type": {
+                          "model": "CComposedType",
+                          "qualifiers": [],
+                          "source_text": "double x[3]",
+                          "components": [
+                            {
+                              "model": "CArray",
+                              "qualifiers": [],
+                              "source_text": "",
+                              "bound": "3",
+                              "is_static_minimum": false,
+                              "is_variable_length": false,
+                              "is_flexible": false
+                            },
+                            {
+                              "model": "CDouble",
+                              "qualifiers": [],
+                              "source_text": "double"
+                            }
+                          ]
+                        },
+                        "storage": [],
+                        "initializer": null,
+                        "bit_width": null,
+                        "source_location": {
+                          "filename": "general/particles.h",
+                          "line": 6,
+                          "column": 5,
+                          "source_line": "    double x[3];"
+                        },
+                        "callback_policy": null,
+                        "declaration_locations": []
+                      }
+                    ],
+                    "anonymous_id": null,
+                    "is_incomplete": false,
+                    "source_location": {
+                      "filename": "general/particles.h",
+                      "line": 4,
+                      "column": 1,
+                      "source_line": "struct particle {"
+                    }
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "struct particle"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/particles.c",
+            "line": 5,
+            "column": 1,
+            "source_line": "void particle_touch(struct particle *p)"
+          },
+          "start": {
+            "filename": "general/particles.c",
+            "line": 5,
+            "column": 1,
+            "source_line": "void particle_touch(struct particle *p)"
+          },
+          "end": {
+            "filename": "general/particles.c",
+            "line": 10,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/particles.h",
+              "line": 12,
+              "column": 1,
+              "source_line": "void particle_touch(struct particle *p);"
+            }
+          ]
+        },
+        {
+          "name": "particle_reset",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "p",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "particle",
+                    "name": "particle",
+                    "type": {
+                      "reference": "struct particle"
+                    },
+                    "source_location": {
+                      "filename": "general/particles.h",
+                      "line": 9,
+                      "column": 1,
+                      "source_line": "typedef struct particle particle;"
+                    },
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "particle"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/particles.c",
+            "line": 12,
+            "column": 1,
+            "source_line": "void particle_reset(particle *p)"
+          },
+          "start": {
+            "filename": "general/particles.c",
+            "line": 12,
+            "column": 1,
+            "source_line": "void particle_reset(particle *p)"
+          },
+          "end": {
+            "filename": "general/particles.c",
+            "line": 20,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/particles.h",
+              "line": 13,
+              "column": 1,
+              "source_line": "void particle_reset(particle *p);"
+            }
+          ]
+        },
+        {
+          "name": "particle_move",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "p",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "particle"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "particle"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "delta",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double delta[static 3]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double delta[static 3]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/particles.c",
+            "line": 22,
+            "column": 1,
+            "source_line": "void particle_move(particle *p, const double delta[static 3])"
+          },
+          "start": {
+            "filename": "general/particles.c",
+            "line": 22,
+            "column": 1,
+            "source_line": "void particle_move(particle *p, const double delta[static 3])"
+          },
+          "end": {
+            "filename": "general/particles.c",
+            "line": 29,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/particles.h",
+              "line": 14,
+              "column": 1,
+              "source_line": "void particle_move(particle *p, const double delta[static 3]);"
+            }
+          ]
+        },
+        {
+          "name": "particle_current",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const struct particle",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CStruct",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const struct particle",
+                "name": "particle",
+                "members": [],
+                "anonymous_id": null,
+                "is_incomplete": true,
+                "source_location": null
+              }
+            ]
+          },
+          "parameters": [],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/particles.c",
+            "line": 31,
+            "column": 1,
+            "source_line": "const struct particle *particle_current(void)"
+          },
+          "start": {
+            "filename": "general/particles.c",
+            "line": 31,
+            "column": 1,
+            "source_line": "const struct particle *particle_current(void)"
+          },
+          "end": {
+            "filename": "general/particles.c",
+            "line": 34,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "general/particles.h",
+              "line": 15,
+              "column": 1,
+              "source_line": "const struct particle *particle_current(void);"
+            }
+          ]
+        }
+      ],
+      "structs": [],
+      "unions": [],
+      "enums": [],
+      "typedefs": [],
+      "variables": [
+        {
+          "name": "current_particle",
+          "type": {
+            "reference": "struct particle"
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": null,
+          "bit_width": null,
+          "source_location": {
+            "filename": "general/particles.c",
+            "line": 3,
+            "column": 1,
+            "source_line": "static struct particle current_particle;"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        }
+      ],
+      "macros": [],
+      "includes": [
+        {
+          "target": "particles.h",
+          "kind": "local",
+          "resolved_path": "general/particles.h",
+          "source_location": {
+            "filename": "general/particles.c",
+            "line": 1,
+            "column": 1,
+            "source_line": "#include \"particles.h\""
+          }
+        }
+      ],
+      "raw_directives": [],
+      "macro_dependencies": [],
+      "diagnostics": []
+    },
+    "general/particles.h": {
+      "filename": "general/particles.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "particle_touch",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "p",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "struct particle"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "struct particle"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/particles.h",
+            "line": 12,
+            "column": 1,
+            "source_line": "void particle_touch(struct particle *p);"
+          },
+          "start": {
+            "filename": "general/particles.h",
+            "line": 12,
+            "column": 1,
+            "source_line": "void particle_touch(struct particle *p);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "particle_reset",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "p",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "particle"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "particle"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/particles.h",
+            "line": 13,
+            "column": 1,
+            "source_line": "void particle_reset(particle *p);"
+          },
+          "start": {
+            "filename": "general/particles.h",
+            "line": 13,
+            "column": 1,
+            "source_line": "void particle_reset(particle *p);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "particle_move",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "p",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "particle"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "particle *p",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "particle"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "delta",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double delta[static 3]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const double delta[static 3]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "3",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CDouble",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const double"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/particles.h",
+            "line": 14,
+            "column": 1,
+            "source_line": "void particle_move(particle *p, const double delta[static 3]);"
+          },
+          "start": {
+            "filename": "general/particles.h",
+            "line": 14,
+            "column": 1,
+            "source_line": "void particle_move(particle *p, const double delta[static 3]);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "particle_current",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const struct particle",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CStruct",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const struct particle",
+                "name": "particle",
+                "members": [],
+                "anonymous_id": null,
+                "is_incomplete": true,
+                "source_location": null
+              }
+            ]
+          },
+          "parameters": [],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/particles.h",
+            "line": 15,
+            "column": 1,
+            "source_line": "const struct particle *particle_current(void);"
+          },
+          "start": {
+            "filename": "general/particles.h",
+            "line": 15,
+            "column": 1,
+            "source_line": "const struct particle *particle_current(void);"
+          },
+          "end": null,
+          "declaration_locations": []
+        }
+      ],
+      "structs": [
+        {
+          "reference": "struct particle"
+        }
+      ],
+      "unions": [],
+      "enums": [],
+      "typedefs": [
+        {
+          "reference": "particle"
+        },
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "particle_handle",
+          "name": "particle_handle",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "typedef struct particle *particle_handle",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct particle"
+              }
+            ]
+          },
+          "source_location": {
+            "filename": "general/particles.h",
+            "line": 10,
+            "column": 1,
+            "source_line": "typedef struct particle *particle_handle;"
+          },
+          "declaration_locations": []
+        }
+      ],
+      "variables": [],
+      "macros": [
+        {
+          "name": "X2PY_GENERAL_PARTICLES_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "general/particles.h",
+            "line": 2,
+            "column": 1,
+            "source_line": "#define X2PY_GENERAL_PARTICLES_H"
+          }
+        }
+      ],
+      "includes": [],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "X2PY_GENERAL_PARTICLES_H",
+          "source_location": {
+            "filename": "general/particles.h",
+            "line": 1,
+            "column": 1,
+            "source_line": "#ifndef X2PY_GENERAL_PARTICLES_H"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "general/particles.h",
+            "line": 17,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        }
+      ],
+      "macro_dependencies": [],
+      "diagnostics": []
+    }
+  },
+  "functions": {
+    "particle_touch": {
+      "name": "particle_touch",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "p",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct particle *p",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct particle"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct particle *p",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct particle"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/particles.c",
+        "line": 5,
+        "column": 1,
+        "source_line": "void particle_touch(struct particle *p)"
+      },
+      "start": {
+        "filename": "general/particles.c",
+        "line": 5,
+        "column": 1,
+        "source_line": "void particle_touch(struct particle *p)"
+      },
+      "end": {
+        "filename": "general/particles.c",
+        "line": 10,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/particles.h",
+          "line": 12,
+          "column": 1,
+          "source_line": "void particle_touch(struct particle *p);"
+        }
+      ]
+    },
+    "particle_reset": {
+      "name": "particle_reset",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "p",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "particle *p",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "particle"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "particle *p",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "particle"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/particles.c",
+        "line": 12,
+        "column": 1,
+        "source_line": "void particle_reset(particle *p)"
+      },
+      "start": {
+        "filename": "general/particles.c",
+        "line": 12,
+        "column": 1,
+        "source_line": "void particle_reset(particle *p)"
+      },
+      "end": {
+        "filename": "general/particles.c",
+        "line": 20,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/particles.h",
+          "line": 13,
+          "column": 1,
+          "source_line": "void particle_reset(particle *p);"
+        }
+      ]
+    },
+    "particle_move": {
+      "name": "particle_move",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "p",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "particle *p",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "particle"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "particle *p",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "particle"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "delta",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double delta[static 3]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const double delta[static 3]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": true,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/particles.c",
+        "line": 22,
+        "column": 1,
+        "source_line": "void particle_move(particle *p, const double delta[static 3])"
+      },
+      "start": {
+        "filename": "general/particles.c",
+        "line": 22,
+        "column": 1,
+        "source_line": "void particle_move(particle *p, const double delta[static 3])"
+      },
+      "end": {
+        "filename": "general/particles.c",
+        "line": 29,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/particles.h",
+          "line": 14,
+          "column": 1,
+          "source_line": "void particle_move(particle *p, const double delta[static 3]);"
+        }
+      ]
+    },
+    "particle_current": {
+      "name": "particle_current",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "const struct particle",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "struct particle"
+          }
+        ]
+      },
+      "parameters": [],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/particles.c",
+        "line": 31,
+        "column": 1,
+        "source_line": "const struct particle *particle_current(void)"
+      },
+      "start": {
+        "filename": "general/particles.c",
+        "line": 31,
+        "column": 1,
+        "source_line": "const struct particle *particle_current(void)"
+      },
+      "end": {
+        "filename": "general/particles.c",
+        "line": 34,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "general/particles.h",
+          "line": 15,
+          "column": 1,
+          "source_line": "const struct particle *particle_current(void);"
+        }
+      ]
+    }
+  },
+  "structs": {
+    "particle": {
+      "reference": "struct particle"
+    }
+  },
+  "unions": {},
+  "enums": {},
+  "typedefs": {
+    "particle": {
+      "reference": "particle"
+    },
+    "particle_handle": {
+      "reference": "particle_handle"
+    }
+  },
+  "variables": {
+    "current_particle": {
+      "name": "current_particle",
+      "type": {
+        "reference": "struct particle"
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": null,
+      "bit_width": null,
+      "source_location": {
+        "filename": "general/particles.c",
+        "line": 3,
+        "column": 1,
+        "source_line": "static struct particle current_particle;"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    }
+  },
+  "macros": {
+    "X2PY_GENERAL_PARTICLES_H": {
+      "name": "X2PY_GENERAL_PARTICLES_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "general/particles.h",
+        "line": 2,
+        "column": 1,
+        "source_line": "#define X2PY_GENERAL_PARTICLES_H"
+      }
+    }
+  },
+  "includes": {
+    "general/particles.c:particles.h": {
+      "target": "particles.h",
+      "kind": "local",
+      "resolved_path": "general/particles.h",
+      "source_location": {
+        "filename": "general/particles.c",
+        "line": 1,
+        "column": 1,
+        "source_line": "#include \"particles.h\""
+      }
+    }
+  },
+  "functions_by_file": {
+    "general/particles.c": [
+      "particle_touch",
+      "particle_reset",
+      "particle_move",
+      "particle_current"
+    ],
+    "general/particles.h": [
+      "particle_touch",
+      "particle_reset",
+      "particle_move",
+      "particle_current"
+    ]
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "general/particles.c": [
+      "general/particles.h"
+    ],
+    "general/particles.h": []
+  },
+  "system_includes": {
+    "general/particles.c": [],
+    "general/particles.h": []
+  },
+  "unresolved_includes": {
+    "general/particles.c": [],
+    "general/particles.h": []
+  },
+  "header_source_pairs": {
+    "general/particles.h": [
+      "general/particles.c"
+    ]
+  },
+  "diagnostics": []
+}
