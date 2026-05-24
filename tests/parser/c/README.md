@@ -22,10 +22,6 @@ cJSON corpus roadmap and compiler-preprocessed `.i`/`#line` behavior, which
 are not implemented yet. CLI, public API, and current project-resolution
 coverage are active.
 
-When `C_PARSER_UPDATE_GOLDENS=1` is set, golden inventory checks are skipped
-while their corresponding comparison tests rewrite the expected output. Those
-update-mode skips are workflow behavior, not unsupported parser input.
-
 ## Parser Goldens
 
 Active parser goldens cover grouped projects from `tests/data/c/general/`,
@@ -63,12 +59,6 @@ Regenerate selected projects by naming either input relative to
 python -m tests.parser.c.generate_c_parser_goldens general/math_api.c json/cJSON.h
 ```
 
-The fixture comparison test also supports the explicit update mode:
-
-```bash
-C_PARSER_UPDATE_GOLDENS=1 python -m pytest -q tests/parser/c/test_c_fixture_suite.py
-```
-
 ## Error Goldens
 
 Fatal diagnostic fixtures live in `tests/data/c/errors/parser/` and their
@@ -78,8 +68,6 @@ expected metadata lives in `fixtures/errors/`. Regenerate them with:
 python -m tests.parser.c.errors.generate_c_parser_error_goldens
 ```
 
-or update through the active regression test:
-
-```bash
-C_PARSER_UPDATE_GOLDENS=1 python -m pytest -q tests/parser/c/test_c_error_fixture_suite.py
-```
+The comparison tests are read-only. Regenerate the expected files with the
+standalone generator, then rerun the tests to compare against the checked-in
+baselines.

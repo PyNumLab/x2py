@@ -2,7 +2,6 @@
 """C parser grouped-project fixture/golden regression tests."""
 
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -110,9 +109,6 @@ def test_c_fixture_golden_suite_has_inputs(data_subdir):
 
 @pytest.mark.parametrize("data_subdir", _FIXTURE_GROUPS)
 def test_c_parser_project_goldens_match_fixture_stems_one_to_one(data_subdir):
-    if os.getenv("C_PARSER_UPDATE_GOLDENS", "0") == "1":
-        pytest.skip("Golden outputs are being updated by the comparison test.")
-
     data_root = _DATA_DIR / data_subdir
     fixture_root = _FIXTURES_DIR / data_subdir
 
@@ -125,16 +121,9 @@ def test_c_parser_project_goldens_match_fixture_stems_one_to_one(data_subdir):
 
 @pytest.mark.parametrize("data_subdir", _FIXTURE_GROUPS)
 def test_c_fixture_golden_suite_compares_project_json(data_subdir):
-    update_mode = os.getenv("C_PARSER_UPDATE_GOLDENS", "0") == "1"
-
     for project_key, fixtures in _project_groups(_DATA_DIR / data_subdir):
         expected_path = _expected_path_for_project(data_subdir, project_key)
         parsed = _serialize_project(fixtures)
-
-        if update_mode:
-            expected_path.parent.mkdir(parents=True, exist_ok=True)
-            expected_path.write_text(json.dumps(parsed, indent=2) + "\n", encoding="utf-8")
-            continue
 
         expected = json.loads(expected_path.read_text(encoding="utf-8"))
         assert parsed == expected
