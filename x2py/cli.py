@@ -190,6 +190,7 @@ def _semantic_report(
             modules = c_file_to_semantic_modules(parsed)
             out[str(p)] = {
                 "semantic_modules": [asdict(module) for module in modules],
+                "pyi": "\n\n".join(emit_module(module) for module in modules).strip(),
             }
         return out
 
@@ -553,10 +554,10 @@ def main() -> int:
     parser.add_argument(
         "--wrap-readiness",
         action="store_true",
-        help="Convert Fortran or .pyi input to semantic IR and show wrapper readiness",
+        help="Convert Fortran, C, or .pyi input to semantic IR and show wrapper readiness",
     )
-    parser.add_argument("--semantics", action="store_true", help="Generate semantic IR models from parsed Fortran modules")
-    parser.add_argument("--pyi", action="store_true", help="Generate Python .pyi content")
+    parser.add_argument("--semantics", action="store_true", help="Generate semantic IR models from parsed source modules")
+    parser.add_argument("--pyi", action="store_true", help="Generate semantic Python .pyi content")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
     parser.add_argument("--out", nargs="?", const="", type=str, help="Write stage output to file (optional explicit output filename)")
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI color in parse diagnostics")
@@ -566,9 +567,7 @@ def main() -> int:
 
     if args.language == "c":
         if not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
-            parser.error("--language c requires a stage flag: choose one of --parse, --semantics, or --wrap-readiness")
-        if args.pyi:
-            parser.error("--pyi is not supported for --language c yet")
+            parser.error("--language c requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness")
         if args.show_vars or args.print_limit is not None or args.vars_limit is not None:
             parser.error("--show-vars/--print-limit are Fortran-only and are not supported for --language c")
 

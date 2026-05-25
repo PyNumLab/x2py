@@ -149,16 +149,16 @@ def test_cli_c_wrap_readiness_human_output_for_header(tmp_path: Path):
     assert "Wrappable: yes" in res.stdout
 
 
-def test_cli_c_pyi_stage_is_rejected_until_generation_is_implemented(tmp_path: Path):
+def test_cli_c_pyi_human_output_for_header(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
     cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--pyi"]
 
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
-    assert res.returncode != 0
-    assert "pyi" in res.stderr.lower()
-    assert "not supported" in res.stderr.lower()
+    assert f"File: {header}" in res.stdout
+    assert "def add(" in res.stdout
+    assert "a: Int32" in res.stdout
 
 
 def test_cli_c_rejects_fortran_only_parse_flags(tmp_path: Path):

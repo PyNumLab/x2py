@@ -56,6 +56,9 @@ The converter does not silently invent wrapper policy. It attaches
 - `long double`, `volatile`, `_Atomic`, bitfields, and unsupported declarator
   compositions.
 
-C `.pyi` emission remains separate later work. The current C semantic path
-supports `--language c --semantics` and `--language c --wrap-readiness`; it
-does not enable `--language c --pyi`.
+The current C semantic path supports `--language c --semantics`,
+`--language c --wrap-readiness`, and starter exact-contract
+`--language c --pyi` output for this supported subset. Generated stubs remain
+conservative: ambiguous ownership, callback, ABI-extension, and Pythonic
+projection policy stays out of the generated `.pyi` until supplied by the
+semantic model or an edited interface.

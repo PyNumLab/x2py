@@ -13,8 +13,9 @@ represent parenthesized pointer/array precedence through concrete
 parameters expose both declared and C-adjusted effective type facts. The CLI
 also exposes shared C/Fortran preprocessing flags and can run exact
 compiler/preprocessor executables for compiler mode. Target-specific standard
-header type facts for later C semantics are available through the separate
-`python -m x2py.c_type_probe` command.
+header type facts for C semantics are available through the separate
+`python -m x2py.c_type_probe` command. C semantic IR, readiness, and starter
+exact-contract `.pyi` output are available through the shared `x2py` CLI.
 
 This document records the implemented C parse command shape, output schema,
 and diagnostic contract, plus deferred CLI behavior.
@@ -28,6 +29,9 @@ python -m x2py path/to/api.h --language c --parse
 python -m x2py path/to/api.h --language c --parse --json
 python -m x2py path/to/api.h --language c --parse --out report.json
 python -m x2py path/to/api.h --language c --parse --preprocess compiler --compiler clang-18 -I include -D API_EXPORT= --std c11
+python -m x2py path/to/api.h --language c --semantics
+python -m x2py path/to/api.h --language c --wrap-readiness
+python -m x2py path/to/api.h --language c --pyi
 ```
 
 The C parser accepts explicit `.c`, `.h`, and direct `.i` files, plus
@@ -86,17 +90,15 @@ as `int i; int i;` are also merged. Duplicate definitions and incompatible
 top-level redeclarations are reported as diagnostics. Local declarations inside
 function bodies are not parsed.
 
-Unsupported C stages:
+Unsupported C display controls:
 
 ```bash
-python -m x2py path/to/api.h --language c --semantics
-python -m x2py path/to/api.h --language c --pyi
-python -m x2py path/to/api.h --language c --wrap-readiness
+python -m x2py path/to/api.h --language c --parse --show-vars
+python -m x2py path/to/api.h --language c --parse --print-limit 20
 ```
 
-These commands return clear argparse errors until C semantic IR conversion and
-`.pyi` generation are implemented. Fortran-only parse display flags such as
-`--show-vars` and `--print-limit` are rejected in C mode.
+Fortran-only parse display flags such as `--show-vars` and `--print-limit`
+return clear argparse errors in C mode until C-specific display controls exist.
 
 ## Current CLI Baseline
 
@@ -402,9 +404,9 @@ JSON output for a file without raw directives:
 }
 ```
 
-The parser should not claim C files are wrappable. If C readiness is added
-later, it should follow the semantics-owned readiness boundary used elsewhere
-in x2py, not become parser JSON.
+The parser should not claim C files are wrappable. C readiness follows the
+semantics-owned readiness boundary used elsewhere in x2py and does not become
+parser JSON.
 
 For raw directives, the same JSON shape is used, but `includes`, `macros`,
 `raw_directives`, `macro_dependencies`, and `diagnostics` may contain populated
@@ -597,10 +599,9 @@ The active CLI/parser tests cover the current partial subset:
   by focused C tests.
 - `--show-vars` and `--print-limit` are rejected in C mode until C-specific
   display controls exist.
-- `--semantics` and `--wrap-readiness` with `--language c` use
-  `semantics.c2ir` and the semantic readiness checker.
-- `--pyi` with `--language c` is rejected until C `.pyi` emission is
-  implemented.
+- `--semantics`, `--wrap-readiness`, and `--pyi` with `--language c` use
+  `semantics.c2ir`, the semantic readiness checker, and the shared `.pyi`
+  emitter for the supported exact-contract subset.
 
 ## Integration Order
 
@@ -648,8 +649,10 @@ Completed order:
     including recursively mapped preprocessed provenance.
 21. Added `_Atomic(type)` type-specifier parsing on the shared declarator path
     and executable parser-developer walkthrough tests.
-22. Added compiler-derived standard-header ABI probing for future C semantic
-    mapping without hard-coded host type aliases.
+22. Added compiler-derived standard-header ABI probing for C semantic mapping
+    without hard-coded host type aliases.
+23. Added C semantic IR, readiness, and starter exact-contract `.pyi` output
+    through `x2py --language c`.
 
 Next implementation work should continue with fixture-driven compiler
 extension policy and broader project conflict policy

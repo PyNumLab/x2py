@@ -31,8 +31,8 @@ examples. Contribution and pull-request requirements remain in
 
 ### C
 
-- [C parser reference](c_parser/c_parser_reference.md): implemented parse-only
-  frontend behavior and testing workflow.
+- [C parser reference](c_parser/c_parser_reference.md): implemented parser
+  behavior, semantic handoff, and testing workflow.
 - [C parser architecture plan](c_parser/c_parser_architecture.md): design and
   integration decisions.
 - [C parser CLI workflow plan](c_parser/c_parser_cli_workflow.md): command

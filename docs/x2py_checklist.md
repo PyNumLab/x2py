@@ -345,26 +345,26 @@ Language scope is stated in each section or subsection heading:
 
 ### C Stub Generation And Policy
 
-- [ ] Enable `--language c --pyi` only after semantic conversion is stable.
-- [ ] Generate stubs from C semantic modules.
-- [ ] Emit scalar functions.
+- [x] Enable `--language c --pyi` only after semantic conversion is stable.
+- [x] Generate stubs from C semantic modules.
+- [x] Emit scalar functions.
 - [ ] Emit pointer constraints when the semantic model supports them.
-- [ ] Emit arrays with `ORDER_C`.
-- [ ] Emit constants as `Final[...]`.
-- [ ] Emit opaque handles as classes or semantic type annotations.
+- [x] Emit arrays with `ORDER_C`.
+- [x] Emit constants as `Final[...]`.
+- [x] Emit opaque handles as classes or semantic type annotations.
 - [ ] Emit structs as classes only when field semantics are intended.
-- [ ] Avoid emitting `Unknown`.
+- [x] Avoid emitting `Unknown`.
 - [ ] Emit imports/includes only if represented in semantic IR.
-- [ ] Add tests for scalar function stubs.
-- [ ] Add tests for constant stubs.
-- [ ] Add tests for opaque handle stubs.
-- [ ] Add tests for array stubs.
-- [ ] Confirm the existing `.pyi` parser accepts generated C stubs.
-- [ ] Extend the `.pyi` parser only if semantic IR requires new constructs.
-- [ ] Add round-trip tests for C-generated stubs.
+- [x] Add tests for scalar function stubs.
+- [x] Add tests for constant stubs.
+- [x] Add tests for opaque handle stubs.
+- [x] Add tests for array stubs.
+- [x] Confirm the existing `.pyi` parser accepts generated C stubs.
+- [x] Extend the `.pyi` parser only if semantic IR requires new constructs.
+- [x] Add round-trip tests for C-generated stubs.
 - [ ] Add edited-stub tests for C APIs.
 - [ ] Add tests that unsupported C stubs fail clearly.
-- [ ] Add fixture tests under `tests/pyi/fixtures/c/` if C stubs are stable.
+- [x] Add fixture tests under `tests/pyi/fixtures/c/` if C stubs are stable.
 - [ ] Represent pointer/size hidden relationships where known.
 - [ ] Represent returned output buffers only with explicit projection metadata.
 - [ ] Represent ownership/lifetime metadata if supported by IR.
@@ -382,10 +382,10 @@ Language scope is stated in each section or subsection heading:
 - [ ] Defer callback projection until those policy fields are supplied by the
       user.
 - [ ] Defer arbitrary ABI details.
-- [ ] Ensure C `.pyi` output works for the supported semantic subset.
-- [ ] Ensure generated stubs parse back into semantic IR.
-- [ ] Keep C `.pyi` tests separate from Fortran `.pyi` tests.
-- [ ] Document generated C stub shape and limitations.
+- [x] Ensure C `.pyi` output works for the supported semantic subset.
+- [x] Ensure generated stubs parse back into semantic IR.
+- [x] Keep C `.pyi` tests separate from Fortran `.pyi` tests.
+- [x] Document generated C stub shape and limitations.
 - [ ] Decide whether existing `.pyi` syntax is expressive enough for ownership
       and callback policy.
 - [ ] Decide whether opaque handles need new conventions.

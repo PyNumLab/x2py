@@ -95,8 +95,9 @@ Implemented now:
   including scalar functions, pointer storage contracts, declared arrays,
   structs/opaque structs, enum and numeric macro constants, local typedef
   chains, target standard-type probe facts, and C-specific readiness blockers.
-- `--language c --semantics` and `--language c --wrap-readiness` are enabled.
-  `--language c --pyi` remains rejected until C `.pyi` emission exists.
+- `--language c --semantics`, `--language c --wrap-readiness`, and starter
+  exact-contract `--language c --pyi` output are enabled for the supported C
+  semantic subset.
 - Focused partial CLI/API, declaration/function, diagnostic color, project
   include/index, raw lexer/directive, project golden, error golden, preprocessed
   linemarker remapping, and JSON schema tests are active. Remaining
@@ -114,7 +115,7 @@ Deferred:
 - compiler attributes and alignment specifiers
 - broader compiler-family validation for preprocessing; parsed declarations
   already retain preprocessed origin and mapped source identity
-- C `.pyi` output and broader callback/ownership policy
+- broader C callback/ownership policy beyond exact starter `.pyi` stubs
 
 Documentation rule: any future C parser implementation change must update all
 affected docs under `docs/c_parser/` in the same change. This applies to model,
@@ -727,9 +728,9 @@ Python APIs.
 
 ## `.pyi` Integration
 
-Generated `.pyi` stubs for C should come after parser models and semantic IR
-conversion are stable. Readiness, if added for C, should follow the semantic
-layer pattern already used by the project.
+Generated `.pyi` stubs for C are emitted from semantic IR for the supported
+exact-contract subset. Readiness follows the semantic-layer pattern already
+used by the project.
 
 Likely stub patterns:
 

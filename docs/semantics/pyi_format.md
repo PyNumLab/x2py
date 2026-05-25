@@ -411,18 +411,21 @@ visible Python values
 The projection mechanism is language-neutral. It can later adapt exact
 Fortran or C contracts through the same notation and runtime concepts, but
 this milestone does not implement automatic Pythonic generation, current
-exact-reference adaptation, coercion/contract execution or C `.pyi` output.
+exact-reference adaptation, coercion/contract execution or C wrapper lowering.
+The C frontend can generate starter exact-contract `.pyi` output for the
+implemented semantic subset.
 
 ## Deferred C Work
 
 The shared model represents the current C semantic conversion subset for
 functions, variables,
 fields, constants, scalar references, pointers, arrays with known contracts,
-origin metadata, mutability and ownership facts. Remaining C work includes:
+origin metadata, mutability and ownership facts. The C frontend can generate
+starter exact-contract stubs from that model. Remaining C work includes:
 
-- C `.pyi` generation;
 - C wrapper lowering;
-- C ownership, callback or pointer policy inference.
+- C ownership, callback or pointer policy inference beyond facts already
+  present in exact contracts.
 
 Future C conversion should use the same notation: by-value scalars as bare
 types, unrefined pointers as `Ptr(T)` or `Ptr(Const(T))`, and array notation

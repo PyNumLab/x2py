@@ -4,8 +4,8 @@ Status: current reference for the partial C frontend. The `c_parser`
 package, typed parser models, explicit C CLI parse path, raw directive
 metadata, compiler-assisted preprocessing, source-location remapping, project
 indexes, parser goldens, C standard-type probe, first semantic IR conversion
-subset, and semantic readiness path are implemented. C `.pyi` generation
-remains future work and is intentionally rejected by the CLI.
+subset, semantic readiness path, and starter exact-contract C `.pyi`
+generation are implemented.
 
 ## Purpose
 
@@ -54,8 +54,9 @@ Implemented:
 - explicit `x2py --language c --parse` output
 - explicit `x2py --language c --semantics` and
   `x2py --language c --wrap-readiness` output
+- starter exact-contract `x2py --language c --pyi` output for the supported C
+  semantic subset
 - C JSON partial output and `--out` behavior
-- rejection of C `--pyi` output until stub emission is implemented
 - raw lexer records with comment stripping, line-continuation folding, and
   lightweight token source locations
 - top-level source splitting that tracks braces, parentheses, brackets, and
@@ -136,7 +137,8 @@ Still deferred:
 - broad compiler-extension declarators
 - broader typedef/tag conflict policy beyond the implemented basic project
   resolution
-- C `.pyi` generation and richer ownership/callback projection policy
+- richer C ownership/callback projection policy beyond exact starter `.pyi`
+  stubs
 
 ## Supported C Subset
 
@@ -298,9 +300,8 @@ target-relevant flags from the matching entry to the probe explicitly.
 For cross targets, provide a runner, for example `--runner=qemu-aarch64
 --runner=-L --runner=/opt/aarch64-sysroot`.
 
-The eventual C semantic converter should accept this report as target context.
-The parser model remains source-faithful and does not embed host ABI
-assumptions.
+The C semantic converter accepts this report as target context. The parser
+model remains source-faithful and does not embed host ABI assumptions.
 
 ## Public API
 

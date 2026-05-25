@@ -120,6 +120,26 @@ enum status { STATUS_OK = 0, STATUS_WARN, STATUS_ERROR = 10 };
     assert constants["STATUS_ERROR"].default_value == "10"
 
 
+def test_c2ir_converts_integer_expression_macro_constants_when_resolvable():
+    parsed = parse_c_file(
+        """
+#define API_N0 4
+#define API_N1 (API_N0 + 2)
+#define API_MASK (1U << API_N1)
+#define API_TEXT "not a semantic integer constant"
+void fill(int x[static API_N1]);
+""",
+        filename="shape_macros.h",
+    )
+    module = c_file_to_semantic_modules(parsed)[0]
+
+    constants = {var.name: var for var in module.variables}
+    assert constants["API_N0"].semantic_type.name == "Int32"
+    assert constants["API_N1"].semantic_type.name == "Int32"
+    assert constants["API_MASK"].semantic_type.name == "Int32"
+    assert "API_TEXT" not in constants
+
+
 def test_c2ir_resolves_local_typedef_chains_and_standard_size_t_fallback():
     parsed = parse_c_file(
         """

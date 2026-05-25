@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,7 @@ from c_parser.models import (
     CFloatComplex,
     CFunction,
     CFunctionType,
+    CMacro,
     CLong,
     CLongDouble,
     CLongDoubleComplex,
@@ -62,9 +64,34 @@ from .models import (
 
 
 _IDENTIFIER_RE = re.compile(r"[^0-9A-Za-z_]+")
+_C_IDENTIFIER_TOKEN_RE = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
+_C_INTEGER_LITERAL_SUFFIX_RE = re.compile(
+    r"(?<![0-9A-Za-z_.])((?:0[xX][0-9A-Fa-f]+|\d+))[uUlL]+(?![0-9A-Za-z_.])"
+)
+_INTEGER_EXPRESSION_CHARS_RE = re.compile(r"[0-9A-Za-z_+\-*/%<>&|^~()\s]+")
 _INTEGER_LITERAL_RE = re.compile(r"[-+]?(?:0[xX][0-9A-Fa-f]+|\d+)(?:[uUlL]*)\Z")
 _FLOAT_LITERAL_RE = re.compile(
     r"[-+]?(?:(?:\d+\.\d*)|(?:\.\d+)|(?:\d+[eE][-+]?\d+)|(?:\d+\.\d*[eE][-+]?\d+))(?:[fFlL]*)\Z"
+)
+_INTEGER_EXPRESSION_AST_NODES = (
+    ast.Expression,
+    ast.BinOp,
+    ast.UnaryOp,
+    ast.Constant,
+    ast.Add,
+    ast.Sub,
+    ast.Mult,
+    ast.Div,
+    ast.FloorDiv,
+    ast.Mod,
+    ast.LShift,
+    ast.RShift,
+    ast.BitOr,
+    ast.BitAnd,
+    ast.BitXor,
+    ast.Invert,
+    ast.UAdd,
+    ast.USub,
 )
 _SIGNED_WIDTH_TYPES = {8: "Int8", 16: "Int16", 32: "Int32", 64: "Int64"}
 _UNSIGNED_WIDTH_TYPES = {8: "UInt8", 16: "UInt16", 32: "UInt32", 64: "UInt64"}
@@ -109,6 +136,7 @@ _PRIMITIVE_TYPE_MAP: dict[type[CType], str | None] = {
 }
 
 _STANDARD_TYPE_FALLBACKS = {
+    "bool": "Bool",
     "size_t": "SizeT",
     "uint8_t": "UInt8",
     "uint16_t": "UInt16",
@@ -180,6 +208,59 @@ class CToIRConverter:
             )
             for _filename, c_file in sorted(project.files.items())
         ]
+
+    def visit_project_module(
+        self,
+        project: CProject,
+        *,
+        name: str = "c_project",
+    ) -> SemanticModule:
+        previous = self.typedefs, self.structs, self.unions, self.enums, self.opaque_standard_types
+        self.typedefs = dict(project.typedefs)
+        self.structs = dict(project.structs)
+        self.unions = dict(project.unions)
+        self.enums = dict(project.enums)
+        self.opaque_standard_types = set()
+        try:
+            semantic_functions = [
+                self.visit_function(function)
+                for function in project.functions.values()
+            ]
+            semantic_variables = [
+                *self._enum_constants(list(project.enums.values())),
+                *self._macro_constants_from_macros(list(project.macros.values())),
+                *[
+                    self.visit_variable(variable)
+                    for variable in project.variables.values()
+                ],
+            ]
+            semantic_classes = [
+                *[
+                    self.visit_struct(struct)
+                    for struct in project.structs.values()
+                ],
+                *[
+                    self.visit_union(union)
+                    for union in project.unions.values()
+                ],
+                *self._opaque_standard_type_classes(),
+            ]
+            return SemanticModule(
+                name=self._identifier(name),
+                functions=semantic_functions,
+                classes=semantic_classes,
+                variables=semantic_variables,
+                metadata=self._project_metadata(project),
+                origin=SemanticOrigin(
+                    source_language="c",
+                    native_name=name,
+                    native_scope=name,
+                    source_kind="project",
+                    metadata={"files": sorted(project.files)},
+                ),
+            )
+        finally:
+            self.typedefs, self.structs, self.unions, self.enums, self.opaque_standard_types = previous
 
     def visit_file(
         self,
@@ -700,17 +781,34 @@ class CToIRConverter:
         return variables
 
     def _macro_constants(self, c_file: CFile) -> list[SemanticArgument]:
+        return self._macro_constants_from_macros(c_file.macros)
+
+    def _macro_constants_from_macros(self, macros: list[CMacro]) -> list[SemanticArgument]:
+        macro_types: dict[str, str] = {}
+        pending = [macro for macro in macros if not macro.function_like and macro.value is not None]
+        changed = True
+        while changed:
+            changed = False
+            for macro in pending:
+                if macro.name in macro_types or macro.value is None:
+                    continue
+                value = macro.value.strip()
+                if _INTEGER_LITERAL_RE.fullmatch(value):
+                    macro_types[macro.name] = "Int32"
+                    changed = True
+                elif _FLOAT_LITERAL_RE.fullmatch(value):
+                    macro_types[macro.name] = "Float64"
+                    changed = True
+                elif self._integer_macro_expression(value, macro_types):
+                    macro_types[macro.name] = "Int32"
+                    changed = True
+
         variables: list[SemanticArgument] = []
-        for macro in c_file.macros:
-            if macro.function_like or macro.value is None:
+        for macro in macros:
+            semantic_name = macro_types.get(macro.name)
+            if semantic_name is None or macro.value is None:
                 continue
             value = macro.value.strip()
-            if _INTEGER_LITERAL_RE.fullmatch(value):
-                semantic_name = "Int32"
-            elif _FLOAT_LITERAL_RE.fullmatch(value):
-                semantic_name = "Float64"
-            else:
-                continue
             variables.append(
                 SemanticArgument(
                     name=macro.name,
@@ -729,6 +827,28 @@ class CToIRConverter:
                 )
             )
         return variables
+
+    @staticmethod
+    def _integer_macro_expression(value: str, macro_types: dict[str, str]) -> bool:
+        if not _INTEGER_EXPRESSION_CHARS_RE.fullmatch(value):
+            return False
+        identifiers = set(_C_IDENTIFIER_TOKEN_RE.findall(value))
+        if any(macro_types.get(identifier) != "Int32" for identifier in identifiers):
+            return False
+        normalized = _C_INTEGER_LITERAL_SUFFIX_RE.sub(r"\1", value)
+        normalized = _C_IDENTIFIER_TOKEN_RE.sub("1", normalized)
+        try:
+            expression = ast.parse(normalized, mode="eval")
+        except SyntaxError:
+            return False
+        return all(
+            isinstance(node, _INTEGER_EXPRESSION_AST_NODES)
+            and not (
+                isinstance(node, ast.Constant)
+                and not isinstance(node.value, int)
+            )
+            for node in ast.walk(expression)
+        )
 
     def _file_metadata(self, c_file: CFile) -> dict[str, Any]:
         metadata: dict[str, Any] = {
@@ -760,6 +880,44 @@ class CToIRConverter:
                 )
             )
         for diagnostic in c_file.diagnostics:
+            blocker = self._diagnostic_blocker(diagnostic)
+            if blocker is not None:
+                blockers.append(blocker)
+        if blockers:
+            metadata["readiness_blockers"] = blockers
+        return metadata
+
+    def _project_metadata(self, project: CProject) -> dict[str, Any]:
+        metadata: dict[str, Any] = {
+            "source_language": "c",
+            "counts": {
+                "files": len(project.files),
+                "functions": len(project.functions),
+                "structs": len(project.structs),
+                "unions": len(project.unions),
+                "enums": len(project.enums),
+                "typedefs": len(project.typedefs),
+                "macros": len(project.macros),
+                "includes": len(project.includes),
+                "diagnostics": len(project.diagnostics),
+            },
+        }
+        blockers = []
+        for c_file in project.files.values():
+            for dependency in c_file.macro_dependencies:
+                blockers.append(
+                    self._blocker(
+                        "c_macro_dependent_declaration",
+                        "Some C declarations depend on macros that were recorded but not expanded.",
+                        {
+                            "owner": c_file.filename or "<c-source>",
+                            "macro": dependency.name,
+                            "context": dependency.context,
+                            "source": dependency.source_text,
+                        },
+                    )
+                )
+        for diagnostic in project.diagnostics:
             blocker = self._diagnostic_blocker(diagnostic)
             if blocker is not None:
                 blockers.append(blocker)
@@ -1161,12 +1319,25 @@ def c_project_to_semantic_modules(
     return CToIRConverter(standard_type_report=standard_type_report).visit_project(project)
 
 
+def c_project_to_semantic_module(
+    project: CProject,
+    *,
+    name: str = "c_project",
+    standard_type_report: Any | None = None,
+) -> SemanticModule:
+    return CToIRConverter(standard_type_report=standard_type_report).visit_project_module(
+        project,
+        name=name,
+    )
+
+
 __all__ = (
     "CToIRConverter",
     "c_file_to_semantic_module",
     "c_file_to_semantic_modules",
     "c_function_to_semantic_function",
     "c_parameter_to_semantic_argument",
+    "c_project_to_semantic_module",
     "c_project_to_semantic_modules",
     "c_struct_to_semantic_class",
     "c_type_to_semantic_type",

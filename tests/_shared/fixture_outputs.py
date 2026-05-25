@@ -2,7 +2,9 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
+from c_parser import parse_c_project
 from x2py import parse_fortran_file
+from semantics.c2ir import c_project_to_semantic_module
 from semantics.fortran2ir import fortran_file_to_semantic_modules, fortran_module_to_semantic_module
 from semantics.pyi_printer import emit_module
 from semantics.readiness import assess_semantic_wrap_readiness
@@ -11,10 +13,15 @@ from semantics.readiness import assess_semantic_wrap_readiness
 TESTS_DIR = Path(__file__).resolve().parents[1]
 FORTRAN_DATA_DIR = TESTS_DIR / "data" / "fortran"
 GENERAL_FORTRAN_DIR = FORTRAN_DATA_DIR / "general"
+C_DATA_DIR = TESTS_DIR / "data" / "c"
+GENERAL_C_DIR = C_DATA_DIR / "general"
 SEMANTICS_FIXTURE_DIR = TESTS_DIR / "semantics" / "fixtures" / "general"
 SEMANTIC_READINESS_FIXTURE_PATH = TESTS_DIR / "semantics" / "fixtures" / "wrap_readiness_messages.json"
 PYI_FIXTURE_DIR = TESTS_DIR / "pyi" / "fixtures" / "general"
+C_PYI_FIXTURE_DIR = TESTS_DIR / "pyi" / "fixtures" / "c" / "general"
 FORTRAN_SUFFIXES = {".f", ".f90", ".f95", ".f03", ".f08", ".for", ".f77", ".ftn"}
+C_SOURCE_SUFFIXES = {".c", ".h", ".i"}
+C_SOURCE_ORDER = {".c": 0, ".h": 1, ".i": 2}
 WRAP_READINESS_CORPUS_DIRS = ("general", "blas", "lapack", "scifortran")
 
 
@@ -24,6 +31,21 @@ def iter_general_fortran_fixtures():
         for path in GENERAL_FORTRAN_DIR.iterdir()
         if path.is_file() and path.suffix.lower() in FORTRAN_SUFFIXES
     )
+
+
+def _c_fixture_sort_key(path: Path) -> tuple[int, str]:
+    return (C_SOURCE_ORDER.get(path.suffix.lower(), 99), path.as_posix())
+
+
+def iter_general_c_fixture_projects() -> list[tuple[Path, list[Path]]]:
+    grouped: dict[Path, list[Path]] = {}
+    for path in sorted(GENERAL_C_DIR.iterdir(), key=_c_fixture_sort_key):
+        if path.is_file() and path.suffix.lower() in C_SOURCE_SUFFIXES:
+            grouped.setdefault(Path(path.stem), []).append(path)
+    return [
+        (project_key, sorted(paths, key=_c_fixture_sort_key))
+        for project_key, paths in sorted(grouped.items())
+    ]
 
 
 def iter_wrap_readiness_fortran_fixtures():
@@ -122,12 +144,36 @@ def pyi_text_for_fixture(path: Path) -> str:
     ).strip()
 
 
+def parse_c_fixture_project(paths: list[Path]):
+    sources = {
+        path.relative_to(C_DATA_DIR).as_posix(): path.read_text(encoding="utf-8")
+        for path in sorted(paths, key=_c_fixture_sort_key)
+    }
+    include_dirs = sorted({path.parent for path in paths})
+    return parse_c_project(sources, include_dirs=include_dirs)
+
+
+def c_semantic_module_for_fixture_project(project_key: Path, paths: list[Path]):
+    return c_project_to_semantic_module(
+        parse_c_fixture_project(paths),
+        name=project_key.as_posix().replace("/", "_"),
+    )
+
+
+def c_pyi_text_for_fixture_project(project_key: Path, paths: list[Path]) -> str:
+    return emit_module(c_semantic_module_for_fixture_project(project_key, paths)).strip()
+
+
 def semantics_fixture_path(path: Path) -> Path:
     return (SEMANTICS_FIXTURE_DIR / path.name).with_suffix(".json")
 
 
 def pyi_fixture_path(path: Path) -> Path:
     return (PYI_FIXTURE_DIR / path.name).with_suffix(".pyi")
+
+
+def c_pyi_fixture_path(project_key: Path) -> Path:
+    return (C_PYI_FIXTURE_DIR / project_key).with_suffix(".pyi")
 
 
 def write_semantics_fixture(path: Path) -> Path:
@@ -141,6 +187,13 @@ def write_pyi_fixture(path: Path) -> Path:
     out = pyi_fixture_path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(pyi_text_for_fixture(path) + "\n", encoding="utf-8")
+    return out
+
+
+def write_c_pyi_fixture(project_key: Path, paths: list[Path]) -> Path:
+    out = c_pyi_fixture_path(project_key)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(c_pyi_text_for_fixture_project(project_key, paths) + "\n", encoding="utf-8")
     return out
 
 
