@@ -39,6 +39,40 @@ def test_project_resolves_quoted_includes_through_include_dirs(tmp_path: Path):
     assert project.unresolved_includes[str(api)] == set()
 
 
+def test_project_records_local_include_without_recursively_parsing_resolved_header(tmp_path: Path):
+    from c_parser import parse_c_project
+
+    include_dir = tmp_path / "generated"
+    include_dir.mkdir()
+    generated = include_dir / "generated_types.h"
+    api = tmp_path / "api.h"
+    generated.write_text("typedef int generated_int;\n", encoding="utf-8")
+    api.write_text('#include "generated_types.h"\nint run(void);\n', encoding="utf-8")
+
+    project = parse_c_project([api], include_dirs=[include_dir])
+
+    assert set(project.files) == {str(api)}
+    assert project.files[str(api)].includes[0].resolved_path == str(generated)
+    assert project.include_graph[str(api)] == {str(generated)}
+    assert "generated_int" not in project.typedefs
+
+
+def test_project_records_system_include_without_searching_or_parsing_local_copy(tmp_path: Path):
+    from c_parser import parse_c_project
+
+    local_system_header = tmp_path / "stddef.h"
+    api = tmp_path / "api.h"
+    local_system_header.write_text("typedef unsigned long size_t;\n", encoding="utf-8")
+    api.write_text("#include <stddef.h>\nint run(void);\n", encoding="utf-8")
+
+    project = parse_c_project([api], include_dirs=[tmp_path])
+
+    assert set(project.files) == {str(api)}
+    assert project.files[str(api)].includes[0].resolved_path is None
+    assert project.system_includes[str(api)] == {"stddef.h"}
+    assert "size_t" not in project.typedefs
+
+
 def test_parse_c_project_directory_discovers_preprocessed_i_files(tmp_path: Path):
     from c_parser import parse_c_project
 
@@ -59,6 +93,34 @@ def test_parse_c_project_directory_discovers_preprocessed_i_files(tmp_path: Path
     assert generated.functions[0].source_location.filename == "include/generated_api.h"
     assert generated.functions[0].source_location.line == 8
     assert generated.to_dict()["functions"][0]["origin"] == "preprocessed"
+
+
+def test_project_retains_mutually_exclusive_function_variants_out_of_unique_index():
+    from c_parser import parse_c_project
+
+    project = parse_c_project(
+        {
+            "api.h": """
+#ifdef API_V2
+int configure(int option);
+#else
+double configure(double option);
+#endif
+"""
+        }
+    )
+
+    assert "configure" not in project.functions
+    assert [fn.condition_set for fn in project.conditional_function_variants["configure"]] == [
+        frozenset({"g1:b0"}),
+        frozenset({"g1:b1"}),
+    ]
+    assert not any(
+        diag.code == "C_CONFLICTING_FUNCTION_DECLARATION"
+        for diag in project.diagnostics
+    )
+    payload = project.to_dict()
+    assert payload["conditional_function_variants"]["configure"][0]["condition_set"] == ["g1:b0"]
 
 
 def test_project_indexes_functions_by_file_and_enum_constants(tmp_path: Path):

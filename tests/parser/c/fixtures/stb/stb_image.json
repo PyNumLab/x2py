@@ -39,7 +39,54 @@
             "column": 1,
             "source_line": "}"
           },
-          "declaration_locations": []
+          "declaration_locations": [],
+          "condition_set": [
+            "g17:b0",
+            "g49:b0",
+            "g50:b0",
+            "g51:b0"
+          ]
+        },
+        {
+          "name": "stbi__cpuid3",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_image.h",
+            "line": 739,
+            "column": 1,
+            "source_line": "static int stbi__cpuid3(void)"
+          },
+          "start": {
+            "filename": "stb/stb_image.h",
+            "line": 739,
+            "column": 1,
+            "source_line": "static int stbi__cpuid3(void)"
+          },
+          "end": {
+            "filename": "stb/stb_image.h",
+            "line": 748,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [],
+          "condition_set": [
+            "g17:b0",
+            "g49:b0",
+            "g50:b0",
+            "g51:b1"
+          ]
         },
         {
           "name": "stbi__sse2_available",
@@ -74,7 +121,54 @@
             "column": 1,
             "source_line": "}"
           },
-          "declaration_locations": []
+          "declaration_locations": [],
+          "condition_set": [
+            "g17:b0",
+            "g49:b0",
+            "g50:b0",
+            "g52:b0"
+          ]
+        },
+        {
+          "name": "stbi__sse2_available",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_image.h",
+            "line": 765,
+            "column": 1,
+            "source_line": "static int stbi__sse2_available(void)"
+          },
+          "start": {
+            "filename": "stb/stb_image.h",
+            "line": 765,
+            "column": 1,
+            "source_line": "static int stbi__sse2_available(void)"
+          },
+          "end": {
+            "filename": "stb/stb_image.h",
+            "line": 771,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [],
+          "condition_set": [
+            "g17:b0",
+            "g49:b0",
+            "g50:b1",
+            "g53:b0"
+          ]
         },
         {
           "name": "stbi__refill_buffer",
@@ -33187,32 +33281,6 @@
         },
         {
           "code": "C_DUPLICATE_FUNCTION_DEFINITION",
-          "message": "Duplicate definition for function 'stbi__cpuid3'.",
-          "severity": "error",
-          "location": {
-            "filename": "stb/stb_image.h",
-            "line": 739,
-            "column": 1,
-            "source_line": "static int stbi__cpuid3(void)"
-          },
-          "unit_kind": "function",
-          "unit_name": "stbi__cpuid3"
-        },
-        {
-          "code": "C_DUPLICATE_FUNCTION_DEFINITION",
-          "message": "Duplicate definition for function 'stbi__sse2_available'.",
-          "severity": "error",
-          "location": {
-            "filename": "stb/stb_image.h",
-            "line": 765,
-            "column": 1,
-            "source_line": "static int stbi__sse2_available(void)"
-          },
-          "unit_kind": "function",
-          "unit_name": "stbi__sse2_available"
-        },
-        {
-          "code": "C_DUPLICATE_FUNCTION_DEFINITION",
           "message": "Duplicate definition for function 'stbi__idct_simd'.",
           "severity": "error",
           "location": {
@@ -33228,76 +33296,6 @@
     }
   },
   "functions": {
-    "stbi__cpuid3": {
-      "name": "stbi__cpuid3",
-      "result_type": {
-        "model": "CInt",
-        "qualifiers": [],
-        "source_text": "int"
-      },
-      "parameters": [],
-      "storage": [
-        "static"
-      ],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_image.h",
-        "line": 732,
-        "column": 1,
-        "source_line": "static int stbi__cpuid3(void)"
-      },
-      "start": {
-        "filename": "stb/stb_image.h",
-        "line": 732,
-        "column": 1,
-        "source_line": "static int stbi__cpuid3(void)"
-      },
-      "end": {
-        "filename": "stb/stb_image.h",
-        "line": 737,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
-    "stbi__sse2_available": {
-      "name": "stbi__sse2_available",
-      "result_type": {
-        "model": "CInt",
-        "qualifiers": [],
-        "source_text": "int"
-      },
-      "parameters": [],
-      "storage": [
-        "static"
-      ],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_image.h",
-        "line": 754,
-        "column": 1,
-        "source_line": "static int stbi__sse2_available(void)"
-      },
-      "start": {
-        "filename": "stb/stb_image.h",
-        "line": 754,
-        "column": 1,
-        "source_line": "static int stbi__sse2_available(void)"
-      },
-      "end": {
-        "filename": "stb/stb_image.h",
-        "line": 758,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
     "stbi__refill_buffer": {
       "name": "stbi__refill_buffer",
       "result_type": {
@@ -55471,6 +55469,8 @@
   "functions_by_file": {
     "stb/stb_image.h": [
       "stbi__cpuid3",
+      "stbi__cpuid3",
+      "stbi__sse2_available",
       "stbi__sse2_available",
       "stbi__refill_buffer",
       "stbi__start_mem",
@@ -55819,6 +55819,176 @@
   },
   "header_source_pairs": {
     "stb/stb_image.h": []
+  },
+  "conditional_function_variants": {
+    "stbi__cpuid3": [
+      {
+        "name": "stbi__cpuid3",
+        "result_type": {
+          "model": "CInt",
+          "qualifiers": [],
+          "source_text": "int"
+        },
+        "parameters": [],
+        "storage": [
+          "static"
+        ],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "stb/stb_image.h",
+          "line": 732,
+          "column": 1,
+          "source_line": "static int stbi__cpuid3(void)"
+        },
+        "start": {
+          "filename": "stb/stb_image.h",
+          "line": 732,
+          "column": 1,
+          "source_line": "static int stbi__cpuid3(void)"
+        },
+        "end": {
+          "filename": "stb/stb_image.h",
+          "line": 737,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g17:b0",
+          "g49:b0",
+          "g50:b0",
+          "g51:b0"
+        ]
+      },
+      {
+        "name": "stbi__cpuid3",
+        "result_type": {
+          "model": "CInt",
+          "qualifiers": [],
+          "source_text": "int"
+        },
+        "parameters": [],
+        "storage": [
+          "static"
+        ],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "stb/stb_image.h",
+          "line": 739,
+          "column": 1,
+          "source_line": "static int stbi__cpuid3(void)"
+        },
+        "start": {
+          "filename": "stb/stb_image.h",
+          "line": 739,
+          "column": 1,
+          "source_line": "static int stbi__cpuid3(void)"
+        },
+        "end": {
+          "filename": "stb/stb_image.h",
+          "line": 748,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g17:b0",
+          "g49:b0",
+          "g50:b0",
+          "g51:b1"
+        ]
+      }
+    ],
+    "stbi__sse2_available": [
+      {
+        "name": "stbi__sse2_available",
+        "result_type": {
+          "model": "CInt",
+          "qualifiers": [],
+          "source_text": "int"
+        },
+        "parameters": [],
+        "storage": [
+          "static"
+        ],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "stb/stb_image.h",
+          "line": 754,
+          "column": 1,
+          "source_line": "static int stbi__sse2_available(void)"
+        },
+        "start": {
+          "filename": "stb/stb_image.h",
+          "line": 754,
+          "column": 1,
+          "source_line": "static int stbi__sse2_available(void)"
+        },
+        "end": {
+          "filename": "stb/stb_image.h",
+          "line": 758,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g17:b0",
+          "g49:b0",
+          "g50:b0",
+          "g52:b0"
+        ]
+      },
+      {
+        "name": "stbi__sse2_available",
+        "result_type": {
+          "model": "CInt",
+          "qualifiers": [],
+          "source_text": "int"
+        },
+        "parameters": [],
+        "storage": [
+          "static"
+        ],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "stb/stb_image.h",
+          "line": 765,
+          "column": 1,
+          "source_line": "static int stbi__sse2_available(void)"
+        },
+        "start": {
+          "filename": "stb/stb_image.h",
+          "line": 765,
+          "column": 1,
+          "source_line": "static int stbi__sse2_available(void)"
+        },
+        "end": {
+          "filename": "stb/stb_image.h",
+          "line": 771,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g17:b0",
+          "g49:b0",
+          "g50:b1",
+          "g53:b0"
+        ]
+      }
+    ]
   },
   "diagnostics": [
     {
@@ -57510,32 +57680,6 @@
       },
       "unit_kind": "typedef",
       "unit_name": "stbi__int32"
-    },
-    {
-      "code": "C_DUPLICATE_FUNCTION_DEFINITION",
-      "message": "Duplicate definition for function 'stbi__cpuid3'.",
-      "severity": "error",
-      "location": {
-        "filename": "stb/stb_image.h",
-        "line": 739,
-        "column": 1,
-        "source_line": "static int stbi__cpuid3(void)"
-      },
-      "unit_kind": "function",
-      "unit_name": "stbi__cpuid3"
-    },
-    {
-      "code": "C_DUPLICATE_FUNCTION_DEFINITION",
-      "message": "Duplicate definition for function 'stbi__sse2_available'.",
-      "severity": "error",
-      "location": {
-        "filename": "stb/stb_image.h",
-        "line": 765,
-        "column": 1,
-        "source_line": "static int stbi__sse2_available(void)"
-      },
-      "unit_kind": "function",
-      "unit_name": "stbi__sse2_available"
     },
     {
       "code": "C_DUPLICATE_FUNCTION_DEFINITION",

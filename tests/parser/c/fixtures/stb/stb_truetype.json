@@ -6125,7 +6125,200 @@
             "column": 1,
             "source_line": "}"
           },
-          "declaration_locations": []
+          "declaration_locations": [],
+          "condition_set": [
+            "g22:b0",
+            "g28:b0"
+          ]
+        },
+        {
+          "name": "stbtt__new_active",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "stbtt__active_edge",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbtt__active_edge"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "hh",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbtt__hheap *hh",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "stbtt__hheap"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbtt__hheap *hh",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "stbtt__hheap"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "e",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbtt__edge *e",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "stbtt__edge"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbtt__edge *e",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "stbtt__edge"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "off_x",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int off_x"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int off_x"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "start_point",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float start_point"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float start_point"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "userdata",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *userdata",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *userdata",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_truetype.h",
+            "line": 2857,
+            "column": 1,
+            "source_line": "static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, int off_x, float start_point, void *userdata)"
+          },
+          "start": {
+            "filename": "stb/stb_truetype.h",
+            "line": 2857,
+            "column": 1,
+            "source_line": "static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, int off_x, float start_point, void *userdata)"
+          },
+          "end": {
+            "filename": "stb/stb_truetype.h",
+            "line": 2873,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [],
+          "condition_set": [
+            "g22:b0",
+            "g28:b1"
+          ]
         },
         {
           "name": "stbtt__fill_active_edges",
@@ -6476,7 +6669,11 @@
             "column": 1,
             "source_line": "}"
           },
-          "declaration_locations": []
+          "declaration_locations": [],
+          "condition_set": [
+            "g22:b0",
+            "g29:b0"
+          ]
         },
         {
           "name": "stbtt__handle_clipped_edge",
@@ -7099,6 +7296,221 @@
             "source_line": "}"
           },
           "declaration_locations": []
+        },
+        {
+          "name": "stbtt__rasterize_sorted_edges",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "result",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbtt__bitmap *result",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "stbtt__bitmap",
+                    "name": "stbtt__bitmap",
+                    "type": null,
+                    "source_location": null,
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbtt__bitmap *result",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "stbtt__bitmap"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "e",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbtt__edge *e",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "stbtt__edge"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "stbtt__edge *e",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "stbtt__edge"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "vsubsample",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int vsubsample"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int vsubsample"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "off_x",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int off_x"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int off_x"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "off_y",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int off_y"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int off_y"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "userdata",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *userdata",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *userdata",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_truetype.h",
+            "line": 3297,
+            "column": 1,
+            "source_line": "static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)"
+          },
+          "start": {
+            "filename": "stb/stb_truetype.h",
+            "line": 3297,
+            "column": 1,
+            "source_line": "static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)"
+          },
+          "end": {
+            "filename": "stb/stb_truetype.h",
+            "line": 3392,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [],
+          "condition_set": [
+            "g22:b0",
+            "g29:b1"
+          ]
         },
         {
           "name": "stbtt__sort_edges_ins_sort",
@@ -14869,32 +15281,6 @@
           },
           "unit_kind": "function",
           "unit_name": "main"
-        },
-        {
-          "code": "C_DUPLICATE_FUNCTION_DEFINITION",
-          "message": "Duplicate definition for function 'stbtt__new_active'.",
-          "severity": "error",
-          "location": {
-            "filename": "stb/stb_truetype.h",
-            "line": 2857,
-            "column": 1,
-            "source_line": "static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, int off_x, float start_point, void *userdata)"
-          },
-          "unit_kind": "function",
-          "unit_name": "stbtt__new_active"
-        },
-        {
-          "code": "C_DUPLICATE_FUNCTION_DEFINITION",
-          "message": "Duplicate definition for function 'stbtt__rasterize_sorted_edges'.",
-          "severity": "error",
-          "location": {
-            "filename": "stb/stb_truetype.h",
-            "line": 3297,
-            "column": 1,
-            "source_line": "static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)"
-          },
-          "unit_kind": "function",
-          "unit_name": "stbtt__rasterize_sorted_edges"
         }
       ]
     }
@@ -19728,191 +20114,6 @@
       },
       "declaration_locations": []
     },
-    "stbtt__new_active": {
-      "name": "stbtt__new_active",
-      "result_type": {
-        "model": "CComposedType",
-        "qualifiers": [],
-        "source_text": "stbtt__active_edge",
-        "components": [
-          {
-            "model": "CPointer",
-            "qualifiers": [],
-            "source_text": ""
-          },
-          {
-            "reference": "stbtt__active_edge"
-          }
-        ]
-      },
-      "parameters": [
-        {
-          "name": "hh",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "stbtt__hheap *hh",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "stbtt__hheap"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "stbtt__hheap *hh",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "stbtt__hheap"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "e",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "stbtt__edge *e",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "stbtt__edge"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "stbtt__edge *e",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "stbtt__edge"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "off_x",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int off_x"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int off_x"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "start_point",
-          "type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float start_point"
-          },
-          "declared_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float start_point"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "userdata",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "void *userdata",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CVoid",
-                "qualifiers": [],
-                "source_text": "void"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "void *userdata",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CVoid",
-                "qualifiers": [],
-                "source_text": "void"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [
-        "static"
-      ],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_truetype.h",
-        "line": 2835,
-        "column": 1,
-        "source_line": "static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, int off_x, float start_point, void *userdata)"
-      },
-      "start": {
-        "filename": "stb/stb_truetype.h",
-        "line": 2835,
-        "column": 1,
-        "source_line": "static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, int off_x, float start_point, void *userdata)"
-      },
-      "end": {
-        "filename": "stb/stb_truetype.h",
-        "line": 2855,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
     "stbtt__fill_active_edges": {
       "name": "stbtt__fill_active_edges",
       "result_type": {
@@ -20048,211 +20249,6 @@
       "end": {
         "filename": "stb/stb_truetype.h",
         "line": 2922,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
-    "stbtt__rasterize_sorted_edges": {
-      "name": "stbtt__rasterize_sorted_edges",
-      "result_type": {
-        "model": "CVoid",
-        "qualifiers": [],
-        "source_text": "void"
-      },
-      "parameters": [
-        {
-          "name": "result",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "stbtt__bitmap *result",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "stbtt__bitmap"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "stbtt__bitmap *result",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "stbtt__bitmap"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "e",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "stbtt__edge *e",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "stbtt__edge"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "stbtt__edge *e",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "stbtt__edge"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "n",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int n"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int n"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "vsubsample",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int vsubsample"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int vsubsample"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "off_x",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int off_x"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int off_x"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "off_y",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int off_y"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int off_y"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "userdata",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "void *userdata",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CVoid",
-                "qualifiers": [],
-                "source_text": "void"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "void *userdata",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CVoid",
-                "qualifiers": [],
-                "source_text": "void"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [
-        "static"
-      ],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_truetype.h",
-        "line": 2924,
-        "column": 1,
-        "source_line": "static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)"
-      },
-      "start": {
-        "filename": "stb/stb_truetype.h",
-        "line": 2924,
-        "column": 1,
-        "source_line": "static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)"
-      },
-      "end": {
-        "filename": "stb/stb_truetype.h",
-        "line": 3022,
         "column": 1,
         "source_line": "}"
       },
@@ -25432,6 +25428,7 @@
       "stbtt__hheap_free",
       "stbtt__hheap_cleanup",
       "stbtt__new_active",
+      "stbtt__new_active",
       "stbtt__fill_active_edges",
       "stbtt__rasterize_sorted_edges",
       "stbtt__handle_clipped_edge",
@@ -25439,6 +25436,7 @@
       "stbtt__position_trapezoid_area",
       "stbtt__sized_triangle_area",
       "stbtt__fill_active_edges_new",
+      "stbtt__rasterize_sorted_edges",
       "stbtt__sort_edges_ins_sort",
       "stbtt__sort_edges_quicksort",
       "stbtt__sort_edges",
@@ -25485,6 +25483,808 @@
   },
   "header_source_pairs": {
     "stb/stb_truetype.h": []
+  },
+  "conditional_function_variants": {
+    "stbtt__new_active": [
+      {
+        "name": "stbtt__new_active",
+        "result_type": {
+          "model": "CComposedType",
+          "qualifiers": [],
+          "source_text": "stbtt__active_edge",
+          "components": [
+            {
+              "model": "CPointer",
+              "qualifiers": [],
+              "source_text": ""
+            },
+            {
+              "reference": "stbtt__active_edge"
+            }
+          ]
+        },
+        "parameters": [
+          {
+            "name": "hh",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__hheap *hh",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__hheap"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__hheap *hh",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__hheap"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "e",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__edge *e",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__edge"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__edge *e",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__edge"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "off_x",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int off_x"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int off_x"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "start_point",
+            "type": {
+              "model": "CFloat",
+              "qualifiers": [],
+              "source_text": "float start_point"
+            },
+            "declared_type": {
+              "model": "CFloat",
+              "qualifiers": [],
+              "source_text": "float start_point"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "userdata",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "void *userdata",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CVoid",
+                  "qualifiers": [],
+                  "source_text": "void"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "void *userdata",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CVoid",
+                  "qualifiers": [],
+                  "source_text": "void"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          }
+        ],
+        "storage": [
+          "static"
+        ],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "stb/stb_truetype.h",
+          "line": 2835,
+          "column": 1,
+          "source_line": "static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, int off_x, float start_point, void *userdata)"
+        },
+        "start": {
+          "filename": "stb/stb_truetype.h",
+          "line": 2835,
+          "column": 1,
+          "source_line": "static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, int off_x, float start_point, void *userdata)"
+        },
+        "end": {
+          "filename": "stb/stb_truetype.h",
+          "line": 2855,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g22:b0",
+          "g28:b0"
+        ]
+      },
+      {
+        "name": "stbtt__new_active",
+        "result_type": {
+          "model": "CComposedType",
+          "qualifiers": [],
+          "source_text": "stbtt__active_edge",
+          "components": [
+            {
+              "model": "CPointer",
+              "qualifiers": [],
+              "source_text": ""
+            },
+            {
+              "reference": "stbtt__active_edge"
+            }
+          ]
+        },
+        "parameters": [
+          {
+            "name": "hh",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__hheap *hh",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__hheap"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__hheap *hh",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__hheap"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "e",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__edge *e",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__edge"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__edge *e",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__edge"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "off_x",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int off_x"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int off_x"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "start_point",
+            "type": {
+              "model": "CFloat",
+              "qualifiers": [],
+              "source_text": "float start_point"
+            },
+            "declared_type": {
+              "model": "CFloat",
+              "qualifiers": [],
+              "source_text": "float start_point"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "userdata",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "void *userdata",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CVoid",
+                  "qualifiers": [],
+                  "source_text": "void"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "void *userdata",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CVoid",
+                  "qualifiers": [],
+                  "source_text": "void"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          }
+        ],
+        "storage": [
+          "static"
+        ],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "stb/stb_truetype.h",
+          "line": 2857,
+          "column": 1,
+          "source_line": "static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, int off_x, float start_point, void *userdata)"
+        },
+        "start": {
+          "filename": "stb/stb_truetype.h",
+          "line": 2857,
+          "column": 1,
+          "source_line": "static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, int off_x, float start_point, void *userdata)"
+        },
+        "end": {
+          "filename": "stb/stb_truetype.h",
+          "line": 2873,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g22:b0",
+          "g28:b1"
+        ]
+      }
+    ],
+    "stbtt__rasterize_sorted_edges": [
+      {
+        "name": "stbtt__rasterize_sorted_edges",
+        "result_type": {
+          "model": "CVoid",
+          "qualifiers": [],
+          "source_text": "void"
+        },
+        "parameters": [
+          {
+            "name": "result",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__bitmap *result",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__bitmap"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__bitmap *result",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__bitmap"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "e",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__edge *e",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__edge"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__edge *e",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__edge"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "n",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int n"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int n"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "vsubsample",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int vsubsample"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int vsubsample"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "off_x",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int off_x"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int off_x"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "off_y",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int off_y"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int off_y"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "userdata",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "void *userdata",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CVoid",
+                  "qualifiers": [],
+                  "source_text": "void"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "void *userdata",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CVoid",
+                  "qualifiers": [],
+                  "source_text": "void"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          }
+        ],
+        "storage": [
+          "static"
+        ],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "stb/stb_truetype.h",
+          "line": 2924,
+          "column": 1,
+          "source_line": "static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)"
+        },
+        "start": {
+          "filename": "stb/stb_truetype.h",
+          "line": 2924,
+          "column": 1,
+          "source_line": "static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)"
+        },
+        "end": {
+          "filename": "stb/stb_truetype.h",
+          "line": 3022,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g22:b0",
+          "g29:b0"
+        ]
+      },
+      {
+        "name": "stbtt__rasterize_sorted_edges",
+        "result_type": {
+          "model": "CVoid",
+          "qualifiers": [],
+          "source_text": "void"
+        },
+        "parameters": [
+          {
+            "name": "result",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__bitmap *result",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__bitmap"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__bitmap *result",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__bitmap"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "e",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__edge *e",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__edge"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "stbtt__edge *e",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "stbtt__edge"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "n",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int n"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int n"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "vsubsample",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int vsubsample"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int vsubsample"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "off_x",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int off_x"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int off_x"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "off_y",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int off_y"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int off_y"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "userdata",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "void *userdata",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CVoid",
+                  "qualifiers": [],
+                  "source_text": "void"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "void *userdata",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CVoid",
+                  "qualifiers": [],
+                  "source_text": "void"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          }
+        ],
+        "storage": [
+          "static"
+        ],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "stb/stb_truetype.h",
+          "line": 3297,
+          "column": 1,
+          "source_line": "static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)"
+        },
+        "start": {
+          "filename": "stb/stb_truetype.h",
+          "line": 3297,
+          "column": 1,
+          "source_line": "static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)"
+        },
+        "end": {
+          "filename": "stb/stb_truetype.h",
+          "line": 3392,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g22:b0",
+          "g29:b1"
+        ]
+      }
+    ]
   },
   "diagnostics": [
     {
@@ -26656,32 +27456,6 @@
       },
       "unit_kind": "function",
       "unit_name": "main"
-    },
-    {
-      "code": "C_DUPLICATE_FUNCTION_DEFINITION",
-      "message": "Duplicate definition for function 'stbtt__new_active'.",
-      "severity": "error",
-      "location": {
-        "filename": "stb/stb_truetype.h",
-        "line": 2857,
-        "column": 1,
-        "source_line": "static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, int off_x, float start_point, void *userdata)"
-      },
-      "unit_kind": "function",
-      "unit_name": "stbtt__new_active"
-    },
-    {
-      "code": "C_DUPLICATE_FUNCTION_DEFINITION",
-      "message": "Duplicate definition for function 'stbtt__rasterize_sorted_edges'.",
-      "severity": "error",
-      "location": {
-        "filename": "stb/stb_truetype.h",
-        "line": 3297,
-        "column": 1,
-        "source_line": "static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)"
-      },
-      "unit_kind": "function",
-      "unit_name": "stbtt__rasterize_sorted_edges"
     }
   ]
 }

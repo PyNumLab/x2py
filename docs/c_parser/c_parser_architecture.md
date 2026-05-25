@@ -28,6 +28,8 @@ Implemented now:
 - `c_parser/` package exists and is included in package discovery.
 - `c_parser.models` defines JSON-stable parser dataclasses and `CParseError`.
 - `c_parser.parser` exposes `CParser`, `parse_c_file`, and `parse_c_project`.
+- `x2py` re-exports `parse_c_file` and `parse_c_project`, matching its
+  Fortran file/project entrypoint style.
 - `c_parser.parser` keeps parser helpers on `CParser`, matching the Fortran
   parser's stateful class structure; module-level functions are limited to
   public entrypoints and small path helpers.
@@ -78,6 +80,10 @@ Implemented now:
   declarations, preserves related declaration locations, and reports duplicate
   definitions or incompatible redeclarations as diagnostics. Local declarations
   inside function bodies remain out of scope because bodies are skipped.
+- Raw same-name function alternatives in mutually exclusive conditional
+  branches retain Fortran-style `condition_set` identity; a project keeps
+  ambiguous alternatives in `conditional_function_variants` rather than
+  inventing one selected function.
 - `c_parser.cli` provides C-specific partial report formatting.
 - `x2py.cli` dispatches `--language c --parse` to the C parser path.
 - `x2py.c_type_probe` compiles and runs a generated C11 query for
@@ -100,7 +106,7 @@ Deferred:
 
 - full typedef/tag resolution policy beyond basic project-level link-up and
   callback policy metadata, for example conflict diagnostics, active
-  conditional branches, and semantic wrappability decisions
+  semantic wrappability decisions
 - compiler attributes and alignment specifiers
 - broader compiler-family validation for preprocessing; parsed declarations
   already retain preprocessed origin and mapped source identity
@@ -284,7 +290,8 @@ Current and planned responsibilities:
 - `c_parser/type_resolver.py`
   - Resolves tag and typedef references, typedef chains/cycles, and aggregate
     references across parsed project files.
-  - Planned: safely fold simple compile-time constant expressions.
+  - Boundary: enum initializer expressions remain source text in the parser;
+    any target-aware evaluation belongs to later semantic conversion.
 - `c_parser/cli.py`
   - Implemented: report formatting and serialization helpers called by
     `x2py.cli` behind explicit C flags.
@@ -319,9 +326,10 @@ class CParser:
     def visit_project(...): ...
 ```
 
-These entrypoints are exposed from `c_parser`, not re-exported from
-`x2py.__init__`. Keeping the API under `c_parser` avoids making the top-level
-x2py API promise stable C behavior before the frontend matures.
+These entrypoints are exposed from both `c_parser` and `x2py.__init__`, using
+the same top-level file/project invocation pattern already provided for
+Fortran. C semantic conversion remains unavailable despite the parse API
+export.
 
 ## Core Model Families
 
@@ -371,8 +379,10 @@ Declaration objects are separate from the type components:
   locations; there is no separate field class.
 - `CFunction` has `name`, `result_type`, named `parameters`, storage and
   function specifiers, `is_variadic`, prototype style, and source/definition
-  locations plus related declaration locations. Its `type` property builds the
-  corresponding nameless `CFunctionType`.
+  locations plus related declaration locations. Raw alternative declarations
+  can also carry `condition_set` tokens such as `g1:b0`, matching the
+  Fortran parser's conditional-sibling identity convention. Its `type`
+  property builds the corresponding nameless `CFunctionType`.
 - `CParameter` has a source name, written `declared_type`, and effective
   `type`; outer array parameters and direct function parameters adjust to
   pointer `type` values while their source form is retained.
@@ -432,6 +442,7 @@ Declaration objects are separate from the type components:
   - `system_includes`
   - `unresolved_includes`
   - `header_source_pairs`
+  - `conditional_function_variants`
   - `diagnostics`
 
 Serialization uses `"model"` to identify concrete `CType` nodes; `"type"` is
@@ -441,9 +452,8 @@ spellings, such as `"const"`. Reused aggregate/typedef objects serialize as
 references to avoid cycles.
 
 Future parser phases can deepen symbol links, duplicate/conflict diagnostics,
-conditional region ownership, and project diagnostics when the corresponding
-behavior lands. Additions should be documented and tested with stable
-serialization expectations.
+and project diagnostics when the corresponding behavior lands. Additions
+should be documented and tested with stable serialization expectations.
 
 ## Grammar-Style Parsing Strategy
 
@@ -546,6 +556,9 @@ Raw-source mode target:
 - Record function-like macros as unsupported or deferred metadata.
 - Record conditional directive presence as metadata only when needed for
   provenance.
+- Preserve same-name function declarations from mutually exclusive raw
+  conditional branches as separate `condition_set` variants; do not select an
+  active branch in raw mode.
 - Parse ordinary declarations only when they are visible without macro
   expansion.
 - Mark function-like wrappers and object-like declaration-prefix regions as
@@ -599,7 +612,7 @@ graphs.
 Current behavior:
 
 - `parse_c_project` accepts mappings, explicit paths, and directories.
-- Directory mode currently discovers `.c` and `.h` files only.
+- Directory mode discovers `.c`, `.h`, and `.i` files.
 - Returned `CProject` objects contain `CFile` parser models with raw include,
   macro, metadata diagnostics, and supported declarations populated per file.
 - Basic project-level indexes are populated for parsed functions, typedefs,
@@ -608,6 +621,15 @@ Current behavior:
   are recorded separately. Unresolved quoted includes remain diagnostics
   rather than hard failures, and include cycles are represented as graph edges
   without recursive traversal.
+- Included local or system files are never recursively parsed, even when a
+  local path can be resolved. The parser reads only explicit mapping/file
+  inputs or supported files below an explicit directory, matching the
+  Fortran policy of recording imports/includes without loading them.
+- Generated headers and direct `.i` inputs follow that explicit-input rule;
+  compiler linemarkers record origins rather than introducing project files.
+- Project and include-graph keys are input/path keys. There is no C module-key
+  namespace; a graph edge uses a parsed project-file key when one matches and
+  otherwise retains its external path/target fact.
 - Likely header/source pairs are reported by matching stems and direct source
   includes.
 - Basic cross-file typedef and struct/union/enum tag references are linked to
@@ -618,9 +640,6 @@ Current behavior:
 
 Planned behavior after project-resolution phases:
 
-- Collect `.c`, `.h`, and `.i` files from explicit paths or
-  directories.
-- Parse headers and sources into `CFile` models.
 - Deepen include graph behavior where normalized paths are ambiguous.
 - Deepen duplicate/conflict diagnostics.
 - Track duplicate symbols by C namespace:

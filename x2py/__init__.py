@@ -2,6 +2,8 @@
 
 from importlib import import_module
 
+from c_parser.models import CFile, CParseError, CProject
+from c_parser.parser import parse_c_file, parse_c_project
 from fortran_parser.models import (
     FortranArgument,
     FortranBlockData,
@@ -44,6 +46,9 @@ def __getattr__(name: str):
     raise AttributeError(f"module 'x2py' has no attribute {name!r}")
 
 __all__ = (
+    "CFile",
+    "CParseError",
+    "CProject",
     "FortranTypeProbeError",
     "FortranTypeProbeReport",
     "FortranArgument",
@@ -68,6 +73,8 @@ __all__ = (
     "fortran_module_to_semantic_module",
     "load_pyi_file",
     "main",
+    "parse_c_file",
+    "parse_c_project",
     "parse_fortran_file",
     "parse_fortran_project",
     "parse_pyi_text",

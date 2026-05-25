@@ -8610,7 +8610,153 @@
             "column": 1,
             "source_line": "}"
           },
-          "declaration_locations": []
+          "declaration_locations": [],
+          "condition_set": [
+            "g13:b0",
+            "g72:b0"
+          ]
+        },
+        {
+          "name": "inverse_mdct_slow",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "buffer",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *buffer",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *buffer",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "f",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "vorb *f",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "vorb"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "vorb *f",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "vorb"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "blocktype",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int blocktype"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int blocktype"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_vorbis.c",
+            "line": 2312,
+            "column": 1,
+            "source_line": "void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)"
+          },
+          "start": {
+            "filename": "stb/stb_vorbis.c",
+            "line": 2312,
+            "column": 1,
+            "source_line": "void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)"
+          },
+          "end": {
+            "filename": "stb/stb_vorbis.c",
+            "line": 2329,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [],
+          "condition_set": [
+            "g13:b0",
+            "g72:b1"
+          ]
         },
         {
           "name": "dct_iv_slow",
@@ -8699,6 +8845,148 @@
             "source_line": "}"
           },
           "declaration_locations": []
+        },
+        {
+          "name": "inverse_mdct_slow",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "buffer",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *buffer",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "float *buffer",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CFloat",
+                    "qualifiers": [],
+                    "source_text": "float"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "n",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int n"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "f",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "vorb *f",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "vorb"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "vorb *f",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "vorb"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "blocktype",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int blocktype"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int blocktype"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "stb/stb_vorbis.c",
+            "line": 2350,
+            "column": 1,
+            "source_line": "void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)"
+          },
+          "start": {
+            "filename": "stb/stb_vorbis.c",
+            "line": 2350,
+            "column": 1,
+            "source_line": "void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)"
+          },
+          "end": {
+            "filename": "stb/stb_vorbis.c",
+            "line": 2361,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [],
+          "condition_set": [
+            "g13:b0",
+            "g72:b2"
+          ]
         },
         {
           "name": "mdct_init",
@@ -21722,32 +22010,6 @@
           "unit_name": "YTYPE"
         },
         {
-          "code": "C_CONFLICTING_FUNCTION_DECLARATION",
-          "message": "Conflicting declarations for function 'inverse_mdct_slow'.",
-          "severity": "error",
-          "location": {
-            "filename": "stb/stb_vorbis.c",
-            "line": 2312,
-            "column": 1,
-            "source_line": "void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)"
-          },
-          "unit_kind": "function",
-          "unit_name": "inverse_mdct_slow"
-        },
-        {
-          "code": "C_CONFLICTING_FUNCTION_DECLARATION",
-          "message": "Conflicting declarations for function 'inverse_mdct_slow'.",
-          "severity": "error",
-          "location": {
-            "filename": "stb/stb_vorbis.c",
-            "line": 2350,
-            "column": 1,
-            "source_line": "void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)"
-          },
-          "unit_kind": "function",
-          "unit_name": "inverse_mdct_slow"
-        },
-        {
           "code": "C_DUPLICATE_FUNCTION_DEFINITION",
           "message": "Duplicate definition for function 'inverse_mdct'.",
           "severity": "error",
@@ -26639,94 +26901,6 @@
       "end": {
         "filename": "stb/stb_vorbis.c",
         "line": 2284,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
-    "inverse_mdct_slow": {
-      "name": "inverse_mdct_slow",
-      "result_type": {
-        "model": "CVoid",
-        "qualifiers": [],
-        "source_text": "void"
-      },
-      "parameters": [
-        {
-          "name": "buffer",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "float *buffer",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "float *buffer",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "n",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int n"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int n"
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_vorbis.c",
-        "line": 2289,
-        "column": 1,
-        "source_line": "void inverse_mdct_slow(float *buffer, int n)"
-      },
-      "start": {
-        "filename": "stb/stb_vorbis.c",
-        "line": 2289,
-        "column": 1,
-        "source_line": "void inverse_mdct_slow(float *buffer, int n)"
-      },
-      "end": {
-        "filename": "stb/stb_vorbis.c",
-        "line": 2309,
         "column": 1,
         "source_line": "}"
       },
@@ -35986,7 +36160,9 @@
       "residue_decode",
       "decode_residue",
       "inverse_mdct_slow",
+      "inverse_mdct_slow",
       "dct_iv_slow",
+      "inverse_mdct_slow",
       "mdct_init",
       "mdct_clear",
       "mdct_backward",
@@ -36100,6 +36276,386 @@
     "stb/stb_vorbis.c": []
   },
   "header_source_pairs": {},
+  "conditional_function_variants": {
+    "inverse_mdct_slow": [
+      {
+        "name": "inverse_mdct_slow",
+        "result_type": {
+          "model": "CVoid",
+          "qualifiers": [],
+          "source_text": "void"
+        },
+        "parameters": [
+          {
+            "name": "buffer",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "float *buffer",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CFloat",
+                  "qualifiers": [],
+                  "source_text": "float"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "float *buffer",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CFloat",
+                  "qualifiers": [],
+                  "source_text": "float"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "n",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int n"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int n"
+            },
+            "source_location": null,
+            "callback_policy": null
+          }
+        ],
+        "storage": [],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "stb/stb_vorbis.c",
+          "line": 2289,
+          "column": 1,
+          "source_line": "void inverse_mdct_slow(float *buffer, int n)"
+        },
+        "start": {
+          "filename": "stb/stb_vorbis.c",
+          "line": 2289,
+          "column": 1,
+          "source_line": "void inverse_mdct_slow(float *buffer, int n)"
+        },
+        "end": {
+          "filename": "stb/stb_vorbis.c",
+          "line": 2309,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g13:b0",
+          "g72:b0"
+        ]
+      },
+      {
+        "name": "inverse_mdct_slow",
+        "result_type": {
+          "model": "CVoid",
+          "qualifiers": [],
+          "source_text": "void"
+        },
+        "parameters": [
+          {
+            "name": "buffer",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "float *buffer",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CFloat",
+                  "qualifiers": [],
+                  "source_text": "float"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "float *buffer",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CFloat",
+                  "qualifiers": [],
+                  "source_text": "float"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "n",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int n"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int n"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "f",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "vorb *f",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "vorb"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "vorb *f",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "vorb"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "blocktype",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int blocktype"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int blocktype"
+            },
+            "source_location": null,
+            "callback_policy": null
+          }
+        ],
+        "storage": [],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "stb/stb_vorbis.c",
+          "line": 2312,
+          "column": 1,
+          "source_line": "void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)"
+        },
+        "start": {
+          "filename": "stb/stb_vorbis.c",
+          "line": 2312,
+          "column": 1,
+          "source_line": "void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)"
+        },
+        "end": {
+          "filename": "stb/stb_vorbis.c",
+          "line": 2329,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g13:b0",
+          "g72:b1"
+        ]
+      },
+      {
+        "name": "inverse_mdct_slow",
+        "result_type": {
+          "model": "CVoid",
+          "qualifiers": [],
+          "source_text": "void"
+        },
+        "parameters": [
+          {
+            "name": "buffer",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "float *buffer",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CFloat",
+                  "qualifiers": [],
+                  "source_text": "float"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "float *buffer",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "model": "CFloat",
+                  "qualifiers": [],
+                  "source_text": "float"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "n",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int n"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int n"
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "f",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "vorb *f",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "vorb"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "vorb *f",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "vorb"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          },
+          {
+            "name": "blocktype",
+            "type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int blocktype"
+            },
+            "declared_type": {
+              "model": "CInt",
+              "qualifiers": [],
+              "source_text": "int blocktype"
+            },
+            "source_location": null,
+            "callback_policy": null
+          }
+        ],
+        "storage": [],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "stb/stb_vorbis.c",
+          "line": 2350,
+          "column": 1,
+          "source_line": "void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)"
+        },
+        "start": {
+          "filename": "stb/stb_vorbis.c",
+          "line": 2350,
+          "column": 1,
+          "source_line": "void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)"
+        },
+        "end": {
+          "filename": "stb/stb_vorbis.c",
+          "line": 2361,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g13:b0",
+          "g72:b2"
+        ]
+      }
+    ]
+  },
   "diagnostics": [
     {
       "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
@@ -36672,32 +37228,6 @@
       },
       "unit_kind": "typedef",
       "unit_name": "YTYPE"
-    },
-    {
-      "code": "C_CONFLICTING_FUNCTION_DECLARATION",
-      "message": "Conflicting declarations for function 'inverse_mdct_slow'.",
-      "severity": "error",
-      "location": {
-        "filename": "stb/stb_vorbis.c",
-        "line": 2312,
-        "column": 1,
-        "source_line": "void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)"
-      },
-      "unit_kind": "function",
-      "unit_name": "inverse_mdct_slow"
-    },
-    {
-      "code": "C_CONFLICTING_FUNCTION_DECLARATION",
-      "message": "Conflicting declarations for function 'inverse_mdct_slow'.",
-      "severity": "error",
-      "location": {
-        "filename": "stb/stb_vorbis.c",
-        "line": 2350,
-        "column": 1,
-        "source_line": "void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)"
-      },
-      "unit_kind": "function",
-      "unit_name": "inverse_mdct_slow"
     },
     {
       "code": "C_DUPLICATE_FUNCTION_DEFINITION",
