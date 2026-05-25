@@ -550,6 +550,23 @@ def test_cli_rejects_fortran_file_with_explicit_c_frontend(tmp_path: Path):
     assert "pass --language fortran" in result.stderr
 
 
+def test_cli_fortran_rejects_embedded_c_declaration_outside_execution_body(tmp_path: Path):
+    source = tmp_path / "solver.f90"
+    source.write_text(
+        "subroutine solve()\n  int add(int a, int b);\nend subroutine solve\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "x2py", str(source), "--pyi"],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 1
+    assert "PARSE_FOREIGN_C_SYNTAX" in result.stderr
+    assert "C declaration syntax is not valid Fortran input" in result.stderr
+
+
 def test_cli_parse_shows_module_derived_types_and_derived_arg_kinds():
     fixture = Path(__file__).parent.parent / "data" / "fortran" / "general" / "modern_pyi_example.f90"
     cmd = [sys.executable, "-m", "x2py", str(fixture), "--parse"]

@@ -746,3 +746,50 @@ module missing_end
 """
     with pytest.raises(FortranParseError, match="Missing end module for module 'missing_end'"):
         parse_fortran_file(code, filename="missing_end_module.f90")
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "int add(int a, int b);\n",
+        "api_size count(void);\n",
+        """
+subroutine mixed_spec()
+  api_size count(void);
+end subroutine mixed_spec
+""",
+    ],
+)
+def test_fortran_parser_rejects_foreign_c_declarations_outside_execution_bodies(code):
+    with pytest.raises(FortranParseError, match="C declaration syntax is not valid Fortran input") as exc_info:
+        parse_fortran_file(code, filename="mixed.f90")
+
+    assert exc_info.value.code == "PARSE_FOREIGN_C_SYNTAX"
+
+
+def test_fortran_parser_ignores_foreign_c_declarations_after_execution_boundary():
+    parsed = parse_fortran_file(
+        """
+subroutine mixed_body()
+  call noop()
+  api_size count(void);
+end subroutine mixed_body
+""",
+        filename="mixed_body.f90",
+    )
+
+    assert parsed.procedures[0].name == "mixed_body"
+
+
+def test_foreign_c_check_preserves_valid_semicolon_separated_fortran_statements():
+    parsed = parse_fortran_file(
+        """
+subroutine valid_body(x)
+  real :: x
+  call update(x); write(*,*) x
+end subroutine valid_body
+""",
+        filename="valid_body.f90",
+    )
+
+    assert parsed.procedures[0].name == "valid_body"

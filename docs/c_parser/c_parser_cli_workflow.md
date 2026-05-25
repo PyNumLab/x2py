@@ -44,7 +44,10 @@ recognizable Fortran files and `.pyi` readiness inputs, but a `.c`, `.h`, or
 `.i` path fails with guidance to pass `--language c`; directory and
 unknown-suffix source inputs require an explicit frontend selection. A known C
 path explicitly passed with `--language fortran` is rejected before parsing,
-so it cannot silently produce an empty Fortran interface.
+so it cannot silently produce an empty Fortran interface. The parser also
+rejects unmistakable Fortran unit or declaration syntax found in C input, and
+the Fortran parser rejects unmistakable C declarations outside execution
+regions that are intentionally not modeled.
 
 The C parser output differs from Fortran parser output by using C-specific
 top-level sections: `functions`, `structs`, `unions`, `enums`, `typedefs`,

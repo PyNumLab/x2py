@@ -120,6 +120,42 @@ _CXX_ACCESS_SPECIFIERS = {"public", "private", "protected"}
 _RAW_CONDITIONAL_DIRECTIVE_RE = re.compile(
     r"^\s*#\s*(?P<directive>if|ifdef|ifndef|elif|else|endif)\b"
 )
+_FOREIGN_FORTRAN_LINES = (
+    re.compile(
+        r"^\s*(?:pure\s+|elemental\s+|recursive\s+|module\s+)*"
+        r"subroutine\s+\w+\s*(?:\([^;{}]*\))?"
+        r"(?:\s+bind\s*\([^;{}]*\))?\s*$",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^\s*(?:pure\s+|elemental\s+|recursive\s+|module\s+)*"
+        r"(?:(?:integer|real|logical|complex|character)(?:\s*\([^;{}]*\))?|"
+        r"double\s+precision|type\s*\([^)]*\)|class\s*\([^)]*\))?"
+        r"\s*function\s+\w+\s*(?:\([^;{}]*\))?"
+        r"(?:\s+result\s*\([^;{}]*\))?"
+        r"(?:\s+bind\s*\([^;{}]*\))?\s*$",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^\s*end\s+(?:subroutine|function|module|submodule|program|interface|type|block\s+data)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^\s*(?:module|program|block\s+data)\s+[A-Za-z_]\w*\s*$",
+        re.IGNORECASE,
+    ),
+    re.compile(r"^\s*submodule\s*\([^)]*\)\s+[A-Za-z_]\w*\s*$", re.IGNORECASE),
+    re.compile(r"^\s*(?:implicit\s+none|contains)\s*$", re.IGNORECASE),
+    re.compile(
+        r"^\s*use\s+(?:,\s*(?:intrinsic|non_intrinsic)\s*)?(?:::)?\s*[A-Za-z_]\w*"
+        r"(?:\s*,\s*only\s*:.*)?\s*$",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^\s*(?:(?:integer|real|logical|complex|character)\b|(?:type|class)\s*\([^)]*\)).*::",
+        re.IGNORECASE,
+    ),
+)
 _PRIMITIVE_WORDS = {
     "void",
     "char",
@@ -337,6 +373,11 @@ class CParser:
         if preprocessing == "raw" and inferred_preprocessed_path is not None:
             preprocessing = "preprocessed"
 
+        self._raise_for_foreign_fortran_syntax(
+            source,
+            filename,
+            use_linemarkers=preprocessing in {"compiler", "preprocessed"},
+        )
         parsed = CFile(filename=filename, parser_status="partial", preprocessing=preprocessing)
         if preprocessing == "raw":
             effective_include_dirs = list(include_dirs or ())
@@ -574,6 +615,50 @@ class CParser:
     def _source_location(self, segment: CTopLevelSegment) -> CSourceLocation:
         """Return the original start location for a top-level segment."""
         return self._source_location_at(segment, 0)
+
+    @staticmethod
+    def _raise_for_foreign_fortran_syntax(
+        source: str,
+        filename: str | None,
+        *,
+        use_linemarkers: bool = False,
+    ) -> None:
+        """Reject unmistakable Fortran statements outside ignored C bodies."""
+        for segment in split_top_level_c_source(
+            source,
+            filename=filename,
+            use_linemarkers=use_linemarkers,
+        ):
+            CParser._raise_for_foreign_fortran_segment(segment)
+
+    @staticmethod
+    def _raise_for_foreign_fortran_segment(segment: CTopLevelSegment) -> None:
+        for line_offset, line in enumerate(segment.text.splitlines()):
+            if not any(pattern.match(line) for pattern in _FOREIGN_FORTRAN_LINES):
+                continue
+            filename = (
+                segment.original_filenames[line_offset]
+                if line_offset < len(segment.original_filenames)
+                else segment.filename
+            )
+            line_number = (
+                segment.original_line_numbers[line_offset]
+                if line_offset < len(segment.original_line_numbers)
+                else segment.original_start_line + line_offset
+            )
+            source_line = (
+                segment.original_source_lines[line_offset]
+                if line_offset < len(segment.original_source_lines)
+                else segment.original_source_line
+            )
+            raise CParseError(
+                "Fortran syntax is not valid C input; parse Fortran source with --language fortran.",
+                filename=filename,
+                line_number=line_number,
+                column=1,
+                source_line=source_line,
+                code="CPARSE_FOREIGN_FORTRAN_SYNTAX",
+            )
 
     def _macro_dependencies(
         self,

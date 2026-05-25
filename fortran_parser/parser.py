@@ -118,6 +118,37 @@ _UNSUPPORTED_PATTERN_KEYS = (
     "unsupported_procedure_pointer",
     "unsupported_c_ptr",
 )
+_FOREIGN_C_DECLARATION = re.compile(
+    r"""
+    ^\s*
+    (?:(?:typedef|extern|static|register|inline|const|volatile|restrict|_Atomic)\s+)*
+    (?:
+        (?:signed|unsigned)(?:\s+(?:char|short|int|long)(?:\s+long)?)?
+        |(?:void|char|short|int|long|float|double)(?:\s+(?:int|long|_Complex))?
+        |(?:struct|union|enum)\s+[A-Za-z_]\w*
+    )
+    \s+(?:\*+\s*)?[A-Za-z_]\w*\s*(?:\(|\[|=|;|\{)
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+_FOREIGN_C_ALIAS_DECLARATION = re.compile(
+    r"""
+    ^\s*
+    (?!
+        (?:allocate|associate|backspace|block|call|case|close|continue|cycle|
+           data|deallocate|do|else|elseif|end|error|exit|external|format|
+           goto|go|if|implicit|include|inquire|intrinsic|nullify|open|
+           parameter|pause|print|read|return|rewind|save|select|stop|use|
+           wait|where|write|integer|real|complex|logical|character|double|
+           type|class|procedure)\b
+    )
+    (?:(?:typedef|extern|static|register|inline|const|volatile|restrict|_Atomic)\s+)*
+    [A-Za-z_]\w*\s+(?:\*+\s*)?[A-Za-z_]\w*
+    \s*(?:\([^;{}]*\)|\[[^\]]*\])?
+    \s*(?:=[^;{}]*)?[;{]\s*$
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
 
 
 _PreprocessedLines = list[tuple[str, int | None, str | None]]
@@ -900,6 +931,7 @@ class FortranParser:
         self._helper_validate_unit_headers(lines, filename)
         root_scope = _ParserScope(kind="file", name=None)
         units = self._helper_slice_child_units(lines, parent_scope=root_scope, filename=filename)
+        self._helper_validate_file_scope_unparsed_lines(lines, filename)
         self._helper_validate_sibling_units(units, parent_scope=root_scope, filename=filename)
         return lines, root_scope, units
 
@@ -1135,6 +1167,79 @@ class FortranParser:
                     lineno=lineno,
                     source_line=source_line,
                 )
+
+    def _helper_validate_file_scope_unparsed_lines(self, lines: _PreprocessedLines, filename: str | None) -> None:
+        """Reject foreign C declarations not owned by a Fortran source unit."""
+        index = 0
+        pp_condition_stack: list[tuple[int, int]] = []
+        pp_active_stack: list[bool] = []
+        pp_group_counter = 0
+        while index < len(lines):
+            line, lineno, source_line = lines[index]
+            stripped = line.strip()
+            if not stripped:
+                index += 1
+                continue
+            handled_pp, pp_group_counter = self._handle_procedure_preprocessor_line(
+                stripped,
+                macro_selection_enabled=False,
+                macro_names=set(),
+                pp_condition_stack=pp_condition_stack,
+                pp_active_stack=pp_active_stack,
+                pp_group_counter=pp_group_counter,
+            )
+            if handled_pp:
+                index += 1
+                continue
+            start = self._helper_classify_unit_start(stripped)
+            if start is not None:
+                end_index = self._helper_find_unit_end(lines, index, start[0], filename=filename)
+                if end_index is not None:
+                    index = end_index + 1
+                    continue
+            if self._is_allowed_unparsed_file_scope_line(stripped):
+                index += 1
+                continue
+            self._raise_if_foreign_c_syntax_line(
+                stripped,
+                filename=filename,
+                lineno=lineno,
+                source_line=source_line,
+            )
+            index += 1
+
+    @staticmethod
+    def _is_allowed_unparsed_file_scope_line(line: str) -> bool:
+        stripped = line.strip()
+        lowered = stripped.lower()
+        return (
+            stripped.startswith("#")
+            or lowered == "contains"
+            or lowered.startswith("end ")
+            or FortranParser._is_ignored_spec_statement(stripped)
+            or FortranParser._is_openmp_directive(stripped)
+        )
+
+    @staticmethod
+    def _raise_if_foreign_c_syntax_line(
+        line: str,
+        *,
+        filename: str | None,
+        lineno: int | None,
+        source_line: str | None,
+    ) -> None:
+        if not (
+            _FOREIGN_C_DECLARATION.match(line)
+            or _FOREIGN_C_ALIAS_DECLARATION.match(line)
+        ):
+            return
+        raise FortranParseError(
+            "C declaration syntax is not valid Fortran input; parse C source with --language c.",
+            filename=filename,
+            line_number=lineno,
+            source_line=source_line,
+            code="PARSE_FOREIGN_C_SYNTAX",
+        )
 
     def _helper_slice_child_units(
         self,
@@ -2047,6 +2152,12 @@ class FortranParser:
             stripped = line.strip()
             if not stripped:
                 continue
+            self._raise_if_foreign_c_syntax_line(
+                stripped,
+                filename=filename,
+                lineno=lineno,
+                source_line=source_line,
+            )
             if scope.kind == "procedure":
                 self._helper_visit_procedure_spec_line(
                     stripped,
@@ -2306,6 +2417,12 @@ class FortranParser:
         lineno: int | None = None,
         source_line: str | None = None,
     ) -> None:
+        self._raise_if_foreign_c_syntax_line(
+            line,
+            filename=filename,
+            lineno=lineno,
+            source_line=source_line,
+        )
         proc_binding = _REGEX["procedure_binding"].match(line)
         if proc_binding:
             binding_names = split_csv(proc_binding.group("names"))

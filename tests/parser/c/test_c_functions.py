@@ -78,6 +78,58 @@ int b;
         parse_c_file(source, filename="knr.c")
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        "subroutine solve()\nend subroutine solve\n",
+        "integer function answer()\nend function answer\n",
+        "int add(int a, int b);\ninteger :: state\n",
+        "int add(int a, int b);\ntype(c_ptr) :: handle\n",
+    ],
+)
+def test_c_parser_rejects_foreign_fortran_syntax(source):
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError, match="Fortran syntax is not valid C input") as exc_info:
+        parse_c_file(source, filename="mixed.h")
+
+    assert exc_info.value.code == "CPARSE_FOREIGN_FORTRAN_SYNTAX"
+
+
+def test_c_parser_foreign_fortran_error_maps_preprocessed_source_location():
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError) as exc_info:
+        parse_c_file(
+            '# 80 "generated.f90"\ninteger :: state\n',
+            filename="translation.i",
+            preprocessing="preprocessed",
+        )
+
+    assert exc_info.value.code == "CPARSE_FOREIGN_FORTRAN_SYNTAX"
+    assert exc_info.value.filename == "generated.f90"
+    assert exc_info.value.line_number == 80
+
+
+def test_c_parser_ignores_foreign_fortran_syntax_inside_function_body():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+int run(void)
+{
+    subroutine solve()
+    integer :: state
+    end subroutine solve
+    return 0;
+}
+""",
+        filename="mixed_body.c",
+    )
+
+    assert [function.name for function in parsed.functions] == ["run"]
+
+
 def test_control_flow_conditions_inside_function_body_do_not_look_like_knr_definitions():
     from c_parser import parse_c_file
 

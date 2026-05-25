@@ -208,6 +208,23 @@ def test_cli_c_input_rejects_explicit_fortran_frontend(tmp_path: Path):
     assert not output.exists()
 
 
+def test_cli_c_pyi_rejects_embedded_fortran_syntax(tmp_path: Path):
+    header = tmp_path / "api.h"
+    header.write_text(
+        "int add(int a, int b);\nsubroutine solve()\nend subroutine solve\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "x2py", str(header), "--language", "c", "--pyi"],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 1
+    assert "CPARSE_FOREIGN_FORTRAN_SYNTAX" in result.stderr
+    assert "Fortran syntax is not valid C input" in result.stderr
+
+
 def test_cli_c_rejects_fortran_only_parse_flags(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
