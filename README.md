@@ -89,8 +89,9 @@ under `tests/data/c` and C parser tests live under `tests/parser/c`.
 Stage-specific tests and expected fixtures live under `tests/parser`,
 `tests/semantics`, and `tests/pyi`.
 
-The editable wrapper `.pyi` format is documented in
-[`docs/pyi_format.md`](docs/pyi_format.md).
+Technical documentation is indexed in [`docs/README.md`](docs/README.md). The
+editable wrapper `.pyi` format is documented in
+[`docs/semantics/pyi_format.md`](docs/semantics/pyi_format.md).
 
 ## Terminal usage
 

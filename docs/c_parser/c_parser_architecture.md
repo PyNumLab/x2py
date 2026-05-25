@@ -114,10 +114,10 @@ should not wait for a separate request.
 ## Inspected Repository Areas
 
 - `README.md`
-- `fortran_parser.md`
-- `parser_implementation_reference.md`
-- `Semantic_Multilanguage_Wrapper_Runtime_Architecture.md`
-- `docs/pyi_format.md`
+- `docs/fortran/fortran_parser.md`
+- `docs/fortran/parser_implementation_reference.md`
+- `docs/architecture/semantic_multilanguage_wrapper_runtime_architecture.md`
+- `docs/semantics/pyi_format.md`
 - `fortran_parser/lexer.py`
 - `fortran_parser/parser.py`
 - `fortran_parser/models.py`
