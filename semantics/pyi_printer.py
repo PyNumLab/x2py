@@ -4,7 +4,9 @@ import keyword
 import re
 
 from .models import (
+    ProjectionMapping,
     SemanticArgument,
+    SemanticArrayContract,
     SemanticClass,
     SemanticConstraint,
     SemanticFunction,
@@ -13,7 +15,6 @@ from .models import (
     SemanticMethod,
     SemanticModule,
     SemanticType,
-    ProjectionMapping,
 )
 
 
@@ -42,6 +43,8 @@ class PyiPrinter:
         raise TypeError(f"Unsupported semantic model for .pyi emission: {type(node)!r}")
 
     def emit_constraint(self, constraint: SemanticConstraint) -> str:
+        if constraint.name == "Shape":
+            raise ValueError("Shape constraints are not supported; use T[n, m] array subscriptions")
         if not constraint.arguments:
             return constraint.name
         args = ", ".join(map(repr, constraint.arguments))
@@ -52,11 +55,78 @@ class PyiPrinter:
             raise ValueError("Cannot emit .pyi with unresolved semantic type 'Unknown'")
         if semantic_type.name == "Callable":
             return self._emit_callable_type(semantic_type)
+        if semantic_type.storage is not None:
+            return self._emit_storage_type(semantic_type)
         text = semantic_type.name
         annotations = [self.emit_constraint(c) for c in semantic_type.constraints]
         if annotations:
             text += "[" + ", ".join(annotations) + "]"
         return text
+
+    def _emit_storage_type(self, semantic_type: SemanticType) -> str:
+        storage = semantic_type.storage
+        if storage is None:
+            return semantic_type.name
+        if storage.kind == "value":
+            if storage.read_only:
+                return f"Const({semantic_type.name})"
+            return semantic_type.name
+        if storage.kind in {"reference", "pointer"}:
+            target = semantic_type.name
+            if storage.read_only:
+                target = f"Const({target})"
+            if storage.pointer_depth > 1:
+                return f"Ptr[{storage.pointer_depth}]({target})"
+            return f"Ptr({target})"
+        if storage.kind == "array":
+            return self._emit_array_type(semantic_type)
+        return semantic_type.name
+
+    def _emit_array_type(self, semantic_type: SemanticType) -> str:
+        storage = semantic_type.storage
+        array = storage.array if storage is not None else None
+        dimensions = self._array_dimensions(semantic_type, array)
+        base = f"{semantic_type.name}[{', '.join(dimensions)}]"
+        if storage is not None and storage.read_only:
+            base = f"Const({base})"
+
+        metadata = self._array_annotation_metadata(array)
+        if metadata:
+            return f"Annotated[{base}, {', '.join(metadata)}]"
+        return base
+
+    @staticmethod
+    def _array_dimensions(
+        semantic_type: SemanticType,
+        array: SemanticArrayContract | None,
+    ) -> list[str]:
+        shape = list(array.shape if array is not None and array.shape else semantic_type.shape)
+        if not shape and semantic_type.rank > 0:
+            shape = [":" for _ in range(semantic_type.rank)]
+        return [str(dim) for dim in shape]
+
+    @staticmethod
+    def _array_annotation_metadata(array: SemanticArrayContract | None) -> list[str]:
+        if array is None:
+            return []
+        metadata: list[str] = []
+        if array.order in {"ORDER_F", "ORDER_ANY"}:
+            metadata.append(array.order)
+        if array.allocatable:
+            metadata.append("Allocatable")
+        if array.pointer:
+            metadata.append("Pointer")
+        if array.category and array.category != "explicit_shape":
+            metadata.append(f"ArrayCategory({array.category!r})")
+        if array.source_shape and array.source_shape != array.shape:
+            args = ", ".join(repr(value) for value in array.source_shape)
+            metadata.append(f"SourceDims({args})")
+        if any(value not in {None, "1"} for value in array.lower_bounds):
+            args = ", ".join(repr(value) for value in array.lower_bounds)
+            metadata.append(f"LowerBounds({args})")
+        if array.contiguous is True and array.category == "assumed_shape":
+            metadata.append("Contiguous")
+        return metadata
 
     def _emit_callable_type(self, semantic_type: SemanticType) -> str:
         arguments = semantic_type.metadata.get("arguments")
@@ -88,8 +158,13 @@ class PyiPrinter:
     ) -> str:
         semantic_type = self._without_constant_constraint(arg.semantic_type)
         type_text = self.emit_semantic_type(semantic_type)
+        annotation_metadata = []
         if original_name is not None:
-            type_text = f'Annotated[{type_text}, Name("{original_name}")]'
+            annotation_metadata.append(f'Name("{original_name}")')
+        if self._requires_intent_metadata(arg):
+            annotation_metadata.append(f"Intent({arg.intent!r})")
+        if annotation_metadata:
+            type_text = self._annotated_type_text(type_text, annotation_metadata)
         if self._is_constant(arg.semantic_type):
             type_text = f"Final[{type_text}]"
         if getattr(arg, "visibility", "public") == "private":
@@ -99,6 +174,13 @@ class PyiPrinter:
         if arg.optional:
             text += " = ..."
         return text
+
+    @staticmethod
+    def _annotated_type_text(type_text: str, metadata: list[str]) -> str:
+        suffix = ", ".join(metadata)
+        if type_text.startswith("Annotated[") and type_text.endswith("]"):
+            return f"{type_text[:-1]}, {suffix}]"
+        return f"Annotated[{type_text}, {suffix}]"
 
     @staticmethod
     def _is_constant(semantic_type: SemanticType) -> bool:
@@ -121,6 +203,8 @@ class PyiPrinter:
             coercions=list(semantic_type.coercions),
             ownership=semantic_type.ownership,
             metadata=dict(semantic_type.metadata),
+            storage=semantic_type.storage,
+            origin=semantic_type.origin,
         )
 
     def emit_function(self, func: SemanticFunction) -> str:
@@ -231,25 +315,9 @@ class PyiPrinter:
             sections.append("")
 
     def _projected_return_annotation(self, func: SemanticFunction) -> str:
-        returns = []
         if func.return_type:
-            returns.append(self.emit_semantic_type(func.return_type))
-
-        returned_args = [
-            arg
-            for arg in func.arguments
-            if getattr(arg, "intent", "in") in {"out", "inout"}
-        ]
-        returns.extend(
-            self._projected_argument_return(arg)
-            for arg in returned_args
-        )
-
-        if not returns:
-            return "None"
-        if len(returns) == 1:
-            return returns[0]
-        return "tuple[" + ", ".join(returns) + "]"
+            return self.emit_semantic_type(func.return_type)
+        return "None"
 
     def _projected_argument_return(self, arg: SemanticArgument) -> str:
         if self._requires_named_return(arg):
@@ -297,7 +365,7 @@ class PyiPrinter:
         if mapping.value_kind == "len":
             return f"Len({PyiPrinter._native_value_ref(mapping.value)})"
         if mapping.value_kind == "shape":
-            return f"Shape({PyiPrinter._native_value_ref(mapping.value['value'])}, {mapping.value['dim']})"
+            return f"{PyiPrinter._native_value_ref(mapping.value['value'])}.shape[{mapping.value['dim']}]"
         if mapping.value_kind == "is_present":
             return f"IsPresent({PyiPrinter._native_value_ref(mapping.value)})"
         if mapping.value_kind == "work":
@@ -333,11 +401,11 @@ class PyiPrinter:
 
     @staticmethod
     def _call_arguments(func: SemanticFunction) -> list[SemanticArgument]:
-        return [
-            arg
-            for arg in func.arguments
-            if getattr(arg, "intent", "in") != "out"
-        ]
+        return list(func.arguments)
+
+    @staticmethod
+    def _requires_intent_metadata(arg: SemanticArgument) -> bool:
+        return getattr(arg, "intent", "in") == "out"
 
     @classmethod
     def _method_call_arguments(cls, method: SemanticMethod) -> list[SemanticArgument]:

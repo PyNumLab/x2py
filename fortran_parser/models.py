@@ -262,6 +262,14 @@ class FortranArgument(FortranVariable):
     allocatable: bool = False
     pointer: bool = False
 
+    @property
+    def contiguous(self) -> bool:
+        return bool(getattr(self, "_contiguous", False))
+
+    @contiguous.setter
+    def contiguous(self, value: bool) -> None:
+        self._contiguous = bool(value)
+
 
 @dataclass(eq=False)
 class FortranUseMapping:

@@ -49,39 +49,39 @@ Language scope is stated in each section or subsection heading:
 
 ## Step 3: Shared Semantic Model Foundation (Fortran And C)
 
-- [ ] Treat the semantic model as language-neutral: Fortran and C parser output
+- [x] Treat the semantic model as language-neutral: Fortran and C parser output
       should converge into the same IR shapes wherever the native contract is
       equivalent.
-- [ ] Decide whether `SemanticArgument` remains the common model for variables,
+- [x] Decide whether `SemanticArgument` remains the common model for variables,
       function arguments, fields, and returned argument projections, or whether
       `semantics/models.py` should introduce a clearer `SemanticVariable`
       model and use it consistently.
-- [ ] Make the chosen variable model represent C function parameters, C globals,
+- [x] Make the chosen variable model represent C function parameters, C globals,
       C struct/union fields, Fortran dummy arguments, Fortran module variables,
       Fortran derived-type components, and projected return values.
-- [ ] Keep language-specific origin facts as metadata, for example
+- [x] Keep language-specific origin facts as metadata, for example
       `source_language`, `native_name`, `native_scope`, source location, parser
       node kind, and backend lowering hints.
-- [ ] Split the semantic value type from the storage and calling contract where
+- [x] Split the semantic value type from the storage and calling contract where
       needed, so `Float64`, `Ptr(Float64)`, `Const(Float64[n])`, and a Fortran
       descriptor-backed array are not confused.
-- [ ] Define one array/storage contract that can represent known C array
+- [x] Define one array/storage contract that can represent known C array
       contracts and Fortran array dummies using element type, rank, shape,
       bounds, strides, order, contiguity, mutability, and ownership.
-- [ ] Decide whether that array/storage contract is represented as a dedicated
+- [x] Decide whether that array/storage contract is represented as a dedicated
       semantic model, a derived semantic type, or structured metadata on
       `SemanticType`; the chosen design must be readable from both generated
       and edited `.pyi` files.
-- [ ] For Fortran arrays, record the dummy category and properties needed by
+- [x] For Fortran arrays, record the dummy category and properties needed by
       lowering: explicit-shape, assumed-size, assumed-shape, assumed-rank,
       deferred-shape, `contiguous`, `allocatable`, `pointer`, rank, shape,
       lower bounds, and whether replacement or reassociation is possible.
 - [ ] For C arrays, use the same array/storage contract only when a real storage
       contract is known; leave unrefined pointers as pointer types instead of
       inventing array shapes.
-- [ ] Preserve scalar by-reference contracts for both languages with the same
+- [x] Preserve scalar by-reference contracts for both languages with the same
       reference representation, including `Ptr(T)` and `Ptr(Const(T))`.
-- [ ] Make `intent`, mutability, ownership, aliasing, optionality, defaults,
+- [x] Make `intent`, mutability, ownership, aliasing, optionality, defaults,
       constraints, coercions, and contracts work on the shared variable model
       rather than in language-specific side channels.
 - [ ] Define how future constraints and coercions attach to variables and
@@ -91,17 +91,17 @@ Language scope is stated in each section or subsection heading:
       Fortran array rank, unknown array category, unsupported allocatable or
       pointer reassociation, unresolved C pointer ownership, and unsupported
       callbacks.
-- [ ] Keep backend lowering metadata separate from the Python-facing `.pyi`
+- [x] Keep backend lowering metadata separate from the Python-facing `.pyi`
       contract; generated stubs should describe the visible semantic interface,
       not compiler-private transport details.
 - [ ] Add equality and round-trip tests that prove equivalent C and Fortran
       variables compare by semantic contract, not by parser-specific metadata.
-- [ ] Add model tests for Fortran arrays represented as semantic array/storage
+- [x] Add model tests for Fortran arrays represented as semantic array/storage
       contracts with shape, rank, `ORDER_F` or `ORDER_ANY`, `Allocatable`, and
       `Pointer`.
 - [ ] Add model tests for C pointer/array contracts using the same
       array/storage representation when shape and storage facts are known.
-- [ ] Document the shared variable, array, pointer, ownership, constraint, and
+- [x] Document the shared variable, array, pointer, ownership, constraint, and
       coercion model before enabling new generator behavior.
 
 ## Step 4: C Semantic Readiness
@@ -222,32 +222,34 @@ Language scope is stated in each section or subsection heading:
 
 ### Fortran Conversion
 
-- [ ] Update `FortranToIRConverter` to emit the exact native interface described
+- [x] Update `FortranToIRConverter` to emit the exact native interface described
       in `docs/semantics/pyi_format.md`, not the older placeholder shape
       representation.
-- [ ] Map Fortran scalar dummy arguments by reference to shared pointer
+- [x] Map Fortran scalar dummy arguments by reference to shared pointer
       contracts: writable storage as `Ptr(T)` and read-only storage as
       `Ptr(Const(T))`.
-- [ ] Map Fortran `value` scalar dummy arguments and function returns to direct
+- [x] Map Fortran `value` scalar dummy arguments and function returns to direct
       semantic scalar values.
-- [ ] Map Fortran explicit-shape and adjustable arrays to shaped NumPy storage
+- [x] Map Fortran explicit-shape and adjustable arrays to shaped NumPy storage
       contracts with `ORDER_F` where rank and orientation require it.
-- [ ] Map Fortran assumed-size arrays to known-rank storage contracts while
+- [x] Map Fortran assumed-size arrays to known-rank storage contracts while
       preserving the missing final extent boundary.
-- [ ] Map Fortran assumed-shape arrays to strided contracts with `ORDER_ANY`
+- [x] Map Fortran assumed-shape arrays to strided contracts with `ORDER_ANY`
       unless `contiguous` or another source fact restricts orientation.
 - [ ] Map Fortran assumed-rank arrays only after the semantic model can
       represent rank-polymorphic array contracts explicitly.
 - [ ] Map Fortran `allocatable` and `pointer` dummy arrays to shared array
-      contracts with `Allocatable` or `Pointer` constraints and readiness
+      contracts with `Allocatable` or `Pointer` metadata and readiness
       blockers for allocation or association changes until policy exists.
-- [ ] Preserve Fortran lower bounds and source-level dimension expressions when
+      Contracts are represented in IR and `.pyi`; readiness blockers for
+      allocation or association changes remain open.
+- [x] Preserve Fortran lower bounds and source-level dimension expressions when
       they affect wrapper validation or lowering.
-- [ ] Convert Fortran module variables and derived-type components through the
+- [x] Convert Fortran module variables and derived-type components through the
       same variable model used for C variables and fields.
-- [ ] Ensure language-to-IR conversion retains enough origin metadata for
+- [x] Ensure language-to-IR conversion retains enough origin metadata for
       backend lowering without making `.pyi` syntax language-specific.
-- [ ] Add Fortran semantic IR tests for scalar references, explicit-shape
+- [x] Add Fortran semantic IR tests for scalar references, explicit-shape
       arrays, assumed-size arrays, assumed-shape arrays, allocatable arrays,
       pointer arrays, derived-type components, and module variables.
 
@@ -262,58 +264,58 @@ Language scope is stated in each section or subsection heading:
 
 ### Shared Generation Contract (Fortran And C)
 
-- [ ] Make `.pyi` generation consume semantic IR only; language-specific
+- [x] Make `.pyi` generation consume semantic IR only; language-specific
       differences should already be encoded as semantic contracts and metadata.
-- [ ] Update the `.pyi` printer to emit the canonical target notation from
+- [x] Update the `.pyi` printer to emit the canonical target notation from
       `docs/semantics/pyi_format.md`, including `T[n, m]`, `T[:, :]`,
       `T[::Strided]`, `Annotated[..., ORDER_F]`,
       `Annotated[..., ORDER_ANY]`, `Allocatable`, and `Pointer`.
 
 ### Fortran Stub Generation
 
-- [ ] Update Fortran `.pyi` generation to emit exact native interface stubs:
+- [x] Update Fortran `.pyi` generation to emit exact native interface stubs:
       scalar references as `Ptr(...)`, array dummies as NumPy array
       annotations, explicit `ORDER_F` only when rank and orientation require
       it, and no `@native_call` for the exact interface.
-- [ ] Ensure Fortran `.pyi` generation preserves source facts that affect
+- [x] Ensure Fortran `.pyi` generation preserves source facts that affect
       validation or lowering, including rank, shape expressions, lower bounds,
       assumed-shape or assumed-size category, contiguity, `allocatable`,
       `pointer`, `intent`, optionality, and constants.
-- [ ] Ensure generated Fortran stubs do not generalize missing fixed-rank array
+- [x] Ensure generated Fortran stubs do not generalize missing fixed-rank array
       information into rank-polymorphic notation.
-- [ ] Add Fortran `.pyi` generation tests for exact scalar references,
+- [x] Add Fortran `.pyi` generation tests for exact scalar references,
       explicit-shape arrays, assumed-size arrays, assumed-shape strided arrays,
       contiguous arrays, allocatable arrays, pointer arrays, constants, derived
       type fields, and module variables.
 
 ### Shared Loading And Round Trips (Fortran And C)
 
-- [ ] Extend `load_pyi_file`, `parse_pyi_text`, and `convert_pyi_to_ir` to load
+- [x] Extend `load_pyi_file`, `parse_pyi_text`, and `convert_pyi_to_ir` to load
       the accepted `.pyi` target notation into semantic IR, not just parse a
       subset for readiness.
-- [ ] Teach the `.pyi` loader to parse `Annotated[...]` metadata into semantic
-      constraints and metadata without losing order, ownership, array category,
-      or source-name information.
-- [ ] Teach the `.pyi` loader to parse NumPy-style array subscriptions into the
+- [x] Teach the `.pyi` loader to parse `Annotated[...]` metadata into semantic
+      storage metadata without losing order, ownership, array category, or
+      source-name information.
+- [x] Teach the `.pyi` loader to parse NumPy-style array subscriptions into the
       shared array/storage contract, including symbolic dimensions, `:`,
       `::Strided`, known rank, rank-polymorphic forms when supported, and
       order metadata.
-- [ ] Teach the `.pyi` loader to parse `Ptr(...)`, `Const(...)`, `Final[...]`,
+- [x] Teach the `.pyi` loader to parse `Ptr(...)`, `Const(...)`, `Final[...]`,
       `private[...]`, `Name(...)`, `native_call(...)`, and projected returns
       into the same semantic IR emitted by language converters.
 - [ ] Add parser errors for `.pyi` constructs that look valid but cannot be
       converted to complete semantic IR, such as unknown fixed-rank shape,
       unsupported rank-polymorphic arrays, or unsafe allocatable/pointer
       replacement policy.
-- [ ] Add round-trip tests for Fortran parser output:
+- [x] Add round-trip tests for Fortran parser output:
       parser model -> semantic IR -> `.pyi` -> semantic IR.
-- [ ] Add round-trip tests for edited Fortran `.pyi` files loaded directly into
+- [x] Add round-trip tests for edited Fortran `.pyi` files loaded directly into
       semantic IR.
 - [ ] Add round-trip tests for C parser output:
       parser model -> semantic IR -> `.pyi` -> semantic IR.
 - [ ] Add mixed-language semantic fixture tests where C and Fortran stubs load
       through the same `.pyi` loader and readiness checker.
-- [ ] Keep `.pyi` syntax language-neutral; Fortran and C should differ by
+- [x] Keep `.pyi` syntax language-neutral; Fortran and C should differ by
       semantic contract, not by separate annotation families.
 
 ### C Stub Generation And Policy

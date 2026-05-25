@@ -1,7 +1,7 @@
 class node:
     id: Int32
-    xyz: Float64[Shape('3'), ORDER_F]
+    xyz: Float64[3]
 
 class mesh:
     nnodes: Int32
-    nodes: node[Shape(':'), ORDER_F, Allocatable]
+    nodes: Annotated[node[:], Allocatable, ArrayCategory('deferred_shape')]

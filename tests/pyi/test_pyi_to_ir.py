@@ -206,7 +206,7 @@ def test_parse_pyi_text_accepts_qualified_ast_wrapper_names():
         """
 import typing
 
-alias: typing.Annotated[Float64[typing.Shape("1:n")], typing.Name("native_alias")]
+alias: typing.Annotated[Float64[1:n], typing.Name("native_alias")]
 
 def f() -> typing.Tuple[Float64, typing.Returns["y", Float64]]: ...
 """,
@@ -224,7 +224,7 @@ def f() -> typing.Tuple[Float64, typing.Returns["y", Float64]]: ...
 def test_parse_pyi_text_accepts_ast_only_projection_value_refs():
     module = parse_pyi_text(
         """
-@native_call([Return(0), Len(Return(0)), Shape(Work("tmp"), 0)])
+@native_call([Return(0), Len(Return(0)), Work("tmp").shape[0]])
 def f() -> Float64: ...
 """,
         module_name="edited",
@@ -255,8 +255,8 @@ def test_function_equality_treats_argument_names_as_placeholders():
         """
 def resize(
     n: Int32,
-    x: Float64[Shape('1:n'), ORDER_F]
-) -> Returns["x", Float64[Shape('1:n'), ORDER_F]]: ...
+    x: Float64[1:n]
+) -> None: ...
 """,
         module_name="edited",
     )
@@ -264,8 +264,8 @@ def resize(
         """
 def resize(
     extent: Int32,
-    values: Float64[Shape('1:extent'), ORDER_F]
-) -> Returns["values", Float64[Shape('1:extent'), ORDER_F]]: ...
+    values: Float64[1:extent]
+) -> None: ...
 """,
         module_name="edited",
     )
@@ -274,7 +274,7 @@ def resize(
     assert left.functions[0].arguments[0] != right.functions[0].arguments[0]
 
 
-def test_plain_return_type_compares_equal_to_unnamed_output_argument():
+def test_plain_return_type_represents_direct_return_not_output_argument():
     from_pyi = parse_pyi_text(
         """
 def add(
@@ -284,26 +284,9 @@ def add(
 """,
         module_name="edited",
     )
-    from_ir = SemanticModule(
-        name="edited",
-        functions=[
-            SemanticFunction(
-                name="add",
-                native_name="add",
-                arguments=[
-                    SemanticArgument("a", SemanticType("Float64", dtype="Float64")),
-                    SemanticArgument("b", SemanticType("Float64", dtype="Float64")),
-                    SemanticArgument(
-                        "c",
-                        SemanticType("Float64", dtype="Float64"),
-                        intent="out",
-                    ),
-                ],
-            )
-        ],
-    )
-
-    assert from_pyi == from_ir
+    func = from_pyi.functions[0]
+    assert func.return_type.name == "Float64"
+    assert [arg.name for arg in func.arguments] == ["a", "b"]
 
 
 def test_native_call_preserves_unnamed_output_argument_position():
@@ -344,7 +327,7 @@ def add(
         ],
     )
 
-    assert from_pyi == from_ir
+    assert from_pyi != from_ir
     assert from_pyi.functions[0].arguments[2].intent == "out"
     assert from_pyi.functions[0].projection[2].native_position == 2
 
@@ -356,12 +339,12 @@ def test_native_call_accepts_hidden_native_values():
     Arg(0),
     Const(1),
     Len(Arg(0)),
-    Shape(Arg(0), 0),
+    Arg(0).shape[0],
     IsPresent(Arg(1)),
     Work("tmp"),
 ])
 def wrapper(
-    x: Float64[Shape("n"), ORDER_F],
+    x: Float64[n],
     b: Vector | None = None
 ) -> None: ...
 """,
@@ -420,7 +403,7 @@ def test_emit_native_call_hidden_native_values():
 
     pyi = emit_module(module)
 
-    assert "@native_call([Arg(0), Const(1), Len(Arg(0)), Shape(Arg(0), 0), IsPresent(Arg(1)), Work('tmp')])" in pyi
+    assert "@native_call([Arg(0), Const(1), Len(Arg(0)), Arg(0).shape[0], IsPresent(Arg(1)), Work('tmp')])" in pyi
 
 
 def test_plain_return_without_native_call_does_not_preserve_native_output_position():
@@ -463,7 +446,7 @@ def add(
     assert from_pyi != with_native_call
 
 
-def test_plain_tuple_return_types_compare_equal_to_unnamed_output_arguments():
+def test_plain_tuple_return_types_parse_component_returns():
     from_pyi = parse_pyi_text(
         """
 def split(
@@ -472,30 +455,10 @@ def split(
 """,
         module_name="edited",
     )
-    from_ir = SemanticModule(
-        name="edited",
-        functions=[
-            SemanticFunction(
-                name="split",
-                native_name="split",
-                arguments=[
-                    SemanticArgument("x", SemanticType("Float64", dtype="Float64")),
-                    SemanticArgument(
-                        "lo",
-                        SemanticType("Float64", dtype="Float64"),
-                        intent="out",
-                    ),
-                    SemanticArgument(
-                        "hi",
-                        SemanticType("Int32", dtype="Int32"),
-                        intent="out",
-                    ),
-                ],
-            )
-        ],
-    )
-
-    assert from_pyi == from_ir
+    func = from_pyi.functions[0]
+    assert func.return_type.name == "Float64"
+    assert [arg.name for arg in func.arguments] == ["x", "__return_1"]
+    assert func.arguments[1].intent == "out"
 
 
 def test_method_equality_treats_argument_names_as_placeholders():
@@ -505,7 +468,7 @@ class vector:
     def scale(
         self,
         n: Int32,
-        x: Float64[Shape('1:n'), ORDER_F]
+        x: Float64[1:n]
     ) -> None: ...
 """,
         module_name="edited",
@@ -516,7 +479,7 @@ class vector:
     def scale(
         self,
         extent: Int32,
-        values: Float64[Shape('1:extent'), ORDER_F]
+        values: Float64[1:extent]
     ) -> None: ...
 """,
         module_name="edited",
@@ -566,10 +529,6 @@ class vector:
         ("@native_call([Return()])\ndef f(x: Int32) -> None: ...\n", "Return expects one positional index"),
         ("@native_call([Const()])\ndef f(x: Int32) -> None: ...\n", "Const expects one value"),
         ("@native_call([Len()])\ndef f(x: Int32) -> None: ...\n", "Len expects one value reference"),
-        (
-            "@native_call([Shape(Arg(0))])\ndef f(x: Int32) -> None: ...\n",
-            "Shape expects a value reference and dimension",
-        ),
         ("@native_call([IsPresent()])\ndef f(x: Int32) -> None: ...\n", "IsPresent expects one value reference"),
         ("@native_call([Work()])\ndef f(x: Int32) -> None: ...\n", "Work expects one workspace name"),
         ("@native_call([Len(1)])\ndef f(x: Int32) -> None: ...\n", "Expected Arg"),
@@ -623,33 +582,30 @@ end module solver_mod
     pyi = "\n\n".join(emit_module(module) for module in modules)
     reparsed = parse_pyi_text(pyi, module_name="solver_mod")
 
-    assert "@native_call([Arg(0), Return(0), Arg(1)])" in pyi
+    assert "@native_call" not in pyi
     func = reparsed.functions[0]
     assert func.name == "solve"
-    assert [m.native_position for m in func.projection] == [0, 1, 2]
-    assert func.projection[0].python_position == 0
-    assert func.projection[1].result_position == 0
-    assert func.projection[2].python_position == 1
+    assert [arg.name for arg in func.arguments] == ["a", "x", "b"]
+    assert func.arguments[1].intent == "out"
 
 
 def test_parse_pyi_text_accepts_c_and_fortran_order_constraints():
     module = parse_pyi_text(
         """
 def consume(
-    a: Float64[Shape(':', ':'), ORDER_C],
-    b: Float64[Shape(':', ':'), ORDER_F]
+    a: Float64[:, :],
+    b: Annotated[Float64[:, :], ORDER_F]
 ) -> None: ...
 """,
         module_name="edited",
     )
 
-    constraint_names = [
-        constraint.name
+    arrays = [
+        arg.semantic_type.storage.array
         for arg in module.functions[0].arguments
-        for constraint in arg.semantic_type.constraints
     ]
-    assert "ORDER_C" in constraint_names
-    assert "ORDER_F" in constraint_names
+    assert arrays[0].order == "ORDER_C"
+    assert arrays[1].order == "ORDER_F"
 
 
 def test_generated_pyi_compares_equal_to_original_ir_for_all_fortran_fixtures(tmp_path: Path):

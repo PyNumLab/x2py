@@ -188,9 +188,14 @@ runnable C Phase 1 wrapper requires the corresponding native routine to
 accept that storage layout directly. For a rank-one array, `ORDER_C` and
 `ORDER_F` do not distinguish storage, contiguous or strided, so no order
 constraint is written.
-For a multidimensional strided annotation, `ORDER_F` is orientation metadata,
-not a requirement that NumPy report `F_CONTIGUOUS`; non-unit strides remain
-part of the contract.
+   For a multidimensional strided annotation, `ORDER_F` is orientation metadata,
+   not a requirement that NumPy report `F_CONTIGUOUS`; non-unit strides remain
+   part of the contract.
+   The shared semantic format also has source-preservation metadata such as
+   `SourceDims(...)` for frontends that need to retain original source-level
+   dimension expressions. That metadata is not C semantic conversion support;
+   C conversion remains deferred and should emit it only if a future C mapping
+   has an actual source-level fact to preserve.
 
 Stride-aware dimensions use a slice step marker:
 

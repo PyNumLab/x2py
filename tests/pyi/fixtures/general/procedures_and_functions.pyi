@@ -1,8 +1,8 @@
 def norm2(
-    x: Float64[Shape(':'), ORDER_F]
+    x: Annotated[Const(Float64[::Strided]), ArrayCategory('assumed_shape'), SourceDims(':')]
 ) -> Float64: ...
 
 def scale(
-    a: Float64,
-    x: Float64[Shape(':'), ORDER_F]
-) -> Returns["x", Float64[Shape(':'), ORDER_F]]: ...
+    a: Ptr(Const(Float64)),
+    x: Annotated[Float64[::Strided], ArrayCategory('assumed_shape'), SourceDims(':')]
+) -> None: ...

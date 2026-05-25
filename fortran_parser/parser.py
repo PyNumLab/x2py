@@ -2611,6 +2611,7 @@ class FortranParser:
             "value": False,
             "allocatable": False,
             "pointer": False,
+            "contiguous": False,
             "external": False,
             "parameter": False,
         }
@@ -2629,6 +2630,8 @@ class FortranParser:
                 meta["allocatable"] = True
             elif la == "pointer":
                 meta["pointer"] = True
+            elif la == "contiguous":
+                meta["contiguous"] = True
             elif la == "external":
                 meta["external"] = True
             elif la == "parameter":
@@ -2679,6 +2682,7 @@ class FortranParser:
         arg.pass_by_value = meta["value"]
         arg.allocatable = meta["allocatable"]
         arg.pointer = meta["pointer"]
+        arg.contiguous = meta["contiguous"]
         arg.is_parameter = meta["parameter"]
         if shape:
             arg.shape = shape

@@ -39,6 +39,49 @@ class OwnershipPolicy:
 
 
 # ============================================================
+# Origin And Storage Contracts
+# ============================================================
+
+@dataclass
+class SemanticOrigin:
+    source_language: Optional[str] = None
+    native_name: Optional[str] = None
+    native_scope: Optional[str] = None
+    source_kind: Optional[str] = None
+    source_type: Optional[str] = None
+    source_location: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class SemanticArrayContract:
+    rank: Optional[int] = None
+    shape: list[str] = field(default_factory=list)
+    lower_bounds: list[Optional[str]] = field(default_factory=list)
+    upper_bounds: list[Optional[str]] = field(default_factory=list)
+    source_shape: list[str] = field(default_factory=list)
+    category: Optional[str] = None
+    order: Optional[str] = None
+    axes: list[str] = field(default_factory=list)
+    contiguous: Optional[bool] = None
+    allocatable: bool = False
+    pointer: bool = False
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class SemanticStorageContract:
+    kind: str = "value"
+    read_only: bool = False
+    mutable: bool = False
+    pointer_depth: int = 0
+    ownership: str = "borrowed"
+    array: Optional[SemanticArrayContract] = None
+    calling_convention: Optional[str] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+# ============================================================
 # Semantic Types
 # ============================================================
 
@@ -60,6 +103,10 @@ class SemanticType:
 
     metadata: dict[str, Any] = field(default_factory=dict)
 
+    storage: Optional[SemanticStorageContract] = None
+
+    origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
+
 
 # ============================================================
 # Semantic Arguments
@@ -79,6 +126,8 @@ class SemanticArgument:
     default_value: Optional[str] = None
 
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
 
 
 # ============================================================
@@ -132,6 +181,7 @@ class SemanticFunction:
 
     metadata: dict[str, Any] = field(default_factory=dict)
     visibility: str = "public"
+    origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
 
     def __eq__(self, other: object) -> bool:
         if type(self) is not type(other):
@@ -176,7 +226,7 @@ class SemanticMethod(SemanticFunction):
 
 
 def _call_arguments(func: SemanticFunction) -> list[SemanticArgument]:
-    return [arg for arg in func.arguments if getattr(arg, "intent", "in") != "out"]
+    return list(func.arguments)
 
 
 def _argument_name_map(arguments: list[SemanticArgument]) -> dict[str, str]:
@@ -212,16 +262,88 @@ def _semantic_type_key(
 ) -> tuple[Any, ...] | None:
     if semantic_type is None:
         return None
+    shape = (
+        semantic_type.storage.array.shape
+        if semantic_type.storage is not None and semantic_type.storage.array is not None
+        else semantic_type.shape
+    )
     return (
         semantic_type.name,
         semantic_type.rank,
         semantic_type.dtype,
-        tuple(_canonical_expression(item, name_map) for item in semantic_type.shape),
-        tuple(_constraint_key(c, name_map) for c in semantic_type.constraints),
+        tuple(_canonical_expression(item, name_map) for item in shape),
+        tuple(
+            _constraint_key(c, name_map)
+            for c in _semantic_contract_constraints(semantic_type)
+        ),
         tuple(semantic_type.coercions),
         semantic_type.ownership if include_ownership else None,
         semantic_type.metadata,
+        _storage_contract_key(semantic_type.storage, name_map),
     )
+
+
+def _semantic_contract_constraints(semantic_type: SemanticType) -> list[SemanticConstraint]:
+    if semantic_type.storage is None:
+        return semantic_type.constraints
+    storage_constraint_names = {
+        "Allocatable",
+        "ORDER_ANY",
+        "ORDER_C",
+        "ORDER_F",
+        "Pointer",
+    }
+    return [
+        constraint
+        for constraint in semantic_type.constraints
+        if constraint.name not in storage_constraint_names
+    ]
+
+
+def _storage_contract_key(
+    storage: SemanticStorageContract | None,
+    name_map: dict[str, str],
+) -> tuple[Any, ...] | None:
+    if storage is None:
+        return None
+    return (
+        storage.kind,
+        storage.read_only,
+        storage.mutable,
+        storage.pointer_depth,
+        storage.ownership,
+        _array_contract_key(storage.array, name_map),
+        storage.calling_convention,
+        _canonical_expression(storage.metadata, name_map),
+    )
+
+
+def _array_contract_key(
+    array: SemanticArrayContract | None,
+    name_map: dict[str, str],
+) -> tuple[Any, ...] | None:
+    if array is None:
+        return None
+    return (
+        array.rank,
+        tuple(_canonical_expression(item, name_map) for item in array.shape),
+        _bound_tuple(array.lower_bounds, name_map),
+        _bound_tuple(array.upper_bounds, name_map),
+        tuple(_canonical_expression(item, name_map) for item in array.source_shape),
+        array.category,
+        array.order,
+        tuple(array.axes),
+        array.contiguous,
+        array.allocatable,
+        array.pointer,
+        _canonical_expression(array.metadata, name_map),
+    )
+
+
+def _bound_tuple(bounds: list[str | None], name_map: dict[str, str]) -> tuple[Any, ...]:
+    if not bounds or all(bound is None for bound in bounds):
+        return ()
+    return tuple(_canonical_expression(item, name_map) for item in bounds)
 
 
 def _return_projection_key(
@@ -231,11 +353,6 @@ def _return_projection_key(
     returns: list[tuple[Any, ...]] = []
     if func.return_type is not None:
         returns.append((_semantic_type_key(func.return_type, name_map, include_ownership=False),))
-    returns.extend(
-        (_semantic_type_key(arg.semantic_type, name_map, include_ownership=False),)
-        for arg in func.arguments
-        if getattr(arg, "intent", "in") in {"out", "inout"}
-    )
     return tuple(returns)
 
 
@@ -338,6 +455,7 @@ class SemanticClass:
 
     metadata: dict[str, Any] = field(default_factory=dict)
     visibility: str = "public"
+    origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
 
 
 # ============================================================
@@ -368,3 +486,5 @@ class SemanticModule:
     imports: list[str | SemanticImport] = field(default_factory=list)
 
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)

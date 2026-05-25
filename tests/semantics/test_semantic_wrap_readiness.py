@@ -46,13 +46,13 @@ nmax: Final[Int32] = 32
 
 class sim_state:
     n: Int32
-    values: Float64[Shape('n'), ORDER_F]
+    values: Float64[n]
 
 def step(
     state: sim_state,
     t: Float64,
     objective: Callable[[sim_state, Float64], Float64],
-    scratch: Float64[Shape('nmax'), ORDER_F]
+    scratch: Float64[nmax]
 ) -> tuple[Returns["state", sim_state], Returns["score", Float64]]: ...
 """
     )
@@ -87,7 +87,7 @@ def step(state: sim_state) -> Returns["state", sim_state]: ...
 def test_shape_argument_makes_shape_symbol_ready():
     report = _readiness_from_pyi(
         """
-def fill(n: Int32, x: Float64[Shape('n'), ORDER_F]) -> Returns["x", Float64[Shape('n'), ORDER_F]]: ...
+def fill(n: Int32, x: Float64[n]) -> None: ...
 """
     )
 
@@ -99,7 +99,7 @@ def test_final_constant_needs_literal_value_for_shape_readiness():
         """
 n: Final[Int32]
 
-def fill(x: Float64[Shape('n'), ORDER_F]) -> Returns["x", Float64[Shape('n'), ORDER_F]]: ...
+def fill(x: Float64[n]) -> None: ...
 """
     )
 
@@ -112,7 +112,7 @@ def test_final_constant_literal_value_makes_shape_ready():
         """
 n: Final[Int32] = 16
 
-def fill(x: Float64[Shape('n'), ORDER_F]) -> Returns["x", Float64[Shape('n'), ORDER_F]]: ...
+def fill(x: Float64[n]) -> None: ...
 """
     )
 
@@ -167,7 +167,7 @@ def test_cli_wrap_readiness_loads_completed_pyi(tmp_path: Path):
         """
 n: Final[Int32] = 8
 
-def fill(x: Float64[Shape('n'), ORDER_F]) -> Returns["x", Float64[Shape('n'), ORDER_F]]: ...
+def fill(x: Float64[n]) -> None: ...
 """,
         encoding="utf-8",
     )

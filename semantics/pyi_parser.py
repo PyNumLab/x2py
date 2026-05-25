@@ -7,6 +7,7 @@ from pathlib import Path
 from .models import (
     ProjectionMapping,
     SemanticArgument,
+    SemanticArrayContract,
     SemanticClass,
     SemanticConstraint,
     SemanticFunction,
@@ -14,6 +15,7 @@ from .models import (
     SemanticImportItem,
     SemanticMethod,
     SemanticModule,
+    SemanticStorageContract,
     SemanticType,
 )
 
@@ -122,11 +124,14 @@ class _PyiAstParser:
         visibility, semantic_type, original_name = self.visible_type(node.annotation)
         if original_name is not None:
             name = original_name
-        semantic_type.ownership.mutable = default_intent.lower() != "in"
+        intent = self._pop_intent_metadata(semantic_type, default_intent)
+        semantic_type.ownership.mutable = intent.lower() != "in"
+        if semantic_type.storage is not None:
+            semantic_type.storage.mutable = intent.lower() != "in"
         return SemanticArgument(
             name=name,
             semantic_type=semantic_type,
-            intent=default_intent,
+            intent=intent,
             optional=self.default_marks_optional(node.value),
             visibility=visibility,
             default_value=self.literal_default_value(node.value),
@@ -157,6 +162,9 @@ class _PyiAstParser:
         ]
 
     def native_projection_entry(self, node: ast.AST, native_position: int) -> ProjectionMapping:
+        shape_mapping = self.native_shape_projection_entry(node, native_position)
+        if shape_mapping is not None:
+            return shape_mapping
         if not isinstance(node, ast.Call):
             raise ValueError("native_call expects projection entry calls")
         if node.keywords:
@@ -194,14 +202,6 @@ class _PyiAstParser:
                 value_kind="len",
                 value=self.native_value_ref(node.args[0]),
             )
-        if helper == "Shape":
-            if len(node.args) != 2:
-                raise ValueError("Shape expects a value reference and dimension")
-            return ProjectionMapping(
-                native_position=native_position,
-                value_kind="shape",
-                value={"value": self.native_value_ref(node.args[0]), "dim": int(ast.literal_eval(node.args[1]))},
-            )
         if helper == "IsPresent":
             if len(node.args) != 1:
                 raise ValueError("IsPresent expects one value reference")
@@ -220,6 +220,25 @@ class _PyiAstParser:
             )
 
         raise ValueError(f"Unsupported native_call projection entry: {helper}")
+
+    def native_shape_projection_entry(
+        self,
+        node: ast.AST,
+        native_position: int,
+    ) -> ProjectionMapping | None:
+        if not isinstance(node, ast.Subscript) or not isinstance(node.value, ast.Attribute):
+            return None
+        attribute = node.value.attr
+        if attribute != "shape":
+            return None
+        return ProjectionMapping(
+            native_position=native_position,
+            value_kind="shape",
+            value={
+                "value": self.native_value_ref(node.value.value),
+                "dim": int(ast.literal_eval(node.slice)),
+            },
+        )
 
     def native_value_ref(self, node: ast.AST) -> dict[str, int | str]:
         if not isinstance(node, ast.Call):
@@ -251,11 +270,14 @@ class _PyiAstParser:
             raise ValueError(f"Annotated type is empty: {ast.unparse(node)!r}")
 
         original_name = None
+        semantic_type = self.semantic_type(items[0])
         for item in items[1:]:
             parsed_name = self.name_metadata(item)
             if parsed_name is not None:
                 original_name = parsed_name
-        return self.semantic_type(items[0]), original_name
+                continue
+            self.apply_annotation_metadata(semantic_type, item)
+        return semantic_type, original_name
 
     def semantic_type(self, node: ast.expr) -> SemanticType:
         if self.is_subscript_of(node, "Annotated"):
@@ -271,6 +293,26 @@ class _PyiAstParser:
             return semantic_type
         if self.matches_name(node, "Callable") or self.is_subscript_of(node, "Callable"):
             return self.callable_type(node)
+        if isinstance(node, ast.Call) and self.matches_name(node.func, "Const"):
+            if len(node.args) != 1 or node.keywords:
+                raise ValueError(f"Const type expects one argument: {ast.unparse(node)!r}")
+            semantic_type = self.semantic_type(node.args[0])
+            self._mark_storage_read_only(semantic_type)
+            return semantic_type
+        if isinstance(node, ast.Call) and self._is_ptr_call(node):
+            if len(node.args) != 1 or node.keywords:
+                raise ValueError(f"Ptr type expects one argument: {ast.unparse(node)!r}")
+            pointer_depth = self._ptr_depth(node.func)
+            pointee = self.semantic_type(node.args[0])
+            read_only = pointee.storage.read_only if pointee.storage is not None else False
+            pointee.storage = SemanticStorageContract(
+                kind="reference" if pointer_depth == 1 else "pointer",
+                read_only=read_only,
+                mutable=not read_only,
+                pointer_depth=pointer_depth,
+            )
+            pointee.ownership.mutable = not read_only
+            return pointee
 
         name = self.type_name(node)
         if name == "Unknown":
@@ -278,24 +320,232 @@ class _PyiAstParser:
         if not isinstance(node, ast.Subscript):
             return SemanticType(name=name, dtype=name)
 
+        if self._is_array_subscript(node):
+            return self.array_type(node)
+
         constraints = [self.constraint(item) for item in self.subscript_items(node)]
-        shape = []
-        for constraint in constraints:
-            if constraint.name == "Shape":
-                shape = [str(arg) for arg in constraint.arguments]
-                break
         return SemanticType(
             name=name,
-            rank=len(shape),
+            rank=0,
             dtype=name,
-            shape=shape,
+            shape=[],
             constraints=constraints,
         )
 
+    def array_type(self, node: ast.Subscript) -> SemanticType:
+        if isinstance(node.value, ast.Subscript):
+            semantic_type = self.array_type(node.value)
+            selector = ", ".join(self.dimension_text(item) for item in self.subscript_items(node))
+            semantic_type.metadata["rank_selector"] = selector
+            if semantic_type.storage and semantic_type.storage.array:
+                semantic_type.storage.array.metadata["rank_selector"] = selector
+            return semantic_type
+
+        name = self.type_name(node)
+        dims = [self.dimension_text(item) for item in self.subscript_items(node)]
+        rank = None if "..." in dims else len(dims)
+        array = SemanticArrayContract(
+            rank=rank,
+            shape=list(dims),
+            source_shape=list(dims),
+            category="rank_polymorphic" if rank is None else "explicit_shape",
+            order="ORDER_C" if rank is not None and rank > 1 else None,
+            axes=["strided" if "Strided" in dim else "dense" for dim in dims],
+            contiguous=False if any("Strided" in dim for dim in dims) else True,
+        )
+        storage = SemanticStorageContract(kind="array", array=array)
+        return SemanticType(
+            name=name,
+            rank=rank or 0,
+            dtype=name,
+            shape=list(dims) if rank is not None else [],
+            constraints=[],
+            storage=storage,
+        )
+
+    def apply_annotation_metadata(self, semantic_type: SemanticType, node: ast.expr) -> None:
+        if isinstance(node, ast.Name):
+            self._apply_metadata_name(semantic_type, node.id)
+            return
+        if isinstance(node, ast.Call):
+            helper = self.required_name(node.func)
+            if helper == "Intent":
+                if len(node.args) != 1:
+                    raise ValueError(f"Intent metadata expects one argument: {ast.unparse(node)!r}")
+                semantic_type.metadata["_pyi_intent"] = str(ast.literal_eval(node.args[0]))
+                return
+            if helper == "ArrayCategory":
+                self._require_array_storage(semantic_type).category = str(ast.literal_eval(node.args[0]))
+                return
+            if helper == "SourceDims":
+                values = [str(ast.literal_eval(arg)) for arg in node.args]
+                array = self._require_array_storage(semantic_type)
+                array.source_shape = values
+                array.lower_bounds, array.upper_bounds = self._bounds_from_source_shape(values)
+                return
+            if helper == "SourceShape":
+                raise ValueError("SourceShape metadata is not supported; use SourceDims")
+            if helper == "LowerBounds":
+                self._require_array_storage(semantic_type).lower_bounds = [
+                    None if isinstance(arg, ast.Constant) and arg.value is None else str(ast.literal_eval(arg))
+                    for arg in node.args
+                ]
+                return
+            if helper == "UpperBounds":
+                self._require_array_storage(semantic_type).upper_bounds = [
+                    None if isinstance(arg, ast.Constant) and arg.value is None else str(ast.literal_eval(arg))
+                    for arg in node.args
+                ]
+                return
+        return
+
+    def _apply_metadata_name(self, semantic_type: SemanticType, name: str) -> None:
+        if name in {"ORDER_C", "ORDER_F", "ORDER_ANY"}:
+            array = self._require_array_storage(semantic_type)
+            array.order = name
+            return
+        if name == "Allocatable":
+            array = self._require_array_storage(semantic_type)
+            array.allocatable = True
+            return
+        if name == "Pointer":
+            array = self._require_array_storage(semantic_type)
+            array.pointer = True
+            return
+        if name == "Contiguous":
+            self._require_array_storage(semantic_type).contiguous = True
+
+    @staticmethod
+    def _replace_constraint(semantic_type: SemanticType, name: str) -> None:
+        semantic_type.constraints = [
+            constraint for constraint in semantic_type.constraints if constraint.name != name
+        ]
+        semantic_type.constraints.append(SemanticConstraint(name))
+
+    @staticmethod
+    def _require_array_storage(semantic_type: SemanticType) -> SemanticArrayContract:
+        if semantic_type.storage is None:
+            semantic_type.storage = SemanticStorageContract(kind="array")
+        if semantic_type.storage.array is None:
+            semantic_type.storage.array = SemanticArrayContract(
+                rank=semantic_type.rank,
+                shape=list(semantic_type.shape),
+                source_shape=list(semantic_type.shape),
+            )
+        return semantic_type.storage.array
+
+    @staticmethod
+    def _bounds_from_source_shape(shape: list[str]) -> tuple[list[str | None], list[str | None]]:
+        lower_bounds: list[str | None] = []
+        upper_bounds: list[str | None] = []
+        for dim in shape:
+            token = str(dim).strip()
+            if ":" in token:
+                lower, upper = token.split(":", 1)
+                lower_text = lower.strip() or None
+                lower_bounds.append(None if lower_text == "1" else lower_text)
+                upper_bounds.append(upper.strip() or None)
+            elif token == "*":
+                lower_bounds.append(None)
+                upper_bounds.append("*")
+            else:
+                lower_bounds.append(None)
+                upper_bounds.append(None)
+        return lower_bounds, upper_bounds
+
+    @staticmethod
+    def _mark_storage_read_only(semantic_type: SemanticType) -> None:
+        if semantic_type.storage is None:
+            semantic_type.storage = SemanticStorageContract(kind="value")
+        semantic_type.storage.read_only = True
+        semantic_type.storage.mutable = False
+        semantic_type.ownership.mutable = False
+
+    @staticmethod
+    def _inferred_argument_intent(semantic_type: SemanticType) -> str:
+        storage = semantic_type.storage
+        if storage is None:
+            return "in"
+        if storage.kind in {"reference", "array", "pointer"} and not storage.read_only:
+            return "inout"
+        return "in"
+
+    @staticmethod
+    def _pop_intent_metadata(semantic_type: SemanticType, default: str) -> str:
+        value = semantic_type.metadata.pop("_pyi_intent", None)
+        return str(value).lower() if value is not None else default
+
+    @staticmethod
+    def _is_ptr_call(node: ast.Call) -> bool:
+        return _PyiAstParser.matches_name(node.func, "Ptr") or (
+            isinstance(node.func, ast.Subscript)
+            and _PyiAstParser.matches_name(node.func.value, "Ptr")
+        )
+
+    @staticmethod
+    def _ptr_depth(node: ast.AST) -> int:
+        if isinstance(node, ast.Subscript):
+            depth = int(ast.literal_eval(node.slice))
+            if depth <= 1:
+                raise ValueError("Ptr[1](...) is invalid; use Ptr(...)")
+            return depth
+        return 1
+
+    def _is_array_subscript(self, node: ast.Subscript) -> bool:
+        if isinstance(node.value, ast.Subscript):
+            return self._is_array_subscript(node.value)
+        items = self.subscript_items(node)
+        if not items:
+            return False
+        if any(isinstance(item, (ast.Slice, ast.Constant)) for item in items):
+            return True
+        if any(isinstance(item, ast.Name) and item.id not in self._legacy_constraint_names() for item in items):
+            return True
+        if any(isinstance(item, ast.Call) and self.required_name(item.func) not in self._legacy_constraint_names() for item in items):
+            return True
+        if any(isinstance(item, (ast.BinOp, ast.UnaryOp)) for item in items):
+            return True
+        return False
+
+    @staticmethod
+    def _legacy_constraint_names() -> set[str]:
+        return {
+            "Allocatable",
+            "Constant",
+            "Optional",
+            "ORDER_ANY",
+            "ORDER_C",
+            "ORDER_F",
+            "Pointer",
+        }
+
+    def dimension_text(self, node: ast.expr) -> str:
+        if isinstance(node, ast.Constant) and node.value is Ellipsis:
+            return "..."
+        if isinstance(node, ast.Slice):
+            return self.slice_text(node)
+        if isinstance(node, ast.Constant):
+            return str(node.value)
+        if isinstance(node, ast.Call) and self.required_name(node.func) == "Shape":
+            raise ValueError("Shape dimensions are not supported; use T[n, m] array subscriptions")
+        return ast.unparse(node)
+
+    def slice_text(self, node: ast.Slice) -> str:
+        lower = "" if node.lower is None else ast.unparse(node.lower)
+        upper = "" if node.upper is None else ast.unparse(node.upper)
+        step = "" if node.step is None else ast.unparse(node.step)
+        if step:
+            return f"{lower}:{upper}:{step}"
+        return f"{lower}:{upper}"
+
     def constraint(self, node: ast.expr) -> SemanticConstraint:
         if isinstance(node, ast.Name):
+            if node.id == "Shape":
+                raise ValueError("Shape constraints are not supported; use T[n, m] array subscriptions")
             return SemanticConstraint(node.id)
         if isinstance(node, ast.Call):
+            if self.required_name(node.func) == "Shape":
+                raise ValueError("Shape constraints are not supported; use T[n, m] array subscriptions")
             return SemanticConstraint(
                 name=self.required_name(node.func),
                 arguments=[ast.literal_eval(arg) for arg in node.args],
@@ -478,11 +728,14 @@ class _PyiAstParser:
         if arg.annotation is None:
             raise ValueError(f"Expected typed argument: {arg.arg!r}")
         visibility, semantic_type, original_name = self.visible_type(arg.annotation)
-        semantic_type.ownership.mutable = False
+        intent = self._pop_intent_metadata(semantic_type, self._inferred_argument_intent(semantic_type))
+        semantic_type.ownership.mutable = intent.lower() != "in"
+        if semantic_type.storage is not None:
+            semantic_type.storage.mutable = intent.lower() != "in"
         return SemanticArgument(
             name=original_name or arg.arg,
             semantic_type=semantic_type,
-            intent="in",
+            intent=intent,
             optional=self.default_marks_optional(default),
             visibility=visibility,
         )

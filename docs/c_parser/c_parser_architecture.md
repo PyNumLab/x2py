@@ -683,7 +683,8 @@ Planned mapping:
 - C parameter -> `SemanticArgument`
 - C primitive -> `SemanticType`
 - C pointer -> constraints and ownership metadata
-- C array -> `Shape(...)`, `ORDER_C`, and pointer/extent metadata
+- C array -> subscription shape notation such as `T[n]`, order metadata such as
+  `ORDER_C`, and pointer/extent metadata
 - `const` -> read-only ownership/constraint metadata
 - `restrict` -> aliasing metadata
 - structs/unions -> `SemanticClass` or named opaque semantic type
@@ -712,10 +713,11 @@ Likely stub patterns:
 - plain scalar functions:
   - `def f(x: Int32) -> Float64: ...`
 - pointer arguments:
-  - use semantic constraints such as `Pointer`, `Writable`, `Const`, `Shape`
-    only after the IR supports them cleanly
+  - use storage/calling contracts such as `Ptr(...)`, `Const(...)`, writable
+    metadata, and explicit extent metadata only after the IR supports them
+    cleanly
 - arrays:
-  - `Float64[Shape("n"), ORDER_C]`
+  - `Annotated[Float64[n], ORDER_C]`
 - opaque handles:
   - classes or named semantic types with ownership constraints
 - structs:
@@ -727,9 +729,9 @@ Likely stub patterns:
   - `Final[...]`
 
 The existing `.pyi` parser already supports `Final`, `private`, `native_call`,
-imports, classes, functions, shapes, and native projection entries. C-specific
-work should extend the semantic model intentionally before changing `.pyi`
-syntax.
+imports, classes, functions, shape subscriptions, storage contracts, metadata,
+and native projection entries. C-specific work should extend the semantic model
+intentionally before changing `.pyi` syntax.
 
 For function pointers and callbacks, parser extraction and later wrappability
 are separate decisions. The parser should extract the function pointer type into

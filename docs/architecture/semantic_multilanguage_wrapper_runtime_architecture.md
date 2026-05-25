@@ -327,13 +327,13 @@ def solve(
         From(np.ndarray),
         ORDER_F,
         Writable,
-        Shape("N", "N"),
+        "N", "N",
     ],
     b: Float64Vector[
         From(np.ndarray),
-        Shape("N"),
+        "N",
     ],
-) -> Float64Vector[Shape("N")]: ...
+) -> Float64Vector["N"]: ...
 ```
 
 This means:
@@ -366,7 +366,7 @@ Examples:
 * `ORDER_F`
 * `ORDER_C`
 * `CPUResident`
-* `Shape(N, N)`
+* shape subscriptions such as `Float64["N", "N"]`
 * `Aligned(64)`
 * `Finite`
 * `NonNull`

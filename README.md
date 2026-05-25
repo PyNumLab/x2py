@@ -430,10 +430,10 @@ File: tests/data/fortran/general/modern_pyi_example.f90
 class particle:
     id: Int32
     mass: Float64
-    position: Float64[Shape('3'), ORDER_F]
+    position: Float64[3]
 
 class vector3:
-    values: Float64[Shape('3'), ORDER_F]
+    values: Float64[3]
 
 @private
 class hidden_state:
@@ -443,46 +443,47 @@ counter: Int32
 
 hidden_scale: private[Float64]
 
-@native_call([Return(0), Arg(0), Arg(1), Arg(2), Arg(3), Arg(4)])
 def init_particle(
-    pid: Int32,
-    mass: Float64,
-    x: Float64,
-    y: Float64,
-    z: Float64
-) -> particle: ...
+    p: Annotated[Ptr(particle), Intent('out')],
+    pid: Ptr(Const(Int32)),
+    mass: Ptr(Const(Float64)),
+    x: Ptr(Const(Float64)),
+    y: Ptr(Const(Float64)),
+    z: Ptr(Const(Float64))
+) -> None: ...
 
 def kinetic_energy(
-    p: particle,
-    vx: Float64,
-    vy: Float64,
-    vz: Float64
+    p: Ptr(Const(particle)),
+    vx: Ptr(Const(Float64)),
+    vy: Ptr(Const(Float64)),
+    vz: Ptr(Const(Float64))
 ) -> Float64: ...
 
 def scale_vector(
-    v: Float64[Shape(':'), ORDER_F],
-    alpha: Float64
-) -> Returns["v", Float64[Shape(':'), ORDER_F]]: ...
+    v: Annotated[Float64[::Strided], ArrayCategory('assumed_shape'), SourceDims(':')],
+    alpha: Ptr(Const(Float64))
+) -> None: ...
 
 def dot3(
-    a: Float64[Shape('3'), ORDER_F],
-    b: Float64[Shape('3'), ORDER_F]
+    a: Const(Float64[3]),
+    b: Const(Float64[3])
 ) -> Float64: ...
 
-@native_call([Return(0)])
-def fill_identity3() -> Float64[Shape('3', '3'), ORDER_F]: ...
+def fill_identity3(
+    a: Annotated[Float64[3, 3], ORDER_F, Intent('out')]
+) -> None: ...
 
 def normalize_particle(
-    p: particle
-) -> Returns["p", particle]: ...
+    p: Ptr(particle)
+) -> None: ...
 
 @private
 def hidden_proc(
-    x: Int32
+    x: Ptr(Const(Int32))
 ) -> None: ...
 ```
 
-This snapshot is also verified in `tests/pyi/test_pyi_printer_modern_example.py`.
+This snapshot is also verified in `tests/semantics/test_pyi_printer_modern_example.py`.
 
 Parse output for the same fixture now includes the derived type definition and field list:
 
