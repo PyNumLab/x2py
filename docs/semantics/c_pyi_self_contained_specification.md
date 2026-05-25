@@ -39,12 +39,33 @@ and execute direct C signatures reliably before adding Pythonic adaptations.
    direct C return, or `None` for native `void`.
 5. A C pointer parameter is never silently represented by a plain immutable
    Python scalar. The caller supplies pointer-backed storage.
-6. Numeric one-level pointers use NumPy storage notation:
-   `T[()]` for zero-dimensional storage and `T[dimensions...]` for array
-   storage. Both lower to one native `T *`.
+6. A bare numeric pointer uses `Ptr(T)` for writable storage and
+   `Ptr(Const(T))` for read-only storage. For an API known to use that pointer
+   as a scalar reference, callers conventionally pass matching
+   zero-dimensional NumPy storage. Numeric pointer parameters with a recorded
+   array shape contract use `T[dimension-specs]` or `T[...]`. All these
+   one-level storage forms lower to one native pointer; C does not carry
+   rank, shape or stride metadata in an ordinary `T *` parameter.
 7. Array dimensions express validation constraints, not additional pointer
    depth. `Float64[:, :]` still lowers to one `double *`, never `double **`.
-8. With no stride or order modifier, numeric array storage is C-contiguous.
+8. With no stride or order modifier, numeric array storage in a C-origin
+   semantic stub is implicitly C-contiguous. Generated C stubs omit redundant
+   `ORDER_C`.
+   Rank-one contiguous storage has no C-versus-Fortran order distinction, so
+   `T[:]` and `T[n]` never need `ORDER_F` either. A non-contiguous vector uses
+   stride notation such as `T[::Strided]`, not an order modifier.
+   For multidimensional storage, order and stride constraints are independent.
+   `ORDER_C` is not needed in canonical stubs because bare array notation,
+   including `T[::Strided, ::Strided]`, already carries the C orientation.
+   The explicit non-default layout form is
+   `Annotated[T[dimension-specs], ORDER_F]`, including
+   `Annotated[T[::Strided, ::Strided], ORDER_F]` for a Fortran-oriented
+   strided contract. `ORDER_ANY` represents a multidimensional strided
+   contract with no C/F orientation restriction.
+   A stride-aware axis is written `::Strided`, as in
+   `Float64[:, ::Strided]` or `Float64[:, 0:n:Strided]`. It is a direct
+   interface when any native extent or stride values remain visible arguments;
+   the exact interface must not generate them.
 9. `Const(...)` is the canonical spelling for a read-only C pointee/storage
    contract.
 10. Pointer graphs such as `T **` and deeper are not inferred from NumPy
@@ -102,48 +123,129 @@ No decorator is needed or accepted for these identity calls.
 
 ## 5. Numeric Pointer Storage
 
-### 5.1 Canonical NumPy Notation
+### 5.1 Canonical Reference And Array Notation
 
 A numeric NumPy storage annotation means the caller supplies memory whose data
-address is passed directly to C.
+address is passed directly to C. C ordinary pointer parameters contain no
+rank, extent or stride descriptor. Therefore a native `double *values` with no
+additional array contract is represented exactly as `Ptr(Float64)`;
+dimensioned forms are used only when the C declaration, documented API
+contract, or completed semantic stub provides those constraints.
+A generated Fortran intermediary that prepares Fortran dummy arguments is a
+Fortran backend concern and does not change the direct C `T *` contract
+described in this document.
 
 | Semantic annotation | Python caller supplies | Native parameter |
 | --- | --- | --- |
-| `Int[()]` | writable zero-dimensional NumPy array with C `int` dtype | `int *` |
-| `Const(Int[()])` | matching NumPy scalar or zero-dimensional storage | `const int *` |
-| `Int[:]` | writable one-dimensional C-contiguous NumPy array | `int *` |
-| `Const(Int[:])` | read-only one-dimensional C-contiguous NumPy array | `const int *` |
-| `Float64[:]` | writable one-dimensional C-contiguous NumPy array | `double *` |
-| `Const(Float64[:])` | read-only one-dimensional C-contiguous NumPy array | `const double *` |
-| `Float64[0:n]` | writable one-dimensional array whose extent is validated against visible argument `n` | `double *` |
-| `Const(Float64[0:n])` | read-only one-dimensional array whose extent is validated against visible argument `n` | `const double *` |
+| `Ptr(T)` | compatible writable native pointer-backed storage; a zero-dimensional NumPy array is the scalar-reference convention | `T *` |
+| `Ptr(Const(T))` | compatible native pointer-backed storage under a read-only pointee contract | `const T *` |
+| `Int[:]` | writable contiguous rank-one NumPy array; C/F order is equivalent | `int *` |
+| `Const(Int[:])` | read-only contiguous rank-one NumPy array; C/F order is equivalent | `const int *` |
+| `Float64[:]` | writable contiguous rank-one NumPy array; C/F order is equivalent | `double *` |
+| `Const(Float64[:])` | read-only contiguous rank-one NumPy array; C/F order is equivalent | `const double *` |
+| `Float64[n]` | writable one-dimensional array whose size is validated against visible argument or semantic constant `n` | `double *` |
+| `Const(Float64[n])` | read-only one-dimensional array whose size is validated against visible argument or semantic constant `n` | `const double *` |
+| `Float64[0:n]` | writable one-dimensional array with explicit half-open range `0:n` | `double *` |
 | `Float64[:, :]` | writable rank-two C-contiguous NumPy array | `double *` |
 | `Float64[3, 4]` | writable C-contiguous NumPy array with exact shape `(3, 4)` | `double *` |
+| `Float64[...]` | writable C-contiguous NumPy array of any rank | `double *` |
+| `Float64[...][1:4]` | writable C-contiguous NumPy array with rank 1, 2, or 3 | `double *` |
+| `Float64[...][1, 2, 5]` | writable C-contiguous NumPy array with rank 1, 2, or 5 | `double *` |
 
-`T[()]` and `T[dimensions...]` are the only current spelling for ordinary
-NumPy-backed numeric pointer parameters. Do not also write `Ptr(...)`.
+`Float64[...]` means any rank (any number of dimensions). A following rank
+selector restricts that set: `Float64[...][1:4]` accepts ranks 1 through 3
+because the stop value is exclusive, while `Float64[...][1, 2, 5]` accepts
+only ranks 1, 2, and 5. The same forms apply to other numeric element types
+and inside `Const(...)`.
 
-### 5.2 Direct Pointer Objects
+An axis entry without colons is an extent. `Float64[n]` means a rank-one
+array of size `n`, and `Float64[n, m]` means an array with shape `(n, m)`;
+neither denotes element indexing. A slice entry such as `Float64[0:n]`
+expresses an explicit NumPy-style half-open range. It has the same size as
+`Float64[n]` in this simple zero-based case, but retains range semantics for
+forms with a lower bound or step.
 
-Some native parameters are pointers but are not ordinary one-level numeric
-storage. Their exact identity representation uses the canonical pointer
-constructor:
+`Ptr(T)` and `Ptr(Const(T))` preserve an unrefined one-level C pointer. For a
+known primitive scalar-reference API, the canonical NumPy value is a
+zero-dimensional array, as shown below. `T[dimension-specs]` and `T[...]`
+with an optional rank selector are NumPy-backed array-pointer spellings once
+an array contract is known. A shape-bearing array annotation already
+represents pointer-backed array storage; do not additionally wrap it in
+`Ptr(...)`.
+
+For multidimensional storage, order is orthogonal to rank, dimensions and
+stride capability. `Annotated[Float64[:, :], ORDER_F]` denotes a rank-two
+dense Fortran-contiguous array, while
+`Annotated[Float64[::Strided, ::Strided], ORDER_F]` denotes a rank-two
+Fortran-oriented strided array. Bare `Float64[::Strided, ::Strided]` retains
+the default `ORDER_C` orientation, and
+`Annotated[Float64[::Strided, ::Strided], ORDER_ANY]` imposes no C/F
+orientation restriction. `Annotated[Float64[...][1:4], ORDER_F]` expresses
+the corresponding Fortran-oriented rank-polymorphic contract. These spellings
+define the semantic format; they are explicit because `ORDER_F` and
+`ORDER_ANY` are non-default in a C-origin stub. Accepting either in a
+runnable C Phase 1 wrapper requires the corresponding native routine to
+accept that storage layout directly. For a rank-one array, `ORDER_C` and
+`ORDER_F` do not distinguish storage, contiguous or strided, so no order
+constraint is written.
+For a multidimensional strided annotation, `ORDER_F` is orientation metadata,
+not a requirement that NumPy report `F_CONTIGUOUS`; non-unit strides remain
+part of the contract.
+
+Stride-aware dimensions use a slice step marker:
+
+| Semantic annotation | Meaning | Exact-call condition |
+| --- | --- | --- |
+| `Float64[::Strided]` | Rank-one array with a runtime element stride. | Any required stride argument is separately visible in the native signature. |
+| `Float64[:, ::Strided]` | Rank-two array whose second axis has runtime stride metadata. | Any required stride argument is separately visible in the native signature. |
+| `Float64[::Strided, ::Strided]` | Rank-two strided array with implicit `ORDER_C` orientation. | Any required stride arguments are separately visible in the native signature. |
+| `Annotated[Float64[::Strided, ::Strided], ORDER_F]` | Rank-two strided array with required Fortran orientation. | The native routine accepts that orientation and any required stride arguments remain visible. |
+| `Annotated[Float64[::Strided, ::Strided], ORDER_ANY]` | Rank-two strided array with no C/F orientation restriction. | The native routine accepts arbitrary orientation and any required stride arguments remain visible. |
+| `Float64[:, ::2]` | Rank-two array whose second-axis element step is exactly two. | The native routine consumes that layout directly. |
+| `Float64[:, 0:n:Strided]` | Rank-two array with bounded second axis and an arbitrary runtime step. | `n` and any required stride metadata are native inputs. |
+| `Float64[:, 0:n:m]` | Rank-two array with bounded second axis and exact symbolic step `m`. | `n` and `m` are native inputs or semantic constants. |
+
+`Float64[:, ::]` does not select a strided representation: under Python slice
+semantics it is just `Float64[:, :]`. A stride-aware array cannot be passed
+correctly to an operation that assumes contiguous storage unless the native
+call also receives required strides or the wrapper performs an explicit
+packing/copy-back conversion.
+
+Slice dimensions follow `lower:upper:step`. A literal bound or step is checked
+directly. A symbolic bound or step, such as `n` or `m` in
+`Float64[:, 0:n:m]`, must resolve from a visible scalar parameter or a
+declared semantic constant such as `Final[Int]`. A later wrapper projection
+may derive native metadata from array storage using NumPy notation, for
+example `Arg(0).shape[1]` or `Arg(0).strides[1]` in a later Pythonic view,
+but the exact interface does not synthesize such arguments. Resolvable
+arithmetic expressions such as `2*n`
+can be added later without requiring a new dimension notation. Annotation
+steps use NumPy element units, while `Arg(0).strides[1]` has NumPy's byte
+units; converting between them is an explicit later mapping decision.
+
+### 5.2 Pointer Depth And Opaque Pointers
+
+`Ptr(...)` expresses native pointer depth directly. For a one-level pointer,
+it preserves the native address form without inventing rank or shape. A known
+primitive scalar-reference use may be supplied with zero-dimensional NumPy
+storage. For an opaque argument or a direct pointer return, it represents a
+typed low-level native pointer object:
 
 | Semantic annotation | Native parameter |
 | --- | --- |
-| `Ptr(T)` | `T *` direct low-level pointer object |
-| `Ptr(Const(T))` | `const T *` direct low-level pointer object |
+| `Ptr(T)` | `T *`; writable unrefined one-level pointer storage |
+| `Ptr(Const(T))` | `const T *`; read-only unrefined one-level pointer storage |
 | `Ptr[2](T)` | `T **` direct low-level pointer object |
 | `Ptr[2](Const(T))` | `const T **` direct low-level pointer object |
 | `Ptr[n](T)` | `T` followed by exactly `n` native pointer layers, `n >= 2` |
 
 `Ptr(x)` is the only canonical depth-one spelling. `Ptr[1](x)` is invalid.
 
-For ordinary numeric `int *`/`double *` inputs whose scalar or array storage
-contract is known, use the NumPy forms instead of `Ptr(Int)` or
-`Ptr(Float64)`. `Ptr[n](T)` is necessary for native pointer graphs and for
-low-level pointer values that are not represented by a NumPy storage
-contract.
+For array storage whose dimensions are known, use an array form such as
+`Int[n]` or `Float64[:, :]` rather than `Ptr(Int)` or `Ptr(Float64)`. When
+the only available C fact is a data pointer with no rank or extent contract,
+retain `Ptr(T)`. `Ptr[n](T)` is necessary for pointer graphs and for low-level
+pointer values that are not represented by a shaped NumPy storage contract.
 
 A direct pointer object carries a typed native address. Passing or returning
 it does not imply allocation, copying, ownership or automatic destruction.
@@ -162,8 +264,8 @@ void read_count(const int *value);
 Phase 1 interface:
 
 ```python
-def increment(value: Int[()]) -> None: ...
-def read_count(value: Const(Int[()])) -> None: ...
+def increment(value: Ptr(Int)) -> None: ...
+def read_count(value: Ptr(Const(Int))) -> None: ...
 ```
 
 Python use is intentionally storage-oriented:
@@ -188,8 +290,8 @@ double sum_values(size_t n, const double *values);
 Phase 1 interface:
 
 ```python
-def negate(n: Int, values: Float64[0:n]) -> None: ...
-def sum_values(n: SizeT, values: Const(Float64[0:n])) -> Float64: ...
+def negate(n: Int, values: Float64[n]) -> None: ...
+def sum_values(n: SizeT, values: Const(Float64[n])) -> Float64: ...
 ```
 
 The caller supplies `n` explicitly because it is an actual C parameter. The
@@ -205,8 +307,8 @@ void get_values(int n, double *out);
 Phase 1 interface:
 
 ```python
-def get_count(out: Int[()]) -> None: ...
-def get_values(n: Int, out: Float64[0:n]) -> None: ...
+def get_count(out: Ptr(Int)) -> None: ...
+def get_values(n: Int, out: Float64[n]) -> None: ...
 ```
 
 Example Python use:
@@ -221,29 +323,47 @@ get_values(n, out_values)
 ```
 
 Returning `Int` from `get_count()` or allocating and returning
-`Float64[0:n]` from `get_values(n)` is a later Pythonic adaptation, not an
+`Float64[n]` from `get_values(n)` is a later Pythonic adaptation, not an
 identity call.
 
 ## 6. Array Constraints
 
-### 6.1 Rank And Fixed Dimensions
+### 6.1 Rank, Accepted Ranks And Fixed Dimensions
 
 Dimensions refine valid NumPy storage while the native argument remains one
-data pointer.
+data pointer. They are semantic/API contracts rather than metadata transported
+by a C `T *`. A bare pointer imported without such a contract remains raw:
+
+```c
+void process_raw(double *values);
+```
+
+```python
+def process_raw(values: Ptr(Float64)) -> None: ...
+```
+
+Once the semantic interface records valid array contracts, it may use:
 
 ```c
 void process_matrix(double *matrix);
+void process_any(double *values);
+void process_vector_or_matrix(double *values);
 void use_row(int (*row)[4]);
 void use_matrix(int (*matrix)[4]);
 ```
 
 ```python
 def process_matrix(matrix: Float64[:, :]) -> None: ...
+def process_any(values: Float64[...]) -> None: ...
+def process_vector_or_matrix(values: Float64[...][1, 2]) -> None: ...
 def use_row(row: Int[4]) -> None: ...
 def use_matrix(matrix: Int[:, 4]) -> None: ...
 ```
 
 - `Float64[:, :]` validates rank two and C contiguity, then passes one
+  `double *`.
+- `Float64[...]` accepts any rank and passes one `double *`.
+- `Float64[...][1, 2]` accepts rank one or rank two and passes one
   `double *`.
 - `Int[4]` validates one fixed row of four `int` values, then passes one
   address.
@@ -254,7 +374,37 @@ For function parameters on the selected ABI, `int (*)[4]` is represented as
 one pointer plus its fixed row-width contract. It is not represented as
 `int **`.
 
-### 6.2 Pointer Graphs Are Different
+### 6.2 Strided Direct Interfaces Keep Native Metadata Visible
+
+The semantic notation can distinguish a stride-aware view from a contiguous
+matrix while retaining the exact native parameter list:
+
+```c
+void process_bounded_step(int n, int m, double *values);
+void process_columns(const double *values, size_t columns, size_t stride_bytes);
+```
+
+```python
+def process_bounded_step(n: Int, m: Int, values: Float64[:, 0:n:m]) -> None: ...
+def process_columns(
+    values: Const(Float64[:, ::Strided]),
+    columns: SizeT,
+    stride_bytes: SizeT,
+) -> None: ...
+```
+
+`Strided` means the axis stride must be carried or checked rather than assumed
+to be contiguous. `::2` is the fixed-step equivalent. `0:n:m` validates a
+bounded axis and exact element step using visible native values or declared
+semantic constants. In `process_columns`, the caller supplies both the array
+storage and its native `stride_bytes` argument; nothing is hidden or
+generated. For a multidimensional array, a stride form may be combined with
+`ORDER_F`, or with `ORDER_ANY` when no orientation is part of the native
+contract; leaving it unannotated retains `ORDER_C`. A later Pythonic view may
+hide that argument with
+`Arg(0).strides[1]`, or request `Pack` / `CopyBack`.
+
+### 6.3 Pointer Graphs Are Different
 
 ```c
 void use_rows(int **rows);
@@ -262,8 +412,9 @@ void update_value(int *****value);
 ```
 
 Neither declaration is represented by `Int[:, :]`. NumPy array notation
-supplies one contiguous data pointer only. Their exact low-level Phase 1
-interfaces are:
+supplies one array data address, optionally accompanied by native
+extent/stride values; it does not create a pointer graph. Their exact
+low-level Phase 1 interfaces are:
 
 ```python
 def use_rows(rows: Ptr[2](Int)) -> None: ...
@@ -275,13 +426,21 @@ topology. The wrapper passes it unchanged. Constructing pointer rows from
 nested Python sequences and exposing `update_value(value: Int) -> Int` are
 later Pythonic adaptations.
 
-### 6.3 Contiguity
+### 6.4 Contiguity
 
-Phase 1 accepts only C-contiguous numeric arrays for `T[:]`, `T[:, :]`,
-fixed-dimension forms and dependent dimension forms such as `T[0:n]`.
-Dependent dimensions may reference visible scalar arguments only; they
-validate storage and do not generate or change native arguments. Strided
-inputs, Fortran-order inputs, automatic packing and copy-back are deferred.
+Without an explicit layout or stride form, array annotations such as `T[:]`,
+`T[:, :]`, `T[n]`, and `T[...]` require C-contiguous numeric storage; a
+generated C stub does not repeat this as `ORDER_C`. Explicit non-default
+forms such as `Annotated[T[:, :], ORDER_F]`,
+`Annotated[T[::Strided, ::Strided], ORDER_F]`, or
+`Annotated[T[::Strided, ::Strided], ORDER_ANY]` are exact interfaces when
+the native routine accepts that layout and all required metadata remains
+visible in the signature. A bare multidimensional stride form such as
+`T[:, ::Strided]` is also exact when native metadata is visible, but retains
+the implicit `ORDER_C` orientation. Automatic packing, copy-back, or
+derivation of native metadata is a later Pythonic transformation.
+For rank one, `T[:]` and `T[n]` are also the canonical Fortran-contiguous
+spelling; write `T[::Strided]` when contiguity is not required.
 
 ## 7. Direct Native Returns
 
@@ -331,7 +490,7 @@ void free_values(double *values);
 
 ```python
 def create_values(n: Int) -> Annotated[
-    Float64[0:n],
+    Float64[n],
     Owned,
     FreeWith("free_values"),
 ]: ...
@@ -358,7 +517,7 @@ void c_increment(int *value);
 def add(a: Int, b: Int) -> Int: ...
 
 @bind("c_increment")
-def increment(value: Int[()]) -> None: ...
+def increment(value: Ptr(Int)) -> None: ...
 ```
 
 `@bind` changes only which exported symbol is loaded. It does not synthesize
@@ -425,14 +584,14 @@ Unsupported now:
 
 | Desired behavior | Example C shape | Later mechanism |
 | --- | --- | --- |
-| Pass a Python scalar through a native pointer | `void increment(int *value)` exposed as `value = increment(value)` | `@native_call(Ptr(Arg(0)))` plus readback |
-| Generate a hidden length | `double sum(size_t n, const double *x)` exposed as `sum(x)` | `len(Arg(0))` in `@native_call` |
-| Turn an output pointer into a Python result | `void get_count(int *out)` exposed as `get_count() -> Int` | `Return(...)` in `@native_call` |
+| Pass a Python scalar through a native pointer | `void increment(int *value)` exposed as `value = increment(value)` | `@native_call([Ptr(Arg(0))])` plus readback |
+| Generate a hidden length | `double sum(size_t n, const double *x)` exposed as `sum(x)` | `Arg(0).shape[0]` in `@native_call` |
+| Turn an output pointer into a Python result | `void get_count(int *out)` exposed as `get_count() -> Int` | `Ptr(Return(...))` in `@native_call` |
 | Convert native status to exception | `int create(...);` with hidden status | `Status[...]` and `Check(...)` |
 | Wrap a raw opaque pointer with ownership behavior | `struct ctx *` / `struct ctx **` | handle and lifetime policy |
 | Convert Python strings to C strings | `const char *` from `str` | text encoding/termination policy |
 | Generate callback thunks | function-pointer argument | callback lifetime/exception policy |
-| Pack or copy non-contiguous arrays | pointer to contiguous data | `Pack` / `CopyBack` coercions |
+| Pack or copy a layout the native function does not accept | pointer to accepted native storage | `Pack` / `CopyBack` coercions |
 
 The later syntax is retained as design direction only. It is not required by
 the Phase 1 parser, IR, printer or wrapper generator.
@@ -445,11 +604,12 @@ instead of silently changing the interface.
 | Code | Condition |
 | --- | --- |
 | `c_non_identity_call_unsupported` | A declaration or semantic interface requires synthesized, omitted, reordered or transformed parameters/results. |
-| `c_pointer_object_mismatch` | A `Ptr(T)` or `Ptr[n](T)` parameter is supplied a value without the declared direct native pointer topology. |
+| `c_pointer_object_mismatch` | A `Ptr(T)` argument lacks compatible native pointer-backed storage, or a multi-level pointer argument lacks the declared native pointer topology. |
 | `c_numpy_pointer_return_policy_required` | A native pointer return is exposed as a shaped NumPy result without implemented lifetime handling or explicit required metadata; a direct raw `Ptr(T)` return remains identity behavior. |
 | `c_numpy_dtype_mismatch` | Supplied NumPy storage does not have the exact semantic native element dtype. |
-| `c_numpy_rank_mismatch` | Supplied NumPy storage does not satisfy declared zero-dimensional, rank or fixed-shape constraints. |
-| `c_numpy_contiguity_required` | Supplied numeric array is not C-contiguous. |
+| `c_numpy_rank_mismatch` | Supplied NumPy storage does not satisfy declared rank or fixed-shape constraints. |
+| `c_numpy_contiguity_required` | An unqualified dense C-contiguous array annotation receives non-contiguous storage. |
+| `c_numpy_stride_mapping_required` | A Pythonic interface hides native stride parameters required for stride-aware storage without an explicit mapping such as `Arg(0).strides[1]`. |
 | `c_numpy_writeability_required` | A mutable native pointer receives read-only NumPy storage. |
 | `c_opaque_handle_conversion_unsupported` | A raw opaque pointer is requested as an owning/high-level Python handle rather than direct `Ptr(context)` identity. |
 | `c_string_conversion_unsupported` | A Python string conversion is requested. |
@@ -463,27 +623,35 @@ instead of silently changing the interface.
 The Phase 1 implementation must:
 
 1. Parse scalar annotations and direct `None`/scalar return annotations.
-2. Parse numeric NumPy storage forms:
-   `T[()]`, `Const(T[()])`, `T[:]`, `Const(T[:])`, `T[:, :]` and fixed
-   integer dimensions such as `T[3, 4]`, plus dependent dimensions such as
-   `T[0:n]` referencing a visible scalar parameter.
-3. Lower each supported pointer-backed numeric annotation to exactly one
-   native pointer of its leaf type.
-4. Parse and lower direct pointer forms `Ptr(T)` and `Ptr[n](T)` as exactly
-   one and `n` native pointer layers, and accept only compatible low-level
-   native pointer objects at runtime.
-5. Validate NumPy dtype, rank, fixed dimensions, C contiguity and
-   writeability before calling native code.
-6. Preserve the visible parameter order exactly.
-7. Preserve direct native scalar, pointer and native `void` returns.
-8. Parse and apply `@bind("symbol")` for identity symbol renaming.
-9. Parse complete by-value `Structure`, `Enum[T]` and opaque pointer leaf
+2. Parse unrefined one-level pointer forms `Ptr(T)` and `Ptr(Const(T))`, and
+   accept matching pointer-backed storage; known scalar-reference uses must
+   support the zero-dimensional NumPy convention.
+3. Parse numeric array storage forms: `T[:]`, `Const(T[:])`, `T[:, :]`,
+   fixed or symbolic extents such as `T[3, 4]` and `T[n]`, explicit dependent
+   ranges or steps such as `T[0:n]` and `T[:, 0:n:m]`, and rank-polymorphic
+   forms such as `T[...]`, `T[...][1:4]`, and `T[...][1, 2, 5]`.
+4. Lower each supported one-level scalar-reference or array-storage
+   annotation to exactly one native pointer of its leaf type.
+5. Parse and lower direct pointer forms `Ptr[n](T)` as exactly `n` native
+   pointer layers, accepting compatible low-level native pointer objects at
+   runtime.
+6. Validate NumPy dtype, rank, fixed dimensions, explicit layout/stride
+   constraints including `ORDER_F` and `ORDER_ANY`, and writeability before
+   calling native code.
+7. Preserve the visible parameter order exactly, including visible native
+   count or stride parameters.
+8. Preserve direct native scalar, pointer and native `void` returns.
+9. Parse and apply `@bind("symbol")` for identity symbol renaming.
+10. Parse complete by-value `Structure`, `Enum[T]` and opaque pointer leaf
    declarations if those existing declaration features are already runnable;
    otherwise report them as not yet supported without approximating them.
-10. Reject `@native_call`, `Arg`, `Return`, `Returns`, `Status`, `Check`,
+11. Reject `@native_call`, `Arg`, `Return`, `Returns`, `Status`, `Check`,
    `Pack`, `CopyBack` and callback conversion constructs as later-phase
    syntax if encountered in a Phase 1 runnable input.
-11. Never consult C source after a supported semantic `.pyi` has been parsed.
+12. Accept stride-aware direct interfaces only when any required native count
+    or stride arguments remain visible; deriving them from array metadata is a
+    later Pythonic mapping.
+13. Never consult C source after a supported semantic `.pyi` has been parsed.
 
 ## 13. Phase 1 Tests
 
@@ -506,7 +674,7 @@ void increment(int *value);
 ```
 
 ```python
-def increment(value: Int[()]) -> None: ...
+def increment(value: Ptr(Int)) -> None: ...
 ```
 
 Tests must verify that a writable zero-dimensional NumPy array is passed by
@@ -520,7 +688,7 @@ void read_count(const int *value);
 ```
 
 ```python
-def read_count(value: Const(Int[()])) -> None: ...
+def read_count(value: Ptr(Const(Int))) -> None: ...
 ```
 
 Tests must verify matching scalar storage/input acceptance and exact native
@@ -533,7 +701,7 @@ double sum_values(size_t n, const double *values);
 ```
 
 ```python
-def sum_values(n: SizeT, values: Const(Float64[0:n])) -> Float64: ...
+def sum_values(n: SizeT, values: Const(Float64[n])) -> Float64: ...
 ```
 
 Tests must verify that the caller passes `n`, that the wrapper passes it
@@ -547,8 +715,8 @@ void get_values(int n, double *out);
 ```
 
 ```python
-def get_count(out: Int[()]) -> None: ...
-def get_values(n: Int, out: Float64[0:n]) -> None: ...
+def get_count(out: Ptr(Int)) -> None: ...
+def get_values(n: Int, out: Float64[n]) -> None: ...
 ```
 
 Tests must verify mutation of caller-allocated output storage and that the
@@ -563,6 +731,8 @@ void matrix_rows(int (*matrix)[4]);
 
 ```python
 def matrix_data(matrix: Float64[:, :]) -> None: ...
+def array_data(values: Float64[...]) -> None: ...
+def vector_matrix_or_rank5(values: Float64[...][1, 2, 5]) -> None: ...
 def matrix_rows(matrix: Int[:, 4]) -> None: ...
 ```
 
@@ -626,38 +796,46 @@ The Phase 1 parser or readiness checker must reject a runnable interface using
 later transformation syntax such as:
 
 ```python
-@native_call(Ptr(Arg(0)))
+@native_call([Ptr(Arg(0))])
 def increment(value: Int) -> Returns["value", Int]: ...
 ```
 
 The supported Phase 1 spelling for the same C function is:
 
 ```python
-def increment(value: Int[()]) -> None: ...
+def increment(value: Ptr(Int)) -> None: ...
 ```
 
 ## 14. Phase 2: Pythonic Adaptations After Identity Works
 
-After Phase 1 can call direct signatures reliably, `@native_call` introduces
-Python-facing APIs that differ from their C parameter lists. The settled
-design direction is:
+After Phase 1 can call direct signatures reliably, an optional Pythonic
+generation mode can use `@native_call` to expose APIs that differ from their
+C parameter lists. The settled design direction is:
 
 ```python
 # C: void increment(int *value);
-@native_call(Ptr(Arg(0)))
+@native_call([Ptr(Arg(0))])
 def increment_value(value: Int) -> Returns["value", Int]: ...
 
+# C: void get_count(int *out);
+@native_call([Ptr(Return(0))])
+def get_count() -> Int: ...
+
 # C: double sum_values(size_t n, const double *values);
-@native_call(As[SizeT](len(Arg(0))), Arg(0), returns=Return(0))
+@native_call([As[SizeT](Arg(0).shape[0]), Arg(0)])
 def sum_values(values: Const(Float64[:])) -> Float64: ...
 
+# C: void process_columns(const double *values, size_t n, ptrdiff_t stride_bytes);
+@native_call([Arg(0), Arg(0).shape[1], Arg(0).strides[1]])
+def process_columns(values: Const(Float64[:, ::Strided])) -> None: ...
+
 # C: void get_values(int n, double *out);
-@native_call(Arg(0), Return(0))
-def get_values(n: Int) -> Float64[0:n]: ...
+@native_call([Arg(0), Return(0)])
+def get_values(n: Int) -> Float64[n]: ...
 
 # C: int context_create(struct context **out);
 @native_call(
-    Ptr(Return(0)),
+    [Ptr(Return(0))],
     returns=Status[Int, Check(success=0, raises=RuntimeError)],
 )
 def context_create() -> Annotated[context, Owned, FreeWith("context_destroy")]: ...
@@ -670,8 +848,8 @@ Phase 2 also introduces policies and coercions such as:
 - `Pack` and `CopyBack` for non-contiguous arrays;
 - opaque handles and native ownership management;
 - status conversion and hidden native outputs;
-- derived arguments such as `len(Arg(i))`, `.shape[...]`, `.size` and
-  `.step`.
+- derived NumPy metadata such as `Arg(i).shape`, `Arg(i).shape[...]`,
+  `Arg(i).strides[...]`, `Arg(i).size` and `Arg(i).itemsize`.
 
 None of these transformations is necessary to complete Phase 1.
 
@@ -689,7 +867,8 @@ The following decisions do not block the identity-call implementation:
 5. Converting native pointer returns into NumPy views beyond explicitly shaped,
    explicitly owned or borrowed storage. Returning direct `Ptr(T)` objects is
    already identity behavior.
-6. Strided/Fortran-order storage, packing and copy-back.
+6. Automatic derivation of hidden layout/stride arguments and packing or
+   copy-back for storage the native routine does not accept directly.
 7. Clean generated `.pyi` files for IDEs and type checkers.
 8. Module/library selection, platform variants and non-default calling
    conventions.
