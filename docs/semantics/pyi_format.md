@@ -5,9 +5,8 @@ language-neutral: Fortran and future C inputs use the same type, storage,
 pointer, array, layout and metadata notation. Source language differences are
 represented by contracts and metadata, not by separate syntax families.
 
-This document describes the behavior implemented for the current Fortran path
-and the shared notation it establishes for later C semantic conversion. C
-semantic conversion and C `.pyi` generation remain deferred.
+This document describes the behavior implemented for the current Fortran and C
+semantic conversion paths.
 
 ## Canonical Type And Storage Contract
 
@@ -38,6 +37,10 @@ entry without colons is an extent (`Float64[n]`, `Float64[n, m]`). Slice-like
 entries express range or stride contracts (`Float64[1:n]`,
 `Float64[::Strided]`, `Float64[:, 0:n:m]`). `Strided` means the runtime stride
 is part of the accepted storage contract.
+
+Generic semantic constraints are not represented as type subscriptions.
+Constants use `Final[T]`; other constraints and non-dimensional array metadata
+use `Annotated[T[...], Constraint, ...]`.
 
 `Annotated[...]` carries non-dimensional metadata:
 
@@ -411,20 +414,21 @@ visible Python values
 The projection mechanism is language-neutral. It can later adapt exact
 Fortran or C contracts through the same notation and runtime concepts, but
 this milestone does not implement automatic Pythonic generation, current
-exact-reference adaptation, coercion/contract execution or C semantic
-conversion/output.
+exact-reference adaptation, coercion/contract execution or C wrapper lowering.
+The C frontend can generate starter exact-contract `.pyi` output for the
+implemented semantic subset.
 
 ## Deferred C Work
 
-The shared model is capable of representing future C functions, variables,
+The shared model represents the current C semantic conversion subset for
+functions, variables,
 fields, constants, scalar references, pointers, arrays with known contracts,
-origin metadata, mutability and ownership facts. This task does not implement:
+origin metadata, mutability and ownership facts. The C frontend can generate
+starter exact-contract stubs from that model. Remaining C work includes:
 
-- `semantics/c2ir.py`;
-- C semantic conversion;
-- C `.pyi` generation;
 - C wrapper lowering;
-- C ownership, callback or pointer policy inference.
+- C ownership, callback or pointer policy inference beyond facts already
+  present in exact contracts.
 
 Future C conversion should use the same notation: by-value scalars as bare
 types, unrefined pointers as `Ptr(T)` or `Ptr(Const(T))`, and array notation

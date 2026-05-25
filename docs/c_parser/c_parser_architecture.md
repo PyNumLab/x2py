@@ -12,7 +12,7 @@ The x2py CLI also has a shared C/Fortran preprocessing option surface and can
 run an exact compiler/preprocessor executable for C compiler mode. Compiler
 and preprocessed C inputs preserve `#line`/GCC linemarker source locations for
 parsed declarations and diagnostics. A separate compiler-derived standard-type
-probe supplies target ABI facts needed by later C semantic conversion.
+probe supplies target ABI facts consumed by C semantic conversion.
 
 This document records the target architecture for the C parser frontend in
 x2py. The initial skeleton has grown into a partial parser, and the remaining
@@ -91,12 +91,18 @@ Implemented now:
   preserving compiler/runner/source provenance for semantic conversion. It
   carries target-relevant include, macro, undefine, and compiler-argument flags
   and records the requested project standard as provenance.
-- `--language c --semantics`, `--language c --pyi`, and C wrap-readiness are
-  rejected until semantic conversion exists.
+- `semantics.c2ir` converts the supported C parser subset into semantic IR,
+  including scalar functions, pointer storage contracts, declared arrays,
+  structs/opaque structs, enum and numeric macro constants, local typedef
+  chains, target standard-type probe facts, and C-specific readiness blockers.
+- `--language c --semantics`, `--language c --wrap-readiness`, and starter
+  exact-contract `--language c --pyi` output are enabled for the supported C
+  semantic subset.
 - Focused partial CLI/API, declaration/function, diagnostic color, project
   include/index, raw lexer/directive, project golden, error golden, preprocessed
-  linemarker remapping, and JSON schema tests are active. Remaining
-  parser-suite skips are limited to the pinned corpus roadmap.
+  linemarker remapping, JSON schema, and cJSON partial-parse regression tests
+  are active. A separately pinned/provenanced corpus remains deferred work,
+  not a skipped test.
 - `tests/data/c/` contains general fixtures modeled after the Fortran general
   fixture themes, additional C-specific API shapes, fatal diagnostic inputs,
   and real-world cJSON/jsmn/tinyexpr/linmath/NanoSVG/stb inputs whose partial
@@ -110,7 +116,7 @@ Deferred:
 - compiler attributes and alignment specifiers
 - broader compiler-family validation for preprocessing; parsed declarations
   already retain preprocessed origin and mapped source identity
-- C semantic readiness, semantic IR conversion, and `.pyi` output
+- broader C callback/ownership policy beyond exact starter `.pyi` stubs
 
 Documentation rule: any future C parser implementation change must update all
 affected docs under `docs/c_parser/` in the same change. This applies to model,
@@ -328,8 +334,8 @@ class CParser:
 
 These entrypoints are exposed from both `c_parser` and `x2py.__init__`, using
 the same top-level file/project invocation pattern already provided for
-Fortran. C semantic conversion remains unavailable despite the parse API
-export.
+Fortran. C semantic conversion is exposed separately through
+`semantics.c2ir` and top-level `x2py` compatibility helpers.
 
 ## Core Model Families
 
@@ -723,9 +729,9 @@ Python APIs.
 
 ## `.pyi` Integration
 
-Generated `.pyi` stubs for C should come after parser models and semantic IR
-conversion are stable. Readiness, if added for C, should follow the semantic
-layer pattern already used by the project.
+Generated `.pyi` stubs for C are emitted from semantic IR for the supported
+exact-contract subset. Readiness follows the semantic-layer pattern already
+used by the project.
 
 Likely stub patterns:
 

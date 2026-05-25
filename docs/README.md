@@ -10,6 +10,8 @@ examples. Contribution and pull-request requirements remain in
   long-term architecture and runtime model.
 - [Wrapper `.pyi` format](semantics/pyi_format.md): editable semantic
   interface syntax and conversion behavior.
+- [C to semantic IR mapping](semantics/c2ir_mapping.md): implemented C
+  semantic conversion subset and blocker policy.
 - [Self-contained C semantic `.pyi` specification](semantics/c_pyi_self_contained_specification.md):
   staged C wrapper interface design.
 
@@ -29,8 +31,8 @@ examples. Contribution and pull-request requirements remain in
 
 ### C
 
-- [C parser reference](c_parser/c_parser_reference.md): implemented parse-only
-  frontend behavior and testing workflow.
+- [C parser reference](c_parser/c_parser_reference.md): implemented parser
+  behavior, semantic handoff, and testing workflow.
 - [C parser architecture plan](c_parser/c_parser_architecture.md): design and
   integration decisions.
 - [C parser CLI workflow plan](c_parser/c_parser_cli_workflow.md): command

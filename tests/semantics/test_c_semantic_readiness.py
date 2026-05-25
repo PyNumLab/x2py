@@ -1,15 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Planned C semantic wrap-readiness tests.
+"""C semantic wrap-readiness tests.
 
 These tests intentionally live under ``tests/semantics`` because readiness is
 owned by semantic IR or edited ``.pyi`` interfaces, not by the C parser.
 """
-
-import pytest
-
-pytestmark = pytest.mark.skip(
-    reason="C semantic readiness roadmap tests; unskip after C semantic IR conversion exists."
-)
 
 
 def test_c_semantic_readiness_accepts_plain_primitive_function_signatures():
@@ -101,9 +95,9 @@ def test_completed_pyi_callback_policy_can_make_c_api_semantically_ready():
 from typing import Any, Callable
 
 def each_item(
-    items: Pointer[Any],
-    visit: Callable[[Pointer[Any], Pointer[Any]], None],
-    userdata: Pointer[Any],
+    items: Ptr(Any),
+    visit: Callable[[Ptr(Any), Ptr(Any)], None],
+    userdata: Ptr(Any),
 ) -> None: ...
 """,
         module_name="callback_api",

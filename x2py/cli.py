@@ -7,11 +7,13 @@ import sys
 from dataclasses import asdict, fields, is_dataclass
 from pathlib import Path
 
-from c_parser.cli import format_c_report, parse_c_report
+from c_parser.cli import expand_c_paths, format_c_report, parse_c_report
 from c_parser.models import CParseError
+from c_parser.parser import CParser
 from fortran_parser.models import FortranParseError
 from fortran_parser.parser import FortranParser
 from fortran_parser.cli import _format_report
+from semantics.c2ir import c_file_to_semantic_modules
 from semantics.fortran2ir import fortran_file_to_semantic_modules
 from semantics.pyi_parser import load_pyi_file
 from semantics.readiness import assess_semantic_wrap_readiness
@@ -124,6 +126,31 @@ def _c_parser_preprocessing_mode(preprocessing: PreprocessingConfig) -> str:
     return "compiler" if preprocessing.uses_compiler else "raw"
 
 
+def _parse_c_path(
+    parser: CParser,
+    path: Path,
+    preprocessing: PreprocessingConfig,
+):
+    source_loader = _c_source_loader(preprocessing)
+    if source_loader is None:
+        return parser.visit_file(
+            path,
+            filename=str(path),
+            include_dirs=preprocessing.include_dirs,
+            preprocessing=_c_parser_preprocessing_mode(preprocessing),
+        )
+
+    source, preprocessing_recipe = source_loader(path)
+    parsed = parser.visit_file(
+        source,
+        filename=str(path),
+        include_dirs=preprocessing.include_dirs,
+        preprocessing=_c_parser_preprocessing_mode(preprocessing),
+    )
+    parsed.preprocessing_recipe = preprocessing_recipe
+    return parsed
+
+
 def _parse_report(paths: list[str], preprocessing: PreprocessingConfig | None = None) -> dict[str, dict]:
     preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
@@ -145,12 +172,28 @@ def _parse_report(paths: list[str], preprocessing: PreprocessingConfig | None = 
     return out
 
 
-def _semantic_report(paths: list[str], preprocessing: PreprocessingConfig | None = None) -> dict[str, dict]:
+def _semantic_report(
+    paths: list[str],
+    preprocessing: PreprocessingConfig | None = None,
+    *,
+    language: str = "fortran",
+) -> dict[str, dict]:
     from semantics.fortran2ir import fortran_module_to_semantic_module
     from semantics.pyi_printer import emit_module
 
     preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
+    if language == "c":
+        parser = CParser()
+        for p in expand_c_paths(paths):
+            parsed = _parse_c_path(parser, p, preprocessing)
+            modules = c_file_to_semantic_modules(parsed)
+            out[str(p)] = {
+                "semantic_modules": [asdict(module) for module in modules],
+                "pyi": "\n\n".join(emit_module(module) for module in modules).strip(),
+            }
+        return out
+
     parser = FortranParser()
     for p in _expand_paths(paths):
         code, macro_defines, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
@@ -176,9 +219,26 @@ def _format_pyi_report(semantic_report: dict[str, dict]) -> str:
     return "\n".join(lines).rstrip()
 
 
-def _wrap_readiness_report(paths: list[str], preprocessing: PreprocessingConfig | None = None) -> dict[str, dict]:
+def _wrap_readiness_report(
+    paths: list[str],
+    preprocessing: PreprocessingConfig | None = None,
+    *,
+    language: str = "fortran",
+) -> dict[str, dict]:
     preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
+    if language == "c":
+        parser = CParser()
+        for p in expand_c_paths(paths):
+            parsed = _parse_c_path(parser, p, preprocessing)
+            modules = c_file_to_semantic_modules(parsed)
+            out[str(p)] = {
+                "source_kind": "c",
+                "semantic_modules": [asdict(module) for module in modules],
+                "wrap_readiness": assess_semantic_wrap_readiness(modules, source=str(p)),
+            }
+        return out
+
     parser = FortranParser()
     for p in _expand_readiness_paths(paths):
         if p.suffix.lower() == ".pyi":
@@ -240,6 +300,10 @@ def _format_semantic_blocker_item(code: str, item) -> str:
     if code == "callback_signature_incomplete":
         needs = ", ".join(item.get("needs") or [])
         return f"{item['owner']} needs Callable[[...], ...] metadata ({needs})"
+    if code.startswith("c_"):
+        owner = item.get("owner", "<c-source>")
+        detail = item.get("type") or item.get("source") or item.get("function") or item.get("parameter")
+        return f"{owner}: {detail}" if detail else str(item)
     if code == "no_public_api":
         needs = ", ".join(item.get("needs") or [])
         return f"{item['owner']} needs {needs}"
@@ -409,7 +473,7 @@ def main() -> int:
         "--language",
         choices=("fortran", "c"),
         default="fortran",
-        help="Frontend language. Defaults to fortran; C currently supports partial --parse output.",
+        help="Frontend language. Defaults to fortran; C supports parse, semantic IR, and semantic readiness output.",
     )
     parser.add_argument("--parse", action="store_true", help="Run and output parser stage report")
     parser.add_argument(
@@ -490,10 +554,10 @@ def main() -> int:
     parser.add_argument(
         "--wrap-readiness",
         action="store_true",
-        help="Convert Fortran or .pyi input to semantic IR and show wrapper readiness",
+        help="Convert Fortran, C, or .pyi input to semantic IR and show wrapper readiness",
     )
-    parser.add_argument("--semantics", action="store_true", help="Generate semantic IR models from parsed Fortran modules")
-    parser.add_argument("--pyi", action="store_true", help="Generate Python .pyi content")
+    parser.add_argument("--semantics", action="store_true", help="Generate semantic IR models from parsed source modules")
+    parser.add_argument("--pyi", action="store_true", help="Generate semantic Python .pyi content")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
     parser.add_argument("--out", nargs="?", const="", type=str, help="Write stage output to file (optional explicit output filename)")
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI color in parse diagnostics")
@@ -503,13 +567,7 @@ def main() -> int:
 
     if args.language == "c":
         if not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
-            parser.error("--language c requires --parse; C semantics and .pyi output are not supported yet")
-        if args.semantics:
-            parser.error("--semantics is not supported for --language c yet")
-        if args.pyi:
-            parser.error("--pyi is not supported for --language c yet")
-        if args.wrap_readiness:
-            parser.error("--wrap-readiness is semantic-layer output and is not supported for --language c yet")
+            parser.error("--language c requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness")
         if args.show_vars or args.print_limit is not None or args.vars_limit is not None:
             parser.error("--show-vars/--print-limit are Fortran-only and are not supported for --language c")
 
@@ -537,8 +595,8 @@ def main() -> int:
             if args.parse and args.language == "c"
             else _parse_report(args.paths, preprocessing) if args.parse else None
         )
-        semantic_payload = _semantic_report(args.paths, preprocessing) if (args.semantics or args.pyi) else None
-        readiness_payload = _wrap_readiness_report(args.paths, preprocessing) if args.wrap_readiness else None
+        semantic_payload = _semantic_report(args.paths, preprocessing, language=args.language) if (args.semantics or args.pyi) else None
+        readiness_payload = _wrap_readiness_report(args.paths, preprocessing, language=args.language) if args.wrap_readiness else None
         _attach_wrap_readiness(semantic_payload, readiness_payload)
     except CParseError as exc:
         if args.debug_traceback or _env_flag("C_PARSER_DEBUG"):

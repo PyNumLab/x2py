@@ -1,11 +1,11 @@
 # C Parser Reference
 
-Status: current reference for the parse-only C frontend. The `c_parser`
+Status: current reference for the partial C frontend. The `c_parser`
 package, typed parser models, explicit C CLI parse path, raw directive
 metadata, compiler-assisted preprocessing, source-location remapping, project
-indexes, parser goldens, and C standard-type probe are implemented. C semantic
-readiness, semantic IR conversion, and `.pyi` generation remain future work and
-are intentionally rejected by the CLI.
+indexes, parser goldens, C standard-type probe, first semantic IR conversion
+subset, semantic readiness path, and starter exact-contract C `.pyi`
+generation are implemented.
 
 ## Purpose
 
@@ -52,8 +52,11 @@ Implemented:
   the `c_parser` package entrypoints
 - `CParseError` with compiler-style diagnostic formatting
 - explicit `x2py --language c --parse` output
+- explicit `x2py --language c --semantics` and
+  `x2py --language c --wrap-readiness` output
+- starter exact-contract `x2py --language c --pyi` output for the supported C
+  semantic subset
 - C JSON partial output and `--out` behavior
-- rejection of C `--semantics`, `--pyi`, and `--wrap-readiness`
 - raw lexer records with comment stripping, line-continuation folding, and
   lightweight token source locations
 - top-level source splitting that tracks braces, parentheses, brackets, and
@@ -123,6 +126,10 @@ Implemented:
   `tests/data/c/errors/parser/`, and partial-parser regression inputs under
   `tests/data/c/json/`, `tests/data/c/tinyexpr/`, `tests/data/c/linmath/`,
   `tests/data/c/nanosvg/`, and top-level C inputs from `tests/data/c/stb/`
+- `semantics.c2ir` conversion for the first identity subset: scalar
+  functions, const/mutable pointer storage contracts, declared arrays,
+  structs/opaque structs, enums, numeric macro constants, local typedef
+  chains, standard-type probe facts, and explicit semantic readiness blockers
 
 Still deferred:
 
@@ -130,7 +137,8 @@ Still deferred:
 - broad compiler-extension declarators
 - broader typedef/tag conflict policy beyond the implemented basic project
   resolution
-- semantic readiness, semantic IR conversion, and `.pyi` generation
+- richer C ownership/callback projection policy beyond exact starter `.pyi`
+  stubs
 
 ## Supported C Subset
 
@@ -292,9 +300,8 @@ target-relevant flags from the matching entry to the probe explicitly.
 For cross targets, provide a runner, for example `--runner=qemu-aarch64
 --runner=-L --runner=/opt/aarch64-sysroot`.
 
-The eventual C semantic converter should accept this report as target context.
-The parser model remains source-faithful and does not embed host ABI
-assumptions.
+The C semantic converter accepts this report as target context. The parser
+model remains source-faithful and does not embed host ABI assumptions.
 
 ## Public API
 
@@ -603,7 +610,7 @@ Test families should mirror the Fortran parser:
 - typedef tests
 - macro/constant tests
 - include/project tests
-- semantic readiness tests once C semantic conversion exists
+- C semantic readiness tests
 - CLI tests
 - semantic conversion tests
 - `.pyi` generation/parser tests
@@ -611,8 +618,8 @@ Test families should mirror the Fortran parser:
 - error fixture/golden tests
 - corpus parse-only tests
 
-The C test area contains active partial-parser/raw-metadata tests plus narrowly
-scoped roadmap skips under `tests/parser/c/`. The active tests cover
+The C test area contains active partial-parser/raw-metadata tests, including
+parse-only cJSON regression coverage under `tests/parser/c/`. The active tests cover
 public entrypoints, empty model serialization, CLI discovery, JSON/output-file
 behavior, unsupported C stages, comment stripping, line-continuation folding,
 top-level splitting, include collection, simple macro collection, macro-shaped
@@ -625,8 +632,8 @@ prototypes/definitions, function-definition start/end locations, JSON golden
 serialization, fatal diagnostic goldens, and project-level callback typedef
 resolution. The `json` regression inputs
 intentionally retain recoverable diagnostics from unsupported constructs; they
-do not claim complete library parsing. Remaining parser-suite skips cover the
-pinned/provenanced corpus target. Golden comparison tests rewrite their baselines when
+do not claim complete library parsing. A separately pinned/provenanced corpus
+target remains deferred without disabling parser tests. Golden comparison tests rewrite their baselines when
 `C_PARSER_UPDATE_GOLDENS=1` is set. Future implementation branches should
 activate only the tests for the capability they implement.
 

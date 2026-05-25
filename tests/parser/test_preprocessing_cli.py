@@ -7,10 +7,18 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+import x2py.preprocessing as preprocessing
 from x2py.preprocessing import (
+    PreprocessingError,
     PreprocessingConfig,
     build_compile_commands_invocation,
     build_direct_preprocess_invocation,
+    build_preprocess_invocation,
+    run_compiler_preprocessor,
+    run_compiler_preprocessor_with_recipe,
+    validate_macro_name,
 )
 
 
@@ -94,6 +102,31 @@ def test_direct_fortran_preprocess_invocation_uses_exact_compiler_and_cpp(tmp_pa
     ]
 
 
+def test_preprocessing_config_internal_macros_recipe_and_validation(tmp_path: Path):
+    source = tmp_path / "source.F90"
+    plain = PreprocessingConfig()
+    selected = PreprocessingConfig(defines=["USE_MPI", "VALUE=3"], undefs=["DEBUG"])
+
+    assert plain.uses_compiler is False
+    assert plain.fortran_internal_recipe(source) is None
+    assert selected.fortran_macro_defines() == {"USE_MPI": 1, "VALUE": "3", "DEBUG": 0}
+    assert selected.fortran_internal_recipe(source)["source_path"] == str(source)
+    with pytest.raises(PreprocessingError, match="requires a macro name"):
+        validate_macro_name("=value", "--define")
+
+
+def test_direct_preprocess_invocation_rejects_missing_compiler_and_unknown_language(tmp_path: Path):
+    source = tmp_path / "input.txt"
+    with pytest.raises(PreprocessingError, match="requires --compiler"):
+        build_direct_preprocess_invocation(source, language="c", config=PreprocessingConfig(mode="compiler"))
+    with pytest.raises(PreprocessingError, match="not supported for language"):
+        build_direct_preprocess_invocation(
+            source,
+            language="rust",
+            config=PreprocessingConfig(mode="compiler", compiler="cc"),
+        )
+
+
 def test_compile_commands_invocation_uses_database_compiler_and_filters_compile_only_args(tmp_path: Path):
     source = tmp_path / "src" / "api.c"
     source.parent.mkdir()
@@ -134,6 +167,98 @@ def test_compile_commands_invocation_uses_database_compiler_and_filters_compile_
         "-DPROJECT_API=",
         str(source),
     ]
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        ("not json", "invalid compile commands JSON"),
+        ("{}", "must contain a list"),
+        ("[]", "no compile_commands entry found"),
+        (
+            '[{"directory": ".", "file": "api.c", "arguments": ["cc"]}, {"directory": ".", "file": "api.c", "arguments": ["cc"]}]',
+            "multiple compile_commands entries",
+        ),
+        ('[{"directory": ".", "arguments": ["cc"]}]', "missing 'file'"),
+        ('[{"directory": ".", "file": "api.c"}]', "must contain 'arguments' or 'command'"),
+        ('[{"directory": ".", "file": "api.c", "arguments": []}]', "empty command"),
+    ],
+)
+def test_compile_commands_invocation_reports_invalid_database_entries(tmp_path: Path, payload: str, message: str):
+    source = tmp_path / "api.c"
+    database = tmp_path / "compile_commands.json"
+    source.write_text("int api(void);\n", encoding="utf-8")
+    database.write_text(payload.replace('"directory": "."', f'"directory": "{tmp_path}"'), encoding="utf-8")
+
+    with pytest.raises(PreprocessingError, match=message):
+        build_compile_commands_invocation(
+            source,
+            config=PreprocessingConfig(mode="compiler", compile_commands=str(database)),
+        )
+
+
+def test_compile_commands_invocation_reports_missing_file_and_supports_command_strings(tmp_path: Path):
+    source = tmp_path / "api.c"
+    source.write_text("int api(void);\n", encoding="utf-8")
+    with pytest.raises(PreprocessingError, match="database path is missing"):
+        build_compile_commands_invocation(source, config=PreprocessingConfig(mode="compiler"))
+
+    missing = tmp_path / "absent.json"
+    with pytest.raises(PreprocessingError, match="cannot read compile commands file"):
+        build_compile_commands_invocation(
+            source,
+            config=PreprocessingConfig(mode="compiler", compile_commands=str(missing)),
+        )
+
+    database = tmp_path / "compile_commands.json"
+    database.write_text(
+        json.dumps([{"directory": str(tmp_path), "file": str(source), "command": f"cc -c {source} -oapi.o /Fowindows.obj"}]),
+        encoding="utf-8",
+    )
+    invocation = build_compile_commands_invocation(
+        source,
+        config=PreprocessingConfig(mode="compiler", compile_commands=str(database), compiler="clang"),
+    )
+    assert invocation.argv == ["clang", "-E", str(source)]
+
+
+def test_build_preprocess_invocation_rejects_fortran_compile_database(tmp_path: Path):
+    with pytest.raises(PreprocessingError, match="only supported for --language c"):
+        build_preprocess_invocation(
+            tmp_path / "api.f90",
+            language="fortran",
+            config=PreprocessingConfig(mode="compiler", compile_commands="compile_commands.json"),
+        )
+
+
+def test_run_compiler_preprocessor_success_and_failures(monkeypatch, tmp_path: Path):
+    config = PreprocessingConfig(mode="compiler", compiler="cc")
+    source = tmp_path / "api.c"
+    source.write_text("int api(void);\n", encoding="utf-8")
+    monkeypatch.setattr(
+        preprocessing.subprocess,
+        "run",
+        lambda *_args, **_kwargs: type("Done", (), {"returncode": 0, "stdout": "expanded", "stderr": ""})(),
+    )
+    expanded, recipe = run_compiler_preprocessor_with_recipe(source, language="c", config=config)
+    assert expanded == "expanded"
+    assert recipe.compiler == "cc"
+    assert run_compiler_preprocessor(source, language="c", config=config) == "expanded"
+
+    def raise_oserror(*_args, **_kwargs):
+        raise OSError("cannot start")
+
+    monkeypatch.setattr(preprocessing.subprocess, "run", raise_oserror)
+    with pytest.raises(PreprocessingError, match="failed to run compiler preprocessor"):
+        run_compiler_preprocessor(source, language="c", config=config)
+
+    monkeypatch.setattr(
+        preprocessing.subprocess,
+        "run",
+        lambda *_args, **_kwargs: type("Done", (), {"returncode": 1, "stdout": "", "stderr": "bad option"})(),
+    )
+    with pytest.raises(PreprocessingError, match="compiler preprocessing failed"):
+        run_compiler_preprocessor(source, language="c", config=config)
 
 
 def test_cli_help_documents_exact_compiler_and_preprocessing_examples():
@@ -254,6 +379,32 @@ def test_cli_compiler_specific_flags_require_compiler_mode(tmp_path: Path):
 
     assert res.returncode == 2
     assert "--compiler requires --preprocess compiler" in res.stderr
+
+
+def test_cli_rejects_compile_database_for_fortran_compiler_mode(tmp_path: Path):
+    source = tmp_path / "solver.F90"
+    source.write_text("subroutine solve()\nend subroutine solve\n", encoding="utf-8")
+
+    res = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(source),
+            "--parse",
+            "--preprocess",
+            "compiler",
+            "--compiler",
+            "gfortran",
+            "--compile-commands",
+            "compile_commands.json",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert res.returncode == 2
+    assert "--compile-commands is only supported with --language c" in res.stderr
 
 
 def test_cli_c_compiler_mode_runs_exact_compiler_and_parses_preprocessed_stdout(tmp_path: Path):

@@ -5,11 +5,14 @@ import json
 import shutil
 import subprocess
 import sys
+from types import SimpleNamespace
 
 import pytest
 
+import x2py.c_type_probe as c_type_probe
 from x2py.c_type_probe import (
     CStandardTypeProbeError,
+    _semantic_type_facts,
     build_c_standard_type_probe_source,
     probe_c_standard_types,
 )
@@ -17,6 +20,11 @@ from x2py.preprocessing import PreprocessingConfig
 
 
 _CC = shutil.which("cc")
+
+
+def _required_c_compiler() -> str:
+    assert _CC is not None, "the full C pipeline test suite requires an available native C compiler"
+    return _CC
 
 
 def test_c_standard_type_probe_source_queries_standard_headers_without_layout_claims():
@@ -38,10 +46,82 @@ def test_c_standard_type_probe_requires_an_explicit_compiler():
         probe_c_standard_types(PreprocessingConfig(mode="compiler"))
 
 
-@pytest.mark.skipif(_CC is None, reason="requires an available native C compiler")
+def test_c_standard_type_probe_rejects_compile_database_and_classifies_all_arithmetic_categories():
+    with pytest.raises(CStandardTypeProbeError, match="does not consume compile_commands"):
+        probe_c_standard_types(
+            PreprocessingConfig(mode="compiler", compiler="cc", compile_commands="compile_commands.json")
+        )
+
+    types = {
+        "real": {"available": True, "kind": "arithmetic", "underlying_c_type": "double"},
+        "char": {"available": True, "kind": "arithmetic", "underlying_c_type": "char"},
+        "other": {"available": True, "kind": "arithmetic", "underlying_c_type": "other"},
+        "unavailable": {"available": False, "kind": "arithmetic", "underlying_c_type": "double"},
+    }
+    _semantic_type_facts(types)
+
+    assert types["real"]["semantic_category"] == "real"
+    assert types["char"]["semantic_category"] == "integer_implementation_signedness"
+    assert types["other"]["semantic_category"] == "implementation_defined"
+    assert "semantic_category" not in types["unavailable"]
+
+
+@pytest.mark.parametrize(
+    ("results", "message"),
+    [
+        ([OSError("missing")], "failed to run C type probe compiler"),
+        ([SimpleNamespace(returncode=1, stderr="compile failed")], "compilation failed"),
+        ([SimpleNamespace(returncode=0, stderr=""), OSError("cannot execute")], "failed to execute"),
+        (
+            [SimpleNamespace(returncode=0, stderr=""), SimpleNamespace(returncode=2, stderr="run failed")],
+            "execution failed",
+        ),
+        (
+            [SimpleNamespace(returncode=0, stderr=""), SimpleNamespace(returncode=0, stdout="not json", stderr="")],
+            "invalid JSON",
+        ),
+        (
+            [SimpleNamespace(returncode=0, stderr=""), SimpleNamespace(returncode=0, stdout="{}", stderr="")],
+            "missing 'types'",
+        ),
+    ],
+)
+def test_c_standard_type_probe_reports_compiler_and_runner_failures(monkeypatch, results, message):
+    responses = iter(results)
+
+    def run(*_args, **_kwargs):
+        result = next(responses)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    monkeypatch.setattr(c_type_probe.subprocess, "run", run)
+    with pytest.raises(CStandardTypeProbeError, match=message):
+        probe_c_standard_types(PreprocessingConfig(mode="compiler", compiler="cc"), runner=["runner"])
+
+
+def test_c_standard_type_probe_accepts_explicit_runner_and_cli_validates_macros(monkeypatch):
+    responses = iter(
+        [
+            SimpleNamespace(returncode=0, stderr=""),
+            SimpleNamespace(returncode=0, stdout='{"types": {}}', stderr=""),
+        ]
+    )
+    monkeypatch.setattr(c_type_probe.subprocess, "run", lambda *_args, **_kwargs: next(responses))
+
+    report = probe_c_standard_types(PreprocessingConfig(mode="compiler", compiler="cc"), runner=["emulator"])
+    assert report.recipe.run_argv[0] == "emulator"
+
+    with pytest.raises(SystemExit):
+        c_type_probe.main(["--compiler", "cc", "-D", "=bad"])
+    with pytest.raises(SystemExit):
+        c_type_probe.main(["--compiler", "cc", "-U", "=bad"])
+
+
 def test_c_standard_type_probe_reports_semantic_facts_from_native_compiler():
+    compiler = _required_c_compiler()
     report = probe_c_standard_types(
-        PreprocessingConfig(mode="compiler", compiler=_CC, std="c11")
+        PreprocessingConfig(mode="compiler", compiler=compiler, std="c11")
     )
 
     size_t = report.types["size_t"]
@@ -70,20 +150,20 @@ def test_c_standard_type_probe_reports_semantic_facts_from_native_compiler():
     file_type = report.types["FILE"]
     assert file_type["kind"] == "opaque_handle"
     assert file_type["pointer_bits"] > 0
-    assert report.recipe.compiler == _CC
+    assert report.recipe.compiler == compiler
     assert "-std=c11" in report.recipe.compile_argv
     assert "#include <time.h>" in report.source_text
 
 
-@pytest.mark.skipif(_CC is None, reason="requires an available native C compiler")
 def test_c_standard_type_probe_carries_target_relevant_user_flags(tmp_path):
+    compiler = _required_c_compiler()
     include_dir = tmp_path / "include"
     include_dir.mkdir()
 
     report = probe_c_standard_types(
         PreprocessingConfig(
             mode="compiler",
-            compiler=_CC,
+            compiler=compiler,
             include_dirs=[str(include_dir)],
             defines=["X2PY_FEATURE=1"],
             undefs=["X2PY_OLD_FEATURE"],
@@ -105,10 +185,10 @@ def test_c_standard_type_probe_carries_target_relevant_user_flags(tmp_path):
     assert report.recipe.compiler_args == ["-funsigned-char"]
 
 
-@pytest.mark.skipif(_CC is None, reason="requires an available native C compiler")
 def test_c_standard_type_probe_module_cli_emits_json_for_semantic_input():
+    compiler = _required_c_compiler()
     completed = subprocess.run(
-        [sys.executable, "-m", "x2py.c_type_probe", "--compiler", _CC],
+        [sys.executable, "-m", "x2py.c_type_probe", "--compiler", compiler],
         capture_output=True,
         text=True,
         check=True,
@@ -117,5 +197,5 @@ def test_c_standard_type_probe_module_cli_emits_json_for_semantic_input():
     payload = json.loads(completed.stdout)
     assert payload["types"]["size_t"]["semantic_category"] == "unsigned_integer"
     assert payload["types"]["FILE"]["kind"] == "opaque_handle"
-    assert payload["recipe"]["compiler"] == _CC
+    assert payload["recipe"]["compiler"] == compiler
     assert payload["source_text"].startswith("#include <limits.h>")

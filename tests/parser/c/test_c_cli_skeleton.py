@@ -6,6 +6,11 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+
+from c_parser import cli as c_parser_cli
+from x2py import cli as x2py_cli
+from x2py.preprocessing import PreprocessingConfig
 
 
 def test_cli_help_shows_explicit_c_language_mode():
@@ -123,16 +128,42 @@ def test_cli_c_parse_out_without_json_writes_json_and_suppresses_stdout(tmp_path
     assert payload[str(header)]["parser_status"] == "partial"
 
 
-def test_cli_c_semantic_stages_are_rejected_until_implemented(tmp_path: Path):
+def test_cli_c_semantics_json_stdout_for_header(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
+    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--semantics", "--json"]
 
-    for stage in ("--semantics", "--pyi", "--wrap-readiness"):
-        cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", stage]
-        res = subprocess.run(cmd, capture_output=True, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+    semantic_modules = payload[str(header)]["semantic_modules"]
 
-        assert res.returncode != 0
-        assert "not supported" in res.stderr.lower()
+    assert semantic_modules[0]["name"] == "api"
+    assert semantic_modules[0]["functions"][0]["name"] == "add"
+    assert semantic_modules[0]["functions"][0]["arguments"][0]["semantic_type"]["name"] == "Int32"
+
+
+def test_cli_c_wrap_readiness_human_output_for_header(tmp_path: Path):
+    header = tmp_path / "api.h"
+    header.write_text("int add(int a, int b);\n", encoding="utf-8")
+    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--wrap-readiness"]
+
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    assert f"File: {header}" in res.stdout
+    assert "Source: c" in res.stdout
+    assert "Wrappable: yes" in res.stdout
+
+
+def test_cli_c_pyi_human_output_for_header(tmp_path: Path):
+    header = tmp_path / "api.h"
+    header.write_text("int add(int a, int b);\n", encoding="utf-8")
+    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--pyi"]
+
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    assert f"File: {header}" in res.stdout
+    assert "def add(" in res.stdout
+    assert "a: Int32" in res.stdout
 
 
 def test_cli_c_rejects_fortran_only_parse_flags(tmp_path: Path):
@@ -256,3 +287,96 @@ def test_cli_without_language_keeps_fortran_default_behavior():
 
     assert "subroutine add1" in res.stdout
     assert "Language: c" not in res.stdout
+
+
+def test_c_parser_cli_module_handles_directory_loader_and_output_modes(tmp_path: Path, capsys):
+    header = tmp_path / "api.h"
+    output = tmp_path / "c-report.json"
+    header.write_text("int add(int a, int b);\n", encoding="utf-8")
+    (tmp_path / "ignored.txt").write_text("ignored\n", encoding="utf-8")
+
+    assert c_parser_cli.expand_c_paths([str(tmp_path), str(header)]) == [header]
+    loaded = c_parser_cli.parse_c_report(
+        [str(header)],
+        source_loader=lambda _path: ("int generated(void);\n", {"mode": "test"}),
+    )
+    assert loaded[str(header)]["functions"][0]["name"] == "generated"
+    assert loaded[str(header)]["preprocessing_recipe"] == {"mode": "test"}
+
+    assert c_parser_cli.main([str(header)]) == 0
+    assert "Functions: 1" in capsys.readouterr().out
+
+    assert c_parser_cli.main([str(header), "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)[str(header)]["functions"][0]["name"] == "add"
+
+    assert c_parser_cli.main([str(header), "--out", str(output)]) == 0
+    assert capsys.readouterr().out == ""
+    assert json.loads(output.read_text(encoding="utf-8"))[str(header)]["parser_status"] == "partial"
+
+
+def test_c_parser_module_entrypoint_and_compatibility_exports(tmp_path: Path):
+    import c_parser.__main__ as c_module_entrypoint
+    import c_parser.utils as c_utils
+    from c_parser.parser import parse_c_project
+    from c_parser.project import parse_c_project as compatibility_parse_c_project
+
+    header = tmp_path / "api.h"
+    header.write_text("int run(void);\n", encoding="utf-8")
+    result = subprocess.run(
+        [sys.executable, "-m", "c_parser", str(header), "--json"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert json.loads(result.stdout)[str(header)]["functions"][0]["name"] == "run"
+    assert c_module_entrypoint.main is c_parser_cli.main
+    assert compatibility_parse_c_project is parse_c_project
+    assert c_utils.__all__ == ()
+
+
+def test_x2py_c_compiler_source_loader_drives_semantics_and_readiness(tmp_path: Path, monkeypatch):
+    header = tmp_path / "api.h"
+    header.write_text("API(int) add(int a, int b);\n", encoding="utf-8")
+    calls: list[Path] = []
+
+    def preprocess(path, *, language, config):
+        calls.append(path)
+        assert language == "c"
+        assert config.compiler == "cc"
+        return (
+            "int add(int a, int b);\n",
+            SimpleNamespace(to_dict=lambda: {"mode": "compiler", "compiler": config.compiler}),
+        )
+
+    monkeypatch.setattr(x2py_cli, "run_compiler_preprocessor_with_recipe", preprocess)
+    config = PreprocessingConfig(mode="compiler", compiler="cc")
+
+    semantics = x2py_cli._semantic_report([str(header)], config, language="c")
+    readiness = x2py_cli._wrap_readiness_report([str(header)], config, language="c")
+
+    assert semantics[str(header)]["semantic_modules"][0]["functions"][0]["name"] == "add"
+    assert readiness[str(header)]["wrap_readiness"]["wrappable"] is True
+    assert calls == [header, header]
+
+
+def test_cli_c_requires_a_stage_and_combines_pyi_with_readiness(tmp_path: Path):
+    header = tmp_path / "api.h"
+    header.write_text("int add(int a, int b);\n", encoding="utf-8")
+
+    no_stage = subprocess.run(
+        [sys.executable, "-m", "x2py", str(header), "--language", "c"],
+        capture_output=True,
+        text=True,
+    )
+    assert no_stage.returncode == 2
+    assert "--language c requires a stage flag" in no_stage.stderr
+
+    combined = subprocess.run(
+        [sys.executable, "-m", "x2py", str(header), "--language", "c", "--pyi", "--wrap-readiness"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "def add(" in combined.stdout
+    assert "Wrappable: yes" in combined.stdout

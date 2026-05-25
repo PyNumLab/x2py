@@ -1,0 +1,20 @@
+def norm2(
+    n: Int32,
+    x: Const(Float64[1])
+) -> Float64: ...
+
+def scale(
+    n: Int32,
+    alpha: Float64,
+    x: Float64[1]
+) -> None: ...
+
+def dot(
+    n: Int32,
+    x: Ptr(Const(Float64)),
+    y: Ptr(Const(Float64))
+) -> Float64: ...
+
+def fill_identity3(
+    a: Float64[3, 3]
+) -> None: ...

@@ -890,3 +890,47 @@ end module m
     monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--parse"])
     assert x2py_cli.main() == 0
     assert "module m" in capsys.readouterr().out
+
+
+def test_x2py_readiness_formatting_and_compiler_without_requirements():
+    assert (
+        x2py_cli._format_semantic_blocker_item(
+            "callback_signature_incomplete",
+            {"owner": "handler", "needs": ["arguments", "return type"]},
+        )
+        == "handler needs Callable[[...], ...] metadata (arguments, return type)"
+    )
+    assert x2py_cli._format_semantic_blocker_item("c_unknown_type", {"owner": "api", "type": "widget"}) == "api: widget"
+    assert x2py_cli._format_semantic_blocker_item("c_parser_status", {"owner": "api"}) == "{'owner': 'api'}"
+
+    semantic_payload = {"source": {"semantic_modules": []}}
+    x2py_cli._attach_wrap_readiness(semantic_payload, {"other": {"wrap_readiness": {"wrappable": True}}})
+    assert "wrap_readiness" not in semantic_payload["source"]
+
+    parsed = x2py_cli.FortranParser().visit_file("module empty\nend module empty\n", filename="empty.f90")
+    config = x2py_cli.PreprocessingConfig(mode="compiler", compiler="gfortran")
+    assert x2py_cli._fortran_compile_time_values(parsed, config) is None
+
+
+@pytest.mark.parametrize("macro_flag", ["-D", "-U"])
+def test_x2py_main_rejects_invalid_macro_names(macro_flag: str, monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["x2py", str(TEST_FILE), "--parse", macro_flag, "=invalid"])
+    with pytest.raises(SystemExit):
+        x2py_cli.main()
+
+
+def test_x2py_main_formats_value_errors_or_reraises_for_debug(tmp_path: Path, monkeypatch, capsys):
+    source = tmp_path / "input.f90"
+    source.write_text("module input\nend module input\n", encoding="utf-8")
+
+    def fail_parse(_paths, _preprocessing):
+        raise ValueError("invalid generated interface")
+
+    monkeypatch.setattr(x2py_cli, "_parse_report", fail_parse)
+    monkeypatch.setattr(sys, "argv", ["x2py", str(source), "--parse"])
+    assert x2py_cli.main() == 1
+    assert "x2py: error: invalid generated interface" in capsys.readouterr().err
+
+    monkeypatch.setattr(sys, "argv", ["x2py", str(source), "--parse", "--debug-traceback"])
+    with pytest.raises(ValueError, match="invalid generated interface"):
+        x2py_cli.main()

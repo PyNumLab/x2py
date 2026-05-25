@@ -24,6 +24,17 @@ from semantics.fortran2ir import (
     fortran_module_to_semantic_module,
     resolve_semantic_compile_time_values,
 )
+from semantics.c2ir import (
+    CToIRConverter,
+    c_file_to_semantic_module,
+    c_file_to_semantic_modules,
+    c_function_to_semantic_function,
+    c_parameter_to_semantic_argument,
+    c_project_to_semantic_module,
+    c_project_to_semantic_modules,
+    c_struct_to_semantic_class,
+    c_type_to_semantic_type,
+)
 from semantics.pyi_parser import convert_pyi_to_ir, load_pyi_file, parse_pyi_text
 from semantics.readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
 
@@ -46,6 +57,7 @@ def __getattr__(name: str):
     raise AttributeError(f"module 'x2py' has no attribute {name!r}")
 
 __all__ = (
+    "CToIRConverter",
     "CFile",
     "CParseError",
     "CProject",
@@ -65,6 +77,14 @@ __all__ = (
     "assess_pyi_wrap_readiness",
     "assess_semantic_wrap_readiness",
     "build_fortran_type_probe_source",
+    "c_file_to_semantic_module",
+    "c_file_to_semantic_modules",
+    "c_function_to_semantic_function",
+    "c_parameter_to_semantic_argument",
+    "c_project_to_semantic_module",
+    "c_project_to_semantic_modules",
+    "c_struct_to_semantic_class",
+    "c_type_to_semantic_type",
     "collect_semantic_compile_time_requirements",
     "convert_pyi_to_ir",
     "evaluate_fortran_type_requirements",

@@ -320,17 +320,12 @@ class _PyiAstParser:
         if not isinstance(node, ast.Subscript):
             return SemanticType(name=name, dtype=name)
 
-        if self._is_array_subscript(node):
-            return self.array_type(node)
-
-        constraints = [self.constraint(item) for item in self.subscript_items(node)]
-        return SemanticType(
-            name=name,
-            rank=0,
-            dtype=name,
-            shape=[],
-            constraints=constraints,
-        )
+        if not self._is_array_subscript(node):
+            raise ValueError(
+                "Non-dimensional type subscriptions are not supported; "
+                "use Final[...] for constants and Annotated[...] for constraints or array metadata"
+            )
+        return self.array_type(node)
 
     def array_type(self, node: ast.Subscript) -> SemanticType:
         if isinstance(node.value, ast.Subscript):
@@ -363,7 +358,8 @@ class _PyiAstParser:
 
     def apply_annotation_metadata(self, semantic_type: SemanticType, node: ast.expr) -> None:
         if isinstance(node, ast.Name):
-            self._apply_metadata_name(semantic_type, node.id)
+            if not self._apply_metadata_name(semantic_type, node.id):
+                self._append_constraint_metadata(semantic_type, node.id, [])
             return
         if isinstance(node, ast.Call):
             helper = self.required_name(node.func)
@@ -395,30 +391,45 @@ class _PyiAstParser:
                     for arg in node.args
                 ]
                 return
-        return
+            if node.keywords:
+                raise ValueError(f"Constraint metadata expects positional arguments only: {ast.unparse(node)!r}")
+            self._append_constraint_metadata(
+                semantic_type,
+                helper,
+                [ast.literal_eval(arg) for arg in node.args],
+            )
+            return
+        raise ValueError(f"Unsupported Annotated metadata: {ast.unparse(node)!r}")
 
-    def _apply_metadata_name(self, semantic_type: SemanticType, name: str) -> None:
+    def _apply_metadata_name(self, semantic_type: SemanticType, name: str) -> bool:
         if name in {"ORDER_C", "ORDER_F", "ORDER_ANY"}:
             array = self._require_array_storage(semantic_type)
             array.order = name
-            return
+            return True
         if name == "Allocatable":
             array = self._require_array_storage(semantic_type)
             array.allocatable = True
-            return
+            return True
         if name == "Pointer":
             array = self._require_array_storage(semantic_type)
             array.pointer = True
-            return
+            return True
         if name == "Contiguous":
             self._require_array_storage(semantic_type).contiguous = True
+            return True
+        return False
 
     @staticmethod
-    def _replace_constraint(semantic_type: SemanticType, name: str) -> None:
-        semantic_type.constraints = [
-            constraint for constraint in semantic_type.constraints if constraint.name != name
-        ]
-        semantic_type.constraints.append(SemanticConstraint(name))
+    def _append_constraint_metadata(
+        semantic_type: SemanticType,
+        name: str,
+        arguments: list[object],
+    ) -> None:
+        if name == "Constant":
+            raise ValueError("Constant metadata is not supported; use Final[...]")
+        if name == "Shape":
+            raise ValueError("Shape metadata is not supported; put dimensions inside T[...]")
+        semantic_type.constraints.append(SemanticConstraint(name=name, arguments=arguments))
 
     @staticmethod
     def _require_array_storage(semantic_type: SemanticType) -> SemanticArrayContract:
@@ -496,24 +507,32 @@ class _PyiAstParser:
             return False
         if any(isinstance(item, (ast.Slice, ast.Constant)) for item in items):
             return True
-        if any(isinstance(item, ast.Name) and item.id not in self._legacy_constraint_names() for item in items):
+        if any(isinstance(item, ast.Name) and item.id not in self._non_dimension_subscription_names() for item in items):
             return True
-        if any(isinstance(item, ast.Call) and self.required_name(item.func) not in self._legacy_constraint_names() for item in items):
+        if any(
+            isinstance(item, ast.Call)
+            and self.required_name(item.func) in self._non_dimension_subscription_names()
+            for item in items
+        ):
+            return False
+        if any(isinstance(item, ast.Call) for item in items):
             return True
         if any(isinstance(item, (ast.BinOp, ast.UnaryOp)) for item in items):
             return True
         return False
 
     @staticmethod
-    def _legacy_constraint_names() -> set[str]:
+    def _non_dimension_subscription_names() -> set[str]:
         return {
             "Allocatable",
             "Constant",
+            "Contiguous",
             "Optional",
             "ORDER_ANY",
             "ORDER_C",
             "ORDER_F",
             "Pointer",
+            "Shape",
         }
 
     def dimension_text(self, node: ast.expr) -> str:
@@ -523,8 +542,8 @@ class _PyiAstParser:
             return self.slice_text(node)
         if isinstance(node, ast.Constant):
             return str(node.value)
-        if isinstance(node, ast.Call) and self.required_name(node.func) == "Shape":
-            raise ValueError("Shape dimensions are not supported; use T[n, m] array subscriptions")
+        if isinstance(node, (ast.Attribute, ast.Subscript)):
+            raise ValueError(f"Unsupported array dimension expression: {ast.unparse(node)!r}")
         return ast.unparse(node)
 
     def slice_text(self, node: ast.Slice) -> str:
@@ -534,20 +553,6 @@ class _PyiAstParser:
         if step:
             return f"{lower}:{upper}:{step}"
         return f"{lower}:{upper}"
-
-    def constraint(self, node: ast.expr) -> SemanticConstraint:
-        if isinstance(node, ast.Name):
-            if node.id == "Shape":
-                raise ValueError("Shape constraints are not supported; use T[n, m] array subscriptions")
-            return SemanticConstraint(node.id)
-        if isinstance(node, ast.Call):
-            if self.required_name(node.func) == "Shape":
-                raise ValueError("Shape constraints are not supported; use T[n, m] array subscriptions")
-            return SemanticConstraint(
-                name=self.required_name(node.func),
-                arguments=[ast.literal_eval(arg) for arg in node.args],
-            )
-        raise ValueError(f"Unsupported semantic type constraint: {ast.unparse(node)!r}")
 
     def callable_type(self, node: ast.expr) -> SemanticType:
         if not isinstance(node, ast.Subscript):

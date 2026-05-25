@@ -185,56 +185,56 @@ Language scope is stated in each section or subsection heading:
 
 ### C Conversion
 
-- [ ] Create `semantics/c2ir.py`.
-- [ ] Implement `CToIRConverter`.
-- [ ] Mirror the visitor style of `FortranToIRConverter`.
-- [ ] Accept C standard-type probe reports as target context for converting
+- [x] Create `semantics/c2ir.py`.
+- [x] Implement `CToIRConverter`.
+- [x] Mirror the visitor style of `FortranToIRConverter`.
+- [x] Accept C standard-type probe reports as target context for converting
       standard-header aliases and opaque handles once `CToIRConverter` exists.
-- [ ] Add compatibility helpers such as `c_file_to_semantic_modules`.
-- [ ] Add `c_function_to_semantic_function`.
-- [ ] Add `c_struct_to_semantic_class` where appropriate.
-- [ ] Add `c_project_to_semantic_modules` if project context is needed.
-- [ ] Keep conversion separate from parser internals.
-- [ ] Map `void` return to `None`.
-- [ ] Map `_Bool` to `Bool`.
-- [ ] Map `char` to an explicit semantic type policy.
-- [ ] Map signed integer widths.
-- [ ] Map unsigned integer widths.
-- [ ] Map `float` to `Float32`.
-- [ ] Map `double` to `Float64`.
-- [ ] Map `long double` to a documented type or unsupported diagnostic.
-- [ ] Map pointers to constraints/metadata.
-- [ ] Map C arrays to the shared array/storage contract with default `ORDER_C`
+- [x] Add compatibility helpers such as `c_file_to_semantic_modules`.
+- [x] Add `c_function_to_semantic_function`.
+- [x] Add `c_struct_to_semantic_class` where appropriate.
+- [x] Add `c_project_to_semantic_modules` if project context is needed.
+- [x] Keep conversion separate from parser internals.
+- [x] Map `void` return to `None`.
+- [x] Map `_Bool` to `Bool`.
+- [x] Map `char` to an explicit semantic type policy.
+- [x] Map signed integer widths.
+- [x] Map unsigned integer widths.
+- [x] Map `float` to `Float32`.
+- [x] Map `double` to `Float64`.
+- [x] Map `long double` to a documented type or unsupported diagnostic.
+- [x] Map pointers to constraints/metadata.
+- [x] Map C arrays to the shared array/storage contract with default `ORDER_C`
       when shape and storage facts are known.
-- [ ] Map `const` to read-only/ownership metadata.
-- [ ] Map `restrict` to aliasing metadata.
-- [ ] Map structs to semantic classes or named semantic types.
-- [ ] Map unions conservatively.
-- [ ] Map enums/constants.
-- [ ] Preserve unresolved semantic types as errors, not `Unknown` output.
-- [ ] Convert C functions to `SemanticFunction`.
-- [ ] Preserve native function name.
-- [ ] Preserve parameter order.
-- [ ] Mark pointer mutability.
+- [x] Map `const` to read-only/ownership metadata.
+- [x] Map `restrict` to aliasing metadata.
+- [x] Map structs to semantic classes or named semantic types.
+- [x] Map unions conservatively.
+- [x] Map enums/constants.
+- [x] Preserve unresolved semantic types as errors, not `Unknown` output.
+- [x] Convert C functions to `SemanticFunction`.
+- [x] Preserve native function name.
+- [x] Preserve parameter order.
+- [x] Mark pointer mutability.
 - [ ] Represent array pointer plus size patterns only when known.
 - [ ] Add projection metadata only where native and Python signatures diverge.
-- [ ] Treat out parameters conservatively until ownership/intent policy exists.
-- [ ] Reject or defer variadic functions.
-- [ ] Preserve callback/function-pointer facts from C parser models even if
+- [x] Treat out parameters conservatively until ownership/intent policy exists.
+- [x] Reject or defer variadic functions.
+- [x] Preserve callback/function-pointer facts from C parser models even if
       semantic conversion defers wrapper generation.
-- [ ] Defer callback conversion unless `.pyi` policy supplies the required
+- [x] Defer callback conversion unless `.pyi` policy supplies the required
       callback facts.
-- [ ] Add semantic tests for scalar functions.
-- [ ] Add semantic tests for pointer input.
-- [ ] Add semantic tests for const pointer input.
+- [x] Add semantic tests for scalar functions.
+- [x] Add semantic tests for pointer input.
+- [x] Add semantic tests for const pointer input.
 - [ ] Add semantic tests for arrays with explicit size parameter.
-- [ ] Add semantic tests for structs and opaque handles.
+- [x] Add semantic tests for structs and opaque handles.
 - [ ] Ensure C semantic conversion works for the supported parser subset.
-- [ ] Ensure unsupported C semantic mappings fail explicitly.
-- [ ] Enable `--language c --semantics` only after tests pass.
+- [x] Ensure unsupported C semantic mappings fail explicitly.
+- [x] Enable `--language c --semantics` only after tests pass.
 - [ ] Add a semantic fixture workflow for C if stable enough.
-- [ ] Document C-to-semantic-IR mapping.
-- [ ] Standardize unsigned integer semantic type names.
+- [x] Document C-to-semantic-IR mapping.
+- [x] Standardize unsigned integer semantic type names.
 - [ ] Decide whether struct, union, and enum representation requires semantic
       model extensions.
 
@@ -336,8 +336,10 @@ Language scope is stated in each section or subsection heading:
       parser model -> semantic IR -> `.pyi` -> semantic IR.
 - [x] Add round-trip tests for edited Fortran `.pyi` files loaded directly into
       semantic IR.
-- [ ] Add round-trip tests for C parser output:
-      parser model -> semantic IR -> `.pyi` -> semantic IR.
+- [x] Add round-trip tests for C parser output:
+      parser model -> semantic IR -> `.pyi` -> semantic IR -> canonical `.pyi`;
+      C source/readiness provenance is intentionally not serialized in the
+      public stub contract.
 - [ ] Add mixed-language semantic fixture tests where C and Fortran stubs load
       through the same `.pyi` loader and readiness checker.
 - [x] Keep `.pyi` syntax language-neutral; Fortran and C should differ by
@@ -345,26 +347,26 @@ Language scope is stated in each section or subsection heading:
 
 ### C Stub Generation And Policy
 
-- [ ] Enable `--language c --pyi` only after semantic conversion is stable.
-- [ ] Generate stubs from C semantic modules.
-- [ ] Emit scalar functions.
+- [x] Enable `--language c --pyi` only after semantic conversion is stable.
+- [x] Generate stubs from C semantic modules.
+- [x] Emit scalar functions.
 - [ ] Emit pointer constraints when the semantic model supports them.
-- [ ] Emit arrays with `ORDER_C`.
-- [ ] Emit constants as `Final[...]`.
-- [ ] Emit opaque handles as classes or semantic type annotations.
+- [x] Emit arrays with `ORDER_C`.
+- [x] Emit constants as `Final[...]`.
+- [x] Emit opaque handles as classes or semantic type annotations.
 - [ ] Emit structs as classes only when field semantics are intended.
-- [ ] Avoid emitting `Unknown`.
+- [x] Avoid emitting `Unknown`.
 - [ ] Emit imports/includes only if represented in semantic IR.
-- [ ] Add tests for scalar function stubs.
-- [ ] Add tests for constant stubs.
-- [ ] Add tests for opaque handle stubs.
-- [ ] Add tests for array stubs.
-- [ ] Confirm the existing `.pyi` parser accepts generated C stubs.
-- [ ] Extend the `.pyi` parser only if semantic IR requires new constructs.
-- [ ] Add round-trip tests for C-generated stubs.
+- [x] Add tests for scalar function stubs.
+- [x] Add tests for constant stubs.
+- [x] Add tests for opaque handle stubs.
+- [x] Add tests for array stubs.
+- [x] Confirm the existing `.pyi` parser accepts generated C stubs.
+- [x] Extend the `.pyi` parser only if semantic IR requires new constructs.
+- [x] Add round-trip tests for C-generated stubs.
 - [ ] Add edited-stub tests for C APIs.
 - [ ] Add tests that unsupported C stubs fail clearly.
-- [ ] Add fixture tests under `tests/pyi/fixtures/c/` if C stubs are stable.
+- [x] Add fixture tests under `tests/pyi/fixtures/c/` if C stubs are stable.
 - [ ] Represent pointer/size hidden relationships where known.
 - [ ] Represent returned output buffers only with explicit projection metadata.
 - [ ] Represent ownership/lifetime metadata if supported by IR.
@@ -382,10 +384,10 @@ Language scope is stated in each section or subsection heading:
 - [ ] Defer callback projection until those policy fields are supplied by the
       user.
 - [ ] Defer arbitrary ABI details.
-- [ ] Ensure C `.pyi` output works for the supported semantic subset.
-- [ ] Ensure generated stubs parse back into semantic IR.
-- [ ] Keep C `.pyi` tests separate from Fortran `.pyi` tests.
-- [ ] Document generated C stub shape and limitations.
+- [x] Ensure C `.pyi` output works for the supported semantic subset.
+- [x] Ensure generated stubs parse back into semantic IR.
+- [x] Keep C `.pyi` tests separate from Fortran `.pyi` tests.
+- [x] Document generated C stub shape and limitations.
 - [ ] Decide whether existing `.pyi` syntax is expressive enough for ownership
       and callback policy.
 - [ ] Decide whether opaque handles need new conventions.
@@ -421,8 +423,8 @@ Language scope is stated in each section or subsection heading:
 - [ ] Add parse-only corpus tests.
 - [ ] Add selected parser JSON goldens for representative corpus files.
 - [ ] Keep corpus license provenance documented.
-- [ ] Run C corpus parse-only tests. The current corpus file is still a skipped
-      roadmap test until the corpus workflow is enabled.
+- [x] Run cJSON parse-only regression tests from `tests/data/c/json/`.
+      A separately pinned/provenanced corpus copy remains deferred.
 - [ ] Audit JSON schema stability.
 - [ ] Audit error diagnostic stability.
 - [ ] Require green CI for Fortran and C suites.

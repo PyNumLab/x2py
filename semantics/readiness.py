@@ -34,6 +34,7 @@ _BUILTIN_TYPES = frozenset(
         "Int64",
         "Matrix",
         "None",
+        "SizeT",
         "String",
         "UInt8",
         "UInt16",
@@ -138,6 +139,13 @@ class _SemanticReadinessChecker:
         }
 
     def _check_module(self, module: SemanticModule) -> None:
+        self._check_metadata_blockers(
+            getattr(module, "metadata", {}),
+            owner=module.name,
+            item=module.name,
+            unit=module.name,
+            unit_kind="module",
+        )
         module_constants = _constant_values(module.variables)
         module_constant_names = _constant_names(module.variables)
 
@@ -185,6 +193,13 @@ class _SemanticReadinessChecker:
         module_constants: dict[str, str],
         module_constant_names: set[str],
     ) -> None:
+        self._check_metadata_blockers(
+            getattr(cls, "metadata", {}),
+            owner=f"{module.name}.{cls.name}",
+            item=cls.name,
+            unit=f"{module.name}.{cls.name}",
+            unit_kind="class",
+        )
         class_symbols = {field.name for field in cls.fields}
         known_shape_symbols = set(module_constants) | class_symbols
         constant_names = module_constant_names | _constant_names(cls.fields)
@@ -224,6 +239,13 @@ class _SemanticReadinessChecker:
         unit: str,
         unit_kind: str,
     ) -> None:
+        self._check_metadata_blockers(
+            getattr(func, "metadata", {}),
+            owner=owner,
+            item=func.name,
+            unit=unit,
+            unit_kind=unit_kind,
+        )
         function_symbols = set(known_shape_symbols) | {arg.name for arg in func.arguments}
         for arg in func.arguments:
             self._check_argument(
@@ -257,6 +279,13 @@ class _SemanticReadinessChecker:
         unit: str,
         unit_kind: str,
     ) -> None:
+        self._check_metadata_blockers(
+            getattr(arg, "metadata", {}),
+            owner=owner,
+            item=arg.name,
+            unit=unit,
+            unit_kind=unit_kind,
+        )
         self._check_type(
             arg.semantic_type,
             owner=owner,
@@ -282,6 +311,14 @@ class _SemanticReadinessChecker:
     ) -> None:
         if semantic_type is None:
             return
+
+        self._check_metadata_blockers(
+            getattr(semantic_type, "metadata", {}),
+            owner=owner,
+            item=item,
+            unit=unit,
+            unit_kind=unit_kind,
+        )
 
         type_name = semantic_type.name
         if type_name in _CALLBACK_PLACEHOLDERS:
@@ -390,6 +427,47 @@ class _SemanticReadinessChecker:
                     {"owner": owner, "item": item, "symbol": symbol, "expression": expression},
                     unit=unit,
                     unit_kind=unit_kind,
+                )
+
+    def _check_metadata_blockers(
+        self,
+        metadata: dict,
+        *,
+        owner: str,
+        item: str,
+        unit: str,
+        unit_kind: str,
+    ) -> None:
+        blockers = metadata.get("readiness_blockers") if isinstance(metadata, dict) else None
+        if not isinstance(blockers, list):
+            return
+
+        for blocker in blockers:
+            if not isinstance(blocker, dict):
+                continue
+            code = str(blocker.get("code") or "semantic_readiness_blocker")
+            message = str(blocker.get("message") or "Semantic metadata marks this item as not wrappable.")
+            raw_items = blocker.get("items")
+            if raw_items is None:
+                raw_items = [blocker.get("item") or {}]
+            if not isinstance(raw_items, list):
+                raw_items = [raw_items]
+
+            blocker_unit = str(blocker.get("unit") or unit)
+            blocker_unit_kind = str(blocker.get("unit_kind") or unit_kind)
+            for raw_item in raw_items:
+                if isinstance(raw_item, dict):
+                    payload = dict(raw_item)
+                else:
+                    payload = {"detail": raw_item}
+                payload.setdefault("owner", owner)
+                payload.setdefault("item", item)
+                self._add_blocker(
+                    code,
+                    message,
+                    payload,
+                    unit=blocker_unit,
+                    unit_kind=blocker_unit_kind,
                 )
 
     def _add_callback_blocker(
