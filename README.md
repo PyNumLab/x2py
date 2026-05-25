@@ -188,6 +188,47 @@ By default the probes execute the generated binary on the host. For cross
 targets, provide a compatible runner/emulator or supply a target profile; host
 execution only describes the host target.
 
+### C parser examples
+
+Parse a C header in raw mode:
+
+```bash
+python -m x2py include/api.h --language c --parse
+```
+
+Print C parser JSON:
+
+```bash
+python -m x2py include/api.h --language c --parse --json
+```
+
+Parse a macro-shaped API through the configured compiler preprocessor:
+
+```bash
+python -m x2py include/api.h --language c --parse \
+  --preprocess compiler \
+  --compiler clang-18 \
+  -I include \
+  -D API_EXPORT=
+```
+
+Parse a C source using a compile database entry:
+
+```bash
+python -m x2py src/api.c --language c --parse \
+  --preprocess compiler \
+  --compile-commands build/compile_commands.json
+```
+
+Current C parser output is parse-only. These stages remain intentionally
+disabled until C semantic conversion exists:
+
+```bash
+python -m x2py include/api.h --language c --semantics
+python -m x2py include/api.h --language c --pyi
+python -m x2py include/api.h --language c --wrap-readiness
+```
+
 ### Example 1: human-readable output
 
 Fortran input (`tests/data/fortran/general/basic_subroutine.f90`):
@@ -564,6 +605,24 @@ python -m x2py solver.pyi --wrap-readiness
 The edited `.pyi` is the source of truth for readiness. It can declare derived
 types with `class` stubs, literal compile-time constants with
 `Final[...] = value`, and callback signatures with `Callable[[...], ...]`.
+
+### Example 3: parse C from Python
+
+```python
+from c_parser import parse_c_file, parse_c_project
+
+header = parse_c_file("include/api.h")
+print("functions:", [fn.name for fn in header.functions])
+print("typedefs:", [typedef.name for typedef in header.typedefs])
+
+project = parse_c_project(["src/api.c", "include/api.h"], include_dirs=["include"])
+print("include graph:", project.include_graph)
+print("header/source pairs:", project.header_source_pairs)
+```
+
+The C Python API is intentionally imported from `c_parser` while the C frontend
+stabilizes. C semantic conversion will be added through the semantic layer in a
+future phase.
 
 ## Running tests
 
