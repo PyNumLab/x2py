@@ -237,8 +237,6 @@ that still needs a decision, implementation, tests, or release validation.
       parser changes.
 - [ ] Keep fixture/golden workflows stable.
 - [ ] Make corpus tests catch regressions.
-- [ ] Confirm the parse-only C frontend remains mature enough for the planned
-      merge to project `main`.
 
 ## Guardrails For All Remaining Work
 

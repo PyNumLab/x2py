@@ -603,7 +603,7 @@ pinned/provenanced corpus target. Golden comparison tests rewrite their baseline
 `C_PARSER_UPDATE_GOLDENS=1` is set. Future implementation branches should
 activate only the tests for the capability they implement.
 
-Recent local merge-readiness checks for the parse-only frontend:
+Useful local checks for the parse-only frontend:
 
 ```bash
 pytest -q tests/parser/c tests/parser/test_c_standard_type_probe.py tests/parser/test_preprocessing_cli.py tests/parser/test_cli.py tests/parser/test_fortran_type_probe.py tests/semantics tests/pyi
@@ -733,7 +733,6 @@ Current documents:
 - `c_parser_architecture.md`
 - `c_parser_cli_workflow.md`
 - `c_parser_implementation_checklist.md`
-- `c_parser_main_merge_guard.md`
 
 Documentation update rule: every C parser implementation change must update
 all affected files under `docs/c_parser/` in the same change. This includes

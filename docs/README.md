@@ -32,8 +32,6 @@ examples. Contribution and pull-request requirements remain in
   surface and output contracts.
 - [C parser remaining work checklist](c_parser/c_parser_implementation_checklist.md):
   pending implementation tasks.
-- [C parser main merge guard](c_parser/c_parser_main_merge_guard.md): branch
-  and merge policy for C parser work.
 
 ## Fixture Notes
 

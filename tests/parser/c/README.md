@@ -3,8 +3,8 @@
 This directory contains active tests for the implemented partial C parser and
 narrowly scoped skipped tests for genuinely deferred input/corpus work.
 
-Unskip tests one capability at a time on a short-lived `c-parser/*` branch, then
-merge only into `c-parser/main`.
+Unskip tests one capability at a time and keep the active/skipped split
+intentional.
 
 Guidelines:
 
