@@ -1875,7 +1875,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 2
+          "n_items": 8
         },
         {
           "code": "unresolved_semantic_types",
@@ -1961,14 +1961,22 @@
       "blockers": []
     },
     "general/modern_pyi_example.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 6,
       "n_classes": 2,
       "n_variables": 1,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 2
+        }
+      ]
     },
     "general/module_vars_use.f90": {
       "wrappable": true,
@@ -1981,14 +1989,22 @@
       "blockers": []
     },
     "general/procedures_and_functions.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 2,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 4
+        }
+      ]
     },
     "general/scope_name_reuse_combinations.f90": {
       "wrappable": true,
@@ -27116,7 +27132,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 16
+          "n_items": 84
         }
       ]
     },
@@ -27272,7 +27288,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 2
+          "n_items": 4
         }
       ]
     },
@@ -27300,7 +27316,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 12
+          "n_items": 24
         }
       ]
     },
@@ -27318,7 +27334,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 68
         }
       ]
     },
@@ -27333,14 +27349,22 @@
       "blockers": []
     },
     "scifortran/SF_INTEGRATE.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 2,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 2
+        }
+      ]
     },
     "scifortran/SF_INTERPOLATE.f90": {
       "wrappable": true,
@@ -27483,14 +27507,22 @@
       ]
     },
     "scifortran/SF_SPARSE_ARRAY_COO.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 8,
       "n_classes": 2,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
+        }
+      ]
     },
     "scifortran/SF_SPARSE_ARRAY_CSC.f90": {
       "wrappable": true,
@@ -27526,7 +27558,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 2
+          "n_items": 6
         }
       ]
     },
@@ -27590,7 +27622,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 6
+          "n_items": 22
         }
       ]
     },
@@ -27618,7 +27650,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 8
         }
       ]
     },
@@ -27642,7 +27674,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 2
+          "n_items": 8
         }
       ]
     },
@@ -27666,7 +27698,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 2
+          "n_items": 8
         }
       ]
     },
@@ -27678,13 +27710,19 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
           "n_items": 8
+        },
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 6
         }
       ]
     },
@@ -27696,13 +27734,19 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
           "n_items": 1
+        },
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 4
         }
       ]
     },
@@ -27720,7 +27764,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 12
         }
       ]
     },
@@ -28244,7 +28288,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 24
         }
       ]
     },
@@ -28268,7 +28312,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 32
+          "n_items": 56
         }
       ]
     },
@@ -28292,7 +28336,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 32
+          "n_items": 56
         }
       ]
     },
@@ -28314,13 +28358,19 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
           "n_items": 1
+        },
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 6
         }
       ]
     },
@@ -28400,7 +28450,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 2
+          "n_items": 4
         }
       ]
     },
@@ -28430,19 +28480,19 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-        "Some shape expressions refer to symbols not supplied by the semantic interface."
+        "Some shape expressions refer to symbols not supplied by the semantic interface.",
+        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
       ],
       "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
+        },
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
           "n_items": 3
-        },
-        {
-          "code": "unresolved_shape_symbols",
-          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 2
         }
       ]
     },
@@ -28454,19 +28504,19 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-        "Some shape expressions refer to symbols not supplied by the semantic interface."
+        "Some shape expressions refer to symbols not supplied by the semantic interface.",
+        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
       ],
       "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
+        },
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
           "n_items": 3
-        },
-        {
-          "code": "unresolved_shape_symbols",
-          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 2
         }
       ]
     },
@@ -28478,9 +28528,15 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface.",
         "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
       ],
       "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 4
+        },
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
@@ -28514,25 +28570,39 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
           "n_items": 6
+        },
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
         }
       ]
     },
     "scifortran/functions_bethe.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 5,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 2
+        }
+      ]
     },
     "scifortran/functions_wofz.f90": {
       "wrappable": true,
@@ -28772,12 +28842,18 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "n_items": 8
+        },
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
           "n_items": 8
         }
       ]
@@ -28808,25 +28884,39 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
           "n_items": 1
+        },
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 2
         }
       ]
     },
     "scifortran/integrate_quad_sample.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 1,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 4
+        }
+      ]
     },
     "scifortran/integrate_sample_1d.f90": {
       "wrappable": false,
@@ -28842,19 +28932,27 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 32
         }
       ]
     },
     "scifortran/integrate_sample_2d.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 4,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 16
+        }
+      ]
     },
     "scifortran/interpolate_cubspl_routines.f90": {
       "wrappable": true,
@@ -28886,7 +28984,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 12
         }
       ]
     },
@@ -28910,19 +29008,27 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 12
         }
       ]
     },
     "scifortran/interpolate_nr.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 3,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 14
+        }
+      ]
     },
     "scifortran/interpolate_pack.f90": {
       "wrappable": true,
@@ -28966,7 +29072,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 36
         }
       ]
     },
@@ -28984,7 +29090,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 116
+          "n_items": 176
         }
       ]
     },
@@ -29012,7 +29118,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 80
+          "n_items": 92
         }
       ]
     },
@@ -29030,19 +29136,27 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 18
+          "n_items": 54
         }
       ]
     },
     "scifortran/ioplot_save_array.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 16,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 112
+        }
+      ]
     },
     "scifortran/ioplot_splot.f90": {
       "wrappable": false,
@@ -29058,7 +29172,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 28
+          "n_items": 140
         }
       ]
     },
@@ -29076,7 +29190,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 36
         }
       ]
     },
@@ -29094,7 +29208,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 116
+          "n_items": 176
         }
       ]
     },
@@ -29122,7 +29236,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 80
+          "n_items": 92
         }
       ]
     },
@@ -29140,19 +29254,27 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 12
+          "n_items": 48
         }
       ]
     },
     "scifortran/ioread_read_array.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 16,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 112
+        }
+      ]
     },
     "scifortran/ioread_sread.f90": {
       "wrappable": false,
@@ -29168,7 +29290,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 28
+          "n_items": 140
         }
       ]
     },
@@ -29180,13 +29302,19 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some semantic type references are not declared by the .pyi interface or its imports."
+        "Some semantic type references are not declared by the .pyi interface or its imports.",
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
           "code": "unresolved_semantic_types",
           "message": "Some semantic type references are not declared by the .pyi interface or its imports.",
           "n_items": 20
+        },
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 4
         }
       ]
     },
@@ -29210,7 +29338,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 12
         }
       ]
     },
@@ -29234,7 +29362,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 12
         }
       ]
     },
@@ -29258,7 +29386,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 12
         }
       ]
     },
@@ -29270,13 +29398,19 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
           "n_items": 6
+        },
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
         }
       ]
     },
@@ -29294,19 +29428,27 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 32
         }
       ]
     },
     "scifortran/linalg_blacs_aux.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 4,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 32
+        }
+      ]
     },
     "scifortran/linalg_blas.f90": {
       "wrappable": false,
@@ -29322,7 +29464,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 48
         }
       ]
     },
@@ -29340,29 +29482,45 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 16
+          "n_items": 20
         }
       ]
     },
     "scifortran/linalg_check_tridiag.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 4,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
+        }
+      ]
     },
     "scifortran/linalg_eig.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 2,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 20
+        }
+      ]
     },
     "scifortran/linalg_eigh.f90": {
       "wrappable": false,
@@ -29378,7 +29536,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 10
+          "n_items": 52
         }
       ]
     },
@@ -29396,7 +29554,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 18
+          "n_items": 26
         }
       ]
     },
@@ -29414,7 +29572,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 12
         }
       ]
     },
@@ -29432,7 +29590,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 12
         }
       ]
     },
@@ -29450,7 +29608,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 28
+          "n_items": 76
         }
       ]
     },
@@ -29468,79 +29626,135 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 12
+          "n_items": 20
         }
       ]
     },
     "scifortran/linalg_inv.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 2,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
+        }
+      ]
     },
     "scifortran/linalg_inv_gj.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 8,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 24
+        }
+      ]
     },
     "scifortran/linalg_inv_her.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 1,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 4
+        }
+      ]
     },
     "scifortran/linalg_inv_sym.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 2,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
+        }
+      ]
     },
     "scifortran/linalg_inv_triang.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 2,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
+        }
+      ]
     },
     "scifortran/linalg_inv_tridiag.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 8,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
+        }
+      ]
     },
     "scifortran/linalg_lstsq.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 2,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 12
+        }
+      ]
     },
     "scifortran/linalg_p_blas.f90": {
       "wrappable": false,
@@ -29556,7 +29770,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 12
+          "n_items": 48
         }
       ]
     },
@@ -29574,49 +29788,81 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 12
         }
       ]
     },
     "scifortran/linalg_p_inv.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 2,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
+        }
+      ]
     },
     "scifortran/linalg_solve.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 4,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 28
+        }
+      ]
     },
     "scifortran/linalg_svd.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 2,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 28
+        }
+      ]
     },
     "scifortran/linalg_svdvals.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 2,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
+        }
+      ]
     },
     "scifortran/linear_mix.f90": {
       "wrappable": false,
@@ -29632,7 +29878,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 112
+          "n_items": 224
         }
       ]
     },
@@ -29795,14 +30041,22 @@
       "blockers": []
     },
     "scifortran/mpi_bcast.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 32,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 224
+        }
+      ]
     },
     "scifortran/mpi_lanczos_c.f90": {
       "wrappable": false,
@@ -29824,7 +30078,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 12
         }
       ]
     },
@@ -29848,7 +30102,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 12
         }
       ]
     },
@@ -30022,7 +30276,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 10
+          "n_items": 82
         }
       ]
     },
@@ -30034,13 +30288,19 @@
       "n_classes": 0,
       "n_variables": 5,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
           "n_items": 6
+        },
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
         }
       ]
     },
@@ -30064,7 +30324,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 2
+          "n_items": 8
         }
       ]
     },
@@ -30088,7 +30348,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 2
+          "n_items": 8
         }
       ]
     },
@@ -30393,14 +30653,22 @@
       "blockers": []
     },
     "scifortran/random_mt.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 35,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 112
+        }
+      ]
     },
     "scifortran/random_routines.f90": {
       "wrappable": false,

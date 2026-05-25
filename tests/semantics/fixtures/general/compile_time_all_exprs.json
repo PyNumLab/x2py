@@ -14,33 +14,105 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "1:p_add"
+                  "p_add"
                 ],
-                "constraints": [
-                  {
-                    "name": "Shape",
-                    "arguments": [
-                      "1:p_add"
-                    ]
-                  },
-                  {
-                    "name": "ORDER_F",
-                    "arguments": []
-                  }
-                ],
+                "constraints": [],
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
                   "mutable": true,
                   "aliasing": true
                 },
-                "metadata": {}
+                "metadata": {},
+                "storage": {
+                  "kind": "array",
+                  "read_only": false,
+                  "mutable": true,
+                  "pointer_depth": 0,
+                  "ownership": "borrowed",
+                  "array": {
+                    "rank": 1,
+                    "shape": [
+                      "p_add"
+                    ],
+                    "lower_bounds": [],
+                    "upper_bounds": [
+                      "p_add"
+                    ],
+                    "source_shape": [
+                      "1:p_add"
+                    ],
+                    "category": "explicit_shape",
+                    "order": null,
+                    "axes": [
+                      "dense"
+                    ],
+                    "contiguous": true,
+                    "allocatable": false,
+                    "pointer": false,
+                    "metadata": {}
+                  },
+                  "calling_convention": null,
+                  "metadata": {}
+                },
+                "origin": {
+                  "source_language": "fortran",
+                  "native_name": "x1",
+                  "native_scope": null,
+                  "source_kind": "variable",
+                  "source_type": "integer",
+                  "source_location": {},
+                  "metadata": {
+                    "rank": 1,
+                    "shape": [
+                      "1:p_add"
+                    ],
+                    "lower_bounds": [
+                      "1"
+                    ],
+                    "upper_bounds": [
+                      "p_add"
+                    ],
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false,
+                    "allocatable": false,
+                    "pointer": false,
+                    "contiguous": false
+                  }
+                }
               },
               "intent": "inout",
               "optional": false,
               "visibility": "public",
               "default_value": null,
-              "metadata": {}
+              "metadata": {},
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "x1",
+                "native_scope": "all_exprs",
+                "source_kind": "argument",
+                "source_type": "integer",
+                "source_location": {},
+                "metadata": {
+                  "rank": 1,
+                  "shape": [
+                    "1:p_add"
+                  ],
+                  "lower_bounds": [
+                    "1"
+                  ],
+                  "upper_bounds": [
+                    "p_add"
+                  ],
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false,
+                  "allocatable": false,
+                  "pointer": false,
+                  "contiguous": false
+                }
+              }
             },
             {
               "name": "x2",
@@ -49,33 +121,105 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "1:p_sub"
+                  "p_sub"
                 ],
-                "constraints": [
-                  {
-                    "name": "Shape",
-                    "arguments": [
-                      "1:p_sub"
-                    ]
-                  },
-                  {
-                    "name": "ORDER_F",
-                    "arguments": []
-                  }
-                ],
+                "constraints": [],
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
                   "mutable": true,
                   "aliasing": true
                 },
-                "metadata": {}
+                "metadata": {},
+                "storage": {
+                  "kind": "array",
+                  "read_only": false,
+                  "mutable": true,
+                  "pointer_depth": 0,
+                  "ownership": "borrowed",
+                  "array": {
+                    "rank": 1,
+                    "shape": [
+                      "p_sub"
+                    ],
+                    "lower_bounds": [],
+                    "upper_bounds": [
+                      "p_sub"
+                    ],
+                    "source_shape": [
+                      "1:p_sub"
+                    ],
+                    "category": "explicit_shape",
+                    "order": null,
+                    "axes": [
+                      "dense"
+                    ],
+                    "contiguous": true,
+                    "allocatable": false,
+                    "pointer": false,
+                    "metadata": {}
+                  },
+                  "calling_convention": null,
+                  "metadata": {}
+                },
+                "origin": {
+                  "source_language": "fortran",
+                  "native_name": "x2",
+                  "native_scope": null,
+                  "source_kind": "variable",
+                  "source_type": "integer",
+                  "source_location": {},
+                  "metadata": {
+                    "rank": 1,
+                    "shape": [
+                      "1:p_sub"
+                    ],
+                    "lower_bounds": [
+                      "1"
+                    ],
+                    "upper_bounds": [
+                      "p_sub"
+                    ],
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false,
+                    "allocatable": false,
+                    "pointer": false,
+                    "contiguous": false
+                  }
+                }
               },
               "intent": "inout",
               "optional": false,
               "visibility": "public",
               "default_value": null,
-              "metadata": {}
+              "metadata": {},
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "x2",
+                "native_scope": "all_exprs",
+                "source_kind": "argument",
+                "source_type": "integer",
+                "source_location": {},
+                "metadata": {
+                  "rank": 1,
+                  "shape": [
+                    "1:p_sub"
+                  ],
+                  "lower_bounds": [
+                    "1"
+                  ],
+                  "upper_bounds": [
+                    "p_sub"
+                  ],
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false,
+                  "allocatable": false,
+                  "pointer": false,
+                  "contiguous": false
+                }
+              }
             },
             {
               "name": "x3",
@@ -84,33 +228,105 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "1:p_mul"
+                  "p_mul"
                 ],
-                "constraints": [
-                  {
-                    "name": "Shape",
-                    "arguments": [
-                      "1:p_mul"
-                    ]
-                  },
-                  {
-                    "name": "ORDER_F",
-                    "arguments": []
-                  }
-                ],
+                "constraints": [],
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
                   "mutable": true,
                   "aliasing": true
                 },
-                "metadata": {}
+                "metadata": {},
+                "storage": {
+                  "kind": "array",
+                  "read_only": false,
+                  "mutable": true,
+                  "pointer_depth": 0,
+                  "ownership": "borrowed",
+                  "array": {
+                    "rank": 1,
+                    "shape": [
+                      "p_mul"
+                    ],
+                    "lower_bounds": [],
+                    "upper_bounds": [
+                      "p_mul"
+                    ],
+                    "source_shape": [
+                      "1:p_mul"
+                    ],
+                    "category": "explicit_shape",
+                    "order": null,
+                    "axes": [
+                      "dense"
+                    ],
+                    "contiguous": true,
+                    "allocatable": false,
+                    "pointer": false,
+                    "metadata": {}
+                  },
+                  "calling_convention": null,
+                  "metadata": {}
+                },
+                "origin": {
+                  "source_language": "fortran",
+                  "native_name": "x3",
+                  "native_scope": null,
+                  "source_kind": "variable",
+                  "source_type": "integer",
+                  "source_location": {},
+                  "metadata": {
+                    "rank": 1,
+                    "shape": [
+                      "1:p_mul"
+                    ],
+                    "lower_bounds": [
+                      "1"
+                    ],
+                    "upper_bounds": [
+                      "p_mul"
+                    ],
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false,
+                    "allocatable": false,
+                    "pointer": false,
+                    "contiguous": false
+                  }
+                }
               },
               "intent": "inout",
               "optional": false,
               "visibility": "public",
               "default_value": null,
-              "metadata": {}
+              "metadata": {},
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "x3",
+                "native_scope": "all_exprs",
+                "source_kind": "argument",
+                "source_type": "integer",
+                "source_location": {},
+                "metadata": {
+                  "rank": 1,
+                  "shape": [
+                    "1:p_mul"
+                  ],
+                  "lower_bounds": [
+                    "1"
+                  ],
+                  "upper_bounds": [
+                    "p_mul"
+                  ],
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false,
+                  "allocatable": false,
+                  "pointer": false,
+                  "contiguous": false
+                }
+              }
             },
             {
               "name": "x4",
@@ -119,33 +335,105 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "1:p_div"
+                  "p_div"
                 ],
-                "constraints": [
-                  {
-                    "name": "Shape",
-                    "arguments": [
-                      "1:p_div"
-                    ]
-                  },
-                  {
-                    "name": "ORDER_F",
-                    "arguments": []
-                  }
-                ],
+                "constraints": [],
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
                   "mutable": true,
                   "aliasing": true
                 },
-                "metadata": {}
+                "metadata": {},
+                "storage": {
+                  "kind": "array",
+                  "read_only": false,
+                  "mutable": true,
+                  "pointer_depth": 0,
+                  "ownership": "borrowed",
+                  "array": {
+                    "rank": 1,
+                    "shape": [
+                      "p_div"
+                    ],
+                    "lower_bounds": [],
+                    "upper_bounds": [
+                      "p_div"
+                    ],
+                    "source_shape": [
+                      "1:p_div"
+                    ],
+                    "category": "explicit_shape",
+                    "order": null,
+                    "axes": [
+                      "dense"
+                    ],
+                    "contiguous": true,
+                    "allocatable": false,
+                    "pointer": false,
+                    "metadata": {}
+                  },
+                  "calling_convention": null,
+                  "metadata": {}
+                },
+                "origin": {
+                  "source_language": "fortran",
+                  "native_name": "x4",
+                  "native_scope": null,
+                  "source_kind": "variable",
+                  "source_type": "integer",
+                  "source_location": {},
+                  "metadata": {
+                    "rank": 1,
+                    "shape": [
+                      "1:p_div"
+                    ],
+                    "lower_bounds": [
+                      "1"
+                    ],
+                    "upper_bounds": [
+                      "p_div"
+                    ],
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false,
+                    "allocatable": false,
+                    "pointer": false,
+                    "contiguous": false
+                  }
+                }
               },
               "intent": "inout",
               "optional": false,
               "visibility": "public",
               "default_value": null,
-              "metadata": {}
+              "metadata": {},
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "x4",
+                "native_scope": "all_exprs",
+                "source_kind": "argument",
+                "source_type": "integer",
+                "source_location": {},
+                "metadata": {
+                  "rank": 1,
+                  "shape": [
+                    "1:p_div"
+                  ],
+                  "lower_bounds": [
+                    "1"
+                  ],
+                  "upper_bounds": [
+                    "p_div"
+                  ],
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false,
+                  "allocatable": false,
+                  "pointer": false,
+                  "contiguous": false
+                }
+              }
             },
             {
               "name": "x5",
@@ -154,33 +442,105 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "1:p_pow"
+                  "p_pow"
                 ],
-                "constraints": [
-                  {
-                    "name": "Shape",
-                    "arguments": [
-                      "1:p_pow"
-                    ]
-                  },
-                  {
-                    "name": "ORDER_F",
-                    "arguments": []
-                  }
-                ],
+                "constraints": [],
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
                   "mutable": true,
                   "aliasing": true
                 },
-                "metadata": {}
+                "metadata": {},
+                "storage": {
+                  "kind": "array",
+                  "read_only": false,
+                  "mutable": true,
+                  "pointer_depth": 0,
+                  "ownership": "borrowed",
+                  "array": {
+                    "rank": 1,
+                    "shape": [
+                      "p_pow"
+                    ],
+                    "lower_bounds": [],
+                    "upper_bounds": [
+                      "p_pow"
+                    ],
+                    "source_shape": [
+                      "1:p_pow"
+                    ],
+                    "category": "explicit_shape",
+                    "order": null,
+                    "axes": [
+                      "dense"
+                    ],
+                    "contiguous": true,
+                    "allocatable": false,
+                    "pointer": false,
+                    "metadata": {}
+                  },
+                  "calling_convention": null,
+                  "metadata": {}
+                },
+                "origin": {
+                  "source_language": "fortran",
+                  "native_name": "x5",
+                  "native_scope": null,
+                  "source_kind": "variable",
+                  "source_type": "integer",
+                  "source_location": {},
+                  "metadata": {
+                    "rank": 1,
+                    "shape": [
+                      "1:p_pow"
+                    ],
+                    "lower_bounds": [
+                      "1"
+                    ],
+                    "upper_bounds": [
+                      "p_pow"
+                    ],
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false,
+                    "allocatable": false,
+                    "pointer": false,
+                    "contiguous": false
+                  }
+                }
               },
               "intent": "inout",
               "optional": false,
               "visibility": "public",
               "default_value": null,
-              "metadata": {}
+              "metadata": {},
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "x5",
+                "native_scope": "all_exprs",
+                "source_kind": "argument",
+                "source_type": "integer",
+                "source_location": {},
+                "metadata": {
+                  "rank": 1,
+                  "shape": [
+                    "1:p_pow"
+                  ],
+                  "lower_bounds": [
+                    "1"
+                  ],
+                  "upper_bounds": [
+                    "p_pow"
+                  ],
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false,
+                  "allocatable": false,
+                  "pointer": false,
+                  "contiguous": false
+                }
+              }
             },
             {
               "name": "x6",
@@ -189,33 +549,107 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "0:p_mix"
+                  "p_mix - 0 + 1"
                 ],
-                "constraints": [
-                  {
-                    "name": "Shape",
-                    "arguments": [
-                      "0:p_mix"
-                    ]
-                  },
-                  {
-                    "name": "ORDER_F",
-                    "arguments": []
-                  }
-                ],
+                "constraints": [],
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
                   "mutable": true,
                   "aliasing": true
                 },
-                "metadata": {}
+                "metadata": {},
+                "storage": {
+                  "kind": "array",
+                  "read_only": false,
+                  "mutable": true,
+                  "pointer_depth": 0,
+                  "ownership": "borrowed",
+                  "array": {
+                    "rank": 1,
+                    "shape": [
+                      "p_mix - 0 + 1"
+                    ],
+                    "lower_bounds": [
+                      "0"
+                    ],
+                    "upper_bounds": [
+                      "p_mix"
+                    ],
+                    "source_shape": [
+                      "0:p_mix"
+                    ],
+                    "category": "explicit_shape",
+                    "order": null,
+                    "axes": [
+                      "dense"
+                    ],
+                    "contiguous": true,
+                    "allocatable": false,
+                    "pointer": false,
+                    "metadata": {}
+                  },
+                  "calling_convention": null,
+                  "metadata": {}
+                },
+                "origin": {
+                  "source_language": "fortran",
+                  "native_name": "x6",
+                  "native_scope": null,
+                  "source_kind": "variable",
+                  "source_type": "integer",
+                  "source_location": {},
+                  "metadata": {
+                    "rank": 1,
+                    "shape": [
+                      "0:p_mix"
+                    ],
+                    "lower_bounds": [
+                      "0"
+                    ],
+                    "upper_bounds": [
+                      "p_mix"
+                    ],
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false,
+                    "allocatable": false,
+                    "pointer": false,
+                    "contiguous": false
+                  }
+                }
               },
               "intent": "inout",
               "optional": false,
               "visibility": "public",
               "default_value": null,
-              "metadata": {}
+              "metadata": {},
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "x6",
+                "native_scope": "all_exprs",
+                "source_kind": "argument",
+                "source_type": "integer",
+                "source_location": {},
+                "metadata": {
+                  "rank": 1,
+                  "shape": [
+                    "0:p_mix"
+                  ],
+                  "lower_bounds": [
+                    "0"
+                  ],
+                  "upper_bounds": [
+                    "p_mix"
+                  ],
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false,
+                  "allocatable": false,
+                  "pointer": false,
+                  "contiguous": false
+                }
+              }
             },
             {
               "name": "x7",
@@ -224,33 +658,105 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "1:-(-a + b)"
+                  "-(-a + b)"
                 ],
-                "constraints": [
-                  {
-                    "name": "Shape",
-                    "arguments": [
-                      "1:-(-a + b)"
-                    ]
-                  },
-                  {
-                    "name": "ORDER_F",
-                    "arguments": []
-                  }
-                ],
+                "constraints": [],
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
                   "mutable": true,
                   "aliasing": true
                 },
-                "metadata": {}
+                "metadata": {},
+                "storage": {
+                  "kind": "array",
+                  "read_only": false,
+                  "mutable": true,
+                  "pointer_depth": 0,
+                  "ownership": "borrowed",
+                  "array": {
+                    "rank": 1,
+                    "shape": [
+                      "-(-a + b)"
+                    ],
+                    "lower_bounds": [],
+                    "upper_bounds": [
+                      "-(-a + b)"
+                    ],
+                    "source_shape": [
+                      "1:-(-a + b)"
+                    ],
+                    "category": "explicit_shape",
+                    "order": null,
+                    "axes": [
+                      "dense"
+                    ],
+                    "contiguous": true,
+                    "allocatable": false,
+                    "pointer": false,
+                    "metadata": {}
+                  },
+                  "calling_convention": null,
+                  "metadata": {}
+                },
+                "origin": {
+                  "source_language": "fortran",
+                  "native_name": "x7",
+                  "native_scope": null,
+                  "source_kind": "variable",
+                  "source_type": "integer",
+                  "source_location": {},
+                  "metadata": {
+                    "rank": 1,
+                    "shape": [
+                      "1:-(-a + b)"
+                    ],
+                    "lower_bounds": [
+                      "1"
+                    ],
+                    "upper_bounds": [
+                      "-(-a + b)"
+                    ],
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false,
+                    "allocatable": false,
+                    "pointer": false,
+                    "contiguous": false
+                  }
+                }
               },
               "intent": "inout",
               "optional": false,
               "visibility": "public",
               "default_value": null,
-              "metadata": {}
+              "metadata": {},
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "x7",
+                "native_scope": "all_exprs",
+                "source_kind": "argument",
+                "source_type": "integer",
+                "source_location": {},
+                "metadata": {
+                  "rank": 1,
+                  "shape": [
+                    "1:-(-a + b)"
+                  ],
+                  "lower_bounds": [
+                    "1"
+                  ],
+                  "upper_bounds": [
+                    "-(-a + b)"
+                  ],
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false,
+                  "allocatable": false,
+                  "pointer": false,
+                  "contiguous": false
+                }
+              }
             },
             {
               "name": "x8",
@@ -259,33 +765,105 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "1:(a+b)*(c+1)-1"
+                  "(a + b) * (c + 1) - 1"
                 ],
-                "constraints": [
-                  {
-                    "name": "Shape",
-                    "arguments": [
-                      "1:(a+b)*(c+1)-1"
-                    ]
-                  },
-                  {
-                    "name": "ORDER_F",
-                    "arguments": []
-                  }
-                ],
+                "constraints": [],
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
                   "mutable": true,
                   "aliasing": true
                 },
-                "metadata": {}
+                "metadata": {},
+                "storage": {
+                  "kind": "array",
+                  "read_only": false,
+                  "mutable": true,
+                  "pointer_depth": 0,
+                  "ownership": "borrowed",
+                  "array": {
+                    "rank": 1,
+                    "shape": [
+                      "(a + b) * (c + 1) - 1"
+                    ],
+                    "lower_bounds": [],
+                    "upper_bounds": [
+                      "(a+b)*(c+1)-1"
+                    ],
+                    "source_shape": [
+                      "1:(a+b)*(c+1)-1"
+                    ],
+                    "category": "explicit_shape",
+                    "order": null,
+                    "axes": [
+                      "dense"
+                    ],
+                    "contiguous": true,
+                    "allocatable": false,
+                    "pointer": false,
+                    "metadata": {}
+                  },
+                  "calling_convention": null,
+                  "metadata": {}
+                },
+                "origin": {
+                  "source_language": "fortran",
+                  "native_name": "x8",
+                  "native_scope": null,
+                  "source_kind": "variable",
+                  "source_type": "integer",
+                  "source_location": {},
+                  "metadata": {
+                    "rank": 1,
+                    "shape": [
+                      "1:(a+b)*(c+1)-1"
+                    ],
+                    "lower_bounds": [
+                      "1"
+                    ],
+                    "upper_bounds": [
+                      "(a+b)*(c+1)-1"
+                    ],
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false,
+                    "allocatable": false,
+                    "pointer": false,
+                    "contiguous": false
+                  }
+                }
               },
               "intent": "inout",
               "optional": false,
               "visibility": "public",
               "default_value": null,
-              "metadata": {}
+              "metadata": {},
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "x8",
+                "native_scope": "all_exprs",
+                "source_kind": "argument",
+                "source_type": "integer",
+                "source_location": {},
+                "metadata": {
+                  "rank": 1,
+                  "shape": [
+                    "1:(a+b)*(c+1)-1"
+                  ],
+                  "lower_bounds": [
+                    "1"
+                  ],
+                  "upper_bounds": [
+                    "(a+b)*(c+1)-1"
+                  ],
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false,
+                  "allocatable": false,
+                  "pointer": false,
+                  "contiguous": false
+                }
+              }
             },
             {
               "name": "x9",
@@ -294,33 +872,105 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "1:(a-b)*(a-c)"
+                  "(a - b) * (a - c)"
                 ],
-                "constraints": [
-                  {
-                    "name": "Shape",
-                    "arguments": [
-                      "1:(a-b)*(a-c)"
-                    ]
-                  },
-                  {
-                    "name": "ORDER_F",
-                    "arguments": []
-                  }
-                ],
+                "constraints": [],
                 "coercions": [],
                 "ownership": {
                   "ownership": "borrowed",
                   "mutable": true,
                   "aliasing": true
                 },
-                "metadata": {}
+                "metadata": {},
+                "storage": {
+                  "kind": "array",
+                  "read_only": false,
+                  "mutable": true,
+                  "pointer_depth": 0,
+                  "ownership": "borrowed",
+                  "array": {
+                    "rank": 1,
+                    "shape": [
+                      "(a - b) * (a - c)"
+                    ],
+                    "lower_bounds": [],
+                    "upper_bounds": [
+                      "(a-b)*(a-c)"
+                    ],
+                    "source_shape": [
+                      "1:(a-b)*(a-c)"
+                    ],
+                    "category": "explicit_shape",
+                    "order": null,
+                    "axes": [
+                      "dense"
+                    ],
+                    "contiguous": true,
+                    "allocatable": false,
+                    "pointer": false,
+                    "metadata": {}
+                  },
+                  "calling_convention": null,
+                  "metadata": {}
+                },
+                "origin": {
+                  "source_language": "fortran",
+                  "native_name": "x9",
+                  "native_scope": null,
+                  "source_kind": "variable",
+                  "source_type": "integer",
+                  "source_location": {},
+                  "metadata": {
+                    "rank": 1,
+                    "shape": [
+                      "1:(a-b)*(a-c)"
+                    ],
+                    "lower_bounds": [
+                      "1"
+                    ],
+                    "upper_bounds": [
+                      "(a-b)*(a-c)"
+                    ],
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false,
+                    "allocatable": false,
+                    "pointer": false,
+                    "contiguous": false
+                  }
+                }
               },
               "intent": "inout",
               "optional": false,
               "visibility": "public",
               "default_value": null,
-              "metadata": {}
+              "metadata": {},
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "x9",
+                "native_scope": "all_exprs",
+                "source_kind": "argument",
+                "source_type": "integer",
+                "source_location": {},
+                "metadata": {
+                  "rank": 1,
+                  "shape": [
+                    "1:(a-b)*(a-c)"
+                  ],
+                  "lower_bounds": [
+                    "1"
+                  ],
+                  "upper_bounds": [
+                    "(a-b)*(a-c)"
+                  ],
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false,
+                  "allocatable": false,
+                  "pointer": false,
+                  "contiguous": false
+                }
+              }
             }
           ],
           "return_type": null,
@@ -331,7 +981,7 @@
               "native_name": "x1",
               "native_position": 0,
               "python_position": 0,
-              "result_position": 0,
+              "result_position": null,
               "value_kind": "",
               "value": null,
               "intent": "inout"
@@ -341,7 +991,7 @@
               "native_name": "x2",
               "native_position": 1,
               "python_position": 1,
-              "result_position": 1,
+              "result_position": null,
               "value_kind": "",
               "value": null,
               "intent": "inout"
@@ -351,7 +1001,7 @@
               "native_name": "x3",
               "native_position": 2,
               "python_position": 2,
-              "result_position": 2,
+              "result_position": null,
               "value_kind": "",
               "value": null,
               "intent": "inout"
@@ -361,7 +1011,7 @@
               "native_name": "x4",
               "native_position": 3,
               "python_position": 3,
-              "result_position": 3,
+              "result_position": null,
               "value_kind": "",
               "value": null,
               "intent": "inout"
@@ -371,7 +1021,7 @@
               "native_name": "x5",
               "native_position": 4,
               "python_position": 4,
-              "result_position": 4,
+              "result_position": null,
               "value_kind": "",
               "value": null,
               "intent": "inout"
@@ -381,7 +1031,7 @@
               "native_name": "x6",
               "native_position": 5,
               "python_position": 5,
-              "result_position": 5,
+              "result_position": null,
               "value_kind": "",
               "value": null,
               "intent": "inout"
@@ -391,7 +1041,7 @@
               "native_name": "x7",
               "native_position": 6,
               "python_position": 6,
-              "result_position": 6,
+              "result_position": null,
               "value_kind": "",
               "value": null,
               "intent": "inout"
@@ -401,7 +1051,7 @@
               "native_name": "x8",
               "native_position": 7,
               "python_position": 7,
-              "result_position": 7,
+              "result_position": null,
               "value_kind": "",
               "value": null,
               "intent": "inout"
@@ -411,14 +1061,23 @@
               "native_name": "x9",
               "native_position": 8,
               "python_position": 8,
-              "result_position": 8,
+              "result_position": null,
               "value_kind": "",
               "value": null,
               "intent": "inout"
             }
           ],
           "metadata": {},
-          "visibility": "public"
+          "visibility": "public",
+          "origin": {
+            "source_language": "fortran",
+            "native_name": "all_exprs",
+            "native_scope": "expr_mod",
+            "source_kind": "subroutine",
+            "source_type": null,
+            "source_location": {},
+            "metadata": {}
+          }
         }
       ],
       "classes": [],
@@ -442,13 +1101,56 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {}
+            "metadata": {},
+            "storage": null,
+            "origin": {
+              "source_language": "fortran",
+              "native_name": "a",
+              "native_scope": null,
+              "source_kind": "variable",
+              "source_type": "integer",
+              "source_location": {},
+              "metadata": {
+                "rank": 0,
+                "shape": [],
+                "lower_bounds": [],
+                "upper_bounds": [],
+                "intent": "unknown",
+                "optional": false,
+                "value": false,
+                "allocatable": false,
+                "pointer": false,
+                "contiguous": false,
+                "constant": true
+              }
+            }
           },
           "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
-          "metadata": {}
+          "metadata": {},
+          "origin": {
+            "source_language": "fortran",
+            "native_name": "a",
+            "native_scope": null,
+            "source_kind": "argument",
+            "source_type": "integer",
+            "source_location": {},
+            "metadata": {
+              "rank": 0,
+              "shape": [],
+              "lower_bounds": [],
+              "upper_bounds": [],
+              "intent": "unknown",
+              "optional": false,
+              "value": false,
+              "allocatable": false,
+              "pointer": false,
+              "contiguous": false,
+              "constant": true
+            }
+          }
         },
         {
           "name": "b",
@@ -469,13 +1171,56 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {}
+            "metadata": {},
+            "storage": null,
+            "origin": {
+              "source_language": "fortran",
+              "native_name": "b",
+              "native_scope": null,
+              "source_kind": "variable",
+              "source_type": "integer",
+              "source_location": {},
+              "metadata": {
+                "rank": 0,
+                "shape": [],
+                "lower_bounds": [],
+                "upper_bounds": [],
+                "intent": "unknown",
+                "optional": false,
+                "value": false,
+                "allocatable": false,
+                "pointer": false,
+                "contiguous": false,
+                "constant": true
+              }
+            }
           },
           "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
-          "metadata": {}
+          "metadata": {},
+          "origin": {
+            "source_language": "fortran",
+            "native_name": "b",
+            "native_scope": null,
+            "source_kind": "argument",
+            "source_type": "integer",
+            "source_location": {},
+            "metadata": {
+              "rank": 0,
+              "shape": [],
+              "lower_bounds": [],
+              "upper_bounds": [],
+              "intent": "unknown",
+              "optional": false,
+              "value": false,
+              "allocatable": false,
+              "pointer": false,
+              "contiguous": false,
+              "constant": true
+            }
+          }
         },
         {
           "name": "c",
@@ -496,13 +1241,56 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {}
+            "metadata": {},
+            "storage": null,
+            "origin": {
+              "source_language": "fortran",
+              "native_name": "c",
+              "native_scope": null,
+              "source_kind": "variable",
+              "source_type": "integer",
+              "source_location": {},
+              "metadata": {
+                "rank": 0,
+                "shape": [],
+                "lower_bounds": [],
+                "upper_bounds": [],
+                "intent": "unknown",
+                "optional": false,
+                "value": false,
+                "allocatable": false,
+                "pointer": false,
+                "contiguous": false,
+                "constant": true
+              }
+            }
           },
           "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
-          "metadata": {}
+          "metadata": {},
+          "origin": {
+            "source_language": "fortran",
+            "native_name": "c",
+            "native_scope": null,
+            "source_kind": "argument",
+            "source_type": "integer",
+            "source_location": {},
+            "metadata": {
+              "rank": 0,
+              "shape": [],
+              "lower_bounds": [],
+              "upper_bounds": [],
+              "intent": "unknown",
+              "optional": false,
+              "value": false,
+              "allocatable": false,
+              "pointer": false,
+              "contiguous": false,
+              "constant": true
+            }
+          }
         },
         {
           "name": "p_add",
@@ -523,13 +1311,56 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {}
+            "metadata": {},
+            "storage": null,
+            "origin": {
+              "source_language": "fortran",
+              "native_name": "p_add",
+              "native_scope": null,
+              "source_kind": "variable",
+              "source_type": "integer",
+              "source_location": {},
+              "metadata": {
+                "rank": 0,
+                "shape": [],
+                "lower_bounds": [],
+                "upper_bounds": [],
+                "intent": "unknown",
+                "optional": false,
+                "value": false,
+                "allocatable": false,
+                "pointer": false,
+                "contiguous": false,
+                "constant": true
+              }
+            }
           },
           "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
-          "metadata": {}
+          "metadata": {},
+          "origin": {
+            "source_language": "fortran",
+            "native_name": "p_add",
+            "native_scope": null,
+            "source_kind": "argument",
+            "source_type": "integer",
+            "source_location": {},
+            "metadata": {
+              "rank": 0,
+              "shape": [],
+              "lower_bounds": [],
+              "upper_bounds": [],
+              "intent": "unknown",
+              "optional": false,
+              "value": false,
+              "allocatable": false,
+              "pointer": false,
+              "contiguous": false,
+              "constant": true
+            }
+          }
         },
         {
           "name": "p_sub",
@@ -550,13 +1381,56 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {}
+            "metadata": {},
+            "storage": null,
+            "origin": {
+              "source_language": "fortran",
+              "native_name": "p_sub",
+              "native_scope": null,
+              "source_kind": "variable",
+              "source_type": "integer",
+              "source_location": {},
+              "metadata": {
+                "rank": 0,
+                "shape": [],
+                "lower_bounds": [],
+                "upper_bounds": [],
+                "intent": "unknown",
+                "optional": false,
+                "value": false,
+                "allocatable": false,
+                "pointer": false,
+                "contiguous": false,
+                "constant": true
+              }
+            }
           },
           "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
-          "metadata": {}
+          "metadata": {},
+          "origin": {
+            "source_language": "fortran",
+            "native_name": "p_sub",
+            "native_scope": null,
+            "source_kind": "argument",
+            "source_type": "integer",
+            "source_location": {},
+            "metadata": {
+              "rank": 0,
+              "shape": [],
+              "lower_bounds": [],
+              "upper_bounds": [],
+              "intent": "unknown",
+              "optional": false,
+              "value": false,
+              "allocatable": false,
+              "pointer": false,
+              "contiguous": false,
+              "constant": true
+            }
+          }
         },
         {
           "name": "p_mul",
@@ -577,13 +1451,56 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {}
+            "metadata": {},
+            "storage": null,
+            "origin": {
+              "source_language": "fortran",
+              "native_name": "p_mul",
+              "native_scope": null,
+              "source_kind": "variable",
+              "source_type": "integer",
+              "source_location": {},
+              "metadata": {
+                "rank": 0,
+                "shape": [],
+                "lower_bounds": [],
+                "upper_bounds": [],
+                "intent": "unknown",
+                "optional": false,
+                "value": false,
+                "allocatable": false,
+                "pointer": false,
+                "contiguous": false,
+                "constant": true
+              }
+            }
           },
           "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
-          "metadata": {}
+          "metadata": {},
+          "origin": {
+            "source_language": "fortran",
+            "native_name": "p_mul",
+            "native_scope": null,
+            "source_kind": "argument",
+            "source_type": "integer",
+            "source_location": {},
+            "metadata": {
+              "rank": 0,
+              "shape": [],
+              "lower_bounds": [],
+              "upper_bounds": [],
+              "intent": "unknown",
+              "optional": false,
+              "value": false,
+              "allocatable": false,
+              "pointer": false,
+              "contiguous": false,
+              "constant": true
+            }
+          }
         },
         {
           "name": "p_div",
@@ -604,13 +1521,56 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {}
+            "metadata": {},
+            "storage": null,
+            "origin": {
+              "source_language": "fortran",
+              "native_name": "p_div",
+              "native_scope": null,
+              "source_kind": "variable",
+              "source_type": "integer",
+              "source_location": {},
+              "metadata": {
+                "rank": 0,
+                "shape": [],
+                "lower_bounds": [],
+                "upper_bounds": [],
+                "intent": "unknown",
+                "optional": false,
+                "value": false,
+                "allocatable": false,
+                "pointer": false,
+                "contiguous": false,
+                "constant": true
+              }
+            }
           },
           "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
-          "metadata": {}
+          "metadata": {},
+          "origin": {
+            "source_language": "fortran",
+            "native_name": "p_div",
+            "native_scope": null,
+            "source_kind": "argument",
+            "source_type": "integer",
+            "source_location": {},
+            "metadata": {
+              "rank": 0,
+              "shape": [],
+              "lower_bounds": [],
+              "upper_bounds": [],
+              "intent": "unknown",
+              "optional": false,
+              "value": false,
+              "allocatable": false,
+              "pointer": false,
+              "contiguous": false,
+              "constant": true
+            }
+          }
         },
         {
           "name": "p_pow",
@@ -631,13 +1591,56 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {}
+            "metadata": {},
+            "storage": null,
+            "origin": {
+              "source_language": "fortran",
+              "native_name": "p_pow",
+              "native_scope": null,
+              "source_kind": "variable",
+              "source_type": "integer",
+              "source_location": {},
+              "metadata": {
+                "rank": 0,
+                "shape": [],
+                "lower_bounds": [],
+                "upper_bounds": [],
+                "intent": "unknown",
+                "optional": false,
+                "value": false,
+                "allocatable": false,
+                "pointer": false,
+                "contiguous": false,
+                "constant": true
+              }
+            }
           },
           "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
-          "metadata": {}
+          "metadata": {},
+          "origin": {
+            "source_language": "fortran",
+            "native_name": "p_pow",
+            "native_scope": null,
+            "source_kind": "argument",
+            "source_type": "integer",
+            "source_location": {},
+            "metadata": {
+              "rank": 0,
+              "shape": [],
+              "lower_bounds": [],
+              "upper_bounds": [],
+              "intent": "unknown",
+              "optional": false,
+              "value": false,
+              "allocatable": false,
+              "pointer": false,
+              "contiguous": false,
+              "constant": true
+            }
+          }
         },
         {
           "name": "p_mix",
@@ -658,17 +1661,69 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {}
+            "metadata": {},
+            "storage": null,
+            "origin": {
+              "source_language": "fortran",
+              "native_name": "p_mix",
+              "native_scope": null,
+              "source_kind": "variable",
+              "source_type": "integer",
+              "source_location": {},
+              "metadata": {
+                "rank": 0,
+                "shape": [],
+                "lower_bounds": [],
+                "upper_bounds": [],
+                "intent": "unknown",
+                "optional": false,
+                "value": false,
+                "allocatable": false,
+                "pointer": false,
+                "contiguous": false,
+                "constant": true
+              }
+            }
           },
           "intent": "in",
           "optional": false,
           "visibility": "public",
           "default_value": null,
-          "metadata": {}
+          "metadata": {},
+          "origin": {
+            "source_language": "fortran",
+            "native_name": "p_mix",
+            "native_scope": null,
+            "source_kind": "argument",
+            "source_type": "integer",
+            "source_location": {},
+            "metadata": {
+              "rank": 0,
+              "shape": [],
+              "lower_bounds": [],
+              "upper_bounds": [],
+              "intent": "unknown",
+              "optional": false,
+              "value": false,
+              "allocatable": false,
+              "pointer": false,
+              "contiguous": false,
+              "constant": true
+            }
+          }
         }
       ],
       "imports": [],
-      "metadata": {}
+      "metadata": {},
+      "origin": {
+        "source_language": "fortran",
+        "native_name": "expr_mod",
+        "native_scope": "expr_mod",
+        "source_kind": "module",
+        "source_type": null,
+        "source_location": {},
+        "metadata": {}
+      }
     }
   ]
 }

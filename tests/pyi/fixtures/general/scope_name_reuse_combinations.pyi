@@ -12,33 +12,33 @@ same_name_c: Complex128
 same_name_s: String
 
 def do_work_i(
-    same_name: Int32
-) -> Returns["same_name", Int32]: ...
+    same_name: Ptr(Int32)
+) -> None: ...
 
 def do_work_r(
-    same_name: Float64
+    same_name: Ptr(Const(Float64))
 ) -> None: ...
 
 def do_work_l(
-    same_name: Bool
+    same_name: Ptr(Const(Bool))
 ) -> None: ...
 
 def host_one(
-    same_name: Int32
-) -> Returns["same_name", Int32]: ...
+    same_name: Ptr(Int32)
+) -> None: ...
 
 def host_two(
-    same_name: Float64
-) -> Returns["same_name", Float64]: ...
+    same_name: Ptr(Float64)
+) -> None: ...
 
 def convert_to_complex(
-    same_name: Int32
+    same_name: Ptr(Const(Int32))
 ) -> Complex128: ...
 
 def convert_to_char(
-    same_name: Float64
+    same_name: Ptr(Const(Float64))
 ) -> String: ...
 
 def convert_to_logical(
-    same_name: String
+    same_name: Ptr(Const(String))
 ) -> Bool: ...

@@ -188,9 +188,16 @@ runnable C Phase 1 wrapper requires the corresponding native routine to
 accept that storage layout directly. For a rank-one array, `ORDER_C` and
 `ORDER_F` do not distinguish storage, contiguous or strided, so no order
 constraint is written.
-For a multidimensional strided annotation, `ORDER_F` is orientation metadata,
-not a requirement that NumPy report `F_CONTIGUOUS`; non-unit strides remain
-part of the contract.
+   For a multidimensional strided annotation, `ORDER_F` is orientation metadata,
+   not a requirement that NumPy report `F_CONTIGUOUS`; non-unit strides remain
+   part of the contract.
+   Source frontends may retain original declaration dimensions, source bounds
+   or native dummy categories as internal provenance. Those source facts are
+   not part of the canonical public array annotation unless they produce an
+   actual storage constraint. In particular, Fortran dummy bounds are
+   established by native association rather than supplied as Python array
+   metadata. This does not add C semantic conversion support; C conversion
+   remains deferred.
 
 Stride-aware dimensions use a slice step marker:
 

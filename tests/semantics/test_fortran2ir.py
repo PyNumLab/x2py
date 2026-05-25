@@ -67,6 +67,12 @@ def has_constraint(obj, name: str) -> bool:
     return any(c.name == name for c in obj.constraints)
 
 
+def array_contract(semantic_type: SemanticType):
+    assert semantic_type.storage is not None
+    assert semantic_type.storage.array is not None
+    return semantic_type.storage.array
+
+
 def test_converter_visitor_and_compatibility_methods_cover_public_paths():
     converter = FortranToIRConverter()
     scale = FortranVariable(name="scale", base_type="real", kind="8", is_parameter=True)
@@ -104,8 +110,8 @@ def test_converter_visitor_and_compatibility_methods_cover_public_paths():
 
     semantic_arg = converter.visit(arg)
     assert semantic_arg.intent == "inout"
-    assert has_constraint(semantic_arg.semantic_type, "Allocatable")
-    assert has_constraint(semantic_arg.semantic_type, "Pointer")
+    assert semantic_arg.semantic_type.storage.kind == "reference"
+    assert semantic_arg.semantic_type.storage.mutable is True
 
     semantic_var = converter.variable_to_semantic_type(scale)
     assert semantic_var.name == "Float64"
@@ -303,7 +309,14 @@ def test_resolve_semantic_compile_time_values_rewrites_shapes_and_constraints():
                     dtype="Float64",
                     rank=1,
                     shape=["1:n"],
-                    constraints=[SemanticConstraint("Shape", ["1:n"])],
+                    storage=semantic_models.SemanticStorageContract(
+                        kind="array",
+                        array=semantic_models.SemanticArrayContract(
+                            rank=1,
+                            shape=["1:n"],
+                            source_shape=["1:n"],
+                        ),
+                    ),
                 ),
             )
         ],
@@ -313,7 +326,7 @@ def test_resolve_semantic_compile_time_values_rewrites_shapes_and_constraints():
 
     assert module.variables[0].semantic_type.shape == ["1:n"]
     assert resolved.variables[0].semantic_type.shape == ["1:8"]
-    assert resolved.variables[0].semantic_type.constraints[0].arguments == ["1:8"]
+    assert resolved.variables[0].semantic_type.storage.array.shape == ["1:8"]
 
 
 def test_resolve_semantic_compile_time_values_handles_nested_modules():
@@ -327,7 +340,15 @@ def test_resolve_semantic_compile_time_values_handles_nested_modules():
                     dtype="Float64",
                     rank=1,
                     shape=["n"],
-                    constraints=[SemanticConstraint("Shape", [{"extent": "n"}])],
+                    storage=semantic_models.SemanticStorageContract(
+                        kind="array",
+                        array=semantic_models.SemanticArrayContract(
+                            rank=1,
+                            shape=["n"],
+                            source_shape=["1:n"],
+                            upper_bounds=["n"],
+                        ),
+                    ),
                     metadata={"bounds": ("n", ["m"])},
                 ),
                 default_value="n",
@@ -382,7 +403,8 @@ def test_resolve_semantic_compile_time_values_handles_nested_modules():
     assert module.variables[0].semantic_type.shape == ["n"]
     resolved_module = resolved[0]
     assert resolved_module.variables[0].semantic_type.shape == ["4"]
-    assert resolved_module.variables[0].semantic_type.constraints[0].arguments == [{"extent": "4"}]
+    assert resolved_module.variables[0].semantic_type.storage.array.shape == ["4"]
+    assert resolved_module.variables[0].semantic_type.storage.array.source_shape == ["1:4"]
     assert resolved_module.variables[0].semantic_type.metadata == {"bounds": ("4", ["2"])}
     assert resolved_module.functions[0].projection[0].value == {"shape": ["4", ("2",)]}
     assert resolved_module.functions[1].return_type.metadata == {"extent": "4"}
@@ -534,17 +556,11 @@ end module
 
     assert x.semantic_type.rank == 1
 
-    assert has_constraint(
-        x.semantic_type,
-        "Shape",
-    )
-
-    assert has_constraint(
-        x.semantic_type,
-        "ORDER_F",
-    )
-
-    assert x.semantic_type.shape == [":"]
+    contract = array_contract(x.semantic_type)
+    assert contract.category == "assumed_shape"
+    assert contract.shape == ["::Strided"]
+    assert contract.source_shape == [":"]
+    assert contract.order is None
 
 
 # ============================================================
@@ -579,17 +595,87 @@ end module
 
     assert A.semantic_type.rank == 2
 
-    assert A.semantic_type.shape == [":", ":"]
+    contract = array_contract(A.semantic_type)
+    assert A.semantic_type.shape == ["::Strided", "::Strided"]
+    assert contract.source_shape == [":", ":"]
+    assert contract.category == "assumed_shape"
+    assert contract.order == "ORDER_F"
 
-    assert has_constraint(
-        A.semantic_type,
-        "Shape",
-    )
 
-    assert has_constraint(
-        A.semantic_type,
-        "ORDER_F",
-    )
+def test_fortran_native_storage_contracts_cover_array_categories_and_scalars():
+    source = """
+module contract_mod
+contains
+subroutine contracts(n, m, explicit, legacy, assumed, contig, alloc, ptr, scalar_value, scalar_ref, scalar_out)
+  integer, intent(in) :: n
+  integer, intent(in) :: m
+  real(8), intent(in) :: explicit(n, m)
+  real(8), intent(inout) :: legacy(n, *)
+  real(8), intent(in) :: assumed(:, :)
+  real(8), contiguous, intent(inout) :: contig(:, :)
+  real(8), allocatable, intent(out) :: alloc(:)
+  real(8), pointer, intent(inout) :: ptr(:)
+  real(8), value, intent(in) :: scalar_value
+  real(8), intent(in) :: scalar_ref
+  real(8), intent(out) :: scalar_out
+end subroutine contracts
+end module contract_mod
+"""
+    module = fortran_module_to_semantic_module(parse_fortran_source(source))
+    func = get_function(module, "contracts")
+    args = {arg.name: arg for arg in func.arguments}
+
+    explicit = array_contract(args["explicit"].semantic_type)
+    assert explicit.category == "explicit_shape"
+    assert explicit.shape == ["n", "m"]
+    assert explicit.order == "ORDER_F"
+    assert args["explicit"].semantic_type.storage.read_only is True
+
+    legacy = array_contract(args["legacy"].semantic_type)
+    assert legacy.category == "assumed_size"
+    assert legacy.shape == ["n", ":"]
+    assert legacy.source_shape == ["n", "*"]
+    assert legacy.order == "ORDER_F"
+
+    assumed = array_contract(args["assumed"].semantic_type)
+    assert assumed.category == "assumed_shape"
+    assert assumed.shape == ["::Strided", "::Strided"]
+    assert assumed.order == "ORDER_F"
+
+    contig = array_contract(args["contig"].semantic_type)
+    assert contig.category == "assumed_shape"
+    assert contig.shape == [":", ":"]
+    assert contig.order == "ORDER_F"
+    assert contig.contiguous is True
+
+    assert array_contract(args["alloc"].semantic_type).allocatable is True
+    assert array_contract(args["ptr"].semantic_type).pointer is True
+    assert args["scalar_value"].semantic_type.storage is None
+    assert args["scalar_ref"].semantic_type.storage.read_only is True
+    assert args["scalar_out"].semantic_type.storage.mutable is True
+
+
+def test_explicit_bound_ranges_remain_shaped_storage_contracts():
+    source = """
+module bound_mod
+contains
+subroutine bounded(n, default_bound, zero_bound)
+  integer, intent(in) :: n
+  real(8), intent(inout) :: default_bound(1:n)
+  real(8), intent(inout) :: zero_bound(0:n-1)
+end subroutine bounded
+end module bound_mod
+"""
+    module = fortran_module_to_semantic_module(parse_fortran_source(source))
+    args = {arg.name: arg for arg in get_function(module, "bounded").arguments}
+
+    default_bound = array_contract(args["default_bound"].semantic_type)
+    assert default_bound.category == "explicit_shape"
+    assert default_bound.shape == ["n"]
+
+    zero_bound = array_contract(args["zero_bound"].semantic_type)
+    assert zero_bound.category == "explicit_shape"
+    assert zero_bound.shape == ["n - 1 - 0 + 1"]
 
 
 # ============================================================
@@ -652,10 +738,7 @@ end module
 
     x = func.arguments[0]
 
-    assert has_constraint(
-        x.semantic_type,
-        "Allocatable",
-    )
+    assert array_contract(x.semantic_type).allocatable is True
 
 
 # ============================================================
@@ -902,10 +985,7 @@ end module
 
     assert K.semantic_type.rank == 2
 
-    assert has_constraint(
-        K.semantic_type,
-        "ORDER_F",
-    )
+    assert array_contract(K.semantic_type).order == "ORDER_F"
 
     connectivity = next(arg for arg in assemble.arguments if arg.name == "connectivity")
 
@@ -971,7 +1051,7 @@ end module m
 
     assert semantic_var.semantic_type.name == "Int32"
     assert semantic_arg.intent == "inout"
-    assert semantic_arg.semantic_type.constraints[-1].name == "Allocatable"
+    assert array_contract(semantic_arg.semantic_type).allocatable is True
     assert semantic_proc.projection[0].python_position == 0
     assert semantic_dtype.base_classes == ["base"]
     assert semantic_module.imports == ["iso_c_binding"]
@@ -996,7 +1076,8 @@ end subroutine scale
     func = get_function(modules[0], "scale")
     assert [arg.name for arg in func.arguments] == ["n", "x"]
     assert func.projection[0].python_position == 0
-    assert func.projection[1].result_position == 0
+    assert func.projection[1].python_position == 1
+    assert func.projection[1].result_position is None
 
 
 def test_semantic_function_projection_equality_and_placeholders():

@@ -13,12 +13,14 @@ from semantics.pyi_printer import (
 from semantics.models import (
     ProjectionMapping,
     SemanticArgument,
+    SemanticArrayContract,
     SemanticClass,
     SemanticConstraint,
     SemanticImport,
     SemanticMethod,
     SemanticModule,
     SemanticFunction,
+    SemanticStorageContract,
     SemanticType,
 )
 
@@ -70,12 +72,12 @@ end module
 
     assert "def add(" in code
 
-    assert "a: Float64" in code
-    assert "b: Float64" in code
-    assert "-> Float64" in code
+    assert "a: Ptr(Const(Float64))" in code
+    assert "b: Ptr(Const(Float64))" in code
+    assert "c: Annotated[Ptr(Float64), Intent('out')]" in code
     assert 'Returns["c", Float64]' not in code
 
-    assert "-> None" not in code
+    assert "-> None" in code
 
 
 def test_emit_rejects_unknown_semantic_type():
@@ -137,9 +139,10 @@ end module
 
     assert "Float64[" in code
 
-    assert "Shape" in code
-
-    assert "ORDER_F" in code
+    assert "Shape" not in code
+    assert "Float64[::Strided]" in code
+    assert "ArrayCategory" not in code
+    assert "SourceDims" not in code
 
 
 # ============================================================
@@ -166,14 +169,31 @@ end module
 
     code = generate_pyi(source)
 
-    assert "A: Float64[" in code
-
-    assert "Shape(':', ':')" in code
-
-    assert "x: Float64[" in code
-
-    assert "-> Float64[" in code
+    assert "A: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_F" in code
+    assert "Shape" not in code
+    assert "x: Const(Float64[::Strided])" in code
+    assert "y: Annotated[Float64[::Strided], Intent('out')]" in code
+    assert "-> None" in code
     assert 'Returns["y", Float64[' not in code
+
+
+def test_emit_explicit_bound_ranges_as_extents_without_source_dimension_metadata():
+    source = """
+module bound_mod
+contains
+subroutine bounded(n, default_bound, zero_bound)
+  integer, intent(in) :: n
+  real(8), intent(inout) :: default_bound(1:n)
+  real(8), intent(inout) :: zero_bound(0:n-1)
+end subroutine bounded
+end module bound_mod
+"""
+    code = generate_pyi(source)
+
+    assert "default_bound: Float64[n]" in code
+    assert "zero_bound: Float64[n - 1 - 0 + 1]" in code
+    assert "ArrayCategory" not in code
+    assert "SourceDims" not in code
 
 
 # ============================================================
@@ -327,7 +347,7 @@ end module
 
     code = generate_pyi(source)
 
-    assert "Shape('10', '20')" in code
+    assert "A: Annotated[Const(Float64[10, 20]), ORDER_F]" in code
 
 
 # ============================================================
@@ -485,18 +505,19 @@ end module
     # Matrix annotations
     # --------------------------------------------------------
 
-    assert "-> Float64[" in code
+    assert "K: Annotated[Float64[::Strided, ::Strided], ORDER_F" in code
     assert 'Returns["K", Float64[' not in code
 
-    assert "coords: Float64[" in code
+    assert "coords: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_F" in code
 
-    assert "connectivity: Int32[" in code
+    assert "connectivity: Annotated[Const(Int32[::Strided, ::Strided]), ORDER_F" in code
 
     # --------------------------------------------------------
     # Return type
     # --------------------------------------------------------
 
-    assert "-> Float64" in code
+    assert "def compute_norm(" in code
+    assert ") -> Float64: ..." in code
 
 
 # ============================================================
@@ -524,8 +545,8 @@ end module
     expected = normalize(
         '''
 def scale(
-    x: Float64[Shape(':'), ORDER_F]
-) -> Returns["x", Float64[Shape(':'), ORDER_F]]: ...
+    x: Float64[::Strided]
+) -> None: ...
 '''
     )
 
@@ -554,7 +575,8 @@ end module
 
     code = PyiPrinter().emit_module(smod)
 
-    assert "-> Float64" in code
+    assert "-> None" in code
+    assert "c: Annotated[Ptr(Float64), Intent('out')]" in code
     assert 'Returns["c", Float64]' not in code
 
 
@@ -624,13 +646,22 @@ end module
     code = PyiPrinter().emit_module(smod)
 
     assert "def touch(" in code
-    assert "x: Int32" in code
+    assert "x: Ptr(Int32)" in code
 
 
 def test_printer_emit_visitor_dispatches_semantic_models():
     printer = PyiPrinter()
-    constraint = SemanticConstraint("Shape", [":"])
-    semantic_type = SemanticType("Float64", dtype="Float64", constraints=[constraint])
+    constraint = SemanticConstraint("Constant")
+    semantic_type = SemanticType(
+        "Float64",
+        dtype="Float64",
+        rank=1,
+        shape=[":"],
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(rank=1, shape=[":"], source_shape=[":"]),
+        ),
+    )
     argument = SemanticArgument("class", semantic_type, optional=True)
     method = SemanticMethod(name="reset")
     cls = SemanticClass(
@@ -642,12 +673,12 @@ def test_printer_emit_visitor_dispatches_semantic_models():
     func = SemanticFunction(name="wrap", arguments=[argument])
     module = SemanticModule(name="visitor_mod", classes=[cls], functions=[func])
 
-    assert printer.emit(constraint) == "Shape(':')"
-    assert printer.emit(semantic_type) == "Float64[Shape(':')]"
-    assert printer.emit(argument) == 'class_: Annotated[Float64[Shape(\':\')], Name("class")] = ...'
+    assert printer.emit(constraint) == "Constant"
+    assert printer.emit(semantic_type) == "Float64[:]"
+    assert printer.emit(argument) == 'class_: Annotated[Float64[:], Name("class")] = ...'
     assert "def reset(self) -> None: ..." in printer.emit(method)
     assert "@private\nclass thing:" in printer.emit(cls)
-    assert "var['bad-name']: Float64[Shape(':')]" in printer.emit(cls)
+    assert "var['bad-name']: Float64[:]" in printer.emit(cls)
     assert "def wrap(" in printer.emit(func)
     assert "class thing:" in printer.emit(module)
 
@@ -694,8 +725,8 @@ end module vector_mod
     code = generate_pyi(source)
 
     assert "class vector:" in code
-    assert "values: Float64[Shape(':'), ORDER_F, Allocatable]" in code
-    assert "    def scale(\n        self,\n        alpha: Float64\n    ) -> Returns[\"self\", vector]: ..." in code
+    assert "values: Annotated[Float64[:], Allocatable]" in code
+    assert "    def scale(\n        self,\n        alpha: Ptr(Const(Float64))\n    ) -> None: ..." in code
     assert "        self: vector" not in code
 
 
@@ -758,7 +789,7 @@ def test_emit_module_with_projection_helpers_and_private_function():
 
     code = emit_module(module)
 
-    assert "@native_call([Arg(0), Const(1), Len(Arg(0)), Shape(Arg(0), 0), IsPresent(Arg(1)), Work('tmp')])" in code
+    assert "@native_call([Arg(0), Const(1), Len(Arg(0)), Arg(0).shape[0], IsPresent(Arg(1)), Work('tmp')])" in code
 
 
 def test_emit_native_call_supports_return_and_work_value_references():
@@ -787,7 +818,7 @@ def test_emit_native_call_supports_return_and_work_value_references():
 
     code = emit_module(module)
 
-    assert "@native_call([Len(Return(0)), Shape(Work('tmp'), 1)])" in code
+    assert "@native_call([Len(Return(0)), Work('tmp').shape[1]])" in code
     assert "def wrapper() -> Float64: ..." in code
 
 

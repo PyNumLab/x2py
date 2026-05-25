@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from copy import deepcopy
 import re
 from pathlib import Path
@@ -18,6 +19,7 @@ from fortran_parser.models import (
 
 from .models import (
     SemanticArgument,
+    SemanticArrayContract,
     SemanticClass,
     SemanticConstraint,
     SemanticFunction,
@@ -25,6 +27,8 @@ from .models import (
     SemanticImportItem,
     SemanticMethod,
     SemanticModule,
+    SemanticOrigin,
+    SemanticStorageContract,
     SemanticType,
     ProjectionMapping,
 )
@@ -177,13 +181,16 @@ class FortranToIRConverter:
 
     def visit_variable(self, var: FortranVariable) -> SemanticType:
         semantic_name = self._semantic_type_name(var)
+        shape = [self._resolve_compile_time_text(dim) for dim in var.shape]
+        storage = self._array_storage_contract(var, shape) if var.rank > 0 else None
         semantic_type = SemanticType(
             name=semantic_name,
             rank=var.rank,
             dtype=semantic_name,
-            shape=[self._resolve_compile_time_text(dim) for dim in var.shape],
+            shape=list(storage.array.shape if storage is not None and storage.array is not None else shape),
+            storage=storage,
+            origin=self._variable_origin(var),
         )
-        self._add_shape_constraints(semantic_type)
         self._add_variable_constraints(semantic_type, var)
         return semantic_type
 
@@ -194,11 +201,14 @@ class FortranToIRConverter:
         intent: str | None = None,
     ) -> SemanticArgument:
         semantic_type = self.visit_variable(arg)
-        self._add_argument_constraints(semantic_type, arg)
         resolved_intent = intent if intent is not None else getattr(arg, "intent", "in")
         resolved_intent = str(resolved_intent).lower().replace(" ", "")
         if resolved_intent == "unknown":
             resolved_intent = "inout"
+        if semantic_type.rank > 0:
+            self._apply_array_argument_contract(semantic_type, arg, resolved_intent)
+        elif not getattr(arg, "pass_by_value", False):
+            semantic_type.storage = self._reference_storage_contract(resolved_intent)
         self._apply_argument_ownership(semantic_type, resolved_intent)
 
         return SemanticArgument(
@@ -207,6 +217,26 @@ class FortranToIRConverter:
             intent=resolved_intent,
             optional=getattr(arg, "optional", False),
             visibility=getattr(arg, "visibility", "public"),
+            origin=self._argument_origin(arg),
+        )
+
+    def visit_data_member(
+        self,
+        var: FortranArgument | FortranVariable,
+        *,
+        intent: str = "in",
+    ) -> SemanticArgument:
+        semantic_type = self.visit_variable(var)
+        if semantic_type.storage is not None and semantic_type.storage.array is not None:
+            semantic_type.storage.array.allocatable = getattr(var, "allocatable", False)
+            semantic_type.storage.array.pointer = getattr(var, "pointer", False)
+        return SemanticArgument(
+            name=var.name,
+            semantic_type=semantic_type,
+            intent=intent,
+            optional=getattr(var, "optional", False),
+            visibility=getattr(var, "visibility", "public"),
+            origin=self._argument_origin(var),
         )
 
     def visit_procedure(
@@ -214,7 +244,7 @@ class FortranToIRConverter:
         proc: FortranProcedureSignature,
         visibility: str = "public",
     ) -> SemanticFunction:
-        arguments = [self.visit_argument(arg) for arg in self._projected_procedure_arguments(proc)]
+        arguments = [self.visit_argument(arg) for arg in proc.arguments]
         return SemanticFunction(
             name=proc.name,
             native_name=proc.name,
@@ -222,6 +252,12 @@ class FortranToIRConverter:
             return_type=self.visit_variable(proc.result) if proc.result else None,
             projection=self._procedure_projection(proc, arguments),
             visibility=visibility,
+            origin=SemanticOrigin(
+                source_language="fortran",
+                native_name=proc.name,
+                native_scope=proc.module,
+                source_kind=proc.kind,
+            ),
         )
 
     def visit_derived_type(
@@ -233,10 +269,16 @@ class FortranToIRConverter:
         return SemanticClass(
             name=dtype.name,
             native_name=dtype.name,
-            fields=[self.visit_argument(field, intent="in") for field in dtype.fields],
+            fields=[self.visit_data_member(field, intent="in") for field in dtype.fields],
             methods=self._bound_methods(dtype, lookup),
             base_classes=self._base_classes(dtype),
             visibility=getattr(dtype, "visibility", "public"),
+            origin=SemanticOrigin(
+                source_language="fortran",
+                native_name=dtype.name,
+                native_scope=dtype.module,
+                source_kind="derived_type",
+            ),
         )
 
     def visit_module(self, module: FortranModule) -> SemanticModule:
@@ -260,8 +302,14 @@ class FortranToIRConverter:
             name=module.name,
             functions=semantic_functions,
             classes=semantic_classes,
-            variables=[self.visit_argument(var, intent="in") for var in getattr(module, "variables", [])],
+            variables=[self.visit_data_member(var, intent="in") for var in getattr(module, "variables", [])],
             imports=self._module_imports(module),
+            origin=SemanticOrigin(
+                source_language="fortran",
+                native_name=module.name,
+                native_scope=module.name,
+                source_kind="module",
+            ),
         )
 
     def visit_file_modules(
@@ -391,28 +439,218 @@ class FortranToIRConverter:
         return _resolve_compile_time_text(text, self.compile_time_values)
 
     @staticmethod
-    def _add_shape_constraints(semantic_type: SemanticType) -> None:
-        if semantic_type.rank <= 0:
-            return
-        semantic_type.constraints.append(
-            SemanticConstraint(
-                name="Shape",
-                arguments=list(semantic_type.shape),
-            )
+    def _variable_origin(var: FortranVariable) -> SemanticOrigin:
+        return SemanticOrigin(
+            source_language="fortran",
+            native_name=var.name,
+            source_kind="variable",
+            source_type=FortranToIRConverter._fortran_source_type(var),
+            metadata=FortranToIRConverter._fortran_variable_metadata(var),
         )
-        semantic_type.constraints.append(SemanticConstraint(name="ORDER_F"))
+
+    @staticmethod
+    def _argument_origin(arg: FortranArgument | FortranVariable) -> SemanticOrigin:
+        return SemanticOrigin(
+            source_language="fortran",
+            native_name=arg.name,
+            native_scope=getattr(arg, "procedure", None),
+            source_kind="argument" if isinstance(arg, FortranArgument) else "variable",
+            source_type=FortranToIRConverter._fortran_source_type(arg),
+            metadata=FortranToIRConverter._fortran_variable_metadata(arg),
+        )
+
+    @staticmethod
+    def _fortran_source_type(var: FortranVariable) -> str:
+        if var.kind:
+            return f"{var.base_type}(kind={var.kind})"
+        return var.base_type
+
+    @staticmethod
+    def _fortran_variable_metadata(var: FortranVariable) -> dict[str, object]:
+        metadata: dict[str, object] = {
+            "rank": var.rank,
+            "shape": list(var.shape),
+            "lower_bounds": list(getattr(var, "lbound", []) or []),
+            "upper_bounds": list(getattr(var, "ubound", []) or []),
+        }
+        if isinstance(var, FortranArgument):
+            metadata.update(
+                {
+                    "intent": var.intent,
+                    "optional": var.optional,
+                    "value": var.pass_by_value,
+                    "allocatable": var.allocatable,
+                    "pointer": var.pointer,
+                    "contiguous": getattr(var, "contiguous", False),
+                }
+            )
+        if getattr(var, "is_parameter", False):
+            metadata["constant"] = True
+        return metadata
+
+    def _array_storage_contract(
+        self,
+        var: FortranVariable,
+        shape: list[str],
+    ) -> SemanticStorageContract:
+        category = self._array_category(var, shape)
+        axes = self._array_axes(shape, category, contiguous=getattr(var, "contiguous", False))
+        rank = var.rank
+        order = self._array_order(rank, category, contiguous=getattr(var, "contiguous", False))
+        lower_bounds, upper_bounds = self._array_bound_metadata(shape)
+        array = SemanticArrayContract(
+            rank=rank,
+            shape=list(axes),
+            lower_bounds=lower_bounds,
+            upper_bounds=upper_bounds,
+            source_shape=list(shape),
+            category=category,
+            order=order,
+            axes=["strided" if self._is_strided_axis(axis) else "dense" for axis in axes],
+            contiguous=self._array_contiguous(category, contiguous=getattr(var, "contiguous", False)),
+            allocatable=getattr(var, "allocatable", False),
+            pointer=getattr(var, "pointer", False),
+        )
+        return SemanticStorageContract(
+            kind="array",
+            mutable=False,
+            array=array,
+        )
+
+    def _resolve_optional_compile_time_text(self, text: str | None) -> str | None:
+        if text is None:
+            return None
+        return self._resolve_compile_time_text(text)
+
+    def _array_bound_metadata(self, shape: list[str]) -> tuple[list[str | None], list[str | None]]:
+        lower_bounds: list[str | None] = []
+        upper_bounds: list[str | None] = []
+        for dim in shape:
+            token = dim.strip()
+            if ":" not in token:
+                lower_bounds.append(None)
+                upper_bounds.append("*" if token == "*" else None)
+                continue
+            lower, upper = self._dimension_bounds(token)
+            lower_bounds.append(None if lower in {None, "1"} else self._resolve_compile_time_text(lower))
+            upper_bounds.append(self._resolve_optional_compile_time_text(upper))
+        if all(value is None for value in lower_bounds):
+            lower_bounds = []
+        if all(value is None for value in upper_bounds):
+            upper_bounds = []
+        return lower_bounds, upper_bounds
+
+    @staticmethod
+    def _array_category(var: FortranVariable, shape: list[str]) -> str:
+        cleaned = [dim.strip() for dim in shape]
+        if cleaned == [".."]:
+            return "assumed_rank"
+        if cleaned and cleaned[-1] == "*":
+            return "assumed_size"
+        if any(dim.endswith(":*") for dim in cleaned):
+            return "assumed_size"
+        if isinstance(var, FortranArgument) and (getattr(var, "allocatable", False) or getattr(var, "pointer", False)):
+            return "deferred_shape" if any(FortranToIRConverter._has_omitted_upper_bound(dim) for dim in cleaned) else "explicit_shape"
+        if any(FortranToIRConverter._has_omitted_upper_bound(dim) for dim in cleaned):
+            return "assumed_shape"
+        return "explicit_shape"
+
+    @classmethod
+    def _array_axes(cls, shape: list[str], category: str, *, contiguous: bool) -> list[str]:
+        if category == "assumed_rank":
+            return ["..."]
+        if category == "assumed_shape" and not contiguous:
+            return ["::Strided" for _dim in shape]
+
+        axes: list[str] = []
+        for dim in shape:
+            token = dim.strip()
+            if token == "*":
+                axes.append(":")
+                continue
+            if token.endswith(":*"):
+                axes.append(":")
+                continue
+            lower, upper = cls._dimension_bounds(token)
+            if lower in {None, "1"} and upper:
+                axes.append(cls._canonical_dimension_expression(upper))
+            elif lower is not None and upper is not None:
+                axes.append(cls._canonical_dimension_expression(f"({upper}) - ({lower}) + 1"))
+            elif ":" in token:
+                axes.append(":")
+            else:
+                axes.append(cls._canonical_dimension_expression(token))
+        return axes
+
+    @staticmethod
+    def _dimension_bounds(token: str) -> tuple[str | None, str | None]:
+        if ":" not in token:
+            return "1", token
+        lower, upper = token.split(":", 1)
+        return lower.strip() or None, upper.strip() or None
+
+    @staticmethod
+    def _has_omitted_upper_bound(token: str) -> bool:
+        return ":" in token and token.split(":", 1)[1].strip() == ""
+
+    @staticmethod
+    def _canonical_dimension_expression(expression: str) -> str:
+        try:
+            return ast.unparse(ast.parse(expression, mode="eval").body)
+        except SyntaxError:
+            return expression
+
+    @staticmethod
+    def _array_order(rank: int, category: str, *, contiguous: bool) -> str | None:
+        if rank <= 1:
+            return None
+        return "ORDER_F"
+
+    @staticmethod
+    def _array_contiguous(category: str, *, contiguous: bool) -> bool | None:
+        if contiguous:
+            return True
+        if category in {"explicit_shape", "assumed_size", "deferred_shape"}:
+            return True
+        if category == "assumed_shape":
+            return False
+        return None
+
+    @staticmethod
+    def _is_strided_axis(axis: str) -> bool:
+        return "Strided" in axis
+
+    @staticmethod
+    def _reference_storage_contract(intent: str) -> SemanticStorageContract:
+        read_only = str(intent).lower() == "in"
+        return SemanticStorageContract(
+            kind="reference",
+            read_only=read_only,
+            mutable=not read_only,
+            pointer_depth=1,
+        )
+
+    @staticmethod
+    def _apply_array_argument_contract(
+        semantic_type: SemanticType,
+        arg: FortranArgument | FortranVariable,
+        intent: str,
+    ) -> None:
+        if semantic_type.storage is None:
+            return
+        read_only = str(intent).lower() == "in"
+        semantic_type.storage.read_only = read_only
+        semantic_type.storage.mutable = not read_only
+        if semantic_type.storage.array is not None:
+            semantic_type.storage.array.allocatable = getattr(arg, "allocatable", False)
+            semantic_type.storage.array.pointer = getattr(arg, "pointer", False)
+            if getattr(arg, "contiguous", False):
+                semantic_type.storage.array.contiguous = True
 
     @staticmethod
     def _add_variable_constraints(semantic_type: SemanticType, var: FortranVariable) -> None:
         if getattr(var, "is_parameter", False):
             semantic_type.constraints.append(SemanticConstraint("Constant"))
-
-    @staticmethod
-    def _add_argument_constraints(semantic_type: SemanticType, arg: FortranArgument | FortranVariable) -> None:
-        if getattr(arg, "allocatable", False):
-            semantic_type.constraints.append(SemanticConstraint("Allocatable"))
-        if getattr(arg, "pointer", False):
-            semantic_type.constraints.append(SemanticConstraint("Pointer"))
 
     @staticmethod
     def _apply_argument_ownership(semantic_type: SemanticType, intent: str) -> None:
@@ -435,7 +673,9 @@ class FortranToIRConverter:
                     arguments=proc.arguments,
                     return_type=proc.return_type,
                     contracts=proc.contracts,
+                    projection=proc.projection,
                     visibility=proc.visibility,
+                    origin=proc.origin,
                 )
             )
         return methods
@@ -463,15 +703,6 @@ class FortranToIRConverter:
         arguments: list[SemanticArgument],
     ) -> list[ProjectionMapping]:
         by_name = {arg.name: arg for arg in arguments}
-        call_positions = {
-            arg.name: index
-            for index, arg in enumerate(arg for arg in arguments if getattr(arg, "intent", "in") != "out")
-        }
-        result_offset = 1 if proc.result is not None else 0
-        result_positions = {
-            arg.name: result_offset + index
-            for index, arg in enumerate(arg for arg in arguments if getattr(arg, "intent", "in") in {"out", "inout"})
-        }
 
         projection: list[ProjectionMapping] = []
         for native_position, native_arg in enumerate(proc.arguments):
@@ -479,11 +710,10 @@ class FortranToIRConverter:
             intent = getattr(arg, "intent", "in")
             projection.append(
                 ProjectionMapping(
-                    python_name=arg.name if intent != "out" else None,
+                    python_name=arg.name,
                     native_name=native_arg.name,
                     native_position=native_position,
-                    python_position=call_positions.get(arg.name),
-                    result_position=result_positions.get(arg.name),
+                    python_position=native_position,
                     intent=intent,
                 )
             )
@@ -759,6 +989,30 @@ def _resolve_semantic_type_compile_time_values(
     for constraint in semantic_type.constraints:
         constraint.arguments = _resolve_semantic_value(constraint.arguments, compile_time_values)
     semantic_type.metadata = _resolve_semantic_value(semantic_type.metadata, compile_time_values)
+    if semantic_type.storage is not None:
+        semantic_type.storage.metadata = _resolve_semantic_value(
+            semantic_type.storage.metadata,
+            compile_time_values,
+        )
+        if semantic_type.storage.array is not None:
+            array = semantic_type.storage.array
+            array.shape = [
+                _resolve_compile_time_text(dim, compile_time_values)
+                for dim in array.shape
+            ]
+            array.source_shape = [
+                _resolve_compile_time_text(dim, compile_time_values)
+                for dim in array.source_shape
+            ]
+            array.lower_bounds = [
+                None if dim is None else _resolve_compile_time_text(dim, compile_time_values)
+                for dim in array.lower_bounds
+            ]
+            array.upper_bounds = [
+                None if dim is None else _resolve_compile_time_text(dim, compile_time_values)
+                for dim in array.upper_bounds
+            ]
+            array.metadata = _resolve_semantic_value(array.metadata, compile_time_values)
 
 
 def _resolve_semantic_argument_compile_time_values(

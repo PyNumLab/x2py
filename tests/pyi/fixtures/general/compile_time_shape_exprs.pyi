@@ -3,6 +3,6 @@ n0: Final[Int32]
 n1: Final[Int32]
 
 def use_expr(
-    x: Int32[Shape('0:n1-1'), ORDER_F],
-    y: Float64[Shape('1:n0*2'), ORDER_F]
-) -> tuple[Returns["x", Int32[Shape('0:n1-1'), ORDER_F]], Returns["y", Float64[Shape('1:n0*2'), ORDER_F]]]: ...
+    x: Int32[n1 - 1 - 0 + 1],
+    y: Float64[n0 * 2]
+) -> None: ...

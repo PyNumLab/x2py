@@ -355,7 +355,9 @@ end module explicit_mod
     assert res.stdout == ""
     assert out.exists()
     text = out.read_text(encoding="utf-8")
-    assert "def set_value() -> Float64: ..." in text
+    assert "def set_value(" in text
+    assert "x: Annotated[Ptr(Float64), Intent('out')]" in text
+    assert "-> None: ..." in text
 
 
 def test_cli_rejects_conflicting_json_and_pyi_out_from_inline_code(tmp_path: Path):
@@ -476,7 +478,8 @@ end program driver
 
     pyi_cmd = [sys.executable, "-m", "fortran_parser", str(module_source), "--pyi"]
     pyi_res = subprocess.run(pyi_cmd, capture_output=True, text=True, check=True)
-    assert "@native_call([Arg(0), Return(0), Arg(1)])" in pyi_res.stdout
+    assert "@native_call" not in pyi_res.stdout
+    assert "x: Annotated[Ptr(Float64), Intent('out')]" in pyi_res.stdout
     assert "def solve(" in pyi_res.stdout
 
     empty_pyi_cmd = [sys.executable, "-m", "fortran_parser", str(program_source), "--pyi"]

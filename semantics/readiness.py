@@ -510,9 +510,9 @@ def _is_constant(semantic_type: SemanticType) -> bool:
 
 def _shape_expressions(semantic_type: SemanticType) -> list[str]:
     expressions = list(semantic_type.shape)
-    for constraint in semantic_type.constraints:
-        if constraint.name == "Shape":
-            expressions.extend(str(value) for value in _iter_expression_values(constraint.arguments))
+    storage = semantic_type.storage
+    if storage is not None and storage.array is not None:
+        expressions.extend(storage.array.shape)
     return expressions
 
 

@@ -1,8 +1,8 @@
 def norm2(
-    x: Float64[Shape(':'), ORDER_F]
+    x: Const(Float64[::Strided])
 ) -> Float64: ...
 
 def scale(
-    a: Float64,
-    x: Float64[Shape(':'), ORDER_F]
-) -> Returns["x", Float64[Shape(':'), ORDER_F]]: ...
+    a: Ptr(Const(Float64)),
+    x: Float64[::Strided]
+) -> None: ...
