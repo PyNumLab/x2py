@@ -1,26 +1,21 @@
 # C Parser Tests
 
-This directory contains active tests for the implemented partial C parser and
-narrowly scoped skipped tests for genuinely deferred input/corpus work.
-
-Unskip tests one capability at a time and keep the active/skipped split
-intentional.
+This directory contains active tests for the implemented partial C parser.
 
 Guidelines:
 
 - keep these tests separate from the Fortran parser tests
 - keep wrap-readiness tests under `tests/semantics`, not under parser tests
-- do not import `c_parser` at module import time while a roadmap test is skipped
-- activate or remove roadmap tests once matching active coverage lands
 - add fixtures and goldens only when the corresponding schema is stable
-- keep cJSON as the first real-world corpus target once corpus tests start
+- keep the checked-in cJSON regression inputs active while a separately pinned
+  and provenanced corpus remains deferred
 
-## Intentional Skips
+## Active cJSON Regression
 
-The normal parser test run retains skips only for the pinned/provenanced
-cJSON corpus roadmap. CLI, public API, direct `.i` discovery,
-compiler/preprocessed linemarker remapping, and current project-resolution
-coverage are active.
+The normal parser test run has no intentionally skipped C parser tests.
+`tests/data/c/json/cJSON.h` and `cJSON.c` exercise the header, source and
+project paths in `test_c_corpus.py`; a separately pinned copy with license and
+source provenance remains documentation work rather than a disabled test.
 
 ## Parser Goldens
 

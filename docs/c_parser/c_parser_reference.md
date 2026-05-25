@@ -618,8 +618,8 @@ Test families should mirror the Fortran parser:
 - error fixture/golden tests
 - corpus parse-only tests
 
-The C test area contains active partial-parser/raw-metadata tests plus narrowly
-scoped roadmap skips under `tests/parser/c/`. The active tests cover
+The C test area contains active partial-parser/raw-metadata tests, including
+parse-only cJSON regression coverage under `tests/parser/c/`. The active tests cover
 public entrypoints, empty model serialization, CLI discovery, JSON/output-file
 behavior, unsupported C stages, comment stripping, line-continuation folding,
 top-level splitting, include collection, simple macro collection, macro-shaped
@@ -632,8 +632,8 @@ prototypes/definitions, function-definition start/end locations, JSON golden
 serialization, fatal diagnostic goldens, and project-level callback typedef
 resolution. The `json` regression inputs
 intentionally retain recoverable diagnostics from unsupported constructs; they
-do not claim complete library parsing. Remaining parser-suite skips cover the
-pinned/provenanced corpus target. Golden comparison tests rewrite their baselines when
+do not claim complete library parsing. A separately pinned/provenanced corpus
+target remains deferred without disabling parser tests. Golden comparison tests rewrite their baselines when
 `C_PARSER_UPDATE_GOLDENS=1` is set. Future implementation branches should
 activate only the tests for the capability they implement.
 

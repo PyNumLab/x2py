@@ -1,11 +1,49 @@
 # -*- coding: utf-8 -*-
 """C parser model to semantic IR conversion tests."""
 
+import pytest
+
 from c_parser import parse_c_file
+from c_parser.models import (
+    CArray,
+    CAtomic,
+    CChar,
+    CComposedType,
+    CConst,
+    CDiagnostic,
+    CDouble,
+    CEnum,
+    CEnumerator,
+    CFile,
+    CFloat,
+    CFunctionType,
+    CInitializer,
+    CInt,
+    CLongDouble,
+    CMacro,
+    CMacroDependency,
+    CParameter,
+    CPointer,
+    CProject,
+    CSourceLocation,
+    CStruct,
+    CTypedef,
+    CUnion,
+    CUnknownType,
+    CVariable,
+    CVolatile,
+    CVoid,
+)
 from semantics.c2ir import (
     CToIRConverter,
+    c_file_to_semantic_module,
     c_file_to_semantic_modules,
     c_function_to_semantic_function,
+    c_parameter_to_semantic_argument,
+    c_project_to_semantic_module,
+    c_project_to_semantic_modules,
+    c_struct_to_semantic_class,
+    c_type_to_semantic_type,
 )
 from semantics.readiness import assess_semantic_wrap_readiness
 
@@ -209,3 +247,199 @@ def test_c_function_compatibility_helper_accepts_parser_function():
     assert function.name == "half"
     assert function.arguments[0].semantic_type.name == "Float32"
     assert function.return_type.name == "Float32"
+
+
+def test_c2ir_visitor_and_project_compatibility_entrypoints_cover_supported_nodes():
+    first = parse_c_file("struct point { int x; };\nint value;\nint f(int x);\n", filename="a.h")
+    second = parse_c_file("double g(double y);\n", filename="b.h")
+    project = CProject(
+        files={"b.h": second, "a.h": first},
+        functions={"f": first.functions[0], "g": second.functions[0]},
+        structs={"point": first.structs[0]},
+        variables={"value": first.variables[0]},
+    )
+    converter = CToIRConverter()
+
+    assert [module.name for module in converter.visit(project)] == ["a", "b"]
+    assert converter.visit(first).name == "a"
+    assert converter.visit(first.functions[0]).name == "f"
+    assert converter.visit(first.functions[0].parameters[0], position=3).metadata["native_position"] == 3
+    assert converter.visit(first.structs[0]).name == "point"
+    assert converter.visit(first.variables[0]).name == "value"
+    assert converter.visit(CInt()).name == "Int32"
+    with pytest.raises(TypeError, match="Unsupported C parse object"):
+        converter.visit(object())
+
+    assert c_file_to_semantic_module(first).name == "a"
+    assert c_type_to_semantic_type(CInt()).name == "Int32"
+    assert c_parameter_to_semantic_argument(CParameter(name=None, type=CInt()), position=2).name == "arg2"
+    assert c_struct_to_semantic_class(first.structs[0]).name == "point"
+    assert [module.name for module in c_project_to_semantic_modules(project)] == ["a", "b"]
+    merged = c_project_to_semantic_module(project, name="42 api/project")
+    assert merged.name == "_42_api_project"
+    assert {function.name for function in merged.functions} == {"f", "g"}
+
+
+def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions():
+    callback = CComposedType(
+        components=[
+            CPointer(),
+            CFunctionType(result_type=CVoid(), parameter_types=[CInt()]),
+        ],
+        source_text="void (*)(int)",
+    )
+    converter = CToIRConverter()
+    variable = converter.visit_variable(CVariable(name="handler", type=callback, storage=["static"]))
+    field = converter.visit_variable(CVariable(name="bits", type=CInt(), bit_width="3"))
+    function = converter.visit_function(
+        parse_c_file("static int legacy();\n", filename="legacy.h").functions[0]
+    )
+    qualified = converter.visit_type(
+        CChar(qualifiers=[CConst(), CVolatile(), CAtomic()], source_text="const volatile _Atomic char")
+    )
+
+    assert variable.visibility == "private"
+    assert variable.semantic_type.name == "CFunctionPointer"
+    assert field.semantic_type.metadata["readiness_blockers"][0]["code"] == "c_bitfield_unsupported"
+    assert function.visibility == "private"
+    assert function.metadata["readiness_blockers"][0]["code"] == "c_unspecified_function_parameters"
+    assert qualified.name == "Int8"
+    assert qualified.metadata["c_char_policy"]
+    assert {blocker["code"] for blocker in qualified.metadata["readiness_blockers"]} == {
+        "c_volatile_unsupported",
+        "c_atomic_unsupported",
+    }
+
+
+def test_c2ir_reports_unsupported_type_and_declarator_compositions():
+    converter = CToIRConverter(primitive_type_map={CInt: None})
+
+    unresolved = converter.visit_type(CUnknownType(spelling="missing_t", source_text="missing_t"))
+    unsupported_integer = converter.visit_type(CInt(source_text="int"))
+    unsupported_precision = converter.visit_type(CLongDouble(source_text="long double"))
+    empty = converter.visit_type(CComposedType(components=[]))
+    array_missing_element = converter.visit_type(CComposedType(components=[CArray(bound="4")]))
+    array_of_pointer = converter.visit_type(
+        CComposedType(components=[CArray(bound="4"), CPointer(), CDouble()])
+    )
+    pointer_missing_pointee = converter.visit_type(CComposedType(components=[CPointer()]))
+    pointer_composition = converter.visit_type(
+        CComposedType(components=[CPointer(), CInt(), CDouble()])
+    )
+    other_composition = converter.visit_type(CComposedType(components=[CInt(), CDouble()]))
+
+    assert unresolved.metadata["readiness_blockers"][0]["code"] == "c_unresolved_type"
+    assert unsupported_integer.metadata["readiness_blockers"][0]["code"] == "c_unsupported_type"
+    assert unsupported_precision.metadata["readiness_blockers"][0]["code"] == "c_long_double_unsupported"
+    assert empty.metadata["readiness_blockers"][0]["code"] == "c_empty_composed_type"
+    assert array_missing_element.metadata["readiness_blockers"][0]["code"] == "c_array_missing_element_type"
+    assert array_of_pointer.metadata["readiness_blockers"][0]["code"] == "c_array_of_pointer_unsupported"
+    assert pointer_missing_pointee.metadata["readiness_blockers"][0]["code"] == "c_pointer_missing_pointee"
+    assert pointer_composition.metadata["readiness_blockers"][0]["code"] == "c_unsupported_composed_type"
+    assert other_composition.metadata["readiness_blockers"][0]["code"] == "c_unsupported_composed_type"
+
+
+def test_c2ir_models_pointer_to_arrays_unknown_extents_unions_and_anonymous_aliases():
+    converter = CToIRConverter()
+    pointer_array = converter.visit_type(
+        CComposedType(components=[CPointer(), CArray(bound=None), CDouble()], source_text="double (*)[]"),
+        owner="matrix",
+    )
+    choice = CUnion(name="choice", members=[CVariable(name="integer", type=CInt())])
+    converter.unions = {"choice": choice}
+    union_type = converter.visit_type(CUnion(name="choice"), owner="selected")
+    anon_struct = CStruct(anonymous_id="anon_struct_1")
+    anon_union = CUnion(anonymous_id="anon_union_1")
+    converter.typedefs = {
+        "record_t": CTypedef(name="record_t", type=anon_struct),
+        "variant_t": CTypedef(name="variant_t", type=anon_union),
+    }
+
+    assert pointer_array.storage.pointer_depth == 1
+    assert pointer_array.storage.metadata["c_pointer_to_array"] is True
+    assert pointer_array.metadata["readiness_blockers"][0]["code"] == "c_array_extent_ambiguous"
+    assert union_type.metadata["readiness_blockers"][0]["code"] == "c_union_unsupported"
+    assert converter.visit_struct(anon_struct).name == "record_t"
+    assert converter.visit_union(anon_union).name == "variant_t"
+
+
+def test_c2ir_marks_incomplete_by_value_structs_and_preserves_initializer_locations():
+    incomplete = CStruct(name="handle", is_incomplete=True)
+    converter = CToIRConverter()
+    converter.structs = {"handle": incomplete}
+    parameter = converter.visit_parameter(CParameter(name="handle", type=incomplete), owner="open")
+    variable = converter.visit_variable(
+        CVariable(
+            name=None,
+            type=incomplete,
+            initializer=CInitializer("factory()"),
+            source_location=CSourceLocation(filename="api.h", line=2, column=4, source_line="struct handle h;"),
+        )
+    )
+
+    assert parameter.semantic_type.metadata["readiness_blockers"][0]["code"] == "c_incomplete_struct_by_value"
+    assert variable.name == "<anonymous>"
+    assert variable.default_value == "factory()"
+    assert variable.origin.source_location["filename"] == "api.h"
+
+
+def test_c2ir_standard_type_facts_and_numeric_constant_edge_cases():
+    class Report:
+        types = {
+            "signed_size": {"kind": "integer", "signed": True, "bits": 16},
+            "real_size": {"kind": "real", "bits": 32},
+            "missing": {"available": False, "kind": "integer", "signed": False, "bits": 32},
+        }
+
+    converter = CToIRConverter(standard_type_report=Report())
+    assert converter._standard_semantic_type("signed_size").name == "Int16"
+    assert converter._standard_semantic_type("real_size").name == "Float32"
+    assert converter._standard_semantic_type("missing") is None
+    assert converter._standard_semantic_type("not_standard") is None
+    assert CToIRConverter._standard_type_facts(object()) == {}
+    assert CToIRConverter._integer_literal_value(None) is None
+    assert CToIRConverter._integer_literal_value("value") is None
+    assert CToIRConverter._integer_macro_expression("(MISSING + 1)", {}) is False
+    assert CToIRConverter._integer_macro_expression("(1 +)", {}) is False
+
+    parsed = parse_c_file(
+        "#define RATE 1.5\n#define BAD (MISSING + 1)\nenum status { STATUS_EXPR = UNKNOWN, STATUS_NEXT };\n",
+        filename="edge_constants.h",
+    )
+    constants = {variable.name: variable for variable in converter.visit_file(parsed).variables}
+    assert constants["RATE"].semantic_type.name == "Float64"
+    assert constants["STATUS_EXPR"].default_value == "UNKNOWN"
+    assert constants["STATUS_NEXT"].default_value is None
+
+
+def test_c2ir_propagates_file_and_project_diagnostic_blockers():
+    dependency = CMacroDependency(name="API", source_text="API(int) f(void);")
+    warning = CDiagnostic(code="C_WARNING", message="warning", severity="warning")
+    duplicate_dependency = CDiagnostic(
+        code="C_MACRO_DEPENDENT_DECLARATION",
+        message="already represented",
+        severity="error",
+    )
+    error = CDiagnostic(
+        code="C_BAD_DECL",
+        message="bad declaration",
+        severity="error",
+        unit_kind="function",
+        unit_name="broken",
+    )
+    c_file = CFile(
+        filename=None,
+        macro_dependencies=[dependency],
+        diagnostics=[warning, duplicate_dependency, error],
+    )
+    project = CProject(files={"bad.h": c_file}, diagnostics=[error])
+    converter = CToIRConverter()
+
+    module = converter.visit_file(c_file)
+    merged = converter.visit_project_module(project)
+    file_codes = {blocker["code"] for blocker in module.metadata["readiness_blockers"]}
+    project_codes = {blocker["code"] for blocker in merged.metadata["readiness_blockers"]}
+
+    assert module.name == "c_module"
+    assert file_codes == {"c_macro_dependent_declaration", "c_c_bad_decl"}
+    assert project_codes == {"c_macro_dependent_declaration", "c_c_bad_decl"}

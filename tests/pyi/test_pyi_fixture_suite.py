@@ -14,6 +14,7 @@ from tests._shared.fixture_outputs import (
     pyi_text_for_fixture,
 )
 from semantics.pyi_parser import parse_pyi_text
+from semantics.pyi_printer import emit_module
 
 
 FORTRAN_FIXTURES = iter_general_fortran_fixtures()
@@ -89,11 +90,13 @@ def test_c_pyi_fixture_suite(project_key: Path, fixtures: list[Path]):
     sorted(C_PYI_FIXTURE_DIR.rglob("*.pyi")),
     ids=lambda path: str(path.relative_to(C_PYI_FIXTURE_DIR)),
 )
-def test_c_pyi_fixtures_parse_back_to_semantic_ir(fixture: Path):
+def test_c_pyi_fixtures_round_trip_through_semantic_ir(fixture: Path):
+    expected = fixture.read_text(encoding="utf-8").strip()
     module = parse_pyi_text(
-        fixture.read_text(encoding="utf-8"),
+        expected,
         module_name=fixture.stem,
         filename=str(fixture),
     )
 
     assert module.name == fixture.stem
+    assert emit_module(module).strip() == expected

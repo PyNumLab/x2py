@@ -189,9 +189,10 @@ def _compile_command_arguments(entry: dict) -> list[str]:
 def _entry_file_path(entry: dict) -> Path:
     """Return the absolute source path for a compile database entry."""
     directory = Path(str(entry.get("directory") or "."))
-    file_path = Path(str(entry.get("file") or ""))
-    if not file_path:
+    file_value = entry.get("file")
+    if not file_value:
         raise PreprocessingError("compile_commands entry is missing 'file'")
+    file_path = Path(str(file_value))
     return file_path if file_path.is_absolute() else directory / file_path
 
 

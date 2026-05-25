@@ -6,7 +6,19 @@ from pathlib import Path
 import pytest
 
 from semantics.pyi_parser import parse_pyi_text
-from semantics.readiness import assess_semantic_wrap_readiness
+from semantics.models import (
+    SemanticArgument,
+    SemanticClass,
+    SemanticFunction,
+    SemanticMethod,
+    SemanticModule,
+    SemanticType,
+)
+from semantics.readiness import (
+    _iter_expression_values,
+    assess_pyi_wrap_readiness,
+    assess_semantic_wrap_readiness,
+)
 from x2py import cli as x2py_cli
 
 
@@ -159,6 +171,83 @@ def integrate(objective: Callable[..., Float64], x0: Float64) -> Float64: ...
 
     assert report["wrappable"] is False
     assert "callback_signature_incomplete" in _blocker_codes(report)
+
+
+def test_assess_pyi_wrap_readiness_expands_directory_and_deduplicates_paths(tmp_path: Path):
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    first = tmp_path / "first.pyi"
+    second = nested / "second.pyi"
+    ignored = nested / "ignored.txt"
+    first.write_text("def first(x: Int32) -> None: ...\n", encoding="utf-8")
+    second.write_text("def second(x: Int32) -> None: ...\n", encoding="utf-8")
+    ignored.write_text("not a stub", encoding="utf-8")
+
+    report = assess_pyi_wrap_readiness([tmp_path, first])
+
+    assert report["wrappable"] is True
+    assert report["n_modules"] == 2
+    assert report["source"] == [str(first), str(second)]
+
+
+def test_readiness_skips_private_api_and_normalizes_metadata_blocker_items():
+    module = SemanticModule(
+        name="policy",
+        metadata={
+            "readiness_blockers": [
+                "ignored",
+                {"code": "default_item", "message": "default", "item": {"detail": "fallback"}},
+                {
+                    "code": "scalar_item",
+                    "message": "scalar",
+                    "items": "detail text",
+                    "unit": "policy.override",
+                    "unit_kind": "policy",
+                },
+            ]
+        },
+        variables=[SemanticArgument("hidden", SemanticType("Undeclared"), visibility="private")],
+        classes=[
+            SemanticClass(name="Private", fields=[SemanticArgument("missing", SemanticType("Undeclared"))], visibility="private"),
+            SemanticClass(
+                name="Public",
+                methods=[
+                    SemanticMethod(name="hidden", arguments=[SemanticArgument("missing", SemanticType("Undeclared"))], visibility="private"),
+                    SemanticMethod(name="ready", arguments=[SemanticArgument("value", SemanticType("Int32"))]),
+                ],
+            ),
+        ],
+        functions=[SemanticFunction(name="hidden", arguments=[SemanticArgument("missing", SemanticType("Undeclared"))], visibility="private")],
+    )
+
+    report = assess_semantic_wrap_readiness(module)
+    blockers = {blocker["code"]: blocker for blocker in report["wrappability_blockers"]}
+
+    assert set(blockers) == {"default_item", "scalar_item"}
+    assert blockers["default_item"]["items"][0]["detail"] == "fallback"
+    assert blockers["scalar_item"]["items"][0]["detail"] == "detail text"
+    assert {unit["unit"] for unit in report["unit_blockers"]} == {"policy", "policy.override"}
+
+
+def test_readiness_accepts_qualified_types_from_imported_modules_and_aliases():
+    report = _readiness_from_pyi(
+        """
+import state_mod
+import mesh_mod as mesh
+from values_mod import value_t as imported_value
+
+def step(a: state_mod.state_t, b: mesh.mesh_t, c: imported_value) -> None: ...
+"""
+    )
+
+    assert report["wrappable"] is True
+
+
+def test_readiness_empty_public_surface_and_nested_expression_utility():
+    report = assess_semantic_wrap_readiness(SemanticModule(name="empty"))
+
+    assert _blocker_codes(report) == {"no_public_api"}
+    assert list(_iter_expression_values({"a": ["n", ("m", {"deep": "k"})]})) == ["n", "m", "k"]
 
 
 def test_cli_wrap_readiness_loads_completed_pyi(tmp_path: Path):

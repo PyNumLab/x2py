@@ -100,8 +100,9 @@ Implemented now:
   semantic subset.
 - Focused partial CLI/API, declaration/function, diagnostic color, project
   include/index, raw lexer/directive, project golden, error golden, preprocessed
-  linemarker remapping, and JSON schema tests are active. Remaining
-  parser-suite skips are limited to the pinned corpus roadmap.
+  linemarker remapping, JSON schema, and cJSON partial-parse regression tests
+  are active. A separately pinned/provenanced corpus remains deferred work,
+  not a skipped test.
 - `tests/data/c/` contains general fixtures modeled after the Fortran general
   fixture themes, additional C-specific API shapes, fatal diagnostic inputs,
   and real-world cJSON/jsmn/tinyexpr/linmath/NanoSVG/stb inputs whose partial

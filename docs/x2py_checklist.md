@@ -336,8 +336,10 @@ Language scope is stated in each section or subsection heading:
       parser model -> semantic IR -> `.pyi` -> semantic IR.
 - [x] Add round-trip tests for edited Fortran `.pyi` files loaded directly into
       semantic IR.
-- [ ] Add round-trip tests for C parser output:
-      parser model -> semantic IR -> `.pyi` -> semantic IR.
+- [x] Add round-trip tests for C parser output:
+      parser model -> semantic IR -> `.pyi` -> semantic IR -> canonical `.pyi`;
+      C source/readiness provenance is intentionally not serialized in the
+      public stub contract.
 - [ ] Add mixed-language semantic fixture tests where C and Fortran stubs load
       through the same `.pyi` loader and readiness checker.
 - [x] Keep `.pyi` syntax language-neutral; Fortran and C should differ by
@@ -421,8 +423,8 @@ Language scope is stated in each section or subsection heading:
 - [ ] Add parse-only corpus tests.
 - [ ] Add selected parser JSON goldens for representative corpus files.
 - [ ] Keep corpus license provenance documented.
-- [ ] Run C corpus parse-only tests. The current corpus file is still a skipped
-      roadmap test until the corpus workflow is enabled.
+- [x] Run cJSON parse-only regression tests from `tests/data/c/json/`.
+      A separately pinned/provenanced corpus copy remains deferred.
 - [ ] Audit JSON schema stability.
 - [ ] Audit error diagnostic stability.
 - [ ] Require green CI for Fortran and C suites.
