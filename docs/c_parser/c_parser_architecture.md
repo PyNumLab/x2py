@@ -8,6 +8,11 @@ reporting, top-level source splitting, and a first simple
 declaration/function subset with function-definition start/end locations and
 aggregate declarations exist. Declarators are parsed through a recursive
 grammar-style path for pointer, array, function, and parenthesized combinations.
+The x2py CLI also has a shared C/Fortran preprocessing option surface and can
+run an exact compiler/preprocessor executable for C compiler mode. Compiler
+and preprocessed C inputs preserve `#line`/GCC linemarker source locations for
+parsed declarations and diagnostics. A separate compiler-derived standard-type
+probe supplies target ABI facts needed by later C semantic conversion.
 
 This document records the target architecture for the C parser frontend in
 x2py. The initial skeleton has grown into a partial parser, and the remaining
@@ -59,8 +64,7 @@ Implemented now:
   unexpanded object-like macros are deferred as macro dependencies rather than
   misreported as invalid type sequences. Selected unsupported declaration
   forms, including attributes, alignment specifiers,
-  `_Atomic(type)`, C++-shaped declarations, nested aggregate member
-  definitions, and static assertions, are reported as diagnostics with
+  C++-shaped declarations, and static assertions, are reported as diagnostics with
   explicit `unit_kind` values. A declarator must be fully consumed before a
   concrete object is returned; unknown suffixes become diagnostics. Primitive
   specifier order is normalized, and invalid combinations such as
@@ -76,12 +80,17 @@ Implemented now:
   inside function bodies remain out of scope because bodies are skipped.
 - `c_parser.cli` provides C-specific partial report formatting.
 - `x2py.cli` dispatches `--language c --parse` to the C parser path.
+- `x2py.c_type_probe` compiles and runs a generated C11 query for
+  `size_t`, `uint32_t`, `time_t`, and opaque `FILE` pointer ABI facts,
+  preserving compiler/runner/source provenance for semantic conversion. It
+  carries target-relevant include, macro, undefine, and compiler-argument flags
+  and records the requested project standard as provenance.
 - `--language c --semantics`, `--language c --pyi`, and C wrap-readiness are
   rejected until semantic conversion exists.
 - Focused partial CLI/API, declaration/function, diagnostic color, project
-  include/index, raw lexer/directive, project golden, error golden, and JSON
-  schema tests are active. Remaining parser-suite skips are limited to the
-  pinned corpus roadmap and compiler-preprocessed `.i`/`#line` behavior.
+  include/index, raw lexer/directive, project golden, error golden, preprocessed
+  linemarker remapping, and JSON schema tests are active. Remaining
+  parser-suite skips are limited to the pinned corpus roadmap.
 - `tests/data/c/` contains general fixtures modeled after the Fortran general
   fixture themes, additional C-specific API shapes, fatal diagnostic inputs,
   and real-world cJSON/jsmn/tinyexpr/linmath/NanoSVG/stb inputs whose partial
@@ -92,13 +101,9 @@ Deferred:
 - full typedef/tag resolution policy beyond basic project-level link-up and
   callback policy metadata, for example conflict diagnostics, active
   conditional branches, and semantic wrappability decisions
-- nested aggregate member definitions, braced initializers, compiler
-  attributes, alignment specifiers, and `_Atomic(type)` declarations, for
-  example `struct outer { struct { int x; } inner; };` and
-  `int values[3] = {1, 2, 3};`
-- preprocessed-input support, line mapping, and macro-expanded declaration
-  parsing, for example `API(int) run(void);` after macro expansion
-- include graph and project type resolution
+- compiler attributes and alignment specifiers
+- broader compiler-family validation for preprocessing; parsed declarations
+  already retain preprocessed origin and mapped source identity
 - C semantic readiness, semantic IR conversion, and `.pyi` output
 
 Documentation rule: any future C parser implementation change must update all
@@ -129,6 +134,7 @@ should not wait for a separate request.
 - `tests/parser/test_fortran_fixture_suite.py`
 - `tests/parser/test_fortran_error_fixture_suite.py`
 - `tests/parser/test_parser_developer_tutorial.py`
+- `tests/parser/c/test_c_parser_developer_tutorial.py`
 - `tests/parser/test_parser_public_entrypoints.py`
 - `tests/semantics/test_semantic_wrap_readiness.py`
 - `tests/parser/test_error_handling.py`
@@ -200,10 +206,14 @@ Regular expressions are acceptable only as narrow helpers inside a grammar
 step, such as recognizing an include directive after the preprocessor collector
 has isolated the line. They must not become the top-level parsing strategy.
 
-External compiler preprocessing can be used later as an optional input source
-for `.i` files or macro-expanded views, but the x2py C frontend still needs its
-own typed parser models, source-location handling, diagnostics, and project
-indexes. Invoking a compiler must not replace the grammar-style parser.
+External compiler preprocessing can be used as an optional input source for
+macro-expanded views, but the x2py C frontend still needs its own typed parser
+models, source-location handling, diagnostics, and project indexes. Invoking a
+compiler must not replace the grammar-style parser. The current x2py CLI can
+run an exact user-supplied compiler executable through `--preprocess compiler`
+and parse the preprocessed stdout through the same C parser. `#line` and
+GCC/Clang linemarkers are used to remap parsed locations and diagnostics back
+to the original source.
 
 ## Package Layout
 
@@ -222,6 +232,9 @@ c_parser/
   project.py
   type_resolver.py
   utils.py
+
+x2py/
+  c_type_probe.py
 ```
 
 Current and planned responsibilities:
@@ -235,42 +248,43 @@ Current and planned responsibilities:
 - `c_parser/lexer.py`
   - Implemented: safe comment removal that preserves line mapping, logical
     record folding for backslash-newline, string/character literal awareness,
-    lightweight tokens with source locations, top-level splitting with block
-    end locations, and delimiter splitting aware of nesting and literals.
+    lightweight tokens with source locations, preprocessed `#line`/linemarker
+    remapping for top-level segments, top-level splitting with block end
+    locations, and delimiter splitting aware of nesting and literals.
   - Planned: richer token helpers as extension and initializer-expression
     parsing require them.
 - `c_parser/preprocessor.py`
   - Implemented: lightweight raw directive metadata for includes,
     object-like macros, `#undef` directives, function-like macro diagnostics,
     and local include resolution when a matching file is available.
-  - Planned: compiler-assisted preprocessing metadata and `#line`/linemarker
-    source mapping for preprocessed input.
+  - Compiler-assisted recipe metadata is persisted by the shared
+    `x2py.preprocessing` CLI input path and attached to generated `CFile`
+    JSON output.
 - `c_parser/parser.py`
   - Implemented: `CParser`, `parse_c_file`, `parse_c_project`,
     translation-unit visiting, declaration/function visitors, grammar-shaped
     recursive declarator parsing, concrete `CType` construction, and aggregate
     member extraction. Helper methods live on `CParser` rather than as broad
-    module-level functions. Function models record prototype-style versus
-    unspecified empty parameter lists, function definitions preserve start/end
-    locations, K&R-style definitions are rejected with `CParseError`, and
-    invalid primitive-specifier combinations are rejected with `CPARSE003`.
-    Array and function parameters preserve `declared_type` while effective
-    `type` uses C parameter adjustment. Raw declarations beginning with an
-    object-like macro name are retained as macro-dependent diagnostics.
+    module-level functions. The file now follows the Fortran parser's
+    maintainer-facing organization pattern with a module architecture guide,
+    public visitors first, sectioned helper groups, and docstrings on parser
+    helper methods. Function models record prototype-style versus unspecified
+    empty parameter lists, function definitions preserve start/end locations,
+    K&R-style definitions are rejected with `CParseError`, and invalid
+    primitive-specifier combinations are rejected with `CPARSE003`. Array and
+    function parameters preserve `declared_type` while effective `type` uses C
+    parameter adjustment. Raw declarations beginning with an object-like macro
+    name are retained as macro-dependent diagnostics.
   - Planned: symbol resolution and additional declaration-specifier and
     extension coverage.
 - `c_parser/project.py`
-  - Placeholder now.
-  - Planned: file discovery for `.c`, `.h`, and possibly `.i`.
-  - Include graph construction.
-  - Header/source association.
-  - Cross-file type and typedef resolution.
+  - Compatibility export for project parsing.
+  - Project behavior is implemented through `CParser.visit_project`, including
+    `.c`/`.h`/`.i` discovery, include graphs, and header/source association.
 - `c_parser/type_resolver.py`
-  - Placeholder now.
-  - Planned: resolve the concrete primitive/tag/typedef types constructed by
-    the parser across declarations and files.
-  - Resolve typedef chains and aggregate references.
-  - Safely fold simple compile-time constant expressions.
+  - Resolves tag and typedef references, typedef chains/cycles, and aggregate
+    references across parsed project files.
+  - Planned: safely fold simple compile-time constant expressions.
 - `c_parser/cli.py`
   - Implemented: report formatting and serialization helpers called by
     `x2py.cli` behind explicit C flags.
@@ -278,6 +292,11 @@ Current and planned responsibilities:
 - `c_parser/utils.py`
   - Placeholder now.
   - Planned: shared helpers that are not parser-state dependent.
+- `x2py/c_type_probe.py`
+  - Implemented: compiler/target-derived JSON facts for standard-header
+    arithmetic aliases and opaque `FILE` pointer ABI information.
+  - Boundary: target ABI facts are inputs to future semantics, not declarations
+    guessed by raw parser mode or stored as `CFile` syntax facts.
 
 ## Public API Shape
 
@@ -308,7 +327,9 @@ x2py API promise stable C behavior before the frontend matures.
 
 All declared types inherit from `CType`, which stores `qualifiers` and
 `source_text`. Type qualifiers are concrete values: `CConst`, `CVolatile`,
-`CRestrict`, and `CAtomic`.
+`CRestrict`, and `CAtomic`. Both `_Atomic int` and `_Atomic(type)` forms are
+parsed; for a composed inner type the atomic qualifier stays on its outermost
+component.
 
 The implemented primitive `CType` subclasses are:
 
@@ -476,6 +497,7 @@ Layered pieces:
 - declaration specifier parser
   - storage classes: `extern`, `static`, `typedef`, `register`, `_Thread_local`
   - qualifiers: `const`, `restrict`, `volatile`, `_Atomic`
+  - atomic type specifier: `_Atomic(type)`
   - primitive base: `void`, `char`, `short`, `int`, `long`, `float`, `double`,
     `_Bool`, `_Complex`
   - signedness: `signed`, `unsigned`
@@ -506,9 +528,13 @@ function names, type names, declarators, attributes, calling conventions,
 visibility annotations, and entire declarations. Raw mode must therefore avoid
 guessing what macro-expanded declarations mean. Macro-heavy APIs are still in
 scope, but the supported path for those APIs is compiler-assisted preprocessing
-with line mapping. The parser should support both raw-source mode and a later
-preprocessed-input mode, and should store the facts it learns from either mode
-in C parser models before any semantic IR conversion is attempted.
+with line mapping. The parser supports raw-source mode,
+compiler/preprocessed-input mode, and direct `.i` input; declarations parsed
+from preprocessed source carry `origin="preprocessed"`. For compiler streams
+produced by the shared x2py CLI, `CFile` JSON records a
+`preprocessing_recipe`: compiler executable, final argv,
+include dirs, defines, undefines, standard, working directory, and optional
+selected `compile_commands.json` entry.
 
 Raw-source mode target:
 
@@ -528,14 +554,25 @@ Raw-source mode target:
 
 Compiler-assisted preprocessing target:
 
-- Accept a preprocessed stream from `.i` files or a configured compiler command
-  such as `cc -E` or `clang -E`.
+- Accept a preprocessed stream from a configured compiler command such as
+  `gcc-13 -E`, `clang-18 -E`, or an absolute compiler path. Users normally pass
+  `.h`/`.c` inputs and have x2py generate the stream; direct `.i` input is
+  accepted when a generated stream already exists.
+- Use a shared x2py CLI option shape for C and Fortran:
+  `--preprocess compiler`, `--compiler`, `-I`, `-D`, `-U`, `--std`, and
+  `--compiler-arg`.
+- Require exact compiler executables in direct compiler mode, for example
+  `gcc-13`, `clang-18`, `/usr/bin/gfortran-12`, or
+  `/opt/intel/oneapi/compiler/latest/bin/ifx`, instead of silently choosing a
+  generic default.
+- Accept C `compile_commands.json` entries for project builds and strip
+  compile-only flags before adding `-E`.
 - Preserve `#line` marker information so diagnostics can map preprocessed
   declarations back to original files.
 - Treat `#line`/linemarker directives as the source of truth for
   `source_location` fields after preprocessing.
-- Store both the original input path and the preprocessed origin metadata on
-  parsed models.
+- Store the original input path and exact invocation recipe for
+  CLI-generated compiler input.
 - Mark declarations discovered only after preprocessing with
   `origin="preprocessed"` or equivalent model metadata.
 - Record the macro definitions/include directories/preprocessor command that
@@ -576,11 +613,12 @@ Current behavior:
 - Basic cross-file typedef and struct/union/enum tag references are linked to
   project index objects after all files are parsed. Original type spelling is
   preserved in the model `source_text`.
-- Duplicate/conflict analysis is not populated yet.
+- Basic duplicate/conflict analysis is populated; broader policy remains
+  fixture-driven work.
 
 Planned behavior after project-resolution phases:
 
-- Collect `.c`, `.h`, and eventually `.i` files from explicit paths or
+- Collect `.c`, `.h`, and `.i` files from explicit paths or
   directories.
 - Parse headers and sources into `CFile` models.
 - Deepen include graph behavior where normalized paths are ambiguous.
@@ -620,8 +658,12 @@ These should become parser diagnostics or parser metadata, not a parser-side
 For the current planning horizon, the C parser should store C-specific facts in
 `c_parser/models.py`. It currently stores function-pointer signatures,
 callback-candidate markers, type qualifiers, raw include dependencies, and
-unresolved typedef/tag uses. Later phases should add preprocessing origin,
-macro dependencies, ownership policy, and resolved symbol links.
+unresolved typedef/tag uses. Preprocessed input records declaration origin and
+mapped source identity; CLI-generated compiler input also records its
+preprocessing recipe. Later phases should add ownership policy and deepen
+resolved symbol/conflict handling. Standard-header aliases whose representation
+matters to semantic conversion are supplied separately by `x2py.c_type_probe`,
+with exact compiler, generated source, and runner provenance.
 
 Semantic IR conversion is deliberately later work. When that phase starts, the
 IR model may need extensions for C pointer ownership, unsigned integer types,
@@ -648,6 +690,10 @@ Planned mapping:
 - enums -> constants or a future semantic enum representation
 - typedefs -> semantic aliases or metadata, depending on IR support at the
   time of implementation
+- standard-header aliases (`size_t`, `uint32_t`, `time_t`) -> semantic
+  integer/real types using compiler-derived width and signedness facts
+- `FILE *` -> opaque handle/pointer semantics using pointer ABI facts rather
+  than importing library-private layout
 - macros/constants -> `SemanticArgument` module variables with `Constant`
   where safe
 
@@ -707,10 +753,13 @@ Until those fields exist and are supplied, any future readiness layer should
 report an explicit callback policy blocker rather than pretending the function
 is safely wrappable.
 
-## Isolation Policy
+## Merge Policy
 
-All C parser work must be isolated from project `main` until the C frontend is
-mature and stable.
+The parse-only C frontend can be merged to project `main` once parser behavior,
+preprocessing, source-location remapping, probe contracts, docs, and tests are
+green. C semantic readiness, semantic IR conversion, and `.pyi` generation are
+separate follow-up phases and should remain explicitly disabled until their
+models and tests exist.
 
 Long-lived integration branch:
 
@@ -724,8 +773,8 @@ Roadmap branch:
 c-parser/phase-0-roadmap
 ```
 
-Future feature branches should be created from `c-parser/main` and merged only
-back into `c-parser/main`, for example:
+Future C semantic feature branches can be created from the integration branch
+or project `main`, depending on the merge point, for example:
 
 ```text
 c-parser/phase-1-cli-and-docs
@@ -742,6 +791,7 @@ c-parser/phase-11-pyi
 c-parser/phase-12-corpus-stabilization
 ```
 
-No C parser branch should merge directly into project `main` until the
-frontend has stable parser behavior, docs, CLI, tests, semantic readiness
-integration, semantic conversion, and `.pyi` expectations.
+Before merging parser work, run the C parser/probe tests plus the shared CLI and
+Fortran regression suites. After merge, C semantics work should continue behind
+the existing CLI errors for `--language c --semantics`, `--pyi`, and
+`--wrap-readiness` until those stages are implemented.

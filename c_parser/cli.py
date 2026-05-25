@@ -3,13 +3,15 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import Any
 
 from .models import CFile, c_model_to_dict
 from .parser import CParser
 
 
-_C_SOURCE_SUFFIXES = {".c", ".h"}
+_C_SOURCE_SUFFIXES = {".c", ".h", ".i"}
 
 
 def _collect_c_extensions(path: Path) -> list[Path]:
@@ -31,11 +33,33 @@ def expand_c_paths(paths: list[str]) -> list[Path]:
     return sorted(set(expanded))
 
 
-def parse_c_report(paths: list[str]) -> dict[str, dict]:
+def parse_c_report(
+    paths: list[str],
+    *,
+    include_dirs: Sequence[str | Path] | None = None,
+    preprocessing: str = "raw",
+    source_loader: Callable[[Path], str | tuple[str, dict[str, Any] | None]] | None = None,
+) -> dict[str, dict]:
     out: dict[str, dict] = {}
     parser = CParser()
     for p in expand_c_paths(paths):
-        parsed = parser.visit_file(p, filename=str(p))
+        if source_loader is None:
+            parsed = parser.visit_file(
+                p,
+                filename=str(p),
+                include_dirs=include_dirs,
+                preprocessing=preprocessing,
+            )
+        else:
+            loaded = source_loader(p)
+            source, preprocessing_recipe = loaded if isinstance(loaded, tuple) else (loaded, None)
+            parsed = parser.visit_file(
+                source,
+                filename=str(p),
+                include_dirs=include_dirs,
+                preprocessing=preprocessing,
+            )
+            parsed.preprocessing_recipe = preprocessing_recipe
         out[str(p)] = c_model_to_dict(parsed)
     return out
 

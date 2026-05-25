@@ -330,14 +330,41 @@ def test_unnamed_and_zero_width_bitfields_preserve_source_facts_and_locations():
     assert parsed.diagnostics == []
 
 
-def test_nested_aggregate_member_definition_is_diagnosed_explicitly():
-    from c_parser import parse_c_file
+def test_nested_aggregate_member_definition_builds_the_nested_type():
+    from c_parser import CStruct, CUnion, parse_c_file
 
     parsed = parse_c_file(
-        "struct outer { struct { int nested; } inner; int kept; };\n",
+        """struct outer {
+    struct { int nested; } inner;
+    union { int integer; double real; } value;
+    int kept;
+};
+""",
         filename="nested_member.h",
     )
 
-    assert [member.name for member in parsed.structs[0].members] == ["kept"]
-    assert parsed.diagnostics[0].code == "C_UNSUPPORTED_FIELD_DECLARATION"
-    assert parsed.diagnostics[0].unit_kind == "struct_field"
+    outer = parsed.structs[0]
+    assert [member.name for member in outer.members] == ["inner", "value", "kept"]
+    assert isinstance(outer.members[0].type, CStruct)
+    assert [member.name for member in outer.members[0].type.members] == ["nested"]
+    assert outer.members[0].source_location.line == 2
+    assert outer.members[0].type.members[0].source_location.line == 2
+    assert isinstance(outer.members[1].type, CUnion)
+    assert [member.name for member in outer.members[1].type.members] == ["integer", "real"]
+    assert parsed.diagnostics == []
+
+
+def test_anonymous_aggregate_member_without_a_declarator_is_retained():
+    from c_parser import CUnion, parse_c_file
+
+    parsed = parse_c_file(
+        "struct flags { union { int integer; float real; }; int tag; };\n",
+        filename="anonymous_member.h",
+    )
+
+    anonymous, tag = parsed.structs[0].members
+    assert anonymous.name is None
+    assert isinstance(anonymous.type, CUnion)
+    assert [member.name for member in anonymous.type.members] == ["integer", "real"]
+    assert tag.name == "tag"
+    assert parsed.diagnostics == []

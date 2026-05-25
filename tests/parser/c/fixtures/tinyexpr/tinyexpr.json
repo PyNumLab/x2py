@@ -784,6 +784,121 @@
                           "declaration_locations": []
                         },
                         {
+                          "name": null,
+                          "type": {
+                            "model": "CUnion",
+                            "qualifiers": [],
+                            "source_text": "",
+                            "name": null,
+                            "members": [
+                              {
+                                "name": "value",
+                                "type": {
+                                  "model": "CDouble",
+                                  "qualifiers": [],
+                                  "source_text": "double value"
+                                },
+                                "storage": [],
+                                "initializer": null,
+                                "bit_width": null,
+                                "source_location": {
+                                  "filename": "tinyexpr/tinyexpr.c",
+                                  "line": 70,
+                                  "column": 12,
+                                  "source_line": "    union {double value; const double *bound; const void *function;};"
+                                },
+                                "callback_policy": null,
+                                "declaration_locations": []
+                              },
+                              {
+                                "name": "bound",
+                                "type": {
+                                  "model": "CComposedType",
+                                  "qualifiers": [],
+                                  "source_text": "const double *bound",
+                                  "components": [
+                                    {
+                                      "model": "CPointer",
+                                      "qualifiers": [],
+                                      "source_text": ""
+                                    },
+                                    {
+                                      "model": "CDouble",
+                                      "qualifiers": [
+                                        "const"
+                                      ],
+                                      "source_text": "const double"
+                                    }
+                                  ]
+                                },
+                                "storage": [],
+                                "initializer": null,
+                                "bit_width": null,
+                                "source_location": {
+                                  "filename": "tinyexpr/tinyexpr.c",
+                                  "line": 70,
+                                  "column": 26,
+                                  "source_line": "    union {double value; const double *bound; const void *function;};"
+                                },
+                                "callback_policy": null,
+                                "declaration_locations": []
+                              },
+                              {
+                                "name": "function",
+                                "type": {
+                                  "model": "CComposedType",
+                                  "qualifiers": [],
+                                  "source_text": "const void *function",
+                                  "components": [
+                                    {
+                                      "model": "CPointer",
+                                      "qualifiers": [],
+                                      "source_text": ""
+                                    },
+                                    {
+                                      "model": "CVoid",
+                                      "qualifiers": [
+                                        "const"
+                                      ],
+                                      "source_text": "const void"
+                                    }
+                                  ]
+                                },
+                                "storage": [],
+                                "initializer": null,
+                                "bit_width": null,
+                                "source_location": {
+                                  "filename": "tinyexpr/tinyexpr.c",
+                                  "line": 70,
+                                  "column": 47,
+                                  "source_line": "    union {double value; const double *bound; const void *function;};"
+                                },
+                                "callback_policy": null,
+                                "declaration_locations": []
+                              }
+                            ],
+                            "anonymous_id": "union@tinyexpr/tinyexpr.c:70:5",
+                            "is_incomplete": false,
+                            "source_location": {
+                              "filename": "tinyexpr/tinyexpr.c",
+                              "line": 70,
+                              "column": 5,
+                              "source_line": "    union {double value; const double *bound; const void *function;};"
+                            }
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "tinyexpr/tinyexpr.c",
+                            "line": 70,
+                            "column": 5,
+                            "source_line": "    union {double value; const double *bound; const void *function;};"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
                           "name": "context",
                           "type": {
                             "model": "CComposedType",
@@ -2811,7 +2926,53 @@
           "reference": "state"
         }
       ],
-      "variables": [],
+      "variables": [
+        {
+          "name": "functions",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static const te_variable functions[]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": null,
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CTypedef",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const te_variable",
+                "name": "te_variable",
+                "type": null,
+                "source_location": null,
+                "declaration_locations": []
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n                                       \n    {\"abs\", fabs,     TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"acos\", acos,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"asin\", asin,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"atan\", atan,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"atan2\", atan2,  TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"ceil\", ceil,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"cos\", cos,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"cosh\", cosh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"e\", e,          TE_FUNCTION0 | TE_FLAG_PURE, 0},\n    {\"exp\", exp,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"fac\", fac,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"floor\", floor,  TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"ln\", log,       TE_FUNCTION1 | TE_FLAG_PURE, 0},\n                 \n    {\"log\", log,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n     \n    {\"log\", log10,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n      \n    {\"log10\", log10,  TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"ncr\", ncr,      TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"npr\", npr,      TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"pi\", pi,        TE_FUNCTION0 | TE_FLAG_PURE, 0},\n    {\"pow\", pow,      TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"sin\", sin,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"sinh\", sinh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"sqrt\", sqrt,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"tan\", tan,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"tanh\", tanh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {0, 0, 0, 0}\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 162,
+            "column": 1,
+            "source_line": "static const te_variable functions[] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        }
+      ],
       "macros": [
         {
           "name": "NAN",
@@ -3309,32 +3470,6 @@
           },
           "unit_kind": "macro",
           "unit_name": "M"
-        },
-        {
-          "code": "C_UNSUPPORTED_FIELD_DECLARATION",
-          "message": "Nested aggregate field definitions are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 70,
-            "column": 5,
-            "source_line": "    union {double value; const double *bound; const void *function;};"
-          },
-          "unit_kind": "struct_field",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 162,
-            "column": 1,
-            "source_line": "static const te_variable functions[] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
         },
         {
           "code": "C_DUPLICATE_FUNCTION_DEFINITION",
@@ -5766,7 +5901,45 @@
       "reference": "state"
     }
   },
-  "variables": {},
+  "variables": {
+    "functions": {
+      "name": "functions",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static const te_variable functions[]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": null,
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "reference": "te_variable"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n                                       \n    {\"abs\", fabs,     TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"acos\", acos,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"asin\", asin,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"atan\", atan,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"atan2\", atan2,  TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"ceil\", ceil,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"cos\", cos,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"cosh\", cosh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"e\", e,          TE_FUNCTION0 | TE_FLAG_PURE, 0},\n    {\"exp\", exp,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"fac\", fac,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"floor\", floor,  TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"ln\", log,       TE_FUNCTION1 | TE_FLAG_PURE, 0},\n                 \n    {\"log\", log,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n     \n    {\"log\", log10,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n      \n    {\"log10\", log10,  TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"ncr\", ncr,      TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"npr\", npr,      TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"pi\", pi,        TE_FUNCTION0 | TE_FLAG_PURE, 0},\n    {\"pow\", pow,      TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"sin\", sin,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"sinh\", sinh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"sqrt\", sqrt,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"tan\", tan,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"tanh\", tanh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {0, 0, 0, 0}\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 162,
+        "column": 1,
+        "source_line": "static const te_variable functions[] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    }
+  },
   "macros": {
     "NAN": {
       "name": "NAN",
@@ -6271,32 +6444,6 @@
       },
       "unit_kind": "macro",
       "unit_name": "M"
-    },
-    {
-      "code": "C_UNSUPPORTED_FIELD_DECLARATION",
-      "message": "Nested aggregate field definitions are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 70,
-        "column": 5,
-        "source_line": "    union {double value; const double *bound; const void *function;};"
-      },
-      "unit_kind": "struct_field",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 162,
-        "column": 1,
-        "source_line": "static const te_variable functions[] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
     },
     {
       "code": "C_DUPLICATE_FUNCTION_DEFINITION",

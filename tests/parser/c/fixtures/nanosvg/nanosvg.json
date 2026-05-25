@@ -4061,6 +4061,82 @@
                                   "declaration_locations": []
                                 },
                                 {
+                                  "name": null,
+                                  "type": {
+                                    "model": "CUnion",
+                                    "qualifiers": [],
+                                    "source_text": "",
+                                    "name": null,
+                                    "members": [
+                                      {
+                                        "name": "linear",
+                                        "type": {
+                                          "model": "CTypedef",
+                                          "qualifiers": [],
+                                          "source_text": "NSVGlinearData linear",
+                                          "name": "NSVGlinearData",
+                                          "type": null,
+                                          "source_location": null,
+                                          "declaration_locations": []
+                                        },
+                                        "storage": [],
+                                        "initializer": null,
+                                        "bit_width": null,
+                                        "source_location": {
+                                          "filename": "nanosvg/nanosvg.h",
+                                          "line": 411,
+                                          "column": 3,
+                                          "source_line": "\t\tNSVGlinearData linear;"
+                                        },
+                                        "callback_policy": null,
+                                        "declaration_locations": []
+                                      },
+                                      {
+                                        "name": "radial",
+                                        "type": {
+                                          "model": "CTypedef",
+                                          "qualifiers": [],
+                                          "source_text": "NSVGradialData radial",
+                                          "name": "NSVGradialData",
+                                          "type": null,
+                                          "source_location": null,
+                                          "declaration_locations": []
+                                        },
+                                        "storage": [],
+                                        "initializer": null,
+                                        "bit_width": null,
+                                        "source_location": {
+                                          "filename": "nanosvg/nanosvg.h",
+                                          "line": 412,
+                                          "column": 3,
+                                          "source_line": "\t\tNSVGradialData radial;"
+                                        },
+                                        "callback_policy": null,
+                                        "declaration_locations": []
+                                      }
+                                    ],
+                                    "anonymous_id": "union@nanosvg/nanosvg.h:410:2",
+                                    "is_incomplete": false,
+                                    "source_location": {
+                                      "filename": "nanosvg/nanosvg.h",
+                                      "line": 410,
+                                      "column": 2,
+                                      "source_line": "\tunion {"
+                                    }
+                                  },
+                                  "storage": [],
+                                  "initializer": null,
+                                  "bit_width": null,
+                                  "source_location": {
+                                    "filename": "nanosvg/nanosvg.h",
+                                    "line": 410,
+                                    "column": 2,
+                                    "source_line": "\tunion {"
+                                  },
+                                  "callback_policy": null,
+                                  "declaration_locations": []
+                                },
+                                {
                                   "name": "spread",
                                   "type": {
                                     "model": "CChar",
@@ -16385,7 +16461,43 @@
           "declaration_locations": []
         }
       ],
-      "variables": [],
+      "variables": [
+        {
+          "name": "nsvg__colors",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "NSVGNamedColor nsvg__colors[]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": null,
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "reference": "NSVGNamedColor"
+              }
+            ]
+          },
+          "storage": [],
+          "initializer": {
+            "source_text": "{\n\n\t{ \"red\", NSVG_RGB(255, 0, 0) },\n\t{ \"green\", NSVG_RGB( 0, 128, 0) },\n\t{ \"blue\", NSVG_RGB( 0, 0, 255) },\n\t{ \"yellow\", NSVG_RGB(255, 255, 0) },\n\t{ \"cyan\", NSVG_RGB( 0, 255, 255) },\n\t{ \"magenta\", NSVG_RGB(255, 0, 255) },\n\t{ \"black\", NSVG_RGB( 0, 0, 0) },\n\t{ \"grey\", NSVG_RGB(128, 128, 128) },\n\t{ \"gray\", NSVG_RGB(128, 128, 128) },\n\t{ \"white\", NSVG_RGB(255, 255, 255) },\n\n                                 \n\t{ \"aliceblue\", NSVG_RGB(240, 248, 255) },\n\t{ \"antiquewhite\", NSVG_RGB(250, 235, 215) },\n\t{ \"aqua\", NSVG_RGB( 0, 255, 255) },\n\t{ \"aquamarine\", NSVG_RGB(127, 255, 212) },\n\t{ \"azure\", NSVG_RGB(240, 255, 255) },\n\t{ \"beige\", NSVG_RGB(245, 245, 220) },\n\t{ \"bisque\", NSVG_RGB(255, 228, 196) },\n\t{ \"blanchedalmond\", NSVG_RGB(255, 235, 205) },\n\t{ \"blueviolet\", NSVG_RGB(138, 43, 226) },\n\t{ \"brown\", NSVG_RGB(165, 42, 42) },\n\t{ \"burlywood\", NSVG_RGB(222, 184, 135) },\n\t{ \"cadetblue\", NSVG_RGB( 95, 158, 160) },\n\t{ \"chartreuse\", NSVG_RGB(127, 255, 0) },\n\t{ \"chocolate\", NSVG_RGB(210, 105, 30) },\n\t{ \"coral\", NSVG_RGB(255, 127, 80) },\n\t{ \"cornflowerblue\", NSVG_RGB(100, 149, 237) },\n\t{ \"cornsilk\", NSVG_RGB(255, 248, 220) },\n\t{ \"crimson\", NSVG_RGB(220, 20, 60) },\n\t{ \"darkblue\", NSVG_RGB( 0, 0, 139) },\n\t{ \"darkcyan\", NSVG_RGB( 0, 139, 139) },\n\t{ \"darkgoldenrod\", NSVG_RGB(184, 134, 11) },\n\t{ \"darkgray\", NSVG_RGB(169, 169, 169) },\n\t{ \"darkgreen\", NSVG_RGB( 0, 100, 0) },\n\t{ \"darkgrey\", NSVG_RGB(169, 169, 169) },\n\t{ \"darkkhaki\", NSVG_RGB(189, 183, 107) },\n\t{ \"darkmagenta\", NSVG_RGB(139, 0, 139) },\n\t{ \"darkolivegreen\", NSVG_RGB( 85, 107, 47) },\n\t{ \"darkorange\", NSVG_RGB(255, 140, 0) },\n\t{ \"darkorchid\", NSVG_RGB(153, 50, 204) },\n\t{ \"darkred\", NSVG_RGB(139, 0, 0) },\n\t{ \"darksalmon\", NSVG_RGB(233, 150, 122) },\n\t{ \"darkseagreen\", NSVG_RGB(143, 188, 143) },\n\t{ \"darkslateblue\", NSVG_RGB( 72, 61, 139) },\n\t{ \"darkslategray\", NSVG_RGB( 47, 79, 79) },\n\t{ \"darkslategrey\", NSVG_RGB( 47, 79, 79) },\n\t{ \"darkturquoise\", NSVG_RGB( 0, 206, 209) },\n\t{ \"darkviolet\", NSVG_RGB(148, 0, 211) },\n\t{ \"deeppink\", NSVG_RGB(255, 20, 147) },\n\t{ \"deepskyblue\", NSVG_RGB( 0, 191, 255) },\n\t{ \"dimgray\", NSVG_RGB(105, 105, 105) },\n\t{ \"dimgrey\", NSVG_RGB(105, 105, 105) },\n\t{ \"dodgerblue\", NSVG_RGB( 30, 144, 255) },\n\t{ \"firebrick\", NSVG_RGB(178, 34, 34) },\n\t{ \"floralwhite\", NSVG_RGB(255, 250, 240) },\n\t{ \"forestgreen\", NSVG_RGB( 34, 139, 34) },\n\t{ \"fuchsia\", NSVG_RGB(255, 0, 255) },\n\t{ \"gainsboro\", NSVG_RGB(220, 220, 220) },\n\t{ \"ghostwhite\", NSVG_RGB(248, 248, 255) },\n\t{ \"gold\", NSVG_RGB(255, 215, 0) },\n\t{ \"goldenrod\", NSVG_RGB(218, 165, 32) },\n\t{ \"greenyellow\", NSVG_RGB(173, 255, 47) },\n\t{ \"honeydew\", NSVG_RGB(240, 255, 240) },\n\t{ \"hotpink\", NSVG_RGB(255, 105, 180) },\n\t{ \"indianred\", NSVG_RGB(205, 92, 92) },\n\t{ \"indigo\", NSVG_RGB( 75, 0, 130) },\n\t{ \"ivory\", NSVG_RGB(255, 255, 240) },\n\t{ \"khaki\", NSVG_RGB(240, 230, 140) },\n\t{ \"lavender\", NSVG_RGB(230, 230, 250) },\n\t{ \"lavenderblush\", NSVG_RGB(255, 240, 245) },\n\t{ \"lawngreen\", NSVG_RGB(124, 252, 0) },\n\t{ \"lemonchiffon\", NSVG_RGB(255, 250, 205) },\n\t{ \"lightblue\", NSVG_RGB(173, 216, 230) },\n\t{ \"lightcoral\", NSVG_RGB(240, 128, 128) },\n\t{ \"lightcyan\", NSVG_RGB(224, 255, 255) },\n\t{ \"lightgoldenrodyellow\", NSVG_RGB(250, 250, 210) },\n\t{ \"lightgray\", NSVG_RGB(211, 211, 211) },\n\t{ \"lightgreen\", NSVG_RGB(144, 238, 144) },\n\t{ \"lightgrey\", NSVG_RGB(211, 211, 211) },\n\t{ \"lightpink\", NSVG_RGB(255, 182, 193) },\n\t{ \"lightsalmon\", NSVG_RGB(255, 160, 122) },\n\t{ \"lightseagreen\", NSVG_RGB( 32, 178, 170) },\n\t{ \"lightskyblue\", NSVG_RGB(135, 206, 250) },\n\t{ \"lightslategray\", NSVG_RGB(119, 136, 153) },\n\t{ \"lightslategrey\", NSVG_RGB(119, 136, 153) },\n\t{ \"lightsteelblue\", NSVG_RGB(176, 196, 222) },\n\t{ \"lightyellow\", NSVG_RGB(255, 255, 224) },\n\t{ \"lime\", NSVG_RGB( 0, 255, 0) },\n\t{ \"limegreen\", NSVG_RGB( 50, 205, 50) },\n\t{ \"linen\", NSVG_RGB(250, 240, 230) },\n\t{ \"maroon\", NSVG_RGB(128, 0, 0) },\n\t{ \"mediumaquamarine\", NSVG_RGB(102, 205, 170) },\n\t{ \"mediumblue\", NSVG_RGB( 0, 0, 205) },\n\t{ \"mediumorchid\", NSVG_RGB(186, 85, 211) },\n\t{ \"mediumpurple\", NSVG_RGB(147, 112, 219) },\n\t{ \"mediumseagreen\", NSVG_RGB( 60, 179, 113) },\n\t{ \"mediumslateblue\", NSVG_RGB(123, 104, 238) },\n\t{ \"mediumspringgreen\", NSVG_RGB( 0, 250, 154) },\n\t{ \"mediumturquoise\", NSVG_RGB( 72, 209, 204) },\n\t{ \"mediumvioletred\", NSVG_RGB(199, 21, 133) },\n\t{ \"midnightblue\", NSVG_RGB( 25, 25, 112) },\n\t{ \"mintcream\", NSVG_RGB(245, 255, 250) },\n\t{ \"mistyrose\", NSVG_RGB(255, 228, 225) },\n\t{ \"moccasin\", NSVG_RGB(255, 228, 181) },\n\t{ \"navajowhite\", NSVG_RGB(255, 222, 173) },\n\t{ \"navy\", NSVG_RGB( 0, 0, 128) },\n\t{ \"oldlace\", NSVG_RGB(253, 245, 230) },\n\t{ \"olive\", NSVG_RGB(128, 128, 0) },\n\t{ \"olivedrab\", NSVG_RGB(107, 142, 35) },\n\t{ \"orange\", NSVG_RGB(255, 165, 0) },\n\t{ \"orangered\", NSVG_RGB(255, 69, 0) },\n\t{ \"orchid\", NSVG_RGB(218, 112, 214) },\n\t{ \"palegoldenrod\", NSVG_RGB(238, 232, 170) },\n\t{ \"palegreen\", NSVG_RGB(152, 251, 152) },\n\t{ \"paleturquoise\", NSVG_RGB(175, 238, 238) },\n\t{ \"palevioletred\", NSVG_RGB(219, 112, 147) },\n\t{ \"papayawhip\", NSVG_RGB(255, 239, 213) },\n\t{ \"peachpuff\", NSVG_RGB(255, 218, 185) },\n\t{ \"peru\", NSVG_RGB(205, 133, 63) },\n\t{ \"pink\", NSVG_RGB(255, 192, 203) },\n\t{ \"plum\", NSVG_RGB(221, 160, 221) },\n\t{ \"powderblue\", NSVG_RGB(176, 224, 230) },\n\t{ \"purple\", NSVG_RGB(128, 0, 128) },\n\t{ \"rosybrown\", NSVG_RGB(188, 143, 143) },\n\t{ \"royalblue\", NSVG_RGB( 65, 105, 225) },\n\t{ \"saddlebrown\", NSVG_RGB(139, 69, 19) },\n\t{ \"salmon\", NSVG_RGB(250, 128, 114) },\n\t{ \"sandybrown\", NSVG_RGB(244, 164, 96) },\n\t{ \"seagreen\", NSVG_RGB( 46, 139, 87) },\n\t{ \"seashell\", NSVG_RGB(255, 245, 238) },\n\t{ \"sienna\", NSVG_RGB(160, 82, 45) },\n\t{ \"silver\", NSVG_RGB(192, 192, 192) },\n\t{ \"skyblue\", NSVG_RGB(135, 206, 235) },\n\t{ \"slateblue\", NSVG_RGB(106, 90, 205) },\n\t{ \"slategray\", NSVG_RGB(112, 128, 144) },\n\t{ \"slategrey\", NSVG_RGB(112, 128, 144) },\n\t{ \"snow\", NSVG_RGB(255, 250, 250) },\n\t{ \"springgreen\", NSVG_RGB( 0, 255, 127) },\n\t{ \"steelblue\", NSVG_RGB( 70, 130, 180) },\n\t{ \"tan\", NSVG_RGB(210, 180, 140) },\n\t{ \"teal\", NSVG_RGB( 0, 128, 128) },\n\t{ \"thistle\", NSVG_RGB(216, 191, 216) },\n\t{ \"tomato\", NSVG_RGB(255, 99, 71) },\n\t{ \"turquoise\", NSVG_RGB( 64, 224, 208) },\n\t{ \"violet\", NSVG_RGB(238, 130, 238) },\n\t{ \"wheat\", NSVG_RGB(245, 222, 179) },\n\t{ \"whitesmoke\", NSVG_RGB(245, 245, 245) },\n\t{ \"yellowgreen\", NSVG_RGB(154, 205, 50) },\n      \n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "nanosvg/nanosvg.h",
+            "line": 1326,
+            "column": 1,
+            "source_line": "NSVGNamedColor nsvg__colors[] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        }
+      ],
       "macros": [
         {
           "name": "NANOSVG_H",
@@ -16997,32 +17109,6 @@
           },
           "unit_kind": "macro_dependent_declaration",
           "unit_name": "NSVG_INLINE"
-        },
-        {
-          "code": "C_UNSUPPORTED_FIELD_DECLARATION",
-          "message": "Nested aggregate field definitions are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "nanosvg/nanosvg.h",
-            "line": 410,
-            "column": 2,
-            "source_line": "\tunion {"
-          },
-          "unit_kind": "struct_field",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "nanosvg/nanosvg.h",
-            "line": 1326,
-            "column": 1,
-            "source_line": "NSVGNamedColor nsvg__colors[] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
         }
       ]
     },
@@ -44773,7 +44859,43 @@
       "reference": "NSVGcachedPaint"
     }
   },
-  "variables": {},
+  "variables": {
+    "nsvg__colors": {
+      "name": "nsvg__colors",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "NSVGNamedColor nsvg__colors[]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": null,
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "reference": "NSVGNamedColor"
+          }
+        ]
+      },
+      "storage": [],
+      "initializer": {
+        "source_text": "{\n\n\t{ \"red\", NSVG_RGB(255, 0, 0) },\n\t{ \"green\", NSVG_RGB( 0, 128, 0) },\n\t{ \"blue\", NSVG_RGB( 0, 0, 255) },\n\t{ \"yellow\", NSVG_RGB(255, 255, 0) },\n\t{ \"cyan\", NSVG_RGB( 0, 255, 255) },\n\t{ \"magenta\", NSVG_RGB(255, 0, 255) },\n\t{ \"black\", NSVG_RGB( 0, 0, 0) },\n\t{ \"grey\", NSVG_RGB(128, 128, 128) },\n\t{ \"gray\", NSVG_RGB(128, 128, 128) },\n\t{ \"white\", NSVG_RGB(255, 255, 255) },\n\n                                 \n\t{ \"aliceblue\", NSVG_RGB(240, 248, 255) },\n\t{ \"antiquewhite\", NSVG_RGB(250, 235, 215) },\n\t{ \"aqua\", NSVG_RGB( 0, 255, 255) },\n\t{ \"aquamarine\", NSVG_RGB(127, 255, 212) },\n\t{ \"azure\", NSVG_RGB(240, 255, 255) },\n\t{ \"beige\", NSVG_RGB(245, 245, 220) },\n\t{ \"bisque\", NSVG_RGB(255, 228, 196) },\n\t{ \"blanchedalmond\", NSVG_RGB(255, 235, 205) },\n\t{ \"blueviolet\", NSVG_RGB(138, 43, 226) },\n\t{ \"brown\", NSVG_RGB(165, 42, 42) },\n\t{ \"burlywood\", NSVG_RGB(222, 184, 135) },\n\t{ \"cadetblue\", NSVG_RGB( 95, 158, 160) },\n\t{ \"chartreuse\", NSVG_RGB(127, 255, 0) },\n\t{ \"chocolate\", NSVG_RGB(210, 105, 30) },\n\t{ \"coral\", NSVG_RGB(255, 127, 80) },\n\t{ \"cornflowerblue\", NSVG_RGB(100, 149, 237) },\n\t{ \"cornsilk\", NSVG_RGB(255, 248, 220) },\n\t{ \"crimson\", NSVG_RGB(220, 20, 60) },\n\t{ \"darkblue\", NSVG_RGB( 0, 0, 139) },\n\t{ \"darkcyan\", NSVG_RGB( 0, 139, 139) },\n\t{ \"darkgoldenrod\", NSVG_RGB(184, 134, 11) },\n\t{ \"darkgray\", NSVG_RGB(169, 169, 169) },\n\t{ \"darkgreen\", NSVG_RGB( 0, 100, 0) },\n\t{ \"darkgrey\", NSVG_RGB(169, 169, 169) },\n\t{ \"darkkhaki\", NSVG_RGB(189, 183, 107) },\n\t{ \"darkmagenta\", NSVG_RGB(139, 0, 139) },\n\t{ \"darkolivegreen\", NSVG_RGB( 85, 107, 47) },\n\t{ \"darkorange\", NSVG_RGB(255, 140, 0) },\n\t{ \"darkorchid\", NSVG_RGB(153, 50, 204) },\n\t{ \"darkred\", NSVG_RGB(139, 0, 0) },\n\t{ \"darksalmon\", NSVG_RGB(233, 150, 122) },\n\t{ \"darkseagreen\", NSVG_RGB(143, 188, 143) },\n\t{ \"darkslateblue\", NSVG_RGB( 72, 61, 139) },\n\t{ \"darkslategray\", NSVG_RGB( 47, 79, 79) },\n\t{ \"darkslategrey\", NSVG_RGB( 47, 79, 79) },\n\t{ \"darkturquoise\", NSVG_RGB( 0, 206, 209) },\n\t{ \"darkviolet\", NSVG_RGB(148, 0, 211) },\n\t{ \"deeppink\", NSVG_RGB(255, 20, 147) },\n\t{ \"deepskyblue\", NSVG_RGB( 0, 191, 255) },\n\t{ \"dimgray\", NSVG_RGB(105, 105, 105) },\n\t{ \"dimgrey\", NSVG_RGB(105, 105, 105) },\n\t{ \"dodgerblue\", NSVG_RGB( 30, 144, 255) },\n\t{ \"firebrick\", NSVG_RGB(178, 34, 34) },\n\t{ \"floralwhite\", NSVG_RGB(255, 250, 240) },\n\t{ \"forestgreen\", NSVG_RGB( 34, 139, 34) },\n\t{ \"fuchsia\", NSVG_RGB(255, 0, 255) },\n\t{ \"gainsboro\", NSVG_RGB(220, 220, 220) },\n\t{ \"ghostwhite\", NSVG_RGB(248, 248, 255) },\n\t{ \"gold\", NSVG_RGB(255, 215, 0) },\n\t{ \"goldenrod\", NSVG_RGB(218, 165, 32) },\n\t{ \"greenyellow\", NSVG_RGB(173, 255, 47) },\n\t{ \"honeydew\", NSVG_RGB(240, 255, 240) },\n\t{ \"hotpink\", NSVG_RGB(255, 105, 180) },\n\t{ \"indianred\", NSVG_RGB(205, 92, 92) },\n\t{ \"indigo\", NSVG_RGB( 75, 0, 130) },\n\t{ \"ivory\", NSVG_RGB(255, 255, 240) },\n\t{ \"khaki\", NSVG_RGB(240, 230, 140) },\n\t{ \"lavender\", NSVG_RGB(230, 230, 250) },\n\t{ \"lavenderblush\", NSVG_RGB(255, 240, 245) },\n\t{ \"lawngreen\", NSVG_RGB(124, 252, 0) },\n\t{ \"lemonchiffon\", NSVG_RGB(255, 250, 205) },\n\t{ \"lightblue\", NSVG_RGB(173, 216, 230) },\n\t{ \"lightcoral\", NSVG_RGB(240, 128, 128) },\n\t{ \"lightcyan\", NSVG_RGB(224, 255, 255) },\n\t{ \"lightgoldenrodyellow\", NSVG_RGB(250, 250, 210) },\n\t{ \"lightgray\", NSVG_RGB(211, 211, 211) },\n\t{ \"lightgreen\", NSVG_RGB(144, 238, 144) },\n\t{ \"lightgrey\", NSVG_RGB(211, 211, 211) },\n\t{ \"lightpink\", NSVG_RGB(255, 182, 193) },\n\t{ \"lightsalmon\", NSVG_RGB(255, 160, 122) },\n\t{ \"lightseagreen\", NSVG_RGB( 32, 178, 170) },\n\t{ \"lightskyblue\", NSVG_RGB(135, 206, 250) },\n\t{ \"lightslategray\", NSVG_RGB(119, 136, 153) },\n\t{ \"lightslategrey\", NSVG_RGB(119, 136, 153) },\n\t{ \"lightsteelblue\", NSVG_RGB(176, 196, 222) },\n\t{ \"lightyellow\", NSVG_RGB(255, 255, 224) },\n\t{ \"lime\", NSVG_RGB( 0, 255, 0) },\n\t{ \"limegreen\", NSVG_RGB( 50, 205, 50) },\n\t{ \"linen\", NSVG_RGB(250, 240, 230) },\n\t{ \"maroon\", NSVG_RGB(128, 0, 0) },\n\t{ \"mediumaquamarine\", NSVG_RGB(102, 205, 170) },\n\t{ \"mediumblue\", NSVG_RGB( 0, 0, 205) },\n\t{ \"mediumorchid\", NSVG_RGB(186, 85, 211) },\n\t{ \"mediumpurple\", NSVG_RGB(147, 112, 219) },\n\t{ \"mediumseagreen\", NSVG_RGB( 60, 179, 113) },\n\t{ \"mediumslateblue\", NSVG_RGB(123, 104, 238) },\n\t{ \"mediumspringgreen\", NSVG_RGB( 0, 250, 154) },\n\t{ \"mediumturquoise\", NSVG_RGB( 72, 209, 204) },\n\t{ \"mediumvioletred\", NSVG_RGB(199, 21, 133) },\n\t{ \"midnightblue\", NSVG_RGB( 25, 25, 112) },\n\t{ \"mintcream\", NSVG_RGB(245, 255, 250) },\n\t{ \"mistyrose\", NSVG_RGB(255, 228, 225) },\n\t{ \"moccasin\", NSVG_RGB(255, 228, 181) },\n\t{ \"navajowhite\", NSVG_RGB(255, 222, 173) },\n\t{ \"navy\", NSVG_RGB( 0, 0, 128) },\n\t{ \"oldlace\", NSVG_RGB(253, 245, 230) },\n\t{ \"olive\", NSVG_RGB(128, 128, 0) },\n\t{ \"olivedrab\", NSVG_RGB(107, 142, 35) },\n\t{ \"orange\", NSVG_RGB(255, 165, 0) },\n\t{ \"orangered\", NSVG_RGB(255, 69, 0) },\n\t{ \"orchid\", NSVG_RGB(218, 112, 214) },\n\t{ \"palegoldenrod\", NSVG_RGB(238, 232, 170) },\n\t{ \"palegreen\", NSVG_RGB(152, 251, 152) },\n\t{ \"paleturquoise\", NSVG_RGB(175, 238, 238) },\n\t{ \"palevioletred\", NSVG_RGB(219, 112, 147) },\n\t{ \"papayawhip\", NSVG_RGB(255, 239, 213) },\n\t{ \"peachpuff\", NSVG_RGB(255, 218, 185) },\n\t{ \"peru\", NSVG_RGB(205, 133, 63) },\n\t{ \"pink\", NSVG_RGB(255, 192, 203) },\n\t{ \"plum\", NSVG_RGB(221, 160, 221) },\n\t{ \"powderblue\", NSVG_RGB(176, 224, 230) },\n\t{ \"purple\", NSVG_RGB(128, 0, 128) },\n\t{ \"rosybrown\", NSVG_RGB(188, 143, 143) },\n\t{ \"royalblue\", NSVG_RGB( 65, 105, 225) },\n\t{ \"saddlebrown\", NSVG_RGB(139, 69, 19) },\n\t{ \"salmon\", NSVG_RGB(250, 128, 114) },\n\t{ \"sandybrown\", NSVG_RGB(244, 164, 96) },\n\t{ \"seagreen\", NSVG_RGB( 46, 139, 87) },\n\t{ \"seashell\", NSVG_RGB(255, 245, 238) },\n\t{ \"sienna\", NSVG_RGB(160, 82, 45) },\n\t{ \"silver\", NSVG_RGB(192, 192, 192) },\n\t{ \"skyblue\", NSVG_RGB(135, 206, 235) },\n\t{ \"slateblue\", NSVG_RGB(106, 90, 205) },\n\t{ \"slategray\", NSVG_RGB(112, 128, 144) },\n\t{ \"slategrey\", NSVG_RGB(112, 128, 144) },\n\t{ \"snow\", NSVG_RGB(255, 250, 250) },\n\t{ \"springgreen\", NSVG_RGB( 0, 255, 127) },\n\t{ \"steelblue\", NSVG_RGB( 70, 130, 180) },\n\t{ \"tan\", NSVG_RGB(210, 180, 140) },\n\t{ \"teal\", NSVG_RGB( 0, 128, 128) },\n\t{ \"thistle\", NSVG_RGB(216, 191, 216) },\n\t{ \"tomato\", NSVG_RGB(255, 99, 71) },\n\t{ \"turquoise\", NSVG_RGB( 64, 224, 208) },\n\t{ \"violet\", NSVG_RGB(238, 130, 238) },\n\t{ \"wheat\", NSVG_RGB(245, 222, 179) },\n\t{ \"whitesmoke\", NSVG_RGB(245, 245, 245) },\n\t{ \"yellowgreen\", NSVG_RGB(154, 205, 50) },\n      \n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "nanosvg/nanosvg.h",
+        "line": 1326,
+        "column": 1,
+        "source_line": "NSVGNamedColor nsvg__colors[] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    }
+  },
   "macros": {
     "NANOSVG_H": {
       "name": "NANOSVG_H",
@@ -45575,32 +45697,6 @@
       },
       "unit_kind": "macro_dependent_declaration",
       "unit_name": "NSVG_INLINE"
-    },
-    {
-      "code": "C_UNSUPPORTED_FIELD_DECLARATION",
-      "message": "Nested aggregate field definitions are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "nanosvg/nanosvg.h",
-        "line": 410,
-        "column": 2,
-        "source_line": "\tunion {"
-      },
-      "unit_kind": "struct_field",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "nanosvg/nanosvg.h",
-        "line": 1326,
-        "column": 1,
-        "source_line": "NSVGNamedColor nsvg__colors[] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
     },
     {
       "code": "C_UNSUPPORTED_DECLARATOR",

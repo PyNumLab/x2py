@@ -5642,6 +5642,266 @@
                       "name": "stbir__info",
                       "members": [
                         {
+                          "name": "profile",
+                          "type": {
+                            "model": "CUnion",
+                            "qualifiers": [],
+                            "source_text": "",
+                            "name": null,
+                            "members": [
+                              {
+                                "name": "named",
+                                "type": {
+                                  "model": "CStruct",
+                                  "qualifiers": [],
+                                  "source_text": "",
+                                  "name": null,
+                                  "members": [
+                                    {
+                                      "name": "total",
+                                      "type": {
+                                        "model": "CTypedef",
+                                        "qualifiers": [],
+                                        "source_text": "stbir_uint64 total",
+                                        "name": "stbir_uint64",
+                                        "type": null,
+                                        "source_location": null,
+                                        "declaration_locations": []
+                                      },
+                                      "storage": [],
+                                      "initializer": null,
+                                      "bit_width": null,
+                                      "source_location": {
+                                        "filename": "stb/stb_image_resize2.h",
+                                        "line": 1015,
+                                        "column": 14,
+                                        "source_line": "    struct { stbir_uint64 total, build, alloc, horizontal, vertical, cleanup, pivot; } named;"
+                                      },
+                                      "callback_policy": null,
+                                      "declaration_locations": []
+                                    },
+                                    {
+                                      "name": "build",
+                                      "type": {
+                                        "model": "CTypedef",
+                                        "qualifiers": [],
+                                        "source_text": "stbir_uint64 build",
+                                        "name": "stbir_uint64",
+                                        "type": null,
+                                        "source_location": null,
+                                        "declaration_locations": []
+                                      },
+                                      "storage": [],
+                                      "initializer": null,
+                                      "bit_width": null,
+                                      "source_location": {
+                                        "filename": "stb/stb_image_resize2.h",
+                                        "line": 1015,
+                                        "column": 14,
+                                        "source_line": "    struct { stbir_uint64 total, build, alloc, horizontal, vertical, cleanup, pivot; } named;"
+                                      },
+                                      "callback_policy": null,
+                                      "declaration_locations": []
+                                    },
+                                    {
+                                      "name": "alloc",
+                                      "type": {
+                                        "model": "CTypedef",
+                                        "qualifiers": [],
+                                        "source_text": "stbir_uint64 alloc",
+                                        "name": "stbir_uint64",
+                                        "type": null,
+                                        "source_location": null,
+                                        "declaration_locations": []
+                                      },
+                                      "storage": [],
+                                      "initializer": null,
+                                      "bit_width": null,
+                                      "source_location": {
+                                        "filename": "stb/stb_image_resize2.h",
+                                        "line": 1015,
+                                        "column": 14,
+                                        "source_line": "    struct { stbir_uint64 total, build, alloc, horizontal, vertical, cleanup, pivot; } named;"
+                                      },
+                                      "callback_policy": null,
+                                      "declaration_locations": []
+                                    },
+                                    {
+                                      "name": "horizontal",
+                                      "type": {
+                                        "model": "CTypedef",
+                                        "qualifiers": [],
+                                        "source_text": "stbir_uint64 horizontal",
+                                        "name": "stbir_uint64",
+                                        "type": null,
+                                        "source_location": null,
+                                        "declaration_locations": []
+                                      },
+                                      "storage": [],
+                                      "initializer": null,
+                                      "bit_width": null,
+                                      "source_location": {
+                                        "filename": "stb/stb_image_resize2.h",
+                                        "line": 1015,
+                                        "column": 14,
+                                        "source_line": "    struct { stbir_uint64 total, build, alloc, horizontal, vertical, cleanup, pivot; } named;"
+                                      },
+                                      "callback_policy": null,
+                                      "declaration_locations": []
+                                    },
+                                    {
+                                      "name": "vertical",
+                                      "type": {
+                                        "model": "CTypedef",
+                                        "qualifiers": [],
+                                        "source_text": "stbir_uint64 vertical",
+                                        "name": "stbir_uint64",
+                                        "type": null,
+                                        "source_location": null,
+                                        "declaration_locations": []
+                                      },
+                                      "storage": [],
+                                      "initializer": null,
+                                      "bit_width": null,
+                                      "source_location": {
+                                        "filename": "stb/stb_image_resize2.h",
+                                        "line": 1015,
+                                        "column": 14,
+                                        "source_line": "    struct { stbir_uint64 total, build, alloc, horizontal, vertical, cleanup, pivot; } named;"
+                                      },
+                                      "callback_policy": null,
+                                      "declaration_locations": []
+                                    },
+                                    {
+                                      "name": "cleanup",
+                                      "type": {
+                                        "model": "CTypedef",
+                                        "qualifiers": [],
+                                        "source_text": "stbir_uint64 cleanup",
+                                        "name": "stbir_uint64",
+                                        "type": null,
+                                        "source_location": null,
+                                        "declaration_locations": []
+                                      },
+                                      "storage": [],
+                                      "initializer": null,
+                                      "bit_width": null,
+                                      "source_location": {
+                                        "filename": "stb/stb_image_resize2.h",
+                                        "line": 1015,
+                                        "column": 14,
+                                        "source_line": "    struct { stbir_uint64 total, build, alloc, horizontal, vertical, cleanup, pivot; } named;"
+                                      },
+                                      "callback_policy": null,
+                                      "declaration_locations": []
+                                    },
+                                    {
+                                      "name": "pivot",
+                                      "type": {
+                                        "model": "CTypedef",
+                                        "qualifiers": [],
+                                        "source_text": "stbir_uint64 pivot",
+                                        "name": "stbir_uint64",
+                                        "type": null,
+                                        "source_location": null,
+                                        "declaration_locations": []
+                                      },
+                                      "storage": [],
+                                      "initializer": null,
+                                      "bit_width": null,
+                                      "source_location": {
+                                        "filename": "stb/stb_image_resize2.h",
+                                        "line": 1015,
+                                        "column": 14,
+                                        "source_line": "    struct { stbir_uint64 total, build, alloc, horizontal, vertical, cleanup, pivot; } named;"
+                                      },
+                                      "callback_policy": null,
+                                      "declaration_locations": []
+                                    }
+                                  ],
+                                  "anonymous_id": "struct@stb/stb_image_resize2.h:1015:5",
+                                  "is_incomplete": false,
+                                  "source_location": {
+                                    "filename": "stb/stb_image_resize2.h",
+                                    "line": 1015,
+                                    "column": 5,
+                                    "source_line": "    struct { stbir_uint64 total, build, alloc, horizontal, vertical, cleanup, pivot; } named;"
+                                  }
+                                },
+                                "storage": [],
+                                "initializer": null,
+                                "bit_width": null,
+                                "source_location": {
+                                  "filename": "stb/stb_image_resize2.h",
+                                  "line": 1015,
+                                  "column": 5,
+                                  "source_line": "    struct { stbir_uint64 total, build, alloc, horizontal, vertical, cleanup, pivot; } named;"
+                                },
+                                "callback_policy": null,
+                                "declaration_locations": []
+                              },
+                              {
+                                "name": "array",
+                                "type": {
+                                  "model": "CComposedType",
+                                  "qualifiers": [],
+                                  "source_text": "stbir_uint64 array[7]",
+                                  "components": [
+                                    {
+                                      "model": "CArray",
+                                      "qualifiers": [],
+                                      "source_text": "",
+                                      "bound": "7",
+                                      "is_static_minimum": false,
+                                      "is_variable_length": false,
+                                      "is_flexible": false
+                                    },
+                                    {
+                                      "model": "CTypedef",
+                                      "qualifiers": [],
+                                      "source_text": "stbir_uint64",
+                                      "name": "stbir_uint64",
+                                      "type": null,
+                                      "source_location": null,
+                                      "declaration_locations": []
+                                    }
+                                  ]
+                                },
+                                "storage": [],
+                                "initializer": null,
+                                "bit_width": null,
+                                "source_location": {
+                                  "filename": "stb/stb_image_resize2.h",
+                                  "line": 1016,
+                                  "column": 5,
+                                  "source_line": "    stbir_uint64 array[7];"
+                                },
+                                "callback_policy": null,
+                                "declaration_locations": []
+                              }
+                            ],
+                            "anonymous_id": "union@stb/stb_image_resize2.h:1013:3",
+                            "is_incomplete": false,
+                            "source_location": {
+                              "filename": "stb/stb_image_resize2.h",
+                              "line": 1013,
+                              "column": 3,
+                              "source_line": "  union"
+                            }
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "stb/stb_image_resize2.h",
+                            "line": 1013,
+                            "column": 3,
+                            "source_line": "  union"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
                           "name": "current_zone_excluded_ptr",
                           "type": {
                             "model": "CComposedType",
@@ -6318,6 +6578,289 @@
                                   "source_text": "",
                                   "name": null,
                                   "members": [
+                                    {
+                                      "name": "profile",
+                                      "type": {
+                                        "model": "CUnion",
+                                        "qualifiers": [],
+                                        "source_text": "",
+                                        "name": null,
+                                        "members": [
+                                          {
+                                            "name": "named",
+                                            "type": {
+                                              "model": "CStruct",
+                                              "qualifiers": [],
+                                              "source_text": "",
+                                              "name": null,
+                                              "members": [
+                                                {
+                                                  "name": "total",
+                                                  "type": {
+                                                    "model": "CTypedef",
+                                                    "qualifiers": [],
+                                                    "source_text": "stbir_uint64 total",
+                                                    "name": "stbir_uint64",
+                                                    "type": null,
+                                                    "source_location": null,
+                                                    "declaration_locations": []
+                                                  },
+                                                  "storage": [],
+                                                  "initializer": null,
+                                                  "bit_width": null,
+                                                  "source_location": {
+                                                    "filename": "stb/stb_image_resize2.h",
+                                                    "line": 979,
+                                                    "column": 14,
+                                                    "source_line": "    struct { stbir_uint64 total, looping, vertical, horizontal, decode, encode, alpha, unalpha; } named;"
+                                                  },
+                                                  "callback_policy": null,
+                                                  "declaration_locations": []
+                                                },
+                                                {
+                                                  "name": "looping",
+                                                  "type": {
+                                                    "model": "CTypedef",
+                                                    "qualifiers": [],
+                                                    "source_text": "stbir_uint64 looping",
+                                                    "name": "stbir_uint64",
+                                                    "type": null,
+                                                    "source_location": null,
+                                                    "declaration_locations": []
+                                                  },
+                                                  "storage": [],
+                                                  "initializer": null,
+                                                  "bit_width": null,
+                                                  "source_location": {
+                                                    "filename": "stb/stb_image_resize2.h",
+                                                    "line": 979,
+                                                    "column": 14,
+                                                    "source_line": "    struct { stbir_uint64 total, looping, vertical, horizontal, decode, encode, alpha, unalpha; } named;"
+                                                  },
+                                                  "callback_policy": null,
+                                                  "declaration_locations": []
+                                                },
+                                                {
+                                                  "name": "vertical",
+                                                  "type": {
+                                                    "model": "CTypedef",
+                                                    "qualifiers": [],
+                                                    "source_text": "stbir_uint64 vertical",
+                                                    "name": "stbir_uint64",
+                                                    "type": null,
+                                                    "source_location": null,
+                                                    "declaration_locations": []
+                                                  },
+                                                  "storage": [],
+                                                  "initializer": null,
+                                                  "bit_width": null,
+                                                  "source_location": {
+                                                    "filename": "stb/stb_image_resize2.h",
+                                                    "line": 979,
+                                                    "column": 14,
+                                                    "source_line": "    struct { stbir_uint64 total, looping, vertical, horizontal, decode, encode, alpha, unalpha; } named;"
+                                                  },
+                                                  "callback_policy": null,
+                                                  "declaration_locations": []
+                                                },
+                                                {
+                                                  "name": "horizontal",
+                                                  "type": {
+                                                    "model": "CTypedef",
+                                                    "qualifiers": [],
+                                                    "source_text": "stbir_uint64 horizontal",
+                                                    "name": "stbir_uint64",
+                                                    "type": null,
+                                                    "source_location": null,
+                                                    "declaration_locations": []
+                                                  },
+                                                  "storage": [],
+                                                  "initializer": null,
+                                                  "bit_width": null,
+                                                  "source_location": {
+                                                    "filename": "stb/stb_image_resize2.h",
+                                                    "line": 979,
+                                                    "column": 14,
+                                                    "source_line": "    struct { stbir_uint64 total, looping, vertical, horizontal, decode, encode, alpha, unalpha; } named;"
+                                                  },
+                                                  "callback_policy": null,
+                                                  "declaration_locations": []
+                                                },
+                                                {
+                                                  "name": "decode",
+                                                  "type": {
+                                                    "model": "CTypedef",
+                                                    "qualifiers": [],
+                                                    "source_text": "stbir_uint64 decode",
+                                                    "name": "stbir_uint64",
+                                                    "type": null,
+                                                    "source_location": null,
+                                                    "declaration_locations": []
+                                                  },
+                                                  "storage": [],
+                                                  "initializer": null,
+                                                  "bit_width": null,
+                                                  "source_location": {
+                                                    "filename": "stb/stb_image_resize2.h",
+                                                    "line": 979,
+                                                    "column": 14,
+                                                    "source_line": "    struct { stbir_uint64 total, looping, vertical, horizontal, decode, encode, alpha, unalpha; } named;"
+                                                  },
+                                                  "callback_policy": null,
+                                                  "declaration_locations": []
+                                                },
+                                                {
+                                                  "name": "encode",
+                                                  "type": {
+                                                    "model": "CTypedef",
+                                                    "qualifiers": [],
+                                                    "source_text": "stbir_uint64 encode",
+                                                    "name": "stbir_uint64",
+                                                    "type": null,
+                                                    "source_location": null,
+                                                    "declaration_locations": []
+                                                  },
+                                                  "storage": [],
+                                                  "initializer": null,
+                                                  "bit_width": null,
+                                                  "source_location": {
+                                                    "filename": "stb/stb_image_resize2.h",
+                                                    "line": 979,
+                                                    "column": 14,
+                                                    "source_line": "    struct { stbir_uint64 total, looping, vertical, horizontal, decode, encode, alpha, unalpha; } named;"
+                                                  },
+                                                  "callback_policy": null,
+                                                  "declaration_locations": []
+                                                },
+                                                {
+                                                  "name": "alpha",
+                                                  "type": {
+                                                    "model": "CTypedef",
+                                                    "qualifiers": [],
+                                                    "source_text": "stbir_uint64 alpha",
+                                                    "name": "stbir_uint64",
+                                                    "type": null,
+                                                    "source_location": null,
+                                                    "declaration_locations": []
+                                                  },
+                                                  "storage": [],
+                                                  "initializer": null,
+                                                  "bit_width": null,
+                                                  "source_location": {
+                                                    "filename": "stb/stb_image_resize2.h",
+                                                    "line": 979,
+                                                    "column": 14,
+                                                    "source_line": "    struct { stbir_uint64 total, looping, vertical, horizontal, decode, encode, alpha, unalpha; } named;"
+                                                  },
+                                                  "callback_policy": null,
+                                                  "declaration_locations": []
+                                                },
+                                                {
+                                                  "name": "unalpha",
+                                                  "type": {
+                                                    "model": "CTypedef",
+                                                    "qualifiers": [],
+                                                    "source_text": "stbir_uint64 unalpha",
+                                                    "name": "stbir_uint64",
+                                                    "type": null,
+                                                    "source_location": null,
+                                                    "declaration_locations": []
+                                                  },
+                                                  "storage": [],
+                                                  "initializer": null,
+                                                  "bit_width": null,
+                                                  "source_location": {
+                                                    "filename": "stb/stb_image_resize2.h",
+                                                    "line": 979,
+                                                    "column": 14,
+                                                    "source_line": "    struct { stbir_uint64 total, looping, vertical, horizontal, decode, encode, alpha, unalpha; } named;"
+                                                  },
+                                                  "callback_policy": null,
+                                                  "declaration_locations": []
+                                                }
+                                              ],
+                                              "anonymous_id": "struct@stb/stb_image_resize2.h:979:5",
+                                              "is_incomplete": false,
+                                              "source_location": {
+                                                "filename": "stb/stb_image_resize2.h",
+                                                "line": 979,
+                                                "column": 5,
+                                                "source_line": "    struct { stbir_uint64 total, looping, vertical, horizontal, decode, encode, alpha, unalpha; } named;"
+                                              }
+                                            },
+                                            "storage": [],
+                                            "initializer": null,
+                                            "bit_width": null,
+                                            "source_location": {
+                                              "filename": "stb/stb_image_resize2.h",
+                                              "line": 979,
+                                              "column": 5,
+                                              "source_line": "    struct { stbir_uint64 total, looping, vertical, horizontal, decode, encode, alpha, unalpha; } named;"
+                                            },
+                                            "callback_policy": null,
+                                            "declaration_locations": []
+                                          },
+                                          {
+                                            "name": "array",
+                                            "type": {
+                                              "model": "CComposedType",
+                                              "qualifiers": [],
+                                              "source_text": "stbir_uint64 array[8]",
+                                              "components": [
+                                                {
+                                                  "model": "CArray",
+                                                  "qualifiers": [],
+                                                  "source_text": "",
+                                                  "bound": "8",
+                                                  "is_static_minimum": false,
+                                                  "is_variable_length": false,
+                                                  "is_flexible": false
+                                                },
+                                                {
+                                                  "model": "CTypedef",
+                                                  "qualifiers": [],
+                                                  "source_text": "stbir_uint64",
+                                                  "name": "stbir_uint64",
+                                                  "type": null,
+                                                  "source_location": null,
+                                                  "declaration_locations": []
+                                                }
+                                              ]
+                                            },
+                                            "storage": [],
+                                            "initializer": null,
+                                            "bit_width": null,
+                                            "source_location": {
+                                              "filename": "stb/stb_image_resize2.h",
+                                              "line": 980,
+                                              "column": 5,
+                                              "source_line": "    stbir_uint64 array[8];"
+                                            },
+                                            "callback_policy": null,
+                                            "declaration_locations": []
+                                          }
+                                        ],
+                                        "anonymous_id": "union@stb/stb_image_resize2.h:977:3",
+                                        "is_incomplete": false,
+                                        "source_location": {
+                                          "filename": "stb/stb_image_resize2.h",
+                                          "line": 977,
+                                          "column": 3,
+                                          "source_line": "  union"
+                                        }
+                                      },
+                                      "storage": [],
+                                      "initializer": null,
+                                      "bit_width": null,
+                                      "source_location": {
+                                        "filename": "stb/stb_image_resize2.h",
+                                        "line": 977,
+                                        "column": 3,
+                                        "source_line": "  union"
+                                      },
+                                      "callback_policy": null,
+                                      "declaration_locations": []
+                                    },
                                     {
                                       "name": "current_zone_excluded_ptr",
                                       "type": {
@@ -13045,7 +13588,814 @@
           "reference": "STBIR__V_FIRST_INFO"
         }
       ],
-      "variables": [],
+      "variables": [
+        {
+          "name": "stbir__type_size",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static unsigned char stbir__type_size[]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": null,
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  1,1,1,2,4,2                                                                                                                               \n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 904,
+            "column": 1,
+            "source_line": "static unsigned char stbir__type_size[] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__srgb_uchar_to_linear_float",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static float stbir__srgb_uchar_to_linear_float[256]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "256",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  0.000000f, 0.000304f, 0.000607f, 0.000911f, 0.001214f, 0.001518f, 0.001821f, 0.002125f, 0.002428f, 0.002732f, 0.003035f,\n  0.003347f, 0.003677f, 0.004025f, 0.004391f, 0.004777f, 0.005182f, 0.005605f, 0.006049f, 0.006512f, 0.006995f, 0.007499f,\n  0.008023f, 0.008568f, 0.009134f, 0.009721f, 0.010330f, 0.010960f, 0.011612f, 0.012286f, 0.012983f, 0.013702f, 0.014444f,\n  0.015209f, 0.015996f, 0.016807f, 0.017642f, 0.018500f, 0.019382f, 0.020289f, 0.021219f, 0.022174f, 0.023153f, 0.024158f,\n  0.025187f, 0.026241f, 0.027321f, 0.028426f, 0.029557f, 0.030713f, 0.031896f, 0.033105f, 0.034340f, 0.035601f, 0.036889f,\n  0.038204f, 0.039546f, 0.040915f, 0.042311f, 0.043735f, 0.045186f, 0.046665f, 0.048172f, 0.049707f, 0.051269f, 0.052861f,\n  0.054480f, 0.056128f, 0.057805f, 0.059511f, 0.061246f, 0.063010f, 0.064803f, 0.066626f, 0.068478f, 0.070360f, 0.072272f,\n  0.074214f, 0.076185f, 0.078187f, 0.080220f, 0.082283f, 0.084376f, 0.086500f, 0.088656f, 0.090842f, 0.093059f, 0.095307f,\n  0.097587f, 0.099899f, 0.102242f, 0.104616f, 0.107023f, 0.109462f, 0.111932f, 0.114435f, 0.116971f, 0.119538f, 0.122139f,\n  0.124772f, 0.127438f, 0.130136f, 0.132868f, 0.135633f, 0.138432f, 0.141263f, 0.144128f, 0.147027f, 0.149960f, 0.152926f,\n  0.155926f, 0.158961f, 0.162029f, 0.165132f, 0.168269f, 0.171441f, 0.174647f, 0.177888f, 0.181164f, 0.184475f, 0.187821f,\n  0.191202f, 0.194618f, 0.198069f, 0.201556f, 0.205079f, 0.208637f, 0.212231f, 0.215861f, 0.219526f, 0.223228f, 0.226966f,\n  0.230740f, 0.234551f, 0.238398f, 0.242281f, 0.246201f, 0.250158f, 0.254152f, 0.258183f, 0.262251f, 0.266356f, 0.270498f,\n  0.274677f, 0.278894f, 0.283149f, 0.287441f, 0.291771f, 0.296138f, 0.300544f, 0.304987f, 0.309469f, 0.313989f, 0.318547f,\n  0.323143f, 0.327778f, 0.332452f, 0.337164f, 0.341914f, 0.346704f, 0.351533f, 0.356400f, 0.361307f, 0.366253f, 0.371238f,\n  0.376262f, 0.381326f, 0.386430f, 0.391573f, 0.396755f, 0.401978f, 0.407240f, 0.412543f, 0.417885f, 0.423268f, 0.428691f,\n  0.434154f, 0.439657f, 0.445201f, 0.450786f, 0.456411f, 0.462077f, 0.467784f, 0.473532f, 0.479320f, 0.485150f, 0.491021f,\n  0.496933f, 0.502887f, 0.508881f, 0.514918f, 0.520996f, 0.527115f, 0.533276f, 0.539480f, 0.545725f, 0.552011f, 0.558340f,\n  0.564712f, 0.571125f, 0.577581f, 0.584078f, 0.590619f, 0.597202f, 0.603827f, 0.610496f, 0.617207f, 0.623960f, 0.630757f,\n  0.637597f, 0.644480f, 0.651406f, 0.658375f, 0.665387f, 0.672443f, 0.679543f, 0.686685f, 0.693872f, 0.701102f, 0.708376f,\n  0.715694f, 0.723055f, 0.730461f, 0.737911f, 0.745404f, 0.752942f, 0.760525f, 0.768151f, 0.775822f, 0.783538f, 0.791298f,\n  0.799103f, 0.806952f, 0.814847f, 0.822786f, 0.830770f, 0.838799f, 0.846873f, 0.854993f, 0.863157f, 0.871367f, 0.879622f,\n  0.887923f, 0.896269f, 0.904661f, 0.913099f, 0.921582f, 0.930111f, 0.938686f, 0.947307f, 0.955974f, 0.964686f, 0.973445f,\n  0.982251f, 0.991102f, 1.0f\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 1087,
+            "column": 1,
+            "source_line": "static float stbir__srgb_uchar_to_linear_float[256] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "fp32_to_srgb8_tab4",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static const stbir_uint32 fp32_to_srgb8_tab4[104]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "104",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "reference": "stbir_uint32"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  0x0073000d, 0x007a000d, 0x0080000d, 0x0087000d, 0x008d000d, 0x0094000d, 0x009a000d, 0x00a1000d,\n  0x00a7001a, 0x00b4001a, 0x00c1001a, 0x00ce001a, 0x00da001a, 0x00e7001a, 0x00f4001a, 0x0101001a,\n  0x010e0033, 0x01280033, 0x01410033, 0x015b0033, 0x01750033, 0x018f0033, 0x01a80033, 0x01c20033,\n  0x01dc0067, 0x020f0067, 0x02430067, 0x02760067, 0x02aa0067, 0x02dd0067, 0x03110067, 0x03440067,\n  0x037800ce, 0x03df00ce, 0x044600ce, 0x04ad00ce, 0x051400ce, 0x057b00c5, 0x05dd00bc, 0x063b00b5,\n  0x06970158, 0x07420142, 0x07e30130, 0x087b0120, 0x090b0112, 0x09940106, 0x0a1700fc, 0x0a9500f2,\n  0x0b0f01cb, 0x0bf401ae, 0x0ccb0195, 0x0d950180, 0x0e56016e, 0x0f0d015e, 0x0fbc0150, 0x10630143,\n  0x11070264, 0x1238023e, 0x1357021d, 0x14660201, 0x156601e9, 0x165a01d3, 0x174401c0, 0x182401af,\n  0x18fe0331, 0x1a9602fe, 0x1c1502d2, 0x1d7e02ad, 0x1ed4028d, 0x201a0270, 0x21520256, 0x227d0240,\n  0x239f0443, 0x25c003fe, 0x27bf03c4, 0x29a10392, 0x2b6a0367, 0x2d1d0341, 0x2ebe031f, 0x304d0300,\n  0x31d105b0, 0x34a80555, 0x37520507, 0x39d504c5, 0x3c37048b, 0x3e7c0458, 0x40a8042a, 0x42bd0401,\n  0x44c20798, 0x488e071e, 0x4c1c06b6, 0x4f76065d, 0x52a50610, 0x55ac05cc, 0x5892058f, 0x5b590559,\n  0x5e0c0a23, 0x631c0980, 0x67db08f6, 0x6c55087f, 0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 1122,
+            "column": 1,
+            "source_line": "static const stbir_uint32 fp32_to_srgb8_tab4[104] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir_00001111",
+          "type": {
+            "model": "CTypedef",
+            "qualifiers": [],
+            "source_text": "static __m256i stbir_00001111",
+            "name": "__m256i",
+            "type": null,
+            "source_location": null,
+            "declaration_locations": []
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ STBIR__CONST_4d_32i( 0, 0, 0, 0 ), STBIR__CONST_4d_32i( 1, 1, 1, 1 ) }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 1625,
+            "column": 5,
+            "source_line": "    static __m256i stbir_00001111 = { STBIR__CONST_4d_32i( 0, 0, 0, 0 ), STBIR__CONST_4d_32i( 1, 1, 1, 1 ) };"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir_22223333",
+          "type": {
+            "model": "CTypedef",
+            "qualifiers": [],
+            "source_text": "static __m256i stbir_22223333",
+            "name": "__m256i",
+            "type": null,
+            "source_location": null,
+            "declaration_locations": []
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ STBIR__CONST_4d_32i( 2, 2, 2, 2 ), STBIR__CONST_4d_32i( 3, 3, 3, 3 ) }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 1628,
+            "column": 5,
+            "source_line": "    static __m256i stbir_22223333 = { STBIR__CONST_4d_32i( 2, 2, 2, 2 ), STBIR__CONST_4d_32i( 3, 3, 3, 3 ) };"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir_00112233",
+          "type": {
+            "model": "CTypedef",
+            "qualifiers": [],
+            "source_text": "static __m256i stbir_00112233",
+            "name": "__m256i",
+            "type": null,
+            "source_location": null,
+            "declaration_locations": []
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ STBIR__CONST_4d_32i( 0, 0, 1, 1 ), STBIR__CONST_4d_32i( 2, 2, 3, 3 ) }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 1635,
+            "column": 5,
+            "source_line": "    static __m256i stbir_00112233 = { STBIR__CONST_4d_32i( 0, 0, 1, 1 ), STBIR__CONST_4d_32i( 2, 2, 3, 3 ) };"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir_load6",
+          "type": {
+            "model": "CTypedef",
+            "qualifiers": [],
+            "source_text": "static __m256i stbir_load6",
+            "name": "__m256i",
+            "type": null,
+            "source_location": null,
+            "declaration_locations": []
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ STBIR__CONST_4_32i( 0x80000000 ), STBIR__CONST_4d_32i(  0x80000000,  0x80000000, 0, 0 ) }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 1639,
+            "column": 5,
+            "source_line": "    static __m256i stbir_load6 = { STBIR__CONST_4_32i( 0x80000000 ), STBIR__CONST_4d_32i(  0x80000000,  0x80000000, 0, 0 ) };"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "STBIR_mask",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static const int STBIR_mask[9]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "9",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CInt",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const int"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ 0,0,0,-1,-1,-1,0,0,0 }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 2564,
+            "column": 1,
+            "source_line": "static const int STBIR_mask[9] = { 0,0,0,-1,-1,-1,0,0,0 };"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__edge_wrap_slow",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static stbir__edge_wrap_func * stbir__edge_wrap_slow[]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": null,
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbir__edge_wrap_func"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  stbir__edge_clamp_full,                       \n  stbir__edge_reflect_full,                       \n  stbir__edge_wrap_full,                       \n  stbir__edge_zero_full,                       \n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 3102,
+            "column": 1,
+            "source_line": "static stbir__edge_wrap_func * stbir__edge_wrap_slow[] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__vertical_gathers",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static STBIR_VERTICAL_GATHERFUNC * stbir__vertical_gathers[ 8 ]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "8",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "STBIR_VERTICAL_GATHERFUNC"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  stbir__vertical_gather_with_1_coeffs,stbir__vertical_gather_with_2_coeffs,stbir__vertical_gather_with_3_coeffs,stbir__vertical_gather_with_4_coeffs,stbir__vertical_gather_with_5_coeffs,stbir__vertical_gather_with_6_coeffs,stbir__vertical_gather_with_7_coeffs,stbir__vertical_gather_with_8_coeffs\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 6161,
+            "column": 1,
+            "source_line": "static STBIR_VERTICAL_GATHERFUNC * stbir__vertical_gathers[ 8 ] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__vertical_gathers_continues",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static STBIR_VERTICAL_GATHERFUNC * stbir__vertical_gathers_continues[ 8 ]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "8",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "STBIR_VERTICAL_GATHERFUNC"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  stbir__vertical_gather_with_1_coeffs_cont,stbir__vertical_gather_with_2_coeffs_cont,stbir__vertical_gather_with_3_coeffs_cont,stbir__vertical_gather_with_4_coeffs_cont,stbir__vertical_gather_with_5_coeffs_cont,stbir__vertical_gather_with_6_coeffs_cont,stbir__vertical_gather_with_7_coeffs_cont,stbir__vertical_gather_with_8_coeffs_cont\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 6166,
+            "column": 1,
+            "source_line": "static STBIR_VERTICAL_GATHERFUNC * stbir__vertical_gathers_continues[ 8 ] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__vertical_scatter_sets",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static STBIR_VERTICAL_SCATTERFUNC * stbir__vertical_scatter_sets[ 8 ]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "8",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "STBIR_VERTICAL_SCATTERFUNC"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  stbir__vertical_scatter_with_1_coeffs,stbir__vertical_scatter_with_2_coeffs,stbir__vertical_scatter_with_3_coeffs,stbir__vertical_scatter_with_4_coeffs,stbir__vertical_scatter_with_5_coeffs,stbir__vertical_scatter_with_6_coeffs,stbir__vertical_scatter_with_7_coeffs,stbir__vertical_scatter_with_8_coeffs\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 6173,
+            "column": 1,
+            "source_line": "static STBIR_VERTICAL_SCATTERFUNC * stbir__vertical_scatter_sets[ 8 ] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__vertical_scatter_blends",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static STBIR_VERTICAL_SCATTERFUNC * stbir__vertical_scatter_blends[ 8 ]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "8",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "STBIR_VERTICAL_SCATTERFUNC"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  stbir__vertical_scatter_with_1_coeffs_cont,stbir__vertical_scatter_with_2_coeffs_cont,stbir__vertical_scatter_with_3_coeffs_cont,stbir__vertical_scatter_with_4_coeffs_cont,stbir__vertical_scatter_with_5_coeffs_cont,stbir__vertical_scatter_with_6_coeffs_cont,stbir__vertical_scatter_with_7_coeffs_cont,stbir__vertical_scatter_with_8_coeffs_cont\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 6178,
+            "column": 1,
+            "source_line": "static STBIR_VERTICAL_SCATTERFUNC * stbir__vertical_scatter_blends[ 8 ] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__builtin_kernels",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static stbir__kernel_callback * stbir__builtin_kernels[]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": null,
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbir__kernel_callback"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ 0, stbir__filter_trapezoid,  stbir__filter_triangle, stbir__filter_cubic, stbir__filter_catmullrom, stbir__filter_mitchell, stbir__filter_point }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 6570,
+            "column": 1,
+            "source_line": "static stbir__kernel_callback * stbir__builtin_kernels[] =   { 0, stbir__filter_trapezoid,  stbir__filter_triangle, stbir__filter_cubic, stbir__filter_catmullrom, stbir__filter_mitchell, stbir__filter_point };"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__builtin_supports",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static stbir__support_callback * stbir__builtin_supports[]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": null,
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbir__support_callback"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ 0, stbir__support_trapezoid, stbir__support_one,     stbir__support_two,  stbir__support_two,       stbir__support_two,     stbir__support_zeropoint5 }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 6571,
+            "column": 1,
+            "source_line": "static stbir__support_callback * stbir__builtin_supports[] = { 0, stbir__support_trapezoid, stbir__support_one,     stbir__support_two,  stbir__support_two,       stbir__support_two,     stbir__support_zeropoint5 };"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__horizontal_gather_n_coeffs_funcs",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static stbir__horizontal_gather_channels_func ** stbir__horizontal_gather_n_coeffs_funcs[8]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "8",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbir__horizontal_gather_channels_func"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  0, stbir__horizontal_gather_1_channels_with_n_coeffs_funcs, stbir__horizontal_gather_2_channels_with_n_coeffs_funcs, stbir__horizontal_gather_3_channels_with_n_coeffs_funcs, stbir__horizontal_gather_4_channels_with_n_coeffs_funcs, 0,0, stbir__horizontal_gather_7_channels_with_n_coeffs_funcs\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 6883,
+            "column": 1,
+            "source_line": "static stbir__horizontal_gather_channels_func ** stbir__horizontal_gather_n_coeffs_funcs[8] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__horizontal_gather_channels_funcs",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static stbir__horizontal_gather_channels_func ** stbir__horizontal_gather_channels_funcs[8]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "8",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "stbir__horizontal_gather_channels_func"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  0, stbir__horizontal_gather_1_channels_funcs, stbir__horizontal_gather_2_channels_funcs, stbir__horizontal_gather_3_channels_funcs, stbir__horizontal_gather_4_channels_funcs, 0,0, stbir__horizontal_gather_7_channels_funcs\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 6888,
+            "column": 1,
+            "source_line": "static stbir__horizontal_gather_channels_func ** stbir__horizontal_gather_channels_funcs[8] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__compute_weights",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static float stbir__compute_weights[5][STBIR_RESIZE_CLASSIFICATIONS][4]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "5",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "STBIR_RESIZE_CLASSIFICATIONS",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "4",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  {\n    { 1.00000f, 1.00000f, 0.31250f, 1.00000f },\n    { 0.56250f, 0.59375f, 0.00000f, 0.96875f },\n    { 1.00000f, 0.06250f, 0.00000f, 1.00000f },\n    { 0.00000f, 0.09375f, 1.00000f, 1.00000f },\n    { 1.00000f, 1.00000f, 0.31250f, 1.00000f },\n    { 0.03125f, 0.12500f, 1.00000f, 1.00000f },\n    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },\n    { 0.00000f, 1.00000f, 0.00000f, 0.03125f },\n  }, {\n    { 0.00000f, 0.84375f, 0.00000f, 0.03125f },\n    { 0.09375f, 0.93750f, 0.00000f, 0.78125f },\n    { 0.87500f, 0.21875f, 0.00000f, 0.96875f },\n    { 0.09375f, 0.09375f, 1.00000f, 1.00000f },\n    { 0.00000f, 0.84375f, 0.00000f, 0.03125f },\n    { 0.03125f, 0.12500f, 1.00000f, 1.00000f },\n    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },\n    { 0.00000f, 1.00000f, 0.00000f, 0.53125f },\n  }, {\n    { 0.00000f, 0.53125f, 0.00000f, 0.03125f },\n    { 0.06250f, 0.96875f, 0.00000f, 0.53125f },\n    { 0.87500f, 0.18750f, 0.00000f, 0.93750f },\n    { 0.00000f, 0.09375f, 1.00000f, 1.00000f },\n    { 0.00000f, 0.53125f, 0.00000f, 0.03125f },\n    { 0.03125f, 0.12500f, 1.00000f, 1.00000f },\n    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },\n    { 0.00000f, 1.00000f, 0.00000f, 0.56250f },\n  }, {\n    { 0.00000f, 0.50000f, 0.00000f, 0.71875f },\n    { 0.06250f, 0.84375f, 0.00000f, 0.87500f },\n    { 1.00000f, 0.50000f, 0.50000f, 0.96875f },\n    { 1.00000f, 0.09375f, 0.31250f, 0.50000f },\n    { 0.00000f, 0.50000f, 0.00000f, 0.71875f },\n    { 1.00000f, 0.03125f, 0.03125f, 0.53125f },\n    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },\n    { 0.00000f, 1.00000f, 0.03125f, 0.18750f },\n  }, {\n    { 0.00000f, 0.59375f, 0.00000f, 0.96875f },\n    { 0.06250f, 0.81250f, 0.06250f, 0.59375f },\n    { 0.75000f, 0.43750f, 0.12500f, 0.96875f },\n    { 0.87500f, 0.06250f, 0.18750f, 0.43750f },\n    { 0.00000f, 0.59375f, 0.00000f, 0.96875f },\n    { 0.15625f, 0.12500f, 1.00000f, 1.00000f },\n    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },\n    { 0.00000f, 1.00000f, 0.03125f, 0.34375f },\n  }\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 6896,
+            "column": 1,
+            "source_line": "static float stbir__compute_weights[5][STBIR_RESIZE_CLASSIFICATIONS][4]=  // 5 = 0=1chan, 1=2chan, 2=3chan, 3=4chan, 4=7chan"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "STBIR__V_FIRST_INFO_BUFFER",
+          "type": {
+            "reference": "STBIR__V_FIRST_INFO"
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{0}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 6957,
+            "column": 1,
+            "source_line": "static STBIR__V_FIRST_INFO STBIR__V_FIRST_INFO_BUFFER = {0};"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__pixel_channels",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static unsigned char stbir__pixel_channels[]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": null,
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  1,2,3,3,4,                             \n  4,4,4,4,2,2,                             \n  4,4,4,4,2,2,                                               \n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 7034,
+            "column": 1,
+            "source_line": "static unsigned char stbir__pixel_channels[] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbir__pixel_layout_convert_public_to_internal",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static stbir_internal_pixel_layout stbir__pixel_layout_convert_public_to_internal[]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": null,
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "reference": "stbir_internal_pixel_layout"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n  STBIRI_BGR, STBIRI_1CHANNEL, STBIRI_2CHANNEL, STBIRI_RGB, STBIRI_RGBA,\n  STBIRI_4CHANNEL, STBIRI_BGRA, STBIRI_ARGB, STBIRI_ABGR, STBIRI_RA, STBIRI_AR,\n  STBIRI_RGBA_PM, STBIRI_BGRA_PM, STBIRI_ARGB_PM, STBIRI_ABGR_PM, STBIRI_RA_PM, STBIRI_AR_PM,\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_resize2.h",
+            "line": 7042,
+            "column": 1,
+            "source_line": "static stbir_internal_pixel_layout stbir__pixel_layout_convert_public_to_internal[] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        }
+      ],
       "macros": [
         {
           "name": "STBIR_INCLUDE_STB_IMAGE_RESIZE2_H",
@@ -30907,7 +32257,7 @@
             "column": 3,
             "source_line": "  static const stbir__simdf STBIR_zeroones = { 0.0f,1.0f,0.0f,1.0f };"
           },
-          "source_text": "static const stbir__simdf STBIR_zeroones ="
+          "source_text": "static const stbir__simdf STBIR_zeroones = { 0.0f,1.0f,0.0f,1.0f }"
         },
         {
           "name": "stbir__simdf",
@@ -30918,7 +32268,7 @@
             "column": 3,
             "source_line": "  static const stbir__simdf STBIR_onezeros = { 1.0f,0.0f,1.0f,0.0f };"
           },
-          "source_text": "static const stbir__simdf STBIR_onezeros ="
+          "source_text": "static const stbir__simdf STBIR_onezeros = { 1.0f,0.0f,1.0f,0.0f }"
         },
         {
           "name": "STBIR__SIMDI_CONST",
@@ -31039,7 +32389,7 @@
             "column": 3,
             "source_line": "  static const stbir__simdf8 STBIR_max_uint16_as_float_inverted8 = { stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted };"
           },
-          "source_text": "static const stbir__simdf8 STBIR_max_uint16_as_float_inverted8 ="
+          "source_text": "static const stbir__simdf8 STBIR_max_uint16_as_float_inverted8 = { stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted,stbir__max_uint16_as_float_inverted }"
         },
         {
           "name": "stbir__simdf8",
@@ -31050,7 +32400,7 @@
             "column": 3,
             "source_line": "  static const stbir__simdf8 STBIR_max_uint8_as_float_inverted8 = { stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted };"
           },
-          "source_text": "static const stbir__simdf8 STBIR_max_uint8_as_float_inverted8 ="
+          "source_text": "static const stbir__simdf8 STBIR_max_uint8_as_float_inverted8 = { stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted,stbir__max_uint8_as_float_inverted }"
         },
         {
           "name": "stbir__simdf8",
@@ -31061,7 +32411,7 @@
             "column": 3,
             "source_line": "  static const stbir__simdf8 STBIR_ones8 = { 1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0 };"
           },
-          "source_text": "static const stbir__simdf8 STBIR_ones8 ="
+          "source_text": "static const stbir__simdf8 STBIR_ones8 = { 1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0 }"
         },
         {
           "name": "stbir__simdf8",
@@ -31072,7 +32422,7 @@
             "column": 3,
             "source_line": "  static const stbir__simdf8 STBIR_simd_point58 = { 0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5 };"
           },
-          "source_text": "static const stbir__simdf8 STBIR_simd_point58 ="
+          "source_text": "static const stbir__simdf8 STBIR_simd_point58 = { 0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5 }"
         },
         {
           "name": "stbir__simdf8",
@@ -31083,7 +32433,7 @@
             "column": 3,
             "source_line": "  static const stbir__simdf8 STBIR_max_uint8_as_float8 = { stbir__max_uint8_as_float,stbir__max_uint8_as_float,stbir__max_uint8_as_float,stbir__max_uint8_as_float, stbir__max_uint8_as_float,stbir__max_uint8_as_float,stbir__max_uint8_as_float,stbir__max_uint8_as_float };"
           },
-          "source_text": "static const stbir__simdf8 STBIR_max_uint8_as_float8 ="
+          "source_text": "static const stbir__simdf8 STBIR_max_uint8_as_float8 = { stbir__max_uint8_as_float,stbir__max_uint8_as_float,stbir__max_uint8_as_float,stbir__max_uint8_as_float, stbir__max_uint8_as_float,stbir__max_uint8_as_float,stbir__max_uint8_as_float,stbir__max_uint8_as_float }"
         },
         {
           "name": "stbir__simdf8",
@@ -31094,7 +32444,7 @@
             "column": 3,
             "source_line": "  static const stbir__simdf8 STBIR_max_uint16_as_float8 = { stbir__max_uint16_as_float,stbir__max_uint16_as_float,stbir__max_uint16_as_float,stbir__max_uint16_as_float, stbir__max_uint16_as_float,stbir__max_uint16_as_float,stbir__max_uint16_as_float,stbir__max_uint16_as_float };"
           },
-          "source_text": "static const stbir__simdf8 STBIR_max_uint16_as_float8 ="
+          "source_text": "static const stbir__simdf8 STBIR_max_uint16_as_float8 = { stbir__max_uint16_as_float,stbir__max_uint16_as_float,stbir__max_uint16_as_float,stbir__max_uint16_as_float, stbir__max_uint16_as_float,stbir__max_uint16_as_float,stbir__max_uint16_as_float,stbir__max_uint16_as_float }"
         },
         {
           "name": "stbir__inline",
@@ -32128,7 +33478,7 @@
             "column": 1,
             "source_line": "static stbir__horizontal_gather_channels_func * STBIR_chans(stbir__horizontal_gather_,_channels_with_n_coeffs_funcs)[4]="
           },
-          "source_text": "static stbir__horizontal_gather_channels_func * STBIR_chans(stbir__horizontal_gather_,_channels_with_n_coeffs_funcs)[4]="
+          "source_text": "static stbir__horizontal_gather_channels_func * STBIR_chans(stbir__horizontal_gather_,_channels_with_n_coeffs_funcs)[4]=\n{\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_n_coeffs_mod0),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_n_coeffs_mod1),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_n_coeffs_mod2),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_n_coeffs_mod3),\n}"
         },
         {
           "name": "STBIR_chans",
@@ -32139,7 +33489,7 @@
             "column": 1,
             "source_line": "static stbir__horizontal_gather_channels_func * STBIR_chans(stbir__horizontal_gather_,_channels_funcs)[12]="
           },
-          "source_text": "static stbir__horizontal_gather_channels_func * STBIR_chans(stbir__horizontal_gather_,_channels_funcs)[12]="
+          "source_text": "static stbir__horizontal_gather_channels_func * STBIR_chans(stbir__horizontal_gather_,_channels_funcs)[12]=\n{\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_1_coeff),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_2_coeffs),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_3_coeffs),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_4_coeffs),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_5_coeffs),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_6_coeffs),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_7_coeffs),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_8_coeffs),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_9_coeffs),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_10_coeffs),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_11_coeffs),\n  STBIR_chans(stbir__horizontal_gather_,_channels_with_12_coeffs),\n}"
         }
       ],
       "diagnostics": [
@@ -39502,45 +40852,6 @@
           "unit_name": "STBIRDEF"
         },
         {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 904,
-            "column": 1,
-            "source_line": "static unsigned char stbir__type_size[] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_FIELD_DECLARATION",
-          "message": "Nested aggregate field definitions are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 977,
-            "column": 3,
-            "source_line": "  union"
-          },
-          "unit_kind": "struct_field",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_FIELD_DECLARATION",
-          "message": "Nested aggregate field definitions are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 1013,
-            "column": 3,
-            "source_line": "  union"
-          },
-          "unit_kind": "struct_field",
-          "unit_name": null
-        },
-        {
           "code": "C_MACRO_DEPENDENT_DECLARATION",
           "message": "Declaration depends on object-like macro 'stbir__inline'; provide preprocessed input to parse it.",
           "severity": "warning",
@@ -39565,32 +40876,6 @@
           },
           "unit_kind": "macro_dependent_declaration",
           "unit_name": "stbir__inline"
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 1087,
-            "column": 1,
-            "source_line": "static float stbir__srgb_uchar_to_linear_float[256] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 1122,
-            "column": 1,
-            "source_line": "static const stbir_uint32 fp32_to_srgb8_tab4[104] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
         },
         {
           "code": "C_MACRO_DEPENDENT_DECLARATION",
@@ -39656,58 +40941,6 @@
           },
           "unit_kind": "macro_dependent_declaration",
           "unit_name": "STBIR__SIMDI_CONST"
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 1625,
-            "column": 5,
-            "source_line": "    static __m256i stbir_00001111 = { STBIR__CONST_4d_32i( 0, 0, 0, 0 ), STBIR__CONST_4d_32i( 1, 1, 1, 1 ) };"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 1628,
-            "column": 5,
-            "source_line": "    static __m256i stbir_22223333 = { STBIR__CONST_4d_32i( 2, 2, 2, 2 ), STBIR__CONST_4d_32i( 3, 3, 3, 3 ) };"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 1635,
-            "column": 5,
-            "source_line": "    static __m256i stbir_00112233 = { STBIR__CONST_4d_32i( 0, 0, 1, 1 ), STBIR__CONST_4d_32i( 2, 2, 3, 3 ) };"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 1639,
-            "column": 5,
-            "source_line": "    static __m256i stbir_load6 = { STBIR__CONST_4_32i( 0x80000000 ), STBIR__CONST_4d_32i(  0x80000000,  0x80000000, 0, 0 ) };"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
         },
         {
           "code": "C_MACRO_DEPENDENT_DECLARATION",
@@ -40139,19 +41372,6 @@
           "unit_name": "stbir__inline"
         },
         {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 2564,
-            "column": 1,
-            "source_line": "static const int STBIR_mask[9] = { 0,0,0,-1,-1,-1,0,0,0 };"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
           "code": "C_MACRO_DEPENDENT_DECLARATION",
           "message": "Declaration depends on function-like macro 'STBIR__SIMDF_CONST'; provide preprocessed input to parse it.",
           "severity": "warning",
@@ -40321,19 +41541,6 @@
           "unit_name": "STBIR_PROFILE_FUNC"
         },
         {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 3102,
-            "column": 1,
-            "source_line": "static stbir__edge_wrap_func * stbir__edge_wrap_slow[] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
           "code": "C_MACRO_DEPENDENT_DECLARATION",
           "message": "Declaration depends on object-like macro 'stbir__inline'; provide preprocessed input to parse it.",
           "severity": "warning",
@@ -40373,58 +41580,6 @@
           "unit_name": null
         },
         {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 6161,
-            "column": 1,
-            "source_line": "static STBIR_VERTICAL_GATHERFUNC * stbir__vertical_gathers[ 8 ] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 6166,
-            "column": 1,
-            "source_line": "static STBIR_VERTICAL_GATHERFUNC * stbir__vertical_gathers_continues[ 8 ] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 6173,
-            "column": 1,
-            "source_line": "static STBIR_VERTICAL_SCATTERFUNC * stbir__vertical_scatter_sets[ 8 ] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 6178,
-            "column": 1,
-            "source_line": "static STBIR_VERTICAL_SCATTERFUNC * stbir__vertical_scatter_blends[ 8 ] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
           "code": "C_UNSUPPORTED_DECLARATOR",
           "message": "Unsupported declarator syntax after parsed type layers: 'STBIR_ONLY_PROFILE_GET_SPLIT_INFO'.",
           "severity": "warning",
@@ -40448,110 +41603,6 @@
             "source_line": "static void stbir__resample_horizontal_gather(stbir__info const * stbir_info, float* output_buffer, float const * input_buffer STBIR_ONLY_PROFILE_GET_SPLIT_INFO )"
           },
           "unit_kind": "declarator",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 6570,
-            "column": 1,
-            "source_line": "static stbir__kernel_callback * stbir__builtin_kernels[] =   { 0, stbir__filter_trapezoid,  stbir__filter_triangle, stbir__filter_cubic, stbir__filter_catmullrom, stbir__filter_mitchell, stbir__filter_point };"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 6571,
-            "column": 1,
-            "source_line": "static stbir__support_callback * stbir__builtin_supports[] = { 0, stbir__support_trapezoid, stbir__support_one,     stbir__support_two,  stbir__support_two,       stbir__support_two,     stbir__support_zeropoint5 };"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 6883,
-            "column": 1,
-            "source_line": "static stbir__horizontal_gather_channels_func ** stbir__horizontal_gather_n_coeffs_funcs[8] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 6888,
-            "column": 1,
-            "source_line": "static stbir__horizontal_gather_channels_func ** stbir__horizontal_gather_channels_funcs[8] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 6896,
-            "column": 1,
-            "source_line": "static float stbir__compute_weights[5][STBIR_RESIZE_CLASSIFICATIONS][4]=  // 5 = 0=1chan, 1=2chan, 2=3chan, 3=4chan, 4=7chan"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 6957,
-            "column": 1,
-            "source_line": "static STBIR__V_FIRST_INFO STBIR__V_FIRST_INFO_BUFFER = {0};"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 7034,
-            "column": 1,
-            "source_line": "static unsigned char stbir__pixel_channels[] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_resize2.h",
-            "line": 7042,
-            "column": 1,
-            "source_line": "static stbir_internal_pixel_layout stbir__pixel_layout_convert_public_to_internal[] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
           "unit_name": null
         },
         {
@@ -49329,7 +50380,790 @@
       "reference": "STBIR__V_FIRST_INFO"
     }
   },
-  "variables": {},
+  "variables": {
+    "stbir__type_size": {
+      "name": "stbir__type_size",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static unsigned char stbir__type_size[]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": null,
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CUnsignedChar",
+            "qualifiers": [],
+            "source_text": "unsigned char"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  1,1,1,2,4,2                                                                                                                               \n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 904,
+        "column": 1,
+        "source_line": "static unsigned char stbir__type_size[] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__srgb_uchar_to_linear_float": {
+      "name": "stbir__srgb_uchar_to_linear_float",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static float stbir__srgb_uchar_to_linear_float[256]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "256",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  0.000000f, 0.000304f, 0.000607f, 0.000911f, 0.001214f, 0.001518f, 0.001821f, 0.002125f, 0.002428f, 0.002732f, 0.003035f,\n  0.003347f, 0.003677f, 0.004025f, 0.004391f, 0.004777f, 0.005182f, 0.005605f, 0.006049f, 0.006512f, 0.006995f, 0.007499f,\n  0.008023f, 0.008568f, 0.009134f, 0.009721f, 0.010330f, 0.010960f, 0.011612f, 0.012286f, 0.012983f, 0.013702f, 0.014444f,\n  0.015209f, 0.015996f, 0.016807f, 0.017642f, 0.018500f, 0.019382f, 0.020289f, 0.021219f, 0.022174f, 0.023153f, 0.024158f,\n  0.025187f, 0.026241f, 0.027321f, 0.028426f, 0.029557f, 0.030713f, 0.031896f, 0.033105f, 0.034340f, 0.035601f, 0.036889f,\n  0.038204f, 0.039546f, 0.040915f, 0.042311f, 0.043735f, 0.045186f, 0.046665f, 0.048172f, 0.049707f, 0.051269f, 0.052861f,\n  0.054480f, 0.056128f, 0.057805f, 0.059511f, 0.061246f, 0.063010f, 0.064803f, 0.066626f, 0.068478f, 0.070360f, 0.072272f,\n  0.074214f, 0.076185f, 0.078187f, 0.080220f, 0.082283f, 0.084376f, 0.086500f, 0.088656f, 0.090842f, 0.093059f, 0.095307f,\n  0.097587f, 0.099899f, 0.102242f, 0.104616f, 0.107023f, 0.109462f, 0.111932f, 0.114435f, 0.116971f, 0.119538f, 0.122139f,\n  0.124772f, 0.127438f, 0.130136f, 0.132868f, 0.135633f, 0.138432f, 0.141263f, 0.144128f, 0.147027f, 0.149960f, 0.152926f,\n  0.155926f, 0.158961f, 0.162029f, 0.165132f, 0.168269f, 0.171441f, 0.174647f, 0.177888f, 0.181164f, 0.184475f, 0.187821f,\n  0.191202f, 0.194618f, 0.198069f, 0.201556f, 0.205079f, 0.208637f, 0.212231f, 0.215861f, 0.219526f, 0.223228f, 0.226966f,\n  0.230740f, 0.234551f, 0.238398f, 0.242281f, 0.246201f, 0.250158f, 0.254152f, 0.258183f, 0.262251f, 0.266356f, 0.270498f,\n  0.274677f, 0.278894f, 0.283149f, 0.287441f, 0.291771f, 0.296138f, 0.300544f, 0.304987f, 0.309469f, 0.313989f, 0.318547f,\n  0.323143f, 0.327778f, 0.332452f, 0.337164f, 0.341914f, 0.346704f, 0.351533f, 0.356400f, 0.361307f, 0.366253f, 0.371238f,\n  0.376262f, 0.381326f, 0.386430f, 0.391573f, 0.396755f, 0.401978f, 0.407240f, 0.412543f, 0.417885f, 0.423268f, 0.428691f,\n  0.434154f, 0.439657f, 0.445201f, 0.450786f, 0.456411f, 0.462077f, 0.467784f, 0.473532f, 0.479320f, 0.485150f, 0.491021f,\n  0.496933f, 0.502887f, 0.508881f, 0.514918f, 0.520996f, 0.527115f, 0.533276f, 0.539480f, 0.545725f, 0.552011f, 0.558340f,\n  0.564712f, 0.571125f, 0.577581f, 0.584078f, 0.590619f, 0.597202f, 0.603827f, 0.610496f, 0.617207f, 0.623960f, 0.630757f,\n  0.637597f, 0.644480f, 0.651406f, 0.658375f, 0.665387f, 0.672443f, 0.679543f, 0.686685f, 0.693872f, 0.701102f, 0.708376f,\n  0.715694f, 0.723055f, 0.730461f, 0.737911f, 0.745404f, 0.752942f, 0.760525f, 0.768151f, 0.775822f, 0.783538f, 0.791298f,\n  0.799103f, 0.806952f, 0.814847f, 0.822786f, 0.830770f, 0.838799f, 0.846873f, 0.854993f, 0.863157f, 0.871367f, 0.879622f,\n  0.887923f, 0.896269f, 0.904661f, 0.913099f, 0.921582f, 0.930111f, 0.938686f, 0.947307f, 0.955974f, 0.964686f, 0.973445f,\n  0.982251f, 0.991102f, 1.0f\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 1087,
+        "column": 1,
+        "source_line": "static float stbir__srgb_uchar_to_linear_float[256] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "fp32_to_srgb8_tab4": {
+      "name": "fp32_to_srgb8_tab4",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static const stbir_uint32 fp32_to_srgb8_tab4[104]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "104",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "reference": "stbir_uint32"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  0x0073000d, 0x007a000d, 0x0080000d, 0x0087000d, 0x008d000d, 0x0094000d, 0x009a000d, 0x00a1000d,\n  0x00a7001a, 0x00b4001a, 0x00c1001a, 0x00ce001a, 0x00da001a, 0x00e7001a, 0x00f4001a, 0x0101001a,\n  0x010e0033, 0x01280033, 0x01410033, 0x015b0033, 0x01750033, 0x018f0033, 0x01a80033, 0x01c20033,\n  0x01dc0067, 0x020f0067, 0x02430067, 0x02760067, 0x02aa0067, 0x02dd0067, 0x03110067, 0x03440067,\n  0x037800ce, 0x03df00ce, 0x044600ce, 0x04ad00ce, 0x051400ce, 0x057b00c5, 0x05dd00bc, 0x063b00b5,\n  0x06970158, 0x07420142, 0x07e30130, 0x087b0120, 0x090b0112, 0x09940106, 0x0a1700fc, 0x0a9500f2,\n  0x0b0f01cb, 0x0bf401ae, 0x0ccb0195, 0x0d950180, 0x0e56016e, 0x0f0d015e, 0x0fbc0150, 0x10630143,\n  0x11070264, 0x1238023e, 0x1357021d, 0x14660201, 0x156601e9, 0x165a01d3, 0x174401c0, 0x182401af,\n  0x18fe0331, 0x1a9602fe, 0x1c1502d2, 0x1d7e02ad, 0x1ed4028d, 0x201a0270, 0x21520256, 0x227d0240,\n  0x239f0443, 0x25c003fe, 0x27bf03c4, 0x29a10392, 0x2b6a0367, 0x2d1d0341, 0x2ebe031f, 0x304d0300,\n  0x31d105b0, 0x34a80555, 0x37520507, 0x39d504c5, 0x3c37048b, 0x3e7c0458, 0x40a8042a, 0x42bd0401,\n  0x44c20798, 0x488e071e, 0x4c1c06b6, 0x4f76065d, 0x52a50610, 0x55ac05cc, 0x5892058f, 0x5b590559,\n  0x5e0c0a23, 0x631c0980, 0x67db08f6, 0x6c55087f, 0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 1122,
+        "column": 1,
+        "source_line": "static const stbir_uint32 fp32_to_srgb8_tab4[104] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir_00001111": {
+      "name": "stbir_00001111",
+      "type": {
+        "reference": "__m256i"
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ STBIR__CONST_4d_32i( 0, 0, 0, 0 ), STBIR__CONST_4d_32i( 1, 1, 1, 1 ) }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 1625,
+        "column": 5,
+        "source_line": "    static __m256i stbir_00001111 = { STBIR__CONST_4d_32i( 0, 0, 0, 0 ), STBIR__CONST_4d_32i( 1, 1, 1, 1 ) };"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir_22223333": {
+      "name": "stbir_22223333",
+      "type": {
+        "reference": "__m256i"
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ STBIR__CONST_4d_32i( 2, 2, 2, 2 ), STBIR__CONST_4d_32i( 3, 3, 3, 3 ) }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 1628,
+        "column": 5,
+        "source_line": "    static __m256i stbir_22223333 = { STBIR__CONST_4d_32i( 2, 2, 2, 2 ), STBIR__CONST_4d_32i( 3, 3, 3, 3 ) };"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir_00112233": {
+      "name": "stbir_00112233",
+      "type": {
+        "reference": "__m256i"
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ STBIR__CONST_4d_32i( 0, 0, 1, 1 ), STBIR__CONST_4d_32i( 2, 2, 3, 3 ) }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 1635,
+        "column": 5,
+        "source_line": "    static __m256i stbir_00112233 = { STBIR__CONST_4d_32i( 0, 0, 1, 1 ), STBIR__CONST_4d_32i( 2, 2, 3, 3 ) };"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir_load6": {
+      "name": "stbir_load6",
+      "type": {
+        "reference": "__m256i"
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ STBIR__CONST_4_32i( 0x80000000 ), STBIR__CONST_4d_32i(  0x80000000,  0x80000000, 0, 0 ) }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 1639,
+        "column": 5,
+        "source_line": "    static __m256i stbir_load6 = { STBIR__CONST_4_32i( 0x80000000 ), STBIR__CONST_4d_32i(  0x80000000,  0x80000000, 0, 0 ) };"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "STBIR_mask": {
+      "name": "STBIR_mask",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static const int STBIR_mask[9]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "9",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CInt",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const int"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ 0,0,0,-1,-1,-1,0,0,0 }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 2564,
+        "column": 1,
+        "source_line": "static const int STBIR_mask[9] = { 0,0,0,-1,-1,-1,0,0,0 };"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__edge_wrap_slow": {
+      "name": "stbir__edge_wrap_slow",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static stbir__edge_wrap_func * stbir__edge_wrap_slow[]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": null,
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "stbir__edge_wrap_func"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  stbir__edge_clamp_full,                       \n  stbir__edge_reflect_full,                       \n  stbir__edge_wrap_full,                       \n  stbir__edge_zero_full,                       \n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 3102,
+        "column": 1,
+        "source_line": "static stbir__edge_wrap_func * stbir__edge_wrap_slow[] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__vertical_gathers": {
+      "name": "stbir__vertical_gathers",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static STBIR_VERTICAL_GATHERFUNC * stbir__vertical_gathers[ 8 ]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "8",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "STBIR_VERTICAL_GATHERFUNC"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  stbir__vertical_gather_with_1_coeffs,stbir__vertical_gather_with_2_coeffs,stbir__vertical_gather_with_3_coeffs,stbir__vertical_gather_with_4_coeffs,stbir__vertical_gather_with_5_coeffs,stbir__vertical_gather_with_6_coeffs,stbir__vertical_gather_with_7_coeffs,stbir__vertical_gather_with_8_coeffs\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 6161,
+        "column": 1,
+        "source_line": "static STBIR_VERTICAL_GATHERFUNC * stbir__vertical_gathers[ 8 ] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__vertical_gathers_continues": {
+      "name": "stbir__vertical_gathers_continues",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static STBIR_VERTICAL_GATHERFUNC * stbir__vertical_gathers_continues[ 8 ]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "8",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "STBIR_VERTICAL_GATHERFUNC"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  stbir__vertical_gather_with_1_coeffs_cont,stbir__vertical_gather_with_2_coeffs_cont,stbir__vertical_gather_with_3_coeffs_cont,stbir__vertical_gather_with_4_coeffs_cont,stbir__vertical_gather_with_5_coeffs_cont,stbir__vertical_gather_with_6_coeffs_cont,stbir__vertical_gather_with_7_coeffs_cont,stbir__vertical_gather_with_8_coeffs_cont\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 6166,
+        "column": 1,
+        "source_line": "static STBIR_VERTICAL_GATHERFUNC * stbir__vertical_gathers_continues[ 8 ] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__vertical_scatter_sets": {
+      "name": "stbir__vertical_scatter_sets",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static STBIR_VERTICAL_SCATTERFUNC * stbir__vertical_scatter_sets[ 8 ]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "8",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "STBIR_VERTICAL_SCATTERFUNC"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  stbir__vertical_scatter_with_1_coeffs,stbir__vertical_scatter_with_2_coeffs,stbir__vertical_scatter_with_3_coeffs,stbir__vertical_scatter_with_4_coeffs,stbir__vertical_scatter_with_5_coeffs,stbir__vertical_scatter_with_6_coeffs,stbir__vertical_scatter_with_7_coeffs,stbir__vertical_scatter_with_8_coeffs\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 6173,
+        "column": 1,
+        "source_line": "static STBIR_VERTICAL_SCATTERFUNC * stbir__vertical_scatter_sets[ 8 ] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__vertical_scatter_blends": {
+      "name": "stbir__vertical_scatter_blends",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static STBIR_VERTICAL_SCATTERFUNC * stbir__vertical_scatter_blends[ 8 ]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "8",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "STBIR_VERTICAL_SCATTERFUNC"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  stbir__vertical_scatter_with_1_coeffs_cont,stbir__vertical_scatter_with_2_coeffs_cont,stbir__vertical_scatter_with_3_coeffs_cont,stbir__vertical_scatter_with_4_coeffs_cont,stbir__vertical_scatter_with_5_coeffs_cont,stbir__vertical_scatter_with_6_coeffs_cont,stbir__vertical_scatter_with_7_coeffs_cont,stbir__vertical_scatter_with_8_coeffs_cont\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 6178,
+        "column": 1,
+        "source_line": "static STBIR_VERTICAL_SCATTERFUNC * stbir__vertical_scatter_blends[ 8 ] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__builtin_kernels": {
+      "name": "stbir__builtin_kernels",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static stbir__kernel_callback * stbir__builtin_kernels[]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": null,
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "stbir__kernel_callback"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ 0, stbir__filter_trapezoid,  stbir__filter_triangle, stbir__filter_cubic, stbir__filter_catmullrom, stbir__filter_mitchell, stbir__filter_point }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 6570,
+        "column": 1,
+        "source_line": "static stbir__kernel_callback * stbir__builtin_kernels[] =   { 0, stbir__filter_trapezoid,  stbir__filter_triangle, stbir__filter_cubic, stbir__filter_catmullrom, stbir__filter_mitchell, stbir__filter_point };"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__builtin_supports": {
+      "name": "stbir__builtin_supports",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static stbir__support_callback * stbir__builtin_supports[]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": null,
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "stbir__support_callback"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ 0, stbir__support_trapezoid, stbir__support_one,     stbir__support_two,  stbir__support_two,       stbir__support_two,     stbir__support_zeropoint5 }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 6571,
+        "column": 1,
+        "source_line": "static stbir__support_callback * stbir__builtin_supports[] = { 0, stbir__support_trapezoid, stbir__support_one,     stbir__support_two,  stbir__support_two,       stbir__support_two,     stbir__support_zeropoint5 };"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__horizontal_gather_n_coeffs_funcs": {
+      "name": "stbir__horizontal_gather_n_coeffs_funcs",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static stbir__horizontal_gather_channels_func ** stbir__horizontal_gather_n_coeffs_funcs[8]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "8",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "stbir__horizontal_gather_channels_func"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  0, stbir__horizontal_gather_1_channels_with_n_coeffs_funcs, stbir__horizontal_gather_2_channels_with_n_coeffs_funcs, stbir__horizontal_gather_3_channels_with_n_coeffs_funcs, stbir__horizontal_gather_4_channels_with_n_coeffs_funcs, 0,0, stbir__horizontal_gather_7_channels_with_n_coeffs_funcs\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 6883,
+        "column": 1,
+        "source_line": "static stbir__horizontal_gather_channels_func ** stbir__horizontal_gather_n_coeffs_funcs[8] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__horizontal_gather_channels_funcs": {
+      "name": "stbir__horizontal_gather_channels_funcs",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static stbir__horizontal_gather_channels_func ** stbir__horizontal_gather_channels_funcs[8]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "8",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "stbir__horizontal_gather_channels_func"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  0, stbir__horizontal_gather_1_channels_funcs, stbir__horizontal_gather_2_channels_funcs, stbir__horizontal_gather_3_channels_funcs, stbir__horizontal_gather_4_channels_funcs, 0,0, stbir__horizontal_gather_7_channels_funcs\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 6888,
+        "column": 1,
+        "source_line": "static stbir__horizontal_gather_channels_func ** stbir__horizontal_gather_channels_funcs[8] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__compute_weights": {
+      "name": "stbir__compute_weights",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static float stbir__compute_weights[5][STBIR_RESIZE_CLASSIFICATIONS][4]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "5",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "STBIR_RESIZE_CLASSIFICATIONS",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "4",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  {\n    { 1.00000f, 1.00000f, 0.31250f, 1.00000f },\n    { 0.56250f, 0.59375f, 0.00000f, 0.96875f },\n    { 1.00000f, 0.06250f, 0.00000f, 1.00000f },\n    { 0.00000f, 0.09375f, 1.00000f, 1.00000f },\n    { 1.00000f, 1.00000f, 0.31250f, 1.00000f },\n    { 0.03125f, 0.12500f, 1.00000f, 1.00000f },\n    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },\n    { 0.00000f, 1.00000f, 0.00000f, 0.03125f },\n  }, {\n    { 0.00000f, 0.84375f, 0.00000f, 0.03125f },\n    { 0.09375f, 0.93750f, 0.00000f, 0.78125f },\n    { 0.87500f, 0.21875f, 0.00000f, 0.96875f },\n    { 0.09375f, 0.09375f, 1.00000f, 1.00000f },\n    { 0.00000f, 0.84375f, 0.00000f, 0.03125f },\n    { 0.03125f, 0.12500f, 1.00000f, 1.00000f },\n    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },\n    { 0.00000f, 1.00000f, 0.00000f, 0.53125f },\n  }, {\n    { 0.00000f, 0.53125f, 0.00000f, 0.03125f },\n    { 0.06250f, 0.96875f, 0.00000f, 0.53125f },\n    { 0.87500f, 0.18750f, 0.00000f, 0.93750f },\n    { 0.00000f, 0.09375f, 1.00000f, 1.00000f },\n    { 0.00000f, 0.53125f, 0.00000f, 0.03125f },\n    { 0.03125f, 0.12500f, 1.00000f, 1.00000f },\n    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },\n    { 0.00000f, 1.00000f, 0.00000f, 0.56250f },\n  }, {\n    { 0.00000f, 0.50000f, 0.00000f, 0.71875f },\n    { 0.06250f, 0.84375f, 0.00000f, 0.87500f },\n    { 1.00000f, 0.50000f, 0.50000f, 0.96875f },\n    { 1.00000f, 0.09375f, 0.31250f, 0.50000f },\n    { 0.00000f, 0.50000f, 0.00000f, 0.71875f },\n    { 1.00000f, 0.03125f, 0.03125f, 0.53125f },\n    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },\n    { 0.00000f, 1.00000f, 0.03125f, 0.18750f },\n  }, {\n    { 0.00000f, 0.59375f, 0.00000f, 0.96875f },\n    { 0.06250f, 0.81250f, 0.06250f, 0.59375f },\n    { 0.75000f, 0.43750f, 0.12500f, 0.96875f },\n    { 0.87500f, 0.06250f, 0.18750f, 0.43750f },\n    { 0.00000f, 0.59375f, 0.00000f, 0.96875f },\n    { 0.15625f, 0.12500f, 1.00000f, 1.00000f },\n    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },\n    { 0.00000f, 1.00000f, 0.03125f, 0.34375f },\n  }\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 6896,
+        "column": 1,
+        "source_line": "static float stbir__compute_weights[5][STBIR_RESIZE_CLASSIFICATIONS][4]=  // 5 = 0=1chan, 1=2chan, 2=3chan, 3=4chan, 4=7chan"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "STBIR__V_FIRST_INFO_BUFFER": {
+      "name": "STBIR__V_FIRST_INFO_BUFFER",
+      "type": {
+        "reference": "STBIR__V_FIRST_INFO"
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{0}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 6957,
+        "column": 1,
+        "source_line": "static STBIR__V_FIRST_INFO STBIR__V_FIRST_INFO_BUFFER = {0};"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__pixel_channels": {
+      "name": "stbir__pixel_channels",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static unsigned char stbir__pixel_channels[]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": null,
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CUnsignedChar",
+            "qualifiers": [],
+            "source_text": "unsigned char"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  1,2,3,3,4,                             \n  4,4,4,4,2,2,                             \n  4,4,4,4,2,2,                                               \n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 7034,
+        "column": 1,
+        "source_line": "static unsigned char stbir__pixel_channels[] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbir__pixel_layout_convert_public_to_internal": {
+      "name": "stbir__pixel_layout_convert_public_to_internal",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static stbir_internal_pixel_layout stbir__pixel_layout_convert_public_to_internal[]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": null,
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "reference": "stbir_internal_pixel_layout"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n  STBIRI_BGR, STBIRI_1CHANNEL, STBIRI_2CHANNEL, STBIRI_RGB, STBIRI_RGBA,\n  STBIRI_4CHANNEL, STBIRI_BGRA, STBIRI_ARGB, STBIRI_ABGR, STBIRI_RA, STBIRI_AR,\n  STBIRI_RGBA_PM, STBIRI_BGRA_PM, STBIRI_ARGB_PM, STBIRI_ABGR_PM, STBIRI_RA_PM, STBIRI_AR_PM,\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_resize2.h",
+        "line": 7042,
+        "column": 1,
+        "source_line": "static stbir_internal_pixel_layout stbir__pixel_layout_convert_public_to_internal[] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    }
+  },
   "macros": {
     "STBIR_INCLUDE_STB_IMAGE_RESIZE2_H": {
       "name": "STBIR_INCLUDE_STB_IMAGE_RESIZE2_H",
@@ -61336,45 +63170,6 @@
       "unit_name": "STBIRDEF"
     },
     {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 904,
-        "column": 1,
-        "source_line": "static unsigned char stbir__type_size[] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_FIELD_DECLARATION",
-      "message": "Nested aggregate field definitions are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 977,
-        "column": 3,
-        "source_line": "  union"
-      },
-      "unit_kind": "struct_field",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_FIELD_DECLARATION",
-      "message": "Nested aggregate field definitions are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 1013,
-        "column": 3,
-        "source_line": "  union"
-      },
-      "unit_kind": "struct_field",
-      "unit_name": null
-    },
-    {
       "code": "C_MACRO_DEPENDENT_DECLARATION",
       "message": "Declaration depends on object-like macro 'stbir__inline'; provide preprocessed input to parse it.",
       "severity": "warning",
@@ -61399,32 +63194,6 @@
       },
       "unit_kind": "macro_dependent_declaration",
       "unit_name": "stbir__inline"
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 1087,
-        "column": 1,
-        "source_line": "static float stbir__srgb_uchar_to_linear_float[256] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 1122,
-        "column": 1,
-        "source_line": "static const stbir_uint32 fp32_to_srgb8_tab4[104] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
     },
     {
       "code": "C_MACRO_DEPENDENT_DECLARATION",
@@ -61490,58 +63259,6 @@
       },
       "unit_kind": "macro_dependent_declaration",
       "unit_name": "STBIR__SIMDI_CONST"
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 1625,
-        "column": 5,
-        "source_line": "    static __m256i stbir_00001111 = { STBIR__CONST_4d_32i( 0, 0, 0, 0 ), STBIR__CONST_4d_32i( 1, 1, 1, 1 ) };"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 1628,
-        "column": 5,
-        "source_line": "    static __m256i stbir_22223333 = { STBIR__CONST_4d_32i( 2, 2, 2, 2 ), STBIR__CONST_4d_32i( 3, 3, 3, 3 ) };"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 1635,
-        "column": 5,
-        "source_line": "    static __m256i stbir_00112233 = { STBIR__CONST_4d_32i( 0, 0, 1, 1 ), STBIR__CONST_4d_32i( 2, 2, 3, 3 ) };"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 1639,
-        "column": 5,
-        "source_line": "    static __m256i stbir_load6 = { STBIR__CONST_4_32i( 0x80000000 ), STBIR__CONST_4d_32i(  0x80000000,  0x80000000, 0, 0 ) };"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
     },
     {
       "code": "C_MACRO_DEPENDENT_DECLARATION",
@@ -61973,19 +63690,6 @@
       "unit_name": "stbir__inline"
     },
     {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 2564,
-        "column": 1,
-        "source_line": "static const int STBIR_mask[9] = { 0,0,0,-1,-1,-1,0,0,0 };"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
       "code": "C_MACRO_DEPENDENT_DECLARATION",
       "message": "Declaration depends on function-like macro 'STBIR__SIMDF_CONST'; provide preprocessed input to parse it.",
       "severity": "warning",
@@ -62155,19 +63859,6 @@
       "unit_name": "STBIR_PROFILE_FUNC"
     },
     {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 3102,
-        "column": 1,
-        "source_line": "static stbir__edge_wrap_func * stbir__edge_wrap_slow[] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
       "code": "C_MACRO_DEPENDENT_DECLARATION",
       "message": "Declaration depends on object-like macro 'stbir__inline'; provide preprocessed input to parse it.",
       "severity": "warning",
@@ -62207,58 +63898,6 @@
       "unit_name": null
     },
     {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 6161,
-        "column": 1,
-        "source_line": "static STBIR_VERTICAL_GATHERFUNC * stbir__vertical_gathers[ 8 ] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 6166,
-        "column": 1,
-        "source_line": "static STBIR_VERTICAL_GATHERFUNC * stbir__vertical_gathers_continues[ 8 ] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 6173,
-        "column": 1,
-        "source_line": "static STBIR_VERTICAL_SCATTERFUNC * stbir__vertical_scatter_sets[ 8 ] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 6178,
-        "column": 1,
-        "source_line": "static STBIR_VERTICAL_SCATTERFUNC * stbir__vertical_scatter_blends[ 8 ] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
       "code": "C_UNSUPPORTED_DECLARATOR",
       "message": "Unsupported declarator syntax after parsed type layers: 'STBIR_ONLY_PROFILE_GET_SPLIT_INFO'.",
       "severity": "warning",
@@ -62282,110 +63921,6 @@
         "source_line": "static void stbir__resample_horizontal_gather(stbir__info const * stbir_info, float* output_buffer, float const * input_buffer STBIR_ONLY_PROFILE_GET_SPLIT_INFO )"
       },
       "unit_kind": "declarator",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 6570,
-        "column": 1,
-        "source_line": "static stbir__kernel_callback * stbir__builtin_kernels[] =   { 0, stbir__filter_trapezoid,  stbir__filter_triangle, stbir__filter_cubic, stbir__filter_catmullrom, stbir__filter_mitchell, stbir__filter_point };"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 6571,
-        "column": 1,
-        "source_line": "static stbir__support_callback * stbir__builtin_supports[] = { 0, stbir__support_trapezoid, stbir__support_one,     stbir__support_two,  stbir__support_two,       stbir__support_two,     stbir__support_zeropoint5 };"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 6883,
-        "column": 1,
-        "source_line": "static stbir__horizontal_gather_channels_func ** stbir__horizontal_gather_n_coeffs_funcs[8] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 6888,
-        "column": 1,
-        "source_line": "static stbir__horizontal_gather_channels_func ** stbir__horizontal_gather_channels_funcs[8] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 6896,
-        "column": 1,
-        "source_line": "static float stbir__compute_weights[5][STBIR_RESIZE_CLASSIFICATIONS][4]=  // 5 = 0=1chan, 1=2chan, 2=3chan, 3=4chan, 4=7chan"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 6957,
-        "column": 1,
-        "source_line": "static STBIR__V_FIRST_INFO STBIR__V_FIRST_INFO_BUFFER = {0};"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 7034,
-        "column": 1,
-        "source_line": "static unsigned char stbir__pixel_channels[] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_resize2.h",
-        "line": 7042,
-        "column": 1,
-        "source_line": "static stbir_internal_pixel_layout stbir__pixel_layout_convert_public_to_internal[] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
       "unit_name": null
     },
     {

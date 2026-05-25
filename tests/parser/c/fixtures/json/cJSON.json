@@ -4703,7 +4703,50 @@
           "reference": "printbuffer"
         }
       ],
-      "variables": [],
+      "variables": [
+        {
+          "name": "global_error",
+          "type": {
+            "reference": "error"
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ NULL, 0 }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "json/cJSON.c",
+            "line": 92,
+            "column": 1,
+            "source_line": "static error global_error = { NULL, 0 };"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "global_hooks",
+          "type": {
+            "reference": "internal_hooks"
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ internal_malloc, internal_free, internal_realloc }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "json/cJSON.c",
+            "line": 186,
+            "column": 1,
+            "source_line": "static internal_hooks global_hooks = { internal_malloc, internal_free, internal_realloc };"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        }
+      ],
       "macros": [
         {
           "name": "_CRT_SECURE_NO_DEPRECATE",
@@ -5602,19 +5645,6 @@
           "unit_name": "cjson_min"
         },
         {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "json/cJSON.c",
-            "line": 92,
-            "column": 1,
-            "source_line": "static error global_error = { NULL, 0 };"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
           "code": "C_UNSUPPORTED_DECLARATOR",
           "message": "Unsupported declarator syntax after parsed type layers: 'char *'.",
           "severity": "warning",
@@ -5742,19 +5772,6 @@
             "source_line": "static void * CJSON_CDECL internal_realloc(void *pointer, size_t size)"
           },
           "unit_kind": "declarator",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "json/cJSON.c",
-            "line": 186,
-            "column": 1,
-            "source_line": "static internal_hooks global_hooks = { internal_malloc, internal_free, internal_realloc };"
-          },
-          "unit_kind": "braced_initializer_declaration",
           "unit_name": null
         },
         {
@@ -11426,7 +11443,50 @@
       "reference": "printbuffer"
     }
   },
-  "variables": {},
+  "variables": {
+    "global_error": {
+      "name": "global_error",
+      "type": {
+        "reference": "error"
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ NULL, 0 }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "json/cJSON.c",
+        "line": 92,
+        "column": 1,
+        "source_line": "static error global_error = { NULL, 0 };"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "global_hooks": {
+      "name": "global_hooks",
+      "type": {
+        "reference": "internal_hooks"
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ internal_malloc, internal_free, internal_realloc }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "json/cJSON.c",
+        "line": 186,
+        "column": 1,
+        "source_line": "static internal_hooks global_hooks = { internal_malloc, internal_free, internal_realloc };"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    }
+  },
   "macros": {
     "_CRT_SECURE_NO_DEPRECATE": {
       "name": "_CRT_SECURE_NO_DEPRECATE",
@@ -12210,19 +12270,6 @@
       "unit_name": "cjson_min"
     },
     {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "json/cJSON.c",
-        "line": 92,
-        "column": 1,
-        "source_line": "static error global_error = { NULL, 0 };"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
       "code": "C_UNSUPPORTED_DECLARATOR",
       "message": "Unsupported declarator syntax after parsed type layers: 'char *'.",
       "severity": "warning",
@@ -12350,19 +12397,6 @@
         "source_line": "static void * CJSON_CDECL internal_realloc(void *pointer, size_t size)"
       },
       "unit_kind": "declarator",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "json/cJSON.c",
-        "line": 186,
-        "column": 1,
-        "source_line": "static internal_hooks global_hooks = { internal_malloc, internal_free, internal_realloc };"
-      },
-      "unit_kind": "braced_initializer_declaration",
       "unit_name": null
     },
     {

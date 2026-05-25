@@ -9,7 +9,11 @@ aggregate declarations, function prototypes, prototype-style metadata, and
 function-definition signatures with start/end locations. Declarator output can
 represent parenthesized pointer/array precedence through concrete
 `CComposedType` components and nameless `CFunctionType` signatures; function
-parameters expose both declared and C-adjusted effective type facts.
+parameters expose both declared and C-adjusted effective type facts. The CLI
+also exposes shared C/Fortran preprocessing flags and can run exact
+compiler/preprocessor executables for compiler mode. Target-specific standard
+header type facts for later C semantics are available through the separate
+`python -m x2py.c_type_probe` command.
 
 This document records the implemented C parse command shape, output schema,
 and diagnostic contract, plus deferred CLI behavior.
@@ -22,6 +26,7 @@ Implemented commands:
 python -m x2py path/to/api.h --language c --parse
 python -m x2py path/to/api.h --language c --parse --json
 python -m x2py path/to/api.h --language c --parse --out report.json
+python -m x2py path/to/api.h --language c --parse --preprocess compiler --compiler clang-18 -I include -D API_EXPORT= --std c11
 ```
 
 The C parser accepts explicit `.c` and `.h` files, plus directories in explicit
@@ -40,7 +45,12 @@ legal final flexible struct members marked with `is_flexible=True`. Array and
 function parameters preserve written `declared_type` forms while effective
 `type` values use pointer adjustment. Raw
 `includes`, `macros`, `raw_directives`, `macro_dependencies`, and metadata
-`diagnostics` can also be populated. `parse_c_project(...)` additionally
+`diagnostics` can also be populated. `--preprocess compiler` runs an exact
+user-supplied compiler/preprocessor executable or uses a C
+`compile_commands.json` entry, then feeds the preprocessed stdout through the
+same parser with `preprocessing: "compiler"`. `#line` and GCC/Clang
+linemarkers remap parsed declarations and diagnostics back to the original
+source. `parse_c_project(...)` additionally
 populates project-level include/index fields such as `include_graph`,
 `system_includes`, `unresolved_includes`, `functions_by_file`,
 `enum_constants`, and `header_source_pairs`. Those fields require project
@@ -49,7 +59,7 @@ The object class distinguishes declarations (`CFunction`,
 `CVariable`, `CTypedef`, `CStruct`, `CUnion`, or `CEnum`), and incomplete tag
 declarations set `is_incomplete=True`.
 Known unsupported declaration forms such as declaration attributes, alignment
-specifiers, `_Atomic(type)`, nested aggregate member definitions, and static assertions are
+specifiers, and static assertions are
 reported in diagnostics with explicit `unit_kind` values; unconsumed declarator
 suffixes are diagnosed instead of silently omitted. Invalid flexible array
 member placement and flexible union members produce
@@ -177,20 +187,145 @@ C-specific flags to add only when needed:
 --print-limit N
 ```
 
-Potential later flags:
+Implemented shared preprocessing flags:
 
 ```text
---auto-language
---project
---header-mode
---source-mode
---preprocessed
---preprocess-command PATH_OR_COMMAND
---define NAME[=VALUE]
---undef NAME
+--preprocess {internal,compiler}
+--compiler EXACT_EXECUTABLE
+--compile-commands PATH
+-I DIR / --include-dir DIR
+-D NAME[=VALUE] / --define NAME[=VALUE]
+-U NAME / --undef NAME
+--std STANDARD
+--compiler-arg ARG
 ```
 
-`--define` and `--undef` should belong to compiler-assisted preprocessing, not
+`--preprocess internal` is the default. For C it means the current raw
+directive metadata mode: x2py reads `.h`/`.c` input directly, records includes
+and macros from the file, parses ordinary visible declarations, and does not
+expand macros or select `#if` branches. For Fortran it means the existing
+internal preprocessing path, including simple macro branch selection through
+`-D` and `-U`.
+
+`--preprocess compiler` means x2py runs an external compiler/preprocessor and
+parses stdout. The user must pass an exact compiler executable with
+`--compiler`, unless a C `--compile-commands` entry supplies it. Do not rely on
+generic defaults when multiple compiler versions are installed.
+
+Before this mechanism is treated as portable across supported toolchains, it
+needs substantial integration testing with multiple C and Fortran compiler
+families and versions, including GCC/GFortran, Clang/LLVM-family tools, and
+vendor compilers where available. That validation should cover command-line
+flag compatibility, include and macro behavior, preprocessed stdout parsing,
+and C `#line`/linemarker source-location remapping.
+
+Standard-header typedefs and opaque handles require target ABI facts rather
+than raw parser guesses. The standalone probe emits JSON intended for later C
+semantic conversion:
+
+```bash
+python -m x2py.c_type_probe --compiler /usr/bin/gcc-13 --std c11
+
+# Cross target: run the generated target executable under an emulator.
+python -m x2py.c_type_probe --compiler aarch64-linux-gnu-gcc \
+  --compiler-arg=--sysroot=/opt/aarch64-sysroot \
+  --runner=qemu-aarch64 --runner=-L --runner=/opt/aarch64-sysroot
+```
+
+It reports `size_t`, available `uint32_t`, and `time_t` width/signedness
+classification, plus opaque `FILE` pointer width/alignment, together with the
+generated source and exact compile/run commands. The probe carries
+target-relevant user flags: `-I`, `-D`, `-U`, and every `--compiler-arg`.
+The requested `--std` is recorded in the report, but the generated C probe is
+compiled as C11 because it uses `_Generic` and `_Alignof`. If a standard flag is
+part of the target profile and is C11-compatible, pass it through
+`--compiler-arg` so it appears in the actual compile command. The probe does
+not read `compile_commands.json` directly; when parser preprocessing uses a
+compile database, pass the selected compiler and target-relevant flags from the
+matching entry to the probe explicitly. This is separate from parser JSON
+because it describes a target ABI rather than a source declaration.
+
+Fortran has the same target-profile issue for kind values. The Fortran semantic
+path collects unresolved expressions such as `selected_real_kind(12)` and can
+evaluate them through `x2py.fortran_type_probe` using the configured compiler,
+`-I`, `-D`, `-U`, `--std`, and `--compiler-arg` flags. When the x2py CLI runs
+Fortran `--semantics`, `--pyi`, or `--wrap-readiness` with `--preprocess
+compiler --compiler ...`, those collected values are evaluated automatically
+and passed into semantic conversion.
+
+Examples:
+
+```bash
+# C, versioned executable from PATH.
+python -m x2py include/api.h --language c --parse \
+  --preprocess compiler \
+  --compiler clang-18 \
+  -I include \
+  -D API_EXPORT= \
+  -D FEATURE_X=1 \
+  -U DEBUG \
+  --std c11
+
+# C, absolute compiler path.
+python -m x2py src/api.c --language c --parse --json \
+  --preprocess compiler \
+  --compiler /usr/bin/gcc-13 \
+  -I /opt/vendor/include \
+  --compiler-arg=--sysroot=/opt/sdk
+
+# C, Intel or vendor compiler path.
+python -m x2py include/vendor_api.h --language c --parse \
+  --preprocess compiler \
+  --compiler /opt/intel/oneapi/compiler/latest/bin/icx \
+  -D VENDOR_PUBLIC=
+
+# C, project build database. The compiler and most flags come from the matching
+# compile_commands.json entry for the input file.
+python -m x2py src/api.c --language c --parse \
+  --preprocess compiler \
+  --compile-commands build/compile_commands.json
+
+# Fortran, current internal branch selection.
+python -m x2py src/solver.F90 --parse \
+  -D USE_MPI \
+  -U DEBUG
+
+# Fortran, compiler-assisted preprocessing with an exact versioned executable.
+python -m x2py src/solver.F90 --parse \
+  --preprocess compiler \
+  --compiler /usr/bin/gfortran-12 \
+  -I include \
+  -D USE_MPI \
+  --std f2018
+
+# Fortran, Intel compiler.
+python -m x2py src/solver.F90 --parse \
+  --preprocess compiler \
+  --compiler /opt/intel/oneapi/compiler/latest/bin/ifx \
+  -I include \
+  -D USE_MPI
+```
+
+Flag meanings:
+
+- `--compiler`: exact executable to run. Use `gcc-13`, `clang-18`,
+  `/usr/bin/gfortran-12`, `/opt/.../ifx`, etc. x2py treats this as one argv
+  item, not a shell command string.
+- `--compile-commands`: C project database. x2py finds the entry for the input
+  file, strips compile-only flags such as `-c` and `-o`, adds `-E`, and uses
+  that entry's compiler unless `--compiler` overrides it.
+- `-I` / `--include-dir`: include path passed as `-IDIR` in compiler mode. In
+  C internal mode it is also used for quoted include resolution.
+- `-D` / `--define`: macro definition. `-D NAME` means `NAME=1`; `-D NAME=VALUE`
+  preserves `VALUE`.
+- `-U` / `--undef`: macro undefinition. In Fortran internal mode this selects
+  inactive branches for that macro.
+- `--std`: language standard passed as `-std=STANDARD`, for example `c11`,
+  `c23`, `f2008`, or `f2018`.
+- `--compiler-arg`: one raw compiler argument. For values beginning with `-`,
+  use the equals form, for example `--compiler-arg=-target`.
+
+`--define` and `--undef` belong to compiler-assisted preprocessing for C, not
 to raw parser-side macro evaluation. Raw C mode records directives and parses
 ordinary visible declarations only; it does not select `#if` branches or expand
 macros. A declaration prefixed by an unexpanded object-like macro is deferred
@@ -283,10 +418,19 @@ of hard failures.
 Raw mode must not claim support for macro-generated declarations. If macros
 affect function names, types, parameters, attributes, storage classes, calling
 conventions, visibility annotations, or active conditional branches, the user
-should provide compiler-preprocessed input later through a `.i` file or an
-explicit preprocessor command. That preprocessed path must preserve
+should use `--preprocess compiler` with an exact compiler executable and the
+same `-I`, `-D`, `-U`, standard, target, and sysroot flags required by their
+build. The user should not normally pass a `.i` file directly; x2py generates
+the preprocessed stream internally. Compiler/preprocessed mode preserves
 `#line`/linemarker mappings so parser diagnostics and JSON `source_location`
-fields still point back to the original `.h` or `.c` file.
+fields point back to the original `.h` or `.c` file rather than the compiler
+stdout stream. For streams generated by `x2py --preprocess compiler`, per-file
+JSON also contains `preprocessing_recipe` with the exact compiler argv,
+configuration flags, working directory, and selected `compile_commands.json`
+entry when used. Parsed declarations from compiler mode carry
+`origin: "preprocessed"`. Explicit or directory-discovered `.i` inputs are
+also parsed as preprocessed source and record `preprocessed_source_path` plus
+mapped `original_source_paths` when linemarkers supply original filenames.
 
 ## JSON Parse Schema
 
@@ -298,6 +442,9 @@ language
 filename
 parser_status
 preprocessing
+preprocessing_recipe  # present for x2py-generated compiler input
+preprocessed_source_path  # present for direct .i input
+original_source_paths  # present when linemarkers identify original files
 functions
 structs
 unions
@@ -476,7 +623,21 @@ Completed order:
     and invalid-use diagnostics, plus explicit bit-field regression coverage.
 15. Added C array/function parameter adjustment while preserving written
     parameter type facts in `declared_type`.
+16. Added compiler/preprocessed `#line` and GCC/Clang linemarker remapping for
+    parsed source locations, parser diagnostics, and fatal parse errors.
+17. Added optional JSON preprocessing recipes for x2py-generated compiler
+    streams in C and Fortran, plus internal Fortran `-D`/`-U` selection.
+18. Added C declaration-level preprocessed origin metadata and direct `.i`
+    discovery/source-identity handling.
+19. Preserved braced and designated initializer source text as `CInitializer`
+    facts on parsed file-scope variables.
+20. Parsed nested anonymous struct/union members as concrete member types,
+    including recursively mapped preprocessed provenance.
+21. Added `_Atomic(type)` type-specifier parsing on the shared declarator path
+    and executable parser-developer walkthrough tests.
+22. Added compiler-derived standard-header ABI probing for future C semantic
+    mapping without hard-coded host type aliases.
 
-Next implementation work should continue with tag/typedef resolution,
-preprocessed-input line mapping, compiler extension policy, and project
-resolution while keeping the explicit `--language c` gate in place.
+Next implementation work should continue with fixture-driven compiler
+extension policy and broader project conflict policy
+while keeping the explicit `--language c` gate in place.

@@ -5463,6 +5463,47 @@
           },
           "callback_policy": null,
           "declaration_locations": []
+        },
+        {
+          "name": "stbiw__jpg_ZigZag",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static const unsigned char stbiw__jpg_ZigZag[]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": null,
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const unsigned char"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ 0,1,5,6,14,15,27,28,2,4,7,13,16,26,29,42,3,8,12,17,25,30,41,43,9,11,18,\n      24,31,40,44,53,10,19,23,32,39,45,52,54,20,22,33,38,46,51,55,60,21,34,37,47,50,56,59,61,35,36,48,49,57,58,62,63 }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_image_write.h",
+            "line": 1250,
+            "column": 1,
+            "source_line": "static const unsigned char stbiw__jpg_ZigZag[] = { 0,1,5,6,14,15,27,28,2,4,7,13,16,26,29,42,3,8,12,17,25,30,41,43,9,11,18,"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
         }
       ],
       "macros": [
@@ -7861,19 +7902,6 @@
           },
           "unit_kind": "macro_dependent_declaration",
           "unit_name": "STBIWDEF"
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_image_write.h",
-            "line": 1250,
-            "column": 1,
-            "source_line": "static const unsigned char stbiw__jpg_ZigZag[] = { 0,1,5,6,14,15,27,28,2,4,7,13,16,26,29,42,3,8,12,17,25,30,41,43,9,11,18,"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
         },
         {
           "code": "C_MACRO_DEPENDENT_DECLARATION",
@@ -13136,6 +13164,47 @@
       },
       "callback_policy": null,
       "declaration_locations": []
+    },
+    "stbiw__jpg_ZigZag": {
+      "name": "stbiw__jpg_ZigZag",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static const unsigned char stbiw__jpg_ZigZag[]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": null,
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CUnsignedChar",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const unsigned char"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ 0,1,5,6,14,15,27,28,2,4,7,13,16,26,29,42,3,8,12,17,25,30,41,43,9,11,18,\n      24,31,40,44,53,10,19,23,32,39,45,52,54,20,22,33,38,46,51,55,60,21,34,37,47,50,56,59,61,35,36,48,49,57,58,62,63 }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_image_write.h",
+        "line": 1250,
+        "column": 1,
+        "source_line": "static const unsigned char stbiw__jpg_ZigZag[] = { 0,1,5,6,14,15,27,28,2,4,7,13,16,26,29,42,3,8,12,17,25,30,41,43,9,11,18,"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
     }
   },
   "macros": {
@@ -14441,19 +14510,6 @@
       },
       "unit_kind": "macro_dependent_declaration",
       "unit_name": "STBIWDEF"
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_image_write.h",
-        "line": 1250,
-        "column": 1,
-        "source_line": "static const unsigned char stbiw__jpg_ZigZag[] = { 0,1,5,6,14,15,27,28,2,4,7,13,16,26,29,42,3,8,12,17,25,30,41,43,9,11,18,"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
     },
     {
       "code": "C_MACRO_DEPENDENT_DECLARATION",

@@ -15,6 +15,12 @@ from fortran_parser.cli import _format_report
 from semantics.fortran2ir import fortran_file_to_semantic_modules
 from semantics.pyi_parser import load_pyi_file
 from semantics.readiness import assess_semantic_wrap_readiness
+from x2py.preprocessing import (
+    PreprocessingConfig,
+    PreprocessingError,
+    run_compiler_preprocessor_with_recipe,
+    validate_macro_name,
+)
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
@@ -80,13 +86,52 @@ def _expand_readiness_paths(paths: list[str]) -> list[Path]:
     return sorted(set(expanded))
 
 
-def _parse_report(paths: list[str]) -> dict[str, dict]:
+def _fortran_source_for_path(
+    path: Path,
+    preprocessing: PreprocessingConfig,
+) -> tuple[str, dict[str, int | str] | None, dict[str, object] | None]:
+    if preprocessing.uses_compiler:
+        source, recipe = run_compiler_preprocessor_with_recipe(
+            path,
+            language="fortran",
+            config=preprocessing,
+        )
+        return source, None, recipe.to_dict()
+    macro_defines = preprocessing.fortran_macro_defines()
+    return (
+        path.read_text(encoding="utf-8"),
+        macro_defines or None,
+        preprocessing.fortran_internal_recipe(path),
+    )
+
+
+def _c_source_loader(preprocessing: PreprocessingConfig):
+    if not preprocessing.uses_compiler:
+        return None
+
+    def load(path: Path) -> tuple[str, dict[str, object]]:
+        source, recipe = run_compiler_preprocessor_with_recipe(
+            path,
+            language="c",
+            config=preprocessing,
+        )
+        return source, recipe.to_dict()
+
+    return load
+
+
+def _c_parser_preprocessing_mode(preprocessing: PreprocessingConfig) -> str:
+    return "compiler" if preprocessing.uses_compiler else "raw"
+
+
+def _parse_report(paths: list[str], preprocessing: PreprocessingConfig | None = None) -> dict[str, dict]:
+    preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
     parser = FortranParser()
     for p in _expand_paths(paths):
-        code = p.read_text(encoding="utf-8")
-        parsed = parser.visit_file(code, filename=str(p))
-        out[str(p)] = {
+        code, macro_defines, preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
+        parsed = parser.visit_file(code, filename=str(p), macro_defines=macro_defines)
+        payload = {
             "signatures": [_to_dict_no_parent(s) for s in parsed.procedures],
             "types": [_to_dict_no_parent(t) for t in parsed.derived_types],
             "modules": [_to_dict_no_parent(m) for m in parsed.modules],
@@ -94,19 +139,27 @@ def _parse_report(paths: list[str]) -> dict[str, dict]:
             "programs": [_to_dict_no_parent(m) for m in parsed.programs],
             "block_data": [_to_dict_no_parent(m) for m in parsed.block_data_units],
         }
+        if preprocessing_recipe is not None:
+            payload["preprocessing_recipe"] = preprocessing_recipe
+        out[str(p)] = payload
     return out
 
 
-def _semantic_report(paths: list[str]) -> dict[str, dict]:
+def _semantic_report(paths: list[str], preprocessing: PreprocessingConfig | None = None) -> dict[str, dict]:
     from semantics.fortran2ir import fortran_module_to_semantic_module
     from semantics.pyi_printer import emit_module
 
+    preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
     parser = FortranParser()
     for p in _expand_paths(paths):
-        code = p.read_text(encoding="utf-8")
-        fobj = parser.visit_file(code, filename=str(p))
-        modules = [fortran_module_to_semantic_module(m) for m in fobj.modules]
+        code, macro_defines, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
+        fobj = parser.visit_file(code, filename=str(p), macro_defines=macro_defines)
+        compile_time_values = _fortran_compile_time_values(fobj, preprocessing)
+        modules = [
+            fortran_module_to_semantic_module(m, compile_time_values=compile_time_values)
+            for m in fobj.modules
+        ]
         out[str(p)] = {
             "semantic_modules": [asdict(m) for m in modules],
             "pyi": "\n\n".join(emit_module(m) for m in modules).strip(),
@@ -123,7 +176,8 @@ def _format_pyi_report(semantic_report: dict[str, dict]) -> str:
     return "\n".join(lines).rstrip()
 
 
-def _wrap_readiness_report(paths: list[str]) -> dict[str, dict]:
+def _wrap_readiness_report(paths: list[str], preprocessing: PreprocessingConfig | None = None) -> dict[str, dict]:
+    preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
     parser = FortranParser()
     for p in _expand_readiness_paths(paths):
@@ -131,9 +185,14 @@ def _wrap_readiness_report(paths: list[str]) -> dict[str, dict]:
             modules = [load_pyi_file(p)]
             source_kind = "pyi"
         else:
-            code = p.read_text(encoding="utf-8")
-            parsed = parser.visit_file(code, filename=str(p))
-            modules = fortran_file_to_semantic_modules(parsed, standalone_module_name=p.stem)
+            code, macro_defines, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
+            parsed = parser.visit_file(code, filename=str(p), macro_defines=macro_defines)
+            compile_time_values = _fortran_compile_time_values(parsed, preprocessing)
+            modules = fortran_file_to_semantic_modules(
+                parsed,
+                standalone_module_name=p.stem,
+                compile_time_values=compile_time_values,
+            )
             source_kind = "fortran"
 
         out[str(p)] = {
@@ -142,6 +201,23 @@ def _wrap_readiness_report(paths: list[str]) -> dict[str, dict]:
             "wrap_readiness": assess_semantic_wrap_readiness(modules, source=str(p)),
         }
     return out
+
+
+def _fortran_compile_time_values(
+    parsed,
+    preprocessing: PreprocessingConfig,
+) -> dict[str, int] | None:
+    """Evaluate compiler-dependent Fortran values when a compiler is configured."""
+    if not preprocessing.uses_compiler or not preprocessing.compiler:
+        return None
+
+    from semantics.fortran2ir import collect_semantic_compile_time_requirements
+    from x2py.fortran_type_probe import evaluate_fortran_type_requirements
+
+    requirements = collect_semantic_compile_time_requirements(parsed)
+    if not requirements:
+        return None
+    return evaluate_fortran_type_requirements(preprocessing, requirements)
 
 
 def _attach_wrap_readiness(payload: dict[str, dict] | None, readiness_report: dict[str, dict] | None) -> None:
@@ -198,6 +274,55 @@ def _format_semantic_readiness(readiness_report: dict[str, dict]) -> str:
     return "\n".join(lines).rstrip()
 
 
+def _build_preprocessing_config(args: argparse.Namespace, parser: argparse.ArgumentParser) -> PreprocessingConfig:
+    """Build and validate the shared preprocessing CLI configuration."""
+    defines = list(args.defines or [])
+    undefs = list(args.undefs or [])
+    for define in defines:
+        try:
+            validate_macro_name(define, "--define/-D")
+        except PreprocessingError as exc:
+            parser.error(str(exc))
+    for undef in undefs:
+        try:
+            validate_macro_name(undef, "--undef/-U")
+        except PreprocessingError as exc:
+            parser.error(str(exc))
+
+    config = PreprocessingConfig(
+        mode=args.preprocess,
+        compiler=args.compiler,
+        compile_commands=args.compile_commands,
+        include_dirs=list(args.include_dirs or []),
+        defines=defines,
+        undefs=undefs,
+        std=args.std,
+        compiler_args=list(args.compiler_args or []),
+    )
+
+    compiler_only_flags = [
+        ("--compiler", args.compiler),
+        ("--compile-commands", args.compile_commands),
+        ("--std", args.std),
+        ("--compiler-arg", args.compiler_args),
+    ]
+    for option, value in compiler_only_flags:
+        if value and not config.uses_compiler:
+            parser.error(f"{option} requires --preprocess compiler")
+
+    if config.uses_compiler and not config.compiler and not config.compile_commands:
+        parser.error("--preprocess compiler requires --compiler with an exact executable, for example gcc-13 or /usr/bin/clang-18")
+    if config.compile_commands and args.language != "c":
+        parser.error("--compile-commands is only supported with --language c")
+    if config.compile_commands and not config.uses_compiler:
+        parser.error("--compile-commands requires --preprocess compiler")
+    if args.language == "c" and not config.uses_compiler and (defines or undefs):
+        parser.error("-D/--define and -U/--undef affect C only with --preprocess compiler; raw C mode records source macros without selecting branches")
+    if args.language == "fortran" and not config.uses_compiler and config.include_dirs:
+        parser.error("-I/--include-dir affects Fortran only with --preprocess compiler")
+    return config
+
+
 def print_pyi_output(code: str) -> None:
     # Safe fallback for files, pipes, CI, unsupported terminals, etc.
     if not sys.stdout.isatty():
@@ -246,6 +371,16 @@ def main() -> int:
             "    python -m x2py path/to/file.f90 --parse --json\n"
             "  Parse C subset JSON:\n"
             "    python -m x2py path/to/api.h --language c --parse --json\n"
+            "  Parse C with an exact compiler executable and API flags:\n"
+            "    python -m x2py path/to/api.h --language c --parse --preprocess compiler --compiler clang-18 -I include -D API_EXPORT= --std c11\n"
+            "  Parse C with a compiler path and target/sysroot passthrough flags:\n"
+            "    python -m x2py path/to/api.c --language c --parse --preprocess compiler --compiler /usr/bin/gcc-13 --compiler-arg=--sysroot=/opt/sdk\n"
+            "  Parse C with compile_commands.json for project flags:\n"
+            "    python -m x2py path/to/api.c --language c --parse --preprocess compiler --compile-commands build/compile_commands.json\n"
+            "  Parse Fortran with internal macro branch selection:\n"
+            "    python -m x2py path/to/file.F90 --parse -D USE_MPI -U DEBUG\n"
+            "  Parse Fortran with an exact compiler executable:\n"
+            "    python -m x2py path/to/file.F90 --parse --preprocess compiler --compiler /usr/bin/gfortran-12 -I include -D USE_MPI\n"
             "  Write parser JSON:\n"
             "    python -m x2py path/to/file.f90 --parse --json --out report.json\n"
             "  Write one JSON file next to each source:\n"
@@ -278,6 +413,64 @@ def main() -> int:
     )
     parser.add_argument("--parse", action="store_true", help="Run and output parser stage report")
     parser.add_argument(
+        "--preprocess",
+        choices=("internal", "compiler"),
+        default="internal",
+        help=(
+            "Preprocessing mode. 'internal' keeps the current lightweight parser preprocessing "
+            "(Fortran macro selection, C raw directive metadata). 'compiler' runs the exact "
+            "compiler/preprocessor configured by --compiler or --compile-commands."
+        ),
+    )
+    parser.add_argument(
+        "--compiler",
+        help=(
+            "Exact compiler/preprocessor executable for --preprocess compiler, e.g. gcc-13, "
+            "clang-18, /usr/bin/gfortran-12, or /opt/intel/oneapi/compiler/latest/bin/ifx."
+        ),
+    )
+    parser.add_argument(
+        "--compile-commands",
+        metavar="PATH",
+        help="C compile_commands.json database used with --language c --preprocess compiler.",
+    )
+    parser.add_argument(
+        "-I",
+        "--include-dir",
+        dest="include_dirs",
+        action="append",
+        metavar="DIR",
+        help="Include directory passed as -IDIR during compiler preprocessing.",
+    )
+    parser.add_argument(
+        "-D",
+        "--define",
+        dest="defines",
+        action="append",
+        metavar="NAME[=VALUE]",
+        help="Define a preprocessing macro. NAME means NAME=1; NAME=VALUE preserves VALUE.",
+    )
+    parser.add_argument(
+        "-U",
+        "--undef",
+        dest="undefs",
+        action="append",
+        metavar="NAME",
+        help="Undefine a preprocessing macro.",
+    )
+    parser.add_argument(
+        "--std",
+        metavar="STANDARD",
+        help="Language standard passed to compiler mode, e.g. c11, c23, f2008, or f2018.",
+    )
+    parser.add_argument(
+        "--compiler-arg",
+        dest="compiler_args",
+        action="append",
+        metavar="ARG",
+        help="Raw compiler preprocessing argument. Use --compiler-arg=-target for values starting with '-'.",
+    )
+    parser.add_argument(
         "--show-vars",
         action="store_true",
         help="Include module, submodule, program, and block-data variables in the human-readable parse report.",
@@ -306,6 +499,7 @@ def main() -> int:
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI color in parse diagnostics")
     parser.add_argument("--debug-traceback", action="store_true", help="Re-raise parser errors for debug")
     args = parser.parse_args()
+    preprocessing = _build_preprocessing_config(args, parser)
 
     if args.language == "c":
         if not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
@@ -334,12 +528,17 @@ def main() -> int:
 
     try:
         parse_payload = (
-            parse_c_report(args.paths)
+            parse_c_report(
+                args.paths,
+                include_dirs=preprocessing.include_dirs,
+                preprocessing=_c_parser_preprocessing_mode(preprocessing),
+                source_loader=_c_source_loader(preprocessing),
+            )
             if args.parse and args.language == "c"
-            else _parse_report(args.paths) if args.parse else None
+            else _parse_report(args.paths, preprocessing) if args.parse else None
         )
-        semantic_payload = _semantic_report(args.paths) if (args.semantics or args.pyi) else None
-        readiness_payload = _wrap_readiness_report(args.paths) if args.wrap_readiness else None
+        semantic_payload = _semantic_report(args.paths, preprocessing) if (args.semantics or args.pyi) else None
+        readiness_payload = _wrap_readiness_report(args.paths, preprocessing) if args.wrap_readiness else None
         _attach_wrap_readiness(semantic_payload, readiness_payload)
     except CParseError as exc:
         if args.debug_traceback or _env_flag("C_PARSER_DEBUG"):

@@ -18,8 +18,8 @@ Guidelines:
 ## Intentional Skips
 
 The normal parser test run retains skips only for the pinned/provenanced
-cJSON corpus roadmap and compiler-preprocessed `.i`/`#line` behavior, which
-are not implemented yet. CLI, public API, and current project-resolution
+cJSON corpus roadmap. CLI, public API, direct `.i` discovery,
+compiler/preprocessed linemarker remapping, and current project-resolution
 coverage are active.
 
 ## Parser Goldens
@@ -40,6 +40,13 @@ translation unit.
 The third-party-library inputs are realistic regression inputs for the partial
 parser; diagnostics in their goldens are expected and do not claim full
 library support.
+
+## Developer Walkthrough
+
+`test_c_parser_developer_tutorial.py` is an executable reading guide for
+`c_parser/parser.py`. It shows the shared declaration/declarator gateway, the
+`visit_file` dispatch of declaration roles, and the preprocessed linemarker
+path without replacing the feature-focused test modules.
 
 Each logical project produces one output, for example `math_api.json` for
 `math_api.c` plus `math_api.h`, `cJSON.json` for the cJSON pair, and
