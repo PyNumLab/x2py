@@ -1,0 +1,42 @@
+#!/usr/bin/env sh
+set -eu
+
+current_branch=$(git branch --show-current)
+
+while read -r local_ref local_sha remote_ref remote_sha
+do
+  case "$remote_ref" in
+    refs/heads/main)
+      ;;
+    *)
+      continue
+      ;;
+  esac
+
+  if printf '%s\n' "$current_branch" | grep -Eq '^c-parser/'; then
+    cat >&2 <<'MSG'
+Blocked: refusing to push a c-parser/* branch to remote main.
+
+Push C parser work to c-parser/main or another c-parser/* branch only.
+MSG
+    exit 1
+  fi
+
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    range="$local_sha"
+  else
+    range="$remote_sha..$local_sha"
+  fi
+
+  changed=$(git diff --name-only "$range")
+
+  if printf '%s\n' "$changed" | grep -Eq '^(\.github/workflows/c-parser-main-guard\.yml|\.githooks/|docs/c_parser/|c_parser/|tests/(c_parser|parser/c|data/c)/|semantics/c2ir\.py)'; then
+    cat >&2 <<'MSG'
+Blocked: refusing to push C parser files to remote main.
+
+Push C parser work to c-parser/main. The final main merge requires the C parser
+readiness checklist to be complete and explicit approval.
+MSG
+    exit 1
+  fi
+done

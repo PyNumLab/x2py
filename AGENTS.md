@@ -6,6 +6,8 @@ Ignore:
 - *.f90
 - *.f95
 - *.for
+- *.c
+- *.h
 - *.json
 
 Do not spend context window or analysis on those files unless explicitly requested.

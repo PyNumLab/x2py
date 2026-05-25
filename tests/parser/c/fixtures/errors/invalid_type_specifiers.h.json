@@ -1,0 +1,12 @@
+{
+  "parser": "parse_c_file",
+  "error_type": "CParseError",
+  "message_contains": [
+    "Invalid type specifier sequence 'unsigned float'."
+  ],
+  "diagnostic_contains": [
+    "error[CPARSE003]",
+    "Invalid type specifier sequence 'unsigned float'.",
+    "unsigned float value;"
+  ]
+}

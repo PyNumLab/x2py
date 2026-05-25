@@ -1,0 +1,543 @@
+{
+  "files": {
+    "json/jsmn.h": {
+      "filename": "json/jsmn.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [],
+      "structs": [],
+      "unions": [],
+      "enums": [],
+      "typedefs": [],
+      "variables": [],
+      "macros": [
+        {
+          "name": "JSMN_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 25,
+            "column": 1,
+            "source_line": "#define JSMN_H"
+          }
+        },
+        {
+          "name": "JSMN_API",
+          "value": "static",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 34,
+            "column": 1,
+            "source_line": "#define JSMN_API static"
+          }
+        },
+        {
+          "name": "JSMN_API",
+          "value": "extern",
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 36,
+            "column": 1,
+            "source_line": "#define JSMN_API extern"
+          }
+        }
+      ],
+      "includes": [
+        {
+          "target": "stddef.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 27,
+            "column": 1,
+            "source_line": "#include <stddef.h>"
+          }
+        }
+      ],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "JSMN_H",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 24,
+            "column": 1,
+            "source_line": "#ifndef JSMN_H"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "__cplusplus",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 29,
+            "column": 1,
+            "source_line": "#ifdef __cplusplus"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 31,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "JSMN_STATIC",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 33,
+            "column": 1,
+            "source_line": "#ifdef JSMN_STATIC"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 35,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 37,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "JSMN_PARENT_LINKS",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 74,
+            "column": 1,
+            "source_line": "#ifdef JSMN_PARENT_LINKS"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 76,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "JSMN_HEADER",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 102,
+            "column": 1,
+            "source_line": "#ifndef JSMN_HEADER"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "JSMN_PARENT_LINKS",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 115,
+            "column": 1,
+            "source_line": "#ifdef JSMN_PARENT_LINKS"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 117,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifndef",
+          "argument": "JSMN_STRICT",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 145,
+            "column": 1,
+            "source_line": "#ifndef JSMN_STRICT"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 148,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "JSMN_STRICT",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 166,
+            "column": 1,
+            "source_line": "#ifdef JSMN_STRICT"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 170,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "JSMN_PARENT_LINKS",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 183,
+            "column": 1,
+            "source_line": "#ifdef JSMN_PARENT_LINKS"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 185,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "JSMN_PARENT_LINKS",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 217,
+            "column": 1,
+            "source_line": "#ifdef JSMN_PARENT_LINKS"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 219,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "JSMN_STRICT",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 293,
+            "column": 1,
+            "source_line": "#ifdef JSMN_STRICT"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 298,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "JSMN_PARENT_LINKS",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 300,
+            "column": 1,
+            "source_line": "#ifdef JSMN_PARENT_LINKS"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 302,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "JSMN_PARENT_LINKS",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 314,
+            "column": 1,
+            "source_line": "#ifdef JSMN_PARENT_LINKS"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 336,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 359,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "JSMN_PARENT_LINKS",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 383,
+            "column": 1,
+            "source_line": "#ifdef JSMN_PARENT_LINKS"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 385,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 394,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "JSMN_STRICT",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 397,
+            "column": 1,
+            "source_line": "#ifdef JSMN_STRICT"
+          }
+        },
+        {
+          "directive": "else",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 421,
+            "column": 1,
+            "source_line": "#else"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 424,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "JSMN_STRICT",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 435,
+            "column": 1,
+            "source_line": "#ifdef JSMN_STRICT"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 439,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 465,
+            "column": 1,
+            "source_line": "#endif /* JSMN_HEADER */"
+          }
+        },
+        {
+          "directive": "ifdef",
+          "argument": "__cplusplus",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 467,
+            "column": 1,
+            "source_line": "#ifdef __cplusplus"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 469,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 471,
+            "column": 1,
+            "source_line": "#endif /* JSMN_H */"
+          }
+        }
+      ],
+      "macro_dependencies": [],
+      "diagnostics": [
+        {
+          "code": "C_UNSUPPORTED_DECLARATOR",
+          "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
+          "severity": "warning",
+          "location": {
+            "filename": "json/jsmn.h",
+            "line": 30,
+            "column": 1,
+            "source_line": "extern \"C\" {"
+          },
+          "unit_kind": "declarator",
+          "unit_name": null
+        }
+      ]
+    }
+  },
+  "functions": {},
+  "structs": {},
+  "unions": {},
+  "enums": {},
+  "typedefs": {},
+  "variables": {},
+  "macros": {
+    "JSMN_H": {
+      "name": "JSMN_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 25,
+        "column": 1,
+        "source_line": "#define JSMN_H"
+      }
+    },
+    "JSMN_API": {
+      "name": "JSMN_API",
+      "value": "extern",
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 36,
+        "column": 1,
+        "source_line": "#define JSMN_API extern"
+      }
+    }
+  },
+  "includes": {
+    "json/jsmn.h:stddef.h": {
+      "target": "stddef.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 27,
+        "column": 1,
+        "source_line": "#include <stddef.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "json/jsmn.h": []
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "json/jsmn.h": []
+  },
+  "system_includes": {
+    "json/jsmn.h": [
+      "stddef.h"
+    ]
+  },
+  "unresolved_includes": {
+    "json/jsmn.h": []
+  },
+  "header_source_pairs": {
+    "json/jsmn.h": []
+  },
+  "diagnostics": [
+    {
+      "code": "C_UNSUPPORTED_DECLARATOR",
+      "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
+      "severity": "warning",
+      "location": {
+        "filename": "json/jsmn.h",
+        "line": 30,
+        "column": 1,
+        "source_line": "extern \"C\" {"
+      },
+      "unit_kind": "declarator",
+      "unit_name": null
+    }
+  ]
+}

@@ -566,11 +566,11 @@ A condensed history of important parser capabilities added over time (from
 ## 9) Pull-request maintenance policy for this reference
 
 To keep this document useful as an implementation transfer artifact, pull
-requests should update `parser_implementation_reference.md` whenever parser
+requests should update `docs/fortran/parser_implementation_reference.md` whenever parser
 behavior, parser coverage, parser fixtures/goldens, or parser validation flow
 meaningfully changes.
 
-A CI guard in `.github/workflows/tests.yml` enforces this on pull requests by
+A CI guard in `.github/workflows/parser-reference-guard.yml` enforces this on pull requests by
 failing when parser-related files change without a matching update to this
 reference. The guard currently watches these path groups:
 
@@ -588,7 +588,8 @@ If a specific PR is a legitimate exception, either:
 Manual force mode is also supported: add the pull-request label
 `require-parser-reference-update` to require this document update even when the
 parser-impact path patterns do not match. With that label present, CI fails
-unless `parser_implementation_reference.md` is updated in the PR diff.
+unless `docs/fortran/parser_implementation_reference.md` is updated in the PR
+diff.
 
 Manual ignore mode is supported: add the pull-request label
 `ignore-parser-reference-guard` to skip the parser reference guard entirely.

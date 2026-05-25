@@ -1,0 +1,1202 @@
+{
+  "files": {
+    "general/name_reuse.h": {
+      "filename": "general/name_reuse.h",
+      "language": "c",
+      "parser_status": "partial",
+      "preprocessing": "raw",
+      "functions": [
+        {
+          "name": "do_work_i",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "same_name",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "int *same_name",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "int *same_name",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 16,
+            "column": 1,
+            "source_line": "void do_work_i(int *same_name);"
+          },
+          "start": {
+            "filename": "general/name_reuse.h",
+            "line": 16,
+            "column": 1,
+            "source_line": "void do_work_i(int *same_name);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "do_work_r",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "same_name",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float same_name"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float same_name"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 17,
+            "column": 1,
+            "source_line": "void do_work_r(float same_name);"
+          },
+          "start": {
+            "filename": "general/name_reuse.h",
+            "line": 17,
+            "column": 1,
+            "source_line": "void do_work_r(float same_name);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "do_work_l",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "same_name",
+              "type": {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "bool same_name",
+                "name": "bool",
+                "type": null,
+                "source_location": null,
+                "declaration_locations": []
+              },
+              "declared_type": {
+                "reference": "bool"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "shared",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct same_name *shared",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CStruct",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "name": "same_name",
+                    "members": [
+                      {
+                        "name": "payload",
+                        "type": {
+                          "model": "CInt",
+                          "qualifiers": [],
+                          "source_text": "int payload"
+                        },
+                        "storage": [],
+                        "initializer": null,
+                        "bit_width": null,
+                        "source_location": {
+                          "filename": "general/name_reuse.h",
+                          "line": 7,
+                          "column": 5,
+                          "source_line": "    int payload;"
+                        },
+                        "callback_policy": null,
+                        "declaration_locations": []
+                      }
+                    ],
+                    "anonymous_id": null,
+                    "is_incomplete": false,
+                    "source_location": {
+                      "filename": "general/name_reuse.h",
+                      "line": 6,
+                      "column": 1,
+                      "source_line": "struct same_name {"
+                    }
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "struct same_name *shared",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "struct same_name"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 18,
+            "column": 1,
+            "source_line": "void do_work_l(bool same_name, struct same_name *shared);"
+          },
+          "start": {
+            "filename": "general/name_reuse.h",
+            "line": 18,
+            "column": 1,
+            "source_line": "void do_work_l(bool same_name, struct same_name *shared);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "convert_to_complex",
+          "result_type": {
+            "model": "CDoubleComplex",
+            "qualifiers": [],
+            "source_text": "double _Complex"
+          },
+          "parameters": [
+            {
+              "name": "same_name",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int same_name"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int same_name"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 19,
+            "column": 1,
+            "source_line": "double _Complex convert_to_complex(int same_name);"
+          },
+          "start": {
+            "filename": "general/name_reuse.h",
+            "line": 19,
+            "column": 1,
+            "source_line": "double _Complex convert_to_complex(int same_name);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "convert_to_string",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "same_name",
+              "type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float same_name"
+              },
+              "declared_type": {
+                "model": "CFloat",
+                "qualifiers": [],
+                "source_text": "float same_name"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "shared",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char shared[static 16]",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "char shared[static 16]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "16",
+                    "is_static_minimum": true,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [],
+                    "source_text": "char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 20,
+            "column": 1,
+            "source_line": "int convert_to_string(float same_name, char shared[static 16]);"
+          },
+          "start": {
+            "filename": "general/name_reuse.h",
+            "line": 20,
+            "column": 1,
+            "source_line": "int convert_to_string(float same_name, char shared[static 16]);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "convert_to_logical",
+          "result_type": {
+            "model": "CTypedef",
+            "qualifiers": [],
+            "source_text": "bool",
+            "name": "bool",
+            "type": null,
+            "source_location": null,
+            "declaration_locations": []
+          },
+          "parameters": [
+            {
+              "name": "same_name",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *same_name",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *same_name",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 21,
+            "column": 1,
+            "source_line": "bool convert_to_logical(const char *same_name);"
+          },
+          "start": {
+            "filename": "general/name_reuse.h",
+            "line": 21,
+            "column": 1,
+            "source_line": "bool convert_to_logical(const char *same_name);"
+          },
+          "end": null,
+          "declaration_locations": []
+        }
+      ],
+      "structs": [
+        {
+          "reference": "struct same_name"
+        }
+      ],
+      "unions": [],
+      "enums": [],
+      "typedefs": [],
+      "variables": [
+        {
+          "name": "same_name_i",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "extern int same_name_i"
+          },
+          "storage": [
+            "extern"
+          ],
+          "initializer": null,
+          "bit_width": null,
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 10,
+            "column": 1,
+            "source_line": "extern int same_name_i;"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "same_name_r",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "extern float same_name_r"
+          },
+          "storage": [
+            "extern"
+          ],
+          "initializer": null,
+          "bit_width": null,
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 11,
+            "column": 1,
+            "source_line": "extern float same_name_r;"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "same_name_l",
+          "type": {
+            "model": "CTypedef",
+            "qualifiers": [],
+            "source_text": "extern bool same_name_l",
+            "name": "bool",
+            "type": null,
+            "source_location": null,
+            "declaration_locations": []
+          },
+          "storage": [
+            "extern"
+          ],
+          "initializer": null,
+          "bit_width": null,
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 12,
+            "column": 1,
+            "source_line": "extern bool same_name_l;"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "same_name_c",
+          "type": {
+            "model": "CDoubleComplex",
+            "qualifiers": [],
+            "source_text": "extern double _Complex same_name_c"
+          },
+          "storage": [
+            "extern"
+          ],
+          "initializer": null,
+          "bit_width": null,
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 13,
+            "column": 1,
+            "source_line": "extern double _Complex same_name_c;"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "same_name_s",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "extern char same_name_s[8]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "8",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "storage": [
+            "extern"
+          ],
+          "initializer": null,
+          "bit_width": null,
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 14,
+            "column": 1,
+            "source_line": "extern char same_name_s[8];"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        }
+      ],
+      "macros": [
+        {
+          "name": "X2PY_GENERAL_NAME_REUSE_H",
+          "value": null,
+          "function_like": false,
+          "directive": "define",
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 2,
+            "column": 1,
+            "source_line": "#define X2PY_GENERAL_NAME_REUSE_H"
+          }
+        }
+      ],
+      "includes": [
+        {
+          "target": "stdbool.h",
+          "kind": "system",
+          "resolved_path": null,
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 4,
+            "column": 1,
+            "source_line": "#include <stdbool.h>"
+          }
+        }
+      ],
+      "raw_directives": [
+        {
+          "directive": "ifndef",
+          "argument": "X2PY_GENERAL_NAME_REUSE_H",
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 1,
+            "column": 1,
+            "source_line": "#ifndef X2PY_GENERAL_NAME_REUSE_H"
+          }
+        },
+        {
+          "directive": "endif",
+          "argument": null,
+          "source_location": {
+            "filename": "general/name_reuse.h",
+            "line": 23,
+            "column": 1,
+            "source_line": "#endif"
+          }
+        }
+      ],
+      "macro_dependencies": [],
+      "diagnostics": []
+    }
+  },
+  "functions": {
+    "do_work_i": {
+      "name": "do_work_i",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "same_name",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "int *same_name",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "int *same_name",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 16,
+        "column": 1,
+        "source_line": "void do_work_i(int *same_name);"
+      },
+      "start": {
+        "filename": "general/name_reuse.h",
+        "line": 16,
+        "column": 1,
+        "source_line": "void do_work_i(int *same_name);"
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "do_work_r": {
+      "name": "do_work_r",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "same_name",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float same_name"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float same_name"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 17,
+        "column": 1,
+        "source_line": "void do_work_r(float same_name);"
+      },
+      "start": {
+        "filename": "general/name_reuse.h",
+        "line": 17,
+        "column": 1,
+        "source_line": "void do_work_r(float same_name);"
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "do_work_l": {
+      "name": "do_work_l",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "same_name",
+          "type": {
+            "reference": "bool"
+          },
+          "declared_type": {
+            "reference": "bool"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "shared",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct same_name *shared",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct same_name"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "struct same_name *shared",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "struct same_name"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 18,
+        "column": 1,
+        "source_line": "void do_work_l(bool same_name, struct same_name *shared);"
+      },
+      "start": {
+        "filename": "general/name_reuse.h",
+        "line": 18,
+        "column": 1,
+        "source_line": "void do_work_l(bool same_name, struct same_name *shared);"
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "convert_to_complex": {
+      "name": "convert_to_complex",
+      "result_type": {
+        "model": "CDoubleComplex",
+        "qualifiers": [],
+        "source_text": "double _Complex"
+      },
+      "parameters": [
+        {
+          "name": "same_name",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int same_name"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int same_name"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 19,
+        "column": 1,
+        "source_line": "double _Complex convert_to_complex(int same_name);"
+      },
+      "start": {
+        "filename": "general/name_reuse.h",
+        "line": 19,
+        "column": 1,
+        "source_line": "double _Complex convert_to_complex(int same_name);"
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "convert_to_string": {
+      "name": "convert_to_string",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "same_name",
+          "type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float same_name"
+          },
+          "declared_type": {
+            "model": "CFloat",
+            "qualifiers": [],
+            "source_text": "float same_name"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "shared",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char shared[static 16]",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "char shared[static 16]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "16",
+                "is_static_minimum": true,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 20,
+        "column": 1,
+        "source_line": "int convert_to_string(float same_name, char shared[static 16]);"
+      },
+      "start": {
+        "filename": "general/name_reuse.h",
+        "line": 20,
+        "column": 1,
+        "source_line": "int convert_to_string(float same_name, char shared[static 16]);"
+      },
+      "end": null,
+      "declaration_locations": []
+    },
+    "convert_to_logical": {
+      "name": "convert_to_logical",
+      "result_type": {
+        "reference": "bool"
+      },
+      "parameters": [
+        {
+          "name": "same_name",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *same_name",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *same_name",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": false,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 21,
+        "column": 1,
+        "source_line": "bool convert_to_logical(const char *same_name);"
+      },
+      "start": {
+        "filename": "general/name_reuse.h",
+        "line": 21,
+        "column": 1,
+        "source_line": "bool convert_to_logical(const char *same_name);"
+      },
+      "end": null,
+      "declaration_locations": []
+    }
+  },
+  "structs": {
+    "same_name": {
+      "reference": "struct same_name"
+    }
+  },
+  "unions": {},
+  "enums": {},
+  "typedefs": {},
+  "variables": {
+    "same_name_i": {
+      "name": "same_name_i",
+      "type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "extern int same_name_i"
+      },
+      "storage": [
+        "extern"
+      ],
+      "initializer": null,
+      "bit_width": null,
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 10,
+        "column": 1,
+        "source_line": "extern int same_name_i;"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "same_name_r": {
+      "name": "same_name_r",
+      "type": {
+        "model": "CFloat",
+        "qualifiers": [],
+        "source_text": "extern float same_name_r"
+      },
+      "storage": [
+        "extern"
+      ],
+      "initializer": null,
+      "bit_width": null,
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 11,
+        "column": 1,
+        "source_line": "extern float same_name_r;"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "same_name_l": {
+      "name": "same_name_l",
+      "type": {
+        "reference": "bool"
+      },
+      "storage": [
+        "extern"
+      ],
+      "initializer": null,
+      "bit_width": null,
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 12,
+        "column": 1,
+        "source_line": "extern bool same_name_l;"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "same_name_c": {
+      "name": "same_name_c",
+      "type": {
+        "model": "CDoubleComplex",
+        "qualifiers": [],
+        "source_text": "extern double _Complex same_name_c"
+      },
+      "storage": [
+        "extern"
+      ],
+      "initializer": null,
+      "bit_width": null,
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 13,
+        "column": 1,
+        "source_line": "extern double _Complex same_name_c;"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "same_name_s": {
+      "name": "same_name_s",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "extern char same_name_s[8]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "8",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CChar",
+            "qualifiers": [],
+            "source_text": "char"
+          }
+        ]
+      },
+      "storage": [
+        "extern"
+      ],
+      "initializer": null,
+      "bit_width": null,
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 14,
+        "column": 1,
+        "source_line": "extern char same_name_s[8];"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    }
+  },
+  "macros": {
+    "X2PY_GENERAL_NAME_REUSE_H": {
+      "name": "X2PY_GENERAL_NAME_REUSE_H",
+      "value": null,
+      "function_like": false,
+      "directive": "define",
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 2,
+        "column": 1,
+        "source_line": "#define X2PY_GENERAL_NAME_REUSE_H"
+      }
+    }
+  },
+  "includes": {
+    "general/name_reuse.h:stdbool.h": {
+      "target": "stdbool.h",
+      "kind": "system",
+      "resolved_path": null,
+      "source_location": {
+        "filename": "general/name_reuse.h",
+        "line": 4,
+        "column": 1,
+        "source_line": "#include <stdbool.h>"
+      }
+    }
+  },
+  "functions_by_file": {
+    "general/name_reuse.h": [
+      "do_work_i",
+      "do_work_r",
+      "do_work_l",
+      "convert_to_complex",
+      "convert_to_string",
+      "convert_to_logical"
+    ]
+  },
+  "enum_constants": {},
+  "include_graph": {
+    "general/name_reuse.h": []
+  },
+  "system_includes": {
+    "general/name_reuse.h": [
+      "stdbool.h"
+    ]
+  },
+  "unresolved_includes": {
+    "general/name_reuse.h": []
+  },
+  "header_source_pairs": {
+    "general/name_reuse.h": []
+  },
+  "diagnostics": []
+}

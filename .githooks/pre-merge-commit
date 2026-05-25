@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+set -eu
+
+branch=$(git branch --show-current)
+
+if [ "$branch" != "main" ]; then
+  exit 0
+fi
+
+if ! git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+  exit 0
+fi
+
+merge_head=$(git rev-parse MERGE_HEAD)
+
+if git branch --all --contains "$merge_head" | grep -Eq '(^|[[:space:]])(remotes/origin/)?c-parser/'; then
+  cat >&2 <<'MSG'
+Blocked: attempting to merge a c-parser/* branch into main.
+
+Merge C parser work into c-parser/main only. The final main merge requires the
+C parser readiness checklist to be complete and explicit approval.
+MSG
+  exit 1
+fi
