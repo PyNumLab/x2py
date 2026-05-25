@@ -7,9 +7,18 @@ decision, implementation, tests, or release validation. C-specific tasks remain
 marked as C-specific, but the semantic model and `.pyi` tasks are expected to
 serve both Fortran and C.
 
-## Step 1: Parser Frontend Cleanup
+Language scope is stated in each section or subsection heading:
 
-- [ ] Keep existing parser behavior unchanged unless a future task explicitly
+- **C** tasks apply only to the C frontend or to C-derived semantic/stub output.
+- **Fortran** tasks apply only to the Fortran frontend or to Fortran-derived
+  semantic/stub output.
+- **Shared (Fortran and C)** tasks define common IR, `.pyi`, readiness, or
+  validation behavior used by both languages.
+- **Cross-language** tasks compare or exercise both language paths together.
+
+## Step 1: C Parser Frontend Cleanup
+
+- [ ] Keep existing C parser behavior unchanged unless a future task explicitly
       requires shared infrastructure changes.
 - [ ] Keep wrappability assessment in the semantic layer, not inside parser
       packages.
@@ -20,7 +29,7 @@ serve both Fortran and C.
 - [ ] If `--parse-c` is added, make it an alias for `--language c --parse` and
       add CLI tests for the alias.
 - [ ] Allow same function under mutually exclusive preprocessor branches.
-- [ ] Make parser diagnostics report "no functions found" only when
+- [ ] Make C parser diagnostics report "no functions found" only when
       appropriate.
 - [ ] Safely fold simple enum integer expressions, or document the exact
       boundary for preserving expression text.
@@ -30,7 +39,7 @@ serve both Fortran and C.
 - [ ] Feed C standard-type probe reports into C semantic conversion once the
       C semantic converter exists.
 
-## Step 2: Project And Include Policy
+## Step 2: C Project And Include Policy
 
 - [ ] Decide whether project parsing should parse all included system headers
       when they are found locally.
@@ -38,7 +47,7 @@ serve both Fortran and C.
 - [ ] Decide whether include graph keys should be path-keyed, module-keyed, or
       both.
 
-## Step 3: Shared Semantic Model Foundation
+## Step 3: Shared Semantic Model Foundation (Fortran And C)
 
 - [ ] Treat the semantic model as language-neutral: Fortran and C parser output
       should converge into the same IR shapes wherever the native contract is
@@ -158,6 +167,8 @@ serve both Fortran and C.
 
 ## Step 5: Language-To-Semantic IR Conversion
 
+### C Conversion
+
 - [ ] Create `semantics/c2ir.py`.
 - [ ] Implement `CToIRConverter`.
 - [ ] Mirror the visitor style of `FortranToIRConverter`.
@@ -205,6 +216,12 @@ serve both Fortran and C.
 - [ ] Enable `--language c --semantics` only after tests pass.
 - [ ] Add a semantic fixture workflow for C if stable enough.
 - [ ] Document C-to-semantic-IR mapping.
+- [ ] Standardize unsigned integer semantic type names.
+- [ ] Decide whether struct, union, and enum representation requires semantic
+      model extensions.
+
+### Fortran Conversion
+
 - [ ] Update `FortranToIRConverter` to emit the exact native interface described
       in `docs/semantics/pyi_format.md`, not the older placeholder shape
       representation.
@@ -233,15 +250,17 @@ serve both Fortran and C.
 - [ ] Add Fortran semantic IR tests for scalar references, explicit-shape
       arrays, assumed-size arrays, assumed-shape arrays, allocatable arrays,
       pointer arrays, derived-type components, and module variables.
+
+### Cross-Language And Shared Conversion Policy
+
 - [ ] Add cross-language IR tests that exercise equivalent C and Fortran
       variables through the same semantic model and readiness path.
-- [ ] Decide whether the current semantic IR needs richer pointer/ownership
+- [ ] Decide whether the shared semantic IR needs richer pointer/ownership
       constraints.
-- [ ] Standardize unsigned integer semantic type names.
-- [ ] Decide whether struct, union, and enum representation requires semantic
-      model extensions.
 
 ## Step 6: `.pyi` Generation, Loading, And Policy
+
+### Shared Generation Contract (Fortran And C)
 
 - [ ] Make `.pyi` generation consume semantic IR only; language-specific
       differences should already be encoded as semantic contracts and metadata.
@@ -249,6 +268,9 @@ serve both Fortran and C.
       `docs/semantics/pyi_format.md`, including `T[n, m]`, `T[:, :]`,
       `T[::Strided]`, `Annotated[..., ORDER_F]`,
       `Annotated[..., ORDER_ANY]`, `Allocatable`, and `Pointer`.
+
+### Fortran Stub Generation
+
 - [ ] Update Fortran `.pyi` generation to emit exact native interface stubs:
       scalar references as `Ptr(...)`, array dummies as NumPy array
       annotations, explicit `ORDER_F` only when rank and orientation require
@@ -263,6 +285,9 @@ serve both Fortran and C.
       explicit-shape arrays, assumed-size arrays, assumed-shape strided arrays,
       contiguous arrays, allocatable arrays, pointer arrays, constants, derived
       type fields, and module variables.
+
+### Shared Loading And Round Trips (Fortran And C)
+
 - [ ] Extend `load_pyi_file`, `parse_pyi_text`, and `convert_pyi_to_ir` to load
       the accepted `.pyi` target notation into semantic IR, not just parse a
       subset for readiness.
@@ -290,6 +315,8 @@ serve both Fortran and C.
       through the same `.pyi` loader and readiness checker.
 - [ ] Keep `.pyi` syntax language-neutral; Fortran and C should differ by
       semantic contract, not by separate annotation families.
+
+### C Stub Generation And Policy
 
 - [ ] Enable `--language c --pyi` only after semantic conversion is stable.
 - [ ] Generate stubs from C semantic modules.
@@ -377,7 +404,7 @@ serve both Fortran and C.
 - [ ] Keep fixture/golden workflows stable.
 - [ ] Make corpus tests catch regressions.
 
-## Guardrails For All Remaining Work
+## Guardrails For C And Shared Remaining Work
 
 These are non-goal constraints, not parser implementation tasks:
 
@@ -396,5 +423,5 @@ These are non-goal constraints, not parser implementation tasks:
 - Do not claim callbacks are safely wrappable before the required `.pyi`
   callback policy is supplied.
 - Do not couple shared semantic IR behavior to a single frontend.
-- Do not modify existing parser behavior as part of shared semantic work unless
+- Do not modify existing C parser behavior as part of shared semantic work unless
   the change is explicitly planned, tested, and documented.
