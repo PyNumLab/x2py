@@ -356,6 +356,13 @@ Expected JSON layout:
   - `programs`
   - `block_data`
 
+When `x2py --parse --json` applies Fortran preprocessing settings, the
+per-file payload also contains `preprocessing_recipe`. Internal `-D`/`-U`
+branch selection records those macro settings. `--preprocess compiler` records
+the exact compiler executable and argv, include paths, macro flags, standard,
+extra compiler arguments, and working directory used to produce the parsed
+stdout stream.
+
 `use` import shape:
 
 - A bare module import such as `use iso_c_binding` is serialized as an empty

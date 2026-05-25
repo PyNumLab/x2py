@@ -116,6 +116,7 @@ def test_c_file_serialization_is_json_stable():
         "macro_dependencies": [],
         "diagnostics": [],
     }
+    assert "preprocessing_recipe" not in parsed.to_dict()
 
 
 def test_concrete_type_serialization_preserves_semantic_type_fields_and_locations():

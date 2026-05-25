@@ -330,7 +330,6 @@ int answer = INIT(42);
     ]
 
 
-@pytest.mark.skip(reason="compiler-preprocessed mode lands after raw metadata collection.")
 def test_compiler_preprocessed_mode_accepts_line_markers_and_expanded_declarations():
     from c_parser import parse_c_file
 
@@ -338,7 +337,7 @@ def test_compiler_preprocessed_mode_accepts_line_markers_and_expanded_declaratio
         """
 # 1 "api.h"
 int exported(void);
-# 20 "api.h"
+# line 20 "api.h"
 double scale(double x);
 """,
         filename="api.i",
@@ -346,4 +345,113 @@ double scale(double x);
     )
 
     assert [fn.name for fn in parsed.functions] == ["exported", "scale"]
+    assert [fn.origin for fn in parsed.functions] == ["preprocessed", "preprocessed"]
+    assert parsed.preprocessed_source_path == "api.i"
+    assert parsed.original_source_paths == ["api.h"]
+    assert parsed.functions[0].source_location.filename == "api.h"
+    assert parsed.functions[0].source_location.line == 1
     assert parsed.functions[1].source_location.line == 20
+    payload = parsed.to_dict()
+    assert payload["functions"][0]["origin"] == "preprocessed"
+    assert payload["preprocessed_source_path"] == "api.i"
+    assert payload["original_source_paths"] == ["api.h"]
+
+
+def test_compiler_preprocessed_mode_maps_gcc_linemarkers_across_includes_and_line_jumps():
+    from c_parser import CComposedType, CFunctionType, CPointer, parse_c_file
+
+    parsed = parse_c_file(
+        """
+# 10 "include/api.h" 1
+typedef struct api_state api_state;
+# 42 "include/api.h" 2
+typedef int (*api_callback)(const char *name, int values[static 4]);
+# 90 "generated/detail.h" 1
+struct generated_detail {
+    int id;
+    double (*ops[2])(double);
+};
+# 120 "include/api.h" 2
+int api_register(api_state *state, api_callback cb, int (*factory)(api_state *, const char *));
+""",
+        filename="api.i",
+        preprocessing="compiler",
+    )
+
+    assert [typedef.name for typedef in parsed.typedefs] == ["api_state", "api_callback"]
+    assert [typedef.origin for typedef in parsed.typedefs] == ["preprocessed", "preprocessed"]
+    assert parsed.typedefs[0].source_location.filename == "include/api.h"
+    assert parsed.typedefs[0].source_location.line == 10
+    assert parsed.typedefs[1].source_location.filename == "include/api.h"
+    assert parsed.typedefs[1].source_location.line == 42
+    assert isinstance(parsed.typedefs[1].type, CComposedType)
+    assert any(isinstance(component, CFunctionType) for component in parsed.typedefs[1].type.components)
+
+    detail = parsed.structs[0]
+    assert detail.origin == "preprocessed"
+    assert detail.name == "generated_detail"
+    assert detail.source_location.filename == "generated/detail.h"
+    assert detail.source_location.line == 90
+    assert [member.name for member in detail.members] == ["id", "ops"]
+    assert [member.origin for member in detail.members] == ["preprocessed", "preprocessed"]
+    assert detail.members[1].source_location.filename == "generated/detail.h"
+    assert detail.members[1].source_location.line == 92
+    assert isinstance(detail.members[1].type, CComposedType)
+    assert any(isinstance(component, CPointer) for component in detail.members[1].type.components)
+
+    function = parsed.functions[0]
+    assert function.origin == "preprocessed"
+    assert function.name == "api_register"
+    assert function.source_location.filename == "include/api.h"
+    assert function.source_location.line == 120
+    assert [parameter.name for parameter in function.parameters] == ["state", "cb", "factory"]
+    assert [parameter.origin for parameter in function.parameters] == ["preprocessed"] * 3
+    assert parsed.original_source_paths == ["include/api.h", "generated/detail.h"]
+
+
+def test_compiler_preprocessed_mode_maps_nested_aggregate_members_to_original_file():
+    from c_parser import CStruct, parse_c_file
+
+    parsed = parse_c_file(
+        """
+#line 33 "include/api.h"
+struct outer {
+    int first;
+    struct { int nested; } inner;
+};
+""",
+        filename="api.i",
+        preprocessing="preprocessed",
+    )
+
+    outer = parsed.structs[0]
+    inner = outer.members[1]
+    assert isinstance(inner.type, CStruct)
+    assert outer.origin == "preprocessed"
+    assert inner.origin == "preprocessed"
+    assert inner.type.origin == "preprocessed"
+    assert inner.type.members[0].origin == "preprocessed"
+    assert inner.source_location.filename == "include/api.h"
+    assert inner.source_location.line == 35
+    assert inner.type.members[0].source_location.filename == "include/api.h"
+    assert inner.type.members[0].source_location.line == 35
+    assert parsed.diagnostics == []
+
+
+def test_compiler_preprocessed_mode_maps_fatal_parse_errors_to_original_file():
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError) as exc_info:
+        parse_c_file(
+            """
+# 77 "include/bad_api.h"
+unsigned float value;
+""",
+            filename="bad.i",
+            preprocessing="compiler",
+        )
+
+    exc = exc_info.value
+    assert exc.filename == "include/bad_api.h"
+    assert exc.line_number == 77
+    assert exc.source_line == "unsigned float value;"

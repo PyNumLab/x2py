@@ -1,5 +1,7 @@
 """Public x2py API."""
 
+from importlib import import_module
+
 from fortran_parser.models import (
     FortranArgument,
     FortranBlockData,
@@ -25,7 +27,25 @@ from semantics.readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_
 
 from .cli import main
 
+_FORTRAN_TYPE_PROBE_EXPORTS = {
+    "FortranTypeProbeError",
+    "FortranTypeProbeReport",
+    "build_fortran_type_probe_source",
+    "evaluate_fortran_type_requirements",
+    "fortran_type_probe_expressions",
+    "probe_fortran_type_expressions",
+}
+
+
+def __getattr__(name: str):
+    if name in _FORTRAN_TYPE_PROBE_EXPORTS:
+        module = import_module("x2py.fortran_type_probe")
+        return getattr(module, name)
+    raise AttributeError(f"module 'x2py' has no attribute {name!r}")
+
 __all__ = (
+    "FortranTypeProbeError",
+    "FortranTypeProbeReport",
     "FortranArgument",
     "FortranBlockData",
     "FortranDerivedType",
@@ -39,14 +59,18 @@ __all__ = (
     "FortranSubmodule",
     "assess_pyi_wrap_readiness",
     "assess_semantic_wrap_readiness",
+    "build_fortran_type_probe_source",
     "collect_semantic_compile_time_requirements",
     "convert_pyi_to_ir",
+    "evaluate_fortran_type_requirements",
     "fortran_file_to_semantic_modules",
+    "fortran_type_probe_expressions",
     "fortran_module_to_semantic_module",
     "load_pyi_file",
     "main",
     "parse_fortran_file",
     "parse_fortran_project",
     "parse_pyi_text",
+    "probe_fortran_type_expressions",
     "resolve_semantic_compile_time_values",
 )

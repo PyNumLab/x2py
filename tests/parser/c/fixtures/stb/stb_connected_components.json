@@ -367,6 +367,93 @@
                                                       "name": null,
                                                       "members": [
                                                         {
+                                                          "name": "f",
+                                                          "type": {
+                                                            "model": "CStruct",
+                                                            "qualifiers": [],
+                                                            "source_text": "",
+                                                            "name": null,
+                                                            "members": [
+                                                              {
+                                                                "name": "clump_index",
+                                                                "type": {
+                                                                  "model": "CUnsignedInt",
+                                                                  "qualifiers": [],
+                                                                  "source_text": "unsigned int clump_index"
+                                                                },
+                                                                "storage": [],
+                                                                "initializer": null,
+                                                                "bit_width": "12",
+                                                                "source_location": {
+                                                                  "filename": "stb/stb_connected_components.h",
+                                                                  "line": 232,
+                                                                  "column": 7,
+                                                                  "source_line": "      unsigned int clump_index:12;"
+                                                                },
+                                                                "callback_policy": null,
+                                                                "declaration_locations": []
+                                                              },
+                                                              {
+                                                                "name": "cluster_x",
+                                                                "type": {
+                                                                  "model": "CUnsignedInt",
+                                                                  "qualifiers": [],
+                                                                  "source_text": "unsigned int cluster_x"
+                                                                },
+                                                                "storage": [],
+                                                                "initializer": null,
+                                                                "bit_width": "10",
+                                                                "source_location": {
+                                                                  "filename": "stb/stb_connected_components.h",
+                                                                  "line": 233,
+                                                                  "column": 7,
+                                                                  "source_line": "      unsigned int cluster_x:10;"
+                                                                },
+                                                                "callback_policy": null,
+                                                                "declaration_locations": []
+                                                              },
+                                                              {
+                                                                "name": "cluster_y",
+                                                                "type": {
+                                                                  "model": "CUnsignedInt",
+                                                                  "qualifiers": [],
+                                                                  "source_text": "unsigned int cluster_y"
+                                                                },
+                                                                "storage": [],
+                                                                "initializer": null,
+                                                                "bit_width": "10",
+                                                                "source_location": {
+                                                                  "filename": "stb/stb_connected_components.h",
+                                                                  "line": 234,
+                                                                  "column": 7,
+                                                                  "source_line": "      unsigned int cluster_y:10;"
+                                                                },
+                                                                "callback_policy": null,
+                                                                "declaration_locations": []
+                                                              }
+                                                            ],
+                                                            "anonymous_id": "struct@stb/stb_connected_components.h:231:4",
+                                                            "is_incomplete": false,
+                                                            "source_location": {
+                                                              "filename": "stb/stb_connected_components.h",
+                                                              "line": 231,
+                                                              "column": 4,
+                                                              "source_line": "   struct {"
+                                                            }
+                                                          },
+                                                          "storage": [],
+                                                          "initializer": null,
+                                                          "bit_width": null,
+                                                          "source_location": {
+                                                            "filename": "stb/stb_connected_components.h",
+                                                            "line": 231,
+                                                            "column": 4,
+                                                            "source_line": "   struct {"
+                                                          },
+                                                          "callback_policy": null,
+                                                          "declaration_locations": []
+                                                        },
+                                                        {
                                                           "name": "c",
                                                           "type": {
                                                             "model": "CUnsignedInt",
@@ -4021,19 +4108,6 @@
           },
           "unit_kind": "declarator",
           "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_FIELD_DECLARATION",
-          "message": "Nested aggregate field definitions are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_connected_components.h",
-            "line": 231,
-            "column": 4,
-            "source_line": "   struct {"
-          },
-          "unit_kind": "union_field",
-          "unit_name": null
         }
       ]
     }
@@ -6797,19 +6871,6 @@
         "source_line": "extern \"C\" {"
       },
       "unit_kind": "declarator",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_FIELD_DECLARATION",
-      "message": "Nested aggregate field definitions are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_connected_components.h",
-        "line": 231,
-        "column": 4,
-        "source_line": "   struct {"
-      },
-      "unit_kind": "union_field",
       "unit_name": null
     },
     {

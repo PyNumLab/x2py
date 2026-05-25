@@ -17323,6 +17323,173 @@
       ],
       "variables": [
         {
+          "name": "stbte__color_names",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static char *stbte__color_names[]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": null,
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [],
+                "source_text": "char"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n   \"expander\", \"toolbar\", \"tool button\", \"panel\",\n   \"panel c1\", \"panel c2\", \"scollbar\", \"map button\",\n   \"layer\", \"hide\", \"lock\", \"solo\",\n   \"category\",\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_tilemap_editor.h",
+            "line": 641,
+            "column": 1,
+            "source_line": "static char *stbte__color_names[] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbte__color_table",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static int stbte__color_table[STBTE__num_color_modes][STBTE__num_color_aspects][STBTE__num_color_states]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "STBTE__num_color_modes",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "STBTE__num_color_aspects",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "STBTE__num_color_states",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n   {\n      { 0x000000, 0x84987c, 0xdcdca8, 0xdcdca8, 0x40c040, 0x60d060, 0x505050, },\n      { 0xa4b090, 0xe0ec80, 0xffffc0, 0xffffc0, 0x80ff80, 0x80ff80, 0x606060, },\n      { 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },\n   }, {\n      { 0x808890, 0x606060, 0x606060, 0x606060, 0x606060, 0x606060, 0x606060, },\n      { 0x605860, 0x606060, 0x606060, 0x606060, 0x606060, 0x606060, 0x606060, },\n      { 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, },\n   }, {\n      { 0x3c5068, 0x7088a8, 0x647488, 0x94b4dc, 0x8890c4, 0x9caccc, 0x404040, },\n      { 0x889cb8, 0x889cb8, 0x889cb8, 0x889cb8, 0x84c4e8, 0xacc8ff, 0x0c0c08, },\n      { 0xbcc4cc, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x707074, },\n   }, {\n      { 0x403848, 0x403010, 0x403010, 0x403010, 0x403010, 0x403010, 0x303024, },\n      { 0x68546c, 0xc08040, 0xc08040, 0xc08040, 0xc08040, 0xc08040, 0x605030, },\n      { 0xf4e4ff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },\n   }, {\n      { 0xb4b04c, 0xacac60, 0xc0ffc0, 0xc0ffc0, 0x40c040, 0x60d060, 0x505050, },\n      { 0xa0a04c, 0xd0d04c, 0xffff80, 0xffff80, 0x80ff80, 0x80ff80, 0x606060, },\n      { 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },\n   }, {\n      { 0x40c440, 0x60d060, 0xc0ffc0, 0xc0ffc0, 0x40c040, 0x60d060, 0x505050, },\n      { 0x40c040, 0x80ff80, 0x80ff80, 0x80ff80, 0x80ff80, 0x80ff80, 0x606060, },\n      { 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },\n   }, {\n      { 0x9090ac, 0xa0a0b8, 0xbcb8cc, 0xbcb8cc, 0x909040, 0x909040, 0x909040, },\n      { 0xa0a0b8, 0xb0b4d0, 0xa0a0b8, 0xa0a0b8, 0xa0a050, 0xa0a050, 0xa0a050, },\n      { 0x808088, 0x808030, 0x808030, 0x808030, 0x808030, 0x808030, 0x808030, },\n   }, {\n      { 0x704c70, 0x885c8c, 0x9c68a4, 0xb870bc, 0xb490bc, 0xb490bc, 0x302828, },\n      { 0x646064, 0xcca8d4, 0xc060c0, 0xa07898, 0xe0b8e0, 0xe0b8e0, 0x403838, },\n      { 0xdccce4, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },\n   }, {\n      { 0x704c70, 0x885c8c, 0x9c68a4, 0xb870bc, 0xb490bc, 0xb490bc, 0x302828, },\n      { 0xb09cb4, 0xcca8d4, 0xc060c0, 0xa07898, 0xe0b8e0, 0xe0b8e0, 0x403838, },\n      { 0xdccce4, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },\n   }, {\n      { 0x646494, 0x888cb8, 0xb0b0b0, 0xb0b0cc, 0x9c9cf4, 0x8888b0, 0x50506c, },\n      { 0x9090a4, 0xb0b4d4, 0xb0b0dc, 0xb0b0cc, 0xd0d0fc, 0xd0d4f0, 0x606060, },\n      { 0xb4b4d4, 0xe4e4ff, 0xffffff, 0xffffff, 0xe0e4ff, 0xececff, 0x909090, },\n   }, {\n      { 0x646444, 0x888c64, 0xb0b0b0, 0xb0b088, 0xaca858, 0x88886c, 0x505050, },\n      { 0x88886c, 0xb0b490, 0xb0b0b0, 0xb0b088, 0xd8d898, 0xd0d4b0, 0x606060, },\n      { 0xb4b49c, 0xffffd8, 0xffffff, 0xffffd4, 0xffffdc, 0xffffcc, 0x909090, },\n   }, {\n      { 0x906464, 0xb48c8c, 0xd4b0b0, 0xdcb0b0, 0xff9c9c, 0xc88888, 0x505050, },\n      { 0xb47c80, 0xd4b4b8, 0xc4a8a8, 0xdcb0b0, 0xffc0c0, 0xfce8ec, 0x606060, },\n      { 0xe0b4b4, 0xffdcd8, 0xffd8d4, 0xffe0e4, 0xffece8, 0xffffff, 0x909090, },\n   }, {\n      { 0x403848, 0x403848, 0x403848, 0x886894, 0x7c80c8, 0x7c80c8, 0x302828, },\n      { 0x403848, 0x403848, 0x403848, 0x403848, 0x7c80c8, 0x7c80c8, 0x403838, },\n      { 0xc8c4c8, 0xffffff, 0xffffff, 0xffffff, 0xe8e8ec, 0xffffff, 0x909090, },\n   },\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_tilemap_editor.h",
+            "line": 651,
+            "column": 1,
+            "source_line": "static int stbte__color_table[STBTE__num_color_modes][STBTE__num_color_aspects][STBTE__num_color_states] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbte__state_to_index",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static unsigned char stbte__state_to_index[2][2][2][2]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "2",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "2",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "2",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "2",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n   {\n      { { STBTE__idle    , STBTE__over          }, { STBTE__down    , STBTE__over_down }, },\n      { { STBTE__selected, STBTE__selected_over }, { STBTE__down    , STBTE__over_down }, },\n   },{\n      { { STBTE__disabled, STBTE__disabled      }, { STBTE__disabled, STBTE__disabled  }, },\n      { { STBTE__selected, STBTE__selected_over }, { STBTE__disabled, STBTE__disabled  }, },\n   }\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_tilemap_editor.h",
+            "line": 731,
+            "column": 1,
+            "source_line": "static unsigned char stbte__state_to_index[2][2][2][2] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
           "name": "stbte__font_offset",
           "type": {
             "model": "CComposedType",
@@ -17355,6 +17522,105 @@
             "line": 745,
             "column": 1,
             "source_line": "static short stbte__font_offset[95+16];"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbte__fontdata",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static short stbte__fontdata[769]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "769",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CShort",
+                "qualifiers": [],
+                "source_text": "short"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n   4,9,6,9,9,9,9,8,9,8,4,9,7,7,7,7,4,2,6,8,6,6,7,3,4,4,8,6,3,6,2,6,6,6,6,6,6,\n   6,6,6,6,6,2,3,5,4,5,6,6,6,6,6,6,6,6,6,6,6,6,7,6,7,7,7,6,7,6,6,6,6,7,7,6,6,\n   6,4,6,4,7,7,3,6,6,5,6,6,5,6,6,4,5,6,4,7,6,6,6,6,6,6,6,6,6,7,6,6,6,5,2,5,8,\n   0,0,0,0,2,253,130,456,156,8,72,184,64,2,125,66,64,160,64,146,511,146,146,\n   511,146,146,511,146,511,257,341,297,341,297,341,257,511,16,56,124,16,16,16,\n   124,56,16,96,144,270,261,262,136,80,48,224,192,160,80,40,22,14,15,3,448,496,\n   496,240,232,20,10,5,2,112,232,452,450,225,113,58,28,63,30,60,200,455,257,\n   257,0,0,0,257,257,455,120,204,132,132,159,14,4,4,14,159,132,132,204,120,8,\n   24,56,120,56,24,8,32,48,56,60,56,48,32,0,0,0,0,111,111,7,7,0,0,7,7,34,127,\n   127,34,34,127,127,34,36,46,107,107,58,18,99,51,24,12,102,99,48,122,79,93,\n   55,114,80,4,7,3,62,127,99,65,65,99,127,62,8,42,62,28,28,62,42,8,8,8,62,62,\n   8,8,128,224,96,8,8,8,8,8,8,96,96,96,48,24,12,6,3,62,127,89,77,127,62,64,66,\n   127,127,64,64,98,115,89,77,71,66,33,97,73,93,119,35,24,28,22,127,127,16,39,\n   103,69,69,125,57,62,127,73,73,121,48,1,1,113,121,15,7,54,127,73,73,127,54,\n   6,79,73,105,63,30,54,54,128,246,118,8,28,54,99,65,20,20,20,20,65,99,54,28,\n   8,2,3,105,109,7,2,30,63,33,45,47,46,124,126,19,19,126,124,127,127,73,73,127,\n   54,62,127,65,65,99,34,127,127,65,99,62,28,127,127,73,73,73,65,127,127,9,9,\n   9,1,62,127,65,73,121,121,127,127,8,8,127,127,65,65,127,127,65,65,32,96,64,\n   64,127,63,127,127,8,28,54,99,65,127,127,64,64,64,64,127,127,6,12,6,127,127,\n   127,127,6,12,24,127,127,62,127,65,65,65,127,62,127,127,9,9,15,6,62,127,65,\n   81,49,127,94,127,127,9,25,127,102,70,79,73,73,121,49,1,1,127,127,1,1,63,127,\n   64,64,127,63,15,31,48,96,48,31,15,127,127,48,24,48,127,127,99,119,28,28,119,\n   99,7,15,120,120,15,7,97,113,89,77,71,67,127,127,65,65,3,6,12,24,48,96,65,\n   65,127,127,8,12,6,3,6,12,8,64,64,64,64,64,64,64,3,7,4,32,116,84,84,124,120,\n   127,127,68,68,124,56,56,124,68,68,68,56,124,68,68,127,127,56,124,84,84,92,\n   24,8,124,126,10,10,56,380,324,324,508,252,127,127,4,4,124,120,72,122,122,\n   64,256,256,256,506,250,126,126,16,56,104,64,66,126,126,64,124,124,24,56,28,\n   124,120,124,124,4,4,124,120,56,124,68,68,124,56,508,508,68,68,124,56,56,124,\n   68,68,508,508,124,124,4,4,12,8,72,92,84,84,116,36,4,4,62,126,68,68,60,124,\n   64,64,124,124,28,60,96,96,60,28,28,124,112,56,112,124,28,68,108,56,56,108,\n   68,284,316,352,320,508,252,68,100,116,92,76,68,8,62,119,65,65,127,127,65,\n   65,119,62,8,16,24,12,12,24,24,12,4,\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_tilemap_editor.h",
+            "line": 746,
+            "column": 1,
+            "source_line": "static short stbte__fontdata[769] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "toolchar",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static int toolchar[]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": null,
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ 26,24,25,20,23,22,18, 19,17, 29,28, }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_tilemap_editor.h",
+            "line": 838,
+            "column": 1,
+            "source_line": "static int toolchar[] = { 26,24,25,20,23,22,18, 19,17, 29,28, };"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbte__ui",
+          "type": {
+            "reference": "stbte__ui_t"
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ STBTE__tool_brush, 0 }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_tilemap_editor.h",
+            "line": 919,
+            "column": 1,
+            "source_line": "static stbte__ui_t stbte__ui = { STBTE__tool_brush, 0 };"
           },
           "callback_policy": null,
           "declaration_locations": []
@@ -19903,84 +20169,6 @@
           },
           "unit_kind": "macro",
           "unit_name": "STBTE__TEXTCOLOR"
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_tilemap_editor.h",
-            "line": 641,
-            "column": 1,
-            "source_line": "static char *stbte__color_names[] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_tilemap_editor.h",
-            "line": 651,
-            "column": 1,
-            "source_line": "static int stbte__color_table[STBTE__num_color_modes][STBTE__num_color_aspects][STBTE__num_color_states] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_tilemap_editor.h",
-            "line": 731,
-            "column": 1,
-            "source_line": "static unsigned char stbte__state_to_index[2][2][2][2] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_tilemap_editor.h",
-            "line": 746,
-            "column": 1,
-            "source_line": "static short stbte__fontdata[769] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_tilemap_editor.h",
-            "line": 838,
-            "column": 1,
-            "source_line": "static int toolchar[] = { 26,24,25,20,23,22,18, 19,17, 29,28, };"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_tilemap_editor.h",
-            "line": 919,
-            "column": 1,
-            "source_line": "static stbte__ui_t stbte__ui = { STBTE__tool_brush, 0 };"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
         }
       ]
     }
@@ -32662,6 +32850,173 @@
     }
   },
   "variables": {
+    "stbte__color_names": {
+      "name": "stbte__color_names",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static char *stbte__color_names[]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": null,
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "model": "CChar",
+            "qualifiers": [],
+            "source_text": "char"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n   \"expander\", \"toolbar\", \"tool button\", \"panel\",\n   \"panel c1\", \"panel c2\", \"scollbar\", \"map button\",\n   \"layer\", \"hide\", \"lock\", \"solo\",\n   \"category\",\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_tilemap_editor.h",
+        "line": 641,
+        "column": 1,
+        "source_line": "static char *stbte__color_names[] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbte__color_table": {
+      "name": "stbte__color_table",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static int stbte__color_table[STBTE__num_color_modes][STBTE__num_color_aspects][STBTE__num_color_states]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "STBTE__num_color_modes",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "STBTE__num_color_aspects",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "STBTE__num_color_states",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n   {\n      { 0x000000, 0x84987c, 0xdcdca8, 0xdcdca8, 0x40c040, 0x60d060, 0x505050, },\n      { 0xa4b090, 0xe0ec80, 0xffffc0, 0xffffc0, 0x80ff80, 0x80ff80, 0x606060, },\n      { 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },\n   }, {\n      { 0x808890, 0x606060, 0x606060, 0x606060, 0x606060, 0x606060, 0x606060, },\n      { 0x605860, 0x606060, 0x606060, 0x606060, 0x606060, 0x606060, 0x606060, },\n      { 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, },\n   }, {\n      { 0x3c5068, 0x7088a8, 0x647488, 0x94b4dc, 0x8890c4, 0x9caccc, 0x404040, },\n      { 0x889cb8, 0x889cb8, 0x889cb8, 0x889cb8, 0x84c4e8, 0xacc8ff, 0x0c0c08, },\n      { 0xbcc4cc, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x707074, },\n   }, {\n      { 0x403848, 0x403010, 0x403010, 0x403010, 0x403010, 0x403010, 0x303024, },\n      { 0x68546c, 0xc08040, 0xc08040, 0xc08040, 0xc08040, 0xc08040, 0x605030, },\n      { 0xf4e4ff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },\n   }, {\n      { 0xb4b04c, 0xacac60, 0xc0ffc0, 0xc0ffc0, 0x40c040, 0x60d060, 0x505050, },\n      { 0xa0a04c, 0xd0d04c, 0xffff80, 0xffff80, 0x80ff80, 0x80ff80, 0x606060, },\n      { 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },\n   }, {\n      { 0x40c440, 0x60d060, 0xc0ffc0, 0xc0ffc0, 0x40c040, 0x60d060, 0x505050, },\n      { 0x40c040, 0x80ff80, 0x80ff80, 0x80ff80, 0x80ff80, 0x80ff80, 0x606060, },\n      { 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },\n   }, {\n      { 0x9090ac, 0xa0a0b8, 0xbcb8cc, 0xbcb8cc, 0x909040, 0x909040, 0x909040, },\n      { 0xa0a0b8, 0xb0b4d0, 0xa0a0b8, 0xa0a0b8, 0xa0a050, 0xa0a050, 0xa0a050, },\n      { 0x808088, 0x808030, 0x808030, 0x808030, 0x808030, 0x808030, 0x808030, },\n   }, {\n      { 0x704c70, 0x885c8c, 0x9c68a4, 0xb870bc, 0xb490bc, 0xb490bc, 0x302828, },\n      { 0x646064, 0xcca8d4, 0xc060c0, 0xa07898, 0xe0b8e0, 0xe0b8e0, 0x403838, },\n      { 0xdccce4, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },\n   }, {\n      { 0x704c70, 0x885c8c, 0x9c68a4, 0xb870bc, 0xb490bc, 0xb490bc, 0x302828, },\n      { 0xb09cb4, 0xcca8d4, 0xc060c0, 0xa07898, 0xe0b8e0, 0xe0b8e0, 0x403838, },\n      { 0xdccce4, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },\n   }, {\n      { 0x646494, 0x888cb8, 0xb0b0b0, 0xb0b0cc, 0x9c9cf4, 0x8888b0, 0x50506c, },\n      { 0x9090a4, 0xb0b4d4, 0xb0b0dc, 0xb0b0cc, 0xd0d0fc, 0xd0d4f0, 0x606060, },\n      { 0xb4b4d4, 0xe4e4ff, 0xffffff, 0xffffff, 0xe0e4ff, 0xececff, 0x909090, },\n   }, {\n      { 0x646444, 0x888c64, 0xb0b0b0, 0xb0b088, 0xaca858, 0x88886c, 0x505050, },\n      { 0x88886c, 0xb0b490, 0xb0b0b0, 0xb0b088, 0xd8d898, 0xd0d4b0, 0x606060, },\n      { 0xb4b49c, 0xffffd8, 0xffffff, 0xffffd4, 0xffffdc, 0xffffcc, 0x909090, },\n   }, {\n      { 0x906464, 0xb48c8c, 0xd4b0b0, 0xdcb0b0, 0xff9c9c, 0xc88888, 0x505050, },\n      { 0xb47c80, 0xd4b4b8, 0xc4a8a8, 0xdcb0b0, 0xffc0c0, 0xfce8ec, 0x606060, },\n      { 0xe0b4b4, 0xffdcd8, 0xffd8d4, 0xffe0e4, 0xffece8, 0xffffff, 0x909090, },\n   }, {\n      { 0x403848, 0x403848, 0x403848, 0x886894, 0x7c80c8, 0x7c80c8, 0x302828, },\n      { 0x403848, 0x403848, 0x403848, 0x403848, 0x7c80c8, 0x7c80c8, 0x403838, },\n      { 0xc8c4c8, 0xffffff, 0xffffff, 0xffffff, 0xe8e8ec, 0xffffff, 0x909090, },\n   },\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_tilemap_editor.h",
+        "line": 651,
+        "column": 1,
+        "source_line": "static int stbte__color_table[STBTE__num_color_modes][STBTE__num_color_aspects][STBTE__num_color_states] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbte__state_to_index": {
+      "name": "stbte__state_to_index",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static unsigned char stbte__state_to_index[2][2][2][2]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "2",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "2",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "2",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "2",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CUnsignedChar",
+            "qualifiers": [],
+            "source_text": "unsigned char"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n   {\n      { { STBTE__idle    , STBTE__over          }, { STBTE__down    , STBTE__over_down }, },\n      { { STBTE__selected, STBTE__selected_over }, { STBTE__down    , STBTE__over_down }, },\n   },{\n      { { STBTE__disabled, STBTE__disabled      }, { STBTE__disabled, STBTE__disabled  }, },\n      { { STBTE__selected, STBTE__selected_over }, { STBTE__disabled, STBTE__disabled  }, },\n   }\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_tilemap_editor.h",
+        "line": 731,
+        "column": 1,
+        "source_line": "static unsigned char stbte__state_to_index[2][2][2][2] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
     "stbte__font_offset": {
       "name": "stbte__font_offset",
       "type": {
@@ -32695,6 +33050,105 @@
         "line": 745,
         "column": 1,
         "source_line": "static short stbte__font_offset[95+16];"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbte__fontdata": {
+      "name": "stbte__fontdata",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static short stbte__fontdata[769]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "769",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CShort",
+            "qualifiers": [],
+            "source_text": "short"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n   4,9,6,9,9,9,9,8,9,8,4,9,7,7,7,7,4,2,6,8,6,6,7,3,4,4,8,6,3,6,2,6,6,6,6,6,6,\n   6,6,6,6,6,2,3,5,4,5,6,6,6,6,6,6,6,6,6,6,6,6,7,6,7,7,7,6,7,6,6,6,6,7,7,6,6,\n   6,4,6,4,7,7,3,6,6,5,6,6,5,6,6,4,5,6,4,7,6,6,6,6,6,6,6,6,6,7,6,6,6,5,2,5,8,\n   0,0,0,0,2,253,130,456,156,8,72,184,64,2,125,66,64,160,64,146,511,146,146,\n   511,146,146,511,146,511,257,341,297,341,297,341,257,511,16,56,124,16,16,16,\n   124,56,16,96,144,270,261,262,136,80,48,224,192,160,80,40,22,14,15,3,448,496,\n   496,240,232,20,10,5,2,112,232,452,450,225,113,58,28,63,30,60,200,455,257,\n   257,0,0,0,257,257,455,120,204,132,132,159,14,4,4,14,159,132,132,204,120,8,\n   24,56,120,56,24,8,32,48,56,60,56,48,32,0,0,0,0,111,111,7,7,0,0,7,7,34,127,\n   127,34,34,127,127,34,36,46,107,107,58,18,99,51,24,12,102,99,48,122,79,93,\n   55,114,80,4,7,3,62,127,99,65,65,99,127,62,8,42,62,28,28,62,42,8,8,8,62,62,\n   8,8,128,224,96,8,8,8,8,8,8,96,96,96,48,24,12,6,3,62,127,89,77,127,62,64,66,\n   127,127,64,64,98,115,89,77,71,66,33,97,73,93,119,35,24,28,22,127,127,16,39,\n   103,69,69,125,57,62,127,73,73,121,48,1,1,113,121,15,7,54,127,73,73,127,54,\n   6,79,73,105,63,30,54,54,128,246,118,8,28,54,99,65,20,20,20,20,65,99,54,28,\n   8,2,3,105,109,7,2,30,63,33,45,47,46,124,126,19,19,126,124,127,127,73,73,127,\n   54,62,127,65,65,99,34,127,127,65,99,62,28,127,127,73,73,73,65,127,127,9,9,\n   9,1,62,127,65,73,121,121,127,127,8,8,127,127,65,65,127,127,65,65,32,96,64,\n   64,127,63,127,127,8,28,54,99,65,127,127,64,64,64,64,127,127,6,12,6,127,127,\n   127,127,6,12,24,127,127,62,127,65,65,65,127,62,127,127,9,9,15,6,62,127,65,\n   81,49,127,94,127,127,9,25,127,102,70,79,73,73,121,49,1,1,127,127,1,1,63,127,\n   64,64,127,63,15,31,48,96,48,31,15,127,127,48,24,48,127,127,99,119,28,28,119,\n   99,7,15,120,120,15,7,97,113,89,77,71,67,127,127,65,65,3,6,12,24,48,96,65,\n   65,127,127,8,12,6,3,6,12,8,64,64,64,64,64,64,64,3,7,4,32,116,84,84,124,120,\n   127,127,68,68,124,56,56,124,68,68,68,56,124,68,68,127,127,56,124,84,84,92,\n   24,8,124,126,10,10,56,380,324,324,508,252,127,127,4,4,124,120,72,122,122,\n   64,256,256,256,506,250,126,126,16,56,104,64,66,126,126,64,124,124,24,56,28,\n   124,120,124,124,4,4,124,120,56,124,68,68,124,56,508,508,68,68,124,56,56,124,\n   68,68,508,508,124,124,4,4,12,8,72,92,84,84,116,36,4,4,62,126,68,68,60,124,\n   64,64,124,124,28,60,96,96,60,28,28,124,112,56,112,124,28,68,108,56,56,108,\n   68,284,316,352,320,508,252,68,100,116,92,76,68,8,62,119,65,65,127,127,65,\n   65,119,62,8,16,24,12,12,24,24,12,4,\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_tilemap_editor.h",
+        "line": 746,
+        "column": 1,
+        "source_line": "static short stbte__fontdata[769] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "toolchar": {
+      "name": "toolchar",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static int toolchar[]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": null,
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ 26,24,25,20,23,22,18, 19,17, 29,28, }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_tilemap_editor.h",
+        "line": 838,
+        "column": 1,
+        "source_line": "static int toolchar[] = { 26,24,25,20,23,22,18, 19,17, 29,28, };"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbte__ui": {
+      "name": "stbte__ui",
+      "type": {
+        "reference": "stbte__ui_t"
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ STBTE__tool_brush, 0 }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_tilemap_editor.h",
+        "line": 919,
+        "column": 1,
+        "source_line": "static stbte__ui_t stbte__ui = { STBTE__tool_brush, 0 };"
       },
       "callback_policy": null,
       "declaration_locations": []
@@ -35305,84 +35759,6 @@
       },
       "unit_kind": "macro",
       "unit_name": "STBTE__TEXTCOLOR"
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_tilemap_editor.h",
-        "line": 641,
-        "column": 1,
-        "source_line": "static char *stbte__color_names[] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_tilemap_editor.h",
-        "line": 651,
-        "column": 1,
-        "source_line": "static int stbte__color_table[STBTE__num_color_modes][STBTE__num_color_aspects][STBTE__num_color_states] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_tilemap_editor.h",
-        "line": 731,
-        "column": 1,
-        "source_line": "static unsigned char stbte__state_to_index[2][2][2][2] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_tilemap_editor.h",
-        "line": 746,
-        "column": 1,
-        "source_line": "static short stbte__fontdata[769] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_tilemap_editor.h",
-        "line": 838,
-        "column": 1,
-        "source_line": "static int toolchar[] = { 26,24,25,20,23,22,18, 19,17, 29,28, };"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_tilemap_editor.h",
-        "line": 919,
-        "column": 1,
-        "source_line": "static stbte__ui_t stbte__ui = { STBTE__tool_brush, 0 };"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
     }
   ]
 }

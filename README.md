@@ -1,16 +1,22 @@
 # x2py
 
-Standalone extraction of the Fortran parser used for wrapper-oriented signature
-extraction.
+Wrapper-oriented parser and semantic-interface tooling for Fortran, with a
+partial C parser frontend that is source-faithful and ready for later semantic
+conversion work.
 
 [![Tests](https://github.com/PyNumLab/x2py/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/PyNumLab/x2py/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/PyNumLab/x2py/graph/badge.svg?token=QZRRCS5YO6)](https://codecov.io/gh/PyNumLab/x2py)
 
 
-## What the parser handles
+## What the parsers handle
 
-The parser is intentionally a robust subset parser (not a full Fortran compiler
-front-end). Current handled coverage:
+The parsers are intentionally robust subset parsers, not full compiler
+frontends. They preserve source facts needed for wrapper generation and defer
+ABI, ownership, and wrappability policy to semantic stages.
+
+### Fortran parser
+
+Current handled coverage:
 
 - **Source forms**
   - Free-form: `.f90`, `.f95`, `.f03`, `.f08`
@@ -44,19 +50,44 @@ front-end). Current handled coverage:
   - Unknown argument declaration reporting
   - Parse-stage unsupported construct reporting
 
+### C parser
+
+The C frontend is currently parse-only. It supports:
+
+- Raw-source directive metadata for includes, simple macros, conditionals, and
+  pragmas.
+- Compiler-assisted preprocessing through the shared CLI flags, with `#line`
+  and GCC/Clang linemarker remapping back to original source locations.
+- Top-level variables, typedefs, function declarations/definitions, structs,
+  unions, enums, incomplete tags, flexible array member diagnostics, and
+  compatible top-level redeclaration merging.
+- Pointer, array, function, and parenthesized declarator shapes, including
+  function pointer typedefs/parameters and parameter adjustment metadata.
+- Project include/index facts through `parse_c_project(...)`.
+
+C semantic IR conversion, C `.pyi` generation, and C wrap-readiness are still
+intentionally disabled until the C semantic layer is implemented.
+
 ## Public APIs
 
-Public API:
+Public API entrypoints include:
 
-- `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
-- `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
-- `fortran_file_to_semantic_modules(parsed_file, standalone_module_name=None) -> list[SemanticModule]`
-- `assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
-- `assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`
+- `x2py.parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
+- `x2py.parse_fortran_project(files, encoding="utf-8") -> FortranProject`
+- `c_parser.parse_c_file(source_or_path, filename=None, macro_defines=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile`
+- `c_parser.parse_c_project(files, include_dirs=None, macro_defines=None, preprocessing="raw", encoding="utf-8") -> CProject`
+- `x2py.fortran_file_to_semantic_modules(parsed_file, standalone_module_name=None) -> list[SemanticModule]`
+- `x2py.assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
+- `x2py.assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`
+- `x2py.c_type_probe.probe_c_standard_types(config, runner=None) -> CStandardTypeProbeReport`
+- `x2py.evaluate_fortran_type_requirements(config, requirements, runner=None) -> dict[str, int]`
 
 ## Repository layout
 
-Fortran source inputs live under `tests/data/fortran`. Stage-specific tests and expected fixtures live under `tests/parser`, `tests/semantics`, and `tests/pyi`.
+Fortran source inputs live under `tests/data/fortran`. C parser fixtures live
+under `tests/data/c` and C parser tests live under `tests/parser/c`.
+Stage-specific tests and expected fixtures live under `tests/parser`,
+`tests/semantics`, and `tests/pyi`.
 
 The editable wrapper `.pyi` format is documented in
 [`docs/pyi_format.md`](docs/pyi_format.md).
@@ -69,6 +100,9 @@ The editable wrapper `.pyi` format is documented in
 - `--semantics` for semantic IR JSON
 - `--pyi` for generated Python stub text
 - `--wrap-readiness` for semantic wrap-readiness from either Fortran or `.pyi`
+
+Fortran is the default frontend. Use `--language c --parse` for C parser output.
+C semantics, C `.pyi`, and C wrap-readiness currently return explicit errors.
 
 For parse output, `--show-vars` expands scope-level variables that are normally
 summarized as `vars=N`. Use `--print-limit N` to keep large repeated sections
@@ -87,7 +121,72 @@ x2py <path ...> --parse
 ```
 
 `<path ...>` can be one or more files and/or directories. Directories are
-scanned recursively for: `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`, `.f08`.
+scanned recursively for Fortran suffixes by default: `.f`, `.for`, `.ftn`,
+`.f90`, `.f95`, `.f03`, `.f08`. In explicit C mode, directories scan `.c` and
+`.h` files.
+
+### Compiler preprocessing and target probes
+
+The shared compiler mode is:
+
+```bash
+python -m x2py path/to/source --parse \
+  --preprocess compiler \
+  --compiler /path/to/compiler \
+  -I include \
+  -D FEATURE=1 \
+  -U DEBUG \
+  --std f2008 \
+  --compiler-arg=-fdefault-real-8
+```
+
+For C, `--language c --preprocess compiler` runs the exact compiler
+preprocessor and parses stdout. C also supports `--compile-commands
+build/compile_commands.json`; the matching entry supplies the compiler and
+project flags.
+
+Target-dependent type facts are not hard-coded. They are probed with the same
+compiler path and target-relevant flags because results may change with ABI,
+architecture, library headers, and compiler options.
+
+C standard-header facts:
+
+```bash
+python -m x2py.c_type_probe --compiler /usr/bin/gcc-13 \
+  -I include \
+  -D FEATURE=1 \
+  -U DEBUG \
+  --std c11 \
+  --compiler-arg=--sysroot=/opt/sdk
+```
+
+The C probe passes `-I`, `-D`, `-U`, and `--compiler-arg` into the generated
+probe and records the requested `--std`. The generated probe itself is compiled
+as C11 because it uses C11 `_Generic` and `_Alignof`; if a standard-selection
+flag affects the target ABI or headers, pass a compatible override through
+`--compiler-arg`. The probe does not consume `compile_commands.json` directly;
+when the parser uses a compile database, pass the selected compiler and
+target-relevant flags from that entry to the probe explicitly.
+
+Fortran kind/compile-time facts:
+
+```bash
+python -m x2py.fortran_type_probe --compiler /usr/bin/gfortran-12 \
+  --expr 'selected_real_kind(12)' \
+  --expr 'selected_int_kind(9)' \
+  --std f2008 \
+  --compiler-arg=-fdefault-real-8
+```
+
+The Fortran probe passes `-I`, `-D`, `-U`, `--std`, and `--compiler-arg` to the
+generated probe. The semantic CLI path uses this automatically when Fortran
+input is converted with `--preprocess compiler --compiler ...`: it collects
+unresolved compiler-dependent values, evaluates them with the probe, and feeds
+the resulting `compile_time_values` into semantic conversion.
+
+By default the probes execute the generated binary on the host. For cross
+targets, provide a compatible runner/emulator or supply a target profile; host
+execution only describes the host target.
 
 ### Example 1: human-readable output
 
@@ -552,8 +651,11 @@ the signature while still being valid scoped references for readiness checks.
 The semantics layer consumes `FortranFile`/`FortranModule` objects and projects them into language-independent semantic IR (`SemanticModule`, `SemanticFunction`, `SemanticClass`, `SemanticType`). This keeps the semantic API model independent from parser internals, matching the project goal that parser output is a helper and the semantic interface/IR is the source of truth.
 For compiler-specific constants, use
 `collect_semantic_compile_time_requirements(parsed)` to extract unresolved
-values and pass a dictionary to semantic conversion via
-`compile_time_values`.
+values. With a configured Fortran compiler, pass those requirements to
+`evaluate_fortran_type_requirements(config, requirements)` and provide the
+returned dictionary to semantic conversion via `compile_time_values`. The CLI
+does this automatically for Fortran semantic stages when `--preprocess
+compiler --compiler ...` is active.
 
 For Fortran `use` imports, the parser stores each explicit imported symbol as a
 source/target mapping. A non-renamed `use iso_c_binding, only: c_int` maps

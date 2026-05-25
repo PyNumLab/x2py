@@ -883,7 +883,7 @@
             "static"
           ],
           "initializer": {
-            "source_text": ""
+            "source_text": "{\n  0,\n   \"00010203040506070809101112131415161718192021222324\"\n   \"25262728293031323334353637383940414243444546474849\"\n   \"50515253545556575859606162636465666768697071727374\"\n   \"75767778798081828384858687888990919293949596979899\"\n}"
           },
           "bit_width": null,
           "source_location": {
@@ -891,6 +891,293 @@
             "line": 261,
             "column": 1,
             "source_line": "static struct"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbsp__bot",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static double const stbsp__bot[23]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "23",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n   1e+000, 1e+001, 1e+002, 1e+003, 1e+004, 1e+005, 1e+006, 1e+007, 1e+008, 1e+009, 1e+010, 1e+011,\n   1e+012, 1e+013, 1e+014, 1e+015, 1e+016, 1e+017, 1e+018, 1e+019, 1e+020, 1e+021, 1e+022\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_sprintf.h",
+            "line": 1507,
+            "column": 1,
+            "source_line": "static double const stbsp__bot[23] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbsp__negbot",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static double const stbsp__negbot[22]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "22",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n   1e-001, 1e-002, 1e-003, 1e-004, 1e-005, 1e-006, 1e-007, 1e-008, 1e-009, 1e-010, 1e-011,\n   1e-012, 1e-013, 1e-014, 1e-015, 1e-016, 1e-017, 1e-018, 1e-019, 1e-020, 1e-021, 1e-022\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_sprintf.h",
+            "line": 1511,
+            "column": 1,
+            "source_line": "static double const stbsp__negbot[22] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbsp__negboterr",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static double const stbsp__negboterr[22]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "22",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n   -5.551115123125783e-018,  -2.0816681711721684e-019, -2.0816681711721686e-020, -4.7921736023859299e-021, -8.1803053914031305e-022, 4.5251888174113741e-023,\n   4.5251888174113739e-024,  -2.0922560830128471e-025, -6.2281591457779853e-026, -3.6432197315497743e-027, 6.0503030718060191e-028,  2.0113352370744385e-029,\n   -3.0373745563400371e-030, 1.1806906454401013e-032,  -7.7705399876661076e-032, 2.0902213275965398e-033,  -7.1542424054621921e-034, -7.1542424054621926e-035,\n   2.4754073164739869e-036,  5.4846728545790429e-037,  9.2462547772103625e-038,  -4.8596774326570872e-039\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_sprintf.h",
+            "line": 1515,
+            "column": 1,
+            "source_line": "static double const stbsp__negboterr[22] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbsp__top",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static double const stbsp__top[13]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "13",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n   1e+023, 1e+046, 1e+069, 1e+092, 1e+115, 1e+138, 1e+161, 1e+184, 1e+207, 1e+230, 1e+253, 1e+276, 1e+299\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_sprintf.h",
+            "line": 1521,
+            "column": 1,
+            "source_line": "static double const stbsp__top[13] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbsp__negtop",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static double const stbsp__negtop[13]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "13",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n   1e-023, 1e-046, 1e-069, 1e-092, 1e-115, 1e-138, 1e-161, 1e-184, 1e-207, 1e-230, 1e-253, 1e-276, 1e-299\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_sprintf.h",
+            "line": 1524,
+            "column": 1,
+            "source_line": "static double const stbsp__negtop[13] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbsp__toperr",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static double const stbsp__toperr[13]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "13",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n   8388608,\n   6.8601809640529717e+028,\n   -7.253143638152921e+052,\n   -4.3377296974619174e+075,\n   -1.5559416129466825e+098,\n   -3.2841562489204913e+121,\n   -3.7745893248228135e+144,\n   -1.7356668416969134e+167,\n   -3.8893577551088374e+190,\n   -9.9566444326005119e+213,\n   6.3641293062232429e+236,\n   -5.2069140800249813e+259,\n   -5.2504760255204387e+282\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_sprintf.h",
+            "line": 1527,
+            "column": 1,
+            "source_line": "static double const stbsp__toperr[13] = {"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbsp__negtoperr",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static double const stbsp__negtoperr[13]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "13",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CDouble",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const double"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n   3.9565301985100693e-040,  -2.299904345391321e-063,  3.6506201437945798e-086,  1.1875228833981544e-109,\n   -5.0644902316928607e-132, -6.7156837247865426e-155, -2.812077463003139e-178,  -5.7778912386589953e-201,\n   7.4997100559334532e-224,  -4.6439668915134491e-247, -6.3691100762962136e-270, -9.436808465446358e-293,\n   8.0970921678014997e-317\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_sprintf.h",
+            "line": 1542,
+            "column": 1,
+            "source_line": "static double const stbsp__negtoperr[13] = {"
           },
           "callback_policy": null,
           "declaration_locations": []
@@ -2856,7 +3143,7 @@
             "column": 1,
             "source_line": "static stbsp__uint64 const stbsp__powten[20] = {"
           },
-          "source_text": "static stbsp__uint64 const stbsp__powten[20] ="
+          "source_text": "static stbsp__uint64 const stbsp__powten[20] = {\n   1,\n   10,\n   100,\n   1000,\n   10000,\n   100000,\n   1000000,\n   10000000,\n   100000000,\n   1000000000,\n   10000000000,\n   100000000000,\n   1000000000000,\n   10000000000000,\n   100000000000000,\n   1000000000000000,\n   10000000000000000,\n   100000000000000000,\n   1000000000000000000,\n   10000000000000000000U\n}"
         },
         {
           "name": "stbsp__uint64",
@@ -2867,7 +3154,7 @@
             "column": 1,
             "source_line": "static stbsp__uint64 const stbsp__powten[20] = {"
           },
-          "source_text": "static stbsp__uint64 const stbsp__powten[20] ="
+          "source_text": "static stbsp__uint64 const stbsp__powten[20] = {\n   1,\n   10,\n   100,\n   1000,\n   10000,\n   100000,\n   1000000,\n   10000000,\n   100000000,\n   1000000000,\n   10000000000ULL,\n   100000000000ULL,\n   1000000000000ULL,\n   10000000000000ULL,\n   100000000000000ULL,\n   1000000000000000ULL,\n   10000000000000000ULL,\n   100000000000000000ULL,\n   1000000000000000000ULL,\n   10000000000000000000ULL\n}"
         },
         {
           "name": "stbsp__int32",
@@ -3310,97 +3597,6 @@
           },
           "unit_kind": "macro_dependent_declaration",
           "unit_name": "stbsp__int32"
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_sprintf.h",
-            "line": 1507,
-            "column": 1,
-            "source_line": "static double const stbsp__bot[23] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_sprintf.h",
-            "line": 1511,
-            "column": 1,
-            "source_line": "static double const stbsp__negbot[22] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_sprintf.h",
-            "line": 1515,
-            "column": 1,
-            "source_line": "static double const stbsp__negboterr[22] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_sprintf.h",
-            "line": 1521,
-            "column": 1,
-            "source_line": "static double const stbsp__top[13] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_sprintf.h",
-            "line": 1524,
-            "column": 1,
-            "source_line": "static double const stbsp__negtop[13] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_sprintf.h",
-            "line": 1527,
-            "column": 1,
-            "source_line": "static double const stbsp__toperr[13] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_sprintf.h",
-            "line": 1542,
-            "column": 1,
-            "source_line": "static double const stbsp__negtoperr[13] = {"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
         },
         {
           "code": "C_MACRO_DEPENDENT_DECLARATION",
@@ -4033,7 +4229,7 @@
         "static"
       ],
       "initializer": {
-        "source_text": ""
+        "source_text": "{\n  0,\n   \"00010203040506070809101112131415161718192021222324\"\n   \"25262728293031323334353637383940414243444546474849\"\n   \"50515253545556575859606162636465666768697071727374\"\n   \"75767778798081828384858687888990919293949596979899\"\n}"
       },
       "bit_width": null,
       "source_location": {
@@ -4041,6 +4237,293 @@
         "line": 261,
         "column": 1,
         "source_line": "static struct"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbsp__bot": {
+      "name": "stbsp__bot",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static double const stbsp__bot[23]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "23",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CDouble",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const double"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n   1e+000, 1e+001, 1e+002, 1e+003, 1e+004, 1e+005, 1e+006, 1e+007, 1e+008, 1e+009, 1e+010, 1e+011,\n   1e+012, 1e+013, 1e+014, 1e+015, 1e+016, 1e+017, 1e+018, 1e+019, 1e+020, 1e+021, 1e+022\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_sprintf.h",
+        "line": 1507,
+        "column": 1,
+        "source_line": "static double const stbsp__bot[23] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbsp__negbot": {
+      "name": "stbsp__negbot",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static double const stbsp__negbot[22]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "22",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CDouble",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const double"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n   1e-001, 1e-002, 1e-003, 1e-004, 1e-005, 1e-006, 1e-007, 1e-008, 1e-009, 1e-010, 1e-011,\n   1e-012, 1e-013, 1e-014, 1e-015, 1e-016, 1e-017, 1e-018, 1e-019, 1e-020, 1e-021, 1e-022\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_sprintf.h",
+        "line": 1511,
+        "column": 1,
+        "source_line": "static double const stbsp__negbot[22] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbsp__negboterr": {
+      "name": "stbsp__negboterr",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static double const stbsp__negboterr[22]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "22",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CDouble",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const double"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n   -5.551115123125783e-018,  -2.0816681711721684e-019, -2.0816681711721686e-020, -4.7921736023859299e-021, -8.1803053914031305e-022, 4.5251888174113741e-023,\n   4.5251888174113739e-024,  -2.0922560830128471e-025, -6.2281591457779853e-026, -3.6432197315497743e-027, 6.0503030718060191e-028,  2.0113352370744385e-029,\n   -3.0373745563400371e-030, 1.1806906454401013e-032,  -7.7705399876661076e-032, 2.0902213275965398e-033,  -7.1542424054621921e-034, -7.1542424054621926e-035,\n   2.4754073164739869e-036,  5.4846728545790429e-037,  9.2462547772103625e-038,  -4.8596774326570872e-039\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_sprintf.h",
+        "line": 1515,
+        "column": 1,
+        "source_line": "static double const stbsp__negboterr[22] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbsp__top": {
+      "name": "stbsp__top",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static double const stbsp__top[13]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "13",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CDouble",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const double"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n   1e+023, 1e+046, 1e+069, 1e+092, 1e+115, 1e+138, 1e+161, 1e+184, 1e+207, 1e+230, 1e+253, 1e+276, 1e+299\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_sprintf.h",
+        "line": 1521,
+        "column": 1,
+        "source_line": "static double const stbsp__top[13] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbsp__negtop": {
+      "name": "stbsp__negtop",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static double const stbsp__negtop[13]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "13",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CDouble",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const double"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n   1e-023, 1e-046, 1e-069, 1e-092, 1e-115, 1e-138, 1e-161, 1e-184, 1e-207, 1e-230, 1e-253, 1e-276, 1e-299\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_sprintf.h",
+        "line": 1524,
+        "column": 1,
+        "source_line": "static double const stbsp__negtop[13] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbsp__toperr": {
+      "name": "stbsp__toperr",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static double const stbsp__toperr[13]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "13",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CDouble",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const double"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n   8388608,\n   6.8601809640529717e+028,\n   -7.253143638152921e+052,\n   -4.3377296974619174e+075,\n   -1.5559416129466825e+098,\n   -3.2841562489204913e+121,\n   -3.7745893248228135e+144,\n   -1.7356668416969134e+167,\n   -3.8893577551088374e+190,\n   -9.9566444326005119e+213,\n   6.3641293062232429e+236,\n   -5.2069140800249813e+259,\n   -5.2504760255204387e+282\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_sprintf.h",
+        "line": 1527,
+        "column": 1,
+        "source_line": "static double const stbsp__toperr[13] = {"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbsp__negtoperr": {
+      "name": "stbsp__negtoperr",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static double const stbsp__negtoperr[13]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "13",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CDouble",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const double"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n   3.9565301985100693e-040,  -2.299904345391321e-063,  3.6506201437945798e-086,  1.1875228833981544e-109,\n   -5.0644902316928607e-132, -6.7156837247865426e-155, -2.812077463003139e-178,  -5.7778912386589953e-201,\n   7.4997100559334532e-224,  -4.6439668915134491e-247, -6.3691100762962136e-270, -9.436808465446358e-293,\n   8.0970921678014997e-317\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_sprintf.h",
+        "line": 1542,
+        "column": 1,
+        "source_line": "static double const stbsp__negtoperr[13] = {"
       },
       "callback_policy": null,
       "declaration_locations": []
@@ -5029,97 +5512,6 @@
       },
       "unit_kind": "macro_dependent_declaration",
       "unit_name": "stbsp__int32"
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_sprintf.h",
-        "line": 1507,
-        "column": 1,
-        "source_line": "static double const stbsp__bot[23] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_sprintf.h",
-        "line": 1511,
-        "column": 1,
-        "source_line": "static double const stbsp__negbot[22] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_sprintf.h",
-        "line": 1515,
-        "column": 1,
-        "source_line": "static double const stbsp__negboterr[22] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_sprintf.h",
-        "line": 1521,
-        "column": 1,
-        "source_line": "static double const stbsp__top[13] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_sprintf.h",
-        "line": 1524,
-        "column": 1,
-        "source_line": "static double const stbsp__negtop[13] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_sprintf.h",
-        "line": 1527,
-        "column": 1,
-        "source_line": "static double const stbsp__toperr[13] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_sprintf.h",
-        "line": 1542,
-        "column": 1,
-        "source_line": "static double const stbsp__negtoperr[13] = {"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
     },
     {
       "code": "C_MACRO_DEPENDENT_DECLARATION",

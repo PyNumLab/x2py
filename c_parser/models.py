@@ -58,10 +58,32 @@ def c_model_to_dict(obj: Any, _seen: set[int] | None = None) -> Any:
         if isinstance(obj, (CStruct, CUnion, CEnum, CTypedef)):
             _seen.add(id(obj))
         payload = {"model": type(obj).__name__}
-        payload.update({f.name: c_model_to_dict(getattr(obj, f.name), _seen) for f in fields(obj)})
+        payload.update(
+            {
+                f.name: c_model_to_dict(getattr(obj, f.name), _seen)
+                for f in fields(obj)
+                if not (f.name == "origin" and getattr(obj, f.name) is None)
+            }
+        )
         return payload
     if is_dataclass(obj):
-        return {f.name: c_model_to_dict(getattr(obj, f.name), _seen) for f in fields(obj)}
+        return {
+            f.name: c_model_to_dict(getattr(obj, f.name), _seen)
+            for f in fields(obj)
+            if not (
+                (f.name == "origin" and getattr(obj, f.name) is None)
+                or (
+                    isinstance(obj, CFile)
+                    and f.name in {"preprocessing_recipe", "preprocessed_source_path"}
+                    and getattr(obj, f.name) is None
+                )
+                or (
+                    isinstance(obj, CFile)
+                    and f.name == "original_source_paths"
+                    and not getattr(obj, f.name)
+                )
+            )
+        }
     if isinstance(obj, list):
         return [c_model_to_dict(v, _seen) for v in obj]
     if isinstance(obj, dict):
@@ -348,6 +370,7 @@ class CParameter:
     declared_type: CType | None = None
     source_location: CSourceLocation | None = None
     callback_policy: Any = None
+    origin: str | None = None
 
     @property
     def callback_candidate(self) -> bool:
@@ -368,6 +391,7 @@ class CFunction:
     start: CSourceLocation | None = None
     end: CSourceLocation | None = None
     declaration_locations: list[CSourceLocation] = field(default_factory=list)
+    origin: str | None = None
 
     @property
     def type(self) -> CFunctionType:
@@ -386,6 +410,7 @@ class CStruct(CType):
     anonymous_id: str | None = None
     is_incomplete: bool = False
     source_location: CSourceLocation | None = None
+    origin: str | None = None
 
     @property
     def reference_name(self) -> str:
@@ -399,6 +424,7 @@ class CUnion(CType):
     anonymous_id: str | None = None
     is_incomplete: bool = False
     source_location: CSourceLocation | None = None
+    origin: str | None = None
 
     @property
     def reference_name(self) -> str:
@@ -410,6 +436,7 @@ class CEnumerator:
     name: str
     value: str | None = None
     source_location: CSourceLocation | None = None
+    origin: str | None = None
 
 
 @dataclass
@@ -418,6 +445,7 @@ class CEnum(CType):
     constants: list[CEnumerator] = field(default_factory=list)
     anonymous_id: str | None = None
     source_location: CSourceLocation | None = None
+    origin: str | None = None
 
     @property
     def reference_name(self) -> str:
@@ -430,6 +458,7 @@ class CTypedef(CType):
     type: CType | None = None
     source_location: CSourceLocation | None = None
     declaration_locations: list[CSourceLocation] = field(default_factory=list)
+    origin: str | None = None
 
     @property
     def reference_name(self) -> str:
@@ -451,6 +480,7 @@ class CVariable:
     source_location: CSourceLocation | None = None
     callback_policy: Any = None
     declaration_locations: list[CSourceLocation] = field(default_factory=list)
+    origin: str | None = None
 
     @property
     def callback_candidate(self) -> bool:
@@ -495,6 +525,9 @@ class CFile:
     language: str = "c"
     parser_status: str = "partial"
     preprocessing: str = "raw"
+    preprocessing_recipe: dict[str, Any] | None = None
+    preprocessed_source_path: str | None = None
+    original_source_paths: list[str] = field(default_factory=list)
     functions: list[CFunction] = field(default_factory=list)
     structs: list[CStruct] = field(default_factory=list)
     unions: list[CUnion] = field(default_factory=list)

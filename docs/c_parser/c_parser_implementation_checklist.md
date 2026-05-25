@@ -36,8 +36,8 @@ stable.
 
 ## Progress Snapshot
 
-- Last updated: 2026-05-24
-- Checklist progress: 630/872 checked (72.2%).
+- Last updated: 2026-05-25
+- Checklist progress: 668/881 checked (75.8%).
 - Current parser status: partial C parser with raw directive metadata, top-level
   source splitting, simple declarations/variables/typedefs, prototype-style
   metadata, K&R diagnostics, simple function signatures, and start/end
@@ -58,7 +58,21 @@ stable.
   while their effective `type` applies C parameter-to-pointer adjustment. Raw
   conditional directives, pragmas including OpenMP declaration pragmas, and
   macro-shaped declaration dependencies, including object-like declaration
-  prefixes, are recorded as metadata. `parse_c_project`
+  prefixes, are recorded as metadata. The shared x2py CLI now exposes
+  explicit preprocessing flags for C and Fortran, including exact compiler
+  executables, include dirs, defines, undefines, standards, extra compiler
+  args, and C `compile_commands.json`; C compiler mode feeds preprocessed
+  stdout back through the same parser, with `#line`/GCC linemarker remapping
+  for parsed declarations and diagnostics. Compiler/preprocessed declarations
+  carry `origin="preprocessed"`; direct `.i` inputs are discovered and retain
+  generated/original source identities where linemarkers expose them. Nested
+  anonymous struct/union members are represented as member types and preserve
+  mapped member locations. A separate compiler-derived standard-type probe
+  records target facts for `size_t`, `uint32_t`, `time_t`, and opaque `FILE`
+  handles for later semantic conversion without hard-coded ABI assumptions,
+  carrying target-relevant include, macro, undefine, and compiler-argument
+  flags.
+  `parse_c_project`
   returns project include/index facts and
   resolves basic cross-file typedef and tag references while preserving
   unresolved references for later diagnostics. Top-level compatible
@@ -69,9 +83,11 @@ stable.
 
 ## Global Rules
 
-- [ ] Keep all C parser work on `c-parser/main` and child branches until the
-      frontend is stable.
-- [ ] Do not merge C parser work directly into project `main`.
+- [x] Keep C parser work isolated until the parse-only frontend is stable
+      enough for a planned merge.
+- [x] Allow the parse-only C frontend to merge to project `main` before C
+      semantic conversion, as long as C semantic/`.pyi` CLI paths stay
+      explicitly disabled.
 - [ ] Keep the Fortran parser behavior unchanged unless a future task
       explicitly requires shared infrastructure changes.
 - [x] Put C parser implementation in a separate `c_parser` package.
@@ -84,18 +100,18 @@ stable.
       and typed model objects.
 - [x] Store initial C-specific facts in `c_parser/models.py`; defer semantic IR
       extensions until the C parser models prove what information is needed.
-- [ ] Keep the C parser main-merge guard active for C parser branches and
-      paths.
-- [ ] Require the `c-parser-ready-for-main` label only for the final approved
-      merge into project `main`.
+- [x] Keep the C parser main-merge guard active until the final parser-frontend
+      merge decision.
+- [x] Require the `c-parser-ready-for-main` label only for the final approved
+      parser-frontend merge into project `main`.
 - [x] Do not implement a giant regex parser.
 - [x] Do not implement a whole-file scanner as the core architecture.
 - [x] Do not make libclang the only parser architecture.
-- [ ] Do not make compiler preprocessing a replacement for x2py parser models,
+- [x] Do not make compiler preprocessing a replacement for x2py parser models,
       source locations, diagnostics, or project indexes.
 - [x] Preserve the semantic IR layer as the source of truth.
 - [x] Treat documentation as a first-class deliverable in every phase.
-- [ ] Whenever C parser behavior, models, CLI behavior, tests, fixture
+- [x] Whenever C parser behavior, models, CLI behavior, tests, fixture
       workflows, semantic integration, or `.pyi` behavior change, update every
       affected file under `docs/c_parser/` in the same change. Do not wait for
       a separate documentation request.
@@ -431,7 +447,7 @@ Scope:
 - [x] Add project/include parser test file.
 - [x] Add semantic readiness test file when C semantic conversion exists.
 - [x] Add public entrypoint test file.
-- [ ] Add developer tutorial test file once internal helpers exist.
+- [x] Add developer tutorial test file once internal helpers exist.
 - [x] Add CLI test file.
 - [x] Add fixture/golden test file.
 - [x] Add error fixture/golden test file.
@@ -668,23 +684,25 @@ Scope:
 
 ### Compiler-Assisted Preprocessing Tasks
 
-- [ ] Design a preprocessed-input mode for `.i` files.
-- [ ] Design an optional compiler invocation mode for `cc -E` or `clang -E`.
+- [x] Design a preprocessed-input mode for `.i` files.
+- [x] Design an optional compiler invocation mode for `cc -E` or `clang -E`.
 - [x] Document that compiler-assisted preprocessing is required when macros
       affect names, types, declarators, attributes, storage classes, calling
       conventions, visibility annotations, or active conditional branches.
-- [ ] Preserve `#line` markers from compiler-preprocessed input.
-- [ ] Map diagnostics from preprocessed declarations back to original files.
-- [ ] Map parsed model `source_location` fields from preprocessed declarations
+- [x] Preserve `#line` markers from compiler-preprocessed input.
+- [x] Map diagnostics from preprocessed declarations back to original files.
+- [x] Map parsed model `source_location` fields from preprocessed declarations
       back to original files.
-- [ ] Mark preprocessed declarations with origin metadata.
-- [ ] Store the preprocessor command/configuration in `CFile` or `CProject`.
-- [ ] Store original and preprocessed source paths when both exist.
-- [ ] Store macro defines, undefines, include dirs, and compiler/preprocessor
-      executable used to produce the preprocessed stream.
-- [ ] Add tests for parsing a simple `.i` file.
-- [ ] Add tests for `#line` source mapping.
-- [ ] Add tests that macro-generated declarations are parseable only when they
+- [x] Mark preprocessed declarations with origin metadata.
+- [x] Store the preprocessor command/configuration in `CFile` for streams
+      generated through `x2py --preprocess compiler`.
+- [x] Store original and preprocessed source paths when both exist.
+- [x] Store macro defines, undefines, include dirs, and compiler/preprocessor
+      executable used to produce a CLI-generated preprocessed stream.
+- [x] Add tests for parsing a simple `.i` file.
+- [x] Add tests for `#line` source mapping.
+- [x] Add CLI JSON tests for recorded C and Fortran preprocessing recipes.
+- [x] Add tests that macro-generated declarations are parseable only when they
       appear in preprocessed input.
 
 ### Phase 4 Definition Of Done
@@ -696,7 +714,7 @@ Scope:
 - [x] No arbitrary macro expansion is attempted.
 - [x] Compiler-assisted preprocessing has a documented design path for
       macro-heavy APIs.
-- [ ] Tests cover comments, continuations, directive metadata, raw macro
+- [x] Tests cover comments, continuations, directive metadata, raw macro
       deferral, and preprocessed line mapping.
 
 ### Phase 4 Risks And Open Questions
@@ -705,7 +723,7 @@ Scope:
       declarator parsing requires tokens.
 - [x] Decide whether system headers are recorded only or optionally searched.
 - [x] Decide whether `#pragma` should become diagnostics or metadata.
-- [ ] Decide whether compiler invocation belongs in Phase 4 or a later
+- [x] Decide whether compiler invocation belongs in Phase 4 or a later
       project-resolution phase.
 
 ## Phase 5: Declarations And Declarators
@@ -731,6 +749,8 @@ Scope:
 - [x] Parse qualifier `restrict`.
 - [x] Parse qualifier `volatile`.
 - [x] Parse qualifier `_Atomic` as basic metadata.
+- [x] Parse `_Atomic(type)` as an atomic-qualified type specifier using the
+      shared declarator backend.
 - [x] Parse `void`.
 - [x] Parse `char`.
 - [x] Parse `signed char`.
@@ -802,7 +822,7 @@ Scope:
       variables and parameters.
 - [x] Add tests for multidimensional arrays.
 - [x] Add diagnostics for declarations ignored by the current partial parser.
-- [ ] Add structured source facts for declarations that depend on macros.
+- [x] Add structured source facts for declarations that depend on macros.
 
 ### Top-Level Redeclaration Tasks
 
@@ -817,19 +837,22 @@ Scope:
 
 Known declaration implementation gaps, with representative syntax:
 
-- braced/designated initializer preservation:
-  `int values[3] = {1, 2, 3};`
-- nested anonymous aggregate members:
-  `struct outer { struct { int x; } inner; };`
-- cross-declaration resolution/conflict behavior:
+- broader cross-declaration conflict policy beyond basic resolution:
   `typedef unsigned long size_t; size_t count(void);`
-- preprocessed declarations with line mapping:
-  `#define API(ret) ret` followed by `API(int) run(void);`
 
 Represented shapes with dedicated active regression tests:
 
 - multi-level qualifier placement:
   `const int * const * volatile chain;`
+- braced/designated initializer source preservation:
+  `int values[3] = {1, 2, 3};`
+- nested anonymous aggregate members:
+  `struct outer { struct { int x; } inner; };`
+- atomic type specifier component placement:
+  `_Atomic(int *) atomic_pointer; _Atomic(int) *pointer_to_atomic;`
+- preprocessed declaration provenance:
+  `origin="preprocessed"` plus the compiler/configuration that expanded
+  `API(int) run(void);`
 
 ### Phase 5 Definition Of Done
 
@@ -963,7 +986,7 @@ Scope:
 - [x] Parse pointer members.
 - [x] Parse array members, including legal flexible final struct members with
       invalid-placement and union diagnostics.
-- [x] Parse nested anonymous structs as unsupported or metadata.
+- [x] Parse nested anonymous structs/unions as concrete member types.
 - [x] Parse bit-fields as member metadata with semantic limitations.
 - [x] Preserve member order.
 - [x] Preserve precise per-member source locations.
@@ -1050,7 +1073,7 @@ Scope:
 
 - [x] Discover `.c` files in C mode.
 - [x] Discover `.h` files in C mode.
-- [ ] Decide whether `.i` is included now or later.
+- [x] Decide whether `.i` is included now or later.
 - [x] Keep Fortran directory scanning unchanged.
 - [x] Support explicit file lists.
 - [x] Support directory recursion only in explicit C mode.
@@ -1104,6 +1127,21 @@ Scope:
 - [x] Add tests for cross-file struct resolution.
 - [x] Add tests for opaque handles.
 - [x] Add tests for unresolved references.
+
+### Standard-Header ABI Fact Tasks
+
+- [x] Preserve standard-header typedef uses as named source facts unless parsed
+      typedef declarations provide resolution context.
+- [x] Add a compiler-derived executable probe for `size_t`, available
+      `uint32_t`, `time_t`, and opaque `FILE` pointer facts.
+- [x] Record probe compiler, target flags, runner command, and generated C
+      source alongside ABI facts.
+- [x] Document that the probe carries target-relevant `-I`, `-D`, `-U`, and
+      `--compiler-arg` flags, while compiling the generated query as C11 and
+      recording requested `--std` as provenance.
+- [x] Add native-compiler and command-line tests for the probe report contract.
+- [ ] Feed standard-type probe reports into C semantic conversion once Phase
+      10 exists.
 
 ### Header/Source Pairing Tasks
 
@@ -1409,10 +1447,12 @@ Scope:
 
 ### Regression Hardening Tasks
 
+- [x] Run full repository test suite locally.
 - [x] Run full parser tests.
-- [ ] Run semantic tests.
-- [ ] Run `.pyi` tests.
-- [ ] Run C corpus parse-only tests.
+- [x] Run semantic tests.
+- [x] Run `.pyi` tests.
+- [ ] Run C corpus parse-only tests. The current corpus file is still a skipped
+      roadmap test until the corpus workflow is enabled.
 - [x] Run CLI tests.
 - [x] Run golden fixture tests.
 - [x] Confirm Fortran tests still pass.
@@ -1420,18 +1460,21 @@ Scope:
 - [ ] Audit error diagnostic stability.
 - [x] Audit docs for implemented behavior.
 - [x] Remove stale skeleton wording where implementation has matured.
-- [ ] Add developer tutorial for C parser internals.
+- [x] Add developer tutorial for C parser internals.
 - [ ] Add public API reference examples.
 
 ### Stabilization Tasks
 
-- [ ] Decide criteria for merging `c-parser/main` into project `main`.
+- [x] Decide criteria for merging the parse-only C frontend into project
+      `main`: parser/preprocessing/probe contracts green, docs updated, and C
+      semantic/`.pyi` paths still explicitly disabled.
 - [ ] Require green CI for Fortran and C suites.
-- [ ] Require docs updated for implemented subset.
+- [x] Require docs updated for implemented subset.
 - [x] Require fixture/golden workflow documented.
-- [ ] Require semantic and `.pyi` behavior documented.
+- [x] Require semantic and `.pyi` behavior documented as intentionally deferred
+      for C until semantic conversion exists.
 - [ ] Require explicit non-goals still documented.
-- [ ] Require migration notes for users.
+- [x] Require migration notes for users in the README and C parser docs.
 - [ ] Consider adding CI guard requiring C parser docs updates for C parser
       changes, mirroring the Fortran parser reference policy.
 

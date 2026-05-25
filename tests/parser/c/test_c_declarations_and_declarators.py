@@ -383,6 +383,35 @@ _Atomic int atomic_counter;
     assert variables["atomic_counter"].type.qualifiers == [CAtomic()]
 
 
+def test_atomic_type_specifier_qualifies_the_declared_outermost_type():
+    from c_parser import CAtomic, CComposedType, CInt, CPointer, parse_c_file
+
+    parsed = parse_c_file(
+        """
+_Atomic(int) atomic_value;
+_Atomic(int *) atomic_pointer;
+_Atomic(int) *pointer_to_atomic;
+""",
+        filename="atomic_types.h",
+    )
+
+    variables = {variable.name: variable for variable in parsed.variables}
+    assert isinstance(variables["atomic_value"].type, CInt)
+    assert variables["atomic_value"].type.qualifiers == [CAtomic()]
+
+    atomic_pointer = variables["atomic_pointer"].type
+    assert isinstance(atomic_pointer, CComposedType)
+    assert isinstance(atomic_pointer.components[0], CPointer)
+    assert atomic_pointer.components[0].qualifiers == [CAtomic()]
+    assert atomic_pointer.components[1].qualifiers == []
+
+    pointer_to_atomic = variables["pointer_to_atomic"].type
+    assert isinstance(pointer_to_atomic.components[0], CPointer)
+    assert pointer_to_atomic.components[0].qualifiers == []
+    assert pointer_to_atomic.components[1].qualifiers == [CAtomic()]
+    assert parsed.diagnostics == []
+
+
 def test_function_bodies_do_not_contribute_local_variables():
     from c_parser import parse_c_file
 
@@ -527,7 +556,6 @@ def test_unimplemented_declaration_extensions_are_diagnosed_not_partially_modele
 int visible __attribute__((visibility("default")));
 int outdated [[deprecated]];
 _Alignas(16) int aligned_value;
-_Atomic(int) atomic_value;
 """,
         filename="extensions.h",
     )
@@ -537,7 +565,6 @@ _Atomic(int) atomic_value;
         "attribute_declaration",
         "attribute_declaration",
         "alignment_declaration",
-        "atomic_type_declaration",
     ]
 
 
@@ -570,8 +597,8 @@ def test_cxx_declaration_shapes_are_diagnosed_not_partially_modeled(source):
     ] == [("C_UNSUPPORTED_DECLARATION", "cxx_declaration", 1)]
 
 
-def test_braced_initializer_declarations_are_diagnosed_not_declarator_failures():
-    from c_parser import parse_c_file
+def test_braced_and_designated_initializer_declarations_preserve_source_text():
+    from c_parser import CArray, CComposedType, parse_c_file
 
     parsed = parse_c_file(
         "struct config;\n"
@@ -581,14 +608,14 @@ def test_braced_initializer_declarations_are_diagnosed_not_declarator_failures()
         filename="braced_initializers.h",
     )
 
-    assert [variable.name for variable in parsed.variables] == ["scalar"]
-    assert [
-        (diagnostic.code, diagnostic.unit_kind, diagnostic.location.line)
-        for diagnostic in parsed.diagnostics
-    ] == [
-        ("C_UNSUPPORTED_DECLARATION", "braced_initializer_declaration", 2),
-        ("C_UNSUPPORTED_DECLARATION", "braced_initializer_declaration", 3),
-    ]
+    variables = {variable.name: variable for variable in parsed.variables}
+    assert set(variables) == {"values", "cfg", "scalar"}
+    assert isinstance(variables["values"].type, CComposedType)
+    assert isinstance(variables["values"].type.components[0], CArray)
+    assert variables["values"].initializer.source_text == "{1, 2, 3}"
+    assert variables["cfg"].initializer.source_text == "{.enabled = 1}"
+    assert variables["scalar"].initializer.source_text == "1"
+    assert parsed.diagnostics == []
 
 
 def test_unconsumed_declarator_suffixes_are_diagnosed_not_silently_discarded():

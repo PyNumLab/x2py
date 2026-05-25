@@ -5206,6 +5206,203 @@
           },
           "callback_policy": null,
           "declaration_locations": []
+        },
+        {
+          "name": "stbhw__black",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static unsigned char stbhw__black[3]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{ 0,0,0 }"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_herringbone_wang_tile.h",
+            "line": 978,
+            "column": 1,
+            "source_line": "static unsigned char stbhw__black[3] = { 0,0,0 };"
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbhw__color",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "static unsigned char stbhw__color[7][8][3]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "7",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "8",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "storage": [
+            "static"
+          ],
+          "initializer": {
+            "source_text": "{\n   { {255,51,51}  , {143,143,29}, {0,199,199}, {159,119,199},     {0,149,199}  , {143, 0,143}, {255,128,0}, {64,255,0},  },\n   { {235,255,30 }, {255,0,255},  {199,139,119},  {29,143, 57},    {143,0,71}   , { 0,143,143}, {0,99,199}, {143,71,0},  },\n   { {0,149,199}  , {143, 0,143}, {255,128,0}, {64,255,0},        {255,191,0}  , {51,255,153}, {0,0,143}, {199,119,159},},\n   { {143,0,71}   , { 0,143,143}, {0,99,199}, {143,71,0},         {255,190,153}, { 0,255,255}, {128,0,255}, {255,51,102},},\n   { {255,191,0}  , {51,255,153}, {0,0,143}, {199,119,159},       {255,51,51}  , {143,143,29}, {0,199,199}, {159,119,199},},\n   { {255,190,153}, { 0,255,255}, {128,0,255}, {255,51,102},      {235,255,30 }, {255,0,255}, {199,139,119},  {29,143, 57}, },\n\n   { {40,40,40 },  { 90,90,90 }, { 150,150,150 }, { 200,200,200 },\n     { 255,90,90 }, { 160,160,80}, { 50,150,150 }, { 200,50,200 } },\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_herringbone_wang_tile.h",
+            "line": 984,
+            "column": 1,
+            "source_line": "static unsigned char stbhw__color[7][8][3] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbhw__corner_colors",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "unsigned char stbhw__corner_colors[4][4][3]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "4",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "4",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "3",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CUnsignedChar",
+                "qualifiers": [],
+                "source_text": "unsigned char"
+              }
+            ]
+          },
+          "storage": [],
+          "initializer": {
+            "source_text": "{\n   { { 255,0,0 }, { 200,200,200 }, { 100,100,200 }, { 255,200,150 }, },\n   { { 0,0,255 }, { 255,255,0 },   { 100,200,100 }, { 150,255,200 }, },\n   { { 255,0,255 }, { 80,80,80 },  { 200,100,100 }, { 200,150,255 }, },\n   { { 0,255,255 }, { 0,255,0 },   { 200,120,200 }, { 255,200,200 }, },\n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_herringbone_wang_tile.h",
+            "line": 1055,
+            "column": 1,
+            "source_line": "unsigned char stbhw__corner_colors[4][4][3] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "stbhw__corner_colors_to_edge_color",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "int stbhw__corner_colors_to_edge_color[4][4]",
+            "components": [
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "4",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CArray",
+                "qualifiers": [],
+                "source_text": "",
+                "bound": "4",
+                "is_static_minimum": false,
+                "is_variable_length": false,
+                "is_flexible": false
+              },
+              {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int"
+              }
+            ]
+          },
+          "storage": [],
+          "initializer": {
+            "source_text": "{\n                   \n   {  0,  1,  4,  9, },     \n   {  2,  3,  5, 10, },     \n   {  6,  7,  8, 11, },     \n   { 12, 13, 14, 15, },     \n}"
+          },
+          "bit_width": null,
+          "source_location": {
+            "filename": "stb/stb_herringbone_wang_tile.h",
+            "line": 1063,
+            "column": 1,
+            "source_line": "int stbhw__corner_colors_to_edge_color[4][4] ="
+          },
+          "callback_policy": null,
+          "declaration_locations": []
         }
       ],
       "macros": [
@@ -5869,58 +6066,6 @@
           },
           "unit_kind": "macro_dependent_declaration",
           "unit_name": "STBHW_EXTERN"
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_herringbone_wang_tile.h",
-            "line": 978,
-            "column": 1,
-            "source_line": "static unsigned char stbhw__black[3] = { 0,0,0 };"
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_herringbone_wang_tile.h",
-            "line": 984,
-            "column": 1,
-            "source_line": "static unsigned char stbhw__color[7][8][3] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_herringbone_wang_tile.h",
-            "line": 1055,
-            "column": 1,
-            "source_line": "unsigned char stbhw__corner_colors[4][4][3] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "Braced or designated initializer declarations are not supported yet.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_herringbone_wang_tile.h",
-            "line": 1063,
-            "column": 1,
-            "source_line": "int stbhw__corner_colors_to_edge_color[4][4] ="
-          },
-          "unit_kind": "braced_initializer_declaration",
-          "unit_name": null
         },
         {
           "code": "C_MACRO_DEPENDENT_DECLARATION",
@@ -10225,6 +10370,203 @@
       },
       "callback_policy": null,
       "declaration_locations": []
+    },
+    "stbhw__black": {
+      "name": "stbhw__black",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static unsigned char stbhw__black[3]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "3",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CUnsignedChar",
+            "qualifiers": [],
+            "source_text": "unsigned char"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{ 0,0,0 }"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_herringbone_wang_tile.h",
+        "line": 978,
+        "column": 1,
+        "source_line": "static unsigned char stbhw__black[3] = { 0,0,0 };"
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbhw__color": {
+      "name": "stbhw__color",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "static unsigned char stbhw__color[7][8][3]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "7",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "8",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "3",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CUnsignedChar",
+            "qualifiers": [],
+            "source_text": "unsigned char"
+          }
+        ]
+      },
+      "storage": [
+        "static"
+      ],
+      "initializer": {
+        "source_text": "{\n   { {255,51,51}  , {143,143,29}, {0,199,199}, {159,119,199},     {0,149,199}  , {143, 0,143}, {255,128,0}, {64,255,0},  },\n   { {235,255,30 }, {255,0,255},  {199,139,119},  {29,143, 57},    {143,0,71}   , { 0,143,143}, {0,99,199}, {143,71,0},  },\n   { {0,149,199}  , {143, 0,143}, {255,128,0}, {64,255,0},        {255,191,0}  , {51,255,153}, {0,0,143}, {199,119,159},},\n   { {143,0,71}   , { 0,143,143}, {0,99,199}, {143,71,0},         {255,190,153}, { 0,255,255}, {128,0,255}, {255,51,102},},\n   { {255,191,0}  , {51,255,153}, {0,0,143}, {199,119,159},       {255,51,51}  , {143,143,29}, {0,199,199}, {159,119,199},},\n   { {255,190,153}, { 0,255,255}, {128,0,255}, {255,51,102},      {235,255,30 }, {255,0,255}, {199,139,119},  {29,143, 57}, },\n\n   { {40,40,40 },  { 90,90,90 }, { 150,150,150 }, { 200,200,200 },\n     { 255,90,90 }, { 160,160,80}, { 50,150,150 }, { 200,50,200 } },\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_herringbone_wang_tile.h",
+        "line": 984,
+        "column": 1,
+        "source_line": "static unsigned char stbhw__color[7][8][3] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbhw__corner_colors": {
+      "name": "stbhw__corner_colors",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "unsigned char stbhw__corner_colors[4][4][3]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "4",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "4",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "3",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CUnsignedChar",
+            "qualifiers": [],
+            "source_text": "unsigned char"
+          }
+        ]
+      },
+      "storage": [],
+      "initializer": {
+        "source_text": "{\n   { { 255,0,0 }, { 200,200,200 }, { 100,100,200 }, { 255,200,150 }, },\n   { { 0,0,255 }, { 255,255,0 },   { 100,200,100 }, { 150,255,200 }, },\n   { { 255,0,255 }, { 80,80,80 },  { 200,100,100 }, { 200,150,255 }, },\n   { { 0,255,255 }, { 0,255,0 },   { 200,120,200 }, { 255,200,200 }, },\n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_herringbone_wang_tile.h",
+        "line": 1055,
+        "column": 1,
+        "source_line": "unsigned char stbhw__corner_colors[4][4][3] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
+    },
+    "stbhw__corner_colors_to_edge_color": {
+      "name": "stbhw__corner_colors_to_edge_color",
+      "type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "int stbhw__corner_colors_to_edge_color[4][4]",
+        "components": [
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "4",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CArray",
+            "qualifiers": [],
+            "source_text": "",
+            "bound": "4",
+            "is_static_minimum": false,
+            "is_variable_length": false,
+            "is_flexible": false
+          },
+          {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          }
+        ]
+      },
+      "storage": [],
+      "initializer": {
+        "source_text": "{\n                   \n   {  0,  1,  4,  9, },     \n   {  2,  3,  5, 10, },     \n   {  6,  7,  8, 11, },     \n   { 12, 13, 14, 15, },     \n}"
+      },
+      "bit_width": null,
+      "source_location": {
+        "filename": "stb/stb_herringbone_wang_tile.h",
+        "line": 1063,
+        "column": 1,
+        "source_line": "int stbhw__corner_colors_to_edge_color[4][4] ="
+      },
+      "callback_policy": null,
+      "declaration_locations": []
     }
   },
   "macros": {
@@ -10560,58 +10902,6 @@
       },
       "unit_kind": "macro_dependent_declaration",
       "unit_name": "STBHW_EXTERN"
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_herringbone_wang_tile.h",
-        "line": 978,
-        "column": 1,
-        "source_line": "static unsigned char stbhw__black[3] = { 0,0,0 };"
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_herringbone_wang_tile.h",
-        "line": 984,
-        "column": 1,
-        "source_line": "static unsigned char stbhw__color[7][8][3] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_herringbone_wang_tile.h",
-        "line": 1055,
-        "column": 1,
-        "source_line": "unsigned char stbhw__corner_colors[4][4][3] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "Braced or designated initializer declarations are not supported yet.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_herringbone_wang_tile.h",
-        "line": 1063,
-        "column": 1,
-        "source_line": "int stbhw__corner_colors_to_edge_color[4][4] ="
-      },
-      "unit_kind": "braced_initializer_declaration",
-      "unit_name": null
     },
     {
       "code": "C_MACRO_DEPENDENT_DECLARATION",

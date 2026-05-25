@@ -1,4 +1,42 @@
 # -*- coding: utf-8 -*-
+"""Partial C parser for wrapper-oriented declaration extraction.
+
+Parsing sketch
+==============
+
+The public wrappers call the same orchestration object:
+
+    parse_c_file(...) -> CParser.visit_file(...) -> CFile
+    parse_c_project(...) -> CParser.visit_project(...) -> CProject
+
+One source file follows this path:
+
+    source text/path
+      -> raw directive metadata, or compiler/preprocessed line mappings
+      -> split_top_level_c_source(...) -> CTopLevelSegment objects
+      -> _parse_translation_unit(...)
+           -> _parse_tag_definition(...) -> _parse_fields(...)
+           -> _parse_function(...)
+           -> _parse_declaration(...)
+      -> _normalize_redeclarations(...)
+      -> typed CFile declarations and diagnostics
+
+Declarations share one type-construction path. For example:
+
+    const int *values[4]
+      -> _split_declaration_specifiers: ("const int", "*values[4]")
+      -> _parse_specifiers: CInt qualified with CConst
+      -> _parse_declarator: name "values", array and pointer operations
+      -> _apply_declarator_operations: CArray -> CPointer -> CInt
+
+This is why typedefs, variables, function parameters, and aggregate members
+obtain types with the same declarator rules. Raw preprocessing records macro
+dependencies without expanding them; compiler/preprocessed input is parsed by
+the same route after linemarkers are mapped back to original source locations.
+
+Executable walkthroughs live in
+``tests/parser/c/test_c_parser_developer_tutorial.py``.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,6 +46,7 @@ from pathlib import Path, PurePosixPath
 
 from .lexer import (
     CTopLevelSegment,
+    line_mappings_for_source,
     split_top_level_c_source,
     strip_c_comments,
     top_level_partition,
@@ -63,8 +102,7 @@ from .models import (
 from .preprocessor import collect_preprocessor_metadata
 from .type_resolver import resolve_project_types
 
-
-_C_SOURCE_SUFFIXES = {".c", ".h"}
+_C_SOURCE_SUFFIXES = {".c", ".h", ".i"}
 _IDENTIFIER_RE = re.compile(r"[A-Za-z_]\w*")
 _STORAGE_CLASSES = {"typedef", "extern", "static", "register", "_Thread_local"}
 _TYPE_QUALIFIERS = {"const", "restrict", "volatile", "_Atomic"}
@@ -76,7 +114,6 @@ _UNSUPPORTED_DECLARATION_MARKERS = (
     "[[",
     "_Alignas",
     "alignas",
-    "_Atomic(",
 )
 _CXX_DECLARATION_KEYWORDS = {"using", "namespace", "template", "class"}
 _CXX_ACCESS_SPECIFIERS = {"public", "private", "protected"}
@@ -144,11 +181,15 @@ _PRIMITIVE_TYPE_SIGNATURES = {
 
 @dataclass
 class _PointerOp:
+    """Declarator operation representing one pointer layer."""
+
     qualifiers: list[str]
 
 
 @dataclass
 class _ArrayOp:
+    """Declarator operation representing one array suffix."""
+
     size: str | None = None
     static: bool = False
     qualifiers: list[str] | None = None
@@ -157,6 +198,8 @@ class _ArrayOp:
 
 @dataclass
 class _FunctionOp:
+    """Declarator operation representing one function suffix."""
+
     parameters: list[CParameter]
     variadic: bool = False
     prototype_style: str | None = None
@@ -164,20 +207,27 @@ class _FunctionOp:
 
 @dataclass
 class _ParsedDeclarator:
+    """Name plus type-construction operations parsed from a declarator."""
+
     name: str | None
     operations: list[_PointerOp | _ArrayOp | _FunctionOp]
     source_text: str = ""
 
 
 class _UnsupportedDeclaratorSyntax(ValueError):
+    """Raised internally when a declarator has unconsumed syntax."""
+
     pass
 
 
 class _InvalidSpecifierSequence(ValueError):
+    """Raised internally when declaration specifiers are not valid C."""
+
     pass
 
 
 def _looks_like_existing_source_path(value: object) -> bool:
+    """Return whether `value` can safely be treated as an existing source path."""
     if isinstance(value, Path):
         return value.is_file()
     if not isinstance(value, str) or not value or "\n" in value:
@@ -189,6 +239,7 @@ def _looks_like_existing_source_path(value: object) -> bool:
 
 
 def _collect_c_paths(path: Path) -> list[Path]:
+    """Collect C source/header files below a directory in stable order."""
     return sorted(
         p
         for p in path.rglob("*")
@@ -197,10 +248,12 @@ def _collect_c_paths(path: Path) -> list[Path]:
 
 
 def _posix_key(path: str | Path | PurePosixPath) -> str:
+    """Normalize a filesystem-ish path to the project JSON key spelling."""
     return PurePosixPath(str(path)).as_posix()
 
 
 def _include_key_from_current(current_key: str, target: str) -> str:
+    """Resolve an include target key relative to the current file key."""
     current_parent = PurePosixPath(current_key).parent
     if str(current_parent) == ".":
         return _posix_key(target)
@@ -208,14 +261,17 @@ def _include_key_from_current(current_key: str, target: str) -> str:
 
 
 def _is_header_key(key: str) -> bool:
+    """Return whether a project key names a C header."""
     return PurePosixPath(key).suffix.lower() == ".h"
 
 
 def _is_source_key(key: str) -> bool:
+    """Return whether a project key names a C source file."""
     return PurePosixPath(key).suffix.lower() == ".c"
 
 
 def _looks_like_cxx_declaration(text: str) -> bool:
+    """Detect obvious C++ declarations so they become explicit diagnostics."""
     stripped = text.lstrip()
     identifier = _IDENTIFIER_RE.match(stripped)
     if identifier is None:
@@ -230,31 +286,284 @@ def _looks_like_cxx_declaration(text: str) -> bool:
 
 
 class CParser:
-    """C parser entrypoint for the currently implemented C subset.
+    """Parser orchestration object for the partial typed C model.
 
-    The implemented subset covers raw preprocessing metadata, recursive
-    declarators, aggregate declarations, typedefs, and function signatures.
+    The instance carries no parse stack; per-call input and preprocessing
+    configuration flow explicitly through `visit_file` and `visit_project`.
+    See the module sketch and developer tutorial tests for the helper path.
     """
 
+    # ------------------------------------------------------------------
+    # Public visitor entrypoints
+    # ------------------------------------------------------------------
+
+    def visit_file(
+        self,
+        source_or_path: str | Path,
+        filename: str | None = None,
+        *,
+        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+        include_dirs: Sequence[str | Path] | None = None,
+        preprocessing: str = "raw",
+        encoding: str = "utf-8",
+    ) -> CFile:
+        """Parse one source string/path into a `CFile` parser model.
+
+        The current implementation supports raw preprocessing metadata,
+        compiler-fed preprocessed text, and the partial grammar subset
+        documented in `docs/c_parser`. `macro_defines` is accepted for API
+        compatibility with compiler-assisted preprocessing, but raw mode does
+        not evaluate conditional branches.
+        """
+        del macro_defines
+        source_path: Path | None = None
+        if _looks_like_existing_source_path(source_or_path):
+            path = Path(source_or_path)
+            source_path = path
+            if filename is None:
+                filename = str(path)
+            source = path.read_text(encoding=encoding)
+        else:
+            source = str(source_or_path)
+
+        inferred_preprocessed_path = (
+            filename
+            if filename is not None and PurePosixPath(filename).suffix.lower() == ".i"
+            else None
+        )
+        if preprocessing == "raw" and inferred_preprocessed_path is not None:
+            preprocessing = "preprocessed"
+
+        parsed = CFile(filename=filename, parser_status="partial", preprocessing=preprocessing)
+        if preprocessing == "raw":
+            effective_include_dirs = list(include_dirs or ())
+            if source_path is not None:
+                effective_include_dirs.insert(0, source_path.parent)
+            metadata = collect_preprocessor_metadata(
+                source,
+                filename=filename,
+                include_dirs=effective_include_dirs,
+            )
+            parsed.includes = metadata.includes
+            parsed.macros = metadata.macros
+            parsed.raw_directives = metadata.raw_directives
+            function_like_macro_names = {macro.name for macro in metadata.macros if macro.function_like}
+            object_like_macro_names = {
+                macro.name
+                for macro in metadata.macros
+                if macro.directive == "define" and not macro.function_like
+            }
+            parsed.macro_dependencies = self._macro_dependencies(
+                source,
+                filename,
+                function_like_macro_names,
+                object_like_macro_names,
+            )
+            parsed.diagnostics = metadata.diagnostics
+            functions, structs, unions, enums, typedefs, variables, parser_diagnostics = self._parse_translation_unit(
+                source,
+                filename,
+                function_like_macros=function_like_macro_names,
+                object_like_macros=object_like_macro_names,
+            )
+            parsed.functions = functions
+            parsed.structs = structs
+            parsed.unions = unions
+            parsed.enums = enums
+            parsed.typedefs = typedefs
+            parsed.variables = variables
+            parsed.diagnostics.extend(parser_diagnostics)
+            self._normalize_redeclarations(parsed)
+        elif preprocessing in {"compiler", "preprocessed"}:
+            parsed.preprocessed_source_path = inferred_preprocessed_path
+            functions, structs, unions, enums, typedefs, variables, parser_diagnostics = self._parse_translation_unit(
+                source,
+                filename,
+                use_linemarkers=True,
+            )
+            parsed.functions = functions
+            parsed.structs = structs
+            parsed.unions = unions
+            parsed.enums = enums
+            parsed.typedefs = typedefs
+            parsed.variables = variables
+            parsed.diagnostics.extend(parser_diagnostics)
+            self._normalize_redeclarations(parsed)
+            self._mark_preprocessed_declarations(parsed)
+            parsed.original_source_paths = self._original_source_paths(
+                source,
+                filename,
+                preprocessed_source_path=parsed.preprocessed_source_path,
+            )
+        else:
+            raise ValueError(
+                "C preprocessing mode must be 'raw', 'compiler', or 'preprocessed'."
+            )
+        return parsed
+
+    def visit_project(
+        self,
+        files: Mapping[str, str] | Sequence[str | Path] | str | Path,
+        *,
+        include_dirs: Sequence[str | Path] | None = None,
+        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
+        preprocessing: str = "raw",
+        encoding: str = "utf-8",
+    ) -> CProject:
+        """Parse a mapping, file list, single file, or directory into a `CProject`."""
+        if isinstance(files, Mapping):
+            parsed_files = {
+                name: self.visit_file(
+                    source,
+                    filename=name,
+                    include_dirs=include_dirs,
+                    macro_defines=macro_defines,
+                    preprocessing=preprocessing,
+                    encoding=encoding,
+                )
+                for name, source in files.items()
+            }
+            return self._build_project(parsed_files)
+
+        paths: list[Path] = []
+        root: Path | None = None
+        if isinstance(files, (str, Path)):
+            path = Path(files)
+            if path.is_dir():
+                root = path
+                paths = _collect_c_paths(path)
+            else:
+                paths = [path]
+        else:
+            paths = [Path(p) for p in files]
+
+        parsed_files: dict[str, CFile] = {}
+        for path in sorted(paths):
+            key = path.name if root is not None else str(path)
+            if root is not None:
+                key = str(path.relative_to(root))
+            parsed_files[key] = self.visit_file(
+                path,
+                filename=key,
+                include_dirs=include_dirs,
+                macro_defines=macro_defines,
+                preprocessing=preprocessing,
+                encoding=encoding,
+            )
+        return self._build_project(parsed_files)
+
+    # ------------------------------------------------------------------
+    # Source locations, diagnostics, and macro provenance
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _mark_preprocessed_declarations(parsed: CFile) -> None:
+        """Mark declarations extracted from an externally preprocessed stream."""
+        seen_types: set[int] = set()
+
+        def mark_type(type_: CType | None) -> None:
+            if type_ is None:
+                return
+            if isinstance(type_, CComposedType):
+                for component in type_.components:
+                    mark_type(component)
+                return
+            if isinstance(type_, CFunctionType):
+                mark_type(type_.result_type)
+                for parameter_type in type_.parameter_types:
+                    mark_type(parameter_type)
+                return
+            if isinstance(type_, (CStruct, CUnion)):
+                if id(type_) in seen_types:
+                    return
+                seen_types.add(id(type_))
+                type_.origin = "preprocessed"
+                for member in type_.members:
+                    mark_variable(member)
+                return
+            if isinstance(type_, CEnum):
+                if id(type_) in seen_types:
+                    return
+                seen_types.add(id(type_))
+                type_.origin = "preprocessed"
+                for constant in type_.constants:
+                    constant.origin = "preprocessed"
+                return
+            if isinstance(type_, CTypedef):
+                if id(type_) in seen_types:
+                    return
+                seen_types.add(id(type_))
+                type_.origin = "preprocessed"
+                mark_type(type_.type)
+
+        def mark_variable(variable: CVariable) -> None:
+            variable.origin = "preprocessed"
+            mark_type(variable.type)
+
+        for function in parsed.functions:
+            function.origin = "preprocessed"
+            mark_type(function.result_type)
+            for parameter in function.parameters:
+                parameter.origin = "preprocessed"
+                mark_type(parameter.type)
+                mark_type(parameter.declared_type)
+        for aggregate in [*parsed.structs, *parsed.unions]:
+            mark_type(aggregate)
+        for enum in parsed.enums:
+            mark_type(enum)
+        for typedef in parsed.typedefs:
+            typedef.origin = "preprocessed"
+            mark_type(typedef.type)
+        for variable in parsed.variables:
+            mark_variable(variable)
+
+    @staticmethod
+    def _original_source_paths(
+        source: str,
+        filename: str | None,
+        *,
+        preprocessed_source_path: str | None,
+    ) -> list[str]:
+        """Collect non-generated source identities referenced by linemarkers."""
+        paths: list[str] = []
+        for mapping in line_mappings_for_source(source, filename=filename, use_linemarkers=True):
+            path = mapping.filename
+            if (
+                path is None
+                or path == preprocessed_source_path
+                or (path.startswith("<") and path.endswith(">"))
+                or path in paths
+            ):
+                continue
+            paths.append(path)
+        return paths
+
     def _source_location_at(self, segment: CTopLevelSegment, offset: int) -> CSourceLocation:
+        """Return the original source location for `offset` inside a segment."""
         prefix = segment.text[:offset]
         line_offset = prefix.count("\n")
         line = segment.original_start_line + line_offset
+        filename = segment.filename
         if line_offset:
             column = len(prefix.rsplit("\n", 1)[-1]) + 1
         else:
             column = segment.original_start_column + len(prefix)
         source_line = segment.original_source_line
+        if line_offset < len(segment.original_line_numbers):
+            line = segment.original_line_numbers[line_offset]
+        if line_offset < len(segment.original_filenames):
+            filename = segment.original_filenames[line_offset]
         if line_offset and line_offset < len(segment.original_source_lines):
             source_line = segment.original_source_lines[line_offset]
         return CSourceLocation(
-            filename=segment.filename,
+            filename=filename,
             line=line,
             column=column,
             source_line=source_line,
         )
 
     def _source_location(self, segment: CTopLevelSegment) -> CSourceLocation:
+        """Return the original start location for a top-level segment."""
         return self._source_location_at(segment, 0)
 
     def _macro_dependencies(
@@ -264,6 +573,7 @@ class CParser:
         function_like_macro_names: set[str],
         object_like_macro_names: set[str] | None = None,
     ) -> list[CMacroDependency]:
+        """Collect top-level declaration dependencies on known macro names."""
         dependencies: list[CMacroDependency] = []
         if not function_like_macro_names and not object_like_macro_names:
             return dependencies
@@ -284,6 +594,7 @@ class CParser:
         function_like_macro_names: set[str],
         object_like_macro_names: set[str] | None = None,
     ) -> CMacroDependency | None:
+        """Return the first macro dependency that blocks parsing this segment."""
         text = segment.text.strip()
         if not text:
             return None
@@ -319,6 +630,7 @@ class CParser:
         *,
         function_like: bool,
     ) -> CDiagnostic:
+        """Build a warning for a declaration that requires macro expansion."""
         macro_kind = "function-like" if function_like else "object-like"
         return CDiagnostic(
             code="C_MACRO_DEPENDENT_DECLARATION",
@@ -333,6 +645,7 @@ class CParser:
         )
 
     def _has_unsupported_declaration_marker(self, text: str) -> bool:
+        """Return whether `text` contains a known unsupported declaration marker."""
         return any(marker in text for marker in _UNSUPPORTED_DECLARATION_MARKERS)
 
     def _redeclaration_diagnostic(
@@ -343,6 +656,7 @@ class CParser:
         unit_kind: str,
         unit_name: str | None,
     ) -> CDiagnostic:
+        """Build a normalized redeclaration/conflict diagnostic."""
         return CDiagnostic(
             code=code,
             message=message,
@@ -357,10 +671,16 @@ class CParser:
         locations: list[CSourceLocation],
         location: CSourceLocation | None,
     ) -> None:
+        """Append a declaration location once, preserving encounter order."""
         if location is not None and location not in locations:
             locations.append(location)
 
+    # ------------------------------------------------------------------
+    # Redeclaration compatibility and normalization
+    # ------------------------------------------------------------------
+
     def _type_key(self, type_: CType, seen: set[int] | None = None) -> tuple:
+        """Return a cycle-safe structural key used for type compatibility."""
         if seen is None:
             seen = set()
         object_id = id(type_)
@@ -407,12 +727,15 @@ class CParser:
         return (type(type_).__name__, qualifiers)
 
     def _types_compatible(self, left: CType, right: CType) -> bool:
+        """Return whether two parser type models are structurally compatible."""
         return self._type_key(left) == self._type_key(right)
 
     def _unspecified_function_declaration(self, function: CFunction) -> bool:
+        """Return whether `function` is an old C empty-parameter declaration."""
         return function.prototype_style == "unspecified" and not function.parameters
 
     def _functions_compatible(self, left: CFunction, right: CFunction) -> bool:
+        """Return whether two function declarations can denote one function."""
         if not self._types_compatible(left.result_type, right.result_type):
             return False
         if self._unspecified_function_declaration(left) or self._unspecified_function_declaration(right):
@@ -429,6 +752,7 @@ class CParser:
         existing: CFunction,
         incoming: CFunction,
     ) -> CFunction:
+        """Merge compatible function declarations, preferring definitions."""
         if incoming.is_definition and not existing.is_definition:
             merged = incoming
             for location in existing.declaration_locations:
@@ -446,6 +770,7 @@ class CParser:
         functions: list[CFunction],
         diagnostics: list[CDiagnostic],
     ) -> list[CFunction]:
+        """Merge compatible functions and report duplicate/conflicting ones."""
         by_name: dict[str, CFunction] = {}
         order: list[str] = []
 
@@ -485,6 +810,7 @@ class CParser:
         return [by_name[name] for name in order]
 
     def _is_variable_definition(self, variable: CVariable) -> bool:
+        """Return whether a file-scope variable has an initializer."""
         return variable.initializer is not None
 
     def _merge_variable_declaration(
@@ -492,6 +818,7 @@ class CParser:
         existing: CVariable,
         incoming: CVariable,
     ) -> CVariable:
+        """Merge compatible file-scope variable declarations."""
         if self._is_variable_definition(incoming) and not self._is_variable_definition(existing):
             merged = incoming
             for location in existing.declaration_locations:
@@ -509,6 +836,7 @@ class CParser:
         variables: list[CVariable],
         diagnostics: list[CDiagnostic],
     ) -> list[CVariable]:
+        """Merge tentative variables and report duplicate/conflicting definitions."""
         by_name: dict[str, CVariable] = {}
         order: list[str] = []
 
@@ -554,6 +882,7 @@ class CParser:
         typedefs: list[CTypedef],
         diagnostics: list[CDiagnostic],
     ) -> list[CTypedef]:
+        """Merge repeated compatible typedefs and report conflicts."""
         by_name: dict[str, CTypedef] = {}
         order: list[str] = []
 
@@ -587,6 +916,7 @@ class CParser:
         structs: list[CStruct],
         diagnostics: list[CDiagnostic],
     ) -> list[CStruct]:
+        """Merge incomplete/complete struct tags and report duplicate definitions."""
         by_name: dict[str, CStruct] = {}
         ordered: list[CStruct] = []
 
@@ -621,6 +951,7 @@ class CParser:
         unions: list[CUnion],
         diagnostics: list[CDiagnostic],
     ) -> list[CUnion]:
+        """Merge incomplete/complete union tags and report duplicate definitions."""
         by_name: dict[str, CUnion] = {}
         ordered: list[CUnion] = []
 
@@ -655,6 +986,7 @@ class CParser:
         enums: list[CEnum],
         diagnostics: list[CDiagnostic],
     ) -> list[CEnum]:
+        """Report duplicate enum definitions while preserving first definitions."""
         by_name: dict[str, CEnum] = {}
         ordered: list[CEnum] = []
 
@@ -679,6 +1011,7 @@ class CParser:
         return ordered
 
     def _normalize_redeclarations(self, parsed: CFile) -> None:
+        """Normalize top-level redeclarations in one parsed file in place."""
         parsed.structs = self._deduplicate_structs(parsed.structs, parsed.diagnostics)
         parsed.unions = self._deduplicate_unions(parsed.unions, parsed.diagnostics)
         parsed.enums = self._deduplicate_enums(parsed.enums, parsed.diagnostics)
@@ -687,14 +1020,25 @@ class CParser:
         parsed.functions = self._deduplicate_functions(parsed.functions, parsed.diagnostics)
 
     def _end_location(self, segment: CTopLevelSegment) -> CSourceLocation:
+        """Return the original end location for a top-level segment."""
+        filename = (
+            segment.original_filenames[-1]
+            if segment.original_filenames
+            else segment.filename
+        )
         return CSourceLocation(
-            filename=segment.filename,
+            filename=filename,
             line=segment.original_end_line,
             column=segment.original_end_column,
             source_line=segment.original_end_source_line,
         )
 
+    # ------------------------------------------------------------------
+    # Declaration specifiers and lexical helper primitives
+    # ------------------------------------------------------------------
+
     def _last_identifier(self, text: str) -> re.Match[str] | None:
+        """Return the last identifier in `text`, ignoring bracket contents."""
         bracket_depth = 0
         allowed_spans: list[tuple[int, int]] = []
         span_start = 0
@@ -716,9 +1060,11 @@ class CParser:
         return matches[-1] if matches else None
 
     def _specifier_words(self, spec_text: str) -> list[str]:
+        """Extract identifier-like words from a declaration-specifier prefix."""
         return _IDENTIFIER_RE.findall(spec_text)
 
     def _qualifiers(self, spellings: list[str]) -> list:
+        """Instantiate qualifier model objects from qualifier spellings."""
         return [_QUALIFIER_CLASSES[spelling]() for spelling in spellings]
 
     def _invalid_specifier_error(
@@ -728,6 +1074,7 @@ class CParser:
         *,
         offset: int = 0,
     ) -> CParseError:
+        """Build the fatal diagnostic used for invalid specifier sequences."""
         location = self._source_location_at(segment, offset)
         return CParseError(
             message,
@@ -738,8 +1085,40 @@ class CParser:
             code="CPARSE003",
         )
 
+    def _atomic_type_specifier_parts(self, spec_text: str) -> tuple[str, str] | None:
+        """Return surrounding specifiers and the type-name inside `_Atomic(...)`."""
+        for match in _IDENTIFIER_RE.finditer(spec_text):
+            if match.group(0) != "_Atomic":
+                continue
+            open_index = self._skip_whitespace(spec_text, match.end())
+            if open_index >= len(spec_text) or spec_text[open_index] != "(":
+                continue
+            close_index = self._find_matching_delimiter(spec_text, open_index, "(", ")")
+            if close_index is None:
+                return None
+            surrounding = " ".join(
+                part
+                for part in (
+                    spec_text[: match.start()].strip(),
+                    spec_text[close_index + 1 :].strip(),
+                )
+                if part
+            )
+            return surrounding, spec_text[open_index + 1 : close_index].strip()
+        return None
+
+    def _add_outermost_qualifiers(self, type_: CType, qualifiers: list) -> None:
+        """Attach qualifiers to the object denoted by an assembled type."""
+        if isinstance(type_, CComposedType) and type_.components:
+            type_.components[0].qualifiers.extend(qualifiers)
+        else:
+            type_.qualifiers.extend(qualifiers)
+
     def _parse_specifiers(self, spec_text: str) -> tuple[CType, list[str], list[str]]:
-        words = self._specifier_words(spec_text)
+        """Parse C declaration specifiers into base type and specifier lists."""
+        atomic_specifier = self._atomic_type_specifier_parts(spec_text)
+        outer_spec_text = atomic_specifier[0] if atomic_specifier is not None else spec_text
+        words = self._specifier_words(outer_spec_text)
         storage: list[str] = []
         qualifiers: list[str] = []
         function_specifiers: list[str] = []
@@ -755,7 +1134,29 @@ class CParser:
             else:
                 type_words.append(word)
 
-        if type_words and type_words[0] in _TAG_KINDS:
+        if atomic_specifier is not None:
+            if type_words:
+                raise _InvalidSpecifierSequence(
+                    f"Invalid type specifier sequence {spec_text.strip()!r}."
+                )
+            inner_text = atomic_specifier[1]
+            inner_spec_text, inner_declarator = self._split_declaration_specifiers(inner_text)
+            if not inner_spec_text:
+                raise _InvalidSpecifierSequence(
+                    f"Invalid _Atomic type-name {inner_text!r}."
+                )
+            name, type_, inner_storage, inner_function_specifiers, _direct_function = (
+                self._build_declared_type(inner_spec_text, inner_declarator)
+            )
+            if name is not None or inner_storage or inner_function_specifiers:
+                raise _InvalidSpecifierSequence(
+                    f"Invalid _Atomic type-name {inner_text!r}."
+                )
+            self._add_outermost_qualifiers(
+                type_,
+                [CAtomic(), *self._qualifiers(qualifiers)],
+            )
+        elif type_words and type_words[0] in _TAG_KINDS:
             tag_name = type_words[1] if len(type_words) > 1 else None
             tag_type = {"struct": CStruct, "union": CUnion, "enum": CEnum}[type_words[0]]
             tag_kwargs = {
@@ -793,11 +1194,13 @@ class CParser:
         return type_, storage, function_specifiers
 
     def _skip_whitespace(self, text: str, index: int) -> int:
+        """Advance `index` past ASCII/Unicode whitespace."""
         while index < len(text) and text[index].isspace():
             index += 1
         return index
 
     def _read_identifier(self, text: str, index: int) -> tuple[str, int] | None:
+        """Read one C identifier at `index` and return `(name, end)`."""
         if index >= len(text):
             return None
         first = text[index]
@@ -815,6 +1218,7 @@ class CParser:
         open_char: str,
         close_char: str,
     ) -> int | None:
+        """Find the matching delimiter while respecting strings and chars."""
         depth = 0
         state = "normal"
         quote = ""
@@ -844,6 +1248,13 @@ class CParser:
         return None
 
     def _split_declaration_specifiers(self, text: str) -> tuple[str, str]:
+        """Split a declaration into specifier prefix and declarator tail.
+
+        This is the declaration grammar gateway. It consumes storage classes,
+        qualifiers, function specifiers, primitive words, tag references, and at
+        most one typedef-name placeholder before leaving the declarator text for
+        the recursive declarator parser.
+        """
         index = 0
         spec_end = 0
         consumed_type = False
@@ -855,6 +1266,19 @@ class CParser:
             if identifier is None:
                 break
             word, end = identifier
+
+            if word == "_Atomic":
+                open_index = self._skip_whitespace(text, end)
+                if open_index < len(text) and text[open_index] == "(":
+                    if consumed_type:
+                        break
+                    close_index = self._find_matching_delimiter(text, open_index, "(", ")")
+                    if close_index is None:
+                        break
+                    consumed_type = True
+                    index = close_index + 1
+                    spec_end = index
+                    continue
 
             if word in _STORAGE_CLASSES or word in _TYPE_QUALIFIERS or word in _FUNCTION_SPECIFIERS:
                 index = end
@@ -887,11 +1311,16 @@ class CParser:
 
         return text[:spec_end].strip(), text[spec_end:].strip()
 
+    # ------------------------------------------------------------------
+    # Recursive declarator grammar
+    # ------------------------------------------------------------------
+
     def _parse_pointer_ops(
         self,
         text: str,
         index: int,
     ) -> tuple[list[_PointerOp], int]:
+        """Parse leading pointer operators from a declarator fragment."""
         pointers: list[_PointerOp] = []
         index = self._skip_whitespace(text, index)
         while index < len(text) and text[index] == "*":
@@ -912,6 +1341,7 @@ class CParser:
         return pointers, index
 
     def _parse_array_op(self, content: str) -> _ArrayOp:
+        """Parse the contents of one array declarator suffix."""
         words = content.strip().split()
         qualifiers: list[str] = []
         is_static = False
@@ -937,6 +1367,7 @@ class CParser:
         text: str,
         index: int,
     ) -> tuple[list[_ArrayOp | _FunctionOp], int]:
+        """Parse direct-declarator array/function suffixes."""
         operations: list[_ArrayOp | _FunctionOp] = []
         while True:
             index = self._skip_whitespace(text, index)
@@ -974,6 +1405,13 @@ class CParser:
         text: str,
         index: int,
     ) -> tuple[str | None, list[_PointerOp | _ArrayOp | _FunctionOp], int]:
+        """Parse a direct declarator at `index`.
+
+        Direct declarators contain the identifier, parenthesized declarator, and
+        suffix chain. Parenthesized declarators recurse back into
+        `_parse_declarator` so pointer/function/array precedence follows C's
+        grammar instead of a flat string split.
+        """
         index = self._skip_whitespace(text, index)
         if index < len(text) and text[index] == "(":
             close_index = self._find_matching_delimiter(text, index, "(", ")")
@@ -997,11 +1435,13 @@ class CParser:
         text: str,
         index: int,
     ) -> tuple[str | None, list[_PointerOp | _ArrayOp | _FunctionOp], int]:
+        """Parse one full declarator at `index` into name and operations."""
         pointers, index = self._parse_pointer_ops(text, index)
         name, direct_operations, index = self._parse_direct_declarator_at(text, index)
         return name, [*pointers, *direct_operations], index
 
     def _parse_declarator(self, text: str) -> _ParsedDeclarator:
+        """Parse a complete declarator fragment and reject unconsumed syntax."""
         stripped = text.strip()
         if not stripped:
             return _ParsedDeclarator(name=None, operations=[], source_text="")
@@ -1014,6 +1454,7 @@ class CParser:
         return _ParsedDeclarator(name=name, operations=operations, source_text=stripped)
 
     def _prepend_component(self, component: CType, current: CType) -> CComposedType:
+        """Prepend one derived type component to an existing parser type."""
         if isinstance(current, CComposedType):
             return CComposedType(
                 components=[component, *current.components],
@@ -1022,12 +1463,14 @@ class CParser:
         return CComposedType(components=[component, current], source_text=current.source_text)
 
     def _apply_pointer_operation(self, current: CType, operation: _PointerOp) -> CType:
+        """Apply one parsed pointer operation to the current type."""
         return self._prepend_component(
             CPointer(qualifiers=self._qualifiers(operation.qualifiers)),
             current,
         )
 
     def _apply_array_operation(self, current: CType, operation: _ArrayOp) -> CType:
+        """Apply one parsed array operation to the current type."""
         array = CArray(
             bound=operation.size,
             is_static_minimum=operation.static,
@@ -1037,6 +1480,7 @@ class CParser:
         return self._prepend_component(array, current)
 
     def _apply_function_operation(self, current: CType, operation: _FunctionOp) -> CType:
+        """Apply one parsed function operation to the current type."""
         return CFunctionType(
             result_type=current,
             parameter_types=[parameter.type for parameter in operation.parameters],
@@ -1050,6 +1494,7 @@ class CParser:
         base_type: CType,
         operations: list[_PointerOp | _ArrayOp | _FunctionOp],
     ) -> CType:
+        """Apply parsed declarator operations to a declaration base type."""
         current = base_type
         for operation in operations:
             if isinstance(operation, _PointerOp):
@@ -1065,6 +1510,7 @@ class CParser:
         spec_text: str,
         declarator_fragment: str = "",
     ) -> tuple[str | None, CType, list[str], list[str], _FunctionOp | None]:
+        """Build the declared entity name, type, and declaration metadata."""
         base_type, storage, function_specifiers = self._parse_specifiers(spec_text)
         parsed = self._parse_declarator(declarator_fragment)
         type_ = self._apply_declarator_operations(base_type, parsed.operations)
@@ -1082,6 +1528,7 @@ class CParser:
         spec_text: str,
         declarator_fragment: str = "",
     ) -> tuple[CType, list[str]]:
+        """Build a type-only declaration result for helper callers."""
         _name, type_, _storage, function_specifiers, _direct_function = self._build_declared_type(
             spec_text,
             declarator_fragment,
@@ -1089,6 +1536,7 @@ class CParser:
         return type_, function_specifiers
 
     def _adjust_parameter_type(self, declared_type: CType) -> CType:
+        """Apply C parameter adjustment while preserving the written type."""
         if isinstance(declared_type, CFunctionType):
             return CComposedType(
                 components=[CPointer(), declared_type],
@@ -1109,7 +1557,12 @@ class CParser:
             )
         return declared_type
 
+    # ------------------------------------------------------------------
+    # Parameter and function grammar
+    # ------------------------------------------------------------------
+
     def _parse_parameter(self, text: str) -> CParameter | None:
+        """Parse one function parameter declaration through the shared backend."""
         stripped = text.strip()
         if not stripped or stripped == "void":
             return None
@@ -1127,6 +1580,7 @@ class CParser:
         )
 
     def _find_parameter_list(self, text: str) -> tuple[int, int] | None:
+        """Return the bounds of a trailing parameter list in declaration text."""
         close_index = len(text) - 1
         while close_index >= 0 and text[close_index].isspace():
             close_index -= 1
@@ -1162,6 +1616,7 @@ class CParser:
         return None
 
     def _parse_parameters(self, parameters_text: str) -> tuple[list[CParameter], bool]:
+        """Parse a comma-separated parameter list and variadic marker."""
         stripped = parameters_text.strip()
         if not stripped or stripped == "void":
             return [], False
@@ -1178,6 +1633,7 @@ class CParser:
         return parameters, variadic
 
     def _is_knr_definition(self, segment: CTopLevelSegment, parameters_text: str) -> bool:
+        """Return whether a function-looking block is a K&R-style definition."""
         if segment.terminator != "block":
             return False
         stripped = parameters_text.strip()
@@ -1192,9 +1648,17 @@ class CParser:
         self,
         source: str,
         filename: str | None,
+        *,
+        use_linemarkers: bool = False,
     ) -> None:
+        """Raise before top-level splitting hides unsupported K&R declarations."""
         source_lines = source.splitlines()
         stripped_lines = strip_c_comments(source).splitlines()
+        line_mappings = line_mappings_for_source(
+            source,
+            filename=filename,
+            use_linemarkers=use_linemarkers,
+        )
 
         for index, line in enumerate(stripped_lines):
             text = line.strip()
@@ -1228,11 +1692,14 @@ class CParser:
                 if not stripped:
                     continue
                 if stripped.startswith("{"):
-                    source_line = source_lines[index] if index < len(source_lines) else line
+                    mapping = line_mappings[index] if index < len(line_mappings) else None
+                    source_line = mapping.source_line if mapping is not None else (
+                        source_lines[index] if index < len(source_lines) else line
+                    )
                     raise CParseError(
                         "K&R style function definitions are not supported",
-                        filename=filename,
-                        line_number=index + 1,
+                        filename=mapping.filename if mapping is not None else filename,
+                        line_number=mapping.line if mapping is not None else index + 1,
                         column=max(line.find(name_match.group(0)) + 1, 1),
                         source_line=source_line,
                         code="CPARSE002",
@@ -1243,20 +1710,25 @@ class CParser:
                 break
 
             if saw_old_style_declaration:
-                source_line = source_lines[index] if index < len(source_lines) else line
+                mapping = line_mappings[index] if index < len(line_mappings) else None
+                source_line = mapping.source_line if mapping is not None else (
+                    source_lines[index] if index < len(source_lines) else line
+                )
                 raise CParseError(
                     "K&R style function definitions are not supported",
-                    filename=filename,
-                    line_number=index + 1,
+                    filename=mapping.filename if mapping is not None else filename,
+                    line_number=mapping.line if mapping is not None else index + 1,
                     column=max(line.find(name_match.group(0)) + 1, 1),
                     source_line=source_line,
                     code="CPARSE002",
                 )
 
     def _prototype_style(self, parameters_text: str) -> str:
+        """Classify empty `()` versus prototype-style parameter lists."""
         return "unspecified" if not parameters_text.strip() else "prototype"
 
     def _parse_function(self, segment: CTopLevelSegment) -> CFunction | None:
+        """Parse a function prototype or definition segment, if it is one."""
         text = segment.text.strip()
         if text.startswith(("typedef ", "_Static_assert")) or self._has_unsupported_declaration_marker(text):
             return None
@@ -1304,6 +1776,7 @@ class CParser:
         function_specifiers: list[str],
         segment: CTopLevelSegment,
     ) -> CFunction:
+        """Assemble a `CFunction` model from a parsed function declarator."""
         return CFunction(
             name=name,
             result_type=function_type.result_type,
@@ -1318,11 +1791,17 @@ class CParser:
             end=self._end_location(segment) if segment.terminator == "block" else None,
         )
 
+    # ------------------------------------------------------------------
+    # Aggregate, field, enum, and declaration parsing
+    # ------------------------------------------------------------------
+
     def _anonymous_tag_id(self, kind: str, segment: CTopLevelSegment) -> str:
+        """Create a stable anonymous aggregate id from source location."""
         filename = segment.filename or "<source>"
         return f"{kind}@{filename}:{segment.original_start_line}:{segment.original_start_column}"
 
     def _tag_definition_header(self, text: str) -> tuple[str, list[str], str | None] | None:
+        """Parse the prefix before an aggregate definition body."""
         words = self._specifier_words(text)
         for index, word in enumerate(words):
             if word not in _TAG_KINDS:
@@ -1337,6 +1816,7 @@ class CParser:
         return None
 
     def _forward_tag(self, segment: CTopLevelSegment) -> CStruct | CUnion | None:
+        """Parse `struct tag;` or `union tag;` forward declarations."""
         words = self._specifier_words(segment.text.strip())
         if len(words) != 2 or words[0] not in {"struct", "union"}:
             return None
@@ -1357,6 +1837,7 @@ class CParser:
         type_: CType,
         aggregate: CStruct | CUnion | CEnum,
     ) -> CType:
+        """Replace a matching tag reference with the parsed aggregate object."""
         if isinstance(type_, CComposedType):
             terminal = type_.components[-1]
             if isinstance(terminal, (CStruct, CUnion, CEnum)) and not terminal.qualifiers:
@@ -1374,6 +1855,12 @@ class CParser:
         *,
         resolved: CStruct | CUnion | CEnum | None = None,
     ) -> tuple[list[CFunction], list[CTypedef], list[CVariable], list[CDiagnostic]]:
+        """Parse all declarators after a shared declaration-specifier prefix.
+
+        This is the common declaration backend for top-level functions,
+        variables, typedefs, and aggregate declarators that follow inline
+        `struct`/`union`/`enum` definitions.
+        """
         functions: list[CFunction] = []
         typedefs: list[CTypedef] = []
         variables: list[CVariable] = []
@@ -1430,6 +1917,7 @@ class CParser:
         return functions, typedefs, variables, diagnostics
 
     def _declarator_diagnostic(self, segment: CTopLevelSegment, message: str) -> CDiagnostic:
+        """Build a warning for a declarator rejected by the grammar subset."""
         return CDiagnostic(
             code="C_UNSUPPORTED_DECLARATOR",
             message=message,
@@ -1440,6 +1928,7 @@ class CParser:
         )
 
     def _union_by_value_names(self, type_: CType) -> set[str]:
+        """Return union type names that appear without pointer/array indirection."""
         if isinstance(type_, CUnion):
             return {type_.reference_name}
         if isinstance(type_, CTypedef) and type_.type is not None:
@@ -1468,6 +1957,7 @@ class CParser:
         return set()
 
     def _union_by_value_diagnostics(self, function: CFunction) -> list[CDiagnostic]:
+        """Build conservative diagnostics for functions using unions by value."""
         union_names = self._union_by_value_names(function.result_type)
         for parameter in function.parameters:
             union_names.update(self._union_by_value_names(parameter.type))
@@ -1494,6 +1984,7 @@ class CParser:
         function: CFunction,
         diagnostics: list[CDiagnostic],
     ) -> None:
+        """Append union-by-value diagnostics without duplicating messages."""
         for diagnostic in self._union_by_value_diagnostics(function):
             already_present = any(
                 existing.code == diagnostic.code
@@ -1513,6 +2004,7 @@ class CParser:
         *,
         offset: int = 0,
     ) -> CDiagnostic:
+        """Build a field-level warning at a precise member offset."""
         return CDiagnostic(
             code="C_UNSUPPORTED_FIELD_DECLARATION",
             message=message,
@@ -1523,6 +2015,7 @@ class CParser:
         )
 
     def _incomplete_array_component(self, type_: CType) -> CArray | None:
+        """Return the outer incomplete array component, if present."""
         components = type_.components if isinstance(type_, CComposedType) else [type_]
         if not components or not isinstance(components[0], CArray):
             return None
@@ -1536,6 +2029,7 @@ class CParser:
         members: list[CVariable],
         owner_kind: str,
     ) -> list[CDiagnostic]:
+        """Validate C flexible array member placement rules for this subset."""
         diagnostics: list[CDiagnostic] = []
         named_members = sum(member.name is not None for member in members)
         for index, member in enumerate(members):
@@ -1563,6 +2057,33 @@ class CParser:
             )
         return diagnostics
 
+    def _nested_field_segment(
+        self,
+        segment: CTopLevelSegment,
+        text: str,
+        offset: int,
+    ) -> CTopLevelSegment:
+        """Create a location-preserving segment for a nested field definition."""
+        start = self._source_location_at(segment, offset)
+        end = self._source_location_at(segment, offset + max(len(text) - 1, 0))
+        line_offset = segment.text[:offset].count("\n")
+        line_count = text.count("\n") + 1
+        line_slice = slice(line_offset, line_offset + line_count)
+        return CTopLevelSegment(
+            text=text,
+            terminator=";",
+            filename=start.filename,
+            original_start_line=start.line or segment.original_start_line,
+            original_end_line=end.line or segment.original_end_line,
+            original_start_column=start.column or segment.original_start_column,
+            original_end_column=end.column or segment.original_end_column,
+            original_source_line=start.source_line,
+            original_end_source_line=end.source_line,
+            original_source_lines=segment.original_source_lines[line_slice],
+            original_filenames=segment.original_filenames[line_slice],
+            original_line_numbers=segment.original_line_numbers[line_slice],
+        )
+
     def _parse_fields(
         self,
         body: str,
@@ -1571,6 +2092,7 @@ class CParser:
         *,
         body_offset: int,
     ) -> tuple[list[CVariable], list[CDiagnostic]]:
+        """Parse struct/union member declarations through the shared backend."""
         members: list[CVariable] = []
         diagnostics: list[CDiagnostic] = []
         for text, field_offset in top_level_split_with_offsets(body, ";"):
@@ -1587,11 +2109,31 @@ class CParser:
                 )
                 continue
             if "{" in text or "}" in text:
+                nested = self._parse_tag_definition(
+                    self._nested_field_segment(segment, text, member_offset)
+                )
+                if nested is not None:
+                    aggregate, functions, typedefs, variables, nested_diagnostics = nested
+                    if not functions and not typedefs:
+                        if variables:
+                            members.extend(variables)
+                            diagnostics.extend(nested_diagnostics)
+                            continue
+                        if isinstance(aggregate, (CStruct, CUnion)) and aggregate.name is None:
+                            members.append(
+                                CVariable(
+                                    name=None,
+                                    type=aggregate,
+                                    source_location=member_location,
+                                )
+                            )
+                            diagnostics.extend(nested_diagnostics)
+                            continue
                 diagnostics.append(
                     self._field_diagnostic(
                         segment,
                         owner_kind,
-                        "Nested aggregate field definitions are not supported yet.",
+                        "Unsupported nested aggregate field declaration.",
                         offset=member_offset,
                     )
                 )
@@ -1644,6 +2186,7 @@ class CParser:
         return members, diagnostics
 
     def _parse_enumerators(self, body: str, segment: CTopLevelSegment) -> list[CEnumerator]:
+        """Parse enum constants while preserving explicit expression text."""
         constants: list[CEnumerator] = []
         for item in top_level_split(body, ","):
             name_text, value = top_level_partition(item, "=")
@@ -1672,6 +2215,7 @@ class CParser:
         list[CVariable],
         list[CDiagnostic],
     ] | None:
+        """Parse a top-level struct, union, or enum definition segment."""
         text = segment.text.strip()
         if self._has_unsupported_declaration_marker(text):
             return None
@@ -1751,11 +2295,10 @@ class CParser:
         self,
         segment: CTopLevelSegment,
     ) -> tuple[list[CFunction], list[CTypedef], list[CVariable], list[CDiagnostic]]:
+        """Parse an ordinary top-level declaration segment."""
         text = segment.text.strip()
         if (
             not text
-            or "{" in text
-            or "}" in text
             or text.startswith("_Static_assert")
             or self._has_unsupported_declaration_marker(text)
             or _looks_like_cxx_declaration(text)
@@ -1768,19 +2311,8 @@ class CParser:
 
         return self._declarations_from_declarators(spec_text, declarator_list, segment)
 
-    def _is_braced_initializer_declaration(self, segment: CTopLevelSegment) -> bool:
-        text = segment.text.strip()
-        if not text:
-            return False
-        if "{" in text and "}" in text and "=" in text:
-            return True
-        if segment.terminator != "block":
-            return False
-
-        declaration, initializer = top_level_partition(text, "=")
-        return bool(declaration) and initializer is not None
-
     def _unsupported_declaration_diagnostic(self, segment: CTopLevelSegment) -> CDiagnostic | None:
+        """Classify an unsupported declaration-shaped segment for diagnostics."""
         text = segment.text.strip()
         if not text:
             return None
@@ -1788,10 +2320,7 @@ class CParser:
         kind = "unsupported_declaration"
         message = "Unsupported C declaration form."
 
-        if self._is_braced_initializer_declaration(segment):
-            kind = "braced_initializer_declaration"
-            message = "Braced or designated initializer declarations are not supported yet."
-        elif _looks_like_cxx_declaration(text):
+        if _looks_like_cxx_declaration(text):
             kind = "cxx_declaration"
             message = "C++ declaration syntax is not supported by the C parser."
         elif text.startswith("struct "):
@@ -1812,9 +2341,6 @@ class CParser:
         elif "_Alignas" in text or "alignas" in text:
             kind = "alignment_declaration"
             message = "Declaration alignment specifiers are not supported yet."
-        elif "_Atomic(" in text:
-            kind = "atomic_type_declaration"
-            message = "_Atomic(type) declarations are not supported yet."
         elif "{" in text or "}" in text:
             kind = "brace_declaration"
             message = "Unsupported declaration containing braces."
@@ -1828,6 +2354,10 @@ class CParser:
             unit_name=None,
         )
 
+    # ------------------------------------------------------------------
+    # Translation-unit dispatch and project assembly
+    # ------------------------------------------------------------------
+
     def _parse_translation_unit(
         self,
         source: str,
@@ -1835,6 +2365,7 @@ class CParser:
         *,
         function_like_macros: set[str] | None = None,
         object_like_macros: set[str] | None = None,
+        use_linemarkers: bool = False,
     ) -> tuple[
         list[CFunction],
         list[CStruct],
@@ -1844,7 +2375,18 @@ class CParser:
         list[CVariable],
         list[CDiagnostic],
     ]:
-        self._raise_for_unsupported_old_style_definitions(source, filename)
+        """Dispatch top-level C external declarations by grammar role.
+
+        The ordering here is intentional: macro-dependent declarations are
+        deferred before ordinary parsing, aggregate definitions are parsed
+        before function/declaration fallback, and ordinary `;` declarations all
+        flow through the shared declaration backend.
+        """
+        self._raise_for_unsupported_old_style_definitions(
+            source,
+            filename,
+            use_linemarkers=use_linemarkers,
+        )
 
         functions: list[CFunction] = []
         structs: list[CStruct] = []
@@ -1856,7 +2398,11 @@ class CParser:
 
         function_like_names = function_like_macros or set()
         object_like_names = object_like_macros or set()
-        for segment in split_top_level_c_source(source, filename=filename):
+        for segment in split_top_level_c_source(
+            source,
+            filename=filename,
+            use_linemarkers=use_linemarkers,
+        ):
             macro_dependency = self._segment_macro_dependency(
                 segment,
                 function_like_names,
@@ -1889,11 +2435,6 @@ class CParser:
                 typedefs.extend(parsed_typedefs)
                 variables.extend(parsed_variables)
                 diagnostics.extend(parsed_diagnostics)
-                continue
-            if self._is_braced_initializer_declaration(segment):
-                unsupported = self._unsupported_declaration_diagnostic(segment)
-                if unsupported is not None:
-                    diagnostics.append(unsupported)
                 continue
             if segment.terminator != ";":
                 try:
@@ -1938,6 +2479,7 @@ class CParser:
         return functions, structs, unions, enums, typedefs, variables, diagnostics
 
     def _build_project(self, parsed_files: dict[str, CFile]) -> CProject:
+        """Build project indexes, include graph facts, and resolved type links."""
         project = CProject(files=parsed_files)
         all_functions: list[CFunction] = []
         for filename, file in parsed_files.items():
@@ -1981,6 +2523,7 @@ class CParser:
         struct: CStruct,
         diagnostics: list[CDiagnostic],
     ) -> None:
+        """Index a named struct tag, completing an earlier incomplete tag."""
         if struct.name is None:
             return
         existing = project.structs.get(struct.name)
@@ -2003,6 +2546,7 @@ class CParser:
         union: CUnion,
         diagnostics: list[CDiagnostic],
     ) -> None:
+        """Index a named union tag, completing an earlier incomplete tag."""
         if union.name is None:
             return
         existing = project.unions.get(union.name)
@@ -2025,6 +2569,7 @@ class CParser:
         enum: CEnum,
         diagnostics: list[CDiagnostic],
     ) -> None:
+        """Index a named enum tag and report duplicate definitions."""
         if enum.name is None:
             return
         existing = project.enums.get(enum.name)
@@ -2048,6 +2593,7 @@ class CParser:
         target: str,
         resolved_path: str | None,
     ) -> str:
+        """Choose the project include-graph key for an include target."""
         local_key = _include_key_from_current(filename, target)
         if local_key in parsed_files:
             return local_key
@@ -2071,6 +2617,7 @@ class CParser:
         filename: str,
         file: CFile,
     ) -> None:
+        """Populate include-graph, system-include, and unresolved-include sets."""
         local_targets: set[str] = set()
         system_targets: set[str] = set()
         unresolved_targets: set[str] = set()
@@ -2095,6 +2642,7 @@ class CParser:
         project.unresolved_includes[filename] = unresolved_targets
 
     def _index_header_source_pairs(self, project: CProject) -> None:
+        """Populate reporting-only header/source relationships."""
         headers = [key for key in project.files if _is_header_key(key)]
         sources = [key for key in project.files if _is_source_key(key)]
 
@@ -2114,121 +2662,12 @@ class CParser:
                 if included in project.files and _is_header_key(included):
                     project.header_source_pairs.setdefault(included, set()).add(source)
 
-    def visit_file(
-        self,
-        source_or_path: str | Path,
-        filename: str | None = None,
-        *,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
-        include_dirs: Sequence[str | Path] | None = None,
-        preprocessing: str = "raw",
-        encoding: str = "utf-8",
-    ) -> CFile:
-        del macro_defines
-        source_path: Path | None = None
-        if _looks_like_existing_source_path(source_or_path):
-            path = Path(source_or_path)
-            source_path = path
-            if filename is None:
-                filename = str(path)
-            source = path.read_text(encoding=encoding)
-        else:
-            source = str(source_or_path)
-
-        parsed = CFile(filename=filename, parser_status="partial", preprocessing=preprocessing)
-        if preprocessing == "raw":
-            effective_include_dirs = list(include_dirs or ())
-            if source_path is not None:
-                effective_include_dirs.insert(0, source_path.parent)
-            metadata = collect_preprocessor_metadata(
-                source,
-                filename=filename,
-                include_dirs=effective_include_dirs,
-            )
-            parsed.includes = metadata.includes
-            parsed.macros = metadata.macros
-            parsed.raw_directives = metadata.raw_directives
-            function_like_macro_names = {macro.name for macro in metadata.macros if macro.function_like}
-            object_like_macro_names = {
-                macro.name
-                for macro in metadata.macros
-                if macro.directive == "define" and not macro.function_like
-            }
-            parsed.macro_dependencies = self._macro_dependencies(
-                source,
-                filename,
-                function_like_macro_names,
-                object_like_macro_names,
-            )
-            parsed.diagnostics = metadata.diagnostics
-            functions, structs, unions, enums, typedefs, variables, parser_diagnostics = self._parse_translation_unit(
-                source,
-                filename,
-                function_like_macros=function_like_macro_names,
-                object_like_macros=object_like_macro_names,
-            )
-            parsed.functions = functions
-            parsed.structs = structs
-            parsed.unions = unions
-            parsed.enums = enums
-            parsed.typedefs = typedefs
-            parsed.variables = variables
-            parsed.diagnostics.extend(parser_diagnostics)
-            self._normalize_redeclarations(parsed)
-        return parsed
-
-    def visit_project(
-        self,
-        files: Mapping[str, str] | Sequence[str | Path] | str | Path,
-        *,
-        include_dirs: Sequence[str | Path] | None = None,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
-        preprocessing: str = "raw",
-        encoding: str = "utf-8",
-    ) -> CProject:
-        if isinstance(files, Mapping):
-            parsed_files = {
-                name: self.visit_file(
-                    source,
-                    filename=name,
-                    include_dirs=include_dirs,
-                    macro_defines=macro_defines,
-                    preprocessing=preprocessing,
-                    encoding=encoding,
-                )
-                for name, source in files.items()
-            }
-            return self._build_project(parsed_files)
-
-        paths: list[Path] = []
-        root: Path | None = None
-        if isinstance(files, (str, Path)):
-            path = Path(files)
-            if path.is_dir():
-                root = path
-                paths = _collect_c_paths(path)
-            else:
-                paths = [path]
-        else:
-            paths = [Path(p) for p in files]
-
-        parsed_files: dict[str, CFile] = {}
-        for path in sorted(paths):
-            key = path.name if root is not None else str(path)
-            if root is not None:
-                key = str(path.relative_to(root))
-            parsed_files[key] = self.visit_file(
-                path,
-                filename=key,
-                include_dirs=include_dirs,
-                macro_defines=macro_defines,
-                preprocessing=preprocessing,
-                encoding=encoding,
-            )
-        return self._build_project(parsed_files)
-
-
 _DEFAULT_PARSER = CParser()
+
+
+# -----------------------------------------------------------------------------
+# Module-level convenience wrappers
+# -----------------------------------------------------------------------------
 
 
 def parse_c_file(
@@ -2240,6 +2679,7 @@ def parse_c_file(
     preprocessing: str = "raw",
     encoding: str = "utf-8",
 ) -> CFile:
+    """Parse one C source string/path using the default parser instance."""
     return _DEFAULT_PARSER.visit_file(
         source_or_path,
         filename=filename,
@@ -2258,6 +2698,7 @@ def parse_c_project(
     preprocessing: str = "raw",
     encoding: str = "utf-8",
 ) -> CProject:
+    """Parse multiple C files or a directory using the default parser instance."""
     return _DEFAULT_PARSER.visit_project(
         files,
         include_dirs=include_dirs,
