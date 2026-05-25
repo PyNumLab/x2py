@@ -1,11 +1,11 @@
 # C Parser Reference
 
-Status: current reference for the parse-only C frontend. The `c_parser`
+Status: current reference for the partial C frontend. The `c_parser`
 package, typed parser models, explicit C CLI parse path, raw directive
 metadata, compiler-assisted preprocessing, source-location remapping, project
-indexes, parser goldens, and C standard-type probe are implemented. C semantic
-readiness, semantic IR conversion, and `.pyi` generation remain future work and
-are intentionally rejected by the CLI.
+indexes, parser goldens, C standard-type probe, first semantic IR conversion
+subset, and semantic readiness path are implemented. C `.pyi` generation
+remains future work and is intentionally rejected by the CLI.
 
 ## Purpose
 
@@ -52,8 +52,10 @@ Implemented:
   the `c_parser` package entrypoints
 - `CParseError` with compiler-style diagnostic formatting
 - explicit `x2py --language c --parse` output
+- explicit `x2py --language c --semantics` and
+  `x2py --language c --wrap-readiness` output
 - C JSON partial output and `--out` behavior
-- rejection of C `--semantics`, `--pyi`, and `--wrap-readiness`
+- rejection of C `--pyi` output until stub emission is implemented
 - raw lexer records with comment stripping, line-continuation folding, and
   lightweight token source locations
 - top-level source splitting that tracks braces, parentheses, brackets, and
@@ -123,6 +125,10 @@ Implemented:
   `tests/data/c/errors/parser/`, and partial-parser regression inputs under
   `tests/data/c/json/`, `tests/data/c/tinyexpr/`, `tests/data/c/linmath/`,
   `tests/data/c/nanosvg/`, and top-level C inputs from `tests/data/c/stb/`
+- `semantics.c2ir` conversion for the first identity subset: scalar
+  functions, const/mutable pointer storage contracts, declared arrays,
+  structs/opaque structs, enums, numeric macro constants, local typedef
+  chains, standard-type probe facts, and explicit semantic readiness blockers
 
 Still deferred:
 
@@ -130,7 +136,7 @@ Still deferred:
 - broad compiler-extension declarators
 - broader typedef/tag conflict policy beyond the implemented basic project
   resolution
-- semantic readiness, semantic IR conversion, and `.pyi` generation
+- C `.pyi` generation and richer ownership/callback projection policy
 
 ## Supported C Subset
 
@@ -603,7 +609,7 @@ Test families should mirror the Fortran parser:
 - typedef tests
 - macro/constant tests
 - include/project tests
-- semantic readiness tests once C semantic conversion exists
+- C semantic readiness tests
 - CLI tests
 - semantic conversion tests
 - `.pyi` generation/parser tests

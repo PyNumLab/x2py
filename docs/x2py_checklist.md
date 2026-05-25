@@ -185,56 +185,56 @@ Language scope is stated in each section or subsection heading:
 
 ### C Conversion
 
-- [ ] Create `semantics/c2ir.py`.
-- [ ] Implement `CToIRConverter`.
-- [ ] Mirror the visitor style of `FortranToIRConverter`.
-- [ ] Accept C standard-type probe reports as target context for converting
+- [x] Create `semantics/c2ir.py`.
+- [x] Implement `CToIRConverter`.
+- [x] Mirror the visitor style of `FortranToIRConverter`.
+- [x] Accept C standard-type probe reports as target context for converting
       standard-header aliases and opaque handles once `CToIRConverter` exists.
-- [ ] Add compatibility helpers such as `c_file_to_semantic_modules`.
-- [ ] Add `c_function_to_semantic_function`.
-- [ ] Add `c_struct_to_semantic_class` where appropriate.
-- [ ] Add `c_project_to_semantic_modules` if project context is needed.
-- [ ] Keep conversion separate from parser internals.
-- [ ] Map `void` return to `None`.
-- [ ] Map `_Bool` to `Bool`.
-- [ ] Map `char` to an explicit semantic type policy.
-- [ ] Map signed integer widths.
-- [ ] Map unsigned integer widths.
-- [ ] Map `float` to `Float32`.
-- [ ] Map `double` to `Float64`.
-- [ ] Map `long double` to a documented type or unsupported diagnostic.
-- [ ] Map pointers to constraints/metadata.
-- [ ] Map C arrays to the shared array/storage contract with default `ORDER_C`
+- [x] Add compatibility helpers such as `c_file_to_semantic_modules`.
+- [x] Add `c_function_to_semantic_function`.
+- [x] Add `c_struct_to_semantic_class` where appropriate.
+- [x] Add `c_project_to_semantic_modules` if project context is needed.
+- [x] Keep conversion separate from parser internals.
+- [x] Map `void` return to `None`.
+- [x] Map `_Bool` to `Bool`.
+- [x] Map `char` to an explicit semantic type policy.
+- [x] Map signed integer widths.
+- [x] Map unsigned integer widths.
+- [x] Map `float` to `Float32`.
+- [x] Map `double` to `Float64`.
+- [x] Map `long double` to a documented type or unsupported diagnostic.
+- [x] Map pointers to constraints/metadata.
+- [x] Map C arrays to the shared array/storage contract with default `ORDER_C`
       when shape and storage facts are known.
-- [ ] Map `const` to read-only/ownership metadata.
-- [ ] Map `restrict` to aliasing metadata.
-- [ ] Map structs to semantic classes or named semantic types.
-- [ ] Map unions conservatively.
-- [ ] Map enums/constants.
-- [ ] Preserve unresolved semantic types as errors, not `Unknown` output.
-- [ ] Convert C functions to `SemanticFunction`.
-- [ ] Preserve native function name.
-- [ ] Preserve parameter order.
-- [ ] Mark pointer mutability.
+- [x] Map `const` to read-only/ownership metadata.
+- [x] Map `restrict` to aliasing metadata.
+- [x] Map structs to semantic classes or named semantic types.
+- [x] Map unions conservatively.
+- [x] Map enums/constants.
+- [x] Preserve unresolved semantic types as errors, not `Unknown` output.
+- [x] Convert C functions to `SemanticFunction`.
+- [x] Preserve native function name.
+- [x] Preserve parameter order.
+- [x] Mark pointer mutability.
 - [ ] Represent array pointer plus size patterns only when known.
 - [ ] Add projection metadata only where native and Python signatures diverge.
-- [ ] Treat out parameters conservatively until ownership/intent policy exists.
-- [ ] Reject or defer variadic functions.
-- [ ] Preserve callback/function-pointer facts from C parser models even if
+- [x] Treat out parameters conservatively until ownership/intent policy exists.
+- [x] Reject or defer variadic functions.
+- [x] Preserve callback/function-pointer facts from C parser models even if
       semantic conversion defers wrapper generation.
-- [ ] Defer callback conversion unless `.pyi` policy supplies the required
+- [x] Defer callback conversion unless `.pyi` policy supplies the required
       callback facts.
-- [ ] Add semantic tests for scalar functions.
-- [ ] Add semantic tests for pointer input.
-- [ ] Add semantic tests for const pointer input.
+- [x] Add semantic tests for scalar functions.
+- [x] Add semantic tests for pointer input.
+- [x] Add semantic tests for const pointer input.
 - [ ] Add semantic tests for arrays with explicit size parameter.
-- [ ] Add semantic tests for structs and opaque handles.
+- [x] Add semantic tests for structs and opaque handles.
 - [ ] Ensure C semantic conversion works for the supported parser subset.
-- [ ] Ensure unsupported C semantic mappings fail explicitly.
-- [ ] Enable `--language c --semantics` only after tests pass.
+- [x] Ensure unsupported C semantic mappings fail explicitly.
+- [x] Enable `--language c --semantics` only after tests pass.
 - [ ] Add a semantic fixture workflow for C if stable enough.
-- [ ] Document C-to-semantic-IR mapping.
-- [ ] Standardize unsigned integer semantic type names.
+- [x] Document C-to-semantic-IR mapping.
+- [x] Standardize unsigned integer semantic type names.
 - [ ] Decide whether struct, union, and enum representation requires semantic
       model extensions.
 

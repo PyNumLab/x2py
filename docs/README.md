@@ -10,6 +10,8 @@ examples. Contribution and pull-request requirements remain in
   long-term architecture and runtime model.
 - [Wrapper `.pyi` format](semantics/pyi_format.md): editable semantic
   interface syntax and conversion behavior.
+- [C to semantic IR mapping](semantics/c2ir_mapping.md): implemented C
+  semantic conversion subset and blocker policy.
 - [Self-contained C semantic `.pyi` specification](semantics/c_pyi_self_contained_specification.md):
   staged C wrapper interface design.
 

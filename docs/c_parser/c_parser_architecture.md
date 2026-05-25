@@ -12,7 +12,7 @@ The x2py CLI also has a shared C/Fortran preprocessing option surface and can
 run an exact compiler/preprocessor executable for C compiler mode. Compiler
 and preprocessed C inputs preserve `#line`/GCC linemarker source locations for
 parsed declarations and diagnostics. A separate compiler-derived standard-type
-probe supplies target ABI facts needed by later C semantic conversion.
+probe supplies target ABI facts consumed by C semantic conversion.
 
 This document records the target architecture for the C parser frontend in
 x2py. The initial skeleton has grown into a partial parser, and the remaining
@@ -91,8 +91,12 @@ Implemented now:
   preserving compiler/runner/source provenance for semantic conversion. It
   carries target-relevant include, macro, undefine, and compiler-argument flags
   and records the requested project standard as provenance.
-- `--language c --semantics`, `--language c --pyi`, and C wrap-readiness are
-  rejected until semantic conversion exists.
+- `semantics.c2ir` converts the supported C parser subset into semantic IR,
+  including scalar functions, pointer storage contracts, declared arrays,
+  structs/opaque structs, enum and numeric macro constants, local typedef
+  chains, target standard-type probe facts, and C-specific readiness blockers.
+- `--language c --semantics` and `--language c --wrap-readiness` are enabled.
+  `--language c --pyi` remains rejected until C `.pyi` emission exists.
 - Focused partial CLI/API, declaration/function, diagnostic color, project
   include/index, raw lexer/directive, project golden, error golden, preprocessed
   linemarker remapping, and JSON schema tests are active. Remaining
@@ -110,7 +114,7 @@ Deferred:
 - compiler attributes and alignment specifiers
 - broader compiler-family validation for preprocessing; parsed declarations
   already retain preprocessed origin and mapped source identity
-- C semantic readiness, semantic IR conversion, and `.pyi` output
+- C `.pyi` output and broader callback/ownership policy
 
 Documentation rule: any future C parser implementation change must update all
 affected docs under `docs/c_parser/` in the same change. This applies to model,
@@ -328,8 +332,8 @@ class CParser:
 
 These entrypoints are exposed from both `c_parser` and `x2py.__init__`, using
 the same top-level file/project invocation pattern already provided for
-Fortran. C semantic conversion remains unavailable despite the parse API
-export.
+Fortran. C semantic conversion is exposed separately through
+`semantics.c2ir` and top-level `x2py` compatibility helpers.
 
 ## Core Model Families
 

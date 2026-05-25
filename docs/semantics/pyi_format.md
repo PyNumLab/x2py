@@ -6,8 +6,8 @@ pointer, array, layout and metadata notation. Source language differences are
 represented by contracts and metadata, not by separate syntax families.
 
 This document describes the behavior implemented for the current Fortran path
-and the shared notation it establishes for later C semantic conversion. C
-semantic conversion and C `.pyi` generation remain deferred.
+and the shared notation used by the first C semantic conversion subset. C
+`.pyi` generation remains deferred.
 
 ## Canonical Type And Storage Contract
 
@@ -411,17 +411,15 @@ visible Python values
 The projection mechanism is language-neutral. It can later adapt exact
 Fortran or C contracts through the same notation and runtime concepts, but
 this milestone does not implement automatic Pythonic generation, current
-exact-reference adaptation, coercion/contract execution or C semantic
-conversion/output.
+exact-reference adaptation, coercion/contract execution or C `.pyi` output.
 
 ## Deferred C Work
 
-The shared model is capable of representing future C functions, variables,
+The shared model represents the current C semantic conversion subset for
+functions, variables,
 fields, constants, scalar references, pointers, arrays with known contracts,
-origin metadata, mutability and ownership facts. This task does not implement:
+origin metadata, mutability and ownership facts. Remaining C work includes:
 
-- `semantics/c2ir.py`;
-- C semantic conversion;
 - C `.pyi` generation;
 - C wrapper lowering;
 - C ownership, callback or pointer policy inference.

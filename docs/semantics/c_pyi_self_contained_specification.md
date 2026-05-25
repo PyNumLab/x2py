@@ -196,8 +196,8 @@ constraint is written.
    not part of the canonical public array annotation unless they produce an
    actual storage constraint. In particular, Fortran dummy bounds are
    established by native association rather than supplied as Python array
-   metadata. This does not add C semantic conversion support; C conversion
-   remains deferred.
+   metadata. The implemented C conversion subset is described in
+   [C to semantic IR mapping](c2ir_mapping.md).
 
 Stride-aware dimensions use a slice step marker:
 

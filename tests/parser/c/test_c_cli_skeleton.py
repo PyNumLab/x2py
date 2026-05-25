@@ -123,16 +123,42 @@ def test_cli_c_parse_out_without_json_writes_json_and_suppresses_stdout(tmp_path
     assert payload[str(header)]["parser_status"] == "partial"
 
 
-def test_cli_c_semantic_stages_are_rejected_until_implemented(tmp_path: Path):
+def test_cli_c_semantics_json_stdout_for_header(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
+    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--semantics", "--json"]
 
-    for stage in ("--semantics", "--pyi", "--wrap-readiness"):
-        cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", stage]
-        res = subprocess.run(cmd, capture_output=True, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+    semantic_modules = payload[str(header)]["semantic_modules"]
 
-        assert res.returncode != 0
-        assert "not supported" in res.stderr.lower()
+    assert semantic_modules[0]["name"] == "api"
+    assert semantic_modules[0]["functions"][0]["name"] == "add"
+    assert semantic_modules[0]["functions"][0]["arguments"][0]["semantic_type"]["name"] == "Int32"
+
+
+def test_cli_c_wrap_readiness_human_output_for_header(tmp_path: Path):
+    header = tmp_path / "api.h"
+    header.write_text("int add(int a, int b);\n", encoding="utf-8")
+    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--wrap-readiness"]
+
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    assert f"File: {header}" in res.stdout
+    assert "Source: c" in res.stdout
+    assert "Wrappable: yes" in res.stdout
+
+
+def test_cli_c_pyi_stage_is_rejected_until_generation_is_implemented(tmp_path: Path):
+    header = tmp_path / "api.h"
+    header.write_text("int add(int a, int b);\n", encoding="utf-8")
+    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--pyi"]
+
+    res = subprocess.run(cmd, capture_output=True, text=True)
+
+    assert res.returncode != 0
+    assert "pyi" in res.stderr.lower()
+    assert "not supported" in res.stderr.lower()
 
 
 def test_cli_c_rejects_fortran_only_parse_flags(tmp_path: Path):

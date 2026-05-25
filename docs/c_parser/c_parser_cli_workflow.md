@@ -597,8 +597,8 @@ The active CLI/parser tests cover the current partial subset:
   by focused C tests.
 - `--show-vars` and `--print-limit` are rejected in C mode until C-specific
   display controls exist.
-- `--semantics` with `--language c` is rejected until C semantic conversion is
-  implemented.
+- `--semantics` and `--wrap-readiness` with `--language c` use
+  `semantics.c2ir` and the semantic readiness checker.
 - `--pyi` with `--language c` is rejected until C `.pyi` emission is
   implemented.
 
