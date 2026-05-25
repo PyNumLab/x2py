@@ -273,7 +273,7 @@ Types introduced by standard headers are not portable primitive aliases.
 library layout. Raw parsing therefore preserves unresolved typedef-name uses
 instead of hard-coding an ABI.
 
-For later C semantic conversion, `x2py.c_type_probe` compiles and runs a small
+For C semantic conversion, `x2py.c_type_probe` compiles and runs a small
 C11 query program under an exact compiler and emits target-specific JSON:
 
 ```bash
@@ -488,7 +488,8 @@ x2py path/to/api.h --language c --parse --out report.json
 ```
 
 There is no separate `--parse-c` alias: `--language c --parse` is the shared
-language-selection form. Auto-detection remains deferred.
+language-selection form. Auto-detection remains deferred: a `.c`, `.h`, or
+`.i` input without `--language c` exits with language-selection guidance.
 
 ## Current JSON Output
 

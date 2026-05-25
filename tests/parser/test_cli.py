@@ -505,6 +505,51 @@ def test_cli_help_includes_examples():
     assert "python -m x2py path/to/file.f90 --pyi --out module.pyi" in res.stdout
 
 
+def test_cli_requires_explicit_language_for_directory_and_unknown_suffix(tmp_path: Path):
+    source = tmp_path / "solver.source"
+    source.write_text("subroutine solve()\nend subroutine solve\n", encoding="utf-8")
+
+    unknown = subprocess.run(
+        [sys.executable, "-m", "x2py", str(source), "--parse"],
+        capture_output=True,
+        text=True,
+    )
+    assert unknown.returncode == 2
+    assert "Cannot determine the input language" in unknown.stderr
+    assert "--language fortran or --language c" in unknown.stderr
+
+    directory = subprocess.run(
+        [sys.executable, "-m", "x2py", str(tmp_path), "--parse"],
+        capture_output=True,
+        text=True,
+    )
+    assert directory.returncode == 2
+    assert "requires an explicit frontend" in directory.stderr
+
+    explicit = subprocess.run(
+        [sys.executable, "-m", "x2py", str(source), "--language", "fortran", "--parse"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "subroutine solve" in explicit.stdout
+
+
+def test_cli_rejects_fortran_file_with_explicit_c_frontend(tmp_path: Path):
+    source = tmp_path / "solver.f90"
+    source.write_text("subroutine solve()\nend subroutine solve\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "-m", "x2py", str(source), "--language", "c", "--parse"],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "incompatible with --language c" in result.stderr
+    assert "pass --language fortran" in result.stderr
+
+
 def test_cli_parse_shows_module_derived_types_and_derived_arg_kinds():
     fixture = Path(__file__).parent.parent / "data" / "fortran" / "general" / "modern_pyi_example.f90"
     cmd = [sys.executable, "-m", "x2py", str(fixture), "--parse"]

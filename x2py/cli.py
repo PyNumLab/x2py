@@ -25,6 +25,8 @@ from x2py.preprocessing import (
 )
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
+_FORTRAN_SOURCE_SUFFIXES = {".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"}
+_C_SOURCE_SUFFIXES = {".c", ".h", ".i"}
 
 
 def _env_flag(name: str) -> bool:
@@ -54,8 +56,7 @@ def _to_dict_no_parent(obj):
 
 
 def _collect_extensions(path: Path) -> list[Path]:
-    exts = {".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"}
-    return sorted(p for p in path.rglob("*") if p.suffix.lower() in exts)
+    return sorted(p for p in path.rglob("*") if p.suffix.lower() in _FORTRAN_SOURCE_SUFFIXES)
 
 
 def _collect_pyi_extensions(path: Path) -> list[Path]:
@@ -86,6 +87,51 @@ def _expand_readiness_paths(paths: list[str]) -> list[Path]:
         else:
             expanded.append(p)
     return sorted(set(expanded))
+
+
+def _resolve_language(
+    paths: list[str],
+    requested: str | None,
+    parser: argparse.ArgumentParser,
+) -> str:
+    if requested is not None:
+        for raw in paths:
+            path = Path(raw)
+            if path.is_dir():
+                continue
+            suffix = path.suffix.lower()
+            if requested == "fortran" and suffix in _C_SOURCE_SUFFIXES:
+                parser.error(
+                    f"C input {path} is incompatible with --language fortran; "
+                    "pass --language c. Use --help for examples."
+                )
+            if requested == "c" and suffix in _FORTRAN_SOURCE_SUFFIXES:
+                parser.error(
+                    f"Fortran input {path} is incompatible with --language c; "
+                    "pass --language fortran. Use --help for examples."
+                )
+        return requested
+
+    for raw in paths:
+        path = Path(raw)
+        if path.is_dir():
+            parser.error(
+                f"Input directory {path} requires an explicit frontend; "
+                "pass --language fortran or --language c. Use --help for examples."
+            )
+
+        suffix = path.suffix.lower()
+        if suffix in _C_SOURCE_SUFFIXES:
+            parser.error(
+                f"C input {path} requires explicit --language c. "
+                "Use --help for examples."
+            )
+        if suffix not in _FORTRAN_SOURCE_SUFFIXES and suffix != ".pyi":
+            parser.error(
+                f"Cannot determine the input language for {path}; "
+                "pass --language fortran or --language c. Use --help for examples."
+            )
+    return "fortran"
 
 
 def _fortran_source_for_path(
@@ -430,7 +476,7 @@ def main() -> int:
             "  Parse, include variables and cap every repeated section:\n"
             "    python -m x2py path/to/file.f90 --parse --show-vars --print-limit 50\n"
             "  Parse directory recursively:\n"
-            "    python -m x2py path/to/src_dir --parse --print-limit 20\n"
+            "    python -m x2py path/to/src_dir --language fortran --parse --print-limit 20\n"
             "  Print parser JSON:\n"
             "    python -m x2py path/to/file.f90 --parse --json\n"
             "  Parse C subset JSON:\n"
@@ -448,7 +494,7 @@ def main() -> int:
             "  Write parser JSON:\n"
             "    python -m x2py path/to/file.f90 --parse --json --out report.json\n"
             "  Write one JSON file next to each source:\n"
-            "    python -m x2py path/to/src_dir --parse --out\n"
+            "    python -m x2py path/to/src_dir --language fortran --parse --out\n"
             "  Show wrap-readiness only:\n"
             "    python -m x2py path/to/file.f90 --wrap-readiness\n"
             "  Print semantic IR JSON:\n"
@@ -472,8 +518,11 @@ def main() -> int:
     parser.add_argument(
         "--language",
         choices=("fortran", "c"),
-        default="fortran",
-        help="Frontend language. Defaults to fortran; C supports parse, semantic IR, and semantic readiness output.",
+        default=None,
+        help=(
+            "Frontend language. Omission is allowed for recognizable Fortran files and .pyi readiness input; "
+            "C files, directories, and unknown-suffix source inputs require this flag."
+        ),
     )
     parser.add_argument("--parse", action="store_true", help="Run and output parser stage report")
     parser.add_argument(
@@ -563,6 +612,7 @@ def main() -> int:
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI color in parse diagnostics")
     parser.add_argument("--debug-traceback", action="store_true", help="Re-raise parser errors for debug")
     args = parser.parse_args()
+    args.language = _resolve_language(args.paths, args.language, parser)
     preprocessing = _build_preprocessing_config(args, parser)
 
     if args.language == "c":

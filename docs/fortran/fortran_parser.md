@@ -197,11 +197,18 @@ resolver when enough information is available.
 ### 3.1 Basic CLI invocation
 
 ```bash
-python -m x2py <path ...>
+python -m x2py path/to/file.f90 --parse
 ```
 
-`<path ...>` supports files and directories. Directories are recursively scanned
-for `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`, `.f08`.
+Recognizable Fortran files can omit `--language`. Directories require explicit
+frontend selection:
+
+```bash
+python -m x2py path/to/fortran_src --language fortran --parse
+```
+
+Fortran directories are recursively scanned for `.f`, `.for`, `.ftn`, `.f90`,
+`.f95`, `.f03`, `.f08`.
 
 The human-readable parse tree keeps scope variables compact by default as
 `vars=N`. Add `--show-vars` to print the variables, or `--print-limit N` to

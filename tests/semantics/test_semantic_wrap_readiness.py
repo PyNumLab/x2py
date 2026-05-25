@@ -382,7 +382,7 @@ def test_x2py_main_wrap_readiness_json_directory_expands_fortran_and_pyi(tmp_pat
     pyi = tmp_path / "solver.pyi"
     pyi.write_text("def fill(n: Int32) -> None: ...\n", encoding="utf-8")
 
-    monkeypatch.setattr(sys, "argv", ["x2py", str(tmp_path), "--wrap-readiness", "--json"])
+    monkeypatch.setattr(sys, "argv", ["x2py", str(tmp_path), "--language", "fortran", "--wrap-readiness", "--json"])
     assert x2py_cli.main() == 0
     payload = json.loads(capsys.readouterr().out)
 

@@ -39,8 +39,12 @@ directories in explicit C mode. Directory scanning in C mode collects those
 three source forms. It does not recursively parse headers mentioned by
 includes; as on the Fortran path, an imported/included source is parsed only
 when the user supplied it or supplied a directory containing it.
-Auto-detection is deferred, so omitting `--language` keeps the current Fortran
-behavior.
+Auto-detection is deferred. Omitting `--language` remains accepted for
+recognizable Fortran files and `.pyi` readiness inputs, but a `.c`, `.h`, or
+`.i` path fails with guidance to pass `--language c`; directory and
+unknown-suffix source inputs require an explicit frontend selection. A known C
+path explicitly passed with `--language fortran` is rejected before parsing,
+so it cannot silently produce an empty Fortran interface.
 
 The C parser output differs from Fortran parser output by using C-specific
 top-level sections: `functions`, `structs`, `unions`, `enums`, `typedefs`,
@@ -102,15 +106,16 @@ return clear argparse errors in C mode until C-specific display controls exist.
 
 ## Current CLI Baseline
 
-The current `x2py` CLI is Fortran-oriented:
+Recognizable Fortran files can omit `--language`:
 
 ```bash
-python -m x2py <path ...> --parse
-python -m x2py <path ...> --parse --json
-python -m x2py <path ...> --wrap-readiness
-python -m x2py <path ...> --semantics
-python -m x2py <path ...> --semantics --wrap-readiness
-python -m x2py <path ...> --pyi
+python -m x2py path/to/file.f90 --parse
+python -m x2py path/to/file.f90 --parse --json
+python -m x2py path/to/file.f90 --wrap-readiness
+python -m x2py path/to/file.f90 --semantics
+python -m x2py path/to/file.f90 --semantics --wrap-readiness
+python -m x2py path/to/file.f90 --pyi
+python -m x2py path/to/fortran_src --language fortran --parse
 ```
 
 Important current behaviors to preserve:
@@ -146,8 +151,8 @@ Rationale:
 - It scales to future language frontends.
 - It avoids surprising users by auto-detecting mixed-language directories too
   early.
-- It lets Fortran remain the default during the long C parser stabilization
-  period.
+- It retains concise invocation for recognizable Fortran source files while
+  making ambiguous or C input explicit.
 
 No separate `--parse-c` alias is provided. `--language c --parse` is the
 single shared language-selection form.
@@ -158,9 +163,9 @@ Auto-detection should be later:
 x2py <path ...> --parse
 ```
 
-Auto-detection should wait until C parser behavior is mature enough to handle
-mixed source trees predictably. Until then, `--parse` without `--language`
-should keep existing Fortran behavior.
+Auto-detection should wait until mixed source trees can be handled
+predictably. Until then, recognizable Fortran inputs may omit `--language`;
+C inputs, directories, and unknown-suffix sources must select a frontend.
 
 ## Flags And Deferred Options
 

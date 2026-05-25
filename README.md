@@ -106,8 +106,13 @@ editable wrapper `.pyi` format is documented in
 - `--pyi` for generated Python stub text
 - `--wrap-readiness` for semantic wrap-readiness from either Fortran or `.pyi`
 
-Fortran is the default frontend. Use `--language c --parse` for C parser output.
-C semantics, C `.pyi`, and C wrap-readiness currently return explicit errors.
+Recognizable Fortran source files and `.pyi` readiness inputs use the Fortran
+path when `--language` is omitted. C source/header files require explicit
+`--language c`; directories and unknown-suffix source inputs require either
+`--language fortran` or `--language c`. C parsing, semantic IR, `.pyi`
+generation, and wrap-readiness are available in explicit C mode. Selecting a
+frontend that conflicts with a recognized C or Fortran source suffix is an
+error.
 
 For parse output, `--show-vars` expands scope-level variables that are normally
 summarized as `vars=N`. Use `--print-limit N` to keep large repeated sections
@@ -116,26 +121,32 @@ readable.
 ### Run from source tree
 
 ```bash
-python -m x2py <path ...> --parse
+python -m x2py path/to/file.f90 --parse
 ```
 
 ### Run after installation
 
 ```bash
-x2py <path ...> --parse
+x2py path/to/file.f90 --parse
 ```
 
-`<path ...>` can be one or more files and/or directories. Directories are
-scanned recursively for Fortran suffixes by default: `.f`, `.for`, `.ftn`,
-`.f90`, `.f95`, `.f03`, `.f08`. In explicit C mode, directories scan `.c` and
-`.h` files.
+One or more recognized Fortran files can omit `--language`. Directory input
+must select a frontend explicitly:
+
+```bash
+python -m x2py path/to/fortran_src --language fortran --parse
+python -m x2py path/to/c_src --language c --parse
+```
+
+Fortran directories scan `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`,
+`.f08`; C directories scan `.c`, `.h`, and `.i` files.
 
 ### Compiler preprocessing and target probes
 
 The shared compiler mode is:
 
 ```bash
-python -m x2py path/to/source --parse \
+python -m x2py path/to/source.f90 --language fortran --parse \
   --preprocess compiler \
   --compiler /path/to/compiler \
   -I include \
@@ -225,8 +236,8 @@ python -m x2py src/api.c --language c --parse \
   --compile-commands build/compile_commands.json
 ```
 
-Current C parser output is parse-only. These stages remain intentionally
-disabled until C semantic conversion exists:
+The supported C subset now continues through semantic IR, `.pyi` output, and
+wrap-readiness:
 
 ```bash
 python -m x2py include/api.h --language c --semantics

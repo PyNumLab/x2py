@@ -166,6 +166,48 @@ def test_cli_c_pyi_human_output_for_header(tmp_path: Path):
     assert "a: Int32" in res.stdout
 
 
+def test_cli_c_pyi_out_requires_explicit_language_and_writes_when_selected(tmp_path: Path):
+    header = tmp_path / "api.h"
+    output = tmp_path / "api.pyi"
+    header.write_text("int add(int a, int b);\n", encoding="utf-8")
+
+    omitted = subprocess.run(
+        [sys.executable, "-m", "x2py", str(header), "--pyi", "--out"],
+        capture_output=True,
+        text=True,
+    )
+    assert omitted.returncode == 2
+    assert "usage:" in omitted.stderr
+    assert "requires explicit --language c" in omitted.stderr
+    assert not output.exists()
+
+    selected = subprocess.run(
+        [sys.executable, "-m", "x2py", str(header), "--pyi", "--out", "--language", "c"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert selected.stdout == ""
+    assert "def add(" in output.read_text(encoding="utf-8")
+
+
+def test_cli_c_input_rejects_explicit_fortran_frontend(tmp_path: Path):
+    header = tmp_path / "api.h"
+    output = tmp_path / "api.pyi"
+    header.write_text("int add(int a, int b);\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "-m", "x2py", str(header), "--language", "fortran", "--pyi", "--out"],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "incompatible with --language fortran" in result.stderr
+    assert "pass --language c" in result.stderr
+    assert not output.exists()
+
+
 def test_cli_c_rejects_fortran_only_parse_flags(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")

@@ -229,7 +229,7 @@ Language scope is stated in each section or subsection heading:
 - [x] Add semantic tests for const pointer input.
 - [ ] Add semantic tests for arrays with explicit size parameter.
 - [x] Add semantic tests for structs and opaque handles.
-- [ ] Ensure C semantic conversion works for the supported parser subset.
+- [x] Ensure C semantic conversion works for the supported parser subset.
 - [x] Ensure unsupported C semantic mappings fail explicitly.
 - [x] Enable `--language c --semantics` only after tests pass.
 - [ ] Add a semantic fixture workflow for C if stable enough.
