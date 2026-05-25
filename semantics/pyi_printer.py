@@ -42,9 +42,12 @@ class PyiPrinter:
             return self.emit_constraint(node)
         raise TypeError(f"Unsupported semantic model for .pyi emission: {type(node)!r}")
 
-    def emit_constraint(self, constraint: SemanticConstraint) -> str:
+    @staticmethod
+    def emit_constraint(constraint: SemanticConstraint) -> str:
+        if constraint.name == "Constant":
+            raise ValueError("Constant constraints are emitted through Final[...] data declarations")
         if constraint.name == "Shape":
-            raise ValueError("Shape constraints are not supported; use T[n, m] array subscriptions")
+            raise ValueError("Shape constraints are not canonical; put dimensions inside T[...]")
         if not constraint.arguments:
             return constraint.name
         args = ", ".join(map(repr, constraint.arguments))
@@ -54,13 +57,14 @@ class PyiPrinter:
         if semantic_type.name == "Unknown" or semantic_type.dtype == "Unknown":
             raise ValueError("Cannot emit .pyi with unresolved semantic type 'Unknown'")
         if semantic_type.name == "Callable":
-            return self._emit_callable_type(semantic_type)
-        if semantic_type.storage is not None:
-            return self._emit_storage_type(semantic_type)
-        text = semantic_type.name
-        annotations = [self.emit_constraint(c) for c in semantic_type.constraints]
+            text = self._emit_callable_type(semantic_type)
+        elif semantic_type.storage is not None:
+            text = self._emit_storage_type(semantic_type)
+        else:
+            text = semantic_type.name
+        annotations = [self.emit_constraint(constraint) for constraint in semantic_type.constraints]
         if annotations:
-            text += "[" + ", ".join(annotations) + "]"
+            return self._annotated_type_text(text, annotations)
         return text
 
     def _emit_storage_type(self, semantic_type: SemanticType) -> str:

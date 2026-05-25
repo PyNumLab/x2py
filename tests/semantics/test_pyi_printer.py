@@ -651,7 +651,7 @@ end module
 
 def test_printer_emit_visitor_dispatches_semantic_models():
     printer = PyiPrinter()
-    constraint = SemanticConstraint("Constant")
+    constraint = SemanticConstraint("Finite")
     semantic_type = SemanticType(
         "Float64",
         dtype="Float64",
@@ -673,7 +673,7 @@ def test_printer_emit_visitor_dispatches_semantic_models():
     func = SemanticFunction(name="wrap", arguments=[argument])
     module = SemanticModule(name="visitor_mod", classes=[cls], functions=[func])
 
-    assert printer.emit(constraint) == "Constant"
+    assert printer.emit(constraint) == "Finite"
     assert printer.emit(semantic_type) == "Float64[:]"
     assert printer.emit(argument) == 'class_: Annotated[Float64[:], Name("class")] = ...'
     assert "def reset(self) -> None: ..." in printer.emit(method)
@@ -747,7 +747,6 @@ end module
 """
     code = generate_pyi(source)
     assert "answer: private[Final[Int32]]" in code
-    assert "answer: private[Int32[Constant]]" not in code
     assert "counter: Int32" in code
     assert "hidden_scale: private[Float64]" in code
 
@@ -861,7 +860,7 @@ def test_emit_native_call_rejects_unrepresentable_projection_entries(projection,
         emit_module(module)
 
 
-def test_printer_emits_extended_storage_callable_and_constraint_forms():
+def test_printer_emits_extended_storage_and_callable_forms():
     printer = PyiPrinter()
     readonly_value = SemanticType(
         "Int32",
@@ -880,6 +879,7 @@ def test_printer_emits_extended_storage_callable_and_constraint_forms():
     )
     annotated_array = SemanticType(
         "Float64",
+        constraints=[SemanticConstraint("Finite"), SemanticConstraint("Range", [1, 3])],
         storage=SemanticStorageContract(
             kind="array",
             array=SemanticArrayContract(
@@ -900,15 +900,21 @@ def test_printer_emits_extended_storage_callable_and_constraint_forms():
     )
     any_callback = SemanticType("Callable", metadata={"return": SemanticType("Float64")})
 
-    assert printer.emit_constraint(SemanticConstraint("Range", [1, 3])) == "Range(1, 3)"
-    with pytest.raises(ValueError, match="Shape constraints are not supported"):
-        printer.emit_constraint(SemanticConstraint("Shape", ["n"]))
+    canonical_constant = SemanticArgument(
+        "answer",
+        SemanticType("Int32", constraints=[SemanticConstraint("Constant")]),
+    )
+    assert printer.emit_argument(canonical_constant) == "answer: Final[Int32]"
+    with pytest.raises(ValueError, match=r"Final\[\.\.\.\]"):
+        printer.emit_semantic_type(canonical_constant.semantic_type)
     assert printer.emit_semantic_type(readonly_value) == "Const(Int32)"
     assert printer.emit_semantic_type(mutable_value) == "Int32"
     assert printer.emit_semantic_type(deep_pointer) == "Ptr[3](Const(Float64))"
     assert printer.emit_semantic_type(unspecified_storage) == "Int32"
     assert printer.emit_semantic_type(inferred_array) == "Float64[:, :]"
-    assert printer.emit_semantic_type(annotated_array) == "Annotated[Float64[:, :], ORDER_ANY, Allocatable, Pointer]"
+    assert printer.emit_semantic_type(annotated_array) == (
+        "Annotated[Float64[:, :], ORDER_ANY, Allocatable, Pointer, Finite, Range(1, 3)]"
+    )
     assert printer.emit_semantic_type(full_callback) == "Callable[[Int32], Float64]"
     assert printer.emit_semantic_type(any_callback) == "Callable[..., Float64]"
     assert printer.emit_semantic_type(SemanticType("Callable")) == "Callable"

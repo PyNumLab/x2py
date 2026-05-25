@@ -5,9 +5,8 @@ language-neutral: Fortran and future C inputs use the same type, storage,
 pointer, array, layout and metadata notation. Source language differences are
 represented by contracts and metadata, not by separate syntax families.
 
-This document describes the behavior implemented for the current Fortran path
-and the shared notation used by the first C semantic conversion subset. C
-`.pyi` generation remains deferred.
+This document describes the behavior implemented for the current Fortran and C
+semantic conversion paths.
 
 ## Canonical Type And Storage Contract
 
@@ -38,6 +37,10 @@ entry without colons is an extent (`Float64[n]`, `Float64[n, m]`). Slice-like
 entries express range or stride contracts (`Float64[1:n]`,
 `Float64[::Strided]`, `Float64[:, 0:n:m]`). `Strided` means the runtime stride
 is part of the accepted storage contract.
+
+Generic semantic constraints are not represented as type subscriptions.
+Constants use `Final[T]`; other constraints and non-dimensional array metadata
+use `Annotated[T[...], Constraint, ...]`.
 
 `Annotated[...]` carries non-dimensional metadata:
 

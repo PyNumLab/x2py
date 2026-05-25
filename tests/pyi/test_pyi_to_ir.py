@@ -1,4 +1,3 @@
-import ast
 from pathlib import Path
 import pytest
 
@@ -190,17 +189,24 @@ def test_pyi_parser_reports_unsupported_lines_and_invalid_helpers():
         parse_pyi_text("x: Unknown\n", module_name="edited")
 
 
-def test_pyi_parser_ignores_unknown_annotation_metadata():
+def test_pyi_parser_preserves_generic_constraints_as_annotation_metadata():
     module = parse_pyi_text(
         """
-value: Annotated[Int32, Other("native_value")]
+value: Annotated[Int32, Bounded(1, 8), Finite]
 alias: Annotated[Int32, Name("native_alias")]
 """,
         module_name="edited",
     )
 
     assert module.variables[0].name == "value"
+    assert module.variables[0].semantic_type.constraints == [
+        SemanticConstraint("Bounded", [1, 8]),
+        SemanticConstraint("Finite"),
+    ]
     assert module.variables[1].name == "native_alias"
+    emitted = emit_module(SemanticModule(name="constraints", variables=[module.variables[0]]))
+    assert "value: Annotated[Int32, Bounded(1, 8), Finite]" in emitted
+    assert parse_pyi_text(emitted, module_name="constraints").variables[0] == module.variables[0]
 
 
 def test_parse_pyi_text_accepts_qualified_ast_wrapper_names():
@@ -513,7 +519,7 @@ class vector:
 @pytest.mark.parametrize(
     "source, message",
     [
-        ("value: Int32[foo.bar]\n", "Unsupported semantic type constraint"),
+        ("value: Int32[foo.bar]\n", "Non-dimensional type subscriptions are not supported"),
         ("foo.bar: Int32\n", "Unsupported annotation target"),
         ("value: Annotated[Int32, Name('x', 'y')]\n", "Name metadata expects one argument"),
         ("def f(x: Int32): ...\n", "Unsupported function header"),
@@ -645,11 +651,12 @@ constant: Const(Int32)
 deep: Ptr[3](Const(Float64))
 rank_any: Float64[...]
 strided: Float64[0:n:Strided]
+computed: Float64[size(xl)]
 """,
         module_name="storage",
     )
 
-    plain, callback, constant, deep, rank_any, strided = [var.semantic_type for var in module.variables]
+    plain, callback, constant, deep, rank_any, strided, computed = [var.semantic_type for var in module.variables]
     assert plain.name == "Callable"
     assert callback.metadata["arguments"] is None
     assert constant.storage.kind == "value"
@@ -659,6 +666,7 @@ strided: Float64[0:n:Strided]
     assert deep.storage.read_only is True
     assert rank_any.storage.array.rank is None
     assert strided.storage.array.contiguous is False
+    assert computed.shape == ["size(xl)"]
 
 
 @pytest.mark.parametrize(
@@ -671,7 +679,12 @@ strided: Float64[0:n:Strided]
         ("value: Callable[Int32, Float64]\n", "Callable arguments must be a list"),
         ("value: Annotated[Float64[:], Intent('out', 'extra')]\n", "Intent metadata expects one argument"),
         ("value: Annotated[Float64[:], SourceShape('n')]\n", "SourceShape metadata is not supported"),
-        ("value: Float64[Shape('n')]\n", "Shape dimensions are not supported"),
+        ("value: Int32[Constant]\n", "Non-dimensional type subscriptions are not supported"),
+        ("value: Float64[ORDER_F]\n", "Non-dimensional type subscriptions are not supported"),
+        ("value: Float64[Shape]\n", "Non-dimensional type subscriptions are not supported"),
+        ("value: Float64[Shape('n')]\n", "Non-dimensional type subscriptions are not supported"),
+        ("value: Annotated[Int32, Constant]\n", "use Final"),
+        ("value: Annotated[Float64[:], Shape('n')]\n", "put dimensions inside"),
         ("@native_call([Arg(0).other[0]])\ndef f(x: Int32) -> None: ...\n", "projection entry calls"),
     ],
 )
@@ -680,11 +693,8 @@ def test_parse_pyi_text_rejects_additional_invalid_storage_forms(source: str, me
         parse_pyi_text(source, module_name="invalid")
 
 
-def test_pyi_parser_internal_projection_helpers_preserve_native_names_and_constraints():
+def test_pyi_parser_internal_projection_helpers_preserve_native_names():
     parser = _PyiAstParser(module_name="internal")
-    semantic_type = SemanticType("Int32", constraints=[SemanticConstraint("Old")])
-    parser._replace_constraint(semantic_type, "Old")
-    parser._replace_constraint(semantic_type, "New")
     returned = SemanticArgument("result", SemanticType("Float64"), intent="out", metadata={"return_position": 1})
     mapping = ProjectionMapping(native_name="native_result", result_position=1, intent="out")
     _, values = parser._apply_native_call_returns(None, [returned], [mapping])
@@ -692,13 +702,8 @@ def test_pyi_parser_internal_projection_helpers_preserve_native_names_and_constr
     arg_mapping = ProjectionMapping(native_name="native_name", python_position=0)
     parser._apply_native_call_argument_names([native_arg], {}, [arg_mapping])
 
-    assert [constraint.name for constraint in semantic_type.constraints] == ["Old", "New"]
     assert values[0].name == "native_result"
     assert arg_mapping.native_name == "native_name"
-    with pytest.raises(ValueError, match="Shape constraints are not supported"):
-        parser.constraint(ast.Name(id="Shape"))
-    with pytest.raises(ValueError, match="Shape constraints are not supported"):
-        parser.constraint(ast.Call(func=ast.Name(id="Shape"), args=[], keywords=[]))
 
 
 def test_generated_pyi_compares_equal_to_original_ir_for_all_fortran_fixtures(tmp_path: Path):
