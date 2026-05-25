@@ -2,8 +2,9 @@
 
 Status: C parser partial subset plus raw directive metadata implemented. The
 CLI command shape exists and parse reports can include raw includes, simple
-macros, `#undef` and conditional directive provenance, top-level
-redeclaration diagnostics, project include/index metadata, diagnostics,
+macros, `#undef` and conditional directive provenance, raw conditional
+function variants, top-level redeclaration diagnostics, project include/index
+metadata, diagnostics,
 variables, typedefs,
 aggregate declarations, function prototypes, prototype-style metadata, and
 function-definition signatures with start/end locations. Declarator output can
@@ -29,8 +30,11 @@ python -m x2py path/to/api.h --language c --parse --out report.json
 python -m x2py path/to/api.h --language c --parse --preprocess compiler --compiler clang-18 -I include -D API_EXPORT= --std c11
 ```
 
-The C parser accepts explicit `.c` and `.h` files, plus directories in explicit
-C mode. Directory scanning in C mode only collects `.c` and `.h` files.
+The C parser accepts explicit `.c`, `.h`, and direct `.i` files, plus
+directories in explicit C mode. Directory scanning in C mode collects those
+three source forms. It does not recursively parse headers mentioned by
+includes; as on the Fortran path, an imported/included source is parsed only
+when the user supplied it or supplied a directory containing it.
 Auto-detection is deferred, so omitting `--language` keeps the current Fortran
 behavior.
 
@@ -54,7 +58,11 @@ source. `parse_c_project(...)` additionally
 populates project-level include/index fields such as `include_graph`,
 `system_includes`, `unresolved_includes`, `functions_by_file`,
 `enum_constants`, and `header_source_pairs`. Those fields require project
-context; a single-file parse only records the local file facts.
+context; a single-file parse only records the local file facts. If raw
+conditional branches expose incompatible alternatives of one function,
+`CFunction.condition_set` records the alternatives and
+`CProject.conditional_function_variants` retains them outside the unique
+function index.
 The object class distinguishes declarations (`CFunction`,
 `CVariable`, `CTypedef`, `CStruct`, `CUnion`, or `CEnum`), and incomplete tag
 declarations set `is_incomplete=True`.
@@ -139,14 +147,8 @@ Rationale:
 - It lets Fortran remain the default during the long C parser stabilization
   period.
 
-Optional short alias, not implemented:
-
-```bash
-x2py <path ...> --parse-c
-```
-
-The short alias is convenient, but should be secondary. If added, it should be
-implemented as a strict alias for `--language c --parse`.
+No separate `--parse-c` alias is provided. `--language c --parse` is the
+single shared language-selection form.
 
 Auto-detection should be later:
 
@@ -413,7 +415,12 @@ marked through `macro_dependencies` without being parsed as expanded
 declarations. Local quoted includes are resolved
 relative to the current file or configured include dirs when possible;
 unresolved local includes produce `C_UNRESOLVED_INCLUDE` diagnostics instead
-of hard failures.
+of hard failures. Resolution records an edge; it does not make the included
+file a parser input. System includes are recorded but neither searched nor
+parsed recursively. Generated headers follow the same explicit-input rule.
+Raw same-name functions in mutually exclusive conditional branches carry
+`condition_set` branch tokens and are retained as alternatives rather than
+misdiagnosed as incompatible redeclarations.
 
 Raw mode must not claim support for macro-generated declarations. If macros
 affect function names, types, parameters, attributes, storage classes, calling
@@ -461,6 +468,11 @@ diagnostics
 Declaration/directive records include `source_location`; diagnostics use
 `location`. Concrete type components preserve `source_text` rather than their
 own source-location object:
+
+`condition_set` is emitted only for raw same-name `CFunction` alternatives
+that survive normalization. For project-model JSON,
+`conditional_function_variants` is emitted only when those alternatives
+cannot be represented by one unique `functions` entry.
 
 ```text
 source_location: {
@@ -561,7 +573,7 @@ The active CLI/parser tests cover the current partial subset:
 - Existing Fortran CLI tests still pass unchanged.
 - `python -m x2py --help` lists `--language`.
 - `python -m x2py <file.c> --language c --parse` is accepted.
-- `python -m x2py <file.c> --parse-c` is not implemented.
+- No `--parse-c` alias is provided; C uses `--language c --parse`.
 - `--language c --parse --json` emits stable partial-parser JSON with raw
   include/macro metadata and supported declarations when present.
 - `--language c --parse --out report.json` writes JSON and suppresses stdout.
@@ -570,7 +582,8 @@ The active CLI/parser tests cover the current partial subset:
 - raw comment stripping, line-continuation folding, top-level splitting,
   include collection, simple macro collection, function-like macro diagnostics,
   object-like macro declaration-prefix deferral,
-  conditional non-selection, simple declarations, variables, typedefs,
+  conditional non-selection and mutually exclusive function variants, simple
+  declarations, variables, typedefs,
   parenthesized declarators, function pointer typedefs/parameters, recursive
   declarator combinations, concrete declaration objects, aggregate
   definitions/members/enumerators, incomplete struct/union tags, and function

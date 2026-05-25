@@ -63,7 +63,11 @@ The C frontend is currently parse-only. It supports:
   compatible top-level redeclaration merging.
 - Pointer, array, function, and parenthesized declarator shapes, including
   function pointer typedefs/parameters and parameter adjustment metadata.
-- Project include/index facts through `parse_c_project(...)`.
+- Project include/index facts through `parse_c_project(...)`, with includes
+  recorded non-recursively: only explicitly supplied files or files below an
+  explicitly supplied directory are parsed.
+- Raw mutually exclusive function alternatives preserved for later semantic
+  selection rather than collapsed into one signature.
 
 C semantic IR conversion, C `.pyi` generation, and C wrap-readiness are still
 intentionally disabled until the C semantic layer is implemented.
@@ -74,8 +78,8 @@ Public API entrypoints include:
 
 - `x2py.parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
 - `x2py.parse_fortran_project(files, encoding="utf-8") -> FortranProject`
-- `c_parser.parse_c_file(source_or_path, filename=None, macro_defines=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile`
-- `c_parser.parse_c_project(files, include_dirs=None, macro_defines=None, preprocessing="raw", encoding="utf-8") -> CProject`
+- `x2py.parse_c_file(source_or_path, filename=None, macro_defines=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile`
+- `x2py.parse_c_project(files, include_dirs=None, macro_defines=None, preprocessing="raw", encoding="utf-8") -> CProject`
 - `x2py.fortran_file_to_semantic_modules(parsed_file, standalone_module_name=None) -> list[SemanticModule]`
 - `x2py.assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
 - `x2py.assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`
@@ -611,7 +615,7 @@ types with `class` stubs, literal compile-time constants with
 ### Example 3: parse C from Python
 
 ```python
-from c_parser import parse_c_file, parse_c_project
+from x2py import parse_c_file, parse_c_project
 
 header = parse_c_file("include/api.h")
 print("functions:", [fn.name for fn in header.functions])
@@ -622,9 +626,11 @@ print("include graph:", project.include_graph)
 print("header/source pairs:", project.header_source_pairs)
 ```
 
-The C Python API is intentionally imported from `c_parser` while the C frontend
-stabilizes. C semantic conversion will be added through the semantic layer in a
-future phase.
+The same C entrypoints remain available from `c_parser`. Includes are recorded
+as project facts and are not recursively parsed; supply every header that
+should contribute declarations (or supply its containing directory). C
+semantic conversion will be added through the semantic layer in a future
+phase.
 
 ## Running tests
 

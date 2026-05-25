@@ -82,13 +82,23 @@ def c_model_to_dict(obj: Any, _seen: set[int] | None = None) -> Any:
                     and f.name == "original_source_paths"
                     and not getattr(obj, f.name)
                 )
+                or (
+                    isinstance(obj, CFunction)
+                    and f.name == "condition_set"
+                    and not getattr(obj, f.name)
+                )
+                or (
+                    isinstance(obj, CProject)
+                    and f.name == "conditional_function_variants"
+                    and not getattr(obj, f.name)
+                )
             )
         }
     if isinstance(obj, list):
         return [c_model_to_dict(v, _seen) for v in obj]
     if isinstance(obj, dict):
         return {k: c_model_to_dict(v, _seen) for k, v in obj.items()}
-    if isinstance(obj, set):
+    if isinstance(obj, (set, frozenset)):
         return sorted(c_model_to_dict(v, _seen) for v in obj)
     return obj
 
@@ -391,6 +401,7 @@ class CFunction:
     start: CSourceLocation | None = None
     end: CSourceLocation | None = None
     declaration_locations: list[CSourceLocation] = field(default_factory=list)
+    condition_set: frozenset[str] = field(default_factory=frozenset)
     origin: str | None = None
 
     @property
@@ -561,6 +572,7 @@ class CProject:
     system_includes: dict[str, set[str]] = field(default_factory=dict)
     unresolved_includes: dict[str, set[str]] = field(default_factory=dict)
     header_source_pairs: dict[str, set[str]] = field(default_factory=dict)
+    conditional_function_variants: dict[str, list[CFunction]] = field(default_factory=dict)
     diagnostics: list[CDiagnostic] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:

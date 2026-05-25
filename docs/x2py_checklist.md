@@ -18,34 +18,47 @@ Language scope is stated in each section or subsection heading:
 
 ## Step 1: C Parser Frontend Cleanup
 
-- [ ] Keep existing C parser behavior unchanged unless a future task explicitly
-      requires shared infrastructure changes.
-- [ ] Keep wrappability assessment in the semantic layer, not inside parser
-      packages.
-- [ ] Split `CParser` internals into smaller visitor/helper classes only if the
-      class grows past what remains readable.
-- [ ] Decide whether macros belong only in `CFile.macros` or also in project
-      symbol indexes.
-- [ ] If `--parse-c` is added, make it an alias for `--language c --parse` and
-      add CLI tests for the alias.
-- [ ] Allow same function under mutually exclusive preprocessor branches.
-- [ ] Make C parser diagnostics report "no functions found" only when
-      appropriate.
-- [ ] Safely fold simple enum integer expressions, or document the exact
-      boundary for preserving expression text.
-- [ ] Decide how much enum expression folding is safe without compiler
-      semantics.
-- [ ] Decide whether unions map to semantic IR at all in v1.
-- [ ] Feed C standard-type probe reports into C semantic conversion once the
-      C semantic converter exists.
+- [x] Keep C parsing source-faithful and parse-only. Unsupported syntax and
+      unresolved parser facts may produce diagnostics; wrapper readiness and
+      policy remain semantic-layer work.
+- [x] Keep `CParser` as the current grammar-shaped visitor/helper class; no
+      readability-driven class split is needed for the implemented parser
+      surface.
+- [x] Store macros on each `CFile` and index their recorded project facts in
+      `CProject.macros`.
+- [x] Use the shared CLI spelling `--language c --parse`; do not add a separate
+      `--parse-c` spelling while it would only duplicate that path.
+- [x] Expose `parse_c_file` and `parse_c_project` from `x2py` as well as from
+      `c_parser`, matching the Fortran public entrypoint style.
+- [x] Preserve same-name function variants in mutually exclusive raw
+      preprocessor branches. `CFunction.condition_set` uses the Fortran-style
+      `gN:bN` branch tokens; ambiguous project names are retained in
+      `CProject.conditional_function_variants` instead of being collapsed into
+      one `CProject.functions` entry.
+- [x] Keep "no functions found" out of parser diagnostics. Whether a source
+      has no wrappable public API is a Step 4 semantic-readiness decision.
+- [x] Preserve enum initializer expression text in parser models rather than
+      folding it without compiler semantics. Later semantic conversion may
+      evaluate expressions only with an explicit safe/target-aware policy.
+- [x] Preserve `CUnion` source facts in the parser; whether a union maps to
+      semantic IR or blocks wrapping is deferred to C semantic conversion.
 
 ## Step 2: C Project And Include Policy
 
-- [ ] Decide whether project parsing should parse all included system headers
-      when they are found locally.
-- [ ] Decide how to handle generated headers.
-- [ ] Decide whether include graph keys should be path-keyed, module-keyed, or
-      both.
+- [x] Parse only inputs given by the user: explicit mapping entries, explicit
+      file paths, or supported files discovered below an explicit directory.
+      Quoted and system includes are recorded as dependency facts; they do not
+      cause recursive parsing even when a matching header is locally available.
+      This is the same non-recursive policy used for Fortran recorded
+      imports/includes.
+- [x] Treat generated headers and direct `.i` inputs like other sources: parse
+      them only when explicitly supplied or discovered below an explicitly
+      supplied directory. Compiler-preprocessed streams remain supported input;
+      their linemarkers record origins but do not add recursively parsed files.
+- [x] Key C project files and include-graph edges by input/path identity, not
+      module identity. An edge uses an already parsed project-file key where
+      one matches; otherwise it retains the resolved path or written include
+      target as an external dependency fact.
 
 ## Step 3: Shared Semantic Model Foundation (Fortran And C)
 
@@ -175,6 +188,8 @@ Language scope is stated in each section or subsection heading:
 - [ ] Create `semantics/c2ir.py`.
 - [ ] Implement `CToIRConverter`.
 - [ ] Mirror the visitor style of `FortranToIRConverter`.
+- [ ] Accept C standard-type probe reports as target context for converting
+      standard-header aliases and opaque handles once `CToIRConverter` exists.
 - [ ] Add compatibility helpers such as `c_file_to_semantic_modules`.
 - [ ] Add `c_function_to_semantic_function`.
 - [ ] Add `c_struct_to_semantic_class` where appropriate.

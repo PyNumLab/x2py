@@ -199,6 +199,55 @@ int run_slow(void);
     ]
 
 
+def test_raw_mode_keeps_incompatible_function_variants_from_alternative_branches():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+#ifdef USE_FLOAT
+float scale(float value);
+#else
+double scale(double value);
+#endif
+""",
+        filename="conditional_signature.h",
+        preprocessing="raw",
+    )
+
+    assert [fn.name for fn in parsed.functions] == ["scale", "scale"]
+    assert [fn.condition_set for fn in parsed.functions] == [
+        frozenset({"g1:b0"}),
+        frozenset({"g1:b1"}),
+    ]
+    assert not any(
+        diag.code == "C_CONFLICTING_FUNCTION_DECLARATION"
+        for diag in parsed.diagnostics
+    )
+    assert parsed.to_dict()["functions"][0]["condition_set"] == ["g1:b0"]
+
+
+def test_raw_mode_does_not_treat_independent_conditional_groups_as_exclusive():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+#ifdef USE_FLOAT
+float scale(float value);
+#endif
+#ifdef USE_DOUBLE
+double scale(double value);
+#endif
+""",
+        filename="overlapping_signatures.h",
+        preprocessing="raw",
+    )
+
+    assert any(
+        diag.code == "C_CONFLICTING_FUNCTION_DECLARATION"
+        for diag in parsed.diagnostics
+    )
+
+
 def test_raw_mode_records_pragmas_as_metadata_without_hiding_declarations():
     from c_parser import parse_c_file
 

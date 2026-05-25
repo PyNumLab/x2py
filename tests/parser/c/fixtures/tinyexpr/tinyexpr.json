@@ -2013,7 +2013,100 @@
             "column": 1,
             "source_line": "}"
           },
-          "declaration_locations": []
+          "declaration_locations": [],
+          "condition_set": [
+            "g5:b0"
+          ]
+        },
+        {
+          "name": "factor",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "te_expr",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CTypedef",
+                "qualifiers": [],
+                "source_text": "te_expr",
+                "name": "te_expr",
+                "type": null,
+                "source_location": null,
+                "declaration_locations": []
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "s",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "state *s",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "state"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "state *s",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "state"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 503,
+            "column": 1,
+            "source_line": "static te_expr *factor(state *s) {"
+          },
+          "start": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 503,
+            "column": 1,
+            "source_line": "static te_expr *factor(state *s) {"
+          },
+          "end": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 522,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [],
+          "condition_set": [
+            "g5:b1"
+          ]
         },
         {
           "name": "term",
@@ -3470,19 +3563,6 @@
           },
           "unit_kind": "macro",
           "unit_name": "M"
-        },
-        {
-          "code": "C_DUPLICATE_FUNCTION_DEFINITION",
-          "message": "Duplicate definition for function 'factor'.",
-          "severity": "error",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 503,
-            "column": 1,
-            "source_line": "static te_expr *factor(state *s) {"
-          },
-          "unit_kind": "function",
-          "unit_name": "factor"
         }
       ]
     },
@@ -5136,87 +5216,6 @@
       },
       "declaration_locations": []
     },
-    "factor": {
-      "name": "factor",
-      "result_type": {
-        "model": "CComposedType",
-        "qualifiers": [],
-        "source_text": "te_expr",
-        "components": [
-          {
-            "model": "CPointer",
-            "qualifiers": [],
-            "source_text": ""
-          },
-          {
-            "reference": "te_expr"
-          }
-        ]
-      },
-      "parameters": [
-        {
-          "name": "s",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "state *s",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "state"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "state *s",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "state"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [
-        "static"
-      ],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 448,
-        "column": 1,
-        "source_line": "static te_expr *factor(state *s) {"
-      },
-      "start": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 448,
-        "column": 1,
-        "source_line": "static te_expr *factor(state *s) {"
-      },
-      "end": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 501,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
     "term": {
       "name": "term",
       "result_type": {
@@ -6189,6 +6188,7 @@
       "power",
       "base",
       "factor",
+      "factor",
       "term",
       "te_eval",
       "optimize",
@@ -6327,6 +6327,178 @@
       "tinyexpr/tinyexpr.c"
     ]
   },
+  "conditional_function_variants": {
+    "factor": [
+      {
+        "name": "factor",
+        "result_type": {
+          "model": "CComposedType",
+          "qualifiers": [],
+          "source_text": "te_expr",
+          "components": [
+            {
+              "model": "CPointer",
+              "qualifiers": [],
+              "source_text": ""
+            },
+            {
+              "reference": "te_expr"
+            }
+          ]
+        },
+        "parameters": [
+          {
+            "name": "s",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "state *s",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "state"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "state *s",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "state"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          }
+        ],
+        "storage": [
+          "static"
+        ],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "tinyexpr/tinyexpr.c",
+          "line": 448,
+          "column": 1,
+          "source_line": "static te_expr *factor(state *s) {"
+        },
+        "start": {
+          "filename": "tinyexpr/tinyexpr.c",
+          "line": 448,
+          "column": 1,
+          "source_line": "static te_expr *factor(state *s) {"
+        },
+        "end": {
+          "filename": "tinyexpr/tinyexpr.c",
+          "line": 501,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g5:b0"
+        ]
+      },
+      {
+        "name": "factor",
+        "result_type": {
+          "model": "CComposedType",
+          "qualifiers": [],
+          "source_text": "te_expr",
+          "components": [
+            {
+              "model": "CPointer",
+              "qualifiers": [],
+              "source_text": ""
+            },
+            {
+              "reference": "te_expr"
+            }
+          ]
+        },
+        "parameters": [
+          {
+            "name": "s",
+            "type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "state *s",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "state"
+                }
+              ]
+            },
+            "declared_type": {
+              "model": "CComposedType",
+              "qualifiers": [],
+              "source_text": "state *s",
+              "components": [
+                {
+                  "model": "CPointer",
+                  "qualifiers": [],
+                  "source_text": ""
+                },
+                {
+                  "reference": "state"
+                }
+              ]
+            },
+            "source_location": null,
+            "callback_policy": null
+          }
+        ],
+        "storage": [
+          "static"
+        ],
+        "specifiers": [],
+        "is_variadic": false,
+        "is_definition": true,
+        "prototype_style": "prototype",
+        "source_location": {
+          "filename": "tinyexpr/tinyexpr.c",
+          "line": 503,
+          "column": 1,
+          "source_line": "static te_expr *factor(state *s) {"
+        },
+        "start": {
+          "filename": "tinyexpr/tinyexpr.c",
+          "line": 503,
+          "column": 1,
+          "source_line": "static te_expr *factor(state *s) {"
+        },
+        "end": {
+          "filename": "tinyexpr/tinyexpr.c",
+          "line": 522,
+          "column": 1,
+          "source_line": "}"
+        },
+        "declaration_locations": [],
+        "condition_set": [
+          "g5:b1"
+        ]
+      }
+    ]
+  },
   "diagnostics": [
     {
       "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
@@ -6444,19 +6616,6 @@
       },
       "unit_kind": "macro",
       "unit_name": "M"
-    },
-    {
-      "code": "C_DUPLICATE_FUNCTION_DEFINITION",
-      "message": "Duplicate definition for function 'factor'.",
-      "severity": "error",
-      "location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 503,
-        "column": 1,
-        "source_line": "static te_expr *factor(state *s) {"
-      },
-      "unit_kind": "function",
-      "unit_name": "factor"
     },
     {
       "code": "C_UNSUPPORTED_DECLARATOR",

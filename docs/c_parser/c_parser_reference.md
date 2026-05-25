@@ -37,7 +37,9 @@ Supported source forms:
 
 Project input accepts explicit files and directories in explicit C mode.
 Directory scanning in C mode discovers C source/header inputs without changing
-Fortran's default directory behavior.
+Fortran's default directory behavior. Project parsing does not recursively
+parse files named by C includes: as with Fortran recorded imports/includes,
+only user-supplied files or files beneath a user-supplied directory are parsed.
 
 ## Current Status
 
@@ -46,6 +48,8 @@ Implemented:
 - `c_parser` package
 - typed C parser models for partial parse reports and raw metadata
 - `CParser`, `parse_c_file`, and `parse_c_project`
+- top-level `x2py.parse_c_file` and `x2py.parse_c_project` exports alongside
+  the `c_parser` package entrypoints
 - `CParseError` with compiler-style diagnostic formatting
 - explicit `x2py --language c --parse` output
 - C JSON partial output and `--out` behavior
@@ -54,6 +58,9 @@ Implemented:
   lightweight token source locations
 - top-level source splitting that tracks braces, parentheses, brackets, and
   string/character literals
+- raw conditional same-name function alternatives retain Fortran-style
+  `condition_set` branch identity rather than being diagnosed as conflicting
+  redeclarations
 - raw `#include` collection for quoted and system includes
 - simple object-like `#define` macro collection
 - function-like macro metadata with unsupported diagnostics
@@ -100,10 +107,12 @@ Implemented:
   explicit C mode, while leaving Fortran directory scanning unchanged
 - include resolution for quoted includes relative to the current file and
   configured include directories, unresolved include tracking, system include
-  tracking, cycle-safe include graph construction, and header/source pairing
+  tracking, cycle-safe include graph construction, and header/source pairing,
+  without recursive include parsing
 - project indexes for functions, file-scope variables, typedefs, struct tags,
   union tags, enum tags, enum constants, macros/constants, and functions by
-  file
+  file; raw conditional alternatives that cannot occupy one unique function
+  index entry are retained in `conditional_function_variants`
 - basic cross-file typedef chain and struct/union/enum tag resolution, with
   typedef-cycle diagnostics and unresolved references preserved for later
   diagnostics
@@ -184,6 +193,9 @@ Raw-source mode means source normalization plus directive metadata:
 - record conditional and pragma directives as raw provenance metadata,
   including OpenMP declaration pragmas such as `#pragma omp declare simd` and
   `#pragma omp declare target`
+- retain mutually exclusive same-name function declarations as alternatives
+  with `CFunction.condition_set` branch identity, matching the Fortran
+  parser's unselected-branch convention
 - record function-like macros as metadata with unsupported/deferred diagnostics
 - record function-like wrappers and object-like declaration prefixes as
   macro-dependency metadata without claiming they were parsed
@@ -286,10 +298,12 @@ assumptions.
 
 ## Public API
 
-Implemented module-level entrypoints:
+Implemented top-level and package entrypoints:
 
 ```python
-from c_parser import parse_c_file, parse_c_project
+from x2py import parse_c_file, parse_c_project
+# Equivalent parser-package imports remain available:
+# from c_parser import parse_c_file, parse_c_project
 ```
 
 Implemented signatures:
@@ -395,12 +409,13 @@ declaration. Duplicate initialized variables, duplicate function definitions,
 duplicate complete tag definitions, and incompatible top-level redeclarations
 produce diagnostics. Local declarations inside function bodies are ignored
 because body contents are intentionally skipped.
-Re-export from `x2py` is still deferred; users should import from `c_parser`.
+`x2py` exports the C file/project entrypoints in the same style as the
+Fortran entrypoints. The typed C parser package remains importable directly.
 
 Example: parse one header from Python.
 
 ```python
-from c_parser import parse_c_file
+from x2py import parse_c_file
 
 parsed = parse_c_file("include/api.h")
 print([function.name for function in parsed.functions])
@@ -410,7 +425,7 @@ print([typedef.name for typedef in parsed.typedefs])
 Example: parse a small project with include directories.
 
 ```python
-from c_parser import parse_c_project
+from x2py import parse_c_project
 
 project = parse_c_project(["src/api.c", "include/api.h"], include_dirs=["include"])
 print(project.include_graph)
@@ -433,6 +448,18 @@ macros, declarations, diagnostics, and unresolved typedef/tag references. A
 project parse sees multiple files together and can populate include graphs,
 system include records, unresolved include sets, functions by file, enum
 constants, likely header/source pairs, and basic cross-file typedef/tag links.
+An include edge is metadata only: a resolved local or system header is not
+parsed unless it is also supplied as a project input or falls beneath a
+directory input. Generated headers and direct `.i` streams follow that same
+explicit-input rule. Include-graph keys use project input/path identity; they
+are not module keys.
+
+When raw input declares incompatible versions of the same function in
+alternative `#if`/`#else` branches, each `CFunction` retains a `condition_set`
+such as `{"g1:b0"}` or `{"g1:b1"}`. A `CProject` stores such alternatives in
+`conditional_function_variants` rather than claiming that one variant is the
+unique `functions` entry. Compiler-preprocessed input contains the selected
+configuration and therefore does not need this ambiguity representation.
 
 `macro_defines` is reserved for future compiler-assisted preprocessing
 configuration. It must not mean that raw mode evaluates C preprocessor
@@ -453,13 +480,8 @@ x2py path/to/api.h --language c --parse --json
 x2py path/to/api.h --language c --parse --out report.json
 ```
 
-Optional alias, not implemented:
-
-```bash
-x2py path/to/api.h --parse-c
-```
-
-Auto-detection should come later, after the frontend is stable.
+There is no separate `--parse-c` alias: `--language c --parse` is the shared
+language-selection form. Auto-detection remains deferred.
 
 ## Current JSON Output
 
@@ -511,6 +533,10 @@ JSON compatibility rules:
 - emit references for reused aggregate or typedef objects rather than
   recursive JSON cycles
 - preserve unknown or unresolved information rather than dropping it silently
+- emit `condition_set` only for retained raw conditional function alternatives,
+  and
+  emit project `conditional_function_variants` only when a unique function
+  index would discard those alternatives
 - keep model fields stable enough for golden fixture testing
 - document every intentional schema break
 
@@ -591,7 +617,8 @@ public entrypoints, empty model serialization, CLI discovery, JSON/output-file
 behavior, unsupported C stages, comment stripping, line-continuation folding,
 top-level splitting, include collection, simple macro collection, macro-shaped
 declaration deferral, raw conditional branch non-selection and provenance,
-macro-dependency metadata, project include/index behavior, simple declarations,
+mutually exclusive function variant retention, macro-dependency metadata,
+explicit-input/non-recursive project include behavior, simple declarations,
 variables, typedefs, top-level redeclaration diagnostics, recursive declarator
 composition, aggregate definitions, members, enums, simple function
 prototypes/definitions, function-definition start/end locations, JSON golden
@@ -643,7 +670,7 @@ declarations.
 
 | Capability | C example | Current parser boundary | Needed behavior |
 | --- | --- | --- | --- |
-| Typedef/tag resolution | `typedef unsigned long size_t; size_t count(void);` and `struct state { int id; }; void step(struct state *s);` | Basic project parsing links typedef chains and struct/union/enum tag references while preserving unresolved objects when context is absent. | Deepen conflict and generated-header policy for broader projects. |
+| Typedef/tag resolution | `typedef unsigned long size_t; size_t count(void);` and `struct state { int id; }; void step(struct state *s);` | Basic project parsing links typedef chains and struct/union/enum tag references while preserving unresolved objects when context is absent. | Deepen conflict policy for broader projects; included/generated files are parsed only when supplied as project inputs. |
 | Preprocessed declarations | `#define API(ret) ret` followed by `API(int) run(void);` | Raw mode records macro metadata and does not claim the expanded declaration; compiler or `.i` mode parses expanded declarations, maps locations through `#line` markers, and records `origin="preprocessed"`; x2py-generated streams also record their recipe. | Broaden fixture-driven extension and compiler-family coverage. |
 | Additional extension families | `int run(void) __attribute__((visibility("default")));` | Known attribute/alignment forms are diagnosed; broader compiler extensions are not modeled. | Add fixture-driven support or a focused diagnostic for each required extension family. |
 
@@ -702,8 +729,9 @@ active projects with
 Fatal diagnostic goldens are regenerated with
 `C_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser/c/test_c_error_fixture_suite.py`.
 The standalone generator modules remain available for targeted refreshes.
-Until include-expanded parsing is implemented, a paired project records the
-source-to-header include edge but parses the `.c` and `.h` members separately.
+By policy, a paired project records source-to-header include edges but parses
+each supplied `.c`, `.h`, or `.i` member separately; include traversal is not
+a parser input-discovery mechanism.
 
 STB is treated as a family of independent single-file libraries: each
 top-level `.h` or `.c` input generates its own one-file project golden rather

@@ -117,6 +117,9 @@ _UNSUPPORTED_DECLARATION_MARKERS = (
 )
 _CXX_DECLARATION_KEYWORDS = {"using", "namespace", "template", "class"}
 _CXX_ACCESS_SPECIFIERS = {"public", "private", "protected"}
+_RAW_CONDITIONAL_DIRECTIVE_RE = re.compile(
+    r"^\s*#\s*(?P<directive>if|ifdef|ifndef|elif|else|endif)\b"
+)
 _PRIMITIVE_WORDS = {
     "void",
     "char",
@@ -365,6 +368,7 @@ class CParser:
                 filename,
                 function_like_macros=function_like_macro_names,
                 object_like_macros=object_like_macro_names,
+                condition_sets_by_line=self._raw_conditional_condition_sets(source),
             )
             parsed.functions = functions
             parsed.structs = structs
@@ -410,7 +414,12 @@ class CParser:
         preprocessing: str = "raw",
         encoding: str = "utf-8",
     ) -> CProject:
-        """Parse a mapping, file list, single file, or directory into a `CProject`."""
+        """Parse explicit project inputs without recursively parsing includes.
+
+        A directory input explicitly supplies all supported source files below
+        that directory. Include directives are recorded and resolved as graph
+        facts where possible, but they never cause another file to be opened.
+        """
         if isinstance(files, Mapping):
             parsed_files = {
                 name: self.visit_file(
@@ -675,6 +684,51 @@ class CParser:
         if location is not None and location not in locations:
             locations.append(location)
 
+    @staticmethod
+    def _raw_conditional_condition_sets(source: str) -> dict[int, frozenset[str]]:
+        """Track unselected raw preprocessor alternatives by physical line."""
+        conditions_by_line: dict[int, frozenset[str]] = {}
+        condition_stack: list[tuple[int, int]] = []
+        group_counter = 0
+        for line_number, line in enumerate(source.splitlines(), start=1):
+            match = _RAW_CONDITIONAL_DIRECTIVE_RE.match(line)
+            if match is None:
+                conditions_by_line[line_number] = frozenset(
+                    f"g{group_id}:b{branch_id}"
+                    for group_id, branch_id in condition_stack
+                )
+                continue
+
+            directive = match.group("directive")
+            if directive in {"if", "ifdef", "ifndef"}:
+                group_counter += 1
+                condition_stack.append((group_counter, 0))
+            elif directive in {"elif", "else"} and condition_stack:
+                group_id, branch_id = condition_stack.pop()
+                condition_stack.append((group_id, branch_id + 1))
+            elif directive == "endif" and condition_stack:
+                condition_stack.pop()
+        return conditions_by_line
+
+    @staticmethod
+    def _functions_are_mutually_exclusive(left: CFunction, right: CFunction) -> bool:
+        """Return whether two raw function facts are in alternative branches."""
+        if (
+            not left.condition_set
+            or not right.condition_set
+            or left.source_location is None
+            or right.source_location is None
+            or left.source_location.filename != right.source_location.filename
+        ):
+            return False
+        branches: dict[str, str] = {}
+        for token in left.condition_set | right.condition_set:
+            group, _, branch = token.partition(":")
+            if group in branches and branches[group] != branch:
+                return True
+            branches[group] = branch
+        return False
+
     # ------------------------------------------------------------------
     # Redeclaration compatibility and normalization
     # ------------------------------------------------------------------
@@ -771,43 +825,48 @@ class CParser:
         diagnostics: list[CDiagnostic],
     ) -> list[CFunction]:
         """Merge compatible functions and report duplicate/conflicting ones."""
-        by_name: dict[str, CFunction] = {}
-        order: list[str] = []
+        normalized: list[CFunction] = []
 
         for function in functions:
-            existing = by_name.get(function.name)
-            if existing is None:
-                by_name[function.name] = function
-                order.append(function.name)
+            overlapping = [
+                index
+                for index, existing in enumerate(normalized)
+                if existing.name == function.name
+                and not self._functions_are_mutually_exclusive(existing, function)
+            ]
+            if not overlapping:
+                normalized.append(function)
                 continue
 
-            if not self._functions_compatible(existing, function):
-                diagnostics.append(
-                    self._redeclaration_diagnostic(
-                        "C_CONFLICTING_FUNCTION_DECLARATION",
-                        f"Conflicting declarations for function {function.name!r}.",
-                        function.source_location,
-                        "function",
-                        function.name,
+            for index in overlapping:
+                existing = normalized[index]
+                if not self._functions_compatible(existing, function):
+                    diagnostics.append(
+                        self._redeclaration_diagnostic(
+                            "C_CONFLICTING_FUNCTION_DECLARATION",
+                            f"Conflicting declarations for function {function.name!r}.",
+                            function.source_location,
+                            "function",
+                            function.name,
+                        )
                     )
-                )
-                continue
+                    continue
 
-            if existing.is_definition and function.is_definition:
-                diagnostics.append(
-                    self._redeclaration_diagnostic(
-                        "C_DUPLICATE_FUNCTION_DEFINITION",
-                        f"Duplicate definition for function {function.name!r}.",
-                        function.source_location,
-                        "function",
-                        function.name,
+                if existing.is_definition and function.is_definition:
+                    diagnostics.append(
+                        self._redeclaration_diagnostic(
+                            "C_DUPLICATE_FUNCTION_DEFINITION",
+                            f"Duplicate definition for function {function.name!r}.",
+                            function.source_location,
+                            "function",
+                            function.name,
+                        )
                     )
-                )
-                continue
+                    continue
 
-            by_name[function.name] = self._merge_function_declaration(existing, function)
+                normalized[index] = self._merge_function_declaration(existing, function)
 
-        return [by_name[name] for name in order]
+        return normalized
 
     def _is_variable_definition(self, variable: CVariable) -> bool:
         """Return whether a file-scope variable has an initializer."""
@@ -1018,6 +1077,17 @@ class CParser:
         parsed.typedefs = self._deduplicate_typedefs(parsed.typedefs, parsed.diagnostics)
         parsed.variables = self._deduplicate_variables(parsed.variables, parsed.diagnostics)
         parsed.functions = self._deduplicate_functions(parsed.functions, parsed.diagnostics)
+        function_counts: dict[str, int] = {}
+        for function in parsed.functions:
+            function_counts[function.name] = function_counts.get(function.name, 0) + 1
+        variant_names = {
+            function.name
+            for function in parsed.functions
+            if function_counts[function.name] > 1
+        }
+        for function in parsed.functions:
+            if function.name not in variant_names:
+                function.condition_set = frozenset()
 
     def _end_location(self, segment: CTopLevelSegment) -> CSourceLocation:
         """Return the original end location for a top-level segment."""
@@ -2366,6 +2436,7 @@ class CParser:
         function_like_macros: set[str] | None = None,
         object_like_macros: set[str] | None = None,
         use_linemarkers: bool = False,
+        condition_sets_by_line: Mapping[int, frozenset[str]] | None = None,
     ) -> tuple[
         list[CFunction],
         list[CStruct],
@@ -2398,6 +2469,7 @@ class CParser:
 
         function_like_names = function_like_macros or set()
         object_like_names = object_like_macros or set()
+        condition_sets = condition_sets_by_line or {}
         for segment in split_top_level_c_source(
             source,
             filename=filename,
@@ -2432,6 +2504,11 @@ class CParser:
                 else:
                     enums.append(aggregate)
                 functions.extend(parsed_functions)
+                for function in parsed_functions:
+                    function.condition_set = condition_sets.get(
+                        segment.original_start_line,
+                        frozenset(),
+                    )
                 typedefs.extend(parsed_typedefs)
                 variables.extend(parsed_variables)
                 diagnostics.extend(parsed_diagnostics)
@@ -2443,6 +2520,10 @@ class CParser:
                     diagnostics.append(self._declarator_diagnostic(segment, str(error)))
                     continue
                 if function is not None:
+                    function.condition_set = condition_sets.get(
+                        segment.original_start_line,
+                        frozenset(),
+                    )
                     functions.append(function)
                     self._append_union_by_value_diagnostics(function, diagnostics)
                     continue
@@ -2461,6 +2542,11 @@ class CParser:
                 segment
             )
             functions.extend(parsed_functions)
+            for function in parsed_functions:
+                function.condition_set = condition_sets.get(
+                    segment.original_start_line,
+                    frozenset(),
+                )
             typedefs.extend(parsed_typedefs)
             variables.extend(parsed_variables)
             for function in parsed_functions:
@@ -2509,12 +2595,20 @@ class CParser:
             self._index_file_includes(project, filename, file)
         self._index_header_source_pairs(project)
         resolve_project_types(project)
-        project.functions = {
-            function.name: function
-            for function in self._deduplicate_functions(all_functions, project.diagnostics)
-        }
+        normalized_functions = self._deduplicate_functions(all_functions, project.diagnostics)
+        functions_by_name: dict[str, list[CFunction]] = {}
+        for function in normalized_functions:
+            functions_by_name.setdefault(function.name, []).append(function)
+        for name, variants in functions_by_name.items():
+            if len(variants) == 1:
+                project.functions[name] = variants[0]
+            else:
+                project.conditional_function_variants[name] = variants
         for function in project.functions.values():
             self._append_union_by_value_diagnostics(function, project.diagnostics)
+        for variants in project.conditional_function_variants.values():
+            for function in variants:
+                self._append_union_by_value_diagnostics(function, project.diagnostics)
         return project
 
     def _index_struct(
@@ -2617,7 +2711,7 @@ class CParser:
         filename: str,
         file: CFile,
     ) -> None:
-        """Populate include-graph, system-include, and unresolved-include sets."""
+        """Populate include facts without extending the parsed input set."""
         local_targets: set[str] = set()
         system_targets: set[str] = set()
         unresolved_targets: set[str] = set()

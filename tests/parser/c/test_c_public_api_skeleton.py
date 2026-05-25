@@ -16,6 +16,17 @@ def test_parse_c_file_accepts_inline_source_and_returns_typed_model():
     assert [fn.name for fn in parsed.functions] == ["add"]
 
 
+def test_x2py_exports_c_file_and_project_entrypoints_like_fortran():
+    from x2py import CFile, CProject, parse_c_file, parse_c_project
+
+    parsed = parse_c_file("int add(int left, int right);\n", filename="api.h")
+    project = parse_c_project({"api.h": "int add(int left, int right);\n"})
+
+    assert isinstance(parsed, CFile)
+    assert isinstance(project, CProject)
+    assert "add" in project.functions
+
+
 def test_parse_c_file_accepts_path_input_and_preserves_filename(tmp_path: Path):
     from c_parser import parse_c_file
 
