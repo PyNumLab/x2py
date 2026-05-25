@@ -14,7 +14,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "::Strided"
+                  "n1 - 1 - 0 + 1"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -33,7 +33,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "::Strided"
+                      "n1 - 1 - 0 + 1"
                     ],
                     "lower_bounds": [
                       "0"
@@ -44,12 +44,12 @@
                     "source_shape": [
                       "0:n1-1"
                     ],
-                    "category": "assumed_shape",
+                    "category": "explicit_shape",
                     "order": null,
                     "axes": [
-                      "strided"
+                      "dense"
                     ],
-                    "contiguous": false,
+                    "contiguous": true,
                     "allocatable": false,
                     "pointer": false,
                     "metadata": {}
@@ -123,7 +123,7 @@
                 "rank": 1,
                 "dtype": "Float64",
                 "shape": [
-                  "::Strided"
+                  "n0 * 2"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -142,7 +142,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "::Strided"
+                      "n0 * 2"
                     ],
                     "lower_bounds": [],
                     "upper_bounds": [
@@ -151,12 +151,12 @@
                     "source_shape": [
                       "1:n0*2"
                     ],
-                    "category": "assumed_shape",
+                    "category": "explicit_shape",
                     "order": null,
                     "axes": [
-                      "strided"
+                      "dense"
                     ],
-                    "contiguous": false,
+                    "contiguous": true,
                     "allocatable": false,
                     "pointer": false,
                     "metadata": {}

@@ -4,4 +4,4 @@ class node:
 
 class mesh:
     nnodes: Int32
-    nodes: Annotated[node[:], Allocatable, ArrayCategory('deferred_shape')]
+    nodes: Annotated[node[:], Allocatable]

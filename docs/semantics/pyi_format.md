@@ -30,7 +30,7 @@ are the storage contract:
 ```python
 def scale(n: Ptr(Const(Int32)), x: Float64[n]) -> None: ...
 def matrix(a: Annotated[Const(Float64[n, m]), ORDER_F]) -> None: ...
-def assumed(x: Annotated[Float64[::Strided, ::Strided], ORDER_ANY]) -> None: ...
+def assumed(x: Annotated[Float64[::Strided, ::Strided], ORDER_F]) -> None: ...
 ```
 
 There is no separate dimension helper in canonical type syntax. A dimension
@@ -43,22 +43,27 @@ is part of the accepted storage contract.
 
 - `ORDER_F` for a Fortran-oriented multidimensional contract.
 - `ORDER_ANY` for an orientation-independent multidimensional strided
-  contract.
+  contract chosen explicitly by an edited interface or later projection.
 - `Allocatable` for a Fortran allocatable array.
 - `Pointer` for a Fortran pointer array.
-- `ArrayCategory("...")` for the preserved Fortran dummy category, such as
-  `"assumed_shape"`, `"assumed_size"` or `"deferred_shape"`.
-- `SourceDims(...)` for the original source-level dimension expressions when
-  the public storage dimensions differ from those source expressions.
-- `LowerBounds(...)` for non-default source lower bounds.
 - `Intent("out")` when a visible exact-native argument has source intent
   `out`; `intent(inout)` is the default writable reference/array spelling and
   does not need metadata.
 
 Plain multidimensional array notation is C-oriented (`ORDER_C`) by default.
-Generated Fortran stubs emit `ORDER_F` only when rank and orientation make it
-observable. Rank-one contiguous storage has no C-versus-Fortran order
-distinction, so no order marker is emitted for vectors.
+Under the current Fortran generation policy, every multidimensional Fortran
+array contract emits `ORDER_F`, including stride-aware assumed-shape arrays.
+Rank-one storage has no C-versus-Fortran order distinction, so no order marker
+is emitted for vectors.
+
+`ArrayCategory(...)`, `SourceDims(...)`, `LowerBounds(...)` and `Contiguous`
+are not part of newly generated canonical array annotations. They described
+native declaration provenance rather than additional requirements on the
+Python-visible array. The loader continues to accept existing edited stubs
+that contain these metadata forms. Fortran source category, original bounds
+and declaration dimensions may remain available as internal source provenance
+when converting source; they are not required for the public storage contract
+or for ordinary Python-to-Fortran array argument association.
 
 ## Implemented Fortran Exact Form
 
@@ -119,47 +124,61 @@ def apply(
 ) -> None: ...
 ```
 
-Assumed-size arrays preserve the known rank and the missing final extent
-boundary. A rank-one `x(*)` is emitted as `T[:]`; multidimensional forms keep
-the known dimensions and source category metadata:
+Assumed-size arrays preserve their fixed rank and any dimensions constrained by
+the visible storage contract. A rank-one `x(*)` is emitted as `T[:]`; for
+`x(n, *)`, the second dimension has an unconstrained runtime extent, not an
+unknown rank:
 
 ```python
 def legacy(values: Float64[:]) -> None: ...
 
 def legacy_matrix(
     n: Ptr(Const(Int32)),
-    a: Annotated[Float64[n, :], ORDER_F, ArrayCategory("assumed_size"), SourceDims("n", "*")]
+    a: Annotated[Float64[n, :], ORDER_F]
 ) -> None: ...
 ```
 
 Assumed-shape arrays are stride-aware. A rank-one assumed-shape dummy is
-emitted as a strided vector. A rank-two or higher unrestricted assumed-shape
-dummy uses `ORDER_ANY`:
+emitted as a strided vector. Under the current generated-wrapper policy, a
+rank-two or higher assumed-shape dummy retains Fortran orientation while
+permitting strides:
 
 ```python
-def vector(x: Annotated[Float64[::Strided], ArrayCategory("assumed_shape"), SourceDims(":")]) -> None: ...
+def vector(x: Float64[::Strided]) -> None: ...
 
 def matrix(
     a: Annotated[
         Const(Float64[::Strided, ::Strided]),
-        ORDER_ANY,
-        ArrayCategory("assumed_shape"),
-        SourceDims(":", ":"),
+        ORDER_F,
     ]
 ) -> None: ...
 ```
 
+The Fortran declaration itself may permit an actual argument with another
+orientation. The generated semantic interface deliberately chooses
+Fortran-oriented storage by default. An edited interface or future projection
+may choose `ORDER_ANY` only with corresponding backend and validation policy.
 `contiguous` assumed-shape arrays use dense dimensions instead of
-`::Strided`; multidimensional forms carry `ORDER_F`.
+`::Strided`; their multidimensional forms also carry `ORDER_F`.
+
+Explicit bounds are expressed through storage extents, not source-dimension
+metadata. For example, `x(1:n)` has storage extent `n`; `x(0:n-1)` also has
+extent `n` (the implementation currently retains the equivalent arithmetic
+expression when it is not simplified). Python arrays present zero-based
+storage; the compiled Fortran call associates that storage with the dummy
+argument and supplies the lower and upper bounds declared by the procedure.
+Those Fortran bounds affect indexing within the procedure, not what bound
+metadata Python must pass. The public contract therefore needs the required
+extent, layout and mutability, not `LowerBounds(...)`.
 
 Allocatable and pointer arrays preserve their source storage property:
 
 ```python
 class workspace:
-    values: Annotated[Float64[:], Allocatable, ArrayCategory("deferred_shape")]
+    values: Annotated[Float64[:], Allocatable]
 
 def section(
-    x: Annotated[Float64[::Strided], Pointer, ArrayCategory("deferred_shape")]
+    x: Annotated[Float64[:], Pointer]
 ) -> None: ...
 ```
 
@@ -174,22 +193,25 @@ The shared semantic model separates:
 
 - value type (`Float64`, `Int32`, derived type names);
 - storage/calling contract (`value`, `reference`, `pointer`, `array`);
-- array contract (rank, dimensions, source dimensions, lower/upper bounds,
-  order, contiguity, category, allocatable, pointer);
+- public array contract (rank, required extents or admitted strides, order,
+  contiguity, allocatable and pointer semantics);
 - source origin metadata (source language, native name, native scope,
   source-level type/category information and lowering-relevant facts).
 
-The Fortran converter currently preserves rank, public storage dimensions,
-source dimension expressions, non-default lower bounds, dummy category,
-`intent`, optionality, `value`, constants, `allocatable`, `pointer` and
-`contiguous` where the parser supplies those facts.
+The Fortran converter currently preserves public storage dimensions, order,
+`intent`, optionality, `value`, constants, `allocatable` and `pointer` in the
+visible semantic contract. It retains source declaration dimensions, bounds,
+dummy category and `contiguous` provenance internally where the parser
+supplies those facts for diagnostics or native-interface provenance; those
+facts do not add visible array requirements.
 
 ## Loading And Round Trips
 
-`parse_pyi_text`, `load_pyi_file` and `convert_pyi_to_ir` load the canonical
-array subscription and `Annotated[...]` metadata into the same storage
-contracts emitted by the Fortran semantic pipeline. Focused round-trip tests
-cover:
+`parse_pyi_text`, `load_pyi_file` and `convert_pyi_to_ir` load canonical
+array subscriptions and `Annotated[...]` metadata into the same public
+storage contracts emitted by the Fortran semantic pipeline. Native
+source-provenance details not emitted into the public type are intentionally
+excluded from public contract equality. Focused round-trip tests cover:
 
 ```text
 Fortran parser model -> semantic IR -> .pyi -> semantic IR
@@ -198,6 +220,199 @@ Fortran parser model -> semantic IR -> .pyi -> semantic IR
 The loader rejects removed dimension helper syntax in type annotations. Use
 array subscriptions such as `Float64[n]`, `Float64[:, :]` or
 `Float64[::Strided]` instead.
+
+## Pythonic Projection (Later)
+
+The implemented Fortran generator emits the exact form described above. A
+later optional generation or editing mode, for example `--pythonic`, may
+expose a friendlier Python API whose arguments or results differ from that
+native contract. Such a projected interface must retain a mapping back to the
+exact semantic/native interface; it must not discard source origin, storage,
+intent, shape, ownership or lowering facts needed to issue the call.
+
+A projection is allowed to be more restrictive or more expressive than the
+exact native interface, according to the Python API the user wants to expose.
+It may add accepted-input coercions, local constraints, cross-argument checks,
+result checks, mutation policy or ownership policy. It need not expose every
+use that the native routine could technically accept. At the native-call
+boundary, however, the mapped native values must still satisfy the
+requirements encoded by the exact native contract.
+
+The Fortran converter does not automatically generate a projected interface.
+The loader and printer retain explicit projection mappings for edited semantic
+stubs, including `@native_call` entries formed from `Arg`, `Return`, `Const`,
+`Len`, `IsPresent`, `Work` and `.shape[...]`, plus `Returns[...]`. The
+pointer/reference adaptation examples below (`Ptr(Arg(...))` and
+`Ptr(Return(...))`), `As[...]`, `.strides[...]`, coercion policy and
+validation contracts describe extensions required for the fuller Pythonic
+projection; they are not currently accepted or emitted by this path.
+
+### Native Argument Projection
+
+Only a projected interface uses `@native_call`. The decorator records how
+visible Python arguments and projected results supply the exact native
+arguments.
+
+For a mutable scalar reference, the implemented exact Fortran form keeps
+caller-supplied storage:
+
+```python
+# Implemented exact form.
+def advance(value: Ptr(Float64)) -> None: ...
+```
+
+A future Pythonic form may create writable temporary storage, perform the
+native call and read the updated value back as a Python result:
+
+```python
+# Projected form, not currently implemented.
+@native_call([Ptr(Arg(0))])
+def advance(value: Float64) -> Returns["value", Float64]: ...
+```
+
+Similarly, an `intent(out)` scalar currently remains an explicit writable
+reference with its preserved source intent:
+
+```python
+# Implemented exact form.
+def get_count(result: Annotated[Ptr(Int32), Intent("out")]) -> None: ...
+
+# Projected form, not currently implemented.
+@native_call([Ptr(Return(0))])
+def get_count() -> Int32: ...
+```
+
+A projection may derive hidden native metadata from a visible array. For a
+future native interface with a by-value length parameter, for example:
+
+```python
+# Exact contract for a future supported native frontend.
+def sum_values(n: SizeT, values: Const(Float64[n])) -> Float64: ...
+
+# Projected form, not currently implemented.
+@native_call([As[SizeT](Arg(0).shape[0]), Arg(0)])
+def sum_values(values: Const(Float64[:])) -> Float64: ...
+```
+
+`Arg(i).shape[dim]` denotes a zero-based array extent.
+`Arg(i).strides[dim]` denotes a NumPy byte stride:
+
+```python
+@native_call([Arg(0), Arg(0).shape[1], Arg(0).strides[1]])
+def process_columns(values: Const(Float64[:, ::Strided])) -> None: ...
+```
+
+Dimension steps such as `::m` are expressed in elements; deriving a native
+element stride from a byte stride must include the item-size conversion in
+the native mapping.
+
+### Coercions And Constraints
+
+A Pythonic projection may accept values that are not already in the exact
+storage form, but only through explicit allowed coercions. For example, a
+projected API could allow a NumPy C-order matrix to be copied into an
+`ORDER_F` value required by a Fortran-oriented exact contract. It may instead
+reject that input when no copying coercion is declared.
+
+Coercions and constraints serve different purposes:
+
+- A coercion states how an accepted Python object becomes the required
+  semantic runtime value, potentially allocating storage or changing layout.
+- A constraint states what must be true of the adapted value before native
+  lowering, such as dtype, rank, shape, stride capability, `ORDER_F`,
+  mutability, device residence, alignment or ownership.
+
+The exact notation already records native-facing local constraints, including
+`Ptr(Const(T))`, `Const(T[...])`, dimensions, `ORDER_F`, `ORDER_ANY`,
+`Allocatable` and `Pointer`. A projected API may add allowed conversion
+policy, for example a future `From(np.ndarray, copy=True)` spelling, but it
+cannot silently weaken the exact native contract.
+
+The exact native contract is therefore a minimum obligation for a projection.
+A projected API may require additional properties, such as finite values,
+non-aliasing arguments, a square matrix or a no-copy policy. A declared
+coercion may convert a projected input so that it satisfies a native
+requirement, such as packing C-oriented input into `ORDER_F` storage. But the
+mapped value sent to native lowering must satisfy the encoded native element
+type, reference/read-write contract, rank, extent, layout, stride,
+allocation/association and other calling-relevant requirements.
+
+This document does not currently define a hard-versus-soft classification for
+exact-contract constraints. Until such a classification and override policy
+exist, constraints encoded in the exact native interface are mandatory at the
+native-call boundary. A later design may classify advisory requirements, such
+as a preferred layout or zero-copy preference, as relaxable by an explicit
+projection policy. ABI, memory-safety and semantic-correctness requirements
+cannot be treated as advisory.
+
+In particular, conversion and copy-back policies are required before a
+projection can:
+
+- accept C-order or non-contiguous storage for a target requiring dense
+  Fortran-oriented storage;
+- expose mutable scalar references as ordinary scalar inputs and returns;
+- return changes to output arrays through allocated temporary storage;
+- expose replacement-capable `Allocatable` or `Pointer` dummies; or
+- preserve ownership, lifetime and aliasing behavior through a temporary.
+
+### Validation Contracts
+
+Local constraints are not sufficient for relationships between multiple
+arguments or for promises about projected results. A future projected
+interface may add a validation contract, whether or not the exact native
+interface already contains local constraints, for:
+
+- preconditions, such as matching extents or non-aliasing inputs;
+- postconditions, such as the returned shape or dtype;
+- invariants on projected objects after mutation;
+- mutation and aliasing rules; and
+- ownership and lifetime rules for borrowed, owned, viewed or temporary
+  storage.
+
+For example, this is an illustrative later projected interface, not currently
+accepted projection syntax:
+
+```python
+@contract(
+    pre=[
+        lambda ctx: ctx.args.a.shape[0] == ctx.args.a.shape[1],
+        lambda ctx: ctx.args.b.shape == (ctx.args.a.shape[0],),
+    ],
+    post=[lambda ctx: ctx.result.shape == ctx.args.b.shape],
+    invariants=[lambda ctx: not ctx.result.aliases(ctx.args.a)],
+)
+def solve(
+    a: Annotated[Float64[:, :], ORDER_F],
+    b: Float64[:],
+) -> Float64[:]: ...
+```
+
+A constraint can require that `a` is `ORDER_F`; a contract can require that
+`a` is square, that `b` agrees with its extent and that the result does not
+alias mutable input storage. These checks occur at distinct levels and must
+remain distinct in a later semantic model. Projection-level checks supplement
+the exact native contract; they do not replace its mandatory native-call
+checks.
+
+A projected call therefore has the following conceptual sequence:
+
+```text
+visible Python values
+  -> projected allowed coercions
+  -> projected local constraints and contract preconditions
+  -> exact native argument mapping
+  -> mandatory exact-native constraint validation
+  -> backend lowering
+  -> native call
+  -> contract postconditions and invariants
+  -> projected Python results
+```
+
+The projection mechanism is language-neutral. It can later adapt exact
+Fortran or C contracts through the same notation and runtime concepts, but
+this milestone does not implement automatic Pythonic generation, current
+exact-reference adaptation, coercion/contract execution or C semantic
+conversion/output.
 
 ## Deferred C Work
 

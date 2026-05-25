@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from copy import deepcopy
 import re
 from pathlib import Path
@@ -549,8 +550,8 @@ class FortranToIRConverter:
         if any(dim.endswith(":*") for dim in cleaned):
             return "assumed_size"
         if isinstance(var, FortranArgument) and (getattr(var, "allocatable", False) or getattr(var, "pointer", False)):
-            return "deferred_shape" if any(":" in dim for dim in cleaned) else "explicit_shape"
-        if any(":" in dim for dim in cleaned):
+            return "deferred_shape" if any(FortranToIRConverter._has_omitted_upper_bound(dim) for dim in cleaned) else "explicit_shape"
+        if any(FortranToIRConverter._has_omitted_upper_bound(dim) for dim in cleaned):
             return "assumed_shape"
         return "explicit_shape"
 
@@ -572,11 +573,13 @@ class FortranToIRConverter:
                 continue
             lower, upper = cls._dimension_bounds(token)
             if lower in {None, "1"} and upper:
-                axes.append(upper)
+                axes.append(cls._canonical_dimension_expression(upper))
+            elif lower is not None and upper is not None:
+                axes.append(cls._canonical_dimension_expression(f"({upper}) - ({lower}) + 1"))
             elif ":" in token:
                 axes.append(":")
             else:
-                axes.append(token)
+                axes.append(cls._canonical_dimension_expression(token))
         return axes
 
     @staticmethod
@@ -587,11 +590,20 @@ class FortranToIRConverter:
         return lower.strip() or None, upper.strip() or None
 
     @staticmethod
+    def _has_omitted_upper_bound(token: str) -> bool:
+        return ":" in token and token.split(":", 1)[1].strip() == ""
+
+    @staticmethod
+    def _canonical_dimension_expression(expression: str) -> str:
+        try:
+            return ast.unparse(ast.parse(expression, mode="eval").body)
+        except SyntaxError:
+            return expression
+
+    @staticmethod
     def _array_order(rank: int, category: str, *, contiguous: bool) -> str | None:
         if rank <= 1:
             return None
-        if category == "assumed_shape" and not contiguous:
-            return "ORDER_ANY"
         return "ORDER_F"
 
     @staticmethod

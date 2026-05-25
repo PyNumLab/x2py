@@ -72,10 +72,12 @@ Language scope is stated in each section or subsection heading:
       semantic model, a derived semantic type, or structured metadata on
       `SemanticType`; the chosen design must be readable from both generated
       and edited `.pyi` files.
-- [x] For Fortran arrays, record the dummy category and properties needed by
-      lowering: explicit-shape, assumed-size, assumed-shape, assumed-rank,
-      deferred-shape, `contiguous`, `allocatable`, `pointer`, rank, shape,
-      lower bounds, and whether replacement or reassociation is possible.
+- [x] For Fortran arrays, retain native declaration provenance where available:
+      explicit-shape, assumed-size, assumed-shape, assumed-rank,
+      deferred-shape, `contiguous`, `allocatable`, `pointer`, rank and source
+      bounds. Canonical `.pyi` exposes only storage constraints; Fortran dummy
+      bounds are established by native argument association, not passed as
+      Python array metadata.
 - [ ] For C arrays, use the same array/storage contract only when a real storage
       contract is known; leave unrefined pointers as pointer types instead of
       inventing array shapes.
@@ -97,8 +99,9 @@ Language scope is stated in each section or subsection heading:
 - [ ] Add equality and round-trip tests that prove equivalent C and Fortran
       variables compare by semantic contract, not by parser-specific metadata.
 - [x] Add model tests for Fortran arrays represented as semantic array/storage
-      contracts with shape, rank, `ORDER_F` or `ORDER_ANY`, `Allocatable`, and
-      `Pointer`.
+      contracts with shape, rank, generated `ORDER_F`, `Allocatable`, and
+      `Pointer`; keep `ORDER_ANY` available for an explicitly edited or
+      projected interface.
 - [ ] Add model tests for C pointer/array contracts using the same
       array/storage representation when shape and storage facts are known.
 - [x] Document the shared variable, array, pointer, ownership, constraint, and
@@ -232,10 +235,13 @@ Language scope is stated in each section or subsection heading:
       semantic scalar values.
 - [x] Map Fortran explicit-shape and adjustable arrays to shaped NumPy storage
       contracts with `ORDER_F` where rank and orientation require it.
-- [x] Map Fortran assumed-size arrays to known-rank storage contracts while
-      preserving the missing final extent boundary.
-- [x] Map Fortran assumed-shape arrays to strided contracts with `ORDER_ANY`
-      unless `contiguous` or another source fact restricts orientation.
+- [x] Map Fortran assumed-size arrays to known-rank storage contracts with an
+      unconstrained final runtime extent where the native declaration uses
+      `*`.
+- [x] Map Fortran assumed-shape arrays to strided contracts with generated
+      `ORDER_F` orientation under the current Fortran-default layout policy;
+      an edited interface or later projection may explicitly select
+      `ORDER_ANY`.
 - [ ] Map Fortran assumed-rank arrays only after the semantic model can
       represent rank-polymorphic array contracts explicitly.
 - [ ] Map Fortran `allocatable` and `pointer` dummy arrays to shared array
@@ -243,8 +249,9 @@ Language scope is stated in each section or subsection heading:
       blockers for allocation or association changes until policy exists.
       Contracts are represented in IR and `.pyi`; readiness blockers for
       allocation or association changes remain open.
-- [x] Preserve Fortran lower bounds and source-level dimension expressions when
-      they affect wrapper validation or lowering.
+- [x] Convert Fortran bound declarations to required public storage extents;
+      retain original source bounds only as internal provenance, since the
+      compiled Fortran interface establishes dummy bounds on association.
 - [x] Convert Fortran module variables and derived-type components through the
       same variable model used for C variables and fields.
 - [x] Ensure language-to-IR conversion retains enough origin metadata for
@@ -278,9 +285,11 @@ Language scope is stated in each section or subsection heading:
       annotations, explicit `ORDER_F` only when rank and orientation require
       it, and no `@native_call` for the exact interface.
 - [x] Ensure Fortran `.pyi` generation preserves source facts that affect
-      validation or lowering, including rank, shape expressions, lower bounds,
-      assumed-shape or assumed-size category, contiguity, `allocatable`,
-      `pointer`, `intent`, optionality, and constants.
+      the visible contract, including rank, storage extent expressions,
+      stride/layout policy, `allocatable`, `pointer`, `intent`, optionality,
+      and constants. Retain native dummy category and original bound facts
+      internally as source provenance rather than emitting
+      `ArrayCategory(...)` or `SourceDims(...)` in canonical stubs.
 - [x] Ensure generated Fortran stubs do not generalize missing fixed-rank array
       information into rank-polymorphic notation.
 - [x] Add Fortran `.pyi` generation tests for exact scalar references,
@@ -293,9 +302,10 @@ Language scope is stated in each section or subsection heading:
 - [x] Extend `load_pyi_file`, `parse_pyi_text`, and `convert_pyi_to_ir` to load
       the accepted `.pyi` target notation into semantic IR, not just parse a
       subset for readiness.
-- [x] Teach the `.pyi` loader to parse `Annotated[...]` metadata into semantic
-      storage metadata without losing order, ownership, array category, or
-      source-name information.
+- [x] Teach the `.pyi` loader to parse canonical `Annotated[...]` metadata into
+      semantic storage metadata without losing order, ownership, or
+      source-name information; it continues to accept legacy
+      `ArrayCategory(...)` and `SourceDims(...)` annotations.
 - [x] Teach the `.pyi` loader to parse NumPy-style array subscriptions into the
       shared array/storage contract, including symbolic dimensions, `:`,
       `::Strided`, known rank, rank-polymorphic forms when supported, and

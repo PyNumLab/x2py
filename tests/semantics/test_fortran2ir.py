@@ -599,7 +599,7 @@ end module
     assert A.semantic_type.shape == ["::Strided", "::Strided"]
     assert contract.source_shape == [":", ":"]
     assert contract.category == "assumed_shape"
-    assert contract.order == "ORDER_ANY"
+    assert contract.order == "ORDER_F"
 
 
 def test_fortran_native_storage_contracts_cover_array_categories_and_scalars():
@@ -640,7 +640,7 @@ end module contract_mod
     assumed = array_contract(args["assumed"].semantic_type)
     assert assumed.category == "assumed_shape"
     assert assumed.shape == ["::Strided", "::Strided"]
-    assert assumed.order == "ORDER_ANY"
+    assert assumed.order == "ORDER_F"
 
     contig = array_contract(args["contig"].semantic_type)
     assert contig.category == "assumed_shape"
@@ -653,6 +653,29 @@ end module contract_mod
     assert args["scalar_value"].semantic_type.storage is None
     assert args["scalar_ref"].semantic_type.storage.read_only is True
     assert args["scalar_out"].semantic_type.storage.mutable is True
+
+
+def test_explicit_bound_ranges_remain_shaped_storage_contracts():
+    source = """
+module bound_mod
+contains
+subroutine bounded(n, default_bound, zero_bound)
+  integer, intent(in) :: n
+  real(8), intent(inout) :: default_bound(1:n)
+  real(8), intent(inout) :: zero_bound(0:n-1)
+end subroutine bounded
+end module bound_mod
+"""
+    module = fortran_module_to_semantic_module(parse_fortran_source(source))
+    args = {arg.name: arg for arg in get_function(module, "bounded").arguments}
+
+    default_bound = array_contract(args["default_bound"].semantic_type)
+    assert default_bound.category == "explicit_shape"
+    assert default_bound.shape == ["n"]
+
+    zero_bound = array_contract(args["zero_bound"].semantic_type)
+    assert zero_bound.category == "explicit_shape"
+    assert zero_bound.shape == ["n - 1 - 0 + 1"]
 
 
 # ============================================================
@@ -962,7 +985,7 @@ end module
 
     assert K.semantic_type.rank == 2
 
-    assert array_contract(K.semantic_type).order == "ORDER_ANY"
+    assert array_contract(K.semantic_type).order == "ORDER_F"
 
     connectivity = next(arg for arg in assemble.arguments if arg.name == "connectivity")
 

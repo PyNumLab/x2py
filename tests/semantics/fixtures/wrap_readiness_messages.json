@@ -1875,7 +1875,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 10
+          "n_items": 8
         },
         {
           "code": "unresolved_semantic_types",
@@ -1902,15 +1902,9 @@
       "n_classes": 0,
       "n_variables": 9,
       "messages": [
-        "Some shape expressions refer to symbols not supplied by the semantic interface.",
         "Some compile-time constants are declared but do not have literal .pyi values."
       ],
       "blockers": [
-        {
-          "code": "unresolved_shape_symbols",
-          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 18
-        },
         {
           "code": "missing_compile_time_values",
           "message": "Some compile-time constants are declared but do not have literal .pyi values.",
@@ -1926,15 +1920,9 @@
       "n_classes": 0,
       "n_variables": 2,
       "messages": [
-        "Some shape expressions refer to symbols not supplied by the semantic interface.",
         "Some compile-time constants are declared but do not have literal .pyi values."
       ],
       "blockers": [
-        {
-          "code": "unresolved_shape_symbols",
-          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
-        },
         {
           "code": "missing_compile_time_values",
           "message": "Some compile-time constants are declared but do not have literal .pyi values.",
@@ -27144,7 +27132,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 92
+          "n_items": 84
         }
       ]
     },
@@ -27272,7 +27260,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 6
+          "n_items": 4
         }
       ]
     },
@@ -27300,7 +27288,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 5
+          "n_items": 4
         }
       ]
     },
@@ -27328,7 +27316,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 30
+          "n_items": 24
         }
       ]
     },
@@ -27346,7 +27334,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 72
+          "n_items": 68
         }
       ]
     },
@@ -27570,7 +27558,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 7
+          "n_items": 6
         }
       ]
     },
@@ -27634,7 +27622,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 25
+          "n_items": 22
         }
       ]
     },
@@ -27662,7 +27650,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 10
+          "n_items": 8
         }
       ]
     },
@@ -27686,7 +27674,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 9
+          "n_items": 8
         }
       ]
     },
@@ -27710,7 +27698,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 9
+          "n_items": 8
         }
       ]
     },
@@ -27776,7 +27764,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 16
+          "n_items": 12
         }
       ]
     },
@@ -28300,7 +28288,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 28
+          "n_items": 24
         }
       ]
     },
@@ -28324,7 +28312,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 72
+          "n_items": 56
         }
       ]
     },
@@ -28348,7 +28336,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 72
+          "n_items": 56
         }
       ]
     },
@@ -28462,7 +28450,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 5
+          "n_items": 4
         }
       ]
     },
@@ -28499,7 +28487,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 9
+          "n_items": 8
         },
         {
           "code": "callback_signature_incomplete",
@@ -28523,7 +28511,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 9
+          "n_items": 8
         },
         {
           "code": "callback_signature_incomplete",
@@ -28644,19 +28632,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some semantic type references are not declared by the .pyi interface or its imports.",
-        "Some shape expressions refer to symbols not supplied by the semantic interface."
+        "Some semantic type references are not declared by the .pyi interface or its imports."
       ],
       "blockers": [
         {
           "code": "unresolved_semantic_types",
           "message": "Some semantic type references are not declared by the .pyi interface or its imports.",
           "n_items": 8
-        },
-        {
-          "code": "unresolved_shape_symbols",
-          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 2
         }
       ]
     },
@@ -28950,7 +28932,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 36
+          "n_items": 32
         }
       ]
     },
@@ -29002,7 +28984,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 16
+          "n_items": 12
         }
       ]
     },
@@ -29026,7 +29008,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 16
+          "n_items": 12
         }
       ]
     },
@@ -29072,7 +29054,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 6
+          "n_items": 4
         }
       ]
     },
@@ -29090,7 +29072,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 40
+          "n_items": 36
         }
       ]
     },
@@ -29108,7 +29090,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 234
+          "n_items": 176
         }
       ]
     },
@@ -29136,7 +29118,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 132
+          "n_items": 92
         }
       ]
     },
@@ -29154,7 +29136,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 63
+          "n_items": 54
         }
       ]
     },
@@ -29190,7 +29172,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 154
+          "n_items": 140
         }
       ]
     },
@@ -29208,7 +29190,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 40
+          "n_items": 36
         }
       ]
     },
@@ -29226,7 +29208,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 234
+          "n_items": 176
         }
       ]
     },
@@ -29254,7 +29236,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 132
+          "n_items": 92
         }
       ]
     },
@@ -29272,7 +29254,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 54
+          "n_items": 48
         }
       ]
     },
@@ -29308,7 +29290,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 154
+          "n_items": 140
         }
       ]
     },
@@ -29356,7 +29338,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 14
+          "n_items": 12
         }
       ]
     },
@@ -29380,7 +29362,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 14
+          "n_items": 12
         }
       ]
     },
@@ -29404,7 +29386,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 14
+          "n_items": 12
         }
       ]
     },
@@ -29446,7 +29428,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 34
+          "n_items": 32
         }
       ]
     },
@@ -29482,7 +29464,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 52
+          "n_items": 48
         }
       ]
     },
@@ -29500,7 +29482,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 28
+          "n_items": 20
         }
       ]
     },
@@ -29554,7 +29536,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 57
+          "n_items": 52
         }
       ]
     },
@@ -29572,7 +29554,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 35
+          "n_items": 26
         }
       ]
     },
@@ -29590,7 +29572,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 14
+          "n_items": 12
         }
       ]
     },
@@ -29608,7 +29590,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 14
+          "n_items": 12
         }
       ]
     },
@@ -29626,7 +29608,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 90
+          "n_items": 76
         }
       ]
     },
@@ -29644,7 +29626,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 26
+          "n_items": 20
         }
       ]
     },
@@ -29788,7 +29770,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 54
+          "n_items": 48
         }
       ]
     },
@@ -29806,7 +29788,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 14
+          "n_items": 12
         }
       ]
     },
@@ -29896,7 +29878,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 280
+          "n_items": 224
         }
       ]
     },
@@ -30096,7 +30078,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 14
+          "n_items": 12
         }
       ]
     },
@@ -30120,7 +30102,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 14
+          "n_items": 12
         }
       ]
     },
@@ -30294,7 +30276,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 87
+          "n_items": 82
         }
       ]
     },
@@ -30342,7 +30324,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 9
+          "n_items": 8
         }
       ]
     },
@@ -30366,7 +30348,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 9
+          "n_items": 8
         }
       ]
     },
@@ -30986,7 +30968,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 210
+          "n_items": 4
         }
       ]
     },

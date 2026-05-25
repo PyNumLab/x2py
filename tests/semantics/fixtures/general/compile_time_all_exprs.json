@@ -14,7 +14,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "::Strided"
+                  "p_add"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -33,7 +33,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "::Strided"
+                      "p_add"
                     ],
                     "lower_bounds": [],
                     "upper_bounds": [
@@ -42,12 +42,12 @@
                     "source_shape": [
                       "1:p_add"
                     ],
-                    "category": "assumed_shape",
+                    "category": "explicit_shape",
                     "order": null,
                     "axes": [
-                      "strided"
+                      "dense"
                     ],
-                    "contiguous": false,
+                    "contiguous": true,
                     "allocatable": false,
                     "pointer": false,
                     "metadata": {}
@@ -121,7 +121,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "::Strided"
+                  "p_sub"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -140,7 +140,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "::Strided"
+                      "p_sub"
                     ],
                     "lower_bounds": [],
                     "upper_bounds": [
@@ -149,12 +149,12 @@
                     "source_shape": [
                       "1:p_sub"
                     ],
-                    "category": "assumed_shape",
+                    "category": "explicit_shape",
                     "order": null,
                     "axes": [
-                      "strided"
+                      "dense"
                     ],
-                    "contiguous": false,
+                    "contiguous": true,
                     "allocatable": false,
                     "pointer": false,
                     "metadata": {}
@@ -228,7 +228,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "::Strided"
+                  "p_mul"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -247,7 +247,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "::Strided"
+                      "p_mul"
                     ],
                     "lower_bounds": [],
                     "upper_bounds": [
@@ -256,12 +256,12 @@
                     "source_shape": [
                       "1:p_mul"
                     ],
-                    "category": "assumed_shape",
+                    "category": "explicit_shape",
                     "order": null,
                     "axes": [
-                      "strided"
+                      "dense"
                     ],
-                    "contiguous": false,
+                    "contiguous": true,
                     "allocatable": false,
                     "pointer": false,
                     "metadata": {}
@@ -335,7 +335,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "::Strided"
+                  "p_div"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -354,7 +354,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "::Strided"
+                      "p_div"
                     ],
                     "lower_bounds": [],
                     "upper_bounds": [
@@ -363,12 +363,12 @@
                     "source_shape": [
                       "1:p_div"
                     ],
-                    "category": "assumed_shape",
+                    "category": "explicit_shape",
                     "order": null,
                     "axes": [
-                      "strided"
+                      "dense"
                     ],
-                    "contiguous": false,
+                    "contiguous": true,
                     "allocatable": false,
                     "pointer": false,
                     "metadata": {}
@@ -442,7 +442,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "::Strided"
+                  "p_pow"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -461,7 +461,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "::Strided"
+                      "p_pow"
                     ],
                     "lower_bounds": [],
                     "upper_bounds": [
@@ -470,12 +470,12 @@
                     "source_shape": [
                       "1:p_pow"
                     ],
-                    "category": "assumed_shape",
+                    "category": "explicit_shape",
                     "order": null,
                     "axes": [
-                      "strided"
+                      "dense"
                     ],
-                    "contiguous": false,
+                    "contiguous": true,
                     "allocatable": false,
                     "pointer": false,
                     "metadata": {}
@@ -549,7 +549,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "::Strided"
+                  "p_mix - 0 + 1"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -568,7 +568,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "::Strided"
+                      "p_mix - 0 + 1"
                     ],
                     "lower_bounds": [
                       "0"
@@ -579,12 +579,12 @@
                     "source_shape": [
                       "0:p_mix"
                     ],
-                    "category": "assumed_shape",
+                    "category": "explicit_shape",
                     "order": null,
                     "axes": [
-                      "strided"
+                      "dense"
                     ],
-                    "contiguous": false,
+                    "contiguous": true,
                     "allocatable": false,
                     "pointer": false,
                     "metadata": {}
@@ -658,7 +658,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "::Strided"
+                  "-(-a + b)"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -677,7 +677,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "::Strided"
+                      "-(-a + b)"
                     ],
                     "lower_bounds": [],
                     "upper_bounds": [
@@ -686,12 +686,12 @@
                     "source_shape": [
                       "1:-(-a + b)"
                     ],
-                    "category": "assumed_shape",
+                    "category": "explicit_shape",
                     "order": null,
                     "axes": [
-                      "strided"
+                      "dense"
                     ],
-                    "contiguous": false,
+                    "contiguous": true,
                     "allocatable": false,
                     "pointer": false,
                     "metadata": {}
@@ -765,7 +765,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "::Strided"
+                  "(a + b) * (c + 1) - 1"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -784,7 +784,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "::Strided"
+                      "(a + b) * (c + 1) - 1"
                     ],
                     "lower_bounds": [],
                     "upper_bounds": [
@@ -793,12 +793,12 @@
                     "source_shape": [
                       "1:(a+b)*(c+1)-1"
                     ],
-                    "category": "assumed_shape",
+                    "category": "explicit_shape",
                     "order": null,
                     "axes": [
-                      "strided"
+                      "dense"
                     ],
-                    "contiguous": false,
+                    "contiguous": true,
                     "allocatable": false,
                     "pointer": false,
                     "metadata": {}
@@ -872,7 +872,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "::Strided"
+                  "(a - b) * (a - c)"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -891,7 +891,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "::Strided"
+                      "(a - b) * (a - c)"
                     ],
                     "lower_bounds": [],
                     "upper_bounds": [
@@ -900,12 +900,12 @@
                     "source_shape": [
                       "1:(a-b)*(a-c)"
                     ],
-                    "category": "assumed_shape",
+                    "category": "explicit_shape",
                     "order": null,
                     "axes": [
-                      "strided"
+                      "dense"
                     ],
-                    "contiguous": false,
+                    "contiguous": true,
                     "allocatable": false,
                     "pointer": false,
                     "metadata": {}

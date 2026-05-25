@@ -141,8 +141,8 @@ end module
 
     assert "Shape" not in code
     assert "Float64[::Strided]" in code
-    assert "ArrayCategory('assumed_shape')" in code
-    assert "SourceDims(':')" in code
+    assert "ArrayCategory" not in code
+    assert "SourceDims" not in code
 
 
 # ============================================================
@@ -169,12 +169,31 @@ end module
 
     code = generate_pyi(source)
 
-    assert "A: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_ANY" in code
+    assert "A: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_F" in code
     assert "Shape" not in code
-    assert "x: Annotated[Const(Float64[::Strided])," in code
-    assert "y: Annotated[Float64[::Strided], ArrayCategory('assumed_shape'), SourceDims(':'), Intent('out')]" in code
+    assert "x: Const(Float64[::Strided])" in code
+    assert "y: Annotated[Float64[::Strided], Intent('out')]" in code
     assert "-> None" in code
     assert 'Returns["y", Float64[' not in code
+
+
+def test_emit_explicit_bound_ranges_as_extents_without_source_dimension_metadata():
+    source = """
+module bound_mod
+contains
+subroutine bounded(n, default_bound, zero_bound)
+  integer, intent(in) :: n
+  real(8), intent(inout) :: default_bound(1:n)
+  real(8), intent(inout) :: zero_bound(0:n-1)
+end subroutine bounded
+end module bound_mod
+"""
+    code = generate_pyi(source)
+
+    assert "default_bound: Float64[n]" in code
+    assert "zero_bound: Float64[n - 1 - 0 + 1]" in code
+    assert "ArrayCategory" not in code
+    assert "SourceDims" not in code
 
 
 # ============================================================
@@ -486,12 +505,12 @@ end module
     # Matrix annotations
     # --------------------------------------------------------
 
-    assert "K: Annotated[Float64[::Strided, ::Strided], ORDER_ANY" in code
+    assert "K: Annotated[Float64[::Strided, ::Strided], ORDER_F" in code
     assert 'Returns["K", Float64[' not in code
 
-    assert "coords: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_ANY" in code
+    assert "coords: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_F" in code
 
-    assert "connectivity: Annotated[Const(Int32[::Strided, ::Strided]), ORDER_ANY" in code
+    assert "connectivity: Annotated[Const(Int32[::Strided, ::Strided]), ORDER_F" in code
 
     # --------------------------------------------------------
     # Return type
@@ -526,7 +545,7 @@ end module
     expected = normalize(
         '''
 def scale(
-    x: Annotated[Float64[::Strided], ArrayCategory('assumed_shape'), SourceDims(':')]
+    x: Float64[::Strided]
 ) -> None: ...
 '''
     )
@@ -706,7 +725,7 @@ end module vector_mod
     code = generate_pyi(source)
 
     assert "class vector:" in code
-    assert "values: Annotated[Float64[:], Allocatable, ArrayCategory('deferred_shape')]" in code
+    assert "values: Annotated[Float64[:], Allocatable]" in code
     assert "    def scale(\n        self,\n        alpha: Ptr(Const(Float64))\n    ) -> None: ..." in code
     assert "        self: vector" not in code
 

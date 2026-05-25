@@ -513,9 +513,6 @@ def _shape_expressions(semantic_type: SemanticType) -> list[str]:
     storage = semantic_type.storage
     if storage is not None and storage.array is not None:
         expressions.extend(storage.array.shape)
-        expressions.extend(storage.array.source_shape)
-        expressions.extend(value for value in storage.array.lower_bounds if value is not None)
-        expressions.extend(value for value in storage.array.upper_bounds if value is not None)
     return expressions
 
 

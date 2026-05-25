@@ -606,6 +606,8 @@ def consume(
     ]
     assert arrays[0].order == "ORDER_C"
     assert arrays[1].order == "ORDER_F"
+    assert arrays[0].category is None
+    assert arrays[1].source_shape == []
 
 
 def test_generated_pyi_compares_equal_to_original_ir_for_all_fortran_fixtures(tmp_path: Path):

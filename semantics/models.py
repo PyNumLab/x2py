@@ -57,6 +57,7 @@ class SemanticOrigin:
 class SemanticArrayContract:
     rank: Optional[int] = None
     shape: list[str] = field(default_factory=list)
+    # Native-source provenance, excluded from public contract equality.
     lower_bounds: list[Optional[str]] = field(default_factory=list)
     upper_bounds: list[Optional[str]] = field(default_factory=list)
     source_shape: list[str] = field(default_factory=list)
@@ -85,7 +86,7 @@ class SemanticStorageContract:
 # Semantic Types
 # ============================================================
 
-@dataclass
+@dataclass(eq=False)
 class SemanticType:
     name: str
 
@@ -106,6 +107,11 @@ class SemanticType:
     storage: Optional[SemanticStorageContract] = None
 
     origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SemanticType):
+            return False
+        return _semantic_type_key(self, {}) == _semantic_type_key(other, {})
 
 
 # ============================================================
@@ -327,10 +333,6 @@ def _array_contract_key(
     return (
         array.rank,
         tuple(_canonical_expression(item, name_map) for item in array.shape),
-        _bound_tuple(array.lower_bounds, name_map),
-        _bound_tuple(array.upper_bounds, name_map),
-        tuple(_canonical_expression(item, name_map) for item in array.source_shape),
-        array.category,
         array.order,
         tuple(array.axes),
         array.contiguous,
@@ -338,12 +340,6 @@ def _array_contract_key(
         array.pointer,
         _canonical_expression(array.metadata, name_map),
     )
-
-
-def _bound_tuple(bounds: list[str | None], name_map: dict[str, str]) -> tuple[Any, ...]:
-    if not bounds or all(bound is None for bound in bounds):
-        return ()
-    return tuple(_canonical_expression(item, name_map) for item in bounds)
 
 
 def _return_projection_key(

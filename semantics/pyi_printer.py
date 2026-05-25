@@ -116,16 +116,6 @@ class PyiPrinter:
             metadata.append("Allocatable")
         if array.pointer:
             metadata.append("Pointer")
-        if array.category and array.category != "explicit_shape":
-            metadata.append(f"ArrayCategory({array.category!r})")
-        if array.source_shape and array.source_shape != array.shape:
-            args = ", ".join(repr(value) for value in array.source_shape)
-            metadata.append(f"SourceDims({args})")
-        if any(value not in {None, "1"} for value in array.lower_bounds):
-            args = ", ".join(repr(value) for value in array.lower_bounds)
-            metadata.append(f"LowerBounds({args})")
-        if array.contiguous is True and array.category == "assumed_shape":
-            metadata.append("Contiguous")
         return metadata
 
     def _emit_callable_type(self, semantic_type: SemanticType) -> str:

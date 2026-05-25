@@ -347,8 +347,6 @@ class _PyiAstParser:
         array = SemanticArrayContract(
             rank=rank,
             shape=list(dims),
-            source_shape=list(dims),
-            category="rank_polymorphic" if rank is None else "explicit_shape",
             order="ORDER_C" if rank is not None and rank > 1 else None,
             axes=["strided" if "Strided" in dim else "dense" for dim in dims],
             contiguous=False if any("Strided" in dim for dim in dims) else True,
@@ -430,7 +428,6 @@ class _PyiAstParser:
             semantic_type.storage.array = SemanticArrayContract(
                 rank=semantic_type.rank,
                 shape=list(semantic_type.shape),
-                source_shape=list(semantic_type.shape),
             )
         return semantic_type.storage.array
 

@@ -460,7 +460,7 @@ def kinetic_energy(
 ) -> Float64: ...
 
 def scale_vector(
-    v: Annotated[Float64[::Strided], ArrayCategory('assumed_shape'), SourceDims(':')],
+    v: Float64[::Strided],
     alpha: Ptr(Const(Float64))
 ) -> None: ...
 
