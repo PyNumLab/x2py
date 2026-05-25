@@ -727,12 +727,13 @@ The C parser documentation lives under:
 docs/c_parser/
 ```
 
-Current documents:
+Current C parser documents:
 
 - `c_parser_reference.md`
 - `c_parser_architecture.md`
 - `c_parser_cli_workflow.md`
-- `c_parser_implementation_checklist.md`
+
+Shared project backlog lives in [`../x2py_checklist.md`](../x2py_checklist.md).
 
 Documentation update rule: every C parser implementation change must update
 all affected files under `docs/c_parser/` in the same change. This includes

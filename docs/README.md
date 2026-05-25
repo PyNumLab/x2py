@@ -13,6 +13,11 @@ examples. Contribution and pull-request requirements remain in
 - [Self-contained C semantic `.pyi` specification](semantics/c_pyi_self_contained_specification.md):
   staged C wrapper interface design.
 
+## Roadmap And Backlog
+
+- [x2py checklist](x2py_checklist.md):
+  pending frontend, shared semantics, and `.pyi` tasks.
+
 ## Parser Frontends
 
 ### Fortran
@@ -30,8 +35,6 @@ examples. Contribution and pull-request requirements remain in
   integration decisions.
 - [C parser CLI workflow plan](c_parser/c_parser_cli_workflow.md): command
   surface and output contracts.
-- [C parser remaining work checklist](c_parser/c_parser_implementation_checklist.md):
-  pending implementation tasks.
 
 ## Fixture Notes
 
