@@ -130,6 +130,33 @@ int run(void)
     assert [function.name for function in parsed.functions] == ["run"]
 
 
+@pytest.mark.parametrize("source", ["@@@\n", "int run(void);\n@@@;\n"])
+def test_c_parser_rejects_invalid_top_level_syntax(source):
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError, match="Invalid C syntax") as exc_info:
+        parse_c_file(source, filename="invalid.c")
+
+    assert exc_info.value.code == "CPARSE_INVALID_SYNTAX"
+
+
+def test_c_parser_ignores_invalid_syntax_inside_function_body():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+int run(void)
+{
+    @@@
+    return 0;
+}
+""",
+        filename="invalid_body.c",
+    )
+
+    assert [function.name for function in parsed.functions] == ["run"]
+
+
 def test_control_flow_conditions_inside_function_body_do_not_look_like_knr_definitions():
     from c_parser import parse_c_file
 

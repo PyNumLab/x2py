@@ -73,13 +73,13 @@ end subroutine from_unknown
 """,
         filename="from_unknown.src",
     )
-    parsed_literal = parse_fortran_file(12345)
+    with pytest.raises(FortranParseError, match="Invalid Fortran syntax"):
+        parse_fortran_file(12345)
 
     assert parsed_from_path.filename == str(source_path)
     assert parsed_from_path.format == "modern"
     assert parsed_from_path.procedures[0].name == "from_path"
     assert parsed_unknown_suffix.format == "unknown"
-    assert parsed_literal.procedures == []
 
 def test_public_instance_visitor_entrypoints_use_source_strings():
     parser = FortranParser()

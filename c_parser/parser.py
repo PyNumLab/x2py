@@ -660,6 +660,25 @@ class CParser:
                 code="CPARSE_FOREIGN_FORTRAN_SYNTAX",
             )
 
+    @staticmethod
+    def _could_start_c_external_declaration(text: str) -> bool:
+        stripped = text.lstrip()
+        return bool(stripped) and (stripped[0].isalpha() or stripped[0] == "_")
+
+    @staticmethod
+    def _raise_for_invalid_top_level_syntax(segment: CTopLevelSegment) -> None:
+        text = segment.text.strip()
+        if not text or CParser._could_start_c_external_declaration(text):
+            return
+        raise CParseError(
+            f"Invalid C syntax at top level: {text}",
+            filename=segment.filename,
+            line_number=segment.original_start_line,
+            column=segment.original_start_column,
+            source_line=segment.original_source_line,
+            code="CPARSE_INVALID_SYNTAX",
+        )
+
     def _macro_dependencies(
         self,
         source: str,
@@ -2560,6 +2579,7 @@ class CParser:
             filename=filename,
             use_linemarkers=use_linemarkers,
         ):
+            self._raise_for_invalid_top_level_syntax(segment)
             macro_dependency = self._segment_macro_dependency(
                 segment,
                 function_like_names,

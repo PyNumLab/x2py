@@ -1200,13 +1200,22 @@ class FortranParser:
             if self._is_allowed_unparsed_file_scope_line(stripped):
                 index += 1
                 continue
+            if self._is_executable_statement_start(stripped):
+                index += 1
+                continue
             self._raise_if_foreign_c_syntax_line(
                 stripped,
                 filename=filename,
                 lineno=lineno,
                 source_line=source_line,
             )
-            index += 1
+            self._raise_invalid_fortran_syntax_line(
+                stripped,
+                context="file scope",
+                filename=filename,
+                lineno=lineno,
+                source_line=source_line,
+            )
 
     @staticmethod
     def _is_allowed_unparsed_file_scope_line(line: str) -> bool:
@@ -1216,6 +1225,9 @@ class FortranParser:
             stripped.startswith("#")
             or lowered == "contains"
             or lowered.startswith("end ")
+            or lowered.startswith(("endif", "enddo"))
+            or lowered == "else"
+            or lowered.startswith(("elseif", "else if"))
             or FortranParser._is_ignored_spec_statement(stripped)
             or FortranParser._is_openmp_directive(stripped)
         )
@@ -1239,6 +1251,29 @@ class FortranParser:
             line_number=lineno,
             source_line=source_line,
             code="PARSE_FOREIGN_C_SYNTAX",
+        )
+
+    @staticmethod
+    def _raise_invalid_fortran_syntax_line(
+        line: str,
+        *,
+        context: str,
+        filename: str | None,
+        lineno: int | None,
+        source_line: str | None,
+    ) -> None:
+        FortranParser._raise_if_foreign_c_syntax_line(
+            line,
+            filename=filename,
+            lineno=lineno,
+            source_line=source_line,
+        )
+        raise FortranParseError(
+            f"Invalid Fortran syntax in {context}: {line.strip()}",
+            filename=filename,
+            line_number=lineno,
+            source_line=source_line,
+            code="PARSE_INVALID_SYNTAX",
         )
 
     def _helper_slice_child_units(
@@ -1483,16 +1518,10 @@ class FortranParser:
                     index = child_end + 1
                     continue
 
-            is_spec_statement = (
-                self._parse_use_statement(stripped) is not None
-                or self._is_ignored_spec_statement(stripped)
-                or self._looks_like_declaration_or_spec(stripped)
-            )
             if (
                 region == "specification"
                 and grammar.has_execution_part
                 and self._is_executable_statement_start(stripped)
-                and not is_spec_statement
             ):
                 region = "execution"
 
@@ -2152,6 +2181,8 @@ class FortranParser:
             stripped = line.strip()
             if not stripped:
                 continue
+            if stripped.startswith("#"):
+                continue
             self._raise_if_foreign_c_syntax_line(
                 stripped,
                 filename=filename,
@@ -2278,9 +2309,15 @@ class FortranParser:
         )
         if parsed:
             return
-        if "::" not in stripped and not self._looks_like_declaration_or_spec(stripped):
-            return
         owner_kind, owner_name = self._variable_scope_label(target)
+        if "::" not in stripped and not self._looks_like_declaration_or_spec(stripped):
+            self._raise_invalid_fortran_syntax_line(
+                stripped,
+                context=f"{owner_kind} '{owner_name or '<unnamed>'}' specification part",
+                filename=filename,
+                lineno=lineno,
+                source_line=source_line,
+            )
         raise FortranParseError(
             f"Unknown or unsupported datatype declaration in {owner_kind} '{owner_name or '<unnamed>'}': {stripped}",
             filename=filename,
@@ -2333,6 +2370,8 @@ class FortranParser:
             lineno=lineno,
             source_line=source_line,
         ):
+            return
+        if self._is_statement_function_statement(stripped):
             return
 
         parsed = self._helper_parse_declaration_line(
@@ -2400,7 +2439,15 @@ class FortranParser:
         if parsed:
             return
         if "::" not in stripped and not self._looks_like_declaration_or_spec(stripped):
-            return
+            if self._is_executable_statement_start(stripped):
+                return
+            self._raise_invalid_fortran_syntax_line(
+                stripped,
+                context=f"type '{dtype.name}' specification part",
+                filename=filename,
+                lineno=lineno,
+                source_line=source_line,
+            )
         raise FortranParseError(
             f"Unknown or unsupported datatype declaration in type '{dtype.name}': {line.strip()}",
             filename=filename,
@@ -3007,7 +3054,13 @@ class FortranParser:
             as an unsupported datatype declaration for the active procedure.
         """
         if not self._looks_like_unknown_proc_declaration(line):
-            return
+            self._raise_invalid_fortran_syntax_line(
+                line,
+                context=f"procedure '{proc_state['signature'].name}' specification part",
+                filename=filename,
+                lineno=lineno,
+                source_line=source_line,
+            )
         if any(_REGEX[pattern_key].search(line) for pattern_key in _UNSUPPORTED_PATTERN_KEYS):
             return
         raise FortranParseError(
@@ -3896,6 +3949,17 @@ class FortranParser:
         return bool(re.match(r"^[A-Za-z_]\w+\s+[A-Za-z_]\w*", stripped))
 
     @staticmethod
+    def _is_statement_function_statement(line: str) -> bool:
+        stripped = line.strip()
+        return bool(
+            re.match(
+                r"^[A-Za-z_]\w*\s*\([^()]*\)\s*=",
+                stripped,
+                flags=re.IGNORECASE,
+            )
+        )
+
+    @staticmethod
     def _is_ignored_spec_statement(line: str) -> bool:
         return bool(
             _REGEX["include"].match(line)
@@ -3936,9 +4000,19 @@ class FortranParser:
         stripped = line.strip()
         if not stripped:  # pragma: no cover - callers skip blank lines before executable checks.
             return False
+        labeled = re.match(r"^\d+\s+(?P<body>.*)$", stripped)
+        if labeled:
+            stripped = labeled.group("body").strip()
+            if not stripped:
+                return False
         lowered = stripped.lower()
         if FortranParser._is_openmp_directive(stripped):
             return not FortranParser._is_openmp_declarative_directive(stripped)
+        if (
+            FortranParser._parse_use_statement(stripped) is not None
+            or FortranParser._is_ignored_spec_statement(stripped)
+        ):
+            return False
         first_match = re.match(r"([a-z_][a-z0-9_]*)", lowered)
         first = first_match.group(1) if first_match else lowered.split(None, 1)[0]
         if first.isdigit():
@@ -3952,6 +4026,8 @@ class FortranParser:
         if first in executable_starts:
             return True
         if _REGEX["legacy_parameter"].match(stripped):
+            return False
+        if FortranParser._is_statement_function_statement(stripped):
             return False
         if "=" in stripped and "::" not in stripped:
             # Distinguish assignment/statements from declaration lines carrying

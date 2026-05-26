@@ -781,6 +781,43 @@ end subroutine mixed_body
     assert parsed.procedures[0].name == "mixed_body"
 
 
+@pytest.mark.parametrize(
+    "code",
+    [
+        "@@@\n",
+        """
+module bad_spec
+  @@@
+end module bad_spec
+""",
+        """
+subroutine bad_spec()
+  @@@
+end subroutine bad_spec
+""",
+    ],
+)
+def test_fortran_parser_rejects_invalid_syntax_outside_execution_bodies(code):
+    with pytest.raises(FortranParseError, match="Invalid Fortran syntax") as exc_info:
+        parse_fortran_file(code, filename="invalid_syntax.f90")
+
+    assert exc_info.value.code == "PARSE_INVALID_SYNTAX"
+
+
+def test_fortran_parser_ignores_invalid_syntax_after_execution_boundary():
+    parsed = parse_fortran_file(
+        """
+subroutine ignored_body()
+  call noop()
+  @@@
+end subroutine ignored_body
+""",
+        filename="invalid_body.f90",
+    )
+
+    assert parsed.procedures[0].name == "ignored_body"
+
+
 def test_foreign_c_check_preserves_valid_semicolon_separated_fortran_statements():
     parsed = parse_fortran_file(
         """
