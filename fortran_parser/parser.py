@@ -1165,6 +1165,7 @@ class FortranParser:
             if handled_pp:
                 index += 1
                 continue
+
             start = self._helper_classify_unit_start(stripped)
             if start is not None:
                 end_index = self._helper_find_unit_end(lines, index, start[0], filename=filename)
@@ -1188,12 +1189,6 @@ class FortranParser:
         lowered = stripped.lower()
         return (
             stripped.startswith("#")
-            or lowered == "contains"
-            or lowered.startswith("end ")
-            or lowered.startswith(("endif", "enddo"))
-            or lowered == "else"
-            or lowered.startswith(("elseif", "else if"))
-            or FortranParser._is_ignored_spec_statement(stripped)
             or FortranParser._is_openmp_directive(stripped)
         )
 
