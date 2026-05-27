@@ -113,8 +113,8 @@ path when `--language` is omitted. C source/header files require explicit
 generation, and wrap-readiness are available in explicit C mode. Selecting a
 frontend that conflicts with a recognized C or Fortran source suffix is an
 error. Once selected, a frontend also rejects unmistakable declarations or
-program-unit syntax from the other language outside ignored execution/function
-bodies rather than silently dropping it.
+program-unit syntax that are not from the selected language outside ignored execution/function
+bodies, rather than silently dropping them.
 
 For parse output, `--show-vars` expands scope-level variables that are normally
 summarized as `vars=N`. Use `--print-limit N` to keep large repeated sections
