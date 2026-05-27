@@ -490,8 +490,7 @@ x2py path/to/api.h --language c --parse --out report.json
 There is no separate `--parse-c` alias: `--language c --parse` is the shared
 language-selection form. Auto-detection remains deferred: a `.c`, `.h`, or
 `.i` input without `--language c` exits with language-selection guidance.
-Explicit C input containing unmistakable top-level Fortran unit or declaration
-syntax raises a fatal parser diagnostic instead of emitting a partial C
+Explicit C input containing unmistakable non-C syntax raises a fatal parser diagnostic instead of emitting a partial C
 interface.
 
 ## Current JSON Output
