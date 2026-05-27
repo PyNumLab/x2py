@@ -46,7 +46,7 @@ unknown-suffix source inputs require an explicit frontend selection. A known C
 path explicitly passed with `--language fortran` is rejected before parsing,
 so it cannot silently produce an empty Fortran interface. The parser also
 rejects unmistakable Fortran unit or declaration syntax found in C input, and
-the Fortran parser rejects unmistakable C declarations outside execution
+the Fortran parser rejects unsupported non-Fortran syntax outside execution
 regions that are intentionally not modeled.
 
 The C parser output differs from Fortran parser output by using C-specific
