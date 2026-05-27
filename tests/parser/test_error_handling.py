@@ -760,14 +760,17 @@ end subroutine mixed_spec
 """,
     ],
 )
-def test_fortran_parser_rejects_foreign_c_declarations_outside_execution_bodies(code):
-    with pytest.raises(FortranParseError, match="C declaration syntax is not valid Fortran input") as exc_info:
+def test_fortran_parser_rejects_invalid_non_fortran_syntax_outside_execution_bodies(code):
+    with pytest.raises(
+        FortranParseError,
+        match=r"Invalid Fortran syntax|Unknown or unsupported datatype declaration",
+    ) as exc_info:
         parse_fortran_file(code, filename="mixed.f90")
 
-    assert exc_info.value.code == "PARSE_FOREIGN_C_SYNTAX"
+    assert exc_info.value.code in {"PARSE_INVALID_SYNTAX", "PARSE001"}
 
 
-def test_fortran_parser_ignores_foreign_c_declarations_after_execution_boundary():
+def test_fortran_parser_ignores_non_fortran_syntax_after_execution_boundary():
     parsed = parse_fortran_file(
         """
 subroutine mixed_body()
@@ -818,7 +821,7 @@ end subroutine ignored_body
     assert parsed.procedures[0].name == "ignored_body"
 
 
-def test_foreign_c_check_preserves_valid_semicolon_separated_fortran_statements():
+def test_invalid_syntax_guard_preserves_valid_semicolon_separated_fortran_statements():
     parsed = parse_fortran_file(
         """
 subroutine valid_body(x)

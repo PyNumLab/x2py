@@ -81,8 +81,8 @@ int b;
 @pytest.mark.parametrize(
     "source",
     [
-        "subroutine solve()\nend subroutine solve\n",
-        "integer function answer()\nend function answer\n",
+        "def solve():\n    return 0\n",
+        "lambda x: x\n",
         "int add(int a, int b);\ninteger :: state;\n",
         "int add(int a, int b);\ntype(c_ptr) :: handle;\n",
     ],

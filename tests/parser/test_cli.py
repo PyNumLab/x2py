@@ -563,8 +563,8 @@ def test_cli_fortran_rejects_embedded_c_declaration_outside_execution_body(tmp_p
     )
 
     assert result.returncode == 1
-    assert "PARSE_FOREIGN_C_SYNTAX" in result.stderr
-    assert "C declaration syntax is not valid Fortran input" in result.stderr
+    assert "PARSE001" in result.stderr
+    assert "Unknown or unsupported datatype declaration" in result.stderr
 
 
 def test_cli_parse_shows_module_derived_types_and_derived_arg_kinds():
