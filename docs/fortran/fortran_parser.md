@@ -210,6 +210,10 @@ python -m x2py path/to/fortran_src --language fortran --parse
 Fortran directories are recursively scanned for `.f`, `.for`, `.ftn`, `.f90`,
 `.f95`, `.f03`, `.f08`.
 
+The Fortran frontend rejects unsupported non-Fortran syntax before
+wrapper-focused parsing when it appears outside executable procedure/program
+bodies, which are intentionally not represented in the extracted interface.
+
 The human-readable parse tree keeps scope variables compact by default as
 `vars=N`. Add `--show-vars` to print the variables, or `--print-limit N` to
 print only the first `N` items in each repeated section.

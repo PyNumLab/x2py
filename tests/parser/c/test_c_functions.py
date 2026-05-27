@@ -78,6 +78,93 @@ int b;
         parse_c_file(source, filename="knr.c")
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        "def solve():\n    return 0\n",
+        "lambda x: x\n",
+        "int add(int a, int b);\ninteger :: state;\n",
+        "int add(int a, int b);\ntype(c_ptr) :: handle;\n",
+    ],
+)
+def test_c_parser_rejects_non_c_top_level_syntax(source):
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError, match="Invalid C syntax") as exc_info:
+        parse_c_file(source, filename="mixed.h")
+
+    assert exc_info.value.code == "CPARSE_INVALID_SYNTAX"
+
+
+def test_c_parser_invalid_syntax_error_maps_preprocessed_source_location():
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError) as exc_info:
+        parse_c_file(
+            '# 80 "generated.input"\nvalue_type :: state;\n',
+            filename="translation.i",
+            preprocessing="preprocessed",
+        )
+
+    assert exc_info.value.code == "CPARSE_INVALID_SYNTAX"
+    assert exc_info.value.filename == "generated.input"
+    assert exc_info.value.line_number == 80
+
+
+def test_c_parser_skips_non_c_tokens_inside_function_body():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+int run(void)
+{
+    value_type :: state;
+    return 0;
+}
+""",
+        filename="mixed_body.c",
+    )
+
+    assert [function.name for function in parsed.functions] == ["run"]
+
+
+def test_c_parser_does_not_classify_valid_c_from_typedef_identifier_spelling():
+    from c_parser import CTypedef, parse_c_file
+
+    parsed = parse_c_file("subroutine solve(void);\n", filename="identifier_spelling.h")
+
+    assert [function.name for function in parsed.functions] == ["solve"]
+    assert isinstance(parsed.functions[0].result_type, CTypedef)
+    assert parsed.functions[0].result_type.name == "subroutine"
+
+
+@pytest.mark.parametrize("source", ["@@@\n", "int run(void);\n@@@;\n"])
+def test_c_parser_rejects_invalid_top_level_syntax(source):
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError, match="Invalid C syntax") as exc_info:
+        parse_c_file(source, filename="invalid.c")
+
+    assert exc_info.value.code == "CPARSE_INVALID_SYNTAX"
+
+
+def test_c_parser_ignores_invalid_syntax_inside_function_body():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+int run(void)
+{
+    @@@
+    return 0;
+}
+""",
+        filename="invalid_body.c",
+    )
+
+    assert [function.name for function in parsed.functions] == ["run"]
+
+
 def test_control_flow_conditions_inside_function_body_do_not_look_like_knr_definitions():
     from c_parser import parse_c_file
 

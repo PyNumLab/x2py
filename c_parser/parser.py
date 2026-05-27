@@ -46,6 +46,7 @@ from pathlib import Path, PurePosixPath
 
 from .lexer import (
     CTopLevelSegment,
+    lex_c_source,
     line_mappings_for_source,
     split_top_level_c_source,
     strip_c_comments,
@@ -574,6 +575,36 @@ class CParser:
     def _source_location(self, segment: CTopLevelSegment) -> CSourceLocation:
         """Return the original start location for a top-level segment."""
         return self._source_location_at(segment, 0)
+
+    @staticmethod
+    def _could_start_c_external_declaration(text: str) -> bool:
+        stripped = text.lstrip()
+        return bool(stripped) and (stripped[0].isalpha() or stripped[0] == "_")
+
+    @staticmethod
+    def _raise_for_invalid_top_level_syntax(segment: CTopLevelSegment) -> None:
+        text = segment.text.strip()
+        if not text or _looks_like_cxx_declaration(text):
+            return
+        tokens = lex_c_source(text)
+        has_scope_operator = any(
+            left.text == ":" and right.text == ":"
+            for left, right in zip(tokens, tokens[1:])
+        )
+        if (
+            segment.terminator != "eof"
+            and not has_scope_operator
+            and CParser._could_start_c_external_declaration(text)
+        ):
+            return
+        raise CParseError(
+            f"Invalid C syntax at top level: {text}",
+            filename=segment.filename,
+            line_number=segment.original_start_line,
+            column=segment.original_start_column,
+            source_line=segment.original_source_line,
+            code="CPARSE_INVALID_SYNTAX",
+        )
 
     def _macro_dependencies(
         self,
@@ -2475,6 +2506,7 @@ class CParser:
             filename=filename,
             use_linemarkers=use_linemarkers,
         ):
+            self._raise_for_invalid_top_level_syntax(segment)
             macro_dependency = self._segment_macro_dependency(
                 segment,
                 function_like_names,

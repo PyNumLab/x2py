@@ -69,8 +69,8 @@ The C frontend is currently parse-only. It supports:
 - Raw mutually exclusive function alternatives preserved for later semantic
   selection rather than collapsed into one signature.
 
-C semantic IR conversion, C `.pyi` generation, and C wrap-readiness are still
-intentionally disabled until the C semantic layer is implemented.
+The supported C subset continues through semantic IR conversion, `.pyi`
+generation, and wrap-readiness.
 
 ## Public APIs
 
@@ -112,7 +112,9 @@ path when `--language` is omitted. C source/header files require explicit
 `--language fortran` or `--language c`. C parsing, semantic IR, `.pyi`
 generation, and wrap-readiness are available in explicit C mode. Selecting a
 frontend that conflicts with a recognized C or Fortran source suffix is an
-error.
+error. Once selected, a frontend also rejects unmistakable declarations or
+program-unit syntax that are not from the selected language outside ignored execution/function
+bodies, rather than silently dropping them.
 
 For parse output, `--show-vars` expands scope-level variables that are normally
 summarized as `vars=N`. Use `--print-limit N` to keep large repeated sections
