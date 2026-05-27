@@ -1174,9 +1174,6 @@ class FortranParser:
             if self._is_allowed_unparsed_file_scope_line(stripped):
                 index += 1
                 continue
-            if self._is_executable_statement_start(stripped):
-                index += 1
-                continue
             self._raise_invalid_fortran_syntax_line(
                 stripped,
                 context="file scope",
