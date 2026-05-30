@@ -571,30 +571,35 @@ _Alignas(16) int aligned_value;
 @pytest.mark.parametrize(
     "source",
     [
-        "using size_type = int;\n",
-        "using namespace api;\n",
         "namespace api { int run(void); }\n",
-        "namespace api = other;\n",
-        "template <typename T> T identity(T value);\n",
-        "class widget;\n",
         "public:\n",
     ],
 )
-def test_cxx_declaration_shapes_are_diagnosed_not_partially_modeled(source):
-    from c_parser import parse_c_file
+def test_non_c_top_level_grammar_is_rejected_without_language_guessing(source):
+    from c_parser import CParseError, parse_c_file
 
-    parsed = parse_c_file(source, filename="cxx_shapes.h")
+    with pytest.raises(CParseError, match="Invalid C syntax") as exc_info:
+        parse_c_file(source, filename="invalid_top_level.h")
 
-    assert parsed.functions == []
-    assert parsed.structs == []
-    assert parsed.unions == []
-    assert parsed.enums == []
-    assert parsed.typedefs == []
-    assert parsed.variables == []
-    assert [
-        (diagnostic.code, diagnostic.unit_kind, diagnostic.location.line)
-        for diagnostic in parsed.diagnostics
-    ] == [("C_UNSUPPORTED_DECLARATION", "cxx_declaration", 1)]
+    assert exc_info.value.code == "CPARSE_INVALID_SYNTAX"
+
+
+@pytest.mark.parametrize(
+    ("source", "name", "type_name"),
+    [
+        ("class widget;\n", "widget", "class"),
+        ("namespace api = other;\n", "api", "namespace"),
+        ("using size_type = value;\n", "size_type", "using"),
+    ],
+)
+def test_identifier_spelling_does_not_trigger_foreign_language_detection(source, name, type_name):
+    from c_parser import CTypedef, parse_c_file
+
+    parsed = parse_c_file(source, filename="identifier_spelling.h")
+
+    assert [variable.name for variable in parsed.variables] == [name]
+    assert isinstance(parsed.variables[0].type, CTypedef)
+    assert parsed.variables[0].type.name == type_name
 
 
 def test_braced_and_designated_initializer_declarations_preserve_source_text():

@@ -114,10 +114,13 @@ programs, procedures, derived types, interfaces, and block data are expressed
 by small visitor decisions and grammar flags rather than separate whole-file
 parsing loops.
 
-Procedure execution parts are ignored for wrapper metadata, and
-procedure-internal subprograms are not exported as file/module procedures.
-Procedure-local interface blocks are still visited enough to type callback
-dummy arguments and to preserve interface metadata.
+Nested unit boundaries and placement outside execution regions are checked even
+when they are not exported as wrapper metadata. Internal procedures inside a
+host procedure's `contains` block are structurally sliced, then their
+declarations and bodies are skipped. Once an execution boundary is detected,
+procedure bodies and standalone included execution fragments are intentionally
+skipped. Procedure-local interface blocks are still visited enough to type
+callback dummy arguments and to preserve interface metadata.
 
 ### 2.1 Recursive parser sketch
 
@@ -476,13 +479,15 @@ python -m x2py bad.f90 --no-color
 NO_COLOR=1 python -m x2py bad.f90
 ```
 
-For parser development, use `--debug-traceback` to re-raise
+For parser development, use `--debug` to re-raise
 `FortranParseError` and let Python print the full traceback showing where the
 error was raised internally:
 
 ```bash
-python -m x2py bad.f90 --debug-traceback
+python -m x2py bad.f90 --debug
 ```
+
+`--debug-traceback` remains accepted as a compatibility alias.
 
 The same developer mode can be enabled with the environment variable
 `FORTRAN_PARSER_DEBUG=1`:
@@ -618,7 +623,13 @@ exception keeps structured metadata for consumers:
 - `line_number` — 1-based source line where the error was detected, if known
 - `source_line` — original source text for context, if known
 - `base_message` — stable error text without location/source context
-- `code` — diagnostic code; the default parse diagnostic code is `PARSE001`
+- `code` — stable diagnostic category identifier; the default parse diagnostic
+  code is `PARSE001`, while grammar rejection uses `PARSE_INVALID_SYNTAX`
+
+Diagnostic codes are for programmatic matching in tests, tools, and
+documentation. The numeric suffix in `PARSE001` identifies an error category;
+it is not a source line number, an occurrence counter, or the CLI exit status.
+The shared registry is [`docs/diagnostic_codes.md`](../diagnostic_codes.md).
 
 `str(error)` and `error.format_diagnostic(color=False)` render a
 compiler-style diagnostic:
@@ -642,8 +653,9 @@ disable ANSI output. On Windows, ANSI console compatibility is enabled through
 
 For parser development, `format_diagnostic(debug=True)` appends a note with the
 internal parser file, line, and function that raised the error. The CLI exposes
-this through `--debug-traceback` or `FORTRAN_PARSER_DEBUG=1`; normal CLI parse
-errors intentionally hide Python tracebacks.
+this through `--debug`, its compatibility alias `--debug-traceback`, or
+`FORTRAN_PARSER_DEBUG=1`; normal CLI parse errors intentionally hide Python
+tracebacks.
 
 The sections below list each error category, the triggering condition, and the
 exact `base_message` format (with `<...>` placeholders for runtime values).

@@ -4,6 +4,11 @@ The repository [`README.md`](../README.md) is the starting point for usage and
 examples. Contribution and pull-request requirements remain in
 [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
+## Diagnostics
+
+- [Diagnostic code registry](diagnostic_codes.md): stable parser error and
+  report-diagnostic categories shared by the frontend documentation.
+
 ## Architecture And Semantic Interfaces
 
 - [Semantic multilanguage wrapper runtime architecture](architecture/semantic_multilanguage_wrapper_runtime_architecture.md):

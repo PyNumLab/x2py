@@ -398,9 +398,10 @@ Member records carry their own field location. A legal final incomplete array
 member in a struct is marked as `CArray(is_flexible=True)`; non-final,
 sole-member, and union incomplete-array member forms are retained with
 `C_INVALID_FLEXIBLE_ARRAY_MEMBER` error diagnostics.
-Selected unsupported forms, such as static assertions,
-attributes, alignment specifiers, and C++-shaped declarations, are reported in `diagnostics` with
-explicit `unit_kind` values.
+Selected unsupported forms, such as static assertions, attributes, and
+alignment specifiers, are reported in `diagnostics` with explicit `unit_kind`
+values. Grammar-invalid input raises `CParseError`; identifier spellings are not
+used to guess that input belongs to another language.
 Unconsumed declarator suffixes are also diagnosed instead of producing partial
 objects. Functions
 include `prototype_style`, currently `"prototype"` for
@@ -490,7 +491,8 @@ x2py path/to/api.h --language c --parse --out report.json
 There is no separate `--parse-c` alias: `--language c --parse` is the shared
 language-selection form. Auto-detection remains deferred: a `.c`, `.h`, or
 `.i` input without `--language c` exits with language-selection guidance.
-Explicit C input containing unmistakable non-C syntax raises a fatal parser diagnostic instead of emitting a partial C
+Explicit C input containing syntax that cannot be consumed by the modeled C
+grammar raises a fatal parser diagnostic instead of emitting a partial C
 interface.
 
 ## Current JSON Output
@@ -599,6 +601,10 @@ specifier combinations also raise `CParseError` (`CPARSE003`) because their
 invalidity does not depend on later typedef resolution. Known unsupported
 declaration extensions are diagnosed rather than partially modeled; additional
 syntax diagnostics should be added only with focused tests.
+Generic grammar rejection uses `CPARSE_INVALID_SYNTAX`. Diagnostic codes are
+stable category identifiers for tests, tools, and documentation; numeric
+suffixes are not line numbers, occurrence counters, or exit statuses. The
+shared registry is [`docs/diagnostic_codes.md`](../diagnostic_codes.md).
 
 ## Testing Workflow
 
@@ -668,10 +674,10 @@ Active declaration tests currently cover:
   references
 - `_Atomic int` and `_Atomic(type)` qualifier placement on scalar and pointer
   declaration forms
-- diagnostics for selected unsupported attributes, alignment, C++-shaped
-  declarations, K&R definitions, and trailing declarator extensions
-- fatal diagnostics for invalid primitive-specifier combinations while
-  unresolved single typedef-name uses remain deferred
+- diagnostics for selected unsupported attributes, alignment, K&R definitions,
+  and trailing declarator extensions
+- fatal diagnostics for grammar-invalid syntax and invalid primitive-specifier
+  combinations while unresolved single typedef-name uses remain deferred
 
 This is enough coverage for the currently implemented subset, not for all C
 declarations.
