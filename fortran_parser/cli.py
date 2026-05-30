@@ -290,7 +290,9 @@ def main() -> int:
         help="Disable ANSI color in parse diagnostics. Diagnostics are colored by default when available.",
     )
     parser.add_argument(
+        "--debug",
         "--debug-traceback",
+        dest="debug",
         action="store_true",
         help="Re-raise parser errors so Python prints a traceback for parser debugging. "
         "Can also be enabled with FORTRAN_PARSER_DEBUG=1.",
@@ -305,7 +307,7 @@ def main() -> int:
         report = _parse_paths(args.paths)
         semantic = _semantic_report(args.paths) if (args.semantics or args.pyi) else None
     except FortranParseError as exc:
-        if args.debug_traceback or _env_flag("FORTRAN_PARSER_DEBUG"):
+        if args.debug or _env_flag("FORTRAN_PARSER_DEBUG"):
             raise
         print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
         return 1

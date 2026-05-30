@@ -193,7 +193,7 @@ end subroutine bad
     assert "2 |   weirdtype :: x" in res.stderr
 
 
-def test_cli_debug_traceback_flag_reraises_parse_errors(tmp_path: Path):
+def test_cli_debug_flag_reraises_parse_errors(tmp_path: Path):
     f90 = tmp_path / "bad.f90"
     f90.write_text(
         """subroutine bad(x)
@@ -203,7 +203,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse", "--debug-traceback"]
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse", "--debug"]
     res = subprocess.run(cmd, capture_output=True, text=True)
 
     assert res.returncode == 1
@@ -853,7 +853,7 @@ def test_x2py_cli_rejects_invalid_stage_combinations(extra_args, message):
     assert message in res.stderr
 
 
-def test_fortran_parser_cli_debug_traceback_flag_reraises_parse_errors(tmp_path: Path):
+def test_fortran_parser_cli_debug_flag_reraises_parse_errors(tmp_path: Path):
     f90 = tmp_path / "bad.f90"
     f90.write_text(
         """subroutine bad(x)
@@ -863,7 +863,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "fortran_parser", str(f90), "--debug-traceback"]
+    cmd = [sys.executable, "-m", "fortran_parser", str(f90), "--debug"]
     res = subprocess.run(cmd, capture_output=True, text=True)
 
     assert res.returncode == 1
@@ -993,6 +993,6 @@ def test_x2py_main_formats_value_errors_or_reraises_for_debug(tmp_path: Path, mo
     assert x2py_cli.main() == 1
     assert "x2py: error: invalid generated interface" in capsys.readouterr().err
 
-    monkeypatch.setattr(sys, "argv", ["x2py", str(source), "--parse", "--debug-traceback"])
+    monkeypatch.setattr(sys, "argv", ["x2py", str(source), "--parse", "--debug"])
     with pytest.raises(ValueError, match="invalid generated interface"):
         x2py_cli.main()

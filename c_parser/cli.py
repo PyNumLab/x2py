@@ -3,15 +3,26 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
-from .models import CFile, c_model_to_dict
+from .models import CFile, CParseError, c_model_to_dict
 from .parser import CParser
 
 
 _C_SOURCE_SUFFIXES = {".c", ".h", ".i"}
+_TRUE_VALUES = {"1", "true", "yes", "on"}
+
+
+def _env_flag(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in _TRUE_VALUES
+
+
+def _diagnostic_color_enabled(*, disabled: bool) -> bool:
+    return not disabled and "NO_COLOR" not in os.environ
 
 
 def _collect_c_extensions(path: Path) -> list[Path]:
@@ -88,9 +99,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("paths", nargs="+", help="C source/header file(s) or directory path(s)")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
     parser.add_argument("--out", type=str, help="Write parser JSON to a file")
+    parser.add_argument("--no-color", action="store_true", help="Disable ANSI color in parse diagnostics")
+    parser.add_argument(
+        "--debug",
+        "--debug-traceback",
+        dest="debug",
+        action="store_true",
+        help="Re-raise parser errors so Python prints a traceback for parser debugging.",
+    )
     args = parser.parse_args(argv)
 
-    payload = parse_c_report(args.paths)
+    try:
+        payload = parse_c_report(args.paths)
+    except CParseError as exc:
+        if args.debug or _env_flag("C_PARSER_DEBUG"):
+            raise
+        print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
+        return 1
     if args.out:
         Path(args.out).write_text(json.dumps(payload, indent=2), encoding="utf-8")
         return 0

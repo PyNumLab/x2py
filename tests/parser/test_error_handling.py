@@ -739,6 +739,18 @@ end module wrong_name
         parse_fortran_file(code, filename="mismatch_module.f90")
 
 
+def test_slicer_accepts_mismatched_procedure_end_name_without_preferred_alternative():
+    parsed = parse_fortran_file(
+        """
+subroutine expected_name()
+end subroutine alternate_name
+""",
+        filename="mismatch_procedure_raw_alternative.f90",
+    )
+
+    assert parsed.procedures[0].name == "expected_name"
+
+
 def test_slicer_reports_missing_end_unit():
     code = """
 module missing_end
@@ -819,6 +831,115 @@ end subroutine ignored_body
     )
 
     assert parsed.procedures[0].name == "ignored_body"
+
+
+def test_fortran_parser_skips_standalone_include_fragment_after_execution_boundary():
+    parsed = parse_fortran_file(
+        """
+include 'fragment.inc'
+if (enabled) then
+  @@@
+else
+  @@@
+endif
+""",
+        filename="fragment.inc",
+    )
+
+    assert parsed.procedures == []
+
+
+def test_fortran_parser_skips_balanced_internal_procedure_contents():
+    parsed = parse_fortran_file(
+        """
+subroutine host()
+contains
+  subroutine nested()
+    @@@
+  end subroutine nested
+end subroutine host
+""",
+        filename="ignored_internal_body.f90",
+    )
+
+    assert parsed.procedures[0].name == "host"
+
+
+def test_fortran_parser_rejects_unterminated_internal_procedure_unit():
+    with pytest.raises(FortranParseError, match="Missing end procedure"):
+        parse_fortran_file(
+            """
+subroutine host()
+contains
+  subroutine nested()
+end subroutine host
+""",
+            filename="unterminated_internal_unit.f90",
+        )
+
+
+def test_fortran_parser_skips_nested_unit_like_lines_after_execution_boundary():
+    parsed = parse_fortran_file(
+        """
+subroutine host()
+  call begin_work()
+  interface
+    subroutine ignored()
+      @@@
+    end subroutine ignored
+  end interface
+end subroutine host
+""",
+        filename="ignored_nested_execution.f90",
+    )
+
+    assert parsed.procedures[0].name == "host"
+
+
+def test_fortran_parser_skips_unterminated_unit_like_lines_after_execution_boundary():
+    parsed = parse_fortran_file(
+        """
+subroutine host()
+  call begin_work()
+  subroutine ignored()
+end subroutine host
+""",
+        filename="ignored_unterminated_nested_execution.f90",
+    )
+
+    assert parsed.procedures[0].name == "host"
+
+
+def test_fortran_parser_rejects_malformed_enum_subunit():
+    with pytest.raises(FortranParseError, match="Invalid Fortran syntax") as exc_info:
+        parse_fortran_file(
+            """
+module invalid_enum_mod
+  enum, bind(c)
+    enumerator :: valid = 1
+    @@@
+  end enum
+end module invalid_enum_mod
+""",
+            filename="invalid_enum.f90",
+        )
+
+    assert exc_info.value.code == "PARSE_INVALID_SYNTAX"
+
+
+def test_fortran_parser_rejects_subunit_inside_block_data():
+    with pytest.raises(FortranParseError, match="Invalid Fortran syntax") as exc_info:
+        parse_fortran_file(
+            """
+block data invalid_block
+  interface
+  end interface
+end block data invalid_block
+""",
+            filename="invalid_block_data.f90",
+        )
+
+    assert exc_info.value.code == "PARSE_INVALID_SYNTAX"
 
 
 def test_invalid_syntax_guard_preserves_valid_semicolon_separated_fortran_statements():

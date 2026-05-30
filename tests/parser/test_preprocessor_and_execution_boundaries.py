@@ -302,8 +302,9 @@ end subroutine declaration_noise
     assert sig.arguments[0].name == "x"
     assert sig.arguments[0].base_type == "real"
 
-def test_stray_end_unit_lines_are_ignored_by_public_file_parse():
-    parsed = parse_fortran_file(
+def test_stray_end_unit_lines_are_rejected_by_public_file_parse():
+    with pytest.raises(FortranParseError, match="Invalid Fortran syntax") as exc_info:
+        parse_fortran_file(
         """
 end module stray_mod
 end submodule stray_submod
@@ -316,4 +317,4 @@ end subroutine kept
         filename="stray_ends.f90",
     )
 
-    assert [proc.name for proc in parsed.procedures] == ["kept"]
+    assert exc_info.value.code == "PARSE_INVALID_SYNTAX"

@@ -27,6 +27,10 @@ from x2py.preprocessing import (
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 _FORTRAN_SOURCE_SUFFIXES = {".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"}
 _C_SOURCE_SUFFIXES = {".c", ".h", ".i"}
+_SOURCE_SUFFIXES_BY_LANGUAGE = {
+    "fortran": _FORTRAN_SOURCE_SUFFIXES,
+    "c": _C_SOURCE_SUFFIXES,
+}
 
 
 def _env_flag(name: str) -> bool:
@@ -94,21 +98,27 @@ def _resolve_language(
     requested: str | None,
     parser: argparse.ArgumentParser,
 ) -> str:
+    def language_for_suffix(suffix: str) -> str | None:
+        return next(
+            (
+                language
+                for language, suffixes in _SOURCE_SUFFIXES_BY_LANGUAGE.items()
+                if suffix in suffixes
+            ),
+            None,
+        )
+
     if requested is not None:
         for raw in paths:
             path = Path(raw)
             if path.is_dir():
                 continue
             suffix = path.suffix.lower()
-            if requested == "fortran" and suffix in _C_SOURCE_SUFFIXES:
+            detected = language_for_suffix(suffix)
+            if detected is not None and detected != requested:
                 parser.error(
-                    f"C input {path} is incompatible with --language fortran; "
-                    "pass --language c. Use --help for examples."
-                )
-            if requested == "c" and suffix in _FORTRAN_SOURCE_SUFFIXES:
-                parser.error(
-                    f"Fortran input {path} is incompatible with --language c; "
-                    "pass --language fortran. Use --help for examples."
+                    f"{detected.capitalize()} input {path} is incompatible with --language {requested}; "
+                    f"pass --language {detected}. Use --help for examples."
                 )
         return requested
 
@@ -610,7 +620,13 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
     parser.add_argument("--out", nargs="?", const="", type=str, help="Write stage output to file (optional explicit output filename)")
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI color in parse diagnostics")
-    parser.add_argument("--debug-traceback", action="store_true", help="Re-raise parser errors for debug")
+    parser.add_argument(
+        "--debug",
+        "--debug-traceback",
+        dest="debug",
+        action="store_true",
+        help="Re-raise parser errors so Python prints a traceback for parser debugging",
+    )
     args = parser.parse_args()
     args.language = _resolve_language(args.paths, args.language, parser)
     preprocessing = _build_preprocessing_config(args, parser)
@@ -649,17 +665,17 @@ def main() -> int:
         readiness_payload = _wrap_readiness_report(args.paths, preprocessing, language=args.language) if args.wrap_readiness else None
         _attach_wrap_readiness(semantic_payload, readiness_payload)
     except CParseError as exc:
-        if args.debug_traceback or _env_flag("C_PARSER_DEBUG"):
+        if args.debug or _env_flag("C_PARSER_DEBUG"):
             raise
         print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
         return 1
     except FortranParseError as exc:
-        if args.debug_traceback or _env_flag("FORTRAN_PARSER_DEBUG"):
+        if args.debug or _env_flag("FORTRAN_PARSER_DEBUG"):
             raise
         print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
         return 1
     except (SyntaxError, ValueError) as exc:
-        if args.debug_traceback or _env_flag("X2PY_DEBUG"):
+        if args.debug or _env_flag("X2PY_DEBUG"):
             raise
         print(f"x2py: error: {exc}", file=sys.stderr)
         return 1
