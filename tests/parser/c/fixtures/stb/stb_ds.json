@@ -7944,8 +7944,8 @@
           "unit_name": null
         },
         {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "C++ declaration syntax is not supported by the C parser.",
+          "code": "C_UNSUPPORTED_DECLARATOR",
+          "message": "Unsupported declarator syntax after parsed type layers: '<class T> static T * stbds_arrgrowf_wrapper(T *a, size_t elemsize, size_t addlen, size_t min_cap)'.",
           "severity": "warning",
           "location": {
             "filename": "stb/stb_ds.h",
@@ -7953,12 +7953,12 @@
             "column": 1,
             "source_line": "template<class T> static T * stbds_arrgrowf_wrapper(T *a, size_t elemsize, size_t addlen, size_t min_cap) {"
           },
-          "unit_kind": "cxx_declaration",
+          "unit_kind": "declarator",
           "unit_name": null
         },
         {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "C++ declaration syntax is not supported by the C parser.",
+          "code": "C_UNSUPPORTED_DECLARATOR",
+          "message": "Unsupported declarator syntax after parsed type layers: '<class T> static T * stbds_hmget_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, int mode)'.",
           "severity": "warning",
           "location": {
             "filename": "stb/stb_ds.h",
@@ -7966,12 +7966,12 @@
             "column": 1,
             "source_line": "template<class T> static T * stbds_hmget_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, int mode) {"
           },
-          "unit_kind": "cxx_declaration",
+          "unit_kind": "declarator",
           "unit_name": null
         },
         {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "C++ declaration syntax is not supported by the C parser.",
+          "code": "C_UNSUPPORTED_DECLARATOR",
+          "message": "Unsupported declarator syntax after parsed type layers: '<class T> static T * stbds_hmget_key_ts_wrapper(T *a, size_t elemsize, void *key, size_t keysize, ptrdiff_t *temp, int mode)'.",
           "severity": "warning",
           "location": {
             "filename": "stb/stb_ds.h",
@@ -7979,12 +7979,12 @@
             "column": 1,
             "source_line": "template<class T> static T * stbds_hmget_key_ts_wrapper(T *a, size_t elemsize, void *key, size_t keysize, ptrdiff_t *temp, int mode) {"
           },
-          "unit_kind": "cxx_declaration",
+          "unit_kind": "declarator",
           "unit_name": null
         },
         {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "C++ declaration syntax is not supported by the C parser.",
+          "code": "C_UNSUPPORTED_DECLARATOR",
+          "message": "Unsupported declarator syntax after parsed type layers: '<class T> static T * stbds_hmput_default_wrapper(T *a, size_t elemsize)'.",
           "severity": "warning",
           "location": {
             "filename": "stb/stb_ds.h",
@@ -7992,12 +7992,12 @@
             "column": 1,
             "source_line": "template<class T> static T * stbds_hmput_default_wrapper(T *a, size_t elemsize) {"
           },
-          "unit_kind": "cxx_declaration",
+          "unit_kind": "declarator",
           "unit_name": null
         },
         {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "C++ declaration syntax is not supported by the C parser.",
+          "code": "C_UNSUPPORTED_DECLARATOR",
+          "message": "Unsupported declarator syntax after parsed type layers: '<class T> static T * stbds_hmput_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, int mode)'.",
           "severity": "warning",
           "location": {
             "filename": "stb/stb_ds.h",
@@ -8005,12 +8005,12 @@
             "column": 1,
             "source_line": "template<class T> static T * stbds_hmput_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, int mode) {"
           },
-          "unit_kind": "cxx_declaration",
+          "unit_kind": "declarator",
           "unit_name": null
         },
         {
-          "code": "C_UNSUPPORTED_DECLARATION",
-          "message": "C++ declaration syntax is not supported by the C parser.",
+          "code": "C_UNSUPPORTED_DECLARATOR",
+          "message": "Unsupported declarator syntax after parsed type layers: '<class T> static T * stbds_hmdel_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, size_t keyoffset, int mode)'.",
           "severity": "warning",
           "location": {
             "filename": "stb/stb_ds.h",
@@ -8018,7 +8018,7 @@
             "column": 1,
             "source_line": "template<class T> static T * stbds_hmdel_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, size_t keyoffset, int mode){"
           },
-          "unit_kind": "cxx_declaration",
+          "unit_kind": "declarator",
           "unit_name": null
         },
         {
@@ -13614,8 +13614,8 @@
       "unit_name": null
     },
     {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "C++ declaration syntax is not supported by the C parser.",
+      "code": "C_UNSUPPORTED_DECLARATOR",
+      "message": "Unsupported declarator syntax after parsed type layers: '<class T> static T * stbds_arrgrowf_wrapper(T *a, size_t elemsize, size_t addlen, size_t min_cap)'.",
       "severity": "warning",
       "location": {
         "filename": "stb/stb_ds.h",
@@ -13623,12 +13623,12 @@
         "column": 1,
         "source_line": "template<class T> static T * stbds_arrgrowf_wrapper(T *a, size_t elemsize, size_t addlen, size_t min_cap) {"
       },
-      "unit_kind": "cxx_declaration",
+      "unit_kind": "declarator",
       "unit_name": null
     },
     {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "C++ declaration syntax is not supported by the C parser.",
+      "code": "C_UNSUPPORTED_DECLARATOR",
+      "message": "Unsupported declarator syntax after parsed type layers: '<class T> static T * stbds_hmget_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, int mode)'.",
       "severity": "warning",
       "location": {
         "filename": "stb/stb_ds.h",
@@ -13636,12 +13636,12 @@
         "column": 1,
         "source_line": "template<class T> static T * stbds_hmget_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, int mode) {"
       },
-      "unit_kind": "cxx_declaration",
+      "unit_kind": "declarator",
       "unit_name": null
     },
     {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "C++ declaration syntax is not supported by the C parser.",
+      "code": "C_UNSUPPORTED_DECLARATOR",
+      "message": "Unsupported declarator syntax after parsed type layers: '<class T> static T * stbds_hmget_key_ts_wrapper(T *a, size_t elemsize, void *key, size_t keysize, ptrdiff_t *temp, int mode)'.",
       "severity": "warning",
       "location": {
         "filename": "stb/stb_ds.h",
@@ -13649,12 +13649,12 @@
         "column": 1,
         "source_line": "template<class T> static T * stbds_hmget_key_ts_wrapper(T *a, size_t elemsize, void *key, size_t keysize, ptrdiff_t *temp, int mode) {"
       },
-      "unit_kind": "cxx_declaration",
+      "unit_kind": "declarator",
       "unit_name": null
     },
     {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "C++ declaration syntax is not supported by the C parser.",
+      "code": "C_UNSUPPORTED_DECLARATOR",
+      "message": "Unsupported declarator syntax after parsed type layers: '<class T> static T * stbds_hmput_default_wrapper(T *a, size_t elemsize)'.",
       "severity": "warning",
       "location": {
         "filename": "stb/stb_ds.h",
@@ -13662,12 +13662,12 @@
         "column": 1,
         "source_line": "template<class T> static T * stbds_hmput_default_wrapper(T *a, size_t elemsize) {"
       },
-      "unit_kind": "cxx_declaration",
+      "unit_kind": "declarator",
       "unit_name": null
     },
     {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "C++ declaration syntax is not supported by the C parser.",
+      "code": "C_UNSUPPORTED_DECLARATOR",
+      "message": "Unsupported declarator syntax after parsed type layers: '<class T> static T * stbds_hmput_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, int mode)'.",
       "severity": "warning",
       "location": {
         "filename": "stb/stb_ds.h",
@@ -13675,12 +13675,12 @@
         "column": 1,
         "source_line": "template<class T> static T * stbds_hmput_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, int mode) {"
       },
-      "unit_kind": "cxx_declaration",
+      "unit_kind": "declarator",
       "unit_name": null
     },
     {
-      "code": "C_UNSUPPORTED_DECLARATION",
-      "message": "C++ declaration syntax is not supported by the C parser.",
+      "code": "C_UNSUPPORTED_DECLARATOR",
+      "message": "Unsupported declarator syntax after parsed type layers: '<class T> static T * stbds_hmdel_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, size_t keyoffset, int mode)'.",
       "severity": "warning",
       "location": {
         "filename": "stb/stb_ds.h",
@@ -13688,7 +13688,7 @@
         "column": 1,
         "source_line": "template<class T> static T * stbds_hmdel_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, size_t keyoffset, int mode){"
       },
-      "unit_kind": "cxx_declaration",
+      "unit_kind": "declarator",
       "unit_name": null
     },
     {
