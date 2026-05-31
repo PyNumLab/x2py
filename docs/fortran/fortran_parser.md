@@ -100,7 +100,7 @@ sections so maintainers can navigate the file by concern instead of by history:
   - shared declaration parsing for module variables, program/block-data
     variables, procedure arguments/results, and derived-type fields
   - `_helper_*` methods for scoped parsing, expression resolution,
-    preprocessor branch selection, same-level duplicate checks, and shared
+    raw preprocessor branch structure, same-level duplicate checks, and shared
     specification-part collection
 - Thin module-level convenience wrappers that delegate to a shared parser
   instance
@@ -370,12 +370,22 @@ Expected JSON layout:
   - `programs`
   - `block_data`
 
-When `x2py --parse --json` applies Fortran preprocessing settings, the
-per-file payload also contains `preprocessing_recipe`. Internal `-D`/`-U`
-branch selection records those macro settings. `--preprocess compiler` records
-the exact compiler executable and argv, include paths, macro flags, standard,
-extra compiler arguments, and working directory used to produce the parsed
-stdout stream.
+When `x2py --parse --json` applies compiler preprocessing, the per-file payload
+also contains `preprocessing_recipe`. Internal parser mode accepts plain or
+already-preprocessed source and does not evaluate `-D`/`-U` CPP branches.
+`--preprocess compiler` records the exact compiler executable or adapter,
+argv, include paths, macro flags, standard, extra compiler arguments, working
+directory, include graph, source mappings, diagnostics, and optional macro
+metadata used to produce the parsed stdout stream.
+
+Fortran CPP directives are handled by the configured compiler. Native Fortran
+`include "file.inc"` statements are then expanded recursively by the
+preprocessing layer before the single parser pass. Native INCLUDE is textual
+insertion into the current scope; it is not a `use` import from a separately
+compiled module. Include lookup is relative to the including file first, then
+the configured include directories, duplicate textual inclusion is preserved,
+and missing files or cycles produce `INCLUDE_NOT_FOUND` or `INCLUDE_CYCLE`
+diagnostics.
 
 `use` import shape:
 

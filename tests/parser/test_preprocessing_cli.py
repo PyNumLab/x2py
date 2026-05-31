@@ -16,6 +16,8 @@ from x2py.preprocessing import (
     build_compile_commands_invocation,
     build_direct_preprocess_invocation,
     build_preprocess_invocation,
+    build_template_preprocess_invocation,
+    expand_native_fortran_includes,
     run_compiler_preprocessor,
     run_compiler_preprocessor_with_recipe,
     validate_macro_name,
@@ -43,6 +45,21 @@ sys.stdout.write(os.environ["X2PY_FAKE_COMPILER_OUTPUT"])
         "X2PY_FAKE_COMPILER_OUTPUT": output,
     }
     return script, args_file, env
+
+
+def _failing_compiler(tmp_path: Path, stderr: str) -> Path:
+    script = tmp_path / "failing-cc"
+    script.write_text(
+        f"""#!{sys.executable}
+import sys
+
+sys.stderr.write({stderr!r})
+sys.exit(1)
+""",
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+    return script
 
 
 def test_direct_c_preprocess_invocation_uses_exact_compiler_and_flags(tmp_path: Path):
@@ -222,13 +239,135 @@ def test_compile_commands_invocation_reports_missing_file_and_supports_command_s
     assert invocation.argv == ["clang", "-E", str(source)]
 
 
-def test_build_preprocess_invocation_rejects_fortran_compile_database(tmp_path: Path):
-    with pytest.raises(PreprocessingError, match="only supported for --language c"):
-        build_preprocess_invocation(
-            tmp_path / "api.f90",
-            language="fortran",
-            config=PreprocessingConfig(mode="compiler", compile_commands="compile_commands.json"),
-        )
+def test_build_preprocess_invocation_supports_fortran_compile_database(tmp_path: Path):
+    source = tmp_path / "solver.F90"
+    source.write_text("subroutine solve()\nend subroutine solve\n", encoding="utf-8")
+    compiler = tmp_path / "toolchains" / "gfortran-13"
+    compiler.parent.mkdir()
+    database = tmp_path / "compile_commands.json"
+    database.write_text(
+        json.dumps(
+            [
+                {
+                    "directory": str(tmp_path),
+                    "file": str(source),
+                    "arguments": [
+                        str(compiler),
+                        "-Iproject/include",
+                        "-cpp",
+                        "-c",
+                        str(source),
+                        "-o",
+                        "solver.o",
+                    ],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    invocation = build_preprocess_invocation(
+        source,
+        language="fortran",
+        config=PreprocessingConfig(mode="compiler", compile_commands=str(database)),
+    )
+
+    assert invocation.argv == [
+        str(compiler),
+        "-E",
+        "-cpp",
+        "-Iproject/include",
+        "-cpp",
+        str(source),
+    ]
+
+
+def test_command_template_preprocess_invocation_expands_placeholders(tmp_path: Path):
+    source = tmp_path / "api.h"
+    config = PreprocessingConfig(
+        mode="compiler",
+        adapter="command-template",
+        command_template="vendor-cc --preprocess {include_dirs} {defines} {undefs} {standard} {compiler_args} {source}",
+        include_dirs=["include"],
+        defines=["API_EXPORT="],
+        undefs=["DEBUG"],
+        std="c11",
+        compiler_args=["--target=x86_64-linux"],
+    )
+
+    invocation = build_template_preprocess_invocation(source, language="c", config=config)
+
+    assert invocation.argv == [
+        "vendor-cc",
+        "--preprocess",
+        "-Iinclude",
+        "-DAPI_EXPORT=",
+        "-UDEBUG",
+        "-std=c11",
+        "--target=x86_64-linux",
+        str(source),
+    ]
+
+
+def test_native_fortran_include_expansion_is_recursive_and_preserves_duplicates(tmp_path: Path):
+    root = tmp_path / "src" / "root.F90"
+    include = root.parent / "decls.inc"
+    nested = root.parent / "nested.inc"
+    root.parent.mkdir()
+    root.write_text("module m\ninclude \"decls.inc\"\ninclude \"decls.inc\"\nend module m\n", encoding="utf-8")
+    include.write_text("include \"nested.inc\"\ninteger :: from_decls\n", encoding="utf-8")
+    nested.write_text("real :: from_nested\n", encoding="utf-8")
+
+    expanded, included_files, mappings, diagnostics = expand_native_fortran_includes(
+        root.read_text(encoding="utf-8"),
+        root_path=root,
+        include_dirs=[],
+    )
+
+    assert diagnostics == []
+    assert expanded.count("integer :: from_decls") == 2
+    assert expanded.count("real :: from_nested") == 2
+    assert [Path(item.path).name for item in included_files].count("decls.inc") == 2
+    assert any(Path(mapping.original_path).name == "nested.inc" for mapping in mappings)
+
+
+def test_native_fortran_include_lookup_order_missing_and_cycle_diagnostics(tmp_path: Path):
+    root = tmp_path / "src" / "root.F90"
+    include_dir = tmp_path / "include"
+    root.parent.mkdir()
+    include_dir.mkdir()
+    root.write_text("include \"shared.inc\"\n", encoding="utf-8")
+    (root.parent / "shared.inc").write_text("integer :: relative_wins\n", encoding="utf-8")
+    (include_dir / "shared.inc").write_text("integer :: include_dir_loses\n", encoding="utf-8")
+
+    expanded, _included_files, _mappings, diagnostics = expand_native_fortran_includes(
+        root.read_text(encoding="utf-8"),
+        root_path=root,
+        include_dirs=[str(include_dir)],
+    )
+
+    assert diagnostics == []
+    assert "relative_wins" in expanded
+    assert "include_dir_loses" not in expanded
+
+    missing_source = "include \"absent.inc\"\n"
+    _expanded, _included_files, _mappings, diagnostics = expand_native_fortran_includes(
+        missing_source,
+        root_path=root,
+        include_dirs=[str(include_dir)],
+    )
+    assert [diagnostic.category for diagnostic in diagnostics] == ["INCLUDE_NOT_FOUND"]
+
+    cycle_a = root.parent / "a.inc"
+    cycle_b = root.parent / "b.inc"
+    cycle_a.write_text("include \"b.inc\"\n", encoding="utf-8")
+    cycle_b.write_text("include \"a.inc\"\n", encoding="utf-8")
+    _expanded, _included_files, _mappings, diagnostics = expand_native_fortran_includes(
+        "include \"a.inc\"\n",
+        root_path=root,
+        include_dirs=[],
+    )
+    assert "INCLUDE_CYCLE" in [diagnostic.category for diagnostic in diagnostics]
 
 
 def test_run_compiler_preprocessor_success_and_failures(monkeypatch, tmp_path: Path):
@@ -381,9 +520,26 @@ def test_cli_compiler_specific_flags_require_compiler_mode(tmp_path: Path):
     assert "--compiler requires --preprocess compiler" in res.stderr
 
 
-def test_cli_rejects_compile_database_for_fortran_compiler_mode(tmp_path: Path):
+def test_cli_accepts_compile_database_for_fortran_compiler_mode(tmp_path: Path):
     source = tmp_path / "solver.F90"
     source.write_text("subroutine solve()\nend subroutine solve\n", encoding="utf-8")
+    compiler, _args_file, env = _fake_compiler(
+        tmp_path,
+        "subroutine from_database()\nend subroutine from_database\n",
+    )
+    database = tmp_path / "compile_commands.json"
+    database.write_text(
+        json.dumps(
+            [
+                {
+                    "directory": str(tmp_path),
+                    "file": str(source),
+                    "arguments": [str(compiler), "-cpp", "-c", str(source), "-o", "solver.o"],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
 
     res = subprocess.run(
         [
@@ -392,19 +548,21 @@ def test_cli_rejects_compile_database_for_fortran_compiler_mode(tmp_path: Path):
             "x2py",
             str(source),
             "--parse",
+            "--json",
             "--preprocess",
             "compiler",
-            "--compiler",
-            "gfortran",
             "--compile-commands",
-            "compile_commands.json",
+            str(database),
         ],
         capture_output=True,
         text=True,
+        check=True,
+        env=env,
     )
 
-    assert res.returncode == 2
-    assert "--compile-commands is only supported with --language c" in res.stderr
+    payload = json.loads(res.stdout)[str(source)]
+    assert [signature["name"] for signature in payload["signatures"]] == ["from_database"]
+    assert payload["preprocessing_recipe"]["compile_commands"] == str(database)
 
 
 def test_cli_c_compiler_mode_runs_exact_compiler_and_parses_preprocessed_stdout(tmp_path: Path):
@@ -476,6 +634,55 @@ def test_cli_c_compiler_mode_runs_exact_compiler_and_parses_preprocessed_stdout(
     assert payload["original_source_paths"] == ["include/api.h"]
 
 
+def test_cli_preprocessing_failure_has_category_without_traceback_unless_debug(tmp_path: Path):
+    header = tmp_path / "api.h"
+    header.write_text("int run(void);\n", encoding="utf-8")
+    compiler = _failing_compiler(tmp_path, "bad option\n")
+
+    res = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(header),
+            "--language",
+            "c",
+            "--parse",
+            "--preprocess",
+            "compiler",
+            "--compiler",
+            str(compiler),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    debug_res = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(header),
+            "--language",
+            "c",
+            "--parse",
+            "--preprocess",
+            "compiler",
+            "--compiler",
+            str(compiler),
+            "--debug",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert res.returncode == 1
+    assert "error[PREPROCESSOR_FAILED]" in res.stderr
+    assert "bad option" in res.stderr
+    assert "Traceback" not in res.stderr
+    assert debug_res.returncode == 1
+    assert "Traceback" in debug_res.stderr
+
+
 def test_cli_c_compile_commands_mode_uses_exact_database_compiler(tmp_path: Path):
     source = tmp_path / "api.c"
     source.write_text("API(int) hidden(void);\n", encoding="utf-8")
@@ -538,7 +745,41 @@ def test_cli_c_compile_commands_mode_uses_exact_database_compiler(tmp_path: Path
     assert recipe["compile_commands_entry"]["arguments"][0] == str(compiler)
 
 
-def test_cli_fortran_internal_mode_uses_define_and_undef_for_branch_selection(tmp_path: Path):
+def test_cli_c_compiler_mode_macro_metadata_flows_to_semantic_constants(tmp_path: Path):
+    header = tmp_path / "api.h"
+    header.write_text("#define API_VERSION 3\nint api(void);\n", encoding="utf-8")
+    compiler, _args_file, env = _fake_compiler(
+        tmp_path,
+        "#define API_VERSION 3\nint api(void);\n",
+    )
+
+    res = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(header),
+            "--language",
+            "c",
+            "--semantics",
+            "--json",
+            "--preprocess",
+            "compiler",
+            "--compiler",
+            str(compiler),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        env=env,
+    )
+
+    module = json.loads(res.stdout)[str(header)]["semantic_modules"][0]
+    constants = {variable["name"]: variable for variable in module["variables"]}
+    assert constants["API_VERSION"]["default_value"] == "3"
+
+
+def test_cli_fortran_internal_mode_rejects_define_flags_that_need_compiler_selection(tmp_path: Path):
     source = tmp_path / "branch.F90"
     source.write_text(
         """
@@ -553,47 +794,31 @@ end subroutine fallback
         encoding="utf-8",
     )
 
-    selected = subprocess.run(
+    res = subprocess.run(
         [sys.executable, "-m", "x2py", str(source), "--parse", "-D", "USE_MPI"],
         capture_output=True,
         text=True,
-        check=True,
-    )
-    fallback = subprocess.run(
-        [sys.executable, "-m", "x2py", str(source), "--parse", "-U", "USE_MPI"],
-        capture_output=True,
-        text=True,
-        check=True,
     )
 
-    assert "subroutine selected" in selected.stdout
-    assert "subroutine fallback" not in selected.stdout
-    assert "subroutine fallback" in fallback.stdout
-    assert "subroutine selected" not in fallback.stdout
+    assert res.returncode == 2
+    assert "internal Fortran parsing does not evaluate CPP branches" in res.stderr
 
 
-def test_cli_fortran_internal_json_records_macro_selection_recipe(tmp_path: Path):
+def test_cli_fortran_internal_json_does_not_record_macro_selection_recipe(tmp_path: Path):
     source = tmp_path / "branch.F90"
     source.write_text(
-        "#ifdef USE_MPI\nsubroutine selected()\nend subroutine selected\n#endif\n",
+        "subroutine selected()\nend subroutine selected\n",
         encoding="utf-8",
     )
 
     res = subprocess.run(
-        [sys.executable, "-m", "x2py", str(source), "--parse", "--json", "-D", "USE_MPI", "-U", "DEBUG"],
+        [sys.executable, "-m", "x2py", str(source), "--parse", "--json"],
         capture_output=True,
         text=True,
         check=True,
     )
-    recipe = json.loads(res.stdout)[str(source)]["preprocessing_recipe"]
 
-    assert recipe["mode"] == "internal"
-    assert recipe["language"] == "fortran"
-    assert recipe["source_path"] == str(source)
-    assert recipe["compiler"] is None
-    assert recipe["argv"] == []
-    assert recipe["defines"] == ["USE_MPI"]
-    assert recipe["undefs"] == ["DEBUG"]
+    assert "preprocessing_recipe" not in json.loads(res.stdout)[str(source)]
 
 
 def test_cli_fortran_internal_mode_rejects_include_dirs_that_need_compiler(tmp_path: Path):

@@ -50,6 +50,22 @@ traceback unless `--debug` is used.
 | `CPARSE_INVALID_SPECIFIER_SEQUENCE` | C | Invalid C primitive-specifier sequence. |
 | `CPARSE_INVALID_SYNTAX` | C | Syntax cannot be consumed in a modeled C grammar region. |
 
+## Preprocessing Diagnostics
+
+Compiler-backed preprocessing failures are rendered by the CLI without a
+Python traceback unless `--debug` is used. They occur before the parser consumes
+the expanded source.
+
+| Code | Meaning |
+| --- | --- |
+| `PREPROCESSOR_NOT_FOUND` | The configured compiler/preprocessor executable could not be started. |
+| `PREPROCESSOR_FAILED` | The compiler/preprocessor returned a non-zero status, timed out, or could not be executed. Compiler stderr is preserved. |
+| `INVALID_COMPILER_ARGUMENTS` | The preprocessing configuration is invalid, such as a malformed macro name or unusable compile database entry. |
+| `UNSUPPORTED_COMPILER_CAPABILITY` | The selected adapter was asked for metadata it cannot provide. |
+| `PROVENANCE_UNAVAILABLE` | Expanded source was produced, but the adapter cannot provide accurate source mappings. |
+| `INCLUDE_NOT_FOUND` | A native Fortran `include "..."` target could not be resolved or read. |
+| `INCLUDE_CYCLE` | Recursive native Fortran INCLUDE expansion found a cycle. |
+
 ## C Report Diagnostics
 
 The C parser can preserve partial metadata and attach `CDiagnostic` records.

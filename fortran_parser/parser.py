@@ -225,8 +225,8 @@ class FortranParser:
     """Stateful parser entrypoint and orchestration object.
 
     State carried on the instance:
-    - `macro_defines`: optional macro-selection configuration used while
-      selecting preprocessor branches before source-unit slicing.
+    - `macro_defines`: accepted for backward-compatible call signatures, but
+      CPP branch selection is handled by the compiler preprocessing layer.
 
     Parsing pipeline used by `visit_file`:
     1. Preprocess source into normalized lines (`_preprocessed_lines`).
@@ -272,7 +272,8 @@ class FortranParser:
     # ------------------------------------------------------------------
 
     def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):
-        self.macro_defines = macro_defines
+        del macro_defines
+        self.macro_defines = None
 
     def visit_file(
         self,
@@ -289,11 +290,10 @@ class FortranParser:
         else:
             code = str(source_or_path)
 
-        effective_macro_defines = self.macro_defines if macro_defines is None else macro_defines
+        del macro_defines
         lines, root_scope, top_units = self._helper_prepare_source_units(
             code,
             filename,
-            macro_defines=effective_macro_defines,
         )
         modules: list[FortranModule] = []
         submodules: list[FortranSubmodule] = []
@@ -947,8 +947,8 @@ class FortranParser:
             `_SourceUnit` objects, one module unit and one procedure unit, both
             carrying original source line numbers.
         """
+        del macro_defines
         lines = self._preprocessed_lines(code, filename)
-        lines = self._helper_select_active_preprocessor_lines(lines, macro_defines)
         root_scope = _ParserScope(kind="file", name=None)
         units = self._helper_slice_child_units(lines, parent_scope=root_scope, filename=filename)
         self._helper_validate_file_scope_unparsed_lines(lines, filename)
@@ -1042,46 +1042,6 @@ class FortranParser:
         collect(root_scope, self._helper_slice_child_units(lines, parent_scope=root_scope, filename=filename))
         return types
 
-    def _helper_select_active_preprocessor_lines(
-        self,
-        lines: _PreprocessedLines,
-        macro_defines: set[str] | dict[str, int | bool | str] | None,
-    ) -> _PreprocessedLines:
-        """Drop inactive preprocessor branches when macro selection is enabled.
-
-        This runs before source-unit slicing, so duplicate declarations hidden
-        behind inactive ``#ifdef`` branches do not produce false same-scope
-        conflicts.
-
-        Example:
-            With ``macro_defines={"USE_FAST"}``, only the active branch of
-            ``#ifdef USE_FAST`` is returned to `_helper_slice_child_units`;
-            with ``macro_defines=None``, all branches are preserved and their
-            condition sets are used for overlap-aware duplicate checks.
-        """
-        if macro_defines is None:
-            return lines
-        selected: _PreprocessedLines = []
-        macro_names = self._normalize_macro_defines(macro_defines)
-        pp_condition_stack: list[tuple[int, int]] = []
-        pp_active_stack: list[bool] = []
-        pp_group_counter = 0
-        for line, _lineno, _source_line in lines:
-            handled_pp, pp_group_counter = self._handle_procedure_preprocessor_line(
-                line.strip(),
-                macro_selection_enabled=True,
-                macro_names=macro_names,
-                pp_condition_stack=pp_condition_stack,
-                pp_active_stack=pp_active_stack,
-                pp_group_counter=pp_group_counter,
-            )
-            if handled_pp:
-                continue
-            if pp_active_stack and not all(pp_active_stack):
-                continue
-            selected.append((line, _lineno, _source_line))
-        return selected
-
     def _handle_procedure_preprocessor_line(
         self,
         line: str,
@@ -1113,28 +1073,25 @@ class FortranParser:
         if directive_low.startswith("ifdef "):
             pp_group_counter += 1
             pp_condition_stack.append((pp_group_counter, 0))
-            expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-            pp_active_stack.append((bool(expr) and expr.lower() in macro_names) if macro_selection_enabled else True)
+            pp_active_stack.append(True)
             return True, pp_group_counter
         if directive_low.startswith("ifndef "):
             pp_group_counter += 1
             pp_condition_stack.append((pp_group_counter, 0))
-            expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-            pp_active_stack.append(((not expr) or expr.lower() not in macro_names) if macro_selection_enabled else True)
+            pp_active_stack.append(True)
             return True, pp_group_counter
         if directive_low.startswith("if "):
             pp_group_counter += 1
             pp_condition_stack.append((pp_group_counter, 0))
-            expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-            pp_active_stack.append(self._eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
+            pp_active_stack.append(True)
             return True, pp_group_counter
         if directive_low.startswith("else"):
             if pp_condition_stack:
                 group_id, branch_id = pp_condition_stack.pop()
                 pp_condition_stack.append((group_id, branch_id + 1))
             if pp_active_stack:
-                prev = pp_active_stack.pop()
-                pp_active_stack.append((not prev) if macro_selection_enabled else True)
+                pp_active_stack.pop()
+                pp_active_stack.append(True)
             return True, pp_group_counter
         if directive_low.startswith("elif "):
             if pp_condition_stack:
@@ -1142,8 +1099,7 @@ class FortranParser:
                 pp_condition_stack.append((group_id, branch_id + 1))
             if pp_active_stack:
                 pp_active_stack.pop()
-                expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-                pp_active_stack.append(self._eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
+                pp_active_stack.append(True)
             return True, pp_group_counter
         if directive_low.startswith("endif"):
             if pp_condition_stack:
@@ -4169,42 +4125,6 @@ class FortranParser:
                 return False
             values[group] = branch
         return True
-
-    @staticmethod
-    def _normalize_macro_defines(macro_defines: set[str] | dict[str, int | bool | str] | None) -> set[str]:
-        if not macro_defines:
-            return set()
-        if isinstance(macro_defines, dict):
-            out = set()
-            for k, v in macro_defines.items():
-                if str(v).strip() not in {"", "0", "false", "False"}:
-                    out.add(str(k).lower())
-            return out
-        return {str(x).lower() for x in macro_defines}
-
-    @staticmethod
-    def _eval_cpp_expr(expr: str, macro_names: set[str]) -> bool:
-        """Evaluate a small C-preprocessor boolean expression."""
-        txt = expr.strip()
-        if not txt:  # pragma: no cover - bare #if is not valid Fortran preprocessing input.
-            return False
-        txt = re.sub(r"defined\s*\(\s*([A-Za-z_]\w*)\s*\)", lambda m: str(m.group(1).lower() in macro_names), txt)
-        txt = re.sub(r"\bdefined\s+([A-Za-z_]\w*)\b", lambda m: str(m.group(1).lower() in macro_names), txt)
-        def _ident_to_bool(m: re.Match[str]) -> str:
-            token = m.group(1)
-            if token in {"True", "False", "and", "or", "not"}:
-                return token
-            return "True" if token.lower() in macro_names else "False"
-        txt = re.sub(r"\b([A-Za-z_]\w*)\b", _ident_to_bool, txt)
-        txt = txt.replace("&&", " and ").replace("||", " or ")
-        txt = re.sub(r"(?<![=!<>])!(?!=)", " not ", txt)
-        txt = re.sub(r"\b0\b", "False", txt)
-        txt = re.sub(r"\b1\b", "True", txt)
-        try:
-            node = ast.parse(txt, mode="eval")
-            return bool(eval(compile(node, "<cpp-expr>", "eval"), {"__builtins__": {}}, {}))
-        except Exception:
-            return False
 
     @staticmethod
     def _looks_like_existing_source_path(source: str | Path) -> bool:

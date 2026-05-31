@@ -7,7 +7,7 @@ import sys
 from dataclasses import asdict, fields, is_dataclass
 from pathlib import Path
 
-from c_parser.cli import expand_c_paths, format_c_report, parse_c_report
+from c_parser.cli import attach_preprocessing_recipe, expand_c_paths, format_c_report, parse_c_report
 from c_parser.models import CParseError
 from c_parser.parser import CParser
 from fortran_parser.models import FortranParseError
@@ -155,10 +155,9 @@ def _fortran_source_for_path(
             config=preprocessing,
         )
         return source, None, recipe.to_dict()
-    macro_defines = preprocessing.fortran_macro_defines()
     return (
         path.read_text(encoding="utf-8"),
-        macro_defines or None,
+        None,
         preprocessing.fortran_internal_recipe(path),
     )
 
@@ -203,7 +202,7 @@ def _parse_c_path(
         include_dirs=preprocessing.include_dirs,
         preprocessing=_c_parser_preprocessing_mode(preprocessing),
     )
-    parsed.preprocessing_recipe = preprocessing_recipe
+    attach_preprocessing_recipe(parsed, preprocessing_recipe)
     return parsed
 
 
@@ -413,31 +412,43 @@ def _build_preprocessing_config(args: argparse.Namespace, parser: argparse.Argum
         mode=args.preprocess,
         compiler=args.compiler,
         compile_commands=args.compile_commands,
+        adapter=args.preprocessor_adapter,
+        command_template=args.preprocess_template,
         include_dirs=list(args.include_dirs or []),
         defines=defines,
         undefs=undefs,
         std=args.std,
         compiler_args=list(args.compiler_args or []),
+        include_exposure=args.include_exposure,
+        public_includes=list(args.public_includes or []),
+        private_includes=list(args.private_includes or []),
     )
 
     compiler_only_flags = [
         ("--compiler", args.compiler),
         ("--compile-commands", args.compile_commands),
+        ("--preprocessor-adapter", None if args.preprocessor_adapter == "auto" else args.preprocessor_adapter),
+        ("--preprocess-template", args.preprocess_template),
         ("--std", args.std),
         ("--compiler-arg", args.compiler_args),
+        ("--include-exposure", None if args.include_exposure == "reachable-project" else args.include_exposure),
+        ("--public-include", args.public_includes),
+        ("--private-include", args.private_includes),
     ]
     for option, value in compiler_only_flags:
         if value and not config.uses_compiler:
             parser.error(f"{option} requires --preprocess compiler")
 
-    if config.uses_compiler and not config.compiler and not config.compile_commands:
+    if config.uses_compiler and config.command_template and config.adapter != "command-template":
+        parser.error("--preprocess-template requires --preprocessor-adapter command-template")
+    if config.uses_compiler and not config.compiler and not config.compile_commands and not config.command_template:
         parser.error("--preprocess compiler requires --compiler with an exact executable, for example gcc-13 or /usr/bin/clang-18")
-    if config.compile_commands and args.language != "c":
-        parser.error("--compile-commands is only supported with --language c")
     if config.compile_commands and not config.uses_compiler:
         parser.error("--compile-commands requires --preprocess compiler")
     if args.language == "c" and not config.uses_compiler and (defines or undefs):
         parser.error("-D/--define and -U/--undef affect C only with --preprocess compiler; raw C mode records source macros without selecting branches")
+    if args.language == "fortran" and not config.uses_compiler and (defines or undefs):
+        parser.error("-D/--define and -U/--undef affect Fortran only with --preprocess compiler; internal Fortran parsing does not evaluate CPP branches")
     if args.language == "fortran" and not config.uses_compiler and config.include_dirs:
         parser.error("-I/--include-dir affects Fortran only with --preprocess compiler")
     return config
@@ -497,10 +508,10 @@ def main() -> int:
             "    python -m x2py path/to/api.c --language c --parse --preprocess compiler --compiler /usr/bin/gcc-13 --compiler-arg=--sysroot=/opt/sdk\n"
             "  Parse C with compile_commands.json for project flags:\n"
             "    python -m x2py path/to/api.c --language c --parse --preprocess compiler --compile-commands build/compile_commands.json\n"
-            "  Parse Fortran with internal macro branch selection:\n"
-            "    python -m x2py path/to/file.F90 --parse -D USE_MPI -U DEBUG\n"
             "  Parse Fortran with an exact compiler executable:\n"
             "    python -m x2py path/to/file.F90 --parse --preprocess compiler --compiler /usr/bin/gfortran-12 -I include -D USE_MPI\n"
+            "  Parse with a custom preprocessing command template:\n"
+            "    python -m x2py path/to/api.h --language c --parse --preprocess compiler --preprocessor-adapter command-template --preprocess-template 'cc -E {include_dirs} {defines} {source}'\n"
             "  Write parser JSON:\n"
             "    python -m x2py path/to/file.f90 --parse --json --out report.json\n"
             "  Write one JSON file next to each source:\n"
@@ -540,10 +551,16 @@ def main() -> int:
         choices=("internal", "compiler"),
         default="internal",
         help=(
-            "Preprocessing mode. 'internal' keeps the current lightweight parser preprocessing "
-            "(Fortran macro selection, C raw directive metadata). 'compiler' runs the exact "
+            "Preprocessing mode. 'internal' parses plain or already-expanded source without CPP branch selection. "
+            "'compiler' runs the exact "
             "compiler/preprocessor configured by --compiler or --compile-commands."
         ),
+    )
+    parser.add_argument(
+        "--preprocessor-adapter",
+        choices=("auto", "gcc-compatible-c", "gnu-fortran", "command-template"),
+        default="auto",
+        help="Compiler adapter family. Use command-template for unsupported compiler families.",
     )
     parser.add_argument(
         "--compiler",
@@ -555,7 +572,12 @@ def main() -> int:
     parser.add_argument(
         "--compile-commands",
         metavar="PATH",
-        help="C compile_commands.json database used with --language c --preprocess compiler.",
+        help="compile_commands.json database used with --preprocess compiler.",
+    )
+    parser.add_argument(
+        "--preprocess-template",
+        metavar="TEMPLATE",
+        help="Custom preprocessing command template. Supported placeholders include {source}, {include_dirs}, {defines}, {undefs}, {standard}, and {compiler_args}.",
     )
     parser.add_argument(
         "-I",
@@ -592,6 +614,26 @@ def main() -> int:
         action="append",
         metavar="ARG",
         help="Raw compiler preprocessing argument. Use --compiler-arg=-target for values starting with '-'.",
+    )
+    parser.add_argument(
+        "--include-exposure",
+        choices=("reachable-project", "roots-only"),
+        default="reachable-project",
+        help="Public wrapper exposure policy for reachable included files.",
+    )
+    parser.add_argument(
+        "--public-include",
+        dest="public_includes",
+        action="append",
+        metavar="PATH_OR_PATTERN",
+        help="Force a matched included file to be public in wrapper output.",
+    )
+    parser.add_argument(
+        "--private-include",
+        dest="private_includes",
+        action="append",
+        metavar="PATH_OR_PATTERN",
+        help="Force a matched included file to be private in wrapper output.",
     )
     parser.add_argument(
         "--show-vars",
@@ -673,6 +715,21 @@ def main() -> int:
         if args.debug or _env_flag("FORTRAN_PARSER_DEBUG"):
             raise
         print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
+        return 1
+    except PreprocessingError as exc:
+        if args.debug or _env_flag("X2PY_DEBUG"):
+            raise
+        if exc.diagnostics:
+            for diagnostic in exc.diagnostics:
+                location = diagnostic.path or "<preprocessor>"
+                if diagnostic.line is not None:
+                    location = f"{location}:{diagnostic.line}"
+                print(
+                    f"{location}: error[{diagnostic.category}]: {diagnostic.message}",
+                    file=sys.stderr,
+                )
+        else:
+            print(f"x2py: error[{exc.category}]: {exc}", file=sys.stderr)
         return 1
     except (SyntaxError, ValueError) as exc:
         if args.debug or _env_flag("X2PY_DEBUG"):

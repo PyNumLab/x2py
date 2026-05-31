@@ -253,7 +253,7 @@ end module m
     assert all(sig.name.lower() == "work" for sig in procedures)
 
 
-def test_macro_defines_select_active_branch_only():
+def test_macro_defines_do_not_select_active_branch_in_parser():
     code = """
 module m
 #ifdef USE_MPI
@@ -272,11 +272,11 @@ end module m
 """
     parsed = parse_fortran_file(code, filename="macro_alt_work.f90", macro_defines={"USE_MPI"})
     procedures = parsed.modules[0].procedures
-    assert len(procedures) == 1
-    assert procedures[0].kind == "subroutine"
+    assert len(procedures) == 2
+    assert {proc.kind for proc in procedures} == {"subroutine", "function"}
 
 
-def test_if_defined_macro_expression_selects_branch():
+def test_if_defined_macro_expression_is_not_evaluated_by_parser():
     code = """
 module m
 #if defined(USE_MPI) && !defined(USE_SERIAL)
@@ -299,8 +299,8 @@ end module m
         macro_defines={"USE_MPI": 1, "USE_SERIAL": 0},
     )
     procedures = parsed.modules[0].procedures
-    assert len(procedures) == 1
-    assert procedures[0].kind == "subroutine"
+    assert len(procedures) == 2
+    assert {proc.kind for proc in procedures} == {"subroutine", "function"}
 
 
 def test_duplicate_procedure_name_error_carries_location():

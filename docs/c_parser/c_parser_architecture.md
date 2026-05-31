@@ -323,9 +323,9 @@ parse_c_file(source_or_path, filename=None, macro_defines=None, include_dirs=Non
 parse_c_project(files, include_dirs=None, macro_defines=None, preprocessing="raw", encoding="utf-8") -> CProject
 ```
 
-`macro_defines` is reserved for future compiler-assisted preprocessing
-configuration. It must not cause raw mode to evaluate C preprocessor
-conditionals or expand macros inside x2py.
+`macro_defines` is accepted for API compatibility only. Raw mode must not
+evaluate C preprocessor conditionals or expand macros inside x2py. Compiler
+mode receives already-expanded source from the shared preprocessing layer.
 
 Implemented companion class:
 

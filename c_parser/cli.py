@@ -9,7 +9,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
-from .models import CFile, CParseError, c_model_to_dict
+from .models import CFile, CMacro, CParseError, CSourceLocation, c_model_to_dict
 from .parser import CParser
 
 
@@ -44,6 +44,38 @@ def expand_c_paths(paths: list[str]) -> list[Path]:
     return sorted(set(expanded))
 
 
+def attach_preprocessing_recipe(parsed: CFile, preprocessing_recipe: dict[str, Any] | None) -> None:
+    """Attach compiler recipe side-channel facts to a parsed C file."""
+
+    parsed.preprocessing_recipe = preprocessing_recipe
+    if not preprocessing_recipe:
+        return
+    existing = {(macro.name, macro.source_location.filename if macro.source_location else None, macro.source_location.line if macro.source_location else None) for macro in parsed.macros}
+    for item in preprocessing_recipe.get("macros") or []:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not isinstance(name, str) or not name:
+            continue
+        location = CSourceLocation(
+            filename=item.get("path") if isinstance(item.get("path"), str) else None,
+            line=item.get("line") if isinstance(item.get("line"), int) else None,
+            column=1,
+        )
+        key = (name, location.filename, location.line)
+        if key in existing:
+            continue
+        parsed.macros.append(
+            CMacro(
+                name=name,
+                value=item.get("value") if isinstance(item.get("value"), str) else None,
+                function_like=bool(item.get("function_like")),
+                source_location=location,
+            )
+        )
+        existing.add(key)
+
+
 def parse_c_report(
     paths: list[str],
     *,
@@ -70,7 +102,7 @@ def parse_c_report(
                 include_dirs=include_dirs,
                 preprocessing=preprocessing,
             )
-            parsed.preprocessing_recipe = preprocessing_recipe
+            attach_preprocessing_recipe(parsed, preprocessing_recipe)
         out[str(p)] = c_model_to_dict(parsed)
     return out
 

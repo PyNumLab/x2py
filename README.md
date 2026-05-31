@@ -55,7 +55,8 @@ Current handled coverage:
 The C frontend is currently parse-only. It supports:
 
 - Raw-source directive metadata for includes, simple macros, conditionals, and
-  pragmas.
+  pragmas. Raw mode records these facts but does not expand macros or select
+  conditional branches.
 - Compiler-assisted preprocessing through the shared CLI flags, with `#line`
   and GCC/Clang linemarker remapping back to original source locations.
 - Top-level variables, typedefs, function declarations/definitions, structs,
@@ -66,8 +67,9 @@ The C frontend is currently parse-only. It supports:
 - Project include/index facts through `parse_c_project(...)`, with includes
   recorded non-recursively: only explicitly supplied files or files below an
   explicitly supplied directory are parsed.
-- Raw mutually exclusive function alternatives preserved for later semantic
-  selection rather than collapsed into one signature.
+- Compiler mode is the wrapper-facing path for macro-dependent APIs: it parses
+  one compiler-expanded translation unit and keeps mutually exclusive branches
+  separate across build configurations.
 
 The supported C subset continues through semantic IR conversion, `.pyi`
 generation, and wrap-readiness.
@@ -152,7 +154,15 @@ python -m x2py path/to/c_src --language c --parse
 Fortran directories scan `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`,
 `.f08`; C directories scan `.c`, `.h`, and `.i` files.
 
-### Compiler preprocessing and target probes
+### Compiler preprocessing, includes, and target probes
+
+Wrapper-facing source parsing should use compiler preprocessing whenever the
+input contains C/CPP preprocessing. The selected compiler is authoritative for
+macro expansion, `#if`/`#ifdef` branch selection, C `#include`, Fortran CPP
+`#include`, predefined macros, `-D`/`-U`, include paths, target flags, and
+sysroot behavior. Internal parser mode remains available for plain source,
+already-preprocessed source, and focused parser tests; it does not evaluate CPP
+branches.
 
 The shared compiler mode is:
 
@@ -168,9 +178,37 @@ python -m x2py path/to/source.f90 --language fortran --parse \
 ```
 
 For C, `--language c --preprocess compiler` runs the exact compiler
-preprocessor and parses stdout. C also supports `--compile-commands
-build/compile_commands.json`; the matching entry supplies the compiler and
-project flags.
+preprocessor and parses stdout. C and Fortran can use `--compile-commands
+build/compile_commands.json` when a matching entry supplies the compiler and
+project flags. GCC-compatible C/Clang invocations use `-E -x c`; GNU Fortran
+invocations use `-E -cpp`. Linemarkers are preserved so parser locations can be
+mapped back to original files. For unsupported compiler families, use
+`--preprocessor-adapter command-template --preprocess-template '...'`; the
+minimum adapter contract is expanded source on stdout.
+
+Fortran native `include "file.inc"` is resolved after compiler CPP output and
+before parsing. This is textual insertion into the current module, procedure,
+interface, or execution scope; it is not the same as `use module_name`. Native
+includes are resolved relative to the including file first, then configured
+`-I` directories, and duplicate textual inclusion is preserved. Missing
+includes and cycles are reported as preprocessing diagnostics.
+
+Preprocessing JSON records the exact recipe: compiler or adapter, argv, working
+directory, include directories, defines, undefs, standard, extra compiler
+arguments, included files, source mappings, diagnostics, and optional macro
+metadata when the adapter output exposes it. System-header declarations are
+classified private by default. Reachable project includes are public by
+default; use `--include-exposure roots-only`, `--public-include`, and
+`--private-include` to control wrapper export. Private declarations remain
+available internally for type resolution. Public signatures that refer to
+private C handle types can use private opaque classes rather than exposing data
+members.
+
+Preprocessing failures print explicit categories such as
+`PREPROCESSOR_NOT_FOUND`, `PREPROCESSOR_FAILED`,
+`INVALID_COMPILER_ARGUMENTS`, `UNSUPPORTED_COMPILER_CAPABILITY`,
+`PROVENANCE_UNAVAILABLE`, `INCLUDE_NOT_FOUND`, and `INCLUDE_CYCLE` without a
+Python traceback. Pass `--debug` to re-raise and show the traceback.
 
 Target-dependent type facts are not hard-coded. They are probed with the same
 compiler path and target-relevant flags because results may change with ABI,

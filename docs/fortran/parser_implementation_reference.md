@@ -653,20 +653,22 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
   - "Unsupported but recognized" constructs may be carried far enough for
     semantic readiness or `.pyi` completion to decide wrappability. Unknown
     datatype syntax should crash early.
-- **Preprocessor-conditional duplicate procedures (guarded allowance):**
-  - The parser does **not** run a full C preprocessor stage before parsing.
-  - While slicing source units, simple directive structure is tracked for
-    `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` to model
-    mutually-exclusive branches.
-  - `visit_file(..., macro_defines=...)` can provide macro decisions; inactive conditional branches are skipped before unit parsing so the active code path is selected. The module-level `parse_fortran_file(...)` convenience function delegates to this visitor.
-    - accepted forms: `set[str]` or `dict[str, int|bool|str]`
-    - dictionary values are truthy/falsey (`0`, `False`, `"0"`, `"false"` treated as undefined/disabled)
-  - Basic `#if` expressions are supported for branch selection (`defined(X)`, `!`, `&&`, `||`, parentheses, `0`/`1`).
+- **Preprocessor-conditional duplicate procedures (raw parser tolerance):**
+  - The parser does **not** run a C preprocessor or evaluate CPP expressions.
+    Compiler preprocessing is responsible for `#if`, `#ifdef`, macro
+    expansion, and CPP includes before production wrapper parsing.
+  - While slicing raw source units, simple directive structure is tracked for
+    `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` only to recognize
+    mutually exclusive branches in unresolved raw input.
+  - `visit_file(..., macro_defines=...)` remains accepted for compatibility,
+    but macro decisions are ignored. Active branch selection must happen in the
+    compiler-backed preprocessing layer.
   - Duplicate procedure-name checks in a module/global scope are evaluated
-    against same-level sliced units and this branch context:
+    against same-level sliced units and this structural branch context:
     - if two same-name procedure headers are reachable in an overlapping branch context, raise `FortranParseError` (duplicate procedure name).
     - if they are only present in mutually-exclusive branches of the same conditional group, allow both signatures.
-  - This is a structural exclusivity model (branch groups), not semantic evaluation of macro expressions. In other words, branch mutual exclusivity is honored without requiring expression truth evaluation.
+  - This is not semantic macro evaluation. Multiple build configurations
+    should be preprocessed and parsed separately.
 
 `FortranParseError` is a subclass of `ValueError` and carries structured location metadata:
 - `filename` — source file path (if provided)

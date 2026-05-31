@@ -306,6 +306,7 @@ class CToIRConverter:
                     },
                 ),
             )
+            self._apply_include_exposure(module, c_file)
             return module
         finally:
             self.typedefs, self.structs, self.unions, self.enums = previous
@@ -886,6 +887,47 @@ class CToIRConverter:
         if blockers:
             metadata["readiness_blockers"] = blockers
         return metadata
+
+    @staticmethod
+    def _private_recipe_paths(c_file: CFile) -> set[str]:
+        recipe = c_file.preprocessing_recipe or {}
+        private_paths: set[str] = set()
+        for item in recipe.get("included_files") or []:
+            if not isinstance(item, dict):
+                continue
+            path = item.get("path")
+            if isinstance(path, str) and item.get("exposure") == "private":
+                private_paths.add(path)
+        return private_paths
+
+    @staticmethod
+    def _source_filename(location: dict[str, Any] | None) -> str | None:
+        if not isinstance(location, dict):
+            return None
+        filename = location.get("filename")
+        return filename if isinstance(filename, str) else None
+
+    def _apply_include_exposure(self, module: SemanticModule, c_file: CFile) -> None:
+        private_paths = self._private_recipe_paths(c_file)
+        if not private_paths:
+            return
+
+        def is_private_origin(origin: SemanticOrigin) -> bool:
+            filename = self._source_filename(origin.source_location)
+            return filename in private_paths
+
+        for function in module.functions:
+            if is_private_origin(function.origin):
+                function.visibility = "private"
+        for variable in module.variables:
+            if is_private_origin(variable.origin):
+                variable.visibility = "private"
+        for cls in module.classes:
+            if is_private_origin(cls.origin):
+                cls.visibility = "private"
+                cls.fields = []
+                if "Opaque" not in cls.base_classes:
+                    cls.base_classes.append("Opaque")
 
     def _project_metadata(self, project: CProject) -> dict[str, Any]:
         metadata: dict[str, Any] = {

@@ -141,6 +141,37 @@ void context_destroy(struct context *ctx);
     assert report["wrappable"] is True
 
 
+def test_c2ir_private_include_types_remain_available_as_opaque_handles():
+    parsed = parse_c_file(
+        """
+# 1 "private.h" 1
+struct private_context { int internal; };
+# 1 "api.h" 2
+struct private_context *make_context(void);
+void use_context(struct private_context *ctx);
+""",
+        filename="api.h",
+        preprocessing="compiler",
+    )
+    parsed.preprocessing_recipe = {
+        "included_files": [
+            {"path": "api.h", "dependency_kind": "root", "exposure": "public"},
+            {"path": "private.h", "dependency_kind": "project", "exposure": "private"},
+        ]
+    }
+
+    module = c_file_to_semantic_modules(parsed)[0]
+    private_context = next(cls for cls in module.classes if cls.name == "private_context")
+    make_context = _function(module, "make_context")
+    use_context = _function(module, "use_context")
+
+    assert private_context.visibility == "private"
+    assert private_context.base_classes == ["Opaque"]
+    assert private_context.fields == []
+    assert make_context.return_type.name == "private_context"
+    assert use_context.arguments[0].semantic_type.name == "private_context"
+
+
 def test_c2ir_converts_enum_constants_and_simple_macro_constants():
     parsed = parse_c_file(
         """

@@ -208,24 +208,53 @@ Implemented shared preprocessing flags:
 --preprocess {internal,compiler}
 --compiler EXACT_EXECUTABLE
 --compile-commands PATH
+--preprocessor-adapter {auto,gcc-compatible-c,gnu-fortran,command-template}
+--preprocess-template TEMPLATE
 -I DIR / --include-dir DIR
 -D NAME[=VALUE] / --define NAME[=VALUE]
 -U NAME / --undef NAME
 --std STANDARD
 --compiler-arg ARG
+--include-exposure {reachable-project,roots-only}
+--public-include PATH_OR_PATTERN
+--private-include PATH_OR_PATTERN
 ```
 
 `--preprocess internal` is the default. For C it means the current raw
 directive metadata mode: x2py reads `.h`/`.c` input directly, records includes
 and macros from the file, parses ordinary visible declarations, and does not
-expand macros or select `#if` branches. For Fortran it means the existing
-internal preprocessing path, including simple macro branch selection through
-`-D` and `-U`.
+expand macros or select `#if` branches. For Fortran it means plain or
+already-preprocessed parser input; internal mode does not evaluate CPP
+branches through `-D` or `-U`.
 
 `--preprocess compiler` means x2py runs an external compiler/preprocessor and
 parses stdout. The user must pass an exact compiler executable with
-`--compiler`, unless a C `--compile-commands` entry supplies it. Do not rely on
-generic defaults when multiple compiler versions are installed.
+`--compiler`, unless a `--compile-commands` entry or custom command template
+supplies it. Do not rely on generic defaults when multiple compiler versions
+are installed. GCC-compatible C and Clang use `-E -x c`; GNU Fortran uses
+`-E -cpp`. Linemarkers are preserved so parser diagnostics can report original
+source files after preprocessing.
+
+The compiler is authoritative for macro expansion, conditional branch
+selection, C and Fortran CPP includes, predefined macros, command-line macro
+flags, include paths, target flags, and sysroot behavior. Multiple build
+configurations must be preprocessed and parsed separately. x2py does not merge
+mutually exclusive CPP branches into one parser model.
+
+Fortran native `include "file.inc"` is handled after compiler CPP output
+because GNU Fortran does not preprocess the contents of native INCLUDE files.
+The preprocessing layer resolves these includes relative to the including file,
+then `-I` directories, preserves duplicate textual inclusion, and reports
+`INCLUDE_NOT_FOUND` or `INCLUDE_CYCLE` explicitly.
+
+Compiler preprocessing records a recipe with the adapter, compiler argv,
+working directory, include directories, defines, undefs, standard, raw compiler
+arguments, source mappings, included files, diagnostics, and optional macro
+metadata. System headers are recorded but private by default. Reachable project
+includes are public by default; `--include-exposure roots-only`,
+`--public-include`, and `--private-include` control public wrapper export while
+keeping private declarations available for type resolution. Private C handle
+types may be emitted as opaque classes in `.pyi` output.
 
 Before this mechanism is treated as portable across supported toolchains, it
 needs substantial integration testing with multiple C and Fortran compiler
@@ -294,16 +323,17 @@ python -m x2py include/vendor_api.h --language c --parse \
   --compiler /opt/intel/oneapi/compiler/latest/bin/icx \
   -D VENDOR_PUBLIC=
 
-# C, project build database. The compiler and most flags come from the matching
-# compile_commands.json entry for the input file.
+# C or Fortran, project build database. The compiler and most flags come from
+# the matching compile_commands.json entry for the input file.
 python -m x2py src/api.c --language c --parse \
   --preprocess compiler \
   --compile-commands build/compile_commands.json
 
-# Fortran, current internal branch selection.
-python -m x2py src/solver.F90 --parse \
-  -D USE_MPI \
-  -U DEBUG
+# Unsupported compiler family through a command template.
+python -m x2py include/vendor_api.h --language c --parse \
+  --preprocess compiler \
+  --preprocessor-adapter command-template \
+  --preprocess-template 'vendor-cc --preprocess {include_dirs} {defines} {source}'
 
 # Fortran, compiler-assisted preprocessing with an exact versioned executable.
 python -m x2py src/solver.F90 --parse \
@@ -326,25 +356,28 @@ Flag meanings:
 - `--compiler`: exact executable to run. Use `gcc-13`, `clang-18`,
   `/usr/bin/gfortran-12`, `/opt/.../ifx`, etc. x2py treats this as one argv
   item, not a shell command string.
-- `--compile-commands`: C project database. x2py finds the entry for the input
+- `--compile-commands`: project database. x2py finds the entry for the input
   file, strips compile-only flags such as `-c` and `-o`, adds `-E`, and uses
   that entry's compiler unless `--compiler` overrides it.
+- `--preprocessor-adapter` / `--preprocess-template`: custom adapter path for
+  compiler families that do not match the GCC-compatible C or GNU Fortran
+  command shape. The command must write expanded source to stdout.
 - `-I` / `--include-dir`: include path passed as `-IDIR` in compiler mode. In
   C internal mode it is also used for quoted include resolution.
 - `-D` / `--define`: macro definition. `-D NAME` means `NAME=1`; `-D NAME=VALUE`
   preserves `VALUE`.
-- `-U` / `--undef`: macro undefinition. In Fortran internal mode this selects
-  inactive branches for that macro.
+- `-U` / `--undef`: macro undefinition passed to compiler preprocessing.
 - `--std`: language standard passed as `-std=STANDARD`, for example `c11`,
   `c23`, `f2008`, or `f2018`.
 - `--compiler-arg`: one raw compiler argument. For values beginning with `-`,
   use the equals form, for example `--compiler-arg=-target`.
 
-`--define` and `--undef` belong to compiler-assisted preprocessing for C, not
-to raw parser-side macro evaluation. Raw C mode records directives and parses
-ordinary visible declarations only; it does not select `#if` branches or expand
-macros. A declaration prefixed by an unexpanded object-like macro is deferred
-as macro-dependent rather than treated as an invalid type sequence.
+`--define` and `--undef` belong to compiler-assisted preprocessing for C and
+Fortran, not to raw parser-side macro evaluation. Raw C mode records directives
+and parses ordinary visible declarations only; it does not select `#if`
+branches or expand macros. A declaration prefixed by an unexpanded object-like
+macro is deferred as macro-dependent rather than treated as an invalid type
+sequence.
 
 ## Current Partial Behavior
 
