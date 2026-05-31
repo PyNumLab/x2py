@@ -77,6 +77,7 @@ These records do not necessarily stop parsing; inspect each diagnostic's
 | `C_UNRESOLVED_INCLUDE` | A local include could not be resolved. |
 | `C_UNSUPPORTED_FUNCTION_LIKE_MACRO` | A function-like macro was recorded but not expanded. |
 | `C_MACRO_DEPENDENT_DECLARATION` | Declaration parsing requires macro expansion. |
+| `C_UNMODELED_COMPILER_EXTENSION` | Compiler syntax was accepted for declaration extraction, but ABI-, layout-, type-, or symbol-relevant extension semantics remain unmodeled. |
 | `C_UNSUPPORTED_DECLARATION` | Recognized declaration form is outside the modeled subset. |
 | `C_UNSUPPORTED_DECLARATOR` | Declarator form is outside the modeled subset. |
 | `C_UNSUPPORTED_FIELD_DECLARATION` | Aggregate field form is outside the modeled subset. |

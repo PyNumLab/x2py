@@ -160,6 +160,10 @@ The supported subset focuses on stable wrapper-relevant APIs:
 - simple object-like numeric and string macros
 - include dependency tracking
 - cross-file typedef and tag resolution within parsed project files
+- compiler/preprocessed-mode tolerance for common GCC/Clang and MS declaration syntax:
+  GNU attributes, `__declspec(...)`, `[[...]]`, `__extension__`, alternate
+  qualifier/inline spellings, declaration-level `asm(...)`, calling-convention
+  keywords, `typeof(...)`, `_BitInt(...)`, and selected extended scalar names
 
 ## Unsupported And Deferred Subset
 
@@ -171,7 +175,6 @@ The C parser explicitly reports or defers:
 - token pasting and stringification
 - macro-generated declarations
 - complex conditional compilation evaluation
-- all compiler extensions
 - arbitrary GCC extensions
 - arbitrary MSVC extensions
 - C++ parsing
@@ -182,7 +185,8 @@ The C parser explicitly reports or defers:
 - inline assembly
 - `_Generic` semantic evaluation
 - atomic operation semantics and validation beyond parsed type facts
-- arbitrary attributes before fixture-driven support exists
+- full semantic modeling of compiler attributes, calling conventions, assembler
+  aliases, `typeof(...)`, `_BitInt(...)`, and extended scalar ABI facts
 
 ## Preprocessing Policy
 
@@ -399,10 +403,14 @@ Member records carry their own field location. A legal final incomplete array
 member in a struct is marked as `CArray(is_flexible=True)`; non-final,
 sole-member, and union incomplete-array member forms are retained with
 `C_INVALID_FLEXIBLE_ARRAY_MEMBER` error diagnostics.
-Selected unsupported forms, such as static assertions, attributes, and
-alignment specifiers, are reported in `diagnostics` with explicit `unit_kind`
-values. Grammar-invalid input raises `CParseError`; identifier spellings are not
-used to guess that input belongs to another language.
+In compiler/preprocessed mode, common compiler declaration syntax is normalized
+before grammar parsing.
+Harmless attributes are accepted without dropping their declarations. Ignored
+extensions that can affect layout, calling convention, symbol identity, or type
+identity produce `C_UNMODELED_COMPILER_EXTENSION` warnings with explicit
+`unit_kind` values. Static assertions remain diagnostic-only. Grammar-invalid
+input raises `CParseError`; identifier spellings are not used to guess that
+input belongs to another language.
 Unconsumed declarator suffixes are also diagnosed instead of producing partial
 objects. Functions
 include `prototype_style`, currently `"prototype"` for
@@ -676,8 +684,9 @@ Active declaration tests currently cover:
   references
 - `_Atomic int` and `_Atomic(type)` qualifier placement on scalar and pointer
   declaration forms
-- diagnostics for selected unsupported attributes, alignment, K&R definitions,
-  and trailing declarator extensions
+- tolerance for common GNU/MS declaration extensions, explicit warnings for
+  unmodeled ABI-relevant extension semantics, and diagnostics for K&R
+  definitions and remaining trailing declarator extensions
 - fatal diagnostics for grammar-invalid syntax and invalid primitive-specifier
   combinations while unresolved single typedef-name uses remain deferred
 
@@ -690,7 +699,7 @@ declarations.
 | --- | --- | --- | --- |
 | Typedef/tag resolution | `typedef unsigned long size_t; size_t count(void);` and `struct state { int id; }; void step(struct state *s);` | Basic project parsing links typedef chains and struct/union/enum tag references while preserving unresolved objects when context is absent. | Deepen conflict policy for broader projects; included/generated files are parsed only when supplied as project inputs. |
 | Preprocessed declarations | `#define API(ret) ret` followed by `API(int) run(void);` | Raw mode records macro metadata and does not claim the expanded declaration; compiler or `.i` mode parses expanded declarations, maps locations through `#line` markers, and records `origin="preprocessed"`; x2py-generated streams also record their recipe. | Broaden fixture-driven extension and compiler-family coverage. |
-| Additional extension families | `int run(void) __attribute__((visibility("default")));` | Known attribute/alignment forms are diagnosed; broader compiler extensions are not modeled. | Add fixture-driven support or a focused diagnostic for each required extension family. |
+| Additional extension families | `int run(void) __attribute__((visibility("default")));` | Common GNU/MS declaration syntax is accepted; ignored ABI-, layout-, symbol-, or type-relevant semantics produce `C_UNMODELED_COMPILER_EXTENSION`. Broader compiler extensions are not modeled. | Add fixture-driven tolerance or a focused diagnostic for each required extension family. |
 
 ### Represented With Focused Tests
 

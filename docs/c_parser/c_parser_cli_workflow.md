@@ -77,10 +77,15 @@ function index.
 The object class distinguishes declarations (`CFunction`,
 `CVariable`, `CTypedef`, `CStruct`, `CUnion`, or `CEnum`), and incomplete tag
 declarations set `is_incomplete=True`.
-Known unsupported declaration forms such as declaration attributes, alignment
-specifiers, and static assertions are
-reported in diagnostics with explicit `unit_kind` values; unconsumed declarator
-suffixes are diagnosed instead of silently omitted. Invalid flexible array
+In compiler/preprocessed mode, common GCC/Clang and MS declaration syntax is
+normalized before grammar parsing: attributes, `__declspec(...)`, `[[...]]`,
+`__extension__`, alternate qualifier/inline spellings, declaration-level
+`asm(...)`, calling-convention
+keywords, `typeof(...)`, `_BitInt(...)`, and selected extended scalar names.
+Ignored extension semantics that can affect ABI, layout, symbol identity, or
+type identity produce `C_UNMODELED_COMPILER_EXTENSION` warnings. Static
+assertions and remaining unsupported declarator suffixes are diagnosed instead
+of silently omitted. Invalid flexible array
 member placement and flexible union members produce
 `C_INVALID_FLEXIBLE_ARRAY_MEMBER` error diagnostics at the field location. The parser reports
 `parser_status: "partial"`. C parse diagnostics, currently including
@@ -647,6 +652,9 @@ The active CLI/parser tests cover the current partial subset:
   by focused C tests.
 - array and function parameter declared/effective type adjustment is covered
   by focused C tests.
+- common GNU/MS declaration extension normalization, ABI-relevant omission
+  warnings, linemarker preservation, and a GCC-preprocessed standard-header
+  smoke test are covered by focused C tests.
 - `--show-vars` and `--print-limit` are rejected in C mode until C-specific
   display controls exist.
 - `--semantics`, `--wrap-readiness`, and `--pyi` with `--language c` use
@@ -703,7 +711,10 @@ Completed order:
     without hard-coded host type aliases.
 23. Added C semantic IR, readiness, and starter exact-contract `.pyi` output
     through `x2py --language c`.
+24. Added declaration-normalization tolerance for common GCC/Clang and MS
+    compiler extensions, explicit warnings for ABI-relevant omissions, and
+    GCC-preprocessed standard-header regression coverage.
 
-Next implementation work should continue with fixture-driven compiler
+Next implementation work should continue with broader fixture-driven compiler
 extension policy and broader project conflict policy
 while keeping the explicit `--language c` gate in place.

@@ -204,6 +204,14 @@ available internally for type resolution. Public signatures that refer to
 private C handle types can use private opaque classes rather than exposing data
 members.
 
+The C parser tolerates common compiler-expanded declaration syntax from system
+headers, including GNU attributes, `__declspec(...)`, alternate qualifier
+spellings, declaration-level `asm(...)`, calling-convention keywords,
+`typeof(...)`, `_BitInt(...)`, and selected extended scalar names. Harmless
+syntax is accepted without exposing private header declarations. Ignored
+extensions that can affect ABI, layout, symbol identity, or type identity
+produce `C_UNMODELED_COMPILER_EXTENSION` warnings.
+
 Preprocessing failures print explicit categories such as
 `PREPROCESSOR_NOT_FOUND`, `PREPROCESSOR_FAILED`,
 `INVALID_COMPILER_ARGUMENTS`, `UNSUPPORTED_COMPILER_CAPABILITY`,

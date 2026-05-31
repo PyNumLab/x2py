@@ -64,11 +64,16 @@ Implemented now:
   parameter declarations preserve their written `declared_type` and expose
   pointer-adjusted effective `type` values. Declarations prefixed by
   unexpanded object-like macros are deferred as macro dependencies rather than
-  misreported as invalid type sequences. Selected unsupported declaration
-  forms, including attributes, alignment specifiers and static assertions, are
-  reported as diagnostics with explicit `unit_kind` values. A declarator must
-  be fully consumed before a concrete object is returned; unknown suffixes
-  become diagnostics. Grammar-invalid input raises `CParseError` with
+  misreported as invalid type sequences. In compiler/preprocessed mode, common
+  GCC/Clang and MS declaration syntax is normalized before grammar parsing:
+  attributes, `__declspec(...)`,
+  `[[...]]`, `__extension__`, alternate qualifier/inline spellings,
+  declaration-level `asm(...)`, calling-convention keywords, `typeof(...)`,
+  `_BitInt(...)`, and selected extended scalar names. Ignored extension
+  semantics that can affect ABI, layout, symbol identity, or type identity
+  produce `C_UNMODELED_COMPILER_EXTENSION` warnings. Static assertions remain
+  diagnostic-only. A declarator must be fully consumed before a concrete object
+  is returned; unknown suffixes become diagnostics. Grammar-invalid input raises `CParseError` with
   `CPARSE_INVALID_SYNTAX`; identifier spellings are not used to guess another
   language. Primitive specifier order is normalized, and invalid combinations
   such as `unsigned float` raise `CParseError` with code
@@ -115,7 +120,9 @@ Deferred:
 - full typedef/tag resolution policy beyond basic project-level link-up and
   callback policy metadata, for example conflict diagnostics, active
   semantic wrappability decisions
-- compiler attributes and alignment specifiers
+- semantic modeling for compiler attributes, alignment, calling conventions,
+  assembler aliases, opaque compiler type expressions, and extended scalar ABI
+  facts beyond the accepted declaration syntax
 - broader compiler-family validation for preprocessing; parsed declarations
   already retain preprocessed origin and mapped source identity
 - broader C callback/ownership policy beyond exact starter `.pyi` stubs
@@ -264,7 +271,8 @@ Current and planned responsibilities:
     record folding for backslash-newline, string/character literal awareness,
     lightweight tokens with source locations, preprocessed `#line`/linemarker
     remapping for top-level segments, top-level splitting with block end
-    locations, and delimiter splitting aware of nesting and literals.
+    locations, aggregate-header attribute tolerance during brace
+    classification, and delimiter splitting aware of nesting and literals.
   - Planned: richer token helpers as extension and initializer-expression
     parsing require them.
 - `c_parser/preprocessor.py`
@@ -289,7 +297,10 @@ Current and planned responsibilities:
     `CPARSE_INVALID_SPECIFIER_SEQUENCE`. Array and
     function parameters preserve `declared_type` while effective `type` uses C
     parameter adjustment. Raw declarations beginning with an object-like macro
-    name are retained as macro-dependent diagnostics.
+    name are retained as macro-dependent diagnostics. Compiler/preprocessed mode
+    normalizes common GCC/Clang and MS declaration extensions before grammar
+    parsing; ignored ABI-relevant semantics produce
+    `C_UNMODELED_COMPILER_EXTENSION` warnings.
   - Planned: symbol resolution and additional declaration-specifier and
     extension coverage.
 - `c_parser/project.py`
