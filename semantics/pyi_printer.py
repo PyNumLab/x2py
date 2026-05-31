@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 from collections.abc import Iterable
 from copy import deepcopy
+import json
 import keyword
 import re
 
@@ -167,7 +168,7 @@ class PyiPrinter:
         type_text = self.emit_semantic_type(semantic_type)
         annotation_metadata = []
         if original_name is not None:
-            annotation_metadata.append(f'Name("{original_name}")')
+            annotation_metadata.append(f"Name({json.dumps(original_name)})")
         if self._requires_intent_metadata(arg):
             annotation_metadata.append(f"Intent({arg.intent!r})")
         if annotation_metadata:

@@ -57,8 +57,8 @@ GitHub Actions jobs provide broader repeated coverage.
 
 Validated locally on 2026-05-31:
 
-- [x] Full CI-shaped pytest run: `3474 passed`.
-- [x] Combined xdist and subprocess branch coverage: `95.31%`, above the
+- [x] Full CI-shaped pytest run: `3487 passed`.
+- [x] Combined xdist and subprocess branch coverage: `95.34%`, above the
       configured `95%` gate.
 - [x] Ruff lint and changed-file Ruff formatting checks pass.
 - [x] Pre-commit hooks pass.
@@ -73,11 +73,18 @@ Validated locally on 2026-05-31:
       Assertions and implementation fixes improved the result from `142/206`
       killed mutants to `174/215`, followed by targeted kills for six more
       survivors.
-- [x] Radon baseline reviewed: average complexity is `C (19.01)`.
+- [x] Focused `semantics/pyi_printer.py` mutation campaign completed:
+      `385/395` mutants killed; the remaining `6` survivors and `4` timeouts
+      are reviewed equivalent mutations or mutmut wrapper artifacts.
+- [x] Radon baseline reviewed: average complexity is `C (18.96)`.
 
 ## Ruff
 
-Goal: hard-gate likely bugs now, then remove historical formatting and lint
+What it does: Ruff is a fast Python linter and formatter. It finds static code
+problems such as undefined names, unused imports, suspicious patterns, and
+overly complex functions, and it gives the Python tree one consistent format.
+
+Project goal: hard-gate likely bugs now, then remove historical formatting and lint
 debt in controlled batches.
 
 Adoption target:
@@ -109,7 +116,11 @@ parser functions are improved incrementally.
 
 ## Hypothesis
 
-Goal: generate edge cases and validate invariants across parsers,
+What it does: Hypothesis is a property-based testing library. Instead of checking
+only hand-written examples, it generates many inputs from declared strategies
+and shrinks a failing input to a small reproducer.
+
+Project goal: generate edge cases and validate invariants across parsers,
 transformations, and code generation.
 
 Adoption target:
@@ -140,13 +151,18 @@ Saving minimized failures prevents rediscovery of the same bug.
       linemarkers, includes, and compiler extensions.
 - [x] Add generated Fortran module, derived-type, kind, include, and
       preprocessor cases.
-- [ ] Add AST and semantic-IR transformation invariants.
-- [ ] Add code-generation escaping, stable-ordering, and parse-back invariants.
-- [ ] Store each meaningful minimized Hypothesis failure as a regression test.
+- [x] Add AST and semantic-IR transformation invariants.
+- [x] Add code-generation escaping, stable-ordering, and parse-back invariants.
+- [x] Store each currently known meaningful minimized Hypothesis failure as a
+      regression test; continue doing so for future failures.
 
 ## Mutmut
 
-Goal: find weak tests by proving that meaningful implementation mutations are
+What it does: mutmut is a mutation-testing tool. It makes small changes to
+implementation code, such as changing a condition or return value, and reruns
+tests to reveal behavior that the test suite does not actually protect.
+
+Project goal: find weak tests by proving that meaningful implementation mutations are
 killed by behavioral assertions.
 
 Adoption target:
@@ -167,6 +183,8 @@ unexplained meaningful survivors.
 - [x] Add the manual GitHub Actions mutation job.
 - [x] Add `tools/run_mutmut.py` to avoid the mutmut 3.5.0 child-process
       reaping failure observed locally.
+- [x] Copy local package directories into focused mutmut workspaces and keep
+      process-local stats instrumentation out of fresh CLI subprocesses.
 - [x] Document focused local mutation workflow and survivor review.
 - [x] Run the first focused campaign for `c_parser/type_resolver.py`.
 - [x] Fix the discovered duplicate typedef-cycle diagnostic bug.
@@ -174,6 +192,9 @@ unexplained meaningful survivors.
       members.
 - [x] Add assertions for unresolved `struct`, `union`, and `enum` references.
 - [ ] Review the remaining meaningful `c_parser/type_resolver.py` survivors.
+- [x] Review all `semantics/pyi_printer.py` survivors and timeouts; add
+      behavioral assertions for meaningful gaps and classify equivalent
+      mutations.
 - [ ] Run focused mutation campaigns for each subsystem below.
 - [ ] Record survivor decisions: add a test, fix a bug, or document why the
       mutation is behaviorally equivalent.
@@ -195,14 +216,18 @@ Mutation subsystem progress:
 | `semantics/c2ir.py` | [ ] | [ ] | Prioritize AST-to-IR field mapping and blockers. |
 | `semantics/fortran2ir.py` | [ ] | [ ] | Prioritize kinds, arrays, and compile-time values. |
 | `semantics/pyi_parser.py` | [ ] | [ ] | Prioritize parse-back invariants. |
-| `semantics/pyi_printer.py` | [ ] | [ ] | Prioritize escaping and stable ordering. |
+| `semantics/pyi_printer.py` | [x] | [x] | `385/395` killed; remaining `6` survivors and `4` timeouts are reviewed equivalents or mutmut artifacts. |
 | `semantics/readiness.py` | [ ] | [ ] | Prioritize blocker selection and diagnostics. |
 | `x2py/preprocessing.py` | [ ] | [ ] | Prioritize external command and linemarker handling. |
 | `x2py/cli.py` | [ ] | [ ] | Prioritize command routing and reports. |
 
 ## Vulture
 
-Goal: remove dead code and make newly introduced dead definitions fail CI.
+What it does: Vulture is a static dead-code detector. It reports functions,
+classes, variables, and other definitions that appear unused so they can be
+removed or reviewed as intentional public or dynamically discovered APIs.
+
+Project goal: remove dead code and make newly introduced dead definitions fail CI.
 
 Adoption target:
 
@@ -227,7 +252,11 @@ again.
 
 ## Radon
 
-Goal: track risky control flow and reduce complexity where it improves
+What it does: Radon measures code complexity and maintainability. Its reports
+highlight functions with many control-flow paths and modules that may be harder
+to understand, test, and change safely.
+
+Project goal: track risky control flow and reduce complexity where it improves
 maintainability and regression resistance.
 
 Adoption target:
@@ -272,7 +301,11 @@ Initial hotspot register:
 
 ## Bandit
 
-Goal: block new medium- and high-confidence security risks and review lower
+What it does: Bandit scans Python source for security-sensitive patterns, such
+as risky subprocess, filesystem, cryptography, and deserialization usage. It
+reports severity and confidence so findings can be triaged.
+
+Project goal: block new medium- and high-confidence security risks and review lower
 severity findings deliberately.
 
 Adoption target:
@@ -298,7 +331,11 @@ Low-severity review still matters when trust boundaries move.
 
 ## Pip-Audit
 
-Goal: fail CI when project dependencies have known vulnerabilities.
+What it does: pip-audit checks Python dependencies against published
+vulnerability advisories. It detects known security issues in packages even
+when the repository's own source code has not changed.
+
+Project goal: fail CI when project dependencies have known vulnerabilities.
 
 Adoption target:
 
@@ -320,7 +357,11 @@ change.
 
 ## Pytest-Randomly
 
-Goal: detect hidden order dependence and make failures reproducible.
+What it does: pytest-randomly changes test order and randomizes supported test
+inputs with a recorded seed. It helps reveal tests that pass only because
+another test happened to run before or after them.
+
+Project goal: detect hidden order dependence and make failures reproducible.
 
 Adoption target:
 
@@ -342,7 +383,11 @@ one.
 
 ## Pytest-Benchmark
 
-Goal: detect meaningful parser and code-generation performance regressions
+What it does: pytest-benchmark runs selected workloads repeatedly and records
+timing statistics. Saved benchmark results can be compared over time to detect
+performance changes.
+
+Project goal: detect meaningful parser and code-generation performance regressions
 without introducing flaky gates.
 
 Adoption target:
@@ -375,7 +420,11 @@ These are not additional analyzers, but the stack is incomplete without them.
 
 ### Pytest And Coverage
 
-Goal: keep behavioral regression coverage broad and make subprocess execution
+What it does: pytest runs the behavioral test suite. Coverage records which
+lines and branches those tests execute, making untested paths visible and
+providing a measurable regression floor.
+
+Project goal: keep behavioral regression coverage broad and make subprocess execution
 visible in the reported branch coverage.
 
 Adoption target:
@@ -399,7 +448,11 @@ project exercises compiler and preprocessing boundaries.
 
 ### Pytest-Xdist
 
-Goal: keep the broad suite fast while proving that tests are isolated enough
+What it does: pytest-xdist distributes pytest tests across worker processes. It
+reduces suite runtime and can expose tests that incorrectly depend on shared
+process state or unsafe concurrent access.
+
+Project goal: keep the broad suite fast while proving that tests are isolated enough
 to run concurrently.
 
 Adoption target:
@@ -421,7 +474,11 @@ enabled.
 
 ### Pre-Commit
 
-Goal: catch fast, deterministic issues before CI.
+What it does: pre-commit runs configured repository checks before a commit and
+can also run manual hooks on demand. It gives developers fast local feedback
+before the same issues reach CI.
+
+Project goal: catch fast, deterministic issues before CI.
 
 Adoption target:
 
@@ -439,7 +496,11 @@ to bypass it because expensive analysis runs on every edit.
 
 ### GitHub Actions
 
-Goal: enforce stable quality gates on every pull request and run expensive
+What it does: GitHub Actions runs automated workflows in clean hosted CI
+environments on repository events, schedules, and manual dispatch. It provides
+repeatable remote validation and stores reports or artifacts from deeper jobs.
+
+Project goal: enforce stable quality gates on every pull request and run expensive
 discovery checks often enough to find deeper regressions.
 
 Adoption target:
@@ -473,5 +534,10 @@ Add a row when a QA adoption task or subsystem campaign is completed.
 | 2026-05-31 | Ruff ratchet | Enabled `B009`, `C420`, `F402`, and `UP035` after localized cleanup. | Continue one safe rule family at a time. |
 | 2026-05-31 | Vulture | Narrowed ignore names and made the clean report blocking in CI. | Keep API exclusions narrow. |
 | 2026-05-31 | Bandit | Reviewed 19 low-severity parser-token, template-token, and argv-based subprocess findings. | Re-review when command trust boundaries change. |
+| 2026-05-31 | Bandit | Reviewed the mutmut wrapper's low-severity `subprocess` import finding; the expanded source-and-tools scan has `20` low-severity findings and no medium- or high-severity findings. | Re-review when command trust boundaries change. |
 | 2026-05-31 | Hypothesis and Radon hotspot | Added generated nested C declarators and top-level lexer delimiter properties. | Expand preprocessing generators next. |
 | 2026-05-31 | Parser preprocessing boundary | Added generated Fortran structure/preprocessing properties and aligned raw Fortran/C macro handling around compiler-required errors. | Expand AST and semantic-IR invariants next. |
+| 2026-05-31 | Hypothesis semantic transformations | Added generated C and Fortran AST-to-IR determinism, shared scalar-contract, and semantic-specialization invariants; moved C primitive parser facts out of public contract metadata. | Expand code-generation escaping, stable-ordering, and parse-back invariants next. |
+| 2026-05-31 | Hypothesis code generation | Added generated native-name escaping, stable synthetic-import ordering, and semantic-IR-to-Pyi parse-back invariants; fixed quoted `Name(...)` emission and stored focused regressions for discovered failures. | Continue focused mutation campaigns and keep storing minimized failures. |
+| 2026-05-31 | Full validation | `3487 passed`, combined coverage `95.34%`, Ruff, pre-commit, Vulture, and Radon review clean. | Preserve the baseline while continuing focused mutation campaigns. |
+| 2026-05-31 | Mutmut: `semantics/pyi_printer.py` | Made focused workspaces use local package dependencies, prevented process-local stats instrumentation from leaking into fresh CLI subprocesses, added behavioral assertions for meaningful survivors, and established a reviewed `385/395` baseline. | Continue subsystem campaigns; the remaining `6` survivors and `4` timeouts are classified equivalents or mutmut artifacts. |

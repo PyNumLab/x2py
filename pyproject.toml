@@ -157,4 +157,4 @@ mi_min = "B"
 [tool.mutmut]
 paths_to_mutate = ["c_parser", "fortran_parser", "semantics", "x2py"]
 pytest_add_cli_args_test_selection = ["tests"]
-also_copy = ["conftest.py", "sitecustomize.py", "pyproject.toml"]
+also_copy = ["c_parser", "fortran_parser", "semantics", "x2py", "conftest.py", "sitecustomize.py", "pyproject.toml"]

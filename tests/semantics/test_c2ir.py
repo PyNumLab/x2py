@@ -63,6 +63,8 @@ def test_c2ir_converts_scalar_function_signatures_and_preserves_native_order():
     assert add.return_type.name == "Int32"
     assert [mapping.native_position for mapping in add.projection] == [0, 1]
     assert scale.return_type.name == "Float64"
+    assert scale.arguments[0].semantic_type.metadata == {}
+    assert scale.arguments[0].semantic_type.origin.metadata["c_type"] == "CDouble"
     assert module.metadata["counts"]["functions"] == 2
 
 
@@ -397,6 +399,8 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
         "c_volatile_unsupported",
         "c_atomic_unsupported",
     }
+    assert qualified.origin.metadata["c_type"] == "CChar"
+    assert qualified.origin.metadata["qualifiers"] == ["const", "volatile", "_Atomic"]
 
 
 def test_c2ir_reports_unsupported_type_and_declarator_compositions():

@@ -509,14 +509,17 @@ class CToIRConverter:
                 source_type=self._type_text(type_),
             )
 
-        metadata = self._type_metadata(type_)
+        origin = self._type_origin(type_)
+        metadata = {}
+        if "readiness_blockers" in origin.metadata:
+            metadata["readiness_blockers"] = list(origin.metadata["readiness_blockers"])
         if isinstance(type_, CChar):
             metadata["c_char_policy"] = "implementation-defined signed 8-bit code unit"
         return SemanticType(
             name=semantic_name,
             dtype=semantic_name,
             metadata=metadata,
-            origin=self._type_origin(type_),
+            origin=origin,
         )
 
     def _return_type(self, type_: CType, *, owner: str) -> SemanticType | None:

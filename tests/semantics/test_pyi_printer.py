@@ -7,6 +7,7 @@ from semantics.fortran2ir import (
     fortran_module_to_semantic_module,
 )
 
+from semantics.pyi_parser import parse_pyi_text
 from semantics.pyi_printer import (
     emit_module,
     emit_module_stubs,
@@ -164,6 +165,93 @@ def test_printer_validation_and_opaque_dependency_edge_cases():
 
     with pytest.raises(ValueError, match="duplicate semantic module"):
         emit_module_stubs([SemanticModule(name="duplicate"), SemanticModule(name="duplicate")])
+
+
+def test_opaque_dependency_modules_scan_all_references_and_preserve_metadata():
+    plain_type = SemanticType("Float64", dtype="Float64")
+    invalid_opaque_ref = SemanticType(
+        "invalid_type",
+        dtype="invalid_type",
+        metadata={
+            "external_type_ref": {
+                "representation": "opaque",
+                "origin_module": "types",
+                "name": 42,
+            }
+        },
+    )
+    known_opaque_ref = SemanticType(
+        "known_type",
+        dtype="known_type",
+        metadata={
+            "external_type_ref": {
+                "representation": "opaque",
+                "origin_module": "types",
+                "name": "known_type",
+            }
+        },
+    )
+    missing_opaque_ref = SemanticType(
+        "missing_type",
+        dtype="missing_type",
+        metadata={
+            "external_type_ref": {
+                "representation": "opaque",
+                "origin_module": "types",
+                "name": "missing_type",
+            }
+        },
+    )
+
+    dependencies = opaque_dependency_modules(
+        SemanticModule(
+            name="api",
+            variables=[
+                SemanticArgument("plain", plain_type),
+                SemanticArgument("invalid", invalid_opaque_ref),
+                SemanticArgument("known", known_opaque_ref),
+                SemanticArgument("missing", missing_opaque_ref),
+            ],
+        ),
+        available_modules=[SemanticModule(name="types", classes=[SemanticClass(name="known_type")])],
+    )
+
+    assert dependencies == [
+        SemanticModule(
+            name="types",
+            classes=[
+                SemanticClass(
+                    name="missing_type",
+                    native_name="missing_type",
+                    base_classes=["Opaque"],
+                    metadata={"representation": "opaque"},
+                )
+            ],
+        )
+    ]
+
+
+def test_emit_module_stubs_honors_available_opaque_dependency_modules():
+    known_opaque_ref = SemanticType(
+        "known_type",
+        dtype="known_type",
+        metadata={
+            "external_type_ref": {
+                "representation": "opaque",
+                "origin_module": "types",
+                "name": "known_type",
+            }
+        },
+    )
+    stubs = emit_module_stubs(
+        SemanticModule(
+            name="api",
+            variables=[SemanticArgument("known", known_opaque_ref)],
+        ),
+        available_modules=[SemanticModule(name="types", classes=[SemanticClass(name="known_type")])],
+    )
+
+    assert set(stubs) == {"api"}
 
 
 def test_emit_no_argument_subroutine_is_single_line_signature():
@@ -522,6 +610,14 @@ def test_parameter_target_sanitizes_non_identifier_names():
     assert PyiPrinter._requires_explicit_projection_mapping(ProjectionMapping(native_position=1, result_position=0))
 
 
+def test_emit_argument_escapes_original_name_metadata():
+    emitted = PyiPrinter().emit_argument(SemanticArgument('quote"name', SemanticType("Int32")))
+    reparsed = parse_pyi_text(f"def consume({emitted}) -> None: ...\n", module_name="quoted")
+
+    assert emitted == 'quote_name: Annotated[Int32, Name("quote\\"name")]'
+    assert reparsed.functions[0].arguments[0].name == 'quote"name'
+
+
 # ============================================================
 # Multiple procedures
 # ============================================================
@@ -790,8 +886,9 @@ def test_printer_emit_visitor_dispatches_semantic_models():
     assert "def wrap(" in printer.emit(func)
     assert "class thing:" in printer.emit(module)
 
-    with pytest.raises(TypeError, match="Unsupported semantic model"):
+    with pytest.raises(TypeError) as unsupported:
         printer.emit(object())
+    assert str(unsupported.value) == "Unsupported semantic model for .pyi emission: <class 'object'>"
 
 
 def test_emit_class_method_keeps_method_indentation():
@@ -979,6 +1076,10 @@ def test_printer_emits_extended_storage_and_callable_forms():
         "Float64",
         storage=SemanticStorageContract(kind="pointer", read_only=True, pointer_depth=3),
     )
+    double_pointer = SemanticType(
+        "Float64",
+        storage=SemanticStorageContract(kind="pointer", pointer_depth=2),
+    )
     unspecified_storage = SemanticType("Int32", storage=SemanticStorageContract(kind="custom"))
     inferred_array = SemanticType(
         "Float64",
@@ -1002,7 +1103,7 @@ def test_printer_emits_extended_storage_and_callable_forms():
     full_callback = SemanticType(
         "Callable",
         metadata={
-            "arguments": [SemanticType("Int32")],
+            "arguments": [SemanticType("Int32"), SemanticType("Float64")],
             "return": SemanticType("Float64"),
         },
     )
@@ -1018,12 +1119,13 @@ def test_printer_emits_extended_storage_and_callable_forms():
     assert printer.emit_semantic_type(readonly_value) == "Const(Int32)"
     assert printer.emit_semantic_type(mutable_value) == "Int32"
     assert printer.emit_semantic_type(deep_pointer) == "Ptr[3](Const(Float64))"
+    assert printer.emit_semantic_type(double_pointer) == "Ptr[2](Float64)"
     assert printer.emit_semantic_type(unspecified_storage) == "Int32"
     assert printer.emit_semantic_type(inferred_array) == "Float64[:, :]"
     assert printer.emit_semantic_type(annotated_array) == (
         "Annotated[Float64[:, :], ORDER_ANY, Allocatable, Pointer, Finite, Range(1, 3)]"
     )
-    assert printer.emit_semantic_type(full_callback) == "Callable[[Int32], Float64]"
+    assert printer.emit_semantic_type(full_callback) == "Callable[[Int32, Float64], Float64]"
     assert printer.emit_semantic_type(any_callback) == "Callable[..., Float64]"
     assert printer.emit_semantic_type(SemanticType("Callable")) == "Callable"
 
@@ -1044,6 +1146,68 @@ def test_printer_projection_return_helpers_and_keyword_data_members():
     )
 
     assert printer._projected_argument_return(argument) == 'Returns["x", Float64, Optional]'
+    assert printer._named_return(plain) == 'Returns["value", Int32]'
     assert printer._projected_argument_return(plain) == "Int32"
     assert "var['class']: Int32" in emit_module(module)
     assert "@native_call([Return(0)])" in emit_module(module)
+
+
+def test_printer_rejects_each_unresolved_semantic_type_field():
+    printer = PyiPrinter()
+    message = "Cannot emit .pyi with unresolved semantic type 'Unknown'"
+
+    with pytest.raises(ValueError) as unknown_name:
+        printer.emit_semantic_type(SemanticType("Unknown", dtype="Int32"))
+    with pytest.raises(ValueError) as unknown_dtype:
+        printer.emit_semantic_type(SemanticType("Int32", dtype="Unknown"))
+
+    assert str(unknown_name.value) == message
+    assert str(unknown_dtype.value) == message
+
+
+def test_printer_preserves_structured_class_and_decorator_layout():
+    printer = PyiPrinter()
+    decorated_method = SemanticMethod(
+        name="lookup",
+        return_type=SemanticType("Float64"),
+        visibility="private",
+        projection=[ProjectionMapping(native_position=0, result_position=0)],
+    )
+    cls = SemanticClass(
+        name="thing",
+        base_classes=["Opaque", "Protocol"],
+        fields=[SemanticArgument("value", SemanticType("Int32"))],
+        methods=[decorated_method, SemanticMethod(name="reset")],
+    )
+    decorated_function = SemanticFunction(
+        name="wrapper",
+        visibility="private",
+        projection=[ProjectionMapping(native_position=0, result_position=0)],
+    )
+
+    assert (
+        printer.emit_class(cls)
+        == """class thing(Opaque, Protocol):
+    value: Int32
+
+    @private
+    @native_call([Return(0)])
+    def lookup(self) -> Float64: ...
+
+    def reset(self) -> None: ..."""
+    )
+    assert (
+        printer.emit_function(decorated_function)
+        == """@private
+@native_call([Return(0)])
+def wrapper() -> None: ..."""
+    )
+
+
+def test_native_call_sorts_synthetic_entries_before_native_positions():
+    projection = [
+        ProjectionMapping(native_position=0, value_kind="const", value=1),
+        ProjectionMapping(result_position=0),
+    ]
+
+    assert PyiPrinter()._native_call(projection) == "@native_call([Return(0), Const(1)])"

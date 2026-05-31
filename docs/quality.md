@@ -147,7 +147,10 @@ mutmut tests-for-mutant <mutant-id>
 
 The repository wrapper joins mutmut's mutant-generation workers and waits
 specifically for its mutation workers. This avoids a process-reaping failure
-seen with mutmut 3.5.0 while preserving mutmut's normal CLI behavior.
+seen with mutmut 3.5.0. It also keeps mutmut's process-local stats
+instrumentation out of fresh CLI subprocesses. Focused workspaces copy the
+local package directories so imports resolve consistently when only one module
+is mutated.
 
 For a focused local mutation pass, temporarily narrow `tool.mutmut.paths_to_mutate`
 in `pyproject.toml` to the subsystem you are improving, then restore it before

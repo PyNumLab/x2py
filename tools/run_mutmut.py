@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 from multiprocessing import Pool
+import subprocess
 from time import sleep
 from types import TracebackType
 from typing import Any
@@ -64,9 +65,21 @@ class _JoinedPool:
         self._pool.join()
 
 
+class _StatsSafePopen(subprocess.Popen):
+    """Keep mutmut's process-local stats instrumentation out of subprocesses."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        if os.getenv("MUTANT_UNDER_TEST") == "stats":
+            env = dict(kwargs.get("env") or os.environ)
+            env["MUTANT_UNDER_TEST"] = ""
+            kwargs["env"] = env
+        super().__init__(*args, **kwargs)
+
+
 def main() -> None:
     mutmut_main.Pool = _JoinedPool
     mutmut_main.os = _TrackedOS()
+    subprocess.Popen = _StatsSafePopen
     mutmut_main.cli()
 
 
