@@ -3,10 +3,8 @@
 Diagnostic codes are stable category identifiers for users, tests, and tooling.
 They are not source line numbers, occurrence counters, or process exit statuses.
 
-New categories should use explicit symbolic names such as
-`PARSE_INVALID_SYNTAX` or `C_UNRESOLVED_INCLUDE`. Existing numbered codes remain
-supported for compatibility. Replacing a numbered code should be a deliberate
-compatibility change with tests and generated fixtures updated together.
+Categories use explicit symbolic names such as `PARSE_INVALID_SYNTAX` and
+`C_UNRESOLVED_INCLUDE`. The name describes the failure class directly.
 
 ## Fatal Parser Errors
 
@@ -15,20 +13,42 @@ traceback unless `--debug` is used.
 
 | Code | Frontend | Meaning |
 | --- | --- | --- |
-| `PARSE001` | Fortran | Compatibility fallback for a Fortran parse error without a more specific code. |
+| `PARSE_ERROR` | Fortran | Fallback for a manually constructed or defensive Fortran parse error without a narrower category. |
 | `PARSE_INVALID_SYNTAX` | Fortran | Syntax cannot be consumed in a modeled Fortran grammar region. |
 | `PARSE_WRONG_ENTRYPOINT` | Fortran | A singular public parser API was called for a different source-unit kind. |
 | `PARSE_AMBIGUOUS_ENTRYPOINT` | Fortran | A singular public parser API matched more than one source unit. |
-| `CPARSE001` | C | Compatibility fallback for a C parse error without a more specific code. |
-| `CPARSE002` | C | Unsupported K&R-style function definition. |
-| `CPARSE003` | C | Invalid C primitive-specifier sequence. |
+| `PARSE_EXPECTED_UNIT` | Fortran | An internal unit visitor received the wrong source-unit kind. |
+| `PARSE_MISSING_UNIT_END` | Fortran | A source unit has no closing statement. |
+| `PARSE_MISMATCHED_UNIT_END` | Fortran | A named source-unit closing statement does not match its opener. |
+| `PARSE_UNEXPECTED_UNIT_END` | Fortran | A closing statement appears while another nested unit is active. |
+| `PARSE_DUPLICATE_UNIT` | Fortran | A scope contains duplicate named source units of the same kind. |
+| `PARSE_DUPLICATE_PROCEDURE` | Fortran | A scope contains duplicate procedure names. |
+| `PARSE_MALFORMED_HEADER` | Fortran | A module or procedure header is unsupported or malformed. |
+| `PARSE_UNSUPPORTED_RESULT_TYPE` | Fortran | A function header contains an unsupported result-type prefix. |
+| `PARSE_DUPLICATE_DECLARATION` | Fortran | A procedure symbol is declared more than once. |
+| `PARSE_UNKNOWN_PARAMETER_TYPE` | Fortran | A `PARAMETER` symbol has no declared type where one is required. |
+| `PARSE_DUPLICATE_PARAMETER` | Fortran | A procedure contains duplicate `PARAMETER` declarations. |
+| `PARSE_DUPLICATE_SYMBOL` | Fortran | A file or project scope contains a duplicate symbol. |
+| `PARSE_UNSUPPORTED_OPENMP_DIRECTIVE` | Fortran | A modeled specification region contains an unsupported OpenMP directive. |
+| `PARSE_MISSING_DERIVED_TYPE_END` | Fortran | A derived-type declaration has no matching closing statement. |
+| `PARSE_EXECUTABLE_IN_SPECIFICATION` | Fortran | An executable statement appears in a non-executable specification region. |
+| `PARSE_UNSUPPORTED_DECLARATION` | Fortran | A declaration-shaped line uses an unsupported datatype form. |
+| `PARSE_UNSUPPORTED_TYPE_BOUND_DECLARATION` | Fortran | A derived-type `contains` region has an unsupported binding declaration. |
+| `PARSE_UNRESOLVED_ARGUMENT_TYPE` | Fortran | A defensive invariant could not apply a declared argument type. |
+| `PARSE_UNKNOWN_FUNCTION_RESULT_TYPE` | Fortran | A function result has no resolvable datatype. |
+| `PARSE_IMPLICIT_NONE_UNDECLARED_SYMBOL` | Fortran | `implicit none` requires a missing argument or result declaration. |
+| `PARSE_MISSING_FUNCTION_RESULT` | Fortran | A defensive invariant found a function without a result variable. |
+| `PARSE_RESULT_SHADOWS_ARGUMENT` | Fortran | A function result name shadows an argument. |
+| `PARSE_DUPLICATE_VARIABLE` | Fortran | A module-like scope contains conflicting duplicate variable declarations. |
+| `PARSE_UNKNOWN_VARIABLE_TYPE` | Fortran | A module variable still has an unknown datatype after parsing. |
+| `PARSE_DUPLICATE_FIELD` | Fortran | A derived type contains duplicate fields. |
+| `PARSE_UNKNOWN_FIELD_TYPE` | Fortran | A derived-type field still has an unknown datatype after parsing. |
+| `PARSE_DUPLICATE_ARGUMENT` | Fortran | A procedure argument list repeats a name. |
+| `PARSE_INTERNAL_STATE` | Fortran | A defensive internal parser invariant was violated. |
+| `CPARSE_ERROR` | C | Fallback for a manually constructed or defensive C parse error without a narrower category. |
+| `CPARSE_UNSUPPORTED_KNR_DEFINITION` | C | Unsupported K&R-style function definition. |
+| `CPARSE_INVALID_SPECIFIER_SEQUENCE` | C | Invalid C primitive-specifier sequence. |
 | `CPARSE_INVALID_SYNTAX` | C | Syntax cannot be consumed in a modeled C grammar region. |
-
-`PARSE001`, `CPARSE001`, `CPARSE002`, and `CPARSE003` predate the explicit
-category naming rule. Prefer symbolic names for new categories. If the numbered
-codes are migrated later, useful replacements would be names such as
-`PARSE_UNKNOWN_DATATYPE`, `CPARSE_UNSUPPORTED_KNR_DEFINITION`, and
-`CPARSE_INVALID_SPECIFIER_SEQUENCE`.
 
 ## C Report Diagnostics
 
@@ -53,4 +73,3 @@ These records do not necessarily stop parsing; inspect each diagnostic's
 | `C_DUPLICATE_VARIABLE_DEFINITION` | File-scope variable has more than one definition. |
 | `C_CONFLICTING_TYPEDEF` | Typedef declarations conflict. |
 | `C_DUPLICATE_TAG_DEFINITION` | Struct, union, or enum tag has more than one definition. |
-

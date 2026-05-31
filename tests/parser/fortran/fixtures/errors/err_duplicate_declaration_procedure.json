@@ -5,7 +5,7 @@
     "Duplicate declaration of symbol 'x' in procedure 'dup'."
   ],
   "diagnostic_contains": [
-    "error[PARSE001]",
+    "error[PARSE_DUPLICATE_DECLARATION]",
     "Duplicate declaration of symbol 'x' in procedure 'dup'.",
     "integer :: x"
   ]

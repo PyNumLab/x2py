@@ -5,7 +5,7 @@
     "Duplicate PARAMETER declaration of symbol 'n' in procedure 'dup_param'."
   ],
   "diagnostic_contains": [
-    "error[PARSE001]",
+    "error[PARSE_DUPLICATE_PARAMETER]",
     "Duplicate PARAMETER declaration of symbol 'n' in procedure 'dup_param'.",
     "integer, parameter :: n = 10"
   ]

@@ -580,7 +580,7 @@ class FortranParser:
         header = unit.lines[0]
         module = self._parse_module_header(header[0].strip(), filename, lineno=header[1], source_line=header[2])
         if module is None:  # pragma: no cover - slicer only dispatches module units with module headers.
-            raise FortranParseError("Expected module unit.", filename=filename, line_number=header[1], source_line=header[2])
+            raise FortranParseError("Expected module unit.", filename=filename, line_number=header[1], source_line=header[2], code="PARSE_EXPECTED_UNIT")
         scope = self._helper_scope_for_model("module", module, parent=parent_scope)
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("module"), filename=filename)
         self._helper_visit_spec_part(scope, parts.specification, filename=filename)
@@ -627,7 +627,7 @@ class FortranParser:
         header = unit.lines[0]
         submodule = self._parse_submodule_header(header[0].strip(), filename)
         if submodule is None:  # pragma: no cover - slicer only dispatches submodule units with submodule headers.
-            raise FortranParseError("Expected submodule unit.", filename=filename, line_number=header[1], source_line=header[2])
+            raise FortranParseError("Expected submodule unit.", filename=filename, line_number=header[1], source_line=header[2], code="PARSE_EXPECTED_UNIT")
         scope = self._helper_scope_for_model("submodule", submodule, parent=parent_scope)
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("submodule"), filename=filename)
         self._helper_visit_spec_part(scope, parts.specification, filename=filename)
@@ -673,7 +673,7 @@ class FortranParser:
         header = unit.lines[0]
         program = self._parse_program_header(header[0].strip(), filename)
         if program is None:  # pragma: no cover - slicer only dispatches program units with program headers.
-            raise FortranParseError("Expected program unit.", filename=filename, line_number=header[1], source_line=header[2])
+            raise FortranParseError("Expected program unit.", filename=filename, line_number=header[1], source_line=header[2], code="PARSE_EXPECTED_UNIT")
         scope = self._helper_scope_for_model("program", program, parent=parent_scope)
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("program"), filename=filename)
         self._helper_visit_spec_part(scope, parts.specification, filename=filename)
@@ -706,7 +706,7 @@ class FortranParser:
         header = unit.lines[0]
         block_data = self._parse_block_data_header(header[0].strip(), filename)
         if block_data is None:  # pragma: no cover - slicer only dispatches block-data units with block-data headers.
-            raise FortranParseError("Expected block data unit.", filename=filename, line_number=header[1], source_line=header[2])
+            raise FortranParseError("Expected block data unit.", filename=filename, line_number=header[1], source_line=header[2], code="PARSE_EXPECTED_UNIT")
         scope = self._helper_scope_for_model("block_data", block_data, parent=parent_scope)
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("block_data"), filename=filename)
         self._helper_visit_spec_part(scope, parts.specification, filename=filename)
@@ -731,7 +731,7 @@ class FortranParser:
         header = unit.lines[0]
         dtype = self._init_derived_type(header[0].strip(), current_module=parent_scope.module_owner)
         if dtype is None:  # pragma: no cover - slicer only dispatches derived-type units with type headers.
-            raise FortranParseError("Expected derived-type unit.", filename=filename, line_number=header[1], source_line=header[2])
+            raise FortranParseError("Expected derived-type unit.", filename=filename, line_number=header[1], source_line=header[2], code="PARSE_EXPECTED_UNIT")
         scope = self._helper_scope_for_model("derived_type", dtype, parent=parent_scope)
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("derived_type"), filename=filename)
         self._helper_visit_spec_part(scope, parts.specification, filename=filename)
@@ -762,7 +762,7 @@ class FortranParser:
         header = unit.lines[0]
         starts_interface, interface_name = self._parse_interface_header(header[0].strip())
         if not starts_interface:  # pragma: no cover - slicer only dispatches interface units with interface headers.
-            raise FortranParseError("Expected interface unit.", filename=filename, line_number=header[1], source_line=header[2])
+            raise FortranParseError("Expected interface unit.", filename=filename, line_number=header[1], source_line=header[2], code="PARSE_EXPECTED_UNIT")
         interface = FortranInterface(name=interface_name, module=parent_scope.module_owner)
         scope = self._helper_scope_for_model("interface", interface, parent=parent_scope)
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("interface"), filename=filename)
@@ -812,7 +812,7 @@ class FortranParser:
                 lineno=header[1],
                 source_line=header[2],
             )
-            raise FortranParseError("Expected procedure unit.", filename=filename, line_number=header[1], source_line=header[2])
+            raise FortranParseError("Expected procedure unit.", filename=filename, line_number=header[1], source_line=header[2], code="PARSE_EXPECTED_UNIT")
         proc_state["filename"] = filename
         proc_state["header_lineno"] = header[1]
         proc_state["header_source_line"] = header[2]
@@ -1361,6 +1361,7 @@ class FortranParser:
                         filename=filename,
                         line_number=lineno,
                         source_line=lines[index][2],
+                        code="PARSE_MISSING_UNIT_END",
                     )
 
             end_line = lines[end_index][1]
@@ -1432,6 +1433,7 @@ class FortranParser:
                             filename=filename,
                             line_number=lineno,
                             source_line=source_line,
+                            code="PARSE_MISMATCHED_UNIT_END",
                         )
                 stack.pop()
                 if not stack:
@@ -1470,6 +1472,7 @@ class FortranParser:
                     filename=filename,
                     line_number=lineno,
                     source_line=source_line,
+                    code="PARSE_UNEXPECTED_UNIT_END",
                 )
             idx += 1
         return None
@@ -1884,12 +1887,14 @@ class FortranParser:
                         filename=filename,
                         line_number=unit.start_line,
                         source_line=unit.lines[0][2] if unit.lines else None,
+                        code="PARSE_DUPLICATE_PROCEDURE",
                     )
                 raise FortranParseError(
                     f"Duplicate {unit.kind.replace('_', ' ')} name '{unit.name}' in {parent_scope.kind} scope.",
                     filename=filename,
                     line_number=unit.start_line,
                     source_line=unit.lines[0][2] if unit.lines else None,
+                    code="PARSE_DUPLICATE_UNIT",
                 )
             seen.setdefault(key, []).append(unit)
 
@@ -2089,6 +2094,7 @@ class FortranParser:
                     filename=filename,
                     line_number=lineno,
                     source_line=source_line,
+                    code="PARSE_MALFORMED_HEADER",
                 )
             return None
         return FortranModule(name=module_match.group("name"), filename=filename)
@@ -2220,6 +2226,7 @@ class FortranParser:
                 filename=filename,
                 line_number=lineno,
                 source_line=source_line,
+                code="PARSE_UNSUPPORTED_RESULT_TYPE",
             )
         if parsed_prefix:
             result.base_type, result.kind = parsed_prefix
@@ -2261,6 +2268,7 @@ class FortranParser:
                 filename=filename,
                 line_number=lineno,
                 source_line=source_line,
+                code="PARSE_MALFORMED_HEADER",
             )
         if FortranParser._looks_like_procedure_header(stripped):
             raise FortranParseError(
@@ -2268,6 +2276,7 @@ class FortranParser:
                 filename=filename,
                 line_number=lineno,
                 source_line=source_line,
+                code="PARSE_MALFORMED_HEADER",
             )
 
     @staticmethod
@@ -2380,6 +2389,7 @@ class FortranParser:
                 filename=filename,
                 line_number=line_number,
                 source_line=source_line,
+                code="PARSE_DUPLICATE_DECLARATION",
             )
         proc_state["typed_symbols"].add(key)
         return key
@@ -2425,6 +2435,7 @@ class FortranParser:
                 filename=filename,
                 line_number=line_number,
                 source_line=source_line,
+                code="PARSE_UNKNOWN_PARAMETER_TYPE",
             )
         if key in proc_state["local_params"]:
             raise FortranParseError(
@@ -2432,6 +2443,7 @@ class FortranParser:
                 filename=filename,
                 line_number=line_number,
                 source_line=source_line,
+                code="PARSE_DUPLICATE_PARAMETER",
             )
         proc_state["local_params"][key] = value
         if register_implicit_if_missing and not self._proc_scope_symbol_is_declared(proc_state, key):
@@ -2449,7 +2461,11 @@ class FortranParser:
         filename: str | None = None,
     ) -> None:
         if key in scope:
-            raise FortranParseError(f"Duplicate symbol '{key}' in {label}.", filename=filename)
+            raise FortranParseError(
+                f"Duplicate symbol '{key}' in {label}.",
+                filename=filename,
+                code="PARSE_DUPLICATE_SYMBOL",
+            )
         scope[key] = value
 
     # ------------------------------------------------------------------
@@ -2531,7 +2547,11 @@ class FortranParser:
         """
         target = scope.model
         if target is None:  # pragma: no cover - internal helper misuse.
-            raise FortranParseError("Module-like specification scope is missing a target model.", filename=filename)
+            raise FortranParseError(
+                "Module-like specification scope is missing a target model.",
+                filename=filename,
+                code="PARSE_INTERNAL_STATE",
+            )
         stripped = line.strip()
         lower = stripped.lower()
 
@@ -2542,6 +2562,7 @@ class FortranParser:
                 filename=filename,
                 line_number=lineno,
                 source_line=source_line,
+                code="PARSE_UNSUPPORTED_OPENMP_DIRECTIVE",
             )
 
         if scope.kind == "module":
@@ -2565,6 +2586,7 @@ class FortranParser:
                 filename=filename,
                 line_number=lineno,
                 source_line=source_line,
+                code="PARSE_MISSING_DERIVED_TYPE_END",
             )
 
         if "::" in stripped:
@@ -2594,6 +2616,7 @@ class FortranParser:
                     filename=filename,
                     line_number=lineno,
                     source_line=source_line,
+                    code="PARSE_EXECUTABLE_IN_SPECIFICATION",
                 )
             return
 
@@ -2622,6 +2645,7 @@ class FortranParser:
             filename=filename,
             line_number=lineno,
             source_line=source_line,
+            code="PARSE_UNSUPPORTED_DECLARATION",
         )
 
     def _helper_visit_procedure_spec_line(self, line: str, proc_state: dict, filename: str | None = None, lineno: int | None = None, source_line: str | None = None) -> None:
@@ -2646,6 +2670,7 @@ class FortranParser:
                 filename=filename,
                 line_number=lineno,
                 source_line=source_line,
+                code="PARSE_UNSUPPORTED_OPENMP_DIRECTIVE",
             )
         if self._handle_proc_implicit_line(stripped, proc_state):
             return
@@ -2713,7 +2738,11 @@ class FortranParser:
         """
         dtype = scope.model
         if dtype is None:  # pragma: no cover - internal helper misuse.
-            raise FortranParseError("Derived-type specification scope is missing a target model.", filename=filename)
+            raise FortranParseError(
+                "Derived-type specification scope is missing a target model.",
+                filename=filename,
+                code="PARSE_INTERNAL_STATE",
+            )
         stripped = line.strip()
         if re.match(r"^type\s*::\s*\w+$", stripped, re.IGNORECASE):
             raise FortranParseError(
@@ -2721,6 +2750,7 @@ class FortranParser:
                 filename=filename,
                 line_number=lineno,
                 source_line=source_line,
+                code="PARSE_MISSING_DERIVED_TYPE_END",
             )
         if stripped.lower() in {"sequence", "private"}:
             return
@@ -2730,6 +2760,7 @@ class FortranParser:
                 filename=filename,
                 line_number=lineno,
                 source_line=source_line,
+                code="PARSE_UNSUPPORTED_OPENMP_DIRECTIVE",
             )
         parsed = self._helper_parse_declaration_line(
             stripped,
@@ -2755,6 +2786,7 @@ class FortranParser:
             filename=filename,
             line_number=lineno,
             source_line=source_line,
+            code="PARSE_UNSUPPORTED_DECLARATION",
         )
 
     def _parse_derived_type_contains_line(
@@ -2793,6 +2825,7 @@ class FortranParser:
             filename=filename,
             line_number=lineno,
             source_line=source_line,
+            code="PARSE_UNSUPPORTED_TYPE_BOUND_DECLARATION",
         )
 
     def _helper_apply_local_interface_declarations(
@@ -2991,7 +3024,11 @@ class FortranParser:
         if role == "procedure_symbol":
             proc_state = scope.state
             if proc_state is None:  # pragma: no cover - internal helper misuse.
-                raise FortranParseError("Procedure declaration scope is missing state.", filename=filename)
+                raise FortranParseError(
+                    "Procedure declaration scope is missing state.",
+                    filename=filename,
+                    code="PARSE_INTERNAL_STATE",
+                )
             if meta["base_type"] == "procedure" and meta["kind"] in proc_state.get("imports", set()):
                 meta["kind"] = None
             for entity in split_csv(right):
@@ -3019,7 +3056,11 @@ class FortranParser:
 
         target = scope.model
         if target is None:  # pragma: no cover - internal helper misuse.
-            raise FortranParseError("Declaration scope is missing a target model.", filename=filename)
+            raise FortranParseError(
+                "Declaration scope is missing a target model.",
+                filename=filename,
+                code="PARSE_INTERNAL_STATE",
+            )
 
         for entity in split_csv(right):
             initializer = entity.split("=", 1)[1].strip() if "=" in entity else None
@@ -3347,6 +3388,7 @@ class FortranParser:
             filename=filename,
             line_number=lineno,
             source_line=source_line,
+            code="PARSE_UNSUPPORTED_DECLARATION",
         )
 
     # ------------------------------------------------------------------
@@ -3385,6 +3427,7 @@ class FortranParser:
                 raise FortranParseError(
                     f"Failed to resolve declared argument '{arg.name}' in procedure '{sig.name}'.",
                     filename=filename,
+                    code="PARSE_UNRESOLVED_ARGUMENT_TYPE",
                 )
         local_resolver = _CompileTimeResolver(local_params)
         for arg in sig.arguments:
@@ -3438,6 +3481,7 @@ class FortranParser:
                 raise FortranParseError(
                     f"Unknown datatype for function result '{sig.result.name}' in procedure '{sig.name}'.",
                     filename=filename,
+                    code="PARSE_UNKNOWN_FUNCTION_RESULT_TYPE",
                 )
         if sig.kind == "function":
             self._validate_function_result(sig, filename)
@@ -3455,16 +3499,19 @@ class FortranParser:
                 raise FortranParseError(
                     f"Argument '{arg.name}' in procedure '{sig.name}' has no type declaration (implicit none is active).",
                     filename=filename,
+                    code="PARSE_IMPLICIT_NONE_UNDECLARED_SYMBOL",
                 )
         if sig.kind == "function" and sig.result and sig.result.base_type == "unknown":
             if explicit_result:
                 raise FortranParseError(
                     f"Unknown datatype for function result '{sig.result.name}' in procedure '{sig.name}'.",
                     filename=filename,
+                    code="PARSE_UNKNOWN_FUNCTION_RESULT_TYPE",
                 )
             raise FortranParseError(
                 f"Function result '{sig.result.name}' in procedure '{sig.name}' has no type declaration (implicit none is active).",
                 filename=filename,
+                code="PARSE_IMPLICIT_NONE_UNDECLARED_SYMBOL",
             )
 
     @staticmethod
@@ -3473,6 +3520,7 @@ class FortranParser:
             raise FortranParseError(
                 f"Function '{sig.name}' has no result variable.",
                 filename=filename,
+                code="PARSE_MISSING_FUNCTION_RESULT",
             )
         result_name = sig.result.name.lower()
         func_name = sig.name.lower()
@@ -3481,6 +3529,7 @@ class FortranParser:
                 raise FortranParseError(
                     f"Function result variable '{sig.result.name}' in function '{sig.name}' shadows an argument name.",
                     filename=filename,
+                    code="PARSE_RESULT_SHADOWS_ARGUMENT",
                 )
 
     @staticmethod
@@ -3508,6 +3557,7 @@ class FortranParser:
                     raise FortranParseError(
                         f"Duplicate variable '{var.name}' in {owner_kind} '{display_name}'.",
                         filename=filename,
+                        code="PARSE_DUPLICATE_VARIABLE",
                     )
                 continue  # pragma: no cover - exact duplicate declarations are invalid Fortran and tolerated defensively.
             seen[key] = var
@@ -3548,6 +3598,7 @@ class FortranParser:
                 raise FortranParseError(
                     f"Unknown type for variable '{var.name}' in module '{module.name}'.",
                     filename=filename,
+                    code="PARSE_UNKNOWN_VARIABLE_TYPE",
                 )
 
     @staticmethod
@@ -3558,12 +3609,14 @@ class FortranParser:
                 raise FortranParseError(
                     f"Duplicate field '{f.name}' in derived type '{dtype.name}'.",
                     filename=filename,
+                    code="PARSE_DUPLICATE_FIELD",
                 )
             seen.add(f.name.lower())
             if f.base_type == "unknown":  # pragma: no cover - unknown type fields raise before finalization.
                 raise FortranParseError(
                     f"Unknown type for field '{f.name}' in derived type '{dtype.name}'.",
                     filename=filename,
+                    code="PARSE_UNKNOWN_FIELD_TYPE",
                 )
 
     @staticmethod
@@ -3583,6 +3636,7 @@ class FortranParser:
                     filename=filename,
                     line_number=line_number,
                     source_line=source_line,
+                    code="PARSE_DUPLICATE_ARGUMENT",
                 )
             seen.add(key)
 

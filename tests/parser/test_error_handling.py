@@ -34,7 +34,7 @@ end subroutine bad
         parse_fortran_file(code, filename="myfile.f90")
     msg = str(exc_info.value)
     assert "myfile.f90:3:1" in msg
-    assert "error[PARSE001]" in msg
+    assert "error[PARSE_UNSUPPORTED_DECLARATION]" in msg
 
 
 def test_parse_error_message_includes_source_line():
@@ -73,7 +73,7 @@ end subroutine bad
         parse_fortran_file(code, filename="myfile.f90")
 
     diagnostic = exc_info.value.format_diagnostic(color=False)
-    assert "myfile.f90:3:1: error[PARSE001]:" in diagnostic
+    assert "myfile.f90:3:1: error[PARSE_UNSUPPORTED_DECLARATION]:" in diagnostic
     assert "Unknown or unsupported datatype" in diagnostic
     assert "3 |   weirdtype :: x" in diagnostic
     assert "| ^" in diagnostic
@@ -779,7 +779,7 @@ def test_fortran_parser_rejects_invalid_non_fortran_syntax_outside_execution_bod
     ) as exc_info:
         parse_fortran_file(code, filename="mixed.f90")
 
-    assert exc_info.value.code in {"PARSE_INVALID_SYNTAX", "PARSE001"}
+    assert exc_info.value.code in {"PARSE_INVALID_SYNTAX", "PARSE_UNSUPPORTED_DECLARATION"}
 
 
 def test_fortran_parser_ignores_non_fortran_syntax_after_execution_boundary():

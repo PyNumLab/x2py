@@ -255,10 +255,10 @@ def test_c_parse_error_attributes_and_diagnostic_formatting():
     assert err.line_number == 2
     assert err.column == 5
     assert err.base_message == "unexpected token"
-    assert err.code == "CPARSE001"
+    assert err.code == "CPARSE_ERROR"
 
     diagnostic = err.format_diagnostic(color=False, debug=True)
-    assert "bad.h:2:5: error[CPARSE001]: unexpected token" in diagnostic
+    assert "bad.h:2:5: error[CPARSE_ERROR]: unexpected token" in diagnostic
     assert "2 | int broken(;" in diagnostic
     assert "note: parser raised at" in diagnostic
 

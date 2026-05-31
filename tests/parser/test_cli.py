@@ -189,7 +189,7 @@ end subroutine bad
     assert res.returncode == 1
     assert res.stdout == ""
     assert "Traceback" not in res.stderr
-    assert f"{f90}:2:1: error[PARSE001]:" in res.stderr
+    assert f"{f90}:2:1: error[PARSE_UNSUPPORTED_DECLARATION]:" in res.stderr
     assert "2 |   weirdtype :: x" in res.stderr
 
 
@@ -273,7 +273,7 @@ end subroutine bad
 
     assert res.returncode == 1
     assert "\033[" not in res.stderr
-    assert f"{f90}:2:1: error[PARSE001]:" in res.stderr
+    assert f"{f90}:2:1: error[PARSE_UNSUPPORTED_DECLARATION]:" in res.stderr
 
 
 
@@ -563,7 +563,7 @@ def test_cli_fortran_rejects_embedded_c_declaration_outside_execution_body(tmp_p
     )
 
     assert result.returncode == 1
-    assert "PARSE001" in result.stderr
+    assert "PARSE_UNSUPPORTED_DECLARATION" in result.stderr
     assert "Unknown or unsupported datatype declaration" in result.stderr
 
 

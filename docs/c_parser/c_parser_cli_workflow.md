@@ -189,7 +189,7 @@ Current C behavior also accepts `--no-color`. `CParseError` supports
 compiler-style diagnostic formatting and the `C_PARSER_DEBUG` environment
 variable. The current grammar subset is tolerant for recoverable unsupported
 declaration forms, but invalid primitive-specifier combinations raise
-`CPARSE003`; unresolved single typedef-name uses are deferred until type
+`CPARSE_INVALID_SPECIFIER_SEQUENCE`; unresolved single typedef-name uses are deferred until type
 resolution can determine whether a declaration exists.
 `--debug-traceback` remains accepted as a compatibility alias.
 
@@ -561,16 +561,14 @@ Invalid primitive-specifier combinations that are independent of symbol
 resolution are fatal:
 
 ```text
-src/api.h:12:1: error[CPARSE003]: Invalid type specifier sequence 'unsigned float'.
+src/api.h:12:1: error[CPARSE_INVALID_SPECIFIER_SEQUENCE]: Invalid type specifier sequence 'unsigned float'.
 12 | unsigned float value;
    | ^
 ```
 
 Grammar-invalid C syntax is also fatal and uses
-`CPARSE_INVALID_SYNTAX`. Diagnostic codes are stable category identifiers for
-tests, tools, and documentation. A numeric suffix such as the one in
-`CPARSE003` is not a source line number, an occurrence counter, or an exit
-status. The shared registry is
+`CPARSE_INVALID_SYNTAX`. Diagnostic codes are stable, explicit category
+identifiers for tests, tools, and documentation. The shared registry is
 [`docs/diagnostic_codes.md`](../diagnostic_codes.md).
 
 Debug behavior:
@@ -649,8 +647,8 @@ Completed order:
 12. Replaced generic type references and declaration-kind tags with concrete
     `CType` subclasses, `CComposedType` components, and concrete declaration
     objects.
-13. Added order-insensitive primitive specifier validation and `CPARSE003`
-    errors for invalid primitive combinations while retaining unresolved
+13. Added order-insensitive primitive specifier validation and
+    `CPARSE_INVALID_SPECIFIER_SEQUENCE` errors for invalid primitive combinations while retaining unresolved
     typedef-name references for later resolution.
 14. Added field-level source locations, flexible array member classification
     and invalid-use diagnostics, plus explicit bit-field regression coverage.

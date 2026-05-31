@@ -107,9 +107,9 @@ def test_invalid_primitive_specifier_sequences_raise_parse_errors(source, expect
     with pytest.raises(CParseError, match="Invalid type specifier sequence") as error:
         parse_c_file(source, filename="invalid_specifiers.h")
 
-    assert error.value.code == "CPARSE003"
+    assert error.value.code == "CPARSE_INVALID_SPECIFIER_SEQUENCE"
     assert (
-        f"invalid_specifiers.h:1:{expected_column}: error[CPARSE003]"
+        f"invalid_specifiers.h:1:{expected_column}: error[CPARSE_INVALID_SPECIFIER_SEQUENCE]"
         in error.value.format_diagnostic(color=False)
     )
 

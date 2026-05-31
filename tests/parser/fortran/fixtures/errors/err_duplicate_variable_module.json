@@ -5,7 +5,7 @@
     "Duplicate variable 'n' in module 'm'."
   ],
   "diagnostic_contains": [
-    "error[PARSE001]",
+    "error[PARSE_DUPLICATE_VARIABLE]",
     "Duplicate variable 'n' in module 'm'.",
     ""
   ]

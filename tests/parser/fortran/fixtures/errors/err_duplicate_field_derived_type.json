@@ -5,7 +5,7 @@
     "Duplicate field 'x' in derived type 'point'."
   ],
   "diagnostic_contains": [
-    "error[PARSE001]",
+    "error[PARSE_DUPLICATE_FIELD]",
     "Duplicate field 'x' in derived type 'point'.",
     ""
   ]

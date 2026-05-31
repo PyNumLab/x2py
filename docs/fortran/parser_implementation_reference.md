@@ -314,7 +314,7 @@ stage separation, and `--semantics --wrap-readiness`.
 
 Dedicated tests for the error handling system:
 - `FortranParseError` attribute presence (`filename`, `line_number`, `source_line`, `base_message`, `code`)
-- Compiler-style diagnostic formatting with `PARSE001`, source line context, and caret marker
+- Compiler-style diagnostic formatting with explicit categories, source line context, and caret marker
 - ANSI color formatting and environment-variable debug activation
 - Error raised for all error categories in all scopes: procedures, modules, derived types, interfaces
 - Line number accuracy
@@ -673,14 +673,15 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
 - `line_number` — 1-based line number in the original source where the error was detected
 - `source_line` — the original (pre-preprocessed) source line text
 - `base_message` — the stable error message without source/location context
-- `code` — stable diagnostic category identifier; current parser errors default
-  to `PARSE001`, while grammar rejection uses `PARSE_INVALID_SYNTAX`
+- `code` — stable, explicit diagnostic category identifier; manually
+  constructed fallback errors use `PARSE_ERROR`, while grammar rejection uses
+  `PARSE_INVALID_SYNTAX`
 - `parser_file`, `parser_line_number`, `parser_function` — internal raise-site metadata used only for debug diagnostics
 
 The formatted `str()` of `FortranParseError` is a compiler-style diagnostic:
 
 ```text
-<filename>:<line>:1: error[PARSE001]: <base_message>
+<filename>:<line>:1: error[<CATEGORY>]: <base_message>
   |
 <N> | <source_line>
   | ^
@@ -691,9 +692,8 @@ Use `error.format_diagnostic(color=True)` to add ANSI color and
 line with the internal parser location. `format_diagnostic(debug=None)` also
 honors `FORTRAN_PARSER_DEBUG=1`.
 
-The numeric suffix in a code such as `PARSE001` identifies an error category
-for tests, tools, and documentation. It is not a line number, an occurrence
-counter, or an exit status. The shared registry is
+The category name identifies the failure class for tests, tools, and
+documentation. The shared registry is
 [`docs/diagnostic_codes.md`](../diagnostic_codes.md).
 
 CLI contract:
