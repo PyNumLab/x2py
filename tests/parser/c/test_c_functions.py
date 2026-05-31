@@ -165,6 +165,24 @@ int run(void)
     assert [function.name for function in parsed.functions] == ["run"]
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        "struct bad { @@@; };\n",
+        "enum bad { OK, @@@ };\n",
+        "int run(@@@);\n",
+        "int run(int first, ..., int last);\n",
+    ],
+)
+def test_c_parser_rejects_invalid_nested_grammar_units(source):
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError, match="Invalid C syntax") as exc_info:
+        parse_c_file(source, filename="invalid_nested.h")
+
+    assert exc_info.value.code == "CPARSE_INVALID_SYNTAX"
+
+
 def test_control_flow_conditions_inside_function_body_do_not_look_like_knr_definitions():
     from c_parser import parse_c_file
 

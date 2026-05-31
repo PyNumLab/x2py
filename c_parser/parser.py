@@ -116,8 +116,6 @@ _UNSUPPORTED_DECLARATION_MARKERS = (
     "_Alignas",
     "alignas",
 )
-_CXX_DECLARATION_KEYWORDS = {"using", "namespace", "template", "class"}
-_CXX_ACCESS_SPECIFIERS = {"public", "private", "protected"}
 _RAW_CONDITIONAL_DIRECTIVE_RE = re.compile(
     r"^\s*#\s*(?P<directive>if|ifdef|ifndef|elif|else|endif)\b"
 )
@@ -230,6 +228,12 @@ class _InvalidSpecifierSequence(ValueError):
     pass
 
 
+class _InvalidCGrammarSyntax(ValueError):
+    """Raised internally when a nested C grammar region is malformed."""
+
+    pass
+
+
 def _looks_like_existing_source_path(value: object) -> bool:
     """Return whether `value` can safely be treated as an existing source path."""
     if isinstance(value, Path):
@@ -272,21 +276,6 @@ def _is_header_key(key: str) -> bool:
 def _is_source_key(key: str) -> bool:
     """Return whether a project key names a C source file."""
     return PurePosixPath(key).suffix.lower() == ".c"
-
-
-def _looks_like_cxx_declaration(text: str) -> bool:
-    """Detect obvious C++ declarations so they become explicit diagnostics."""
-    stripped = text.lstrip()
-    identifier = _IDENTIFIER_RE.match(stripped)
-    if identifier is None:
-        return False
-
-    word = identifier.group(0)
-    if word in _CXX_DECLARATION_KEYWORDS:
-        return True
-    if word in _CXX_ACCESS_SPECIFIERS:
-        return stripped[identifier.end() :].lstrip().startswith(":")
-    return False
 
 
 class CParser:
@@ -584,7 +573,7 @@ class CParser:
     @staticmethod
     def _raise_for_invalid_top_level_syntax(segment: CTopLevelSegment) -> None:
         text = segment.text.strip()
-        if not text or _looks_like_cxx_declaration(text):
+        if not text:
             return
         tokens = lex_c_source(text)
         has_scope_operator = any(
@@ -603,6 +592,25 @@ class CParser:
             line_number=segment.original_start_line,
             column=segment.original_start_column,
             source_line=segment.original_source_line,
+            code="CPARSE_INVALID_SYNTAX",
+        )
+
+    def _invalid_syntax_error(
+        self,
+        segment: CTopLevelSegment,
+        text: str,
+        *,
+        context: str,
+        offset: int = 0,
+    ) -> CParseError:
+        """Build the fatal diagnostic used when a C grammar region is invalid."""
+        location = self._source_location_at(segment, offset)
+        return CParseError(
+            f"Invalid C syntax in {context}: {text.strip()}",
+            filename=location.filename,
+            line_number=location.line,
+            column=location.column,
+            source_line=location.source_line,
             code="CPARSE_INVALID_SYNTAX",
         )
 
@@ -1183,7 +1191,7 @@ class CParser:
             line_number=location.line,
             column=location.column,
             source_line=location.source_line,
-            code="CPARSE003",
+            code="CPARSE_INVALID_SPECIFIER_SEQUENCE",
         )
 
     def _atomic_type_specifier_parts(self, spec_text: str) -> tuple[str, str] | None:
@@ -1669,7 +1677,7 @@ class CParser:
             return None
         spec_text, declarator = self._split_declaration_specifiers(stripped)
         if not spec_text:
-            return None
+            raise _InvalidCGrammarSyntax(f"Invalid parameter declaration: {stripped}")
         name, type_, _storage, _function_specifiers, _direct_function = self._build_declared_type(
             spec_text,
             declarator,
@@ -1724,13 +1732,17 @@ class CParser:
 
         parameters: list[CParameter] = []
         variadic = False
-        for item in top_level_split(stripped, ","):
+        items = top_level_split(stripped, ",")
+        for index, item in enumerate(items):
             if item == "...":
+                if variadic or index != len(items) - 1:
+                    raise _InvalidCGrammarSyntax("The variadic marker must be the final function parameter.")
                 variadic = True
                 continue
             parameter = self._parse_parameter(item)
-            if parameter is not None:
-                parameters.append(parameter)
+            if parameter is None:
+                raise _InvalidCGrammarSyntax(f"Invalid parameter declaration: {item}")
+            parameters.append(parameter)
         return parameters, variadic
 
     def _is_knr_definition(self, segment: CTopLevelSegment, parameters_text: str) -> bool:
@@ -1803,7 +1815,7 @@ class CParser:
                         line_number=mapping.line if mapping is not None else index + 1,
                         column=max(line.find(name_match.group(0)) + 1, 1),
                         source_line=source_line,
-                        code="CPARSE002",
+                        code="CPARSE_UNSUPPORTED_KNR_DEFINITION",
                     )
                 if stripped.endswith(";"):
                     saw_old_style_declaration = True
@@ -1821,7 +1833,7 @@ class CParser:
                     line_number=mapping.line if mapping is not None else index + 1,
                     column=max(line.find(name_match.group(0)) + 1, 1),
                     source_line=source_line,
-                    code="CPARSE002",
+                    code="CPARSE_UNSUPPORTED_KNR_DEFINITION",
                 )
 
     def _prototype_style(self, parameters_text: str) -> str:
@@ -1857,7 +1869,7 @@ class CParser:
                     line_number=segment.original_start_line,
                     column=segment.original_start_column,
                     source_line=segment.original_source_line,
-                    code="CPARSE002",
+                    code="CPARSE_UNSUPPORTED_KNR_DEFINITION",
                 )
         return self._function_from_type(
             name,
@@ -2196,6 +2208,13 @@ class CParser:
         """Parse struct/union member declarations through the shared backend."""
         members: list[CVariable] = []
         diagnostics: list[CDiagnostic] = []
+        if body.strip() and not body.rstrip().endswith(";"):
+            raise self._invalid_syntax_error(
+                segment,
+                body,
+                context=f"{owner_kind} field declaration",
+                offset=body_offset,
+            )
         for text, field_offset in top_level_split_with_offsets(body, ";"):
             member_offset = body_offset + field_offset
             member_location = self._source_location_at(segment, member_offset)
@@ -2239,17 +2258,21 @@ class CParser:
                     )
                 )
                 continue
+            if "::" in text:
+                raise self._invalid_syntax_error(
+                    segment,
+                    text,
+                    context=f"{owner_kind} field declaration",
+                    offset=member_offset,
+                )
             spec_text, declarator_list = self._split_declaration_specifiers(text)
             if not spec_text or not declarator_list:
-                diagnostics.append(
-                    self._field_diagnostic(
-                        segment,
-                        owner_kind,
-                        "Unsupported field declaration.",
-                        offset=member_offset,
-                    )
+                raise self._invalid_syntax_error(
+                    segment,
+                    text,
+                    context=f"{owner_kind} field declaration",
+                    offset=member_offset,
                 )
-                continue
             for declarator in top_level_split(declarator_list, ","):
                 declaration, _initializer = top_level_partition(declarator, "=")
                 declaration, bit_width = top_level_partition(declaration, ":")
@@ -2293,10 +2316,10 @@ class CParser:
             name_text, value = top_level_partition(item, "=")
             identifier = self._read_identifier(name_text.strip(), 0)
             if identifier is None:
-                continue
+                raise self._invalid_syntax_error(segment, item, context="enum member")
             name, end = identifier
             if name_text[end:].strip():
-                continue
+                raise self._invalid_syntax_error(segment, item, context="enum member")
             constants.append(
                 CEnumerator(
                     name=name,
@@ -2402,7 +2425,6 @@ class CParser:
             not text
             or text.startswith("_Static_assert")
             or self._has_unsupported_declaration_marker(text)
-            or _looks_like_cxx_declaration(text)
         ):
             return [], [], [], []
 
@@ -2418,13 +2440,10 @@ class CParser:
         if not text:
             return None
 
-        kind = "unsupported_declaration"
-        message = "Unsupported C declaration form."
+        kind = ""
+        message = ""
 
-        if _looks_like_cxx_declaration(text):
-            kind = "cxx_declaration"
-            message = "C++ declaration syntax is not supported by the C parser."
-        elif text.startswith("struct "):
+        if text.startswith("struct "):
             kind = "struct_definition"
             message = "Struct definitions are not supported yet."
         elif text.startswith("union "):
@@ -2445,6 +2464,8 @@ class CParser:
         elif "{" in text or "}" in text:
             kind = "brace_declaration"
             message = "Unsupported declaration containing braces."
+        else:
+            return None
 
         return CDiagnostic(
             code="C_UNSUPPORTED_DECLARATION",
@@ -2521,12 +2542,10 @@ class CParser:
                     )
                 )
                 continue
-            if _looks_like_cxx_declaration(segment.text):
-                unsupported = self._unsupported_declaration_diagnostic(segment)
-                if unsupported is not None:
-                    diagnostics.append(unsupported)
-                continue
-            tag_definition = self._parse_tag_definition(segment)
+            try:
+                tag_definition = self._parse_tag_definition(segment)
+            except _InvalidCGrammarSyntax as error:
+                raise self._invalid_syntax_error(segment, str(error), context="nested declaration") from None
             if tag_definition is not None:
                 aggregate, parsed_functions, parsed_typedefs, parsed_variables, parsed_diagnostics = tag_definition
                 if isinstance(aggregate, CStruct):
@@ -2551,6 +2570,8 @@ class CParser:
                 except _UnsupportedDeclaratorSyntax as error:
                     diagnostics.append(self._declarator_diagnostic(segment, str(error)))
                     continue
+                except _InvalidCGrammarSyntax as error:
+                    raise self._invalid_syntax_error(segment, str(error), context="function declaration") from None
                 if function is not None:
                     function.condition_set = condition_sets.get(
                         segment.original_start_line,
@@ -2562,7 +2583,8 @@ class CParser:
                 unsupported = self._unsupported_declaration_diagnostic(segment)
                 if unsupported is not None:
                     diagnostics.append(unsupported)
-                continue
+                    continue
+                raise self._invalid_syntax_error(segment, segment.text, context="top level")
             forward_tag = self._forward_tag(segment)
             if isinstance(forward_tag, CStruct):
                 structs.append(forward_tag)
@@ -2570,9 +2592,12 @@ class CParser:
             if isinstance(forward_tag, CUnion):
                 unions.append(forward_tag)
                 continue
-            parsed_functions, parsed_typedefs, parsed_variables, declarator_diagnostics = self._parse_declaration(
-                segment
-            )
+            try:
+                parsed_functions, parsed_typedefs, parsed_variables, declarator_diagnostics = self._parse_declaration(
+                    segment
+                )
+            except _InvalidCGrammarSyntax as error:
+                raise self._invalid_syntax_error(segment, str(error), context="declaration") from None
             functions.extend(parsed_functions)
             for function in parsed_functions:
                 function.condition_set = condition_sets.get(
@@ -2593,6 +2618,8 @@ class CParser:
                 unsupported = self._unsupported_declaration_diagnostic(segment)
                 if unsupported is not None:
                     diagnostics.append(unsupported)
+                else:
+                    raise self._invalid_syntax_error(segment, segment.text, context="top level")
 
         return functions, structs, unions, enums, typedefs, variables, diagnostics
 

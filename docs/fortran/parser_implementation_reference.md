@@ -40,8 +40,9 @@ another source language.
 - `result(...)` (and tolerant `results(...)`) parsing for function results.  
 - Procedure arguments retained in declared order.  
 - Local variables are ignored for signature argument lists.  
-- Internal procedures inside `contains` blocks are ignored when parsing a
-  parent routine signature.  
+- Internal procedures inside `contains` blocks are structurally sliced, then
+  their declarations and bodies are ignored when parsing a parent routine
+  signature.
 - Interface-contained procedures flagged as `in_interface`.  
 - Procedure-scope `import :: symbol` inside interface bodies is preserved on
   the parsed interface procedure signature as `import(symbol)`.
@@ -299,7 +300,8 @@ Validates command-line behavior for:
 - JSON file writing
 - module/free-procedure name collision handling
 - parse-error diagnostics without tracebacks by default
-- developer traceback opt-in through `--debug-traceback` and `FORTRAN_PARSER_DEBUG=1`
+- developer traceback opt-in through `--debug`, its compatibility alias
+  `--debug-traceback`, and `FORTRAN_PARSER_DEBUG=1`
 - default ANSI color for diagnostics, with `--no-color` and `NO_COLOR=1` opt-out
 - parser JSON remains parse-only and does not include semantic readiness fields
 
@@ -312,7 +314,7 @@ stage separation, and `--semantics --wrap-readiness`.
 
 Dedicated tests for the error handling system:
 - `FortranParseError` attribute presence (`filename`, `line_number`, `source_line`, `base_message`, `code`)
-- Compiler-style diagnostic formatting with `PARSE001`, source line context, and caret marker
+- Compiler-style diagnostic formatting with explicit categories, source line context, and caret marker
 - ANSI color formatting and environment-variable debug activation
 - Error raised for all error categories in all scopes: procedures, modules, derived types, interfaces
 - Line number accuracy
@@ -503,7 +505,9 @@ implemented today:
   procedure is treated as procedure metadata and emitted as an `import(symbol)`
   signature attribute, rather than as a module variable declaration.
 - **Internal procedure scope protection**: nested procedures in a host
-  `contains` block are not merged into the host routine signature.
+  `contains` block are structurally sliced to check their unit boundaries and
+  placement, but their declarations and bodies are not parsed or merged into
+  the host routine signature.
 - **Name-reuse safety across scopes**: fixtures/tests cover same identifier
   reuse in separate host/internal/type scopes to ensure no cross-scope symbol
   pollution.
@@ -669,13 +673,15 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
 - `line_number` — 1-based line number in the original source where the error was detected
 - `source_line` — the original (pre-preprocessed) source line text
 - `base_message` — the stable error message without source/location context
-- `code` — diagnostic code; current parser errors default to `PARSE001`
+- `code` — stable, explicit diagnostic category identifier; manually
+  constructed fallback errors use `PARSE_ERROR`, while grammar rejection uses
+  `PARSE_INVALID_SYNTAX`
 - `parser_file`, `parser_line_number`, `parser_function` — internal raise-site metadata used only for debug diagnostics
 
 The formatted `str()` of `FortranParseError` is a compiler-style diagnostic:
 
 ```text
-<filename>:<line>:1: error[PARSE001]: <base_message>
+<filename>:<line>:1: error[<CATEGORY>]: <base_message>
   |
 <N> | <source_line>
   | ^
@@ -686,14 +692,18 @@ Use `error.format_diagnostic(color=True)` to add ANSI color and
 line with the internal parser location. `format_diagnostic(debug=None)` also
 honors `FORTRAN_PARSER_DEBUG=1`.
 
+The category name identifies the failure class for tests, tools, and
+documentation. The shared registry is
+[`docs/diagnostic_codes.md`](../diagnostic_codes.md).
+
 CLI contract:
 - End-user parse failures are caught, rendered to `stderr` with
   `format_diagnostic(...)`, and return exit status `1`; they do not print Python
   tracebacks by default.
 - CLI diagnostics request ANSI color by default when available.
 - `--no-color` and `NO_COLOR=1` disable ANSI color in CLI diagnostics.
-- `--debug-traceback` re-raises `FortranParseError` so Python prints the full
-  traceback for parser developers.
+- `--debug` re-raises `FortranParseError` so Python prints the full traceback
+  for parser developers. `--debug-traceback` remains a compatibility alias.
 - `FORTRAN_PARSER_DEBUG=1` enables the same traceback/debug behavior without
   changing command-line arguments.
 

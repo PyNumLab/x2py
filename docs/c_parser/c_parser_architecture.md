@@ -65,13 +65,15 @@ Implemented now:
   pointer-adjusted effective `type` values. Declarations prefixed by
   unexpanded object-like macros are deferred as macro dependencies rather than
   misreported as invalid type sequences. Selected unsupported declaration
-  forms, including attributes, alignment specifiers,
-  C++-shaped declarations, and static assertions, are reported as diagnostics with
-  explicit `unit_kind` values. A declarator must be fully consumed before a
-  concrete object is returned; unknown suffixes become diagnostics. Primitive
-  specifier order is normalized, and invalid combinations such as
-  `unsigned float` raise `CParseError` with code `CPARSE003` while a single
-  unresolved typedef-like name remains deferred. Definitions preserve direct
+  forms, including attributes, alignment specifiers and static assertions, are
+  reported as diagnostics with explicit `unit_kind` values. A declarator must
+  be fully consumed before a concrete object is returned; unknown suffixes
+  become diagnostics. Grammar-invalid input raises `CParseError` with
+  `CPARSE_INVALID_SYNTAX`; identifier spellings are not used to guess another
+  language. Primitive specifier order is normalized, and invalid combinations
+  such as `unsigned float` raise `CParseError` with code
+  `CPARSE_INVALID_SPECIFIER_SEQUENCE` while a
+  single unresolved typedef-like name remains deferred. Definitions preserve direct
   `start` and `end` locations from the signature start through the closing
   brace; and K&R-style function definitions raise focused diagnostics.
 - Top-level redeclaration handling merges compatible repeated declarations,
@@ -283,7 +285,8 @@ Current and planned responsibilities:
     helper methods. Function models record prototype-style versus unspecified
     empty parameter lists, function definitions preserve start/end locations,
     K&R-style definitions are rejected with `CParseError`, and invalid
-    primitive-specifier combinations are rejected with `CPARSE003`. Array and
+    primitive-specifier combinations are rejected with
+    `CPARSE_INVALID_SPECIFIER_SEQUENCE`. Array and
     function parameters preserve `declared_type` while effective `type` uses C
     parameter adjustment. Raw declarations beginning with an object-like macro
     name are retained as macro-dependent diagnostics.

@@ -5,7 +5,7 @@
     "Function result 'f' in procedure 'f' has no type declaration (implicit none is active)."
   ],
   "diagnostic_contains": [
-    "error[PARSE001]",
+    "error[PARSE_IMPLICIT_NONE_UNDECLARED_SYMBOL]",
     "Function result 'f' in procedure 'f' has no type declaration (implicit none is active).",
     ""
   ]

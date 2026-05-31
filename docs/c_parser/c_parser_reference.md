@@ -71,7 +71,8 @@ Implemented:
 - raw `#undef` directive provenance in macro metadata
 - concrete primitive `CType` objects, pointer/array composition, and concrete
   qualifier objects
-- order-insensitive primitive specifier matching with `CPARSE003` errors for
+- order-insensitive primitive specifier matching with
+  `CPARSE_INVALID_SPECIFIER_SEQUENCE` errors for
   invalid combinations such as `unsigned float`
 - recursive declarator extraction for parenthesized pointer/array precedence
 - nameless `CFunctionType` signatures for function pointer typedefs and
@@ -357,8 +358,8 @@ type component they qualify. `_Atomic int value;` is stored with a `CAtomic`
 qualifier; `_Atomic(int) value;` is represented the same way, while
 `_Atomic(int *) value;` qualifies the pointer component. Equivalent primitive orderings, such as
 `int unsigned` and `double long`, map to the same concrete type while
-invalid combinations, such as `unsigned float`, raise `CParseError` with
-code `CPARSE003`. A single unresolved typedef-name use remains a `CTypedef`
+invalid combinations, such as `unsigned float`, raise `CParseError` with code
+`CPARSE_INVALID_SPECIFIER_SEQUENCE`. A single unresolved typedef-name use remains a `CTypedef`
 until resolution can establish whether a matching declaration exists.
 
 Nested declarators are `CComposedType` objects whose `components` are read
@@ -398,9 +399,10 @@ Member records carry their own field location. A legal final incomplete array
 member in a struct is marked as `CArray(is_flexible=True)`; non-final,
 sole-member, and union incomplete-array member forms are retained with
 `C_INVALID_FLEXIBLE_ARRAY_MEMBER` error diagnostics.
-Selected unsupported forms, such as static assertions,
-attributes, alignment specifiers, and C++-shaped declarations, are reported in `diagnostics` with
-explicit `unit_kind` values.
+Selected unsupported forms, such as static assertions, attributes, and
+alignment specifiers, are reported in `diagnostics` with explicit `unit_kind`
+values. Grammar-invalid input raises `CParseError`; identifier spellings are not
+used to guess that input belongs to another language.
 Unconsumed declarator suffixes are also diagnosed instead of producing partial
 objects. Functions
 include `prototype_style`, currently `"prototype"` for
@@ -490,7 +492,8 @@ x2py path/to/api.h --language c --parse --out report.json
 There is no separate `--parse-c` alias: `--language c --parse` is the shared
 language-selection form. Auto-detection remains deferred: a `.c`, `.h`, or
 `.i` input without `--language c` exits with language-selection guidance.
-Explicit C input containing unmistakable non-C syntax raises a fatal parser diagnostic instead of emitting a partial C
+Explicit C input containing syntax that cannot be consumed by the modeled C
+grammar raises a fatal parser diagnostic instead of emitting a partial C
 interface.
 
 ## Current JSON Output
@@ -595,10 +598,14 @@ non-fatal metadata diagnostics, such as unresolved local includes or macros
 that affect declarations but were recorded rather than expanded. K&R-style function
 definitions now raise `CParseError` because the current function parser only
 models prototype-style declarations and definitions. Invalid primitive
-specifier combinations also raise `CParseError` (`CPARSE003`) because their
+specifier combinations also raise `CParseError`
+(`CPARSE_INVALID_SPECIFIER_SEQUENCE`) because their
 invalidity does not depend on later typedef resolution. Known unsupported
 declaration extensions are diagnosed rather than partially modeled; additional
 syntax diagnostics should be added only with focused tests.
+Generic grammar rejection uses `CPARSE_INVALID_SYNTAX`. Diagnostic codes are
+stable, explicit category identifiers for tests, tools, and documentation. The
+shared registry is [`docs/diagnostic_codes.md`](../diagnostic_codes.md).
 
 ## Testing Workflow
 
@@ -668,10 +675,10 @@ Active declaration tests currently cover:
   references
 - `_Atomic int` and `_Atomic(type)` qualifier placement on scalar and pointer
   declaration forms
-- diagnostics for selected unsupported attributes, alignment, C++-shaped
-  declarations, K&R definitions, and trailing declarator extensions
-- fatal diagnostics for invalid primitive-specifier combinations while
-  unresolved single typedef-name uses remain deferred
+- diagnostics for selected unsupported attributes, alignment, K&R definitions,
+  and trailing declarator extensions
+- fatal diagnostics for grammar-invalid syntax and invalid primitive-specifier
+  combinations while unresolved single typedef-name uses remain deferred
 
 This is enough coverage for the currently implemented subset, not for all C
 declarations.

@@ -296,11 +296,11 @@ def test_cli_c_invalid_primitive_specifier_sequence_is_fatal(tmp_path: Path):
     res = subprocess.run(cmd, capture_output=True, text=True)
 
     assert res.returncode == 1
-    assert "error[CPARSE003]: Invalid type specifier sequence 'unsigned float'." in res.stderr
+    assert "error[CPARSE_INVALID_SPECIFIER_SEQUENCE]: Invalid type specifier sequence 'unsigned float'." in res.stderr
     assert "\x1b[" not in res.stderr
 
 
-def test_cli_c_debug_traceback_reraises_parse_errors(tmp_path: Path):
+def test_cli_c_debug_reraises_parse_errors(tmp_path: Path):
     header = tmp_path / "invalid_specifiers.h"
     header.write_text("unsigned float value;\n", encoding="utf-8")
     cmd = [
@@ -311,7 +311,7 @@ def test_cli_c_debug_traceback_reraises_parse_errors(tmp_path: Path):
         "--language",
         "c",
         "--parse",
-        "--debug-traceback",
+        "--debug",
     ]
 
     res = subprocess.run(cmd, capture_output=True, text=True)
@@ -392,6 +392,36 @@ def test_c_parser_module_entrypoint_and_compatibility_exports(tmp_path: Path):
     assert c_module_entrypoint.main is c_parser_cli.main
     assert compatibility_parse_c_project is parse_c_project
     assert c_utils.__all__ == ()
+
+
+def test_c_parser_module_formats_parse_errors_without_traceback(tmp_path: Path):
+    header = tmp_path / "invalid.h"
+    header.write_text("@@@;\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "-m", "c_parser", str(header), "--no-color"],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 1
+    assert "error[CPARSE_INVALID_SYNTAX]" in result.stderr
+    assert "Traceback" not in result.stderr
+
+
+def test_c_parser_module_debug_reraises_parse_errors(tmp_path: Path):
+    header = tmp_path / "invalid.h"
+    header.write_text("@@@;\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "-m", "c_parser", str(header), "--debug"],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 1
+    assert "Traceback" in result.stderr
+    assert "CParseError" in result.stderr
 
 
 def test_x2py_c_compiler_source_loader_drives_semantics_and_readiness(tmp_path: Path, monkeypatch):

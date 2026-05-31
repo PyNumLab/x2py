@@ -44,10 +44,10 @@ recognizable Fortran files and `.pyi` readiness inputs, but a `.c`, `.h`, or
 `.i` path fails with guidance to pass `--language c`; directory and
 unknown-suffix source inputs require an explicit frontend selection. A known C
 path explicitly passed with `--language fortran` is rejected before parsing,
-so it cannot silently produce an empty Fortran interface. The parser also
-rejects foreign syntax found in C input, and the Fortran parser 
-rejects unsupported non-Fortran syntax outside execution
-regions that are intentionally not modeled.
+so it cannot silently produce an empty Fortran interface. Each parser validates
+the grammar regions it models and rejects unparsed syntax outside execution
+regions that are intentionally not modeled. It does not guess a different
+language from identifier or keyword spellings.
 
 The C parser output differs from Fortran parser output by using C-specific
 top-level sections: `functions`, `structs`, `unions`, `enums`, `typedefs`,
@@ -86,8 +86,9 @@ member placement and flexible union members produce
 `parser_status: "partial"`. C parse diagnostics, currently including
 unsupported K&R-style function definitions and invalid primitive-specifier
 combinations such as `unsigned float`, honor `--no-color` and `NO_COLOR=1`.
-Active CLI regression tests also verify that `--debug-traceback` and
-`C_PARSER_DEBUG=1` re-raise fatal C parse errors for debugging.
+Active CLI regression tests also verify that `--debug`,
+`--debug-traceback`, and `C_PARSER_DEBUG=1` re-raise fatal C parse errors for
+debugging.
 Function definitions do not store executable body text; they preserve a
 direct `start` location and `end` location from the signature start through the
 closing brace. Compatible repeated top-level declarations are merged;
@@ -132,7 +133,8 @@ Important current behaviors to preserve:
   keeps parse and readiness payloads in separate top-level sections.
 - Parse diagnostics are compiler-style and go to stderr.
 - Python tracebacks are hidden by default.
-- `--debug-traceback` or parser debug env vars re-raise parse errors.
+- `--debug`, its compatibility alias `--debug-traceback`, or parser debug env
+  vars re-raise parse errors.
 - Diagnostics use ANSI color by default unless `--no-color` or `NO_COLOR=1`
   disables it.
 - Human parse output is a stable tree.
@@ -180,15 +182,16 @@ Initial flags:
 --json
 --out [PATH]
 --no-color
---debug-traceback
+--debug
 ```
 
 Current C behavior also accepts `--no-color`. `CParseError` supports
 compiler-style diagnostic formatting and the `C_PARSER_DEBUG` environment
 variable. The current grammar subset is tolerant for recoverable unsupported
 declaration forms, but invalid primitive-specifier combinations raise
-`CPARSE003`; unresolved single typedef-name uses are deferred until type
+`CPARSE_INVALID_SPECIFIER_SEQUENCE`; unresolved single typedef-name uses are deferred until type
 resolution can determine whether a declaration exists.
+`--debug-traceback` remains accepted as a compatibility alias.
 
 C-specific flags to add only when needed:
 
@@ -539,10 +542,10 @@ Fatal C syntax errors use `CParseError` with the same user experience as
 `FortranParseError`:
 
 ```text
-src/api.h:12:5: error[CPARSE001]: Unsupported declaration.
+src/api.h:12:1: error[CPARSE_INVALID_SYNTAX]: Invalid C syntax at top level: @@@;
    |
-12 |     __attribute__((vector_size(16))) float v;
-   |     ^
+12 | @@@;
+   | ^
 ```
 
 Default CLI behavior:
@@ -558,14 +561,20 @@ Invalid primitive-specifier combinations that are independent of symbol
 resolution are fatal:
 
 ```text
-src/api.h:12:1: error[CPARSE003]: Invalid type specifier sequence 'unsigned float'.
+src/api.h:12:1: error[CPARSE_INVALID_SPECIFIER_SEQUENCE]: Invalid type specifier sequence 'unsigned float'.
 12 | unsigned float value;
    | ^
 ```
 
+Grammar-invalid C syntax is also fatal and uses
+`CPARSE_INVALID_SYNTAX`. Diagnostic codes are stable, explicit category
+identifiers for tests, tools, and documentation. The shared registry is
+[`docs/diagnostic_codes.md`](../diagnostic_codes.md).
+
 Debug behavior:
 
-- `--debug-traceback` re-raises the error
+- `--debug` re-raises the error
+- `--debug-traceback` remains accepted as a compatibility alias
 - `C_PARSER_DEBUG=1` re-raises C parser errors
 - `FORTRAN_PARSER_DEBUG` should not control C behavior
 - a generic `X2PY_DEBUG=1` may be considered later
@@ -588,7 +597,7 @@ The active CLI/parser tests cover the current partial subset:
   include/macro metadata and supported declarations when present.
 - `--language c --parse --out report.json` writes JSON and suppresses stdout.
 - `--language c --parse --no-color` is accepted.
-- `--language c --parse --debug-traceback` is accepted.
+- `--language c --parse --debug` is accepted.
 - raw comment stripping, line-continuation folding, top-level splitting,
   include collection, simple macro collection, function-like macro diagnostics,
   object-like macro declaration-prefix deferral,
@@ -638,8 +647,8 @@ Completed order:
 12. Replaced generic type references and declaration-kind tags with concrete
     `CType` subclasses, `CComposedType` components, and concrete declaration
     objects.
-13. Added order-insensitive primitive specifier validation and `CPARSE003`
-    errors for invalid primitive combinations while retaining unresolved
+13. Added order-insensitive primitive specifier validation and
+    `CPARSE_INVALID_SPECIFIER_SEQUENCE` errors for invalid primitive combinations while retaining unresolved
     typedef-name references for later resolution.
 14. Added field-level source locations, flexible array member classification
     and invalid-use diagnostics, plus explicit bit-field regression coverage.

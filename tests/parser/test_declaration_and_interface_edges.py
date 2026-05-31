@@ -324,39 +324,31 @@ end subroutine arithmetic_shapes
     ]
     assert sig.variables["one"].value == "1"
 
-def test_type_contains_ignores_executable_like_lines_and_rejects_bad_declarations():
-    ok_code = """
-module type_contains_ok_mod
+def test_type_contains_accepts_bindings_and_rejects_other_lines():
+    valid_code = """
+module type_contains_valid_mod
   type :: state
   contains
-    call ignored_statement()
+    procedure :: update
+    final :: destroy
   end type state
-end module type_contains_ok_mod
+end module type_contains_valid_mod
 """
-    bad_code = """
+
+    parsed = parse_fortran_file(valid_code, filename="type_contains_valid.f90")
+    assert parsed.modules[0].derived_types[0].methods == ["update"]
+
+    for invalid_line in ("call ignored_statement()", "!$omp declare target", "integer, public :: bad_binding"):
+        code = f"""
 module type_contains_bad_mod
   type :: state
   contains
-!$omp declare target
+    {invalid_line}
   end type state
 end module type_contains_bad_mod
 """
-    comma_bad_code = """
-module type_contains_comma_bad_mod
-  type :: state
-  contains
-    integer, public :: bad_binding
-  end type state
-end module type_contains_comma_bad_mod
-"""
-
-    parsed = parse_fortran_file(ok_code, filename="type_contains_ok.f90")
-    assert parsed.modules[0].derived_types[0].methods == []
-
-    with pytest.raises(FortranParseError, match="Unsupported or malformed type-bound declaration"):
-        parse_fortran_file(bad_code, filename="type_contains_omp.f90")
-    with pytest.raises(FortranParseError, match="Unsupported or malformed type-bound declaration"):
-        parse_fortran_file(comma_bad_code, filename="type_contains_comma.f90")
+        with pytest.raises(FortranParseError, match="Unsupported or malformed type-bound declaration"):
+            parse_fortran_file(code, filename="type_contains_bad.f90")
 
 def test_malformed_type_bound_declaration_raises():
     code = """
@@ -387,10 +379,8 @@ def test_type_field_spec_variants_and_empty_entities_from_public_source():
     code = """
 module type_field_edges_mod
   type :: state
-    type :: nested_marker
     sequence
     private
-    call ignored_in_type_spec()
     integer :: first, , second
   end type state
 end module type_field_edges_mod
@@ -399,6 +389,19 @@ end module type_field_edges_mod
     dtype = parse_fortran_file(code, filename="type_field_edges.f90").modules[0].derived_types[0]
 
     assert [field.name for field in dtype.fields] == ["first", "second"]
+
+@pytest.mark.parametrize("invalid_line", ["type :: nested_marker", "call invalid_in_type_spec()"])
+def test_type_field_specification_rejects_invalid_nested_syntax(invalid_line):
+    code = f"""
+module type_field_invalid_mod
+  type :: state
+    {invalid_line}
+  end type state
+end module type_field_invalid_mod
+"""
+
+    with pytest.raises(FortranParseError):
+        parse_fortran_file(code, filename="type_field_invalid.f90")
 
 def test_module_like_declaration_edges_from_program_and_module_sources():
     module_code = """
@@ -411,6 +414,8 @@ end module module_spec_edges_mod
     program_code = """
 program type_stmt_program
   type :: local_state
+    integer :: marker
+  end type local_state
   integer :: kept
 end program type_stmt_program
 """

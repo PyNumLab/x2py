@@ -5,7 +5,7 @@
     "Unknown or unsupported datatype declaration in module 'm': weirdtype :: x"
   ],
   "diagnostic_contains": [
-    "error[PARSE001]",
+    "error[PARSE_UNSUPPORTED_DECLARATION]",
     "Unknown or unsupported datatype declaration in module 'm': weirdtype :: x",
     "weirdtype :: x"
   ]

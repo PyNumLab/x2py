@@ -112,9 +112,18 @@ path when `--language` is omitted. C source/header files require explicit
 `--language fortran` or `--language c`. C parsing, semantic IR, `.pyi`
 generation, and wrap-readiness are available in explicit C mode. Selecting a
 frontend that conflicts with a recognized C or Fortran source suffix is an
-error. Once selected, a frontend also rejects unmistakable declarations or
-program-unit syntax that are not from the selected language outside ignored execution/function
-bodies, rather than silently dropping them.
+error. Once selected, a frontend validates the grammar regions it models and
+rejects unparsed syntax outside intentionally ignored execution/function
+bodies, rather than guessing another language from keyword spellings or
+silently dropping malformed input.
+
+Parse failures print a compiler-style diagnostic without a Python traceback.
+Use `--debug` to re-raise the parser error and print the traceback;
+`--debug-traceback` remains accepted as a compatibility alias. Diagnostic codes
+such as `PARSE_UNSUPPORTED_DECLARATION`, `CPARSE_INVALID_SPECIFIER_SEQUENCE`,
+and `CPARSE_INVALID_SYNTAX` are stable, explicit error-category identifiers for
+tests, tools, and documentation. The current categories are listed in
+[`docs/diagnostic_codes.md`](docs/diagnostic_codes.md).
 
 For parse output, `--show-vars` expands scope-level variables that are normally
 summarized as `vars=N`. Use `--print-limit N` to keep large repeated sections
@@ -718,8 +727,12 @@ visitor then parses only its own substring, splits it into header,
 specification, optional execution, and optional `contains` regions, and recurses
 into direct child units where that grammar allows children. Shared declaration
 helpers parse variables, procedure arguments/results, and type fields, then
-push them into the active scope. Procedure execution bodies and internal
-subprograms are ignored for wrapper metadata; procedure-local interfaces are
+push them into the active scope. Nested unit boundaries and placement outside
+execution regions are checked even when they do not produce wrapper metadata.
+Internal procedures inside a host procedure's `contains` block are
+structurally sliced, then their declarations and bodies are skipped. After an
+execution boundary is detected, procedure bodies and standalone included
+execution fragments are intentionally skipped. Procedure-local interfaces are
 retained for callback typing.
 Parameter variables keep both `value` and serialized `symbolic_value` when the
 parser has that information. `value` is literal/evaluated only; if an

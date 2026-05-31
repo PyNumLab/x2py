@@ -106,7 +106,7 @@ def c_model_to_dict(obj: Any, _seen: set[int] | None = None) -> Any:
 class CParseError(ValueError):
     """C parser error with compiler-style diagnostic rendering support."""
 
-    default_code = "CPARSE001"
+    default_code = "CPARSE_ERROR"
 
     def __init__(
         self,

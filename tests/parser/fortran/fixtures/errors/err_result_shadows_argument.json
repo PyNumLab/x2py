@@ -5,7 +5,7 @@
     "Function result variable 'res' in function 'f' shadows an argument name."
   ],
   "diagnostic_contains": [
-    "error[PARSE001]",
+    "error[PARSE_RESULT_SHADOWS_ARGUMENT]",
     "Function result variable 'res' in function 'f' shadows an argument name.",
     ""
   ]

@@ -114,10 +114,13 @@ programs, procedures, derived types, interfaces, and block data are expressed
 by small visitor decisions and grammar flags rather than separate whole-file
 parsing loops.
 
-Procedure execution parts are ignored for wrapper metadata, and
-procedure-internal subprograms are not exported as file/module procedures.
-Procedure-local interface blocks are still visited enough to type callback
-dummy arguments and to preserve interface metadata.
+Nested unit boundaries and placement outside execution regions are checked even
+when they are not exported as wrapper metadata. Internal procedures inside a
+host procedure's `contains` block are structurally sliced, then their
+declarations and bodies are skipped. Once an execution boundary is detected,
+procedure bodies and standalone included execution fragments are intentionally
+skipped. Procedure-local interface blocks are still visited enough to type
+callback dummy arguments and to preserve interface metadata.
 
 ### 2.1 Recursive parser sketch
 
@@ -461,7 +464,7 @@ python -m x2py tests/data/fortran/errors/err_duplicate_argument_name.f90
 Example diagnostic shape:
 
 ```text
-tests/data/fortran/errors/err_duplicate_argument_name.f90:1:1: error[PARSE001]: Duplicate argument name 'x' in procedure 'dup'.
+tests/data/fortran/errors/err_duplicate_argument_name.f90:1:1: error[PARSE_DUPLICATE_ARGUMENT]: Duplicate argument name 'x' in procedure 'dup'.
   |
 1 | subroutine dup(x, y, x)
   | ^
@@ -476,13 +479,15 @@ python -m x2py bad.f90 --no-color
 NO_COLOR=1 python -m x2py bad.f90
 ```
 
-For parser development, use `--debug-traceback` to re-raise
+For parser development, use `--debug` to re-raise
 `FortranParseError` and let Python print the full traceback showing where the
 error was raised internally:
 
 ```bash
-python -m x2py bad.f90 --debug-traceback
+python -m x2py bad.f90 --debug
 ```
+
+`--debug-traceback` remains accepted as a compatibility alias.
 
 The same developer mode can be enabled with the environment variable
 `FORTRAN_PARSER_DEBUG=1`:
@@ -618,13 +623,19 @@ exception keeps structured metadata for consumers:
 - `line_number` — 1-based source line where the error was detected, if known
 - `source_line` — original source text for context, if known
 - `base_message` — stable error text without location/source context
-- `code` — diagnostic code; the default parse diagnostic code is `PARSE001`
+- `code` — stable, explicit diagnostic category identifier; manually
+  constructed fallback errors use `PARSE_ERROR`, while grammar rejection uses
+  `PARSE_INVALID_SYNTAX`
+
+Diagnostic codes are for programmatic matching in tests, tools, and
+documentation. The category name states the failure class directly. The shared
+registry is [`docs/diagnostic_codes.md`](../diagnostic_codes.md).
 
 `str(error)` and `error.format_diagnostic(color=False)` render a
 compiler-style diagnostic:
 
 ```text
-<filename>:<line>:1: error[PARSE001]: <message>
+<filename>:<line>:1: error[<CATEGORY>]: <message>
   |
 <N> | <source line>
   | ^
@@ -642,8 +653,9 @@ disable ANSI output. On Windows, ANSI console compatibility is enabled through
 
 For parser development, `format_diagnostic(debug=True)` appends a note with the
 internal parser file, line, and function that raised the error. The CLI exposes
-this through `--debug-traceback` or `FORTRAN_PARSER_DEBUG=1`; normal CLI parse
-errors intentionally hide Python tracebacks.
+this through `--debug`, its compatibility alias `--debug-traceback`, or
+`FORTRAN_PARSER_DEBUG=1`; normal CLI parse errors intentionally hide Python
+tracebacks.
 
 The sections below list each error category, the triggering condition, and the
 exact `base_message` format (with `<...>` placeholders for runtime values).
@@ -670,7 +682,7 @@ end subroutine bad
 Example error:
 
 ```
-bad.f90:2:1: error[PARSE001]: Unknown or unsupported datatype declaration for procedure 'bad': weirdtype :: x
+bad.f90:2:1: error[PARSE_UNSUPPORTED_DECLARATION]: Unknown or unsupported datatype declaration for procedure 'bad': weirdtype :: x
   |
 2 |   weirdtype :: x
   | ^
@@ -710,7 +722,7 @@ end subroutine dup
 Example error:
 
 ```
-dup.f90:3:1: error[PARSE001]: Duplicate declaration of symbol 'x' in procedure 'dup'.
+dup.f90:3:1: error[PARSE_DUPLICATE_DECLARATION]: Duplicate declaration of symbol 'x' in procedure 'dup'.
   |
 3 |   integer :: x
   | ^
@@ -768,7 +780,7 @@ end subroutine work
 Example error:
 
 ```
-dup.f90:5:1: error[PARSE001]: Duplicate procedure name 'work' in global scope.
+dup.f90:5:1: error[PARSE_DUPLICATE_PROCEDURE]: Duplicate procedure name 'work' in global scope.
   |
 5 | subroutine work(n)
   | ^
@@ -794,62 +806,28 @@ end subroutine dup
 Example error:
 
 ```
-dup_arg.f90:1:1: error[PARSE001]: Duplicate argument name 'x' in procedure 'dup'.
+dup_arg.f90:1:1: error[PARSE_DUPLICATE_ARGUMENT]: Duplicate argument name 'x' in procedure 'dup'.
   |
 1 | subroutine dup(x, y, x)
   | ^
 ```
 
-### 6.5 Star-kind in modern source
+### 6.5 Star-kind declarations
 
-Triggered when a legacy `type*N` (e.g. `real*8`) declaration appears in a file
-with a modern Fortran extension (`.f90`, `.f95`, `.f03`, `.f08`).
-
-```
-Unsupported Fortran 77 star-kind declaration '<type>*<kind>' in modern source '<filename>'.
-```
-
-Example:
+Legacy `type*N` declarations, such as `real*8`, are accepted in both fixed-form
+and modern-extension files. The parser preserves the kind metadata:
 
 ```fortran
-subroutine bad(x)
+subroutine accepted(x)
   real*8 :: x
-end subroutine bad
+end subroutine accepted
 ```
 
-Example error (file `bad.f90`):
+### 6.6 Source-form metadata
 
-```
-bad.f90:2:1: error[PARSE001]: Unsupported Fortran 77 star-kind declaration 'real*8' in modern source 'bad.f90'.
-  |
-2 |   real*8 :: x
-  | ^
-```
-
-### 6.6 Fortran 77 syntax in a `.f77` source file
-
-Triggered when modern constructs (`module`, `contains`, `interface`,
-`class(...)`) appear in a file with extension `.f77`.
-
-```
-Unsupported syntax for Fortran 77 source '<filename>': <line>
-```
-
-Example:
-
-```fortran
-      module bad_module
-      end module bad_module
-```
-
-Example error (file `legacy.f77`):
-
-```
-legacy.f77:1:1: error[PARSE001]: Unsupported syntax for Fortran 77 source 'legacy.f77': module bad_module
-  |
-1 |       module bad_module
-  | ^
-```
+The parser records source-form metadata from the filename and lexer, but does
+not reject a construct solely because a `.f77` suffix was used. Grammar-region
+validation still applies after preprocessing.
 
 ### 6.7 Implicit none — undeclared argument or result
 
@@ -880,7 +858,7 @@ end subroutine foo
 Example error:
 
 ```
-implicit_none.f90:1:1: error[PARSE001]: Argument 'y' in procedure 'foo' has no type declaration (implicit none is active).
+implicit_none.f90:1:1: error[PARSE_IMPLICIT_NONE_UNDECLARED_SYMBOL]: Argument 'y' in procedure 'foo' has no type declaration (implicit none is active).
   |
 1 | subroutine foo(x, y)
   | ^
@@ -907,7 +885,7 @@ end function f
 Example error:
 
 ```
-bad.f90:1:1: error[PARSE001]: Unknown datatype for function result 'res' in procedure 'f'.
+bad.f90:1:1: error[PARSE_UNKNOWN_FUNCTION_RESULT_TYPE]: Unknown datatype for function result 'res' in procedure 'f'.
   |
 1 | function f(x) result(res)
   | ^
@@ -953,7 +931,7 @@ Example:
 Example error:
 
 ```
-legacy.f:4:1: error[PARSE001]: Unknown datatype for PARAMETER symbol 'zero' in procedure 'cst'.
+legacy.f:4:1: error[PARSE_UNKNOWN_PARAMETER_TYPE]: Unknown datatype for PARAMETER symbol 'zero' in procedure 'cst'.
   |
 4 |       parameter ( zero = 0.0e+0 )
   | ^
@@ -980,7 +958,7 @@ end function f
 Example error:
 
 ```
-shadow.f90:1:1: error[PARSE001]: Function result variable 'res' in function 'f' shadows an argument name.
+shadow.f90:1:1: error[PARSE_RESULT_SHADOWS_ARGUMENT]: Function result variable 'res' in function 'f' shadows an argument name.
   |
 1 | function f(res) result(res)
   | ^
