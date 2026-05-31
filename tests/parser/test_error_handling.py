@@ -253,7 +253,7 @@ end module m
     assert all(sig.name.lower() == "work" for sig in procedures)
 
 
-def test_macro_defines_do_not_select_active_branch_in_parser():
+def test_ifdef_macro_branch_is_not_selected_by_parser():
     code = """
 module m
 #ifdef USE_MPI
@@ -270,7 +270,7 @@ contains
 #endif
 end module m
 """
-    parsed = parse_fortran_file(code, filename="macro_alt_work.f90", macro_defines={"USE_MPI"})
+    parsed = parse_fortran_file(code, filename="macro_alt_work.f90")
     procedures = parsed.modules[0].procedures
     assert len(procedures) == 2
     assert {proc.kind for proc in procedures} == {"subroutine", "function"}
@@ -296,7 +296,6 @@ end module m
     parsed = parse_fortran_file(
         code,
         filename="macro_if_expr.f90",
-        macro_defines={"USE_MPI": 1, "USE_SERIAL": 0},
     )
     procedures = parsed.modules[0].procedures
     assert len(procedures) == 2

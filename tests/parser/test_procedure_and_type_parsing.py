@@ -236,7 +236,7 @@ def test_fixed_form_and_interface_detection():
     assert parsed.interfaces[0].procedures[0].in_interface is True
 
 
-def test_preprocessor_macro_defines_do_not_select_active_branch_from_inline_fortran():
+def test_preprocessor_branches_are_preserved_from_inline_fortran():
     source = """
 #ifdef USE_A
 subroutine selected_a(x)
@@ -253,12 +253,10 @@ end subroutine fallback
 #endif
 """
 
-    selected = parse_fortran_file(source, macro_defines={"USE_B": True})
-    fallback = parse_fortran_file(source, macro_defines={"USE_A": False, "USE_B": False})
+    parsed = parse_fortran_file(source)
 
-    assert [proc.name for proc in selected.procedures] == ["selected_a", "selected_b", "fallback"]
-    assert [proc.arguments[0].base_type for proc in selected.procedures] == ["integer", "real", "logical"]
-    assert [proc.name for proc in fallback.procedures] == ["selected_a", "selected_b", "fallback"]
+    assert [proc.name for proc in parsed.procedures] == ["selected_a", "selected_b", "fallback"]
+    assert [proc.arguments[0].base_type for proc in parsed.procedures] == ["integer", "real", "logical"]
 
 
 def test_legacy_character_and_star_kind_declarations_from_inline_fortran():

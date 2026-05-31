@@ -81,6 +81,11 @@ end subroutine from_unknown
     assert parsed_from_path.procedures[0].name == "from_path"
     assert parsed_unknown_suffix.format == "unknown"
 
+@pytest.mark.parametrize("parse", [parse_fortran_file, FortranParser().visit_file])
+def test_public_file_parse_rejects_removed_macro_defines_argument(parse):
+    with pytest.raises(TypeError, match="macro_defines"):
+        parse("", macro_defines={"USE_MPI"})
+
 def test_public_instance_visitor_entrypoints_use_source_strings():
     parser = FortranParser()
 

@@ -97,7 +97,7 @@ end subroutine selected_slow_path
 #endif
 """
 
-    parsed = parse_fortran_file(code, macro_defines={"USE_FAST": True})
+    parsed = parse_fortran_file(code)
 
     assert [proc.name for proc in parsed.procedures] == [
         "fast_path",
@@ -248,7 +248,7 @@ end subroutine malformed_if_else
 #endif
 """
 
-    parsed = parse_fortran_file(code, macro_defines=set())
+    parsed = parse_fortran_file(code)
 
     assert [proc.name for proc in parsed.procedures] == [
         "false_if_branch",
@@ -289,7 +289,7 @@ subroutine after_stray_directives()
 end subroutine after_stray_directives
 """
 
-    parsed = parse_fortran_file(code, filename="cpp_edges.f90", macro_defines={"USE_FAST": True})
+    parsed = parse_fortran_file(code, filename="cpp_edges.f90")
 
     assert [proc.name for proc in parsed.procedures] == [
         "selected_fast",

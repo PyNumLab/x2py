@@ -274,14 +274,9 @@ class FortranParser:
         self,
         source_or_path: str | Path,
         filename: str | None = None,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
         encoding: str = "utf-8",
     ) -> FortranFile:
-        """Parse one source string/path into a `FortranFile` aggregate model.
-
-        `macro_defines` is a legacy no-op. Raw parsing does not evaluate CPP
-        branches; use compiler preprocessing when branch selection is needed.
-        """
+        """Parse one source string/path into a `FortranFile` aggregate model."""
         if filename is None and self._looks_like_existing_source_path(source_or_path):
             path = Path(source_or_path)
             filename = str(path)
@@ -4304,13 +4299,11 @@ _DEFAULT_PARSER = FortranParser()
 def parse_fortran_file(
     source_or_path: str | Path,
     filename: str | None = None,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     encoding: str = "utf-8",
 ) -> FortranFile:
     return _DEFAULT_PARSER.visit_file(
         source_or_path,
         filename=filename,
-        macro_defines=macro_defines,
         encoding=encoding,
     )
 
