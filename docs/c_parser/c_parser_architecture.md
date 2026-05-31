@@ -28,6 +28,8 @@ Implemented now:
 - `c_parser/` package exists and is included in package discovery.
 - `c_parser.models` defines JSON-stable parser dataclasses and `CParseError`.
 - `c_parser.parser` exposes `CParser`, `parse_c_file`, and `parse_c_project`.
+  `CParser.visit_parsed_project` is the documented orchestration hook for
+  assembling translation units that were parsed individually.
 - `x2py` re-exports `parse_c_file` and `parse_c_project`, matching its
   Fortran file/project entrypoint style.
 - `c_parser.parser` keeps parser helpers on `CParser`, matching the Fortran
@@ -284,6 +286,7 @@ Current and planned responsibilities:
     JSON output.
 - `c_parser/parser.py`
   - Implemented: `CParser`, `parse_c_file`, `parse_c_project`,
+    `CParser.visit_parsed_project`,
     translation-unit visiting, declaration/function visitors, grammar-shaped
     recursive declarator parsing, concrete `CType` construction, and aggregate
     member extraction. Helper methods live on `CParser` rather than as broad
@@ -305,8 +308,9 @@ Current and planned responsibilities:
     extension coverage.
 - `c_parser/project.py`
   - Compatibility export for project parsing.
-  - Project behavior is implemented through `CParser.visit_project`, including
-    `.c`/`.h`/`.i` discovery, include graphs, and header/source association.
+  - Project behavior is implemented through `CParser.visit_project` and
+    `CParser.visit_parsed_project`, including `.c`/`.h`/`.i` discovery,
+    include graphs, and header/source association.
 - `c_parser/type_resolver.py`
   - Resolves tag and typedef references, typedef chains/cycles, and aggregate
     references across parsed project files.
@@ -344,12 +348,18 @@ Implemented companion class:
 class CParser:
     def visit_file(...): ...
     def visit_project(...): ...
+    def visit_parsed_project(...): ...
 ```
 
 These entrypoints are exposed from both `c_parser` and `x2py.__init__`, using
 the same top-level file/project invocation pattern already provided for
 Fortran. C semantic conversion is exposed separately through
 `semantics.c2ir` and top-level `x2py` compatibility helpers.
+
+`visit_parsed_project` is a class-level orchestration hook rather than an
+additional module-level wrapper. It is used when a caller preprocesses each
+translation unit first, attaches recipe metadata, and then asks the parser to
+resolve the resulting file set as one `CProject`.
 
 ## Core Model Families
 

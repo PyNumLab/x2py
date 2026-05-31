@@ -84,6 +84,8 @@ Public API entrypoints include:
 - `x2py.parse_c_project(files, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CProject`
 - `x2py.fortran_file_to_semantic_modules(parsed_file, standalone_module_name=None) -> list[SemanticModule]`
 - `x2py.fortran_project_to_semantic_modules(project) -> list[SemanticModule]`
+- `x2py.c_file_to_semantic_modules(parsed_file) -> list[SemanticModule]`
+- `x2py.c_project_to_semantic_modules(project) -> list[SemanticModule]`
 - `x2py.emit_module_stubs(module_or_modules) -> dict[str, str]`
 - `x2py.load_pyi_modules(path_or_paths, encoding="utf-8") -> list[SemanticModule]`
 - `x2py.assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`

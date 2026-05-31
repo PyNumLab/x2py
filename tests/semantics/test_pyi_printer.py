@@ -1,5 +1,6 @@
 import pytest
 
+import x2py
 from x2py import parse_fortran_file as parse_fortran_source
 
 from semantics.fortran2ir import (
@@ -29,6 +30,11 @@ from semantics.models import (
 # ============================================================
 # Helpers
 # ============================================================
+
+def test_x2py_public_api_exports_module_stub_emitter():
+    assert "emit_module_stubs" in x2py.__all__
+    assert x2py.emit_module_stubs is emit_module_stubs
+
 
 def generate_pyi(source: str) -> str:
 

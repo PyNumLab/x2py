@@ -85,14 +85,14 @@ Supported public API:
 ## Parser organization notes
 
 `fortran_parser/parser.py` is now intentionally organized into clearly labeled
-sections so maintainers can navigate the file by concern instead of by history:
+sections and carries an embedded maintainer guide. Start with the thin public
+wrappers at the bottom, then read the class from top to bottom:
 
-- Regex/constants and parser-wide type aliases
-- Module-level helper blocks (source-form rules, preprocessor logic,
-  diagnostics, compile-time expression resolution, dependency ordering)
+- Regex/constants, parser-wide type aliases, private unit dataclasses, and the
+  compile-time resolver
 - `FortranParser` internals grouped by domain:
-  - internal visitor entrypoints (`visit_file`, `visit_project`). The public
-    API remains the module-level wrappers listed above.
+  - public visitor entrypoints (`visit_file`, `visit_project`). The supported
+    module-level API remains the wrappers listed above.
   - source-unit visitors for files, modules, submodules, programs,
     procedures, interfaces, derived types, and block data
   - recursive source-unit slicing (`header`, specification part, execution
@@ -104,6 +104,9 @@ sections so maintainers can navigate the file by concern instead of by history:
     specification-part collection
 - Thin module-level convenience wrappers that delegate to a shared parser
   instance
+
+Parser methods carry focused docstrings, with examples where a compatibility
+visitor or lexical helper is easier to understand from a concrete call.
 
 `visit_file` is the central orchestration path. It first slices the source into
 direct file-level units, then each unit visitor parses only its own substring

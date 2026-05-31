@@ -308,6 +308,30 @@ For cross targets, provide a runner, for example `--runner=qemu-aarch64
 The C semantic converter accepts this report as target context. The parser
 model remains source-faithful and does not embed host ABI assumptions.
 
+## Parser Organization Notes
+
+`c_parser/parser.py` is intentionally ordered for maintainers. Read it from
+top to bottom in these sections:
+
+1. Parser constants, private grammar dataclasses, and small path helpers.
+2. `CParser` public visitors: `visit_file`, `visit_project`, and
+   `visit_parsed_project`.
+3. Source-location, diagnostic, macro-provenance, and redeclaration helpers.
+4. Declaration-specifier and compiler-extension lexical helpers.
+5. Recursive declarator grammar and parameter helpers.
+6. Function and aggregate visitors.
+7. Translation-unit dispatch and project assembly.
+8. Thin module-level wrappers: `parse_c_file` and `parse_c_project`.
+
+Helper methods remain on `CParser` when they depend on parser state. Their
+docstrings describe the narrow parsing responsibility and include examples
+where call shape or grammar behavior is not obvious.
+
+`visit_parsed_project(files)` assembles translation units that a caller has
+already parsed individually. The x2py CLI uses it after compiler preprocessing
+and recipe attachment. Most callers should use `parse_c_project(...)`, which
+handles source loading before delegating to the same project assembly path.
+
 ## Public API
 
 Implemented top-level and package entrypoints:

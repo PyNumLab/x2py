@@ -9,6 +9,24 @@ The public wrappers call the same orchestration object:
     parse_c_file(...) -> CParser.visit_file(...) -> CFile
     parse_c_project(...) -> CParser.visit_project(...) -> CProject
 
+Recommended reading order for maintainers:
+
+1. Start from the module-level wrappers: `parse_c_file` and `parse_c_project`.
+2. Read `CParser.visit_file`, `visit_project`, and `visit_parsed_project`.
+3. Follow `_parse_translation_unit`, which dispatches one top-level C segment.
+4. Read the declaration/declarator helpers used by each dispatched segment.
+5. Finish with `_build_project` and the index helpers.
+
+`CParser` is organized in that same order:
+
+- public visitor entrypoints;
+- source locations, diagnostics, macro provenance, and redeclaration merging;
+- declaration-specifier and compiler-extension lexical helpers;
+- recursive declarator grammar and parameter helpers;
+- function and aggregate visitors;
+- translation-unit dispatch and project assembly;
+- thin module-level wrappers backed by `_DEFAULT_PARSER`.
+
 One source file follows this path:
 
     source text/path
@@ -376,6 +394,14 @@ class CParser:
     The instance carries no parse stack; per-call input and preprocessing
     configuration flow explicitly through `visit_file` and `visit_project`.
     See the module sketch and developer tutorial tests for the helper path.
+
+    Class section map:
+    - public file/project visitor entrypoints;
+    - source-location, diagnostic, macro, and redeclaration helpers;
+    - declaration-specifier and compiler-extension helpers;
+    - recursive declarator and parameter grammar helpers;
+    - function and aggregate visitors;
+    - translation-unit dispatch and project assembly.
     """
 
     # ------------------------------------------------------------------
@@ -509,7 +535,7 @@ class CParser:
                 )
                 for name, source in files.items()
             }
-            return self._build_project(parsed_files)
+            return self.visit_parsed_project(parsed_files)
 
         paths: list[Path] = []
         root: Path | None = None
@@ -535,7 +561,22 @@ class CParser:
                 preprocessing=preprocessing,
                 encoding=encoding,
             )
-        return self._build_project(parsed_files)
+        return self.visit_parsed_project(parsed_files)
+
+    def visit_parsed_project(self, files: Mapping[str, CFile]) -> CProject:
+        """Assemble already parsed translation units into one `CProject`.
+
+        This visitor is useful when an orchestration layer preprocesses each
+        source first and attaches recipe metadata before project resolution.
+
+        Example:
+            >>> parser = CParser()
+            >>> parsed = parser.visit_file("int answer(void);", filename="api.h")
+            >>> project = parser.visit_parsed_project({"api.h": parsed})
+            >>> sorted(project.functions)
+            ['answer']
+        """
+        return self._build_project(dict(files))
 
     # ------------------------------------------------------------------
     # Source locations, diagnostics, and macro provenance
@@ -547,6 +588,7 @@ class CParser:
         seen_types: set[int] = set()
 
         def mark_type(type_: CType | None) -> None:
+            """Mark one reachable type graph as originating in preprocessed text."""
             if type_ is None:
                 return
             if isinstance(type_, CComposedType):
@@ -582,6 +624,7 @@ class CParser:
                 mark_type(type_.type)
 
         def mark_variable(variable: CVariable) -> None:
+            """Mark a variable and recursively mark its declared type."""
             variable.origin = "preprocessed"
             mark_type(variable.type)
 
@@ -653,11 +696,13 @@ class CParser:
 
     @staticmethod
     def _could_start_c_external_declaration(text: str) -> bool:
+        """Return whether `text` begins like a C external declaration."""
         stripped = text.lstrip()
         return bool(stripped) and (stripped[0].isalpha() or stripped[0] == "_")
 
     @staticmethod
     def _raise_for_invalid_top_level_syntax(segment: CTopLevelSegment) -> None:
+        """Raise a focused syntax error for a segment that cannot begin C."""
         text = segment.text.strip()
         if not text:
             return
@@ -3285,7 +3330,12 @@ def parse_c_file(
     preprocessing: str = "raw",
     encoding: str = "utf-8",
 ) -> CFile:
-    """Parse one C source string/path using the default parser instance."""
+    """Parse one C source string/path using the default parser instance.
+
+    Example:
+        >>> parse_c_file("int answer(void);", filename="api.h").functions[0].name
+        'answer'
+    """
     return _DEFAULT_PARSER.visit_file(
         source_or_path,
         filename=filename,
@@ -3302,7 +3352,13 @@ def parse_c_project(
     preprocessing: str = "raw",
     encoding: str = "utf-8",
 ) -> CProject:
-    """Parse multiple C files or a directory using the default parser instance."""
+    """Parse multiple C files or a directory using the default parser instance.
+
+    Example:
+        >>> project = parse_c_project({"api.h": "int answer(void);"})
+        >>> sorted(project.functions)
+        ['answer']
+    """
     return _DEFAULT_PARSER.visit_project(
         files,
         include_dirs=include_dirs,

@@ -242,6 +242,9 @@ def test_c_parser_instance_entrypoints_match_public_functions():
 
     assert parser.visit_file(source, filename="api.h") == parse_c_file(source, filename="api.h")
     assert parser.visit_project({"api.h": source}) == parse_c_project({"api.h": source})
+    assert parser.visit_parsed_project(
+        {"api.h": parser.visit_file(source, filename="api.h")}
+    ) == parse_c_project({"api.h": source})
 
 
 @pytest.mark.parametrize(

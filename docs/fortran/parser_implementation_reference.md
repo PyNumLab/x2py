@@ -335,7 +335,11 @@ Dedicated tests for the error handling system:
 - `fortran_parser/lexer.py`
   - line preprocessing, source-form handling, continuation/comment normalization; returns tuples of `(preprocessed_line, original_line_number, original_source_line)` for downstream error reporting.
 - `fortran_parser/parser.py`
-  - main grammar subset parser and orchestration functions.
+  - main grammar subset parser and orchestration functions. The file embeds a
+    maintainer guide and keeps parser methods documented. Read the thin public
+    wrappers first, then follow `FortranParser` through public visitors,
+    grammar-unit visitors, scoped `_helper_*` methods, and low-level lexical
+    utilities.
 - `fortran_parser/type_resolver.py`
   - kind extraction and symbol/expression helpers.
 - `fortran_parser/models.py`
@@ -395,7 +399,8 @@ ask it to implement each of these layers explicitly:
 
 Use this as the mental model when changing `fortran_parser/parser.py`: parsing
 is recursive over source units, and each unit is handled by the same grammar
-shape before grammar-specific exceptions are applied.
+shape before grammar-specific exceptions are applied. The parser method
+docstrings are the local reference for individual helper responsibilities.
 
 ```fortran
 module m

@@ -47,7 +47,6 @@ _FORTRAN_TYPE_PROBE_EXPORTS = {
     "FortranTypeProbeReport",
     "build_fortran_type_probe_source",
     "evaluate_fortran_type_requirements",
-    "emit_module_stubs",
     "fortran_type_probe_expressions",
     "probe_fortran_type_expressions",
 }
@@ -90,6 +89,7 @@ __all__ = (
     "c_type_to_semantic_type",
     "collect_semantic_compile_time_requirements",
     "convert_pyi_to_ir",
+    "emit_module_stubs",
     "evaluate_fortran_type_requirements",
     "fortran_file_to_semantic_modules",
     "fortran_type_probe_expressions",

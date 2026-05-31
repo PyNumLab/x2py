@@ -390,6 +390,38 @@ def test_x2py_main_wrap_readiness_json_directory_expands_fortran_and_pyi(tmp_pat
     assert payload[str(pyi)]["source_kind"] == "pyi"
 
 
+def test_wrap_readiness_report_reconciles_edited_pyi_file_set(tmp_path: Path):
+    physics = tmp_path / "physics.pyi"
+    types_mod = tmp_path / "types_mod.pyi"
+    physics.write_text(
+        """
+from types_mod import particle
+
+def create_particle() -> Ptr(particle): ...
+""",
+        encoding="utf-8",
+    )
+    types_mod.write_text(
+        """
+class particle:
+    mass: Float64
+""",
+        encoding="utf-8",
+    )
+
+    payload = x2py_cli._wrap_readiness_report([str(tmp_path)])
+    modules = {
+        module["name"]: module
+        for module in payload[str(physics)]["semantic_modules"]
+    }
+    particle_ref = modules["physics"]["functions"][0]["return_type"]["metadata"]["external_type_ref"]
+
+    assert particle_ref["origin_module"] == "types_mod"
+    assert particle_ref["wrapped"] is True
+    assert particle_ref["representation"] == "wrapped"
+    assert payload[str(physics)]["wrap_readiness"]["n_modules"] == 2
+
+
 def test_x2py_main_semantic_readiness_blocker_formatting():
     text = x2py_cli._format_semantic_readiness(
         {

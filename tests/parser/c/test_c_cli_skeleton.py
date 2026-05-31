@@ -187,6 +187,50 @@ def test_cli_c_wrap_readiness_human_output_for_header(tmp_path: Path):
     assert "Wrappable: yes" in res.stdout
 
 
+def test_cli_c_wrap_readiness_directory_includes_native_and_pyi_inputs(tmp_path: Path):
+    header = tmp_path / "api.h"
+    pyi = tmp_path / "solver.pyi"
+    header.write_text("int add(int a, int b);\n", encoding="utf-8")
+    pyi.write_text("def fill(n: Int32) -> None: ...\n", encoding="utf-8")
+    cmd = [
+        sys.executable,
+        "-m",
+        "x2py",
+        str(tmp_path),
+        "--language",
+        "c",
+        "--wrap-readiness",
+        "--json",
+    ]
+
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+
+    assert payload[str(header)]["source_kind"] == "c"
+    assert payload[str(pyi)]["source_kind"] == "pyi"
+
+
+def test_cli_c_wrap_readiness_accepts_language_neutral_pyi_input(tmp_path: Path):
+    pyi = tmp_path / "solver.pyi"
+    pyi.write_text("def fill(n: Int32) -> None: ...\n", encoding="utf-8")
+    cmd = [
+        sys.executable,
+        "-m",
+        "x2py",
+        str(pyi),
+        "--language",
+        "c",
+        "--wrap-readiness",
+        "--json",
+    ]
+
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+
+    assert payload[str(pyi)]["source_kind"] == "pyi"
+    assert payload[str(pyi)]["wrap_readiness"]["wrappable"] is True
+
+
 def test_cli_c_pyi_human_output_for_header(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
