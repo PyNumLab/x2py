@@ -77,7 +77,7 @@ and practical usage from terminal and Python.
 
 Supported public API:
 
-- `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
+- `parse_fortran_file(source_or_path, filename=None, encoding="utf-8") -> FortranFile`
 - `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
 - `assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
 - `assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`
@@ -1003,7 +1003,7 @@ Under `implicit none`, these declarations count as valid argument declarations, 
 
 Use the stable top-level API:
 
-- `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
+- `parse_fortran_file(source_or_path, filename=None, encoding="utf-8") -> FortranFile`
 - `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
 - `assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
 - `assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`

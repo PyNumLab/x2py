@@ -324,7 +324,6 @@ Implemented signatures:
 parse_c_file(
     source_or_path,
     filename=None,
-    macro_defines=None,
     include_dirs=None,
     preprocessing="raw",
     encoding="utf-8",
@@ -333,7 +332,6 @@ parse_c_file(
 parse_c_project(
     files,
     include_dirs=None,
-    macro_defines=None,
     preprocessing="raw",
     encoding="utf-8",
 )
@@ -478,10 +476,9 @@ such as `{"g1:b0"}` or `{"g1:b1"}`. A `CProject` stores such alternatives in
 unique `functions` entry. Compiler-preprocessed input contains the selected
 configuration and therefore does not need this ambiguity representation.
 
-`macro_defines` is accepted for API compatibility only. It must not mean that
-raw mode evaluates C preprocessor conditionals or expands macros internally.
-Compiler mode should receive the already-expanded translation unit from
-`x2py.preprocessing`.
+Raw mode does not evaluate C preprocessor conditionals or expand macros
+internally. Compiler mode should receive the already-expanded translation unit
+from `x2py.preprocessing`.
 
 The parser itself should stay parse-only. If the C frontend later gains
 wrappability assessment, that should live in the semantic layer after C parser

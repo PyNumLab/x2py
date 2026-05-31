@@ -50,6 +50,7 @@ from c_parser.models import (
 )
 
 from .models import (
+    EXTERNAL_TYPE_REF_METADATA,
     ProjectionMapping,
     SemanticArgument,
     SemanticArrayContract,
@@ -60,6 +61,7 @@ from .models import (
     SemanticOrigin,
     SemanticStorageContract,
     SemanticType,
+    _iter_module_semantic_types,
 )
 
 
@@ -198,7 +200,7 @@ class CToIRConverter:
         self.structs = dict(project.structs)
         self.unions = dict(project.unions)
         self.enums = dict(project.enums)
-        return [
+        modules = [
             self.visit_file(
                 c_file,
                 typedefs=self.typedefs,
@@ -208,6 +210,8 @@ class CToIRConverter:
             )
             for _filename, c_file in sorted(project.files.items())
         ]
+        self._classify_project_external_types(modules, project)
+        return modules
 
     def visit_project_module(
         self,
@@ -307,6 +311,7 @@ class CToIRConverter:
                 ),
             )
             self._apply_include_exposure(module, c_file)
+            self._externalize_private_classes(module)
             return module
         finally:
             self.typedefs, self.structs, self.unions, self.enums = previous
@@ -929,6 +934,104 @@ class CToIRConverter:
                 if "Opaque" not in cls.base_classes:
                     cls.base_classes.append("Opaque")
 
+    def _externalize_private_classes(self, module: SemanticModule) -> None:
+        external_classes: dict[str, str] = {}
+        for cls in module.classes:
+            if cls.visibility != "private" or "Opaque" not in cls.base_classes:
+                continue
+            filename = self._source_filename(cls.origin.source_location)
+            if filename is None:
+                continue
+            origin_module = self._module_name_for_filename(filename)
+            if origin_module != module.name:
+                external_classes[cls.name] = origin_module
+        if not external_classes:
+            return
+
+        for semantic_type in _iter_module_semantic_types(module):
+            origin_module = external_classes.get(semantic_type.name)
+            if origin_module is None:
+                continue
+            self._set_external_type_ref(
+                semantic_type,
+                origin_module=origin_module,
+                wrapped=False,
+            )
+            self._add_external_opaque_by_value_blocker(semantic_type)
+        module.classes = [
+            cls
+            for cls in module.classes
+            if cls.name not in external_classes
+        ]
+
+    def _classify_project_external_types(
+        self,
+        modules: list[SemanticModule],
+        project: CProject,
+    ) -> None:
+        modules_by_filename = {
+            module.origin.native_name: module
+            for module in modules
+            if module.origin.native_name is not None
+        }
+        owners: dict[str, tuple[str, bool]] = {}
+        for struct in project.structs.values():
+            if struct.name is None or struct.source_location is None:
+                continue
+            owner = modules_by_filename.get(struct.source_location.filename)
+            if owner is None:
+                continue
+            owners[self._identifier(struct.name)] = (owner.name, not struct.is_incomplete)
+
+        for module in modules:
+            external_names = {
+                name
+                for name, (origin_module, _wrapped) in owners.items()
+                if origin_module != module.name
+            }
+            if not external_names:
+                continue
+            for semantic_type in _iter_module_semantic_types(module):
+                owner = owners.get(semantic_type.name)
+                if owner is None or owner[0] == module.name:
+                    continue
+                self._set_external_type_ref(
+                    semantic_type,
+                    origin_module=owner[0],
+                    wrapped=owner[1],
+                )
+            module.classes = [
+                cls
+                for cls in module.classes
+                if cls.name not in external_names
+            ]
+
+    @staticmethod
+    def _set_external_type_ref(
+        semantic_type: SemanticType,
+        *,
+        origin_module: str,
+        wrapped: bool,
+    ) -> None:
+        semantic_type.metadata[EXTERNAL_TYPE_REF_METADATA] = {
+            "name": semantic_type.name,
+            "local_name": semantic_type.name,
+            "origin_module": origin_module,
+            "wrapped": wrapped,
+            "representation": "wrapped" if wrapped else "opaque",
+        }
+
+    def _add_external_opaque_by_value_blocker(self, semantic_type: SemanticType) -> None:
+        if semantic_type.storage is not None and semantic_type.storage.kind != "value":
+            return
+        semantic_type.metadata.setdefault("readiness_blockers", []).append(
+            self._blocker(
+                "c_opaque_struct_by_value",
+                "Opaque C structs can only cross wrapper boundaries through explicit pointer or handle policy.",
+                {"owner": semantic_type.name, "type": semantic_type.name},
+            )
+        )
+
     def _project_metadata(self, project: CProject) -> dict[str, Any]:
         metadata: dict[str, Any] = {
             "source_language": "c",
@@ -1133,10 +1236,14 @@ class CToIRConverter:
     @staticmethod
     def _module_name(c_file: CFile) -> str:
         if c_file.filename:
-            stem = Path(c_file.filename).stem
+            return CToIRConverter._module_name_for_filename(c_file.filename)
         else:
             stem = "c_module"
         return CToIRConverter._identifier(stem or "c_module")
+
+    @staticmethod
+    def _module_name_for_filename(filename: str) -> str:
+        return CToIRConverter._identifier(Path(filename).stem or "c_module")
 
     @staticmethod
     def _identifier(name: str) -> str:

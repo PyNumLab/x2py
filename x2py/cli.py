@@ -13,7 +13,7 @@ from c_parser.parser import CParser
 from fortran_parser.models import FortranParseError
 from fortran_parser.parser import FortranParser
 from fortran_parser.cli import _format_report
-from semantics.c2ir import c_file_to_semantic_modules
+from semantics.c2ir import c_project_to_semantic_modules
 from semantics.fortran2ir import fortran_file_to_semantic_modules
 from semantics.pyi_parser import load_pyi_file
 from semantics.readiness import assess_semantic_wrap_readiness
@@ -205,6 +205,18 @@ def _parse_c_path(
     return parsed
 
 
+def _parse_c_project(
+    paths: list[str],
+    preprocessing: PreprocessingConfig,
+):
+    parser = CParser()
+    parsed_files = {
+        str(path): _parse_c_path(parser, path, preprocessing)
+        for path in expand_c_paths(paths)
+    }
+    return parser._build_project(parsed_files)
+
+
 def _parse_report(paths: list[str], preprocessing: PreprocessingConfig | None = None) -> dict[str, dict]:
     preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
@@ -233,44 +245,109 @@ def _semantic_report(
     language: str = "fortran",
 ) -> dict[str, dict]:
     from semantics.fortran2ir import fortran_module_to_semantic_module
-    from semantics.pyi_printer import emit_module
+    from semantics.pyi_printer import emit_module_stubs
 
     preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
     if language == "c":
-        parser = CParser()
+        project = _parse_c_project(paths, preprocessing)
+        converted_files = {
+            module.origin.native_name: [module]
+            for module in c_project_to_semantic_modules(project)
+        }
+        available_modules = [
+            module
+            for modules in converted_files.values()
+            for module in modules
+        ]
         for p in expand_c_paths(paths):
-            parsed = _parse_c_path(parser, p, preprocessing)
-            modules = c_file_to_semantic_modules(parsed)
+            modules = converted_files[str(p)]
+            stubs = emit_module_stubs(modules, available_modules=available_modules)
+            primary_names = {module.name for module in modules}
             out[str(p)] = {
                 "semantic_modules": [asdict(module) for module in modules],
-                "pyi": "\n\n".join(emit_module(module) for module in modules).strip(),
+                "pyi": "\n\n".join(stubs[module.name] for module in modules).strip(),
             }
+            dependencies = {
+                module_name: text
+                for module_name, text in stubs.items()
+                if module_name not in primary_names
+            }
+            if dependencies:
+                out[str(p)]["pyi_dependencies"] = dependencies
         return out
 
     parser = FortranParser()
+    parsed_files = []
     for p in _expand_paths(paths):
         code, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
         fobj = parser.visit_file(code, filename=str(p))
+        parsed_files.append((p, fobj))
+    wrapped_derived_types = _fortran_wrapped_derived_types(fobj for _p, fobj in parsed_files)
+    converted_files = []
+    for p, fobj in parsed_files:
         compile_time_values = _fortran_compile_time_values(fobj, preprocessing)
         modules = [
-            fortran_module_to_semantic_module(m, compile_time_values=compile_time_values)
+            fortran_module_to_semantic_module(
+                m,
+                compile_time_values=compile_time_values,
+                wrapped_derived_types=wrapped_derived_types,
+            )
             for m in fobj.modules
         ]
+        converted_files.append((p, modules))
+    available_modules = [module for _p, modules in converted_files for module in modules]
+    for p, modules in converted_files:
+        stubs = emit_module_stubs(modules, available_modules=available_modules)
+        primary_names = {module.name for module in modules}
         out[str(p)] = {
             "semantic_modules": [asdict(m) for m in modules],
-            "pyi": "\n\n".join(emit_module(m) for m in modules).strip(),
+            "pyi": "\n\n".join(stubs[module.name] for module in modules).strip(),
         }
+        dependencies = {
+            module_name: text
+            for module_name, text in stubs.items()
+            if module_name not in primary_names
+        }
+        if dependencies:
+            out[str(p)]["pyi_dependencies"] = dependencies
     return out
 
 
 def _format_pyi_report(semantic_report: dict[str, dict]) -> str:
     lines: list[str] = []
+    emitted_dependencies: set[str] = set()
     for fname, payload in semantic_report.items():
         lines.append(f"File: {fname}")
         lines.append(payload.get("pyi") or "<no module declarations found>")
         lines.append("")
+        for module_name, text in payload.get("pyi_dependencies", {}).items():
+            if module_name in emitted_dependencies:
+                continue
+            emitted_dependencies.add(module_name)
+            lines.append(f"Dependency stub: {module_name}.pyi")
+            lines.append(text)
+            lines.append("")
     return "\n".join(lines).rstrip()
+
+
+def _write_pyi_dependencies(
+    semantic_report: dict[str, dict],
+    *,
+    output_dir: Path | None = None,
+) -> None:
+    outputs: dict[Path, str] = {}
+    for fname, payload in semantic_report.items():
+        parent = output_dir or Path(fname).parent
+        for module_name, text in payload.get("pyi_dependencies", {}).items():
+            path = parent.joinpath(*module_name.split(".")).with_suffix(".pyi")
+            existing = outputs.get(path)
+            if existing is not None and existing != text:
+                raise ValueError(f"Conflicting generated dependency stub for {path}")
+            outputs[path] = text
+    for path, text in outputs.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text + "\n", encoding="utf-8")
 
 
 def _wrap_readiness_report(
@@ -282,10 +359,13 @@ def _wrap_readiness_report(
     preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
     if language == "c":
-        parser = CParser()
+        project = _parse_c_project(paths, preprocessing)
+        converted_files = {
+            module.origin.native_name: [module]
+            for module in c_project_to_semantic_modules(project)
+        }
         for p in expand_c_paths(paths):
-            parsed = _parse_c_path(parser, p, preprocessing)
-            modules = c_file_to_semantic_modules(parsed)
+            modules = converted_files[str(p)]
             out[str(p)] = {
                 "source_kind": "c",
                 "semantic_modules": [asdict(module) for module in modules],
@@ -294,18 +374,27 @@ def _wrap_readiness_report(
         return out
 
     parser = FortranParser()
-    for p in _expand_readiness_paths(paths):
+    expanded_paths = _expand_readiness_paths(paths)
+    parsed_files = {}
+    for p in expanded_paths:
+        if p.suffix.lower() == ".pyi":
+            continue
+        code, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
+        parsed_files[p] = parser.visit_file(code, filename=str(p))
+    wrapped_derived_types = _fortran_wrapped_derived_types(parsed_files.values())
+
+    for p in expanded_paths:
         if p.suffix.lower() == ".pyi":
             modules = [load_pyi_file(p)]
             source_kind = "pyi"
         else:
-            code, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
-            parsed = parser.visit_file(code, filename=str(p))
+            parsed = parsed_files[p]
             compile_time_values = _fortran_compile_time_values(parsed, preprocessing)
             modules = fortran_file_to_semantic_modules(
                 parsed,
                 standalone_module_name=p.stem,
                 compile_time_values=compile_time_values,
+                wrapped_derived_types=wrapped_derived_types,
             )
             source_kind = "fortran"
 
@@ -315,6 +404,16 @@ def _wrap_readiness_report(
             "wrap_readiness": assess_semantic_wrap_readiness(modules, source=str(p)),
         }
     return out
+
+
+def _fortran_wrapped_derived_types(parsed_files) -> set[tuple[str, str]]:
+    return {
+        (dtype.module.lower(), dtype.name.lower())
+        for parsed in parsed_files
+        for module in parsed.modules
+        for dtype in module.derived_types
+        if dtype.module
+    }
 
 
 def _fortran_compile_time_values(
@@ -756,9 +855,11 @@ def main() -> int:
             if args.out:
                 pyi_text = "\n\n".join((report.get("pyi") or "") for report in (semantic_payload or {}).values()).strip()
                 Path(args.out).write_text(pyi_text + "\n", encoding="utf-8")
+                _write_pyi_dependencies(semantic_payload or {}, output_dir=Path(args.out).parent)
             else:
                 for fname, report in (semantic_payload or {}).items():
                     Path(fname).with_suffix(".pyi").write_text((report.get("pyi") or "") + "\n", encoding="utf-8")
+                _write_pyi_dependencies(semantic_payload or {})
         else:
             if args.out:
                 Path(args.out).write_text(json.dumps(payload, indent=2), encoding="utf-8")

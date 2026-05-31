@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
+from copy import deepcopy
 import keyword
 import re
 
 from .models import (
+    EXTERNAL_TYPE_REF_METADATA,
     ProjectionMapping,
     SemanticArgument,
     SemanticArrayContract,
@@ -15,6 +18,7 @@ from .models import (
     SemanticMethod,
     SemanticModule,
     SemanticType,
+    _iter_module_semantic_types,
 )
 
 
@@ -283,10 +287,49 @@ class PyiPrinter:
         return "\n\n".join(body_parts)
 
     def _append_imports(self, sections: list[str], module: SemanticModule) -> None:
-        for imp in module.imports:
+        imports = self._effective_imports(module)
+        for imp in imports:
             sections.append(self._emit_import(imp))
-        if module.imports:
+        if imports:
             sections.append("")
+
+    @staticmethod
+    def _effective_imports(module: SemanticModule) -> list[str | SemanticImport]:
+        imports = list(module.imports)
+        imported_items = {
+            (imp.module, item.source, item.target or item.source)
+            for imp in imports
+            if isinstance(imp, SemanticImport)
+            for item in imp.items
+        }
+        synthetic: dict[str, list[SemanticImportItem]] = {}
+        for semantic_type in _iter_module_semantic_types(module):
+            ref = semantic_type.metadata.get(EXTERNAL_TYPE_REF_METADATA)
+            if not isinstance(ref, dict):
+                continue
+            origin_module = ref.get("origin_module")
+            source_name = ref.get("name")
+            local_name = ref.get("local_name") or source_name
+            if not all(isinstance(value, str) and value for value in (origin_module, source_name, local_name)):
+                continue
+            key = (origin_module, source_name, local_name)
+            if key in imported_items:
+                continue
+            synthetic.setdefault(origin_module, []).append(
+                SemanticImportItem(
+                    source=source_name,
+                    target=local_name if local_name != source_name else None,
+                )
+            )
+            imported_items.add(key)
+        imports.extend(
+            SemanticImport(
+                module=module_name,
+                items=sorted(items, key=lambda item: (item.source, item.target or "")),
+            )
+            for module_name, items in sorted(synthetic.items())
+        )
+        return imports
 
     @staticmethod
     def _emit_import(imp: str | SemanticImport) -> str:
@@ -437,6 +480,82 @@ _DEFAULT_PRINTER = PyiPrinter()
 
 def emit_module(module: SemanticModule) -> str:
     return _DEFAULT_PRINTER.emit_module(module)
+
+
+def opaque_dependency_modules(
+    modules: SemanticModule | Iterable[SemanticModule],
+    *,
+    available_modules: Iterable[SemanticModule] | None = None,
+) -> list[SemanticModule]:
+    source_modules = _module_list(modules)
+    known_modules = _module_list(available_modules) if available_modules is not None else source_modules
+    known_classes = {
+        (module.name, cls.name)
+        for module in known_modules
+        for cls in module.classes
+    }
+    dependencies: dict[str, set[str]] = {}
+    for module in source_modules:
+        for semantic_type in _iter_module_semantic_types(module):
+            ref = semantic_type.metadata.get(EXTERNAL_TYPE_REF_METADATA)
+            if not isinstance(ref, dict) or ref.get("representation") != "opaque":
+                continue
+            origin_module = ref.get("origin_module")
+            type_name = ref.get("name")
+            if not isinstance(origin_module, str) or not isinstance(type_name, str):
+                continue
+            if (origin_module, type_name) in known_classes:
+                continue
+            dependencies.setdefault(origin_module, set()).add(type_name)
+    return [
+        SemanticModule(
+            name=module_name,
+            classes=[
+                SemanticClass(
+                    name=type_name,
+                    native_name=type_name,
+                    base_classes=["Opaque"],
+                    metadata={"representation": "opaque"},
+                )
+                for type_name in sorted(type_names)
+            ],
+        )
+        for module_name, type_names in sorted(dependencies.items())
+    ]
+
+
+def emit_module_stubs(
+    modules: SemanticModule | Iterable[SemanticModule],
+    *,
+    available_modules: Iterable[SemanticModule] | None = None,
+) -> dict[str, str]:
+    source_modules = _module_list(modules)
+    emitted_modules: dict[str, SemanticModule] = {}
+    for module in source_modules:
+        if module.name in emitted_modules:
+            raise ValueError(f"Cannot emit duplicate semantic module '{module.name}'")
+        emitted_modules[module.name] = deepcopy(module)
+
+    for dependency in opaque_dependency_modules(
+        source_modules,
+        available_modules=available_modules,
+    ):
+        target = emitted_modules.setdefault(dependency.name, SemanticModule(name=dependency.name))
+        existing = {cls.name for cls in target.classes}
+        target.classes.extend(cls for cls in dependency.classes if cls.name not in existing)
+
+    return {
+        module_name: emit_module(module).strip()
+        for module_name, module in emitted_modules.items()
+    }
+
+
+def _module_list(modules: SemanticModule | Iterable[SemanticModule] | None) -> list[SemanticModule]:
+    if modules is None:
+        return []
+    if isinstance(modules, SemanticModule):
+        return [modules]
+    return list(modules)
 
 
 if __name__ == "__main__":

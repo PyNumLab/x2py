@@ -330,13 +330,13 @@ Current and planned responsibilities:
 The public C API mirrors the Fortran style but remains C-specific:
 
 ```python
-parse_c_file(source_or_path, filename=None, macro_defines=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile
-parse_c_project(files, include_dirs=None, macro_defines=None, preprocessing="raw", encoding="utf-8") -> CProject
+parse_c_file(source_or_path, filename=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile
+parse_c_project(files, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CProject
 ```
 
-`macro_defines` is accepted for API compatibility only. Raw mode must not
-evaluate C preprocessor conditionals or expand macros inside x2py. Compiler
-mode receives already-expanded source from the shared preprocessing layer.
+Raw mode does not evaluate C preprocessor conditionals or expand macros inside
+x2py. Compiler mode receives already-expanded source from the shared
+preprocessing layer.
 
 Implemented companion class:
 

@@ -78,11 +78,14 @@ generation, and wrap-readiness.
 
 Public API entrypoints include:
 
-- `x2py.parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
+- `x2py.parse_fortran_file(source_or_path, filename=None, encoding="utf-8") -> FortranFile`
 - `x2py.parse_fortran_project(files, encoding="utf-8") -> FortranProject`
-- `x2py.parse_c_file(source_or_path, filename=None, macro_defines=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile`
-- `x2py.parse_c_project(files, include_dirs=None, macro_defines=None, preprocessing="raw", encoding="utf-8") -> CProject`
+- `x2py.parse_c_file(source_or_path, filename=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile`
+- `x2py.parse_c_project(files, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CProject`
 - `x2py.fortran_file_to_semantic_modules(parsed_file, standalone_module_name=None) -> list[SemanticModule]`
+- `x2py.fortran_project_to_semantic_modules(project) -> list[SemanticModule]`
+- `x2py.emit_module_stubs(module_or_modules) -> dict[str, str]`
+- `x2py.load_pyi_modules(path_or_paths, encoding="utf-8") -> list[SemanticModule]`
 - `x2py.assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
 - `x2py.assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`
 - `x2py.c_type_probe.probe_c_standard_types(config, runner=None) -> CStandardTypeProbeReport`
@@ -803,3 +806,46 @@ source/target mapping. A non-renamed `use iso_c_binding, only: c_int` maps
 `source="delete_input_list"` and `target="delete_input"`. The semantic layer
 uses that information to emit Python stub imports such as
 `from list_input import delete_input_list as delete_input`.
+
+Fortran `use` dependencies are not parsed or wrapped recursively. If a
+procedure refers to an imported derived type, semantic IR records its defining
+module and represents the reference as an opaque handle unless the defining
+module is explicitly part of the wrapping target. Explicitly supplied modules
+share one wrapped-type registry, so the imported reference resolves to the
+single class emitted by its owner module without being re-exported by the
+importing module. Reachable include exposure is already handled separately by
+the preprocessing include policy; a future dependency-expansion option would
+apply specifically to recursive Fortran `use` traversal.
+
+When an imported derived type remains external, `.pyi` generation emits an
+owner-module dependency stub. For example, wrapping only `physics.f90` may
+produce:
+
+```python
+# physics.pyi
+from types_mod import particle
+
+def move(p: Ptr(particle)) -> None: ...
+```
+
+```python
+# types_mod.pyi
+class particle(Opaque):
+    pass
+```
+
+`python -m x2py physics.f90 --pyi --out` writes both files beside the source.
+`load_pyi_modules(...)` loads a file set or directory, preserves opaque classes,
+and reconciles imported references against edited owner stubs. Replacing the
+opaque placeholder with a concrete edited class changes the semantic reference
+from `representation="opaque"` to `representation="wrapped"`. Existing
+`Annotated[...]` constraints also round-trip through this editable interface;
+richer coercion syntax can be added to the same `.pyi` format later.
+
+The same opaque-handle file-set model applies to C. A local forward declaration
+such as `struct context;` emits `class context(Opaque): pass`. When a public C
+header uses a struct from another explicitly supplied header, its generated
+stub imports the class from that header's stub. A private included struct used
+through a public pointer boundary emits an opaque owner-module dependency stub.
+An unresolved C typedef is left unresolved rather than guessed to be opaque,
+because its ABI may not be pointer-shaped.

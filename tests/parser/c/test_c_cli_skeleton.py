@@ -224,6 +224,39 @@ def test_cli_c_pyi_out_requires_explicit_language_and_writes_when_selected(tmp_p
     assert "def add(" in output.read_text(encoding="utf-8")
 
 
+def test_cli_c_pyi_out_writes_explicit_multi_header_owner_stubs(tmp_path: Path):
+    types = tmp_path / "types.h"
+    api = tmp_path / "api.h"
+    types.write_text("struct state { int id; };\n", encoding="utf-8")
+    api.write_text("struct state;\nvoid step(struct state *state);\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(types),
+            str(api),
+            "--language",
+            "c",
+            "--pyi",
+            "--out",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert result.stdout == ""
+    assert "class state:" in (tmp_path / "types.pyi").read_text(encoding="utf-8")
+    api_stub = (tmp_path / "api.pyi").read_text(encoding="utf-8")
+    assert "from types import state" in api_stub
+    assert "class state" not in api_stub
+    assert "state: Ptr(state)" in api_stub
+    readiness = x2py_cli._wrap_readiness_report([str(types), str(api)], language="c")
+    assert readiness[str(api)]["wrap_readiness"]["wrappable"] is True
+
+
 def test_cli_c_input_rejects_explicit_fortran_frontend(tmp_path: Path):
     header = tmp_path / "api.h"
     output = tmp_path / "api.pyi"

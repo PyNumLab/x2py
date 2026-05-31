@@ -272,20 +272,6 @@ class PreprocessingConfig:
     def uses_compiler(self) -> bool:
         return self.mode == "compiler"
 
-    def fortran_macro_defines(self) -> dict[str, int | str] | None:
-        """Return legacy parser macros only for non-production internal tests."""
-        if self.uses_compiler:
-            return None
-        if not self.defines and not self.undefs:
-            return None
-        result: dict[str, int | str] = {}
-        for define in self.defines:
-            name, value = define.split("=", 1) if "=" in define else (define, 1)
-            result[name] = value
-        for undef in self.undefs:
-            result[undef] = 0
-        return result
-
     def fortran_internal_recipe(self, path: Path) -> dict[str, object] | None:
         if self.uses_compiler or not (self.defines or self.undefs):
             return None

@@ -3,6 +3,10 @@
 
 from pathlib import Path
 
+import pytest
+
+from c_parser import CParser, parse_c_file, parse_c_project
+
 
 def test_parse_c_file_accepts_inline_source_and_returns_typed_model():
     from c_parser import CFile, parse_c_file
@@ -238,6 +242,20 @@ def test_c_parser_instance_entrypoints_match_public_functions():
 
     assert parser.visit_file(source, filename="api.h") == parse_c_file(source, filename="api.h")
     assert parser.visit_project({"api.h": source}) == parse_c_project({"api.h": source})
+
+
+@pytest.mark.parametrize(
+    "parse,args",
+    [
+        (parse_c_file, ("",)),
+        (CParser().visit_file, ("",)),
+        (parse_c_project, ({"api.h": ""},)),
+        (CParser().visit_project, ({"api.h": ""},)),
+    ],
+)
+def test_public_c_parse_rejects_removed_macro_defines_argument(parse, args):
+    with pytest.raises(TypeError, match="macro_defines"):
+        parse(*args, macro_defines={"USE_FAST"})
 
 
 def test_c_parse_error_attributes_and_diagnostic_formatting():

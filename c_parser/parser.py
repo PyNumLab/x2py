@@ -387,7 +387,6 @@ class CParser:
         source_or_path: str | Path,
         filename: str | None = None,
         *,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
         include_dirs: Sequence[str | Path] | None = None,
         preprocessing: str = "raw",
         encoding: str = "utf-8",
@@ -396,11 +395,8 @@ class CParser:
 
         The current implementation supports raw preprocessing metadata,
         compiler-fed preprocessed text, and the partial grammar subset
-        documented in `docs/c_parser`. `macro_defines` is accepted for API
-        compatibility with compiler-assisted preprocessing, but raw mode does
-        not evaluate conditional branches.
+        documented in `docs/c_parser`.
         """
-        del macro_defines
         source_path: Path | None = None
         if _looks_like_existing_source_path(source_or_path):
             path = Path(source_or_path)
@@ -493,7 +489,6 @@ class CParser:
         files: Mapping[str, str] | Sequence[str | Path] | str | Path,
         *,
         include_dirs: Sequence[str | Path] | None = None,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
         preprocessing: str = "raw",
         encoding: str = "utf-8",
     ) -> CProject:
@@ -509,7 +504,6 @@ class CParser:
                     source,
                     filename=name,
                     include_dirs=include_dirs,
-                    macro_defines=macro_defines,
                     preprocessing=preprocessing,
                     encoding=encoding,
                 )
@@ -538,7 +532,6 @@ class CParser:
                 path,
                 filename=key,
                 include_dirs=include_dirs,
-                macro_defines=macro_defines,
                 preprocessing=preprocessing,
                 encoding=encoding,
             )
@@ -3288,7 +3281,6 @@ def parse_c_file(
     source_or_path: str | Path,
     filename: str | None = None,
     *,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     include_dirs: Sequence[str | Path] | None = None,
     preprocessing: str = "raw",
     encoding: str = "utf-8",
@@ -3297,7 +3289,6 @@ def parse_c_file(
     return _DEFAULT_PARSER.visit_file(
         source_or_path,
         filename=filename,
-        macro_defines=macro_defines,
         include_dirs=include_dirs,
         preprocessing=preprocessing,
         encoding=encoding,
@@ -3308,7 +3299,6 @@ def parse_c_project(
     files: Mapping[str, str] | Sequence[str | Path] | str | Path,
     *,
     include_dirs: Sequence[str | Path] | None = None,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     preprocessing: str = "raw",
     encoding: str = "utf-8",
 ) -> CProject:
@@ -3316,7 +3306,6 @@ def parse_c_project(
     return _DEFAULT_PARSER.visit_project(
         files,
         include_dirs=include_dirs,
-        macro_defines=macro_defines,
         preprocessing=preprocessing,
         encoding=encoding,
     )

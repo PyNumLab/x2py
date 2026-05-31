@@ -125,10 +125,7 @@ def test_preprocessing_config_internal_macros_recipe_and_validation(tmp_path: Pa
     selected = PreprocessingConfig(defines=["USE_MPI", "VALUE=3"], undefs=["DEBUG"])
 
     assert plain.uses_compiler is False
-    assert plain.fortran_macro_defines() is None
-    assert PreprocessingConfig(mode="compiler", defines=["USE_MPI"]).fortran_macro_defines() is None
     assert plain.fortran_internal_recipe(source) is None
-    assert selected.fortran_macro_defines() == {"USE_MPI": 1, "VALUE": "3", "DEBUG": 0}
     assert selected.fortran_internal_recipe(source)["source_path"] == str(source)
     with pytest.raises(PreprocessingError, match="requires a macro name"):
         validate_macro_name("=value", "--define")

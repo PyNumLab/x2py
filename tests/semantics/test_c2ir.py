@@ -3,7 +3,7 @@
 
 import pytest
 
-from c_parser import parse_c_file
+from c_parser import parse_c_file, parse_c_project
 from c_parser.models import (
     CArray,
     CAtomic,
@@ -46,6 +46,7 @@ from semantics.c2ir import (
     c_type_to_semantic_type,
 )
 from semantics.readiness import assess_semantic_wrap_readiness
+from semantics.pyi_printer import emit_module, emit_module_stubs
 
 
 def _function(module, name):
@@ -136,6 +137,7 @@ void context_destroy(struct context *ctx);
     assert scale_point.arguments[0].semantic_type.name == "point"
     assert context_create.return_type.name == "context"
     assert context_create.return_type.storage.kind == "reference"
+    assert "class context(Opaque):" in emit_module(module)
 
     report = assess_semantic_wrap_readiness(module, source="structs.h")
     assert report["wrappable"] is True
@@ -161,15 +163,76 @@ void use_context(struct private_context *ctx);
     }
 
     module = c_file_to_semantic_modules(parsed)[0]
-    private_context = next(cls for cls in module.classes if cls.name == "private_context")
     make_context = _function(module, "make_context")
     use_context = _function(module, "use_context")
+    stubs = emit_module_stubs(module)
 
-    assert private_context.visibility == "private"
-    assert private_context.base_classes == ["Opaque"]
-    assert private_context.fields == []
+    assert all(cls.name != "private_context" for cls in module.classes)
     assert make_context.return_type.name == "private_context"
     assert use_context.arguments[0].semantic_type.name == "private_context"
+    assert make_context.return_type.metadata["external_type_ref"] == {
+        "name": "private_context",
+        "local_name": "private_context",
+        "origin_module": "private",
+        "wrapped": False,
+        "representation": "opaque",
+    }
+    assert "from private import private_context" in stubs["api"]
+    assert stubs["private"] == "class private_context(Opaque):\n    pass"
+    assert assess_semantic_wrap_readiness(module, source="api.h")["wrappable"] is True
+
+
+def test_c2ir_explicit_project_headers_import_types_from_their_owner_module():
+    project = parse_c_project(
+        {
+            "types.h": "struct state { int id; };\n",
+            "api.h": "struct state;\nvoid step(struct state *state);\n",
+        }
+    )
+    modules = {module.name: module for module in c_project_to_semantic_modules(project)}
+    api = modules["api"]
+    state = _function(api, "step").arguments[0].semantic_type
+    stubs = emit_module_stubs(api, available_modules=modules.values())
+
+    assert all(cls.name != "state" for cls in api.classes)
+    assert state.metadata["external_type_ref"] == {
+        "name": "state",
+        "local_name": "state",
+        "origin_module": "types",
+        "wrapped": True,
+        "representation": "wrapped",
+    }
+    assert "from types import state" in stubs["api"]
+    assert "class state" not in stubs["api"]
+    assert assess_semantic_wrap_readiness(api, source="api.h")["wrappable"] is True
+
+
+def test_c2ir_private_include_opaque_struct_by_value_remains_blocked():
+    parsed = parse_c_file(
+        """
+# 1 "private.h" 1
+struct private_context { int internal; };
+# 1 "api.h" 2
+void use_context(struct private_context ctx);
+""",
+        filename="api.h",
+        preprocessing="compiler",
+    )
+    parsed.preprocessing_recipe = {
+        "included_files": [
+            {"path": "api.h", "dependency_kind": "root", "exposure": "public"},
+            {"path": "private.h", "dependency_kind": "project", "exposure": "private"},
+        ]
+    }
+
+    module = c_file_to_semantic_modules(parsed)[0]
+    report = assess_semantic_wrap_readiness(module, source="api.h")
+
+    assert report["wrappable"] is False
+    assert "c_opaque_struct_by_value" in {
+        blocker["code"]
+        for blocker in report["wrappability_blockers"]
+    }
 
 
 def test_c2ir_converts_enum_constants_and_simple_macro_constants():

@@ -487,6 +487,71 @@ end program driver
     assert "<no module declarations found>" in empty_pyi_res.stdout
 
 
+def test_x2py_semantics_marks_explicit_cross_file_derived_type_as_wrapped(tmp_path: Path):
+    types_mod = tmp_path / "types_mod.f90"
+    physics = tmp_path / "physics.f90"
+    types_mod.write_text(
+        """
+module types_mod
+  type :: particle
+    real :: mass
+  end type particle
+end module types_mod
+""",
+        encoding="utf-8",
+    )
+    physics.write_text(
+        """
+module physics
+  use types_mod, only: particle
+contains
+  subroutine move(p)
+    type(particle), intent(inout) :: p
+  end subroutine move
+end module physics
+""",
+        encoding="utf-8",
+    )
+
+    payload = x2py_cli._semantic_report([str(types_mod), str(physics)])
+    semantic_type = payload[str(physics)]["semantic_modules"][0]["functions"][0]["arguments"][0]["semantic_type"]
+
+    assert semantic_type["metadata"]["external_type_ref"]["wrapped"] is True
+    assert "class particle" not in payload[str(physics)]["pyi"]
+
+    readiness = x2py_cli._wrap_readiness_report([str(types_mod), str(physics)])
+    readiness_type = readiness[str(physics)]["semantic_modules"][0]["functions"][0]["arguments"][0]["semantic_type"]
+
+    assert readiness_type["metadata"]["external_type_ref"]["wrapped"] is True
+
+
+def test_x2py_pyi_report_writes_opaque_dependency_stub_for_external_type(tmp_path: Path, monkeypatch):
+    physics = tmp_path / "physics.f90"
+    physics.write_text(
+        """
+module physics
+  use types_mod, only: particle
+contains
+  function create_particle() result(p)
+    type(particle) :: p
+  end function create_particle
+end module physics
+""",
+        encoding="utf-8",
+    )
+
+    payload = x2py_cli._semantic_report([str(physics)])
+
+    assert payload[str(physics)]["pyi_dependencies"] == {
+        "types_mod": "class particle(Opaque):\n    pass"
+    }
+    monkeypatch.setattr(sys, "argv", ["x2py", str(physics), "--pyi", "--out"])
+    assert x2py_cli.main() == 0
+
+    assert (tmp_path / "physics.pyi").exists()
+    assert (tmp_path / "types_mod.pyi").read_text(encoding="utf-8") == "class particle(Opaque):\n    pass\n"
+
+
 
 def test_cli_out_requires_stage_flag():
     cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--out"]

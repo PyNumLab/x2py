@@ -8,6 +8,7 @@ from semantics.fortran2ir import (
 
 from semantics.pyi_printer import (
     emit_module,
+    emit_module_stubs,
     PyiPrinter,
 )
 from semantics.models import (
@@ -390,6 +391,47 @@ end module
     code = generate_pyi(source)
 
     assert "from list_input import delete_input_list as delete_input" in code
+
+
+def test_emit_imported_derived_type_reference_without_reexporting_class():
+    parsed = parse_fortran_source(
+        """
+module physics
+  use types_mod, only: particle
+contains
+  subroutine move(p)
+    type(particle), intent(inout) :: p
+  end subroutine move
+end module physics
+"""
+    )
+    module = fortran_module_to_semantic_module(parsed)
+    stubs = emit_module_stubs(module)
+    code = stubs["physics"]
+
+    assert "from types_mod import particle" in code
+    assert "p: Ptr(particle)" in code
+    assert "class particle" not in code
+    assert stubs["types_mod"] == "class particle(Opaque):\n    pass"
+
+
+def test_emit_bare_use_adds_import_for_opaque_dependency_type():
+    parsed = parse_fortran_source(
+        """
+module physics
+  use types_mod
+contains
+  subroutine move(p)
+    type(particle), intent(inout) :: p
+  end subroutine move
+end module physics
+"""
+    )
+    stubs = emit_module_stubs(fortran_module_to_semantic_module(parsed))
+
+    assert "import types_mod" in stubs["physics"]
+    assert "from types_mod import particle" in stubs["physics"]
+    assert stubs["types_mod"] == "class particle(Opaque):\n    pass"
 
 
 def test_emit_structured_import_without_items_as_plain_import():

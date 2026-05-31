@@ -208,6 +208,16 @@ another source language.
 - Semantic IR imports use structured `SemanticImport` / `SemanticImportItem`
   entries when a Fortran `use` has an explicit symbol list; bare imports remain
   plain module names for compatibility.
+- Imported derived types remain external references by default. Semantic type
+  `external_type_ref` metadata records the defining module, whether that owner
+  module is explicitly wrapped, and whether the boundary representation is
+  `opaque` or `wrapped`. The importing module does not emit or re-export a
+  duplicate class. When the owner is not explicitly wrapped,
+  `emit_module_stubs(...)` emits an owner-module `class Name(Opaque): pass`
+  dependency stub. `load_pyi_modules(...)` restores the file set and reconciles
+  an edited concrete owner class back to a wrapped reference. A future
+  recursive dependency mode would expand Fortran `use` dependencies only;
+  preprocessing include exposure is already handled separately.
 - The `.pyi` printer emits structured imports as `from module import name` or
   `from module import source as target`; the `.pyi` parser accepts the same
   syntax and restores the semantic import mapping.
@@ -660,9 +670,8 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
   - While slicing raw source units, simple directive structure is tracked for
     `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` only to recognize
     mutually exclusive branches in unresolved raw input.
-  - `visit_file(..., macro_defines=...)` remains accepted for compatibility,
-    but macro decisions are ignored. Active branch selection must happen in the
-    compiler-backed preprocessing layer.
+  - Active branch selection must happen in the compiler-backed preprocessing
+    layer.
   - Duplicate procedure-name checks in a module/global scope are evaluated
     against same-level sliced units and this structural branch context:
     - if two same-name procedure headers are reachable in an overlapping branch context, raise `FortranParseError` (duplicate procedure name).
