@@ -1,6 +1,15 @@
 __pycache__
 __pyccel__
 .pymon
+.coverage
+.coverage.*
+.hypothesis/
+.mutmut-cache/
+mutants/
+.pytest_cache/
+.ruff_cache/
+.benchmarks/
+htmlcov/
 
 *.pyc
 *.pyo

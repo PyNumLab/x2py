@@ -291,7 +291,7 @@ def test_compatible_repeated_typedefs_merge_but_conflicting_typedefs_diagnose():
 
 
 def test_variables_preserve_initializer_text_arrays_and_concrete_tag_types():
-    from c_parser import CArray, CComposedType, CEnum, CInt, CStruct, CUnion, parse_c_file
+    from c_parser import CArray, CEnum, CInt, CStruct, CUnion, parse_c_file
 
     parsed = parse_c_file(
         """
@@ -504,16 +504,14 @@ def test_conflicting_function_pointer_typedefs_report_diagnostic():
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
-        "typedef int (*callback_fn)(int);\n"
-        "typedef double (*callback_fn)(double);\n",
+        "typedef int (*callback_fn)(int);\ntypedef double (*callback_fn)(double);\n",
         filename="callback_typedef_conflict.h",
     )
 
     assert [typedef.name for typedef in parsed.typedefs] == ["callback_fn"]
-    assert [
-        (diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name)
-        for diagnostic in parsed.diagnostics
-    ] == [("C_CONFLICTING_TYPEDEF", "typedef", "callback_fn")]
+    assert [(diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name) for diagnostic in parsed.diagnostics] == [
+        ("C_CONFLICTING_TYPEDEF", "typedef", "callback_fn")
+    ]
 
 
 def test_recursive_compositions_cover_tables_callback_arrays_and_function_results():
@@ -561,10 +559,7 @@ _Alignas(16) int aligned_value;
     )
 
     assert [variable.name for variable in parsed.variables] == ["visible", "outdated", "aligned_value"]
-    assert [
-        (diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name)
-        for diagnostic in parsed.diagnostics
-    ] == [
+    assert [(diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name) for diagnostic in parsed.diagnostics] == [
         ("C_UNMODELED_COMPILER_EXTENSION", "alignment_specifier", "_Alignas"),
     ]
 
@@ -607,10 +602,7 @@ def test_braced_and_designated_initializer_declarations_preserve_source_text():
     from c_parser import CArray, CComposedType, parse_c_file
 
     parsed = parse_c_file(
-        "struct config;\n"
-        "int values[3] = {1, 2, 3};\n"
-        "struct config cfg = {.enabled = 1};\n"
-        "int scalar = 1;\n",
+        "struct config;\nint values[3] = {1, 2, 3};\nstruct config cfg = {.enabled = 1};\nint scalar = 1;\n",
         filename="braced_initializers.h",
     )
 
@@ -635,10 +627,7 @@ def test_asm_declarator_suffixes_are_tolerated_with_symbol_identity_diagnostics(
 
     assert [variable.name for variable in parsed.variables] == ["retained", "pinned"]
     assert [function.name for function in parsed.functions] == ["run"]
-    assert [
-        (diagnostic.code, diagnostic.unit_kind)
-        for diagnostic in parsed.diagnostics
-    ] == [
+    assert [(diagnostic.code, diagnostic.unit_kind) for diagnostic in parsed.diagnostics] == [
         ("C_UNMODELED_COMPILER_EXTENSION", "asm_label"),
         ("C_UNMODELED_COMPILER_EXTENSION", "asm_label"),
     ]

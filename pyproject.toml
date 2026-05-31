@@ -12,6 +12,23 @@ dependencies = [
     "colorama>=0.4.6; platform_system == 'Windows'",
 ]
 
+[project.optional-dependencies]
+qa = [
+    "bandit[toml]>=1.8",
+    "coverage[toml]>=7.10",
+    "hypothesis>=6.100",
+    "mutmut>=3.0",
+    "pip-audit>=2.7",
+    "pre-commit>=4.0",
+    "pytest>=8.0",
+    "pytest-benchmark>=5.0",
+    "pytest-randomly>=3.15",
+    "pytest-xdist[psutil]>=3.6",
+    "radon[toml]>=6.0",
+    "ruff>=0.11",
+    "vulture>=2.14",
+]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["c_parser*", "fortran_parser*", "semantics*", "x2py*",]
@@ -19,12 +36,125 @@ include = ["c_parser*", "fortran_parser*", "semantics*", "x2py*",]
 [project.scripts]
 x2py = "x2py.cli:main"
 
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra --strict-config --strict-markers"
+markers = [
+    "benchmark: performance regression tests run explicitly with pytest-benchmark",
+    "fuzz: randomized parser robustness tests",
+    "property: Hypothesis property-based tests",
+    "regression: tests that pin previously fixed bugs",
+    "slow: tests that are useful but too expensive for the default inner loop",
+]
+xfail_strict = true
+
 [tool.coverage.run]
 source = ["c_parser", "fortran_parser", "semantics", "x2py"]
 branch = true
 parallel = true
+relative_files = true
 
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
 fail_under = 95
+precision = 2
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+force-exclude = true
+extend-exclude = [
+    "tests/data",
+    "tests/pyi/fixtures",
+    "x2py.egg-info",
+]
+
+[tool.ruff.lint]
+select = [
+    "E4",   # import and syntax-related pycodestyle errors
+    "E7",   # statement structure errors
+    "E9",   # runtime syntax/name errors
+    "F",    # Pyflakes: undefined names, unused imports, dead assignments
+    "B",    # flake8-bugbear suspicious patterns
+    "C4",   # comprehension mistakes
+    "UP",   # safe Python-version modernizations
+    "SIM",  # simplifiable code
+    "RET",  # return-flow mistakes
+    "RUF",  # Ruff-specific bug and maintenance rules
+    "C90",  # McCabe complexity
+]
+ignore = [
+    # Existing parser/compiler code has long diagnostic strings and generated
+    # examples; keep line length advisory until the formatter is adopted across
+    # the historical tree.
+    "E501",
+
+    # Baseline exceptions to avoid turning historical style debt into a noisy
+    # first QA change. Ratchet these down once the reports are reviewed.
+    "B007",
+    "B018",
+    "B905",
+    "E731",
+    "E741",
+    "RET504",
+    "RET505",
+    "RET507",
+    "RUF007",
+    "RUF012",
+    "RUF015",
+    "RUF022",
+    "SIM102",
+    "SIM103",
+    "SIM105",
+    "SIM108",
+    "SIM110",
+    "SIM211",
+    "UP007",
+    "UP009",
+    "UP037",
+    "UP038",
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["c_parser", "fortran_parser", "semantics", "x2py"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 50
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.bandit]
+exclude_dirs = ["tests", "docs", "x2py.egg-info"]
+
+[tool.vulture]
+paths = ["c_parser", "fortran_parser", "semantics", "x2py", "tests"]
+exclude = ["tests/data/", "tests/pyi/fixtures/", "x2py.egg-info/"]
+min_confidence = 80
+sort_by_size = true
+ignore_names = [
+    "pytest_*",
+    "test_*",
+]
+
+[tool.radon]
+exclude = "tests/*,docs/*"
+ignore = "__pycache__,.git,.pytest_cache,.ruff_cache"
+cc_min = "C"
+cc_max = "F"
+show_complexity = true
+average = true
+total_average = true
+mi_min = "B"
+
+[tool.mutmut]
+paths_to_mutate = ["c_parser", "fortran_parser", "semantics", "x2py"]
+pytest_add_cli_args_test_selection = ["tests"]
+also_copy = ["conftest.py", "sitecustomize.py", "pyproject.toml"]

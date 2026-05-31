@@ -13,9 +13,10 @@ import re
 import shlex
 import shutil
 import subprocess
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, Protocol, Sequence
+from typing import Literal, Protocol
 
 
 PreprocessingCategory = Literal[
@@ -297,17 +298,13 @@ class CompilerAdapter(Protocol):
         *,
         language: str,
         config: PreprocessingConfig,
-    ) -> Invocation:
-        ...
+    ) -> Invocation: ...
 
-    def collect_dependencies(self, result: "PreprocessResult") -> list[IncludedFile]:
-        ...
+    def collect_dependencies(self, result: "PreprocessResult") -> list[IncludedFile]: ...
 
-    def collect_macros(self, result: "PreprocessResult") -> list[MacroDefinition]:
-        ...
+    def collect_macros(self, result: "PreprocessResult") -> list[MacroDefinition]: ...
 
-    def parse_linemarkers(self, source: str, filename: str | None = None) -> list[SourceMapping]:
-        ...
+    def parse_linemarkers(self, source: str, filename: str | None = None) -> list[SourceMapping]: ...
 
 
 _VALID_LANGUAGES = {"c", "fortran"}
@@ -641,12 +638,14 @@ def _template_token_value(token: str, source: Path, language: str, config: Prepr
         return [f"-std={config.std}"] if config.std else []
     if token == "{compiler_args}":
         return list(config.compiler_args)
-    return [token.format(
-        source=str(source),
-        compiler=config.compiler or "",
-        language=language,
-        standard=config.std or "",
-    )]
+    return [
+        token.format(
+            source=str(source),
+            compiler=config.compiler or "",
+            language=language,
+            standard=config.std or "",
+        )
+    ]
 
 
 def build_template_preprocess_invocation(
@@ -850,7 +849,9 @@ def _parse_macro_definitions(source: str, mappings: Sequence[SourceMapping]) -> 
                 name=name,
                 value=value.strip() if value else None,
                 function_like=params_text is not None,
-                parameters=[item.strip() for item in params.split(",")] if params is not None and params.strip() else ([] if params_text else None),
+                parameters=[item.strip() for item in params.split(",")]
+                if params is not None and params.strip()
+                else ([] if params_text else None),
                 path=mapping.original_path if mapping else None,
                 line=mapping.original_line if mapping else None,
                 builtin=(mapping.original_path.startswith("<") if mapping else False),
@@ -859,11 +860,18 @@ def _parse_macro_definitions(source: str, mappings: Sequence[SourceMapping]) -> 
     return macros
 
 
-def _mapping_for_generated_line(mappings: Sequence[SourceMapping], generated_line: int, fallback: Path) -> SourceMapping:
+def _mapping_for_generated_line(
+    mappings: Sequence[SourceMapping], generated_line: int, fallback: Path
+) -> SourceMapping:
     for mapping in mappings:
         if mapping.generated_line == generated_line:
             return mapping
-    return SourceMapping(generated_line=generated_line, original_path=str(fallback), original_line=generated_line, include_stack=[str(fallback)])
+    return SourceMapping(
+        generated_line=generated_line,
+        original_path=str(fallback),
+        original_line=generated_line,
+        include_stack=[str(fallback)],
+    )
 
 
 def _resolve_fortran_include(target: str, including_file: str, include_dirs: Sequence[str]) -> Path | None:
@@ -991,7 +999,12 @@ def expand_native_fortran_includes(
 
     root_abs = root_path.resolve() if root_path.exists() else root_path.absolute()
     expanded_lines = expand_text(source, root_abs, [root_abs])
-    return "\n".join(expanded_lines) + ("\n" if source.endswith("\n") else ""), included_files, generated_mappings, diagnostics
+    return (
+        "\n".join(expanded_lines) + ("\n" if source.endswith("\n") else ""),
+        included_files,
+        generated_mappings,
+        diagnostics,
+    )
 
 
 def _recipe_from_invocation(
@@ -1187,9 +1200,15 @@ def run_compiler_preprocessor_with_recipe(
         standard=result.recipe.get("standard") if isinstance(result.recipe.get("standard"), str) else None,
         compiler_args=list(result.recipe.get("compiler_args") or []),
         source_path=result.recipe.get("source_path") if isinstance(result.recipe.get("source_path"), str) else None,
-        compile_commands=result.recipe.get("compile_commands") if isinstance(result.recipe.get("compile_commands"), str) else None,
-        compile_commands_entry=result.recipe.get("compile_commands_entry") if isinstance(result.recipe.get("compile_commands_entry"), dict) else None,
-        command_template=result.recipe.get("command_template") if isinstance(result.recipe.get("command_template"), str) else None,
+        compile_commands=result.recipe.get("compile_commands")
+        if isinstance(result.recipe.get("compile_commands"), str)
+        else None,
+        compile_commands_entry=result.recipe.get("compile_commands_entry")
+        if isinstance(result.recipe.get("compile_commands_entry"), dict)
+        else None,
+        command_template=result.recipe.get("command_template")
+        if isinstance(result.recipe.get("command_template"), str)
+        else None,
         included_files=list(result.recipe.get("included_files") or []),
         source_mappings=list(result.recipe.get("source_mappings") or []),
         macros=list(result.recipe.get("macros") or []),

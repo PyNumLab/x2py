@@ -46,8 +46,8 @@ from semantics.models import (
 # Helpers
 # ============================================================
 
-def get_function(module: SemanticModule, name: str) -> SemanticFunction:
 
+def get_function(module: SemanticModule, name: str) -> SemanticFunction:
     for f in module.functions:
         if f.name == name:
             return f
@@ -56,7 +56,6 @@ def get_function(module: SemanticModule, name: str) -> SemanticFunction:
 
 
 def get_class(module: SemanticModule, name: str) -> SemanticClass:
-
     for c in module.classes:
         if c.name == name:
             return c
@@ -65,7 +64,6 @@ def get_class(module: SemanticModule, name: str) -> SemanticClass:
 
 
 def has_constraint(obj, name: str) -> bool:
-
     return any(c.name == name for c in obj.constraints)
 
 
@@ -192,7 +190,10 @@ def test_converter_covers_derived_dispatch_methods_and_kind_edges():
         )
     ]
     assert converter.visit(FortranVariable(name="count", base_type="integer")).name == "Int32"
-    assert converter.first_module([FortranProcedureSignature(name="hidden", kind="subroutine", in_interface=True)]).name == ""
+    assert (
+        converter.first_module([FortranProcedureSignature(name="hidden", kind="subroutine", in_interface=True)]).name
+        == ""
+    )
     assert FortranToIRConverter._literal_kind_key("kind(1.0q0)") == "16"
     assert FortranToIRConverter._literal_kind_key("kind(1)") is None
 
@@ -213,10 +214,7 @@ end module solver_mod
         fortran_module_to_semantic_module(parsed)
 
     requirements = collect_semantic_compile_time_requirements(parsed)
-    assert {
-        (item["code"], item["symbol"], item["expression"])
-        for item in requirements
-    } >= {
+    assert {(item["code"], item["symbol"], item["expression"]) for item in requirements} >= {
         ("parameter_value", "rk", "selected_real_kind(12)"),
         ("unsupported_kind", "x", "selected_real_kind(12)"),
     }
@@ -251,7 +249,9 @@ def test_semantic_compile_time_requirements_cover_all_parser_contexts():
             FortranModule(
                 name="solver_mod",
                 variables=[
-                    FortranVariable(name="rk", base_type="integer", is_parameter=True, symbolic_value="selected_real_kind(12)"),
+                    FortranVariable(
+                        name="rk", base_type="integer", is_parameter=True, symbolic_value="selected_real_kind(12)"
+                    ),
                     FortranVariable(name="scale", base_type="real", kind="rk"),
                 ],
                 procedures=[proc],
@@ -263,21 +263,43 @@ def test_semantic_compile_time_requirements_cover_all_parser_contexts():
                 name="solver_child",
                 parent="solver_mod",
                 variables=[FortranVariable(name="child_scale", base_type="real", kind="rk")],
-                procedures=[FortranProcedureSignature(name="child_step", kind="subroutine", arguments=[FortranArgument(name="y", base_type="real", kind="rk")])],
-                derived_types=[FortranDerivedType(name="child_t", fields=[FortranArgument(name="value", base_type="real", kind="rk")])],
+                procedures=[
+                    FortranProcedureSignature(
+                        name="child_step",
+                        kind="subroutine",
+                        arguments=[FortranArgument(name="y", base_type="real", kind="rk")],
+                    )
+                ],
+                derived_types=[
+                    FortranDerivedType(
+                        name="child_t", fields=[FortranArgument(name="value", base_type="real", kind="rk")]
+                    )
+                ],
             )
         ],
         programs=[
             FortranProgram(
                 variables=[FortranVariable(name="program_scale", base_type="real", kind="rk")],
-                procedures=[FortranProcedureSignature(name="program_step", kind="subroutine", arguments=[FortranArgument(name="z", base_type="real", kind="rk")])],
+                procedures=[
+                    FortranProcedureSignature(
+                        name="program_step",
+                        kind="subroutine",
+                        arguments=[FortranArgument(name="z", base_type="real", kind="rk")],
+                    )
+                ],
             )
         ],
         block_data_units=[
             FortranBlockData(variables=[FortranVariable(name="saved_scale", base_type="real", kind="rk")])
         ],
-        procedures=[FortranProcedureSignature(name="free_step", kind="subroutine", arguments=[FortranArgument(name="q", base_type="real", kind="rk")])],
-        derived_types=[FortranDerivedType(name="free_t", fields=[FortranArgument(name="payload", base_type="real", kind="rk")])],
+        procedures=[
+            FortranProcedureSignature(
+                name="free_step", kind="subroutine", arguments=[FortranArgument(name="q", base_type="real", kind="rk")]
+            )
+        ],
+        derived_types=[
+            FortranDerivedType(name="free_t", fields=[FortranArgument(name="payload", base_type="real", kind="rk")])
+        ],
     )
 
     contexts = [ctx for _var, ctx in _iter_fortran_variable_contexts(parsed)]
@@ -292,8 +314,7 @@ def test_semantic_compile_time_requirements_cover_all_parser_contexts():
     }
     assert {ctx["role"] for ctx in contexts} >= {"variable", "argument", "result", "field"}
     assert ("parameter_value", "rk", "selected_real_kind(12)") in {
-        (item["code"], item["symbol"], item["expression"])
-        for item in requirements
+        (item["code"], item["symbol"], item["expression"]) for item in requirements
     }
     assert any(item["code"] == "unsupported_kind" and item["symbol"] == "scale" for item in requirements)
     assert supplied == []
@@ -483,8 +504,8 @@ def test_semantic_model_helpers_cover_projection_and_canonical_edge_cases():
 # Basic scalar test
 # ============================================================
 
-def test_basic_scalar_arguments():
 
+def test_basic_scalar_arguments():
     source = """
 module math_mod
 
@@ -512,7 +533,6 @@ end module
     assert len(func.arguments) == 3
 
     a = func.arguments[0]
-    b = func.arguments[1]
     c = func.arguments[2]
 
     assert a.name == "a"
@@ -530,8 +550,8 @@ end module
 # Array semantics test
 # ============================================================
 
-def test_array_constraints():
 
+def test_array_constraints():
     source = """
 module array_mod
 
@@ -569,8 +589,8 @@ end module
 # Multi-dimensional array test
 # ============================================================
 
-def test_matrix_semantics():
 
+def test_matrix_semantics():
     source = """
 module linalg_mod
 
@@ -684,8 +704,8 @@ end module bound_mod
 # Optional arguments
 # ============================================================
 
-def test_optional_argument():
 
+def test_optional_argument():
     source = """
 module opt_mod
 
@@ -716,8 +736,8 @@ end module
 # Allocatable + pointer semantics
 # ============================================================
 
-def test_allocatable_pointer():
 
+def test_allocatable_pointer():
     source = """
 module alloc_mod
 
@@ -747,8 +767,8 @@ end module
 # Derived type conversion
 # ============================================================
 
-def test_derived_type():
 
+def test_derived_type():
     source = """
 module sparse_mod
 
@@ -792,8 +812,8 @@ end module
 # Inheritance test
 # ============================================================
 
-def test_derived_type_inheritance():
 
+def test_derived_type_inheritance():
     source = """
 module inheritance_mod
 
@@ -819,8 +839,8 @@ end module
 # Function return type
 # ============================================================
 
-def test_function_result():
 
+def test_function_result():
     source = """
 module func_mod
 
@@ -852,8 +872,8 @@ end module
 # Shape preservation
 # ============================================================
 
-def test_explicit_shape():
 
+def test_explicit_shape():
     source = """
 module shape_mod
 
@@ -883,8 +903,8 @@ end module
 # JSON serialization test
 # ============================================================
 
-def test_semantic_ir_serialization():
 
+def test_semantic_ir_serialization():
     source = """
 module simple_mod
 
@@ -916,8 +936,8 @@ end module
 # Complicated mixed example
 # ============================================================
 
-def test_complex_module():
 
+def test_complex_module():
     source = """
 module fem_mod
 
@@ -1003,7 +1023,6 @@ end module
 
 
 def test_module_conversion_public_api_entrypoint():
-
     source = """
 module class_mod
 

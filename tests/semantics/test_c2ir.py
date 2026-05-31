@@ -12,15 +12,11 @@ from c_parser.models import (
     CConst,
     CDiagnostic,
     CDouble,
-    CEnum,
-    CEnumerator,
     CFile,
-    CFloat,
     CFunctionType,
     CInitializer,
     CInt,
     CLongDouble,
-    CMacro,
     CMacroDependency,
     CParameter,
     CPointer,
@@ -229,10 +225,7 @@ void use_context(struct private_context ctx);
     report = assess_semantic_wrap_readiness(module, source="api.h")
 
     assert report["wrappable"] is False
-    assert "c_opaque_struct_by_value" in {
-        blocker["code"]
-        for blocker in report["wrappability_blockers"]
-    }
+    assert "c_opaque_struct_by_value" in {blocker["code"] for blocker in report["wrappability_blockers"]}
 
 
 def test_c2ir_converts_enum_constants_and_simple_macro_constants():
@@ -385,9 +378,7 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
     converter = CToIRConverter()
     variable = converter.visit_variable(CVariable(name="handler", type=callback, storage=["static"]))
     field = converter.visit_variable(CVariable(name="bits", type=CInt(), bit_width="3"))
-    function = converter.visit_function(
-        parse_c_file("static int legacy();\n", filename="legacy.h").functions[0]
-    )
+    function = converter.visit_function(parse_c_file("static int legacy();\n", filename="legacy.h").functions[0])
     qualified = converter.visit_type(
         CChar(qualifiers=[CConst(), CVolatile(), CAtomic()], source_text="const volatile _Atomic char")
     )
@@ -413,13 +404,9 @@ def test_c2ir_reports_unsupported_type_and_declarator_compositions():
     unsupported_precision = converter.visit_type(CLongDouble(source_text="long double"))
     empty = converter.visit_type(CComposedType(components=[]))
     array_missing_element = converter.visit_type(CComposedType(components=[CArray(bound="4")]))
-    array_of_pointer = converter.visit_type(
-        CComposedType(components=[CArray(bound="4"), CPointer(), CDouble()])
-    )
+    array_of_pointer = converter.visit_type(CComposedType(components=[CArray(bound="4"), CPointer(), CDouble()]))
     pointer_missing_pointee = converter.visit_type(CComposedType(components=[CPointer()]))
-    pointer_composition = converter.visit_type(
-        CComposedType(components=[CPointer(), CInt(), CDouble()])
-    )
+    pointer_composition = converter.visit_type(CComposedType(components=[CPointer(), CInt(), CDouble()]))
     other_composition = converter.visit_type(CComposedType(components=[CInt(), CDouble()]))
 
     assert unresolved.metadata["readiness_blockers"][0]["code"] == "c_unresolved_type"

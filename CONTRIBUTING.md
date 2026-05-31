@@ -4,6 +4,7 @@
 
 - **CI must be green before merging**: do not merge a PR unless all checks pass (including `test` and `parser-reference-guard`).
 - **Explain fixture/golden updates**: if you update any JSON under `tests/data/fortran/` or `tests/parser/fortran/fixtures/`, include a short note in the PR describing why the expected output changed.
+- **Run the QA stack for parser/compiler changes**: install `python -m pip install -e ".[qa]"`, use the workflows in `docs/quality.md`, and update `docs/quality_adoption_checklist.md` when a staged adoption task or subsystem campaign is completed.
 
 ### Parser reference guard
 

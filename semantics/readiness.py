@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
@@ -620,11 +620,7 @@ def _iter_expression_values(value) -> Iterable[str]:
 
 
 def _shape_symbols(expression: str) -> set[str]:
-    return {
-        match.group(0)
-        for match in _IDENTIFIER_RE.finditer(expression)
-        if not match.group(0).isdigit()
-    }
+    return {match.group(0) for match in _IDENTIFIER_RE.finditer(expression) if not match.group(0).isdigit()}
 
 
 def _is_public(node) -> bool:

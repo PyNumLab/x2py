@@ -12,6 +12,7 @@ EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
 # Semantic Constraints
 # ============================================================
 
+
 @dataclass
 class SemanticConstraint:
     name: str
@@ -21,6 +22,7 @@ class SemanticConstraint:
 # ============================================================
 # Semantic Coercions
 # ============================================================
+
 
 @dataclass
 class SemanticCoercion:
@@ -34,6 +36,7 @@ class SemanticCoercion:
 # Ownership / Lifetime
 # ============================================================
 
+
 @dataclass
 class OwnershipPolicy:
     ownership: str = "borrowed"
@@ -44,6 +47,7 @@ class OwnershipPolicy:
 # ============================================================
 # Origin And Storage Contracts
 # ============================================================
+
 
 @dataclass
 class SemanticOrigin:
@@ -89,6 +93,7 @@ class SemanticStorageContract:
 # Semantic Types
 # ============================================================
 
+
 @dataclass(eq=False)
 class SemanticType:
     name: str
@@ -121,6 +126,7 @@ class SemanticType:
 # Semantic Arguments
 # ============================================================
 
+
 @dataclass
 class SemanticArgument:
     name: str
@@ -143,6 +149,7 @@ class SemanticArgument:
 # Semantic Contracts
 # ============================================================
 
+
 @dataclass
 class SemanticContract:
     name: Optional[str] = None
@@ -157,6 +164,7 @@ class SemanticContract:
 # ============================================================
 # API Projection
 # ============================================================
+
 
 @dataclass
 class ProjectionMapping:
@@ -173,6 +181,7 @@ class ProjectionMapping:
 # ============================================================
 # Semantic Functions
 # ============================================================
+
 
 @dataclass(eq=False)
 class SemanticFunction:
@@ -229,6 +238,7 @@ class SemanticFunction:
 # Semantic Methods
 # ============================================================
 
+
 @dataclass(eq=False)
 class SemanticMethod(SemanticFunction):
     is_static: bool = False
@@ -281,10 +291,7 @@ def _semantic_type_key(
         semantic_type.rank,
         semantic_type.dtype,
         tuple(_canonical_expression(item, name_map) for item in shape),
-        tuple(
-            _constraint_key(c, name_map)
-            for c in _semantic_contract_constraints(semantic_type)
-        ),
+        tuple(_constraint_key(c, name_map) for c in _semantic_contract_constraints(semantic_type)),
         tuple(semantic_type.coercions),
         semantic_type.ownership if include_ownership else None,
         semantic_type.metadata,
@@ -302,11 +309,7 @@ def _semantic_contract_constraints(semantic_type: SemanticType) -> list[Semantic
         "ORDER_F",
         "Pointer",
     }
-    return [
-        constraint
-        for constraint in semantic_type.constraints
-        if constraint.name not in storage_constraint_names
-    ]
+    return [constraint for constraint in semantic_type.constraints if constraint.name not in storage_constraint_names]
 
 
 def _storage_contract_key(
@@ -389,12 +392,7 @@ def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
 
 def _native_projection_value_key(value: Any, name_map: dict[str, str]) -> Any:
     if isinstance(value, dict):
-        return tuple(
-            sorted(
-                (key, _native_projection_value_key(item, name_map))
-                for key, item in value.items()
-            )
-        )
+        return tuple(sorted((key, _native_projection_value_key(item, name_map)) for key, item in value.items()))
     if isinstance(value, (list, tuple)):
         return tuple(_native_projection_value_key(item, name_map) for item in value)
     return _canonical_expression(value, name_map)
@@ -419,8 +417,7 @@ def _canonical_expression(value: Any, name_map: dict[str, str]) -> Any:
         return tuple(_canonical_expression(item, name_map) for item in value)
     if isinstance(value, dict):
         return {
-            _canonical_expression(key, name_map): _canonical_expression(item, name_map)
-            for key, item in value.items()
+            _canonical_expression(key, name_map): _canonical_expression(item, name_map) for key, item in value.items()
         }
     return value
 
@@ -437,6 +434,7 @@ def _canonical_expression_text(text: str, name_map: dict[str, str]) -> str:
 # ============================================================
 # Semantic Classes
 # ============================================================
+
 
 @dataclass
 class SemanticClass:
@@ -460,6 +458,7 @@ class SemanticClass:
 # ============================================================
 # Semantic Modules
 # ============================================================
+
 
 @dataclass
 class SemanticImportItem:
@@ -505,8 +504,8 @@ def _iter_module_semantic_types(module: SemanticModule):
     for variable in module.variables:
         yield from _iter_semantic_type_tree(variable.semantic_type)
     for cls in module.classes:
-        for field in cls.fields:
-            yield from _iter_semantic_type_tree(field.semantic_type)
+        for semantic_field in cls.fields:
+            yield from _iter_semantic_type_tree(semantic_field.semantic_type)
         for method in cls.methods:
             for argument in method.arguments:
                 yield from _iter_semantic_type_tree(argument.semantic_type)

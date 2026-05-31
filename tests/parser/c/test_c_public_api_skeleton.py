@@ -3,8 +3,6 @@
 
 from pathlib import Path
 
-from c_parser import CParser, parse_c_file, parse_c_project
-
 
 def test_parse_c_file_accepts_inline_source_and_returns_typed_model():
     from c_parser import CFile, parse_c_file
@@ -136,8 +134,7 @@ def test_concrete_type_serialization_preserves_semantic_type_fields_and_location
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
-        "typedef int (*compare_fn)(const void *, const void *);\n"
-        "compare_fn select_compare(void);\n",
+        "typedef int (*compare_fn)(const void *, const void *);\ncompare_fn select_compare(void);\n",
         filename="types.h",
     )
     payload = parsed.to_dict()
@@ -232,9 +229,9 @@ def test_c_parser_instance_entrypoints_match_public_functions():
 
     assert parser.visit_file(source, filename="api.h") == parse_c_file(source, filename="api.h")
     assert parser.visit_project({"api.h": source}) == parse_c_project({"api.h": source})
-    assert parser.visit_parsed_project(
-        {"api.h": parser.visit_file(source, filename="api.h")}
-    ) == parse_c_project({"api.h": source})
+    assert parser.visit_parsed_project({"api.h": parser.visit_file(source, filename="api.h")}) == parse_c_project(
+        {"api.h": source}
+    )
 
 
 def test_c_parse_error_attributes_and_diagnostic_formatting():

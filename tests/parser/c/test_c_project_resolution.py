@@ -115,10 +115,7 @@ double configure(double option);
         frozenset({"g1:b0"}),
         frozenset({"g1:b1"}),
     ]
-    assert not any(
-        diag.code == "C_CONFLICTING_FUNCTION_DECLARATION"
-        for diag in project.diagnostics
-    )
+    assert not any(diag.code == "C_CONFLICTING_FUNCTION_DECLARATION" for diag in project.diagnostics)
     payload = project.to_dict()
     assert payload["conditional_function_variants"]["configure"][0]["condition_set"] == ["g1:b0"]
 
@@ -127,9 +124,7 @@ def test_project_indexes_functions_by_file_and_enum_constants(tmp_path: Path):
     from c_parser import parse_c_project
 
     (tmp_path / "api.h").write_text(
-        "enum status { STATUS_OK = 0, STATUS_ERROR = -1 };\n"
-        "int run(void);\n"
-        "int stop(void);\n",
+        "enum status { STATUS_OK = 0, STATUS_ERROR = -1 };\nint run(void);\nint stop(void);\n",
         encoding="utf-8",
     )
 
@@ -144,8 +139,7 @@ def test_project_indexes_file_scope_variables_and_macros(tmp_path: Path):
     from c_parser import parse_c_project
 
     (tmp_path / "api.h").write_text(
-        "#define API_VERSION 3\n"
-        "extern int global_count;\n",
+        "#define API_VERSION 3\nextern int global_count;\n",
         encoding="utf-8",
     )
 
@@ -183,14 +177,11 @@ def test_project_resolves_typedefs_and_struct_tags_across_files(tmp_path: Path):
     from c_parser import CComposedType, CTypedef, parse_c_project
 
     (tmp_path / "types.h").write_text(
-        "typedef unsigned long api_size;\n"
-        "struct state { int id; };\n",
+        "typedef unsigned long api_size;\nstruct state { int id; };\n",
         encoding="utf-8",
     )
     (tmp_path / "api.h").write_text(
-        '#include "types.h"\n'
-        "api_size count(void);\n"
-        "void step(struct state *s);\n",
+        '#include "types.h"\napi_size count(void);\nvoid step(struct state *s);\n',
         encoding="utf-8",
     )
 
@@ -241,8 +232,7 @@ def test_project_resolves_typedef_chains_while_preserving_alias_objects(tmp_path
     from c_parser import CTypedef, CUnsignedLong, parse_c_project
 
     (tmp_path / "types.h").write_text(
-        "typedef unsigned long raw_size;\n"
-        "typedef raw_size api_size;\n",
+        "typedef unsigned long raw_size;\ntypedef raw_size api_size;\n",
         encoding="utf-8",
     )
     (tmp_path / "api.h").write_text("api_size count(void);\n", encoding="utf-8")
@@ -256,25 +246,44 @@ def test_project_resolves_typedef_chains_while_preserving_alias_objects(tmp_path
     assert project.functions["count"].result_type.source_text == "api_size"
 
 
-def test_project_reports_typedef_cycles_without_crashing():
+def test_project_resolves_typedefs_for_variables_and_aggregate_members():
+    from c_parser import parse_c_project
+
+    project = parse_c_project(
+        {
+            "types.h": ("typedef unsigned long api_size;\nstruct packet { api_size count; };\n"),
+            "api.h": "extern api_size total;\n",
+        }
+    )
+
+    assert project.variables["total"].type is project.typedefs["api_size"]
+    assert project.structs["packet"].members[0].type is project.typedefs["api_size"]
+
+
+def test_project_reports_each_typedef_cycle_once_with_structured_diagnostic():
     from c_parser import parse_c_project
 
     project = parse_c_project({"cycle.h": "typedef b a;\ntypedef a b;\n"})
 
-    assert {diag.code for diag in project.diagnostics} == {"C_TYPEDEF_CYCLE"}
+    assert len(project.diagnostics) == 1
+    diagnostic = project.diagnostics[0]
+    assert diagnostic.code == "C_TYPEDEF_CYCLE"
+    assert diagnostic.message == "Typedef cycle detected: a -> b -> a."
+    assert diagnostic.severity == "error"
+    assert diagnostic.location.filename == "cycle.h"
+    assert diagnostic.unit_kind == "typedef"
+    assert diagnostic.unit_name == "a"
 
 
 def test_project_resolves_union_and_enum_tag_references(tmp_path: Path):
     from c_parser import CComposedType, parse_c_project
 
     (tmp_path / "types.h").write_text(
-        "union value { int i; };\n"
-        "enum status { STATUS_OK = 0 };\n",
+        "union value { int i; };\nenum status { STATUS_OK = 0 };\n",
         encoding="utf-8",
     )
     (tmp_path / "api.h").write_text(
-        "void set_value(union value *v);\n"
-        "enum status current_status(void);\n",
+        "void set_value(union value *v);\nenum status current_status(void);\n",
         encoding="utf-8",
     )
 
@@ -290,8 +299,7 @@ def test_project_resolves_opaque_pointer_typedefs_across_files(tmp_path: Path):
     from c_parser import CComposedType, CTypedef, parse_c_project
 
     (tmp_path / "types.h").write_text(
-        "struct handle;\n"
-        "typedef struct handle *handle_t;\n",
+        "struct handle;\ntypedef struct handle *handle_t;\n",
         encoding="utf-8",
     )
     (tmp_path / "api.h").write_text("handle_t open_handle(void);\n", encoding="utf-8")
@@ -313,6 +321,26 @@ def test_project_preserves_unresolved_type_references_for_later_diagnostics():
     assert isinstance(project.functions["value"].result_type, CTypedef)
     assert project.functions["value"].result_type.name == "missing_type"
     assert project.functions["value"].result_type.type is None
+
+
+def test_project_preserves_unresolved_tag_references_for_later_diagnostics():
+    from c_parser import CComposedType, CEnum, CStruct, CUnion, parse_c_project
+
+    project = parse_c_project(
+        {"api.h": ("struct missing *get_struct(void);\nunion absent *get_union(void);\nenum unknown get_enum(void);\n")}
+    )
+
+    struct_type = project.functions["get_struct"].result_type
+    union_type = project.functions["get_union"].result_type
+    enum_type = project.functions["get_enum"].result_type
+    assert isinstance(struct_type, CComposedType)
+    assert isinstance(struct_type.components[-1], CStruct)
+    assert struct_type.components[-1].name == "missing"
+    assert isinstance(union_type, CComposedType)
+    assert isinstance(union_type.components[-1], CUnion)
+    assert union_type.components[-1].name == "absent"
+    assert isinstance(enum_type, CEnum)
+    assert enum_type.name == "unknown"
 
 
 def test_project_header_source_pairs_use_matching_stems_and_direct_includes(tmp_path: Path):

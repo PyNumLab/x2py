@@ -6,7 +6,7 @@ import os
 import re
 import sys
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Optional
 
 
 _ANSI = {
@@ -73,10 +73,7 @@ def _parse_fortran_expression(text: str | None) -> Any:
     if match:
         return FortranFunctionCall(
             name=match.group("name"),
-            arguments=[
-                _parse_fortran_expression(arg)
-                for arg in _split_top_level_csv(match.group("args"))
-            ],
+            arguments=[_parse_fortran_expression(arg) for arg in _split_top_level_csv(match.group("args"))],
             raw=token,
         )
 
@@ -362,9 +359,9 @@ class FortranBlockData:
     filename: Optional[str] = None
     variables: list[FortranVariable] = field(default_factory=list)
 
+
 @dataclass
 class FortranFile:
-
     # --------------------------------------------------------
     # File metadata
     # --------------------------------------------------------
@@ -419,9 +416,9 @@ class FortranFile:
 
     symbols: dict[str, object] = field(default_factory=dict)
 
+
 @dataclass
 class FortranProject:
-
     # --------------------------------------------------------
     # Physical files
     # --------------------------------------------------------
