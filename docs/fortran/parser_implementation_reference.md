@@ -526,9 +526,9 @@ implemented today:
 - **Name-reuse safety across scopes**: fixtures/tests cover same identifier
   reuse in separate host/internal/type scopes to ensure no cross-scope symbol
   pollution.
-- **Preprocessor branch-aware duplicate checks**: duplicate procedure names are
-  allowed in mutually exclusive `#if/#ifdef` branches but still raise when two
-  same-name procedures are active in overlapping branch conditions.
+- **Preprocessing boundary**: raw CPP directives require compiler
+  preprocessing before parser entry. Compiler linemarkers remain accepted so
+  preprocessed source can retain provenance.
 - **Valued variables map**: compile-time constants are preserved as
   `FortranVariable(name, value, symbolic_value)` records in signature metadata.
   `value` stores only a literal/evaluated value when the parser can determine
@@ -668,21 +668,16 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
   - "Unsupported but recognized" constructs may be carried far enough for
     semantic readiness or `.pyi` completion to decide wrappability. Unknown
     datatype syntax should crash early.
-- **Preprocessor-conditional duplicate procedures (raw parser tolerance):**
+- **Compiler preprocessing boundary:**
   - The parser does **not** run a C preprocessor or evaluate CPP expressions.
     Compiler preprocessing is responsible for `#if`, `#ifdef`, macro
-    expansion, and CPP includes before production wrapper parsing.
-  - While slicing raw source units, simple directive structure is tracked for
-    `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` only to recognize
-    mutually exclusive branches in unresolved raw input.
-  - Active branch selection must happen in the compiler-backed preprocessing
-    layer.
-  - Duplicate procedure-name checks in a module/global scope are evaluated
-    against same-level sliced units and this structural branch context:
-    - if two same-name procedure headers are reachable in an overlapping branch context, raise `FortranParseError` (duplicate procedure name).
-    - if they are only present in mutually-exclusive branches of the same conditional group, allow both signatures.
-  - This is not semantic macro evaluation. Multiple build configurations
-    should be preprocessed and parsed separately.
+    expansion, and CPP includes before parser entry.
+  - Raw CPP directives raise `FortranParseError` with
+    `PARSE_PREPROCESSING_REQUIRED`.
+  - Compiler linemarkers remain accepted so preprocessed source and generated
+    diagnostics can retain provenance.
+  - Multiple build configurations should be preprocessed and parsed
+    separately.
 
 `FortranParseError` is a subclass of `ValueError` and carries structured location metadata:
 - `filename` — source file path (if provided)

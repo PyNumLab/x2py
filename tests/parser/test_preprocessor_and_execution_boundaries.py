@@ -60,6 +60,7 @@ def evaluate_signature_shapes(signature, symbol_values=None):
             arg.shape[index] = dim
     return out
 
+
 def test_signature_shape_helpers_evaluate_publicly_parsed_signature():
     code = """
 subroutine fill(a)
@@ -74,37 +75,43 @@ end subroutine fill
     assert evaluated.arguments[0].shape == ["0:3", "1:3"]
     assert sig.arguments[0].shape == ["0:nx-1", "1:ny"]
 
-def test_cpp_directives_are_preserved_without_parser_branch_selection():
-    code = """
-#if defined USE_FAST
-subroutine fast_path(x)
-  integer, intent(in) :: x
-end subroutine fast_path
-#else
-subroutine slow_path(x)
-  real, intent(in) :: x
-end subroutine slow_path
-#endif
 
-#ifndef USE_SLOW
-subroutine default_path(x)
-  logical, intent(in) :: x
-end subroutine default_path
-#else
-subroutine selected_slow_path(x)
-  real, intent(in) :: x
-end subroutine selected_slow_path
-#endif
-"""
+@pytest.mark.parametrize("directive", ["#if USE_FAST", "#ifdef USE_FAST", "#define USE_FAST 1", '#include "api.inc"'])
+def test_cpp_directives_require_compiler_preprocessing(directive):
+    code = f"{directive}\nsubroutine selected()\nend subroutine selected\n"
 
-    parsed = parse_fortran_file(code)
+    with pytest.raises(FortranParseError, match="require compiler preprocessing") as exc_info:
+        parse_fortran_file(code, filename="raw_cpp.F90")
 
-    assert [proc.name for proc in parsed.procedures] == [
-        "fast_path",
-        "slow_path",
-        "default_path",
-        "selected_slow_path",
-    ]
+    assert exc_info.value.code == "PARSE_PREPROCESSING_REQUIRED"
+    assert exc_info.value.line_number == 1
+
+
+def test_compiler_linemarkers_remain_parseable_for_provenance():
+    code = '# 40 "include/api.inc" 1\nsubroutine selected()\nend subroutine selected\n'
+
+    parsed = parse_fortran_file(code, filename="preprocessed.F90")
+
+    assert [procedure.name for procedure in parsed.procedures] == ["selected"]
+
+
+def test_fixed_form_cpp_directives_are_rejected_before_comment_handling():
+    code = "#ifdef USE_FAST\n      subroutine selected()\n      end\n#endif\n"
+
+    with pytest.raises(FortranParseError, match="require compiler preprocessing") as exc_info:
+        parse_fortran_file(code, filename="raw_cpp.F")
+
+    assert exc_info.value.code == "PARSE_PREPROCESSING_REQUIRED"
+    assert exc_info.value.line_number == 1
+
+
+def test_fixed_form_compiler_linemarkers_are_removed_before_lexing():
+    code = '# 1 "api.F"\n      subroutine selected()\n      end\n'
+
+    parsed = parse_fortran_file(code, filename="preprocessed.F")
+
+    assert [procedure.name for procedure in parsed.procedures] == ["selected"]
+
 
 def test_include_and_ignored_spec_lines_do_not_change_public_signature():
     code = """
@@ -125,6 +132,7 @@ end subroutine legacy_specs
 
     assert [arg.name for arg in sig.arguments] == ["x"]
     assert sig.arguments[0].base_type == "real"
+
 
 def test_execution_part_boundaries_and_local_types_are_not_misread_as_declarations():
     code = """
@@ -147,6 +155,7 @@ end subroutine exec_edges
     assert sig.arguments[0].base_type == "real"
     assert "i" not in sig.variables
 
+
 def test_program_execution_part_is_ignored_after_first_executable_statement():
     code = """
 program driver
@@ -164,6 +173,7 @@ end program driver
 
     assert [var.name for var in program.variables] == ["ierr"]
 
+
 def test_executable_statement_in_module_spec_part_raises():
     code = """
 module bad_exec_mod
@@ -173,6 +183,7 @@ end module bad_exec_mod
 
     with pytest.raises(FortranParseError, match="Executable statement is not allowed"):
         parse_fortran_file(code, filename="bad_exec_mod.f90")
+
 
 def test_openmp_declarative_directives_raise_but_executable_directives_are_body_lines():
     declarative = """
@@ -229,33 +240,6 @@ C$OMP PARALLEL DO
     assert parse_fortran_file(executable, filename="omp_body.f90").procedures[0].name == "omp_body"
     assert parse_fortran_file(fixed_form_executable, filename="fixed_omp.f").procedures[0].name == "fixed_omp"
 
-def test_cpp_false_and_malformed_expressions_are_not_evaluated_by_parser():
-    code = """
-#if 0
-subroutine false_if_branch()
-end subroutine false_if_branch
-#else
-subroutine false_if_else()
-end subroutine false_if_else
-#endif
-
-#if defined(USE_A) && (
-subroutine malformed_if_branch()
-end subroutine malformed_if_branch
-#else
-subroutine malformed_if_else()
-end subroutine malformed_if_else
-#endif
-"""
-
-    parsed = parse_fortran_file(code)
-
-    assert [proc.name for proc in parsed.procedures] == [
-        "false_if_branch",
-        "false_if_else",
-        "malformed_if_branch",
-        "malformed_if_else",
-    ]
 
 def test_statement_function_and_numeric_label_before_execution_part():
     code = """
@@ -271,31 +255,6 @@ end subroutine old_style
 
     assert sig.arguments[0].base_type == "real"
 
-def test_preprocessor_boolean_identifiers_are_not_evaluated_by_public_parse():
-    code = """
-#if USE_FAST && !USE_SLOW
-subroutine selected_fast()
-end subroutine selected_fast
-#else
-subroutine selected_slow()
-end subroutine selected_slow
-#endif
-
-#else
-#elif USE_OTHER
-#endif
-
-subroutine after_stray_directives()
-end subroutine after_stray_directives
-"""
-
-    parsed = parse_fortran_file(code, filename="cpp_edges.f90")
-
-    assert [proc.name for proc in parsed.procedures] == [
-        "selected_fast",
-        "selected_slow",
-        "after_stray_directives",
-    ]
 
 def test_implicit_mapping_parameter_noise_and_assignment_lines_do_not_break_procedure_parse():
     code = """
@@ -313,10 +272,11 @@ end subroutine declaration_noise
     assert sig.arguments[0].name == "x"
     assert sig.arguments[0].base_type == "real"
 
+
 def test_stray_end_unit_lines_are_rejected_by_public_file_parse():
     with pytest.raises(FortranParseError, match="Invalid Fortran syntax") as exc_info:
         parse_fortran_file(
-        """
+            """
 end module stray_mod
 end submodule stray_submod
 end program stray_program
@@ -325,7 +285,7 @@ end interface
 subroutine kept()
 end subroutine kept
 """,
-        filename="stray_ends.f90",
-    )
+            filename="stray_ends.f90",
+        )
 
     assert exc_info.value.code == "PARSE_INVALID_SYNTAX"

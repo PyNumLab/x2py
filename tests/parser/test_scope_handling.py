@@ -1,7 +1,8 @@
 import pytest
 
-from x2py import parse_fortran_file
 from fortran_parser.models import FortranParseError
+from x2py import parse_fortran_file
+
 
 def test_same_argument_name_in_different_procedures_is_allowed():
     code = """
@@ -76,50 +77,6 @@ end module m
 """
     with pytest.raises(FortranParseError, match="Duplicate procedure name"):
         parse_fortran_file(code, filename="scope_dup_err.f90")
-
-
-def test_same_name_in_mutually_exclusive_ifdef_branches_is_allowed():
-    code = """
-module m
-#ifdef USE_A
-contains
-  subroutine work(n)
-    integer :: n
-  end subroutine work
-#else
-contains
-  function work(n) result(out)
-    integer :: n
-    integer :: out
-  end function work
-#endif
-end module m
-"""
-    parsed = parse_fortran_file(code, filename="scope_ifdef_ok.f90")
-    module = parsed.modules[0]
-    assert len(module.procedures) == 2
-
-
-def test_same_name_in_overlapping_ifdef_branches_errors_when_both_active():
-    code = """
-module m
-#ifdef USE_A
-contains
-  subroutine work(n)
-    integer :: n
-  end subroutine work
-#endif
-#ifdef USE_B
-contains
-  function work(n) result(out)
-    integer :: n
-    integer :: out
-  end function work
-#endif
-end module m
-"""
-    with pytest.raises(FortranParseError, match="Duplicate procedure name"):
-        parse_fortran_file(code, filename="scope_ifdef_overlap.f90")
 
 
 def test_module_symbol_tables_keep_derived_type_fields_scoped_to_type():

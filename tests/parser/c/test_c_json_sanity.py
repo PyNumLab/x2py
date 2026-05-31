@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""JSON schema sanity tests for C parser project goldens."""
+"""JSON schema sanity tests for legacy C parser project snapshots."""
 
 import json
 from pathlib import Path
@@ -83,9 +83,9 @@ def test_c_json_types_have_distinct_names_or_anonymous_ids():
     for path, _, payload in _iter_file_payloads():
         for key in ("structs", "unions", "enums"):
             for entry in payload.get(key, []):
-                assert (
-                    entry.get("name") or entry.get("anonymous_id") or entry.get("reference")
-                ), f"anonymous {key} missing id in {path}"
+                assert entry.get("name") or entry.get("anonymous_id") or entry.get("reference"), (
+                    f"anonymous {key} missing id in {path}"
+                )
 
 
 def test_c_json_diagnostics_have_codes_locations_and_severities():

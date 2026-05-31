@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """C lexer and lightweight preprocessing coverage."""
 
-from pathlib import Path
-
 import pytest
 
 
@@ -10,12 +8,12 @@ def test_lexer_removes_comments_without_changing_string_or_char_literals():
     from c_parser.lexer import lex_c_source
 
     tokens = lex_c_source(
-        r'''
+        r"""
 const char *url = "https://example.invalid/a//b";
 char slash = '/';
 /* removed block comment */
 int value; // removed line comment
-''',
+""",
         filename="comments.c",
     )
 
@@ -83,7 +81,7 @@ def test_c_lexer_covers_linemarker_escapes_top_level_strings_and_eof_records():
     )
     from c_parser.preprocessor import _record_location
 
-    assert _unescape_linemarker_filename(r"a\nb\rc\td\\e\"f\x") == "a\nb\rc\td\\e\"fx"
+    assert _unescape_linemarker_filename(r"a\nb\rc\td\\e\"f\x") == 'a\nb\rc\td\\e"fx'
     assert _unescape_linemarker_filename("tail\\") == "tail\\"
 
     mappings = line_mappings_for_source(
@@ -104,20 +102,23 @@ def test_c_lexer_covers_linemarker_escapes_top_level_strings_and_eof_records():
 
     normalized = normalize_c_source("#define API \\\n", filename="defs.h")
     assert normalized.records[0].text == "#define API"
-    assert _record_location(
-        CLogicalRecord(text="#define API", filename="defs.h", original_source_lines=())
-    ).source_line is None
-    assert _record_location(
-        CLogicalRecord(text="define API", filename="defs.h", original_source_lines=("define API",))
-    ).column == 1
+    assert (
+        _record_location(CLogicalRecord(text="#define API", filename="defs.h", original_source_lines=())).source_line
+        is None
+    )
+    assert (
+        _record_location(
+            CLogicalRecord(text="define API", filename="defs.h", original_source_lines=("define API",))
+        ).column
+        == 1
+    )
 
     token = lex_c_source(r'char *s = "unterminated\\', filename="bad.c")[-1]
     assert token.kind == "string"
     assert token.text == r'"unterminated\\'
 
     parsed = parse_c_file(
-        '#line 11 "dir\\\\api\\".h"\n'
-        'struct __attribute__((annotate("tag\\"ged"))) named { int value; };\n',
+        '#line 11 "dir\\\\api\\".h"\nstruct __attribute__((annotate("tag\\"ged"))) named { int value; };\n',
         filename="generated.i",
         preprocessing="preprocessed",
     )
@@ -152,154 +153,24 @@ def test_raw_mode_resolves_local_includes_relative_to_path_input(tmp_path):
     assert parsed.diagnostics == []
 
 
-def test_raw_mode_records_simple_object_like_macros_as_constants():
-    from c_parser import parse_c_file
+@pytest.mark.parametrize(
+    "directive",
+    [
+        "#define API_VERSION 3",
+        "#undef API_VERSION",
+        "#ifdef API_VERSION",
+        "#include API_HEADER",
+        "#error configure preprocessing",
+    ],
+)
+def test_raw_mode_rejects_directives_that_require_preprocessing(directive):
+    from c_parser import CParseError, parse_c_file
 
-    parsed = parse_c_file(
-        """
-#define API_VERSION 3
-#define API_NAME "demo"
-int version(void);
-""",
-        filename="macros.h",
-        preprocessing="raw",
-    )
+    with pytest.raises(CParseError, match="require compiler preprocessing") as exc_info:
+        parse_c_file(f"{directive}\nint run(void);\n", filename="raw_macro.h")
 
-    macros = {macro.name: macro for macro in parsed.macros}
-    assert macros["API_VERSION"].value == "3"
-    assert macros["API_NAME"].value == '"demo"'
-    assert macros["API_VERSION"].function_like is False
-
-
-def test_raw_mode_records_undef_directives_as_macro_provenance():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#define API_FEATURE 1
-#undef API_FEATURE
-""",
-        filename="undefs.h",
-        preprocessing="raw",
-    )
-
-    assert [(macro.name, macro.directive, macro.value) for macro in parsed.macros] == [
-        ("API_FEATURE", "define", "1"),
-        ("API_FEATURE", "undef", None),
-    ]
-
-
-def test_raw_mode_marks_function_like_macros_as_unsupported_until_expanded():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#define API_DECL(ret) ret
-API_DECL(int) exported(void);
-""",
-        filename="macro_decl.h",
-        preprocessing="raw",
-    )
-
-    macros = {macro.name: macro for macro in parsed.macros}
-    assert macros["API_DECL"].function_like is True
-    assert parsed.functions == []
-    assert any(diag.code == "C_UNSUPPORTED_FUNCTION_LIKE_MACRO" for diag in parsed.diagnostics)
-    assert any(diag.code == "C_MACRO_DEPENDENT_DECLARATION" for diag in parsed.diagnostics)
-
-
-def test_raw_mode_fixture_keeps_macro_shaped_declaration_deferred_until_preprocessing():
-    from c_parser import parse_c_file
-
-    fixture = (
-        Path(__file__).resolve().parents[2]
-        / "data"
-        / "c"
-        / "general"
-        / "c_richer_features.h"
-    )
-
-    parsed = parse_c_file(fixture)
-
-    function_names = {fn.name for fn in parsed.functions}
-    assert "x2py_sort" not in function_names
-    assert any(
-        diag.code == "C_UNSUPPORTED_FUNCTION_LIKE_MACRO" and diag.unit_name == "X2PY_API"
-        for diag in parsed.diagnostics
-    )
-    assert any(macro.name == "X2PY_API" and macro.directive == "undef" for macro in parsed.macros)
-
-
-def test_raw_conditional_directives_do_not_select_active_branches():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#ifdef USE_FAST
-int run_fast(void);
-#else
-int run_slow(void);
-#endif
-""",
-        filename="conditional.h",
-        preprocessing="raw",
-    )
-
-    assert {fn.name for fn in parsed.functions} == {"run_fast", "run_slow"}
-    assert [(item.directive, item.argument) for item in parsed.raw_directives] == [
-        ("ifdef", "USE_FAST"),
-        ("else", None),
-        ("endif", None),
-    ]
-
-
-def test_raw_mode_keeps_incompatible_function_variants_from_alternative_branches():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#ifdef USE_FLOAT
-float scale(float value);
-#else
-double scale(double value);
-#endif
-""",
-        filename="conditional_signature.h",
-        preprocessing="raw",
-    )
-
-    assert [fn.name for fn in parsed.functions] == ["scale", "scale"]
-    assert [fn.condition_set for fn in parsed.functions] == [
-        frozenset({"g1:b0"}),
-        frozenset({"g1:b1"}),
-    ]
-    assert not any(
-        diag.code == "C_CONFLICTING_FUNCTION_DECLARATION"
-        for diag in parsed.diagnostics
-    )
-    assert parsed.to_dict()["functions"][0]["condition_set"] == ["g1:b0"]
-
-
-def test_raw_mode_does_not_treat_independent_conditional_groups_as_exclusive():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#ifdef USE_FLOAT
-float scale(float value);
-#endif
-#ifdef USE_DOUBLE
-double scale(double value);
-#endif
-""",
-        filename="overlapping_signatures.h",
-        preprocessing="raw",
-    )
-
-    assert any(
-        diag.code == "C_CONFLICTING_FUNCTION_DECLARATION"
-        for diag in parsed.diagnostics
-    )
+    assert exc_info.value.code == "CPARSE_PREPROCESSING_REQUIRED"
+    assert exc_info.value.line_number == 1
 
 
 def test_raw_mode_records_pragmas_as_metadata_without_hiding_declarations():
@@ -346,90 +217,6 @@ int omp_helper(void);
         ("pragma", "omp declare simd"),
         ("pragma", "omp declare target"),
         ("pragma", "omp end declare target"),
-    ]
-
-
-def test_raw_mode_records_macro_dependency_metadata_for_macro_shaped_declarations():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#define API_DECL(ret) ret
-API_DECL(int) exported(void);
-""",
-        filename="macro_dependency.h",
-        preprocessing="raw",
-    )
-
-    assert [(item.name, item.context) for item in parsed.macro_dependencies] == [
-        ("API_DECL", "declaration")
-    ]
-    assert parsed.macro_dependencies[0].source_text == "API_DECL(int) exported(void)"
-    assert parsed.macro_dependencies[0].source_location.line == 3
-    assert [(diag.code, diag.unit_kind, diag.unit_name) for diag in parsed.diagnostics] == [
-        ("C_UNSUPPORTED_FUNCTION_LIKE_MACRO", "macro", "API_DECL"),
-        ("C_MACRO_DEPENDENT_DECLARATION", "macro_dependent_declaration", "API_DECL"),
-    ]
-
-
-def test_raw_mode_conditional_macro_directive_is_not_treated_as_knr_function():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#define ENABLED(value) value
-#if ENABLED(API)
-typedef int api_value;
-#endif
-int run(void);
-""",
-        filename="conditional_macro.h",
-        preprocessing="raw",
-    )
-
-    assert [function.name for function in parsed.functions] == ["run"]
-    assert any(macro.name == "ENABLED" for macro in parsed.macros)
-
-
-def test_raw_mode_defers_declarations_prefixed_by_object_like_macros():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#define API_INLINE inline
-static API_INLINE void run(void) {}
-""",
-        filename="object_macro_decl.h",
-        preprocessing="raw",
-    )
-
-    assert parsed.functions == []
-    assert [(item.name, item.context) for item in parsed.macro_dependencies] == [
-        ("API_INLINE", "declaration")
-    ]
-    assert [(diag.code, diag.unit_kind, diag.unit_name) for diag in parsed.diagnostics] == [
-        ("C_MACRO_DEPENDENT_DECLARATION", "macro_dependent_declaration", "API_INLINE"),
-    ]
-
-
-def test_raw_mode_macro_initializers_do_not_hide_parseable_declarations():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#define INIT(value) value
-int answer = INIT(42);
-""",
-        filename="macro_initializer.h",
-        preprocessing="raw",
-    )
-
-    assert [variable.name for variable in parsed.variables] == ["answer"]
-    assert parsed.variables[0].initializer is not None
-    assert parsed.variables[0].initializer.source_text == "INIT(42)"
-    assert parsed.macro_dependencies == []
-    assert [diagnostic.code for diagnostic in parsed.diagnostics] == [
-        "C_UNSUPPORTED_FUNCTION_LIKE_MACRO"
     ]
 
 

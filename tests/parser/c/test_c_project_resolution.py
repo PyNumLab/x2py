@@ -95,31 +95,6 @@ def test_parse_c_project_directory_discovers_preprocessed_i_files(tmp_path: Path
     assert generated.to_dict()["functions"][0]["origin"] == "preprocessed"
 
 
-def test_project_retains_mutually_exclusive_function_variants_out_of_unique_index():
-    from c_parser import parse_c_project
-
-    project = parse_c_project(
-        {
-            "api.h": """
-#ifdef API_V2
-int configure(int option);
-#else
-double configure(double option);
-#endif
-"""
-        }
-    )
-
-    assert "configure" not in project.functions
-    assert [fn.condition_set for fn in project.conditional_function_variants["configure"]] == [
-        frozenset({"g1:b0"}),
-        frozenset({"g1:b1"}),
-    ]
-    assert not any(diag.code == "C_CONFLICTING_FUNCTION_DECLARATION" for diag in project.diagnostics)
-    payload = project.to_dict()
-    assert payload["conditional_function_variants"]["configure"][0]["condition_set"] == ["g1:b0"]
-
-
 def test_project_indexes_functions_by_file_and_enum_constants(tmp_path: Path):
     from c_parser import parse_c_project
 
@@ -135,18 +110,17 @@ def test_project_indexes_functions_by_file_and_enum_constants(tmp_path: Path):
     assert project.enum_constants["STATUS_OK"].value == "0"
 
 
-def test_project_indexes_file_scope_variables_and_macros(tmp_path: Path):
+def test_project_indexes_file_scope_variables(tmp_path: Path):
     from c_parser import parse_c_project
 
     (tmp_path / "api.h").write_text(
-        "#define API_VERSION 3\nextern int global_count;\n",
+        "extern int global_count;\n",
         encoding="utf-8",
     )
 
     project = parse_c_project(tmp_path)
 
     assert project.variables["global_count"].storage == ["extern"]
-    assert project.macros["API_VERSION"].value == "3"
 
 
 def test_project_function_index_prefers_definition_over_compatible_prototype(tmp_path: Path):

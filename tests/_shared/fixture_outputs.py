@@ -1,9 +1,13 @@
 import json
+import shutil
 from dataclasses import asdict
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
-from c_parser import parse_c_project
+from c_parser import CParser
+from c_parser.cli import attach_preprocessing_recipe
 from x2py import parse_fortran_file
+from x2py.preprocessing import PreprocessingConfig, preprocess_source
 from semantics.c2ir import c_project_to_semantic_module
 from semantics.fortran2ir import fortran_file_to_semantic_modules, fortran_module_to_semantic_module
 from semantics.pyi_printer import emit_module
@@ -27,10 +31,12 @@ WRAP_READINESS_CORPUS_DIRS = ("general", "blas", "lapack", "scifortran")
 
 def iter_general_fortran_fixtures():
     return sorted(
-        path
-        for path in GENERAL_FORTRAN_DIR.iterdir()
-        if path.is_file() and path.suffix.lower() in FORTRAN_SUFFIXES
+        path for path in GENERAL_FORTRAN_DIR.iterdir() if path.is_file() and path.suffix.lower() in FORTRAN_SUFFIXES
     )
+
+
+def fortran_fixture_requires_compiler_preprocessing(path: Path) -> bool:
+    return any(line.lstrip().startswith("#") for line in path.read_text(encoding="utf-8").splitlines())
 
 
 def _c_fixture_sort_key(path: Path) -> tuple[int, str]:
@@ -42,10 +48,7 @@ def iter_general_c_fixture_projects() -> list[tuple[Path, list[Path]]]:
     for path in sorted(GENERAL_C_DIR.iterdir(), key=_c_fixture_sort_key):
         if path.is_file() and path.suffix.lower() in C_SOURCE_SUFFIXES:
             grouped.setdefault(Path(path.stem), []).append(path)
-    return [
-        (project_key, sorted(paths, key=_c_fixture_sort_key))
-        for project_key, paths in sorted(grouped.items())
-    ]
+    return [(project_key, sorted(paths, key=_c_fixture_sort_key)) for project_key, paths in sorted(grouped.items())]
 
 
 def iter_wrap_readiness_fortran_fixtures():
@@ -53,7 +56,9 @@ def iter_wrap_readiness_fortran_fixtures():
         path
         for dirname in WRAP_READINESS_CORPUS_DIRS
         for path in (FORTRAN_DATA_DIR / dirname).rglob("*")
-        if path.is_file() and path.suffix.lower() in FORTRAN_SUFFIXES
+        if path.is_file()
+        and path.suffix.lower() in FORTRAN_SUFFIXES
+        and not fortran_fixture_requires_compiler_preprocessing(path)
     )
 
 
@@ -79,12 +84,7 @@ def semantic_modules_for_fixture(path: Path):
 
 
 def semantic_payload_for_fixture(path: Path) -> dict:
-    return {
-        "semantic_modules": [
-            asdict(module)
-            for module in semantic_modules_for_fixture(path)
-        ]
-    }
+    return {"semantic_modules": [asdict(module) for module in semantic_modules_for_fixture(path)]}
 
 
 def wrap_readiness_message_payload_for_fixture(path: Path) -> dict:
@@ -138,19 +138,44 @@ def wrap_readiness_message_payload_for_corpus() -> dict:
 
 
 def pyi_text_for_fixture(path: Path) -> str:
-    return "\n\n".join(
-        emit_module(module)
-        for module in semantic_modules_for_fixture(path)
-    ).strip()
+    return "\n\n".join(emit_module(module) for module in semantic_modules_for_fixture(path)).strip()
 
 
 def parse_c_fixture_project(paths: list[Path]):
-    sources = {
-        path.relative_to(C_DATA_DIR).as_posix(): path.read_text(encoding="utf-8")
-        for path in sorted(paths, key=_c_fixture_sort_key)
-    }
-    include_dirs = sorted({path.parent for path in paths})
-    return parse_c_project(sources, include_dirs=include_dirs)
+    compiler = shutil.which("cc")
+    if compiler is None:
+        raise RuntimeError("C fixture preprocessing requires cc")
+
+    parser = CParser()
+    parsed_files = {}
+    root_paths = {str(path.resolve()) for path in paths}
+    with TemporaryDirectory() as tmp_dir:
+        system_include_dir = Path(tmp_dir)
+        (system_include_dir / "stddef.h").write_text("", encoding="utf-8")
+        (system_include_dir / "stdbool.h").write_text(
+            "#define bool _Bool\n#define true 1\n#define false 0\n",
+            encoding="utf-8",
+        )
+        (system_include_dir / "math.h").write_text("", encoding="utf-8")
+        config = PreprocessingConfig(
+            mode="compiler",
+            compiler=compiler,
+            include_dirs=sorted({str(path.parent) for path in paths}),
+            compiler_args=["-dD", f"-isystem{system_include_dir}"],
+        )
+        for path in sorted(paths, key=_c_fixture_sort_key):
+            preprocessed = preprocess_source(path, language="c", config=config)
+            recipe = dict(preprocessed.recipe)
+            recipe["macros"] = [item for item in recipe["macros"] if item.get("path") in root_paths]
+            filename = path.relative_to(C_DATA_DIR).as_posix()
+            parsed = parser.visit_file(
+                preprocessed.source,
+                filename=filename,
+                preprocessing="compiler",
+            )
+            attach_preprocessing_recipe(parsed, recipe)
+            parsed_files[filename] = parsed
+    return parser.visit_parsed_project(parsed_files)
 
 
 def c_semantic_module_for_fixture_project(project_key: Path, paths: list[Path]):

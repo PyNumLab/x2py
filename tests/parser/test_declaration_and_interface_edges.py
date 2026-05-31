@@ -6,6 +6,7 @@ import pytest
 from fortran_parser.parser import FortranParser
 from x2py import FortranParseError, parse_fortran_file, parse_fortran_project
 
+
 def test_legacy_star_kind_and_declarations_without_double_colon_are_resolved():
     code = """
       subroutine legacy_decl(x, z, p, c, f)
@@ -31,6 +32,7 @@ def test_legacy_star_kind_and_declarations_without_double_colon_are_resolved():
     assert args["f"].base_type == "procedure"
     assert args["f"].kind == "cb"
 
+
 def test_bind_c_and_dummy_argument_attributes_from_inline_fortran():
     code = """
 subroutine c_step(n, x, y, work, cb) bind(c, name="c_step")
@@ -52,6 +54,7 @@ end subroutine c_step
     assert args["work"].allocatable is True
     assert args["cb"].base_type == "real"
 
+
 def test_character_entity_lengths_and_assumed_bounds_are_preserved():
     code = """
       subroutine label(name, table)
@@ -68,6 +71,7 @@ def test_character_entity_lengths_and_assumed_bounds_are_preserved():
     assert args["table"].shape == ["0:"]
     assert args["table"].lbound == ["0"]
     assert args["table"].ubound == [None]
+
 
 def test_project_duplicate_registries_raise_for_public_scopes():
     with pytest.raises(FortranParseError, match="Duplicate symbol 'work' in project procedure scope"):
@@ -98,6 +102,7 @@ end program driver
             }
         )
 
+
 def test_module_scope_ignores_non_variable_spec_lines():
     code = """
 module spec_mod
@@ -118,6 +123,7 @@ end module spec_mod
     assert module.default_visibility == "private"
     assert [var.name for var in module.variables] == ["kept"]
 
+
 def test_module_declarations_without_double_colon_are_parsed_not_dropped():
     code = """
 module legacy_module_decls
@@ -132,6 +138,7 @@ end module legacy_module_decls
     assert variables["kept"].base_type == "integer"
     assert variables["values"].base_type == "real"
     assert variables["values"].shape == ["2"]
+
 
 def test_use_rename_and_intrinsic_forms_are_recorded():
     code = """
@@ -152,6 +159,7 @@ end module use_forms
         ("c_double", None),
     ]
 
+
 def test_unknown_no_colon_declarations_raise_in_metadata_scopes():
     module_code = """
 module bad_mod
@@ -171,6 +179,7 @@ end module bad_type_mod
     with pytest.raises(FortranParseError, match="Unknown or unsupported datatype declaration in type"):
         parse_fortran_file(type_code, filename="bad_type.f90")
 
+
 def test_declaration_and_execution_edge_branches_from_inline_fortran():
     code = """
 subroutine declaration_edges(i, x, y)
@@ -189,6 +198,7 @@ end subroutine declaration_edges
     assert args["i"].kind == "4"
     assert args["x"].base_type == "real"
     assert args["y"].base_type == "real"
+
 
 def test_nested_interface_dummy_procedure_and_generic_module_procedure_interface():
     code = """
@@ -216,6 +226,7 @@ end module callback_mod
 
     assert procedures["caller"].arguments[0].base_type == "procedure"
     assert parsed.modules[0].interfaces[0].name == "apply"
+
 
 def test_cross_file_kind_resolution_for_arguments_results_and_local_parameters():
     project = parse_fortran_project(
@@ -250,6 +261,7 @@ end module solver_mod
     assert result_proc.result.kind == "8"
     assert local_proc.arguments[0].shape == ["1:4"]
 
+
 def test_local_kind_parameter_chain_resolves_to_final_integer_kind():
     parsed = parse_fortran_file(
         """
@@ -269,33 +281,6 @@ end subroutine consume
     assert args["x"].kind == "8"
     assert args["y"].kind == "16"
 
-def test_preprocessor_without_macro_selection_keeps_distinct_conditional_procedures():
-    code = """
-#ifdef USE_A
-subroutine from_ifdef()
-end subroutine from_ifdef
-#elif USE_B
-subroutine from_elif()
-end subroutine from_elif
-#else
-subroutine from_else()
-end subroutine from_else
-#endif
-
-#ifndef USE_C
-subroutine from_ifndef()
-end subroutine from_ifndef
-#endif
-"""
-
-    parsed = parse_fortran_file(code)
-
-    assert [proc.name for proc in parsed.procedures] == [
-        "from_ifdef",
-        "from_elif",
-        "from_else",
-        "from_ifndef",
-    ]
 
 def test_local_compile_time_arithmetic_is_folded_for_shapes_and_parameters():
     code = """
@@ -324,6 +309,7 @@ end subroutine arithmetic_shapes
     ]
     assert sig.variables["one"].value == "1"
 
+
 def test_type_contains_accepts_bindings_and_rejects_other_lines():
     valid_code = """
 module type_contains_valid_mod
@@ -350,6 +336,7 @@ end module type_contains_bad_mod
         with pytest.raises(FortranParseError, match="Unsupported or malformed type-bound declaration"):
             parse_fortran_file(code, filename="type_contains_bad.f90")
 
+
 def test_malformed_type_bound_declaration_raises():
     code = """
 module bad_binding_mod
@@ -363,6 +350,7 @@ end module bad_binding_mod
     with pytest.raises(FortranParseError, match="Unsupported or malformed type-bound declaration"):
         parse_fortran_file(code, filename="bad_binding.f90")
 
+
 def test_use_statement_empty_only_items_are_ignored():
     code = """
 module use_empty_items_mod
@@ -374,6 +362,7 @@ end module use_empty_items_mod
     module = parse_fortran_file(code, filename="use_empty_items.f90").modules[0]
 
     assert [item.local_name for item in module.uses["constants_mod"]] == ["rk", "ik"]
+
 
 def test_type_field_spec_variants_and_empty_entities_from_public_source():
     code = """
@@ -390,6 +379,7 @@ end module type_field_edges_mod
 
     assert [field.name for field in dtype.fields] == ["first", "second"]
 
+
 @pytest.mark.parametrize("invalid_line", ["type :: nested_marker", "call invalid_in_type_spec()"])
 def test_type_field_specification_rejects_invalid_nested_syntax(invalid_line):
     code = f"""
@@ -402,6 +392,7 @@ end module type_field_invalid_mod
 
     with pytest.raises(FortranParseError):
         parse_fortran_file(code, filename="type_field_invalid.f90")
+
 
 def test_module_like_declaration_edges_from_program_and_module_sources():
     module_code = """
@@ -429,6 +420,7 @@ end program type_stmt_program
     assert [var.name for var in module.variables] == ["first", "second"]
     assert [var.name for var in program.variables] == ["kept"]
 
+
 def test_public_parse_paths_ignore_empty_declaration_entities():
     parsed = parse_fortran_file(
         """
@@ -447,6 +439,7 @@ end module empty_entity_mod
 
     assert [var.name for var in module.variables] == ["kept", "also_kept"]
     assert [field.name for field in module.derived_types[0].fields] == ["x", "y"]
+
 
 def test_nested_interface_procedure_without_matching_dummy_stays_publicly_parseable():
     sig = parse_fortran_file(

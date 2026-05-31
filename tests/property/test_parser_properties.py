@@ -4,6 +4,10 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+import sys
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 import pytest
 
@@ -11,15 +15,18 @@ pytest.importorskip("hypothesis")
 
 from hypothesis import given, strategies as st
 
+import x2py.preprocessing as preprocessing
 from c_parser import CParseError, parse_c_file
 from c_parser.lexer import split_top_level_c_source, top_level_split
 from semantics.fortran2ir import fortran_file_to_semantic_modules
 from semantics.pyi_parser import parse_pyi_text
 from semantics.pyi_printer import emit_module_stubs
 from x2py import FortranParseError, parse_fortran_file
+from x2py.preprocessing import PreprocessingConfig, preprocess_source
 
 
 _FORTRAN_SCALAR_TYPES = st.sampled_from(["integer", "real", "logical"])
+_FORTRAN_IDENTIFIER_STEMS = st.from_regex(r"[a-z][a-z0-9_]{0,8}", fullmatch=True)
 _C_SCALAR_TYPES = st.sampled_from(["int", "double", "float", "char"])
 _C_MODEL_NAMES = {
     "char": "CChar",
@@ -143,6 +150,153 @@ def test_generated_fortran_subroutines_round_trip_through_pyi(case):
 
 
 @pytest.mark.property
+@given(
+    module_stem=_FORTRAN_IDENTIFIER_STEMS, procedure_stem=_FORTRAN_IDENTIFIER_STEMS, scalar_type=_FORTRAN_SCALAR_TYPES
+)
+def test_generated_fortran_modules_preserve_owned_declarations(module_stem, procedure_stem, scalar_type):
+    module_name = f"mod_{module_stem}"
+    procedure_name = f"proc_{procedure_stem}"
+    source = (
+        f"module {module_name}\n"
+        f"  {scalar_type} :: state\n"
+        "contains\n"
+        f"  subroutine {procedure_name}(value)\n"
+        f"    {scalar_type}, intent(in) :: value\n"
+        f"  end subroutine {procedure_name}\n"
+        f"end module {module_name}\n"
+    )
+
+    parsed = parse_fortran_file(source, filename=f"{module_name}.f90")
+
+    assert parsed.diagnostics == []
+    assert len(parsed.modules) == 1
+    module = parsed.modules[0]
+    assert module.name == module_name
+    assert [(variable.name, variable.base_type) for variable in module.variables] == [("state", scalar_type)]
+    assert [(procedure.name, procedure.module) for procedure in module.procedures] == [(procedure_name, module_name)]
+    assert [(argument.name, argument.base_type) for argument in module.procedures[0].arguments] == [
+        ("value", scalar_type)
+    ]
+
+
+@pytest.mark.property
+@given(
+    module_stem=_FORTRAN_IDENTIFIER_STEMS,
+    type_stem=_FORTRAN_IDENTIFIER_STEMS,
+    field_types=st.lists(_FORTRAN_SCALAR_TYPES, min_size=1, max_size=5),
+)
+def test_generated_fortran_derived_types_preserve_fields(module_stem, type_stem, field_types):
+    module_name = f"mod_{module_stem}"
+    type_name = f"type_{type_stem}"
+    fields = [f"field_{index}" for index in range(len(field_types))]
+    field_lines = "".join(
+        f"    {field_type} :: {field_name}\n" for field_name, field_type in zip(fields, field_types, strict=True)
+    )
+    source = (
+        f"module {module_name}\n  type :: {type_name}\n{field_lines}  end type {type_name}\nend module {module_name}\n"
+    )
+
+    parsed = parse_fortran_file(source, filename=f"{module_name}.f90")
+
+    assert parsed.diagnostics == []
+    assert len(parsed.modules) == 1
+    assert len(parsed.modules[0].derived_types) == 1
+    derived_type = parsed.modules[0].derived_types[0]
+    assert derived_type.name == type_name
+    assert derived_type.module == module_name
+    assert [(field.name, field.base_type) for field in derived_type.fields] == list(
+        zip(fields, field_types, strict=True)
+    )
+
+
+@pytest.mark.property
+@given(base_type=_FORTRAN_SCALAR_TYPES, kind=st.integers(min_value=1, max_value=32), keyword=st.booleans())
+def test_generated_fortran_intrinsic_kinds_are_preserved(base_type, kind, keyword):
+    type_spec = f"{base_type}({'kind=' if keyword else ''}{kind})"
+    source = f"subroutine generated_kind(value)\n  {type_spec}, intent(in) :: value\nend subroutine generated_kind\n"
+
+    parsed = parse_fortran_file(source, filename="generated_kind.f90")
+
+    assert parsed.diagnostics == []
+    assert len(parsed.procedures) == 1
+    assert parsed.procedures[0].arguments[0].base_type == base_type
+    assert parsed.procedures[0].arguments[0].kind == str(kind)
+
+
+@pytest.mark.property
+@given(include_stem=_FORTRAN_IDENTIFIER_STEMS)
+def test_generated_fortran_native_includes_do_not_change_public_signature(include_stem):
+    target = f"{include_stem}.inc"
+    baseline = "subroutine generated_include(value)\n  integer, intent(in) :: value\nend subroutine generated_include\n"
+    with_include = (
+        f"subroutine generated_include(value)\n"
+        f"  include '{target}'\n"
+        "  integer, intent(in) :: value\n"
+        "end subroutine generated_include\n"
+    )
+
+    baseline_parsed = parse_fortran_file(baseline, filename="generated_include.f90")
+    included_parsed = parse_fortran_file(with_include, filename="generated_include.f90")
+
+    assert included_parsed.diagnostics == []
+    assert included_parsed.procedures == baseline_parsed.procedures
+
+
+@pytest.mark.property
+@given(feature_stem=_FORTRAN_IDENTIFIER_STEMS)
+def test_generated_fortran_raw_preprocessor_directives_require_preprocessing(feature_stem):
+    feature = f"feature_{feature_stem}"
+    source = f"#ifdef {feature}\nsubroutine generated_conditional()\nend subroutine generated_conditional\n#endif\n"
+
+    with pytest.raises(FortranParseError, match="require compiler preprocessing") as exc_info:
+        parse_fortran_file(source, filename="generated_conditional.F90")
+
+    assert exc_info.value.code == "PARSE_PREPROCESSING_REQUIRED"
+
+
+@pytest.mark.property
+@given(feature_stem=_FORTRAN_IDENTIFIER_STEMS, select_feature=st.booleans())
+def test_generated_fortran_compiler_preprocessing_selects_macro_branch(feature_stem, select_feature):
+    feature = f"feature_{feature_stem}"
+    with TemporaryDirectory() as tmp_dir:
+        source_path = Path(tmp_dir) / "generated_conditional.F90"
+        source_path.write_text(
+            f"#ifdef {feature}\n"
+            "subroutine selected_path()\n"
+            "end subroutine selected_path\n"
+            "#else\n"
+            "subroutine fallback_path()\n"
+            "end subroutine fallback_path\n"
+            "#endif\n",
+            encoding="utf-8",
+        )
+        captured_argv = []
+
+        def run_compiler(argv, **_kwargs):
+            captured_argv.extend(argv)
+            selected = f"-D{feature}" in argv
+            procedure_name = "selected_path" if selected else "fallback_path"
+            stdout = f"subroutine {procedure_name}()\nend subroutine {procedure_name}\n"
+            return type("Done", (), {"returncode": 0, "stdout": stdout, "stderr": ""})()
+
+        defines = [feature] if select_feature else []
+        with patch.object(preprocessing.subprocess, "run", run_compiler):
+            result = preprocess_source(
+                source_path,
+                language="fortran",
+                config=PreprocessingConfig(mode="compiler", compiler=sys.executable, defines=defines),
+            )
+        parsed = parse_fortran_file(result.source, filename=str(source_path))
+
+    assert "-cpp" in captured_argv
+    assert (f"-D{feature}" in captured_argv) is select_feature
+    assert result.recipe["defines"] == defines
+    assert [procedure.name for procedure in parsed.procedures] == [
+        "selected_path" if select_feature else "fallback_path"
+    ]
+
+
+@pytest.mark.property
 @given(c_prototypes())
 def test_generated_c_prototypes_are_json_stable(case):
     function_name, parameter_names, source = case
@@ -206,6 +360,62 @@ def test_top_level_c_source_split_ignores_function_body_delimiters(names):
     assert [(segment.text, segment.terminator) for segment in segments] == [
         (f"int {name}(void)", "block") for name in names
     ]
+
+
+@pytest.mark.property
+@given(
+    feature=_C_IDENTIFIERS,
+    function_names=st.lists(_C_IDENTIFIERS, min_size=2, max_size=2, unique=True),
+)
+def test_generated_c_raw_conditionals_require_preprocessing(feature, function_names):
+    source = f"#ifdef {feature}\nint {function_names[0]}(void);\n#else\nint {function_names[1]}(void);\n#endif\n"
+
+    with pytest.raises(CParseError, match="require compiler preprocessing") as exc_info:
+        parse_c_file(source, filename="conditional.h", preprocessing="raw")
+
+    assert exc_info.value.code == "CPARSE_PREPROCESSING_REQUIRED"
+
+
+@pytest.mark.property
+@given(line_number=st.integers(min_value=1, max_value=100_000), stem=_C_IDENTIFIERS)
+def test_generated_c_linemarkers_map_function_origin(line_number, stem):
+    mapped_filename = f"{stem}.h"
+    source = f'#line {line_number} "{mapped_filename}"\nint exported(void);\n'
+
+    parsed = parse_c_file(source, filename="generated.i", preprocessing="preprocessed")
+
+    assert parsed.diagnostics == []
+    assert len(parsed.functions) == 1
+    assert parsed.functions[0].source_location is not None
+    assert parsed.functions[0].source_location.filename == mapped_filename
+    assert parsed.functions[0].source_location.line == line_number
+
+
+@pytest.mark.property
+@given(local_stem=_C_IDENTIFIERS, system_stem=_C_IDENTIFIERS)
+def test_generated_c_raw_includes_record_local_and_system_targets(local_stem, system_stem):
+    local_target = f"hypothesis_missing_{local_stem}.h"
+    system_target = f"{system_stem}.h"
+    source = f'#include "{local_target}"\n#include <{system_target}>\nint exported(void);\n'
+
+    parsed = parse_c_file(source, filename="generated_api.h", preprocessing="raw")
+
+    assert [(include.target, include.kind) for include in parsed.includes] == [
+        (local_target, "local"),
+        (system_target, "system"),
+    ]
+    assert [diagnostic.code for diagnostic in parsed.diagnostics] == ["C_UNRESOLVED_INCLUDE"]
+
+
+@pytest.mark.property
+@given(function_name=_C_IDENTIFIERS)
+def test_generated_c_visibility_attributes_are_tolerated(function_name):
+    source = f'int {function_name}(void) __attribute__((visibility("default")));\n'
+
+    parsed = parse_c_file(source, filename="compiler.h", preprocessing="compiler")
+
+    assert parsed.diagnostics == []
+    assert [function.name for function in parsed.functions] == [function_name]
 
 
 @pytest.mark.fuzz

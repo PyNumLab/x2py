@@ -99,9 +99,8 @@ wrappers at the bottom, then read the class from top to bottom:
     part, `contains`) with original line numbers preserved on each slice
   - shared declaration parsing for module variables, program/block-data
     variables, procedure arguments/results, and derived-type fields
-  - `_helper_*` methods for scoped parsing, expression resolution,
-    raw preprocessor branch structure, same-level duplicate checks, and shared
-    specification-part collection
+  - `_helper_*` methods for scoped parsing, expression resolution, same-level
+    duplicate checks, and shared specification-part collection
 - Thin module-level convenience wrappers that delegate to a shared parser
   instance
 
@@ -375,7 +374,8 @@ Expected JSON layout:
 
 When `x2py --parse --json` applies compiler preprocessing, the per-file payload
 also contains `preprocessing_recipe`. Internal parser mode accepts plain or
-already-preprocessed source and does not evaluate `-D`/`-U` CPP branches.
+already-preprocessed source. Raw Fortran CPP directives require
+`--preprocess compiler`; compiler linemarkers remain accepted for provenance.
 `--preprocess compiler` records the exact compiler executable or adapter,
 argv, include paths, macro flags, standard, extra compiler arguments, working
 directory, include graph, source mappings, diagnostics, and optional macro

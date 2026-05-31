@@ -3,7 +3,7 @@
 Status: current reference for the partial C frontend. The `c_parser`
 package, typed parser models, explicit C CLI parse path, raw directive
 metadata, compiler-assisted preprocessing, source-location remapping, project
-indexes, parser goldens, C standard-type probe, first semantic IR conversion
+indexes, legacy parser schema snapshots, C standard-type probe, first semantic IR conversion
 subset, semantic readiness path, and starter exact-contract C `.pyi`
 generation are implemented.
 
@@ -61,14 +61,10 @@ Implemented:
   lightweight token source locations
 - top-level source splitting that tracks braces, parentheses, brackets, and
   string/character literals
-- raw conditional same-name function alternatives retain Fortran-style
-  `condition_set` branch identity rather than being diagnosed as conflicting
-  redeclarations
 - raw `#include` collection for quoted and system includes
-- simple object-like `#define` macro collection
-- function-like macro metadata with unsupported diagnostics
-- object-like declaration-prefix macro dependencies deferred in raw mode
-- raw `#undef` directive provenance in macro metadata
+- raw `#pragma` provenance metadata, including OpenMP declaration pragmas
+- strict `CPARSE_PREPROCESSING_REQUIRED` failures for raw macro, conditional,
+  macro-include, and other directives that require a real preprocessor
 - concrete primitive `CType` objects, pointer/array composition, and concrete
   qualifier objects
 - order-insensitive primitive specifier matching with
@@ -114,15 +110,14 @@ Implemented:
   tracking, cycle-safe include graph construction, and header/source pairing,
   without recursive include parsing
 - project indexes for functions, file-scope variables, typedefs, struct tags,
-  union tags, enum tags, enum constants, macros/constants, and functions by
-  file; raw conditional alternatives that cannot occupy one unique function
-  index entry are retained in `conditional_function_variants`
+  union tags, enum tags, enum constants, compiler-recipe macros/constants, and
+  functions by file
 - basic cross-file typedef chain and struct/union/enum tag resolution, with
   typedef-cycle diagnostics and unresolved references preserved for later
   diagnostics
 - unsupported K&R function-definition diagnostics
-- C parser project JSON goldens and fatal diagnostic goldens generated from
-  stable `CProject.to_dict()` and `CParseError` output
+- legacy C parser project JSON schema snapshots and active fatal diagnostic
+  goldens generated from stable `CParseError` output
 - C fixture inputs under `tests/data/c/general/`, diagnostic inputs under
   `tests/data/c/errors/parser/`, and partial-parser regression inputs under
   `tests/data/c/json/`, `tests/data/c/tinyexpr/`, `tests/data/c/linmath/`,
@@ -196,36 +191,26 @@ function names, type names, attributes, calling conventions, parameter lists,
 and whole declarations. The parser must not infer a public API from unexpanded
 macro-shaped declarations.
 
-Raw-source mode means source normalization plus directive metadata:
+Raw-source mode means source normalization plus safe directive metadata:
 
 - strip comments and fold backslash-newline continuations while preserving
   source locations
 - record `#include` directives as structured include dependencies
-- record simple object-like `#define` directives as macro metadata
-- record `#undef` directives as macro provenance
-- record conditional and pragma directives as raw provenance metadata,
+- record pragma directives as raw provenance metadata,
   including OpenMP declaration pragmas such as `#pragma omp declare simd` and
   `#pragma omp declare target`
-- retain mutually exclusive same-name function declarations as alternatives
-  with `CFunction.condition_set` branch identity, matching the Fortran
-  parser's unselected-branch convention
-- record function-like macros as metadata with unsupported/deferred diagnostics
-- record function-like wrappers and object-like declaration prefixes as
-  macro-dependency metadata without claiming they were parsed
 - parse only declarations that are already visible as ordinary C without macro
   expansion
-- do not select active conditional branches from `#if`/`#ifdef` in raw mode
-- do not expand macros, token pasting, stringification, or macro-generated
-  declarations
+- raise `CPARSE_PREPROCESSING_REQUIRED` for raw macro definitions, undefines,
+  conditionals, macro includes, and other directives that require expansion or
+  branch selection
 
-Compiler-assisted preprocessing is the required path when macros affect the
-declaration text that the C parser needs to understand. Use compiler mode when
-macros define or alter function names, return types, parameter types,
-declarators, attributes, storage classes, calling conventions, visibility
-annotations, or conditional API selection. The user normally gives x2py `.h`
-or `.c` files and has it run the configured compiler/preprocessor; direct
+Compiler-assisted preprocessing is required whenever raw C input contains
+directives beyond literal includes and pragmas. The user normally gives x2py
+`.h` or `.c` files and has it run the configured compiler/preprocessor; direct
 `.i` preprocessed inputs are also accepted and use their linemarkers for
-locations and source identity.
+locations and source identity. Compiler-recipe macro metadata remains attached
+to parse reports for provenance.
 
 Examples:
 
@@ -482,27 +467,21 @@ python -m x2py include/api.h --language c --parse --json \
 ```
 
 Project-level facts require `parse_c_project(...)`, not just
-`parse_c_file(...)`. A single file can report its own raw directives, includes,
-macros, declarations, diagnostics, and unresolved typedef/tag references. A
-project parse sees multiple files together and can populate include graphs,
-system include records, unresolved include sets, functions by file, enum
-constants, likely header/source pairs, and basic cross-file typedef/tag links.
+`parse_c_file(...)`. A single file can report its own pragmas, includes,
+compiler-recipe macros, declarations, diagnostics, and unresolved typedef/tag
+references. A project parse sees multiple files together and can populate
+include graphs, system include records, unresolved include sets, functions by
+file, enum constants, likely header/source pairs, and basic cross-file
+typedef/tag links.
 An include edge is metadata only: a resolved local or system header is not
 parsed unless it is also supplied as a project input or falls beneath a
 directory input. Generated headers and direct `.i` streams follow that same
 explicit-input rule. Include-graph keys use project input/path identity; they
 are not module keys.
 
-When raw input declares incompatible versions of the same function in
-alternative `#if`/`#else` branches, each `CFunction` retains a `condition_set`
-such as `{"g1:b0"}` or `{"g1:b1"}`. A `CProject` stores such alternatives in
-`conditional_function_variants` rather than claiming that one variant is the
-unique `functions` entry. Compiler-preprocessed input contains the selected
-configuration and therefore does not need this ambiguity representation.
-
 Raw mode does not evaluate C preprocessor conditionals or expand macros
-internally. Compiler mode should receive the already-expanded translation unit
-from `x2py.preprocessing`.
+internally. It rejects those directives before grammar parsing. Compiler mode
+receives the already-expanded translation unit from `x2py.preprocessing`.
 
 The parser itself should stay parse-only. If the C frontend later gains
 wrappability assessment, that should live in the semantic layer after C parser
@@ -576,10 +555,6 @@ JSON compatibility rules:
 - emit references for reused aggregate or typedef objects rather than
   recursive JSON cycles
 - preserve unknown or unresolved information rather than dropping it silently
-- emit `condition_set` only for retained raw conditional function alternatives,
-  and
-  emit project `conditional_function_variants` only when a unique function
-  index would discard those alternatives
 - keep model fields stable enough for golden fixture testing
 - document every intentional schema break
 
@@ -654,7 +629,7 @@ Test families should mirror the Fortran parser:
 - CLI tests
 - semantic conversion tests
 - `.pyi` generation/parser tests
-- fixture/golden parser tests
+- legacy JSON schema snapshot tests
 - error fixture/golden tests
 - corpus parse-only tests
 
@@ -662,14 +637,12 @@ The C test area contains active partial-parser/raw-metadata tests, including
 parse-only cJSON regression coverage under `tests/parser/c/`. The active tests cover
 public entrypoints, empty model serialization, CLI discovery, JSON/output-file
 behavior, unsupported C stages, comment stripping, line-continuation folding,
-top-level splitting, include collection, simple macro collection, macro-shaped
-declaration deferral, raw conditional branch non-selection and provenance,
-mutually exclusive function variant retention, macro-dependency metadata,
-explicit-input/non-recursive project include behavior, simple declarations,
+top-level splitting, include collection, pragma metadata, raw preprocessing
+rejection, explicit-input/non-recursive project include behavior, simple declarations,
 variables, typedefs, top-level redeclaration diagnostics, recursive declarator
 composition, aggregate definitions, members, enums, simple function
-prototypes/definitions, function-definition start/end locations, JSON golden
-serialization, fatal diagnostic goldens, and project-level callback typedef
+prototypes/definitions, function-definition start/end locations, legacy JSON
+schema snapshots, fatal diagnostic goldens, and project-level callback typedef
 resolution. The `json` regression inputs
 intentionally retain recoverable diagnostics from unsupported constructs; they
 do not claim complete library parsing. A separately pinned/provenanced corpus
@@ -719,7 +692,7 @@ declarations.
 | Capability | C example | Current parser boundary | Needed behavior |
 | --- | --- | --- | --- |
 | Typedef/tag resolution | `typedef unsigned long size_t; size_t count(void);` and `struct state { int id; }; void step(struct state *s);` | Basic project parsing links typedef chains and struct/union/enum tag references while preserving unresolved objects when context is absent. | Deepen conflict policy for broader projects; included/generated files are parsed only when supplied as project inputs. |
-| Preprocessed declarations | `#define API(ret) ret` followed by `API(int) run(void);` | Raw mode records macro metadata and does not claim the expanded declaration; compiler or `.i` mode parses expanded declarations, maps locations through `#line` markers, and records `origin="preprocessed"`; x2py-generated streams also record their recipe. | Broaden fixture-driven extension and compiler-family coverage. |
+| Preprocessed declarations | `#define API(ret) ret` followed by `API(int) run(void);` | Raw mode raises `CPARSE_PREPROCESSING_REQUIRED`; compiler or `.i` mode parses expanded declarations, maps locations through `#line` markers, and records `origin="preprocessed"`; x2py-generated streams also record their recipe. | Broaden fixture-driven extension and compiler-family coverage. |
 | Additional extension families | `int run(void) __attribute__((visibility("default")));` | Common GNU/MS declaration syntax is accepted; ignored ABI-, layout-, symbol-, or type-relevant semantics produce `C_UNMODELED_COMPILER_EXTENSION`. Broader compiler extensions are not modeled. | Add fixture-driven tolerance or a focused diagnostic for each required extension family. |
 
 ### Represented With Focused Tests
@@ -762,28 +735,23 @@ tests/parser/c/
     general/
     json/
     errors/
-  generate_c_parser_goldens.py
   errors/generate_c_parser_error_goldens.py
 ```
 
-Parser goldens group same-stem `.c` and `.h` inputs as one project, with the
-`.c` translation unit ordered before its header input to mirror compilation;
-explicit header dependency groups put included headers before dependent
-headers, such as `nanosvg.h` before `nanosvgrast.h`; an input without a
-sibling is parsed as a one-file project. Golden filenames use the project
-stem, such as `api.json` or `jsmn.json`. Goldens can be regenerated for all
-active projects with
-`C_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser/c/test_c_fixture_suite.py`.
+Checked-in project JSON files are legacy schema snapshots. They are not active
+parser output goldens because macro-heavy raw inputs now fail before parsing.
+The fixture suite still checks same-stem grouping order and representative raw
+preprocessing failures. Reproducible compiler-preprocessed project snapshots
+remain future curated corpus work.
 Fatal diagnostic goldens are regenerated with
 `C_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser/c/test_c_error_fixture_suite.py`.
-The standalone generator modules remain available for targeted refreshes.
+The standalone error generator remains available for targeted refreshes.
 By policy, a paired project records source-to-header include edges but parses
 each supplied `.c`, `.h`, or `.i` member separately; include traversal is not
 a parser input-discovery mechanism.
 
-STB is treated as a family of independent single-file libraries: each
-top-level `.h` or `.c` input generates its own one-file project golden rather
-than being merged into one large project.
+STB remains a family of independent macro-heavy single-file libraries for
+future curated compiler-preprocessed corpus work.
 
 The first real-world corpus target should be cJSON, pinned to an exact release
 or commit with license and source provenance. cJSON is small enough for early

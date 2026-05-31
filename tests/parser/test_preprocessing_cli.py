@@ -280,6 +280,7 @@ def test_compile_commands_invocation_uses_database_compiler_and_filters_compile_
         ('[{"directory": ".", "file": "api.c", "command": ["cc"]}]', "'command' must contain a string"),
         ('[{"directory": ".", "file": "api.c"}]', "must contain 'arguments' or 'command'"),
         ('[{"directory": ".", "file": "api.c", "arguments": []}]', "empty command"),
+        ("[1]", "entries must be objects"),
     ],
 )
 def test_compile_commands_invocation_reports_invalid_database_entries(tmp_path: Path, payload: str, message: str):
@@ -310,7 +311,9 @@ def test_compile_commands_invocation_reports_missing_file_and_supports_command_s
 
     database = tmp_path / "compile_commands.json"
     database.write_text(
-        json.dumps([{"directory": str(tmp_path), "file": str(source), "command": f"cc -c {source} -oapi.o /Fowindows.obj"}]),
+        json.dumps(
+            [{"directory": str(tmp_path), "file": str(source), "command": f"cc -c {source} -oapi.o /Fowindows.obj"}]
+        ),
         encoding="utf-8",
     )
     invocation = build_compile_commands_invocation(
@@ -528,8 +531,8 @@ def test_native_fortran_include_expansion_is_recursive_and_preserves_duplicates(
     include = root.parent / "decls.inc"
     nested = root.parent / "nested.inc"
     root.parent.mkdir()
-    root.write_text("module m\ninclude \"decls.inc\"\ninclude \"decls.inc\"\nend module m\n", encoding="utf-8")
-    include.write_text("include \"nested.inc\"\ninteger :: from_decls\n", encoding="utf-8")
+    root.write_text('module m\ninclude "decls.inc"\ninclude "decls.inc"\nend module m\n', encoding="utf-8")
+    include.write_text('include "nested.inc"\ninteger :: from_decls\n', encoding="utf-8")
     nested.write_text("real :: from_nested\n", encoding="utf-8")
 
     expanded, included_files, mappings, diagnostics = expand_native_fortran_includes(
@@ -550,7 +553,7 @@ def test_native_fortran_include_lookup_order_missing_and_cycle_diagnostics(tmp_p
     include_dir = tmp_path / "include"
     root.parent.mkdir()
     include_dir.mkdir()
-    root.write_text("include \"shared.inc\"\n", encoding="utf-8")
+    root.write_text('include "shared.inc"\n', encoding="utf-8")
     (root.parent / "shared.inc").write_text("integer :: relative_wins\n", encoding="utf-8")
     (include_dir / "shared.inc").write_text("integer :: include_dir_loses\n", encoding="utf-8")
 
@@ -564,7 +567,7 @@ def test_native_fortran_include_lookup_order_missing_and_cycle_diagnostics(tmp_p
     assert "relative_wins" in expanded
     assert "include_dir_loses" not in expanded
 
-    missing_source = "include \"absent.inc\"\n"
+    missing_source = 'include "absent.inc"\n'
     _expanded, _included_files, _mappings, diagnostics = expand_native_fortran_includes(
         missing_source,
         root_path=root,
@@ -574,14 +577,40 @@ def test_native_fortran_include_lookup_order_missing_and_cycle_diagnostics(tmp_p
 
     cycle_a = root.parent / "a.inc"
     cycle_b = root.parent / "b.inc"
-    cycle_a.write_text("include \"b.inc\"\n", encoding="utf-8")
-    cycle_b.write_text("include \"a.inc\"\n", encoding="utf-8")
+    cycle_a.write_text('include "b.inc"\n', encoding="utf-8")
+    cycle_b.write_text('include "a.inc"\n', encoding="utf-8")
     _expanded, _included_files, _mappings, diagnostics = expand_native_fortran_includes(
-        "include \"a.inc\"\n",
+        'include "a.inc"\n',
         root_path=root,
         include_dirs=[],
     )
     assert "INCLUDE_CYCLE" in [diagnostic.category for diagnostic in diagnostics]
+
+
+def test_native_fortran_include_reports_files_that_disappear_before_read(monkeypatch, tmp_path: Path):
+    root = tmp_path / "root.F90"
+    include = tmp_path / "vanished.inc"
+    root.write_text('include "vanished.inc"\n', encoding="utf-8")
+    include.write_text("integer :: vanished\n", encoding="utf-8")
+    original_read_text = Path.read_text
+
+    def fail_for_include(path: Path, *args, **kwargs):
+        if path == include:
+            raise OSError("disappeared")
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", fail_for_include)
+
+    expanded, included_files, _mappings, diagnostics = expand_native_fortran_includes(
+        root.read_text(encoding="utf-8"),
+        root_path=root,
+        include_dirs=[],
+    )
+
+    assert expanded.startswith(f'# 1 "{include}" 1')
+    assert [Path(item.path) for item in included_files] == [include]
+    assert [diagnostic.category for diagnostic in diagnostics] == ["INCLUDE_NOT_FOUND"]
+    assert "could not be read" in diagnostics[0].message
 
 
 def test_run_compiler_preprocessor_success_and_failures(monkeypatch, tmp_path: Path):
@@ -682,7 +711,9 @@ def test_preprocess_source_error_paths_and_fortran_include_diagnostics(monkeypat
     monkeypatch.setattr(
         preprocessing.subprocess,
         "run",
-        lambda *_args, **_kwargs: type("Done", (), {"returncode": 0, "stdout": 'include "missing.inc"\n', "stderr": ""})(),
+        lambda *_args, **_kwargs: type(
+            "Done", (), {"returncode": 0, "stdout": 'include "missing.inc"\n', "stderr": ""}
+        )(),
     )
     with pytest.raises(PreprocessingError) as exc_info:
         preprocessing.preprocess_source(
@@ -762,7 +793,7 @@ def test_cli_c_internal_mode_rejects_define_flags_that_need_compiler_selection(t
     )
 
     assert res.returncode == 2
-    assert "raw C mode records source macros" in res.stderr
+    assert "raw C parsing rejects unresolved preprocessing directives" in res.stderr
 
 
 def test_cli_compiler_mode_requires_exact_compiler_or_compile_database(tmp_path: Path):
@@ -1094,7 +1125,7 @@ end subroutine fallback
     )
 
     assert res.returncode == 2
-    assert "internal Fortran parsing does not evaluate CPP branches" in res.stderr
+    assert "raw Fortran CPP directives require compiler preprocessing" in res.stderr
 
 
 def test_cli_fortran_internal_json_does_not_record_macro_selection_recipe(tmp_path: Path):

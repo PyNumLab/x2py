@@ -49,6 +49,15 @@ def test_parse_c_file_accepts_empty_source_and_unknown_suffix():
     assert parsed.diagnostics == []
 
 
+def test_parse_c_file_rejects_unknown_preprocessing_mode():
+    import pytest
+
+    from c_parser import parse_c_file
+
+    with pytest.raises(ValueError, match="preprocessing mode"):
+        parse_c_file("int answer(void);\n", filename="api.h", preprocessing="unknown")
+
+
 def test_parse_c_project_accepts_mapping_sources():
     from c_parser import CProject, parse_c_project
 
@@ -62,6 +71,18 @@ def test_parse_c_project_accepts_mapping_sources():
     assert isinstance(project, CProject)
     assert set(project.files) == {"types.h", "api.h"}
     assert project.files["api.h"].language == "c"
+    assert set(project.functions) == {"answer"}
+
+
+def test_parse_c_project_accepts_single_file_path(tmp_path: Path):
+    from c_parser import parse_c_project
+
+    source = tmp_path / "api.c"
+    source.write_text("int answer(void);\n", encoding="utf-8")
+
+    project = parse_c_project(source)
+
+    assert set(project.files) == {str(source)}
     assert set(project.functions) == {"answer"}
 
 
@@ -185,29 +206,6 @@ def test_inline_aggregate_typedef_serialization_uses_references_without_cycles()
     assert payload["structs"][0]["members"][0]["type"]["components"][-1]["model"] == "CStruct"
     assert payload["typedefs"][0]["model"] == "CTypedef"
     assert payload["typedefs"][0]["type"] == {"reference": "struct node"}
-
-
-def test_model_json_shapes_cover_directive_include_macro_and_diagnostic_fields():
-    from c_parser import parse_c_file
-
-    payload = parse_c_file(
-        '#ifdef FEATURE\n#include "missing.h"\n#define API(ret) ret\nAPI(int) run(void);\n#endif\n',
-        filename="metadata.h",
-    ).to_dict()
-
-    assert payload["raw_directives"][0]["directive"] == "ifdef"
-    assert payload["raw_directives"][0]["argument"] == "FEATURE"
-    assert payload["includes"][0]["target"] == "missing.h"
-    assert payload["includes"][0]["resolved_path"] is None
-    assert payload["macros"][0]["name"] == "API"
-    assert payload["macros"][0]["function_like"] is True
-    assert payload["macro_dependencies"][0]["name"] == "API"
-    assert payload["macro_dependencies"][0]["source_text"] == "API(int) run(void)"
-    assert {diagnostic["code"] for diagnostic in payload["diagnostics"]} >= {
-        "C_UNRESOLVED_INCLUDE",
-        "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-        "C_MACRO_DEPENDENT_DECLARATION",
-    }
 
 
 def test_unresolved_typedef_reference_metadata_is_preserved_in_json():

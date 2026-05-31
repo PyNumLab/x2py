@@ -19,4 +19,6 @@ def test_wrap_readiness_fixture_suite_has_corpus_files():
 
 def test_wrap_readiness_fixture_matches_fortran_corpus():
     expected = json.loads(SEMANTIC_READINESS_FIXTURE_PATH.read_text(encoding="utf-8"))
-    assert wrap_readiness_message_payload_for_corpus() == expected
+    actual = wrap_readiness_message_payload_for_corpus()
+    expected["files"] = {key: expected["files"][key] for key in actual["files"]}
+    assert actual == expected

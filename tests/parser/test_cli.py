@@ -124,7 +124,6 @@ def test_cli_json_out(tmp_path: Path):
     assert str(TEST_FILE) in file_payload
 
 
-
 def test_cli_out_without_filename_uses_source_basename_json(tmp_path: Path):
     f90 = tmp_path / "mini.f90"
     f90.write_text("subroutine work(n)\n  integer, intent(in) :: n\nend subroutine work\n", encoding="utf-8")
@@ -150,6 +149,8 @@ def test_cli_pyi_output_without_out():
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert f"File: {TEST_FILE}" in res.stdout
     assert "def add1(" in res.stdout
+
+
 def test_cli_keeps_free_procedure_when_module_has_same_name(tmp_path: Path):
     f90 = tmp_path / "same_name_scopes.f90"
     f90.write_text(
@@ -279,8 +280,6 @@ end subroutine bad
     assert f"{f90}:2:1: error[PARSE_UNSUPPORTED_DECLARATION]:" in res.stderr
 
 
-
-
 def test_cli_semantics_out_writes_json_without_stdout(tmp_path: Path):
     out = tmp_path / "semantics.json"
     cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--semantics", "--out", str(out)]
@@ -291,6 +290,7 @@ def test_cli_semantics_out_writes_json_without_stdout(tmp_path: Path):
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert str(TEST_FILE) in payload
     assert "semantic_modules" in payload[str(TEST_FILE)]
+
 
 def test_cli_semantics_without_json_output():
     cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--semantics"]
@@ -312,7 +312,6 @@ def test_cli_pyi_output():
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert f"File: {TEST_FILE}" in res.stdout
     assert "def add1(" in res.stdout
-
 
 
 def test_cli_pyi_out_writes_adjacent_file(tmp_path: Path):
@@ -545,9 +544,7 @@ end module physics
 
     payload = x2py_cli._semantic_report([str(physics)])
 
-    assert payload[str(physics)]["pyi_dependencies"] == {
-        "types_mod": "class particle(Opaque):\n    pass"
-    }
+    assert payload[str(physics)]["pyi_dependencies"] == {"types_mod": "class particle(Opaque):\n    pass"}
     monkeypatch.setattr(sys, "argv", ["x2py", str(physics), "--pyi", "--out"])
     assert x2py_cli.main() == 0
 
@@ -665,9 +662,9 @@ def test_x2py_cli_helpers_cover_language_and_preprocessing_edges(tmp_path: Path,
         x2py_cli._build_preprocessing_config(args(preprocess="compiler"), parser)
     with pytest.raises(ValueError, match="--compile-commands requires"):
         x2py_cli._build_preprocessing_config(args(compile_commands="compile_commands.json"), parser)
-    with pytest.raises(ValueError, match="raw C mode records source macros"):
+    with pytest.raises(ValueError, match="raw C parsing rejects unresolved preprocessing directives"):
         x2py_cli._build_preprocessing_config(args(language="c", defines=["USE_FAST"]), parser)
-    with pytest.raises(ValueError, match="internal Fortran parsing does not evaluate CPP branches"):
+    with pytest.raises(ValueError, match="raw Fortran CPP directives require compiler preprocessing"):
         x2py_cli._build_preprocessing_config(args(defines=["USE_FAST"]), parser)
     with pytest.raises(ValueError, match="-I/--include-dir affects Fortran only"):
         x2py_cli._build_preprocessing_config(args(include_dirs=["include"]), parser)
@@ -735,12 +732,12 @@ def test_x2py_main_debug_reraises_preprocessing_errors(monkeypatch):
         x2py_cli.main()
 
 
-
 def test_cli_out_requires_stage_flag():
     cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--out"]
     res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 2
     assert "--out requires a stage flag" in res.stderr
+
 
 def test_cli_help_includes_examples():
     cmd = [sys.executable, "-m", "x2py", "--help"]
@@ -900,7 +897,10 @@ def test_fortran_parser_cli_formatting_branches():
     )
     assert "Derived types: 1" in report
     assert "- type particle (fields=0, methods=0)" in report
-    assert fortran_parser_cli._format_var_type({"base_type": "derived", "kind": "particle", "rank": 0}) == "type(particle)[0]"
+    assert (
+        fortran_parser_cli._format_var_type({"base_type": "derived", "kind": "particle", "rank": 0})
+        == "type(particle)[0]"
+    )
     assert fortran_parser_cli._format_var_type({"base_type": "real", "kind": "4", "rank": 2}) == "real(4)[2]"
 
 

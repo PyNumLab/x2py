@@ -30,7 +30,7 @@ Recommended reading order for maintainers:
 One source file follows this path:
 
     source text/path
-      -> raw directive metadata, or compiler/preprocessed line mappings
+      -> raw include/pragma metadata, or compiler/preprocessed line mappings
       -> split_top_level_c_source(...) -> CTopLevelSegment objects
       -> _parse_translation_unit(...)
            -> _parse_tag_definition(...) -> _parse_fields(...)
@@ -48,13 +48,15 @@ Declarations share one type-construction path. For example:
       -> _apply_declarator_operations: CArray -> CPointer -> CInt
 
 This is why typedefs, variables, function parameters, and aggregate members
-obtain types with the same declarator rules. Raw preprocessing records macro
-dependencies without expanding them; compiler/preprocessed input is parsed by
-the same route after linemarkers are mapped back to original source locations.
+obtain types with the same declarator rules. Raw preprocessing accepts include
+and pragma metadata only; macro-shaped source requires compiler preprocessing.
+Compiler/preprocessed input is parsed by the same route after linemarkers are
+mapped back to original source locations.
 
 Executable walkthroughs live in
 ``tests/parser/c/test_c_parser_developer_tutorial.py``.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
@@ -66,6 +68,7 @@ from .lexer import (
     CTopLevelSegment,
     lex_c_source,
     line_mappings_for_source,
+    normalize_c_source,
     split_top_level_c_source,
     strip_c_comments,
     top_level_partition,
@@ -116,7 +119,6 @@ from .models import (
     CLongDouble,
     CLongDoubleComplex,
     CLongLong,
-    CMacroDependency,
 )
 from .preprocessor import collect_preprocessor_metadata
 from .type_resolver import resolve_project_types
@@ -161,10 +163,7 @@ _EXTENDED_SCALAR_NORMALIZATIONS = {
     "_Decimal128": "_xd128",
 }
 _COMPILER_KEYWORD_NORMALIZATIONS.update(_EXTENDED_SCALAR_NORMALIZATIONS)
-_EXTENDED_SCALAR_SPELLINGS = {
-    normalized: spelling
-    for spelling, normalized in _EXTENDED_SCALAR_NORMALIZATIONS.items()
-}
+_EXTENDED_SCALAR_SPELLINGS = {normalized: spelling for spelling, normalized in _EXTENDED_SCALAR_NORMALIZATIONS.items()}
 _EXTENDED_SCALAR_WORDS = set(_EXTENDED_SCALAR_SPELLINGS)
 _TAG_KINDS = {"struct", "union", "enum"}
 _UNSUPPORTED_DECLARATION_MARKERS = (
@@ -174,9 +173,7 @@ _UNSUPPORTED_DECLARATION_MARKERS = (
     "_Alignas",
     "alignas",
 )
-_RAW_CONDITIONAL_DIRECTIVE_RE = re.compile(
-    r"^\s*#\s*(?P<directive>if|ifdef|ifndef|elif|else|endif)\b"
-)
+_ALLOWED_RAW_DIRECTIVE_RE = re.compile(r'^\s*#\s*(?:include\s*(?:"[^"]+"|<[^>]+>)|pragma\b)', re.IGNORECASE)
 _GNU_ATTRIBUTE_KEYWORDS = {"__attribute", "__attribute__"}
 _DECLSPEC_KEYWORDS = {"__declspec", "__declspec__"}
 _ASM_KEYWORDS = {"asm", "__asm", "__asm__"}
@@ -276,8 +273,7 @@ _PRIMITIVE_TYPES = {
     "long double _Complex": CLongDoubleComplex,
 }
 _PRIMITIVE_TYPE_SIGNATURES = {
-    tuple(sorted(spelling.split())): type_class
-    for spelling, type_class in _PRIMITIVE_TYPES.items()
+    tuple(sorted(spelling.split())): type_class for spelling, type_class in _PRIMITIVE_TYPES.items()
 }
 
 
@@ -358,11 +354,7 @@ def _looks_like_existing_source_path(value: object) -> bool:
 
 def _collect_c_paths(path: Path) -> list[Path]:
     """Collect C source/header files below a directory in stable order."""
-    return sorted(
-        p
-        for p in path.rglob("*")
-        if p.is_file() and p.suffix.lower() in _C_SOURCE_SUFFIXES
-    )
+    return sorted(p for p in path.rglob("*") if p.is_file() and p.suffix.lower() in _C_SOURCE_SUFFIXES)
 
 
 def _posix_key(path: str | Path | PurePosixPath) -> str:
@@ -434,15 +426,14 @@ class CParser:
             source = str(source_or_path)
 
         inferred_preprocessed_path = (
-            filename
-            if filename is not None and PurePosixPath(filename).suffix.lower() == ".i"
-            else None
+            filename if filename is not None and PurePosixPath(filename).suffix.lower() == ".i" else None
         )
         if preprocessing == "raw" and inferred_preprocessed_path is not None:
             preprocessing = "preprocessed"
 
         parsed = CFile(filename=filename, parser_status="partial", preprocessing=preprocessing)
         if preprocessing == "raw":
+            self._raise_for_raw_preprocessing_directives(source, filename)
             effective_include_dirs = list(include_dirs or ())
             if source_path is not None:
                 effective_include_dirs.insert(0, source_path.parent)
@@ -454,25 +445,10 @@ class CParser:
             parsed.includes = metadata.includes
             parsed.macros = metadata.macros
             parsed.raw_directives = metadata.raw_directives
-            function_like_macro_names = {macro.name for macro in metadata.macros if macro.function_like}
-            object_like_macro_names = {
-                macro.name
-                for macro in metadata.macros
-                if macro.directive == "define" and not macro.function_like
-            }
-            parsed.macro_dependencies = self._macro_dependencies(
-                source,
-                filename,
-                function_like_macro_names,
-                object_like_macro_names,
-            )
             parsed.diagnostics = metadata.diagnostics
             functions, structs, unions, enums, typedefs, variables, parser_diagnostics = self._parse_translation_unit(
                 source,
                 filename,
-                function_like_macros=function_like_macro_names,
-                object_like_macros=object_like_macro_names,
-                condition_sets_by_line=self._raw_conditional_condition_sets(source),
             )
             parsed.functions = functions
             parsed.structs = structs
@@ -505,10 +481,26 @@ class CParser:
                 preprocessed_source_path=parsed.preprocessed_source_path,
             )
         else:
-            raise ValueError(
-                "C preprocessing mode must be 'raw', 'compiler', or 'preprocessed'."
-            )
+            raise ValueError("C preprocessing mode must be 'raw', 'compiler', or 'preprocessed'.")
         return parsed
+
+    @staticmethod
+    def _raise_for_raw_preprocessing_directives(source: str, filename: str | None) -> None:
+        """Reject raw directives that require a real C preprocessor."""
+        for record in normalize_c_source(source, filename=filename).records:
+            stripped = record.text.strip()
+            if not stripped.startswith("#") or _ALLOWED_RAW_DIRECTIVE_RE.match(stripped):
+                continue
+            source_line = record.source_line
+            column = source_line.find("#") + 1 if source_line and "#" in source_line else 1
+            raise CParseError(
+                "C preprocessing directives require compiler preprocessing before parsing.",
+                filename=record.filename,
+                line_number=record.original_start_line,
+                column=column,
+                source_line=source_line,
+                code="CPARSE_PREPROCESSING_REQUIRED",
+            )
 
     def visit_project(
         self,
@@ -707,15 +699,8 @@ class CParser:
         if not text:
             return
         tokens = lex_c_source(text)
-        has_scope_operator = any(
-            left.text == ":" and right.text == ":"
-            for left, right in zip(tokens, tokens[1:])
-        )
-        if (
-            segment.terminator != "eof"
-            and not has_scope_operator
-            and CParser._could_start_c_external_declaration(text)
-        ):
+        has_scope_operator = any(left.text == ":" and right.text == ":" for left, right in zip(tokens, tokens[1:]))
+        if segment.terminator != "eof" and not has_scope_operator and CParser._could_start_c_external_declaration(text):
             return
         raise CParseError(
             f"Invalid C syntax at top level: {text}",
@@ -743,84 +728,6 @@ class CParser:
             column=location.column,
             source_line=location.source_line,
             code="CPARSE_INVALID_SYNTAX",
-        )
-
-    def _macro_dependencies(
-        self,
-        source: str,
-        filename: str | None,
-        function_like_macro_names: set[str],
-        object_like_macro_names: set[str] | None = None,
-    ) -> list[CMacroDependency]:
-        """Collect top-level declaration dependencies on known macro names."""
-        dependencies: list[CMacroDependency] = []
-        if not function_like_macro_names and not object_like_macro_names:
-            return dependencies
-
-        for segment in split_top_level_c_source(source, filename=filename):
-            dependency = self._segment_macro_dependency(
-                segment,
-                function_like_macro_names,
-                object_like_macro_names,
-            )
-            if dependency is not None:
-                dependencies.append(dependency)
-        return dependencies
-
-    def _segment_macro_dependency(
-        self,
-        segment: CTopLevelSegment,
-        function_like_macro_names: set[str],
-        object_like_macro_names: set[str] | None = None,
-    ) -> CMacroDependency | None:
-        """Return the first macro dependency that blocks parsing this segment."""
-        text = segment.text.strip()
-        if not text:
-            return None
-        declaration_text, initializer = top_level_partition(text, "=")
-        scan_text = declaration_text if initializer is not None else text
-        for macro_name in sorted(function_like_macro_names):
-            if re.search(rf"\b{re.escape(macro_name)}\s*\(", scan_text):
-                return CMacroDependency(
-                    name=macro_name,
-                    context="declaration",
-                    source_text=text,
-                    source_location=self._source_location(segment),
-                )
-        for macro_name in sorted(object_like_macro_names or set()):
-            prefix_words = _STORAGE_CLASSES | _TYPE_QUALIFIERS | _FUNCTION_SPECIFIERS
-            prefix_pattern = "|".join(re.escape(word) for word in sorted(prefix_words))
-            if re.match(
-                rf"^(?:(?:{prefix_pattern})\s+)*{re.escape(macro_name)}\b",
-                scan_text,
-            ):
-                return CMacroDependency(
-                    name=macro_name,
-                    context="declaration",
-                    source_text=text,
-                    source_location=self._source_location(segment),
-                )
-        return None
-
-    def _macro_dependent_declaration_diagnostic(
-        self,
-        segment: CTopLevelSegment,
-        dependency: CMacroDependency,
-        *,
-        function_like: bool,
-    ) -> CDiagnostic:
-        """Build a warning for a declaration that requires macro expansion."""
-        macro_kind = "function-like" if function_like else "object-like"
-        return CDiagnostic(
-            code="C_MACRO_DEPENDENT_DECLARATION",
-            message=(
-                f"Declaration depends on {macro_kind} macro {dependency.name!r}; "
-                "provide preprocessed input to parse it."
-            ),
-            severity="warning",
-            location=dependency.source_location or self._source_location(segment),
-            unit_kind="macro_dependent_declaration",
-            unit_name=dependency.name,
         )
 
     def _has_unsupported_declaration_marker(self, text: str) -> bool:
@@ -853,51 +760,6 @@ class CParser:
         """Append a declaration location once, preserving encounter order."""
         if location is not None and location not in locations:
             locations.append(location)
-
-    @staticmethod
-    def _raw_conditional_condition_sets(source: str) -> dict[int, frozenset[str]]:
-        """Track unselected raw preprocessor alternatives by physical line."""
-        conditions_by_line: dict[int, frozenset[str]] = {}
-        condition_stack: list[tuple[int, int]] = []
-        group_counter = 0
-        for line_number, line in enumerate(source.splitlines(), start=1):
-            match = _RAW_CONDITIONAL_DIRECTIVE_RE.match(line)
-            if match is None:
-                conditions_by_line[line_number] = frozenset(
-                    f"g{group_id}:b{branch_id}"
-                    for group_id, branch_id in condition_stack
-                )
-                continue
-
-            directive = match.group("directive")
-            if directive in {"if", "ifdef", "ifndef"}:
-                group_counter += 1
-                condition_stack.append((group_counter, 0))
-            elif directive in {"elif", "else"} and condition_stack:
-                group_id, branch_id = condition_stack.pop()
-                condition_stack.append((group_id, branch_id + 1))
-            elif directive == "endif" and condition_stack:
-                condition_stack.pop()
-        return conditions_by_line
-
-    @staticmethod
-    def _functions_are_mutually_exclusive(left: CFunction, right: CFunction) -> bool:
-        """Return whether two raw function facts are in alternative branches."""
-        if (
-            not left.condition_set
-            or not right.condition_set
-            or left.source_location is None
-            or right.source_location is None
-            or left.source_location.filename != right.source_location.filename
-        ):
-            return False
-        branches: dict[str, str] = {}
-        for token in left.condition_set | right.condition_set:
-            group, _, branch = token.partition(":")
-            if group in branches and branches[group] != branch:
-                return True
-            branches[group] = branch
-        return False
 
     # ------------------------------------------------------------------
     # Redeclaration compatibility and normalization
@@ -998,12 +860,7 @@ class CParser:
         normalized: list[CFunction] = []
 
         for function in functions:
-            overlapping = [
-                index
-                for index, existing in enumerate(normalized)
-                if existing.name == function.name
-                and not self._functions_are_mutually_exclusive(existing, function)
-            ]
+            overlapping = [index for index, existing in enumerate(normalized) if existing.name == function.name]
             if not overlapping:
                 normalized.append(function)
                 continue
@@ -1247,25 +1104,10 @@ class CParser:
         parsed.typedefs = self._deduplicate_typedefs(parsed.typedefs, parsed.diagnostics)
         parsed.variables = self._deduplicate_variables(parsed.variables, parsed.diagnostics)
         parsed.functions = self._deduplicate_functions(parsed.functions, parsed.diagnostics)
-        function_counts: dict[str, int] = {}
-        for function in parsed.functions:
-            function_counts[function.name] = function_counts.get(function.name, 0) + 1
-        variant_names = {
-            function.name
-            for function in parsed.functions
-            if function_counts[function.name] > 1
-        }
-        for function in parsed.functions:
-            if function.name not in variant_names:
-                function.condition_set = frozenset()
 
     def _end_location(self, segment: CTopLevelSegment) -> CSourceLocation:
         """Return the original end location for a top-level segment."""
-        filename = (
-            segment.original_filenames[-1]
-            if segment.original_filenames
-            else segment.filename
-        )
+        filename = segment.original_filenames[-1] if segment.original_filenames else segment.filename
         return CSourceLocation(
             filename=filename,
             line=segment.original_end_line,
@@ -1380,22 +1222,16 @@ class CParser:
 
         if atomic_specifier is not None:
             if type_words:
-                raise _InvalidSpecifierSequence(
-                    f"Invalid type specifier sequence {spec_text.strip()!r}."
-                )
+                raise _InvalidSpecifierSequence(f"Invalid type specifier sequence {spec_text.strip()!r}.")
             inner_text = atomic_specifier[1]
             inner_spec_text, inner_declarator = self._split_declaration_specifiers(inner_text)
             if not inner_spec_text:
-                raise _InvalidSpecifierSequence(
-                    f"Invalid _Atomic type-name {inner_text!r}."
-                )
-            name, type_, inner_storage, inner_function_specifiers, _direct_function = (
-                self._build_declared_type(inner_spec_text, inner_declarator)
+                raise _InvalidSpecifierSequence(f"Invalid _Atomic type-name {inner_text!r}.")
+            name, type_, inner_storage, inner_function_specifiers, _direct_function = self._build_declared_type(
+                inner_spec_text, inner_declarator
             )
             if name is not None or inner_storage or inner_function_specifiers:
-                raise _InvalidSpecifierSequence(
-                    f"Invalid _Atomic type-name {inner_text!r}."
-                )
+                raise _InvalidSpecifierSequence(f"Invalid _Atomic type-name {inner_text!r}.")
             self._add_outermost_qualifiers(
                 type_,
                 [CAtomic(), *self._qualifiers(qualifiers)],
@@ -1412,10 +1248,7 @@ class CParser:
                 tag_kwargs["is_incomplete"] = True
             type_: CType = tag_type(**tag_kwargs)
         elif type_words:
-            displayed_type_words = [
-                _EXTENDED_SCALAR_SPELLINGS.get(word, word)
-                for word in type_words
-            ]
+            displayed_type_words = [_EXTENDED_SCALAR_SPELLINGS.get(word, word) for word in type_words]
             spelling = " ".join(displayed_type_words)
             primitive = _PRIMITIVE_TYPE_SIGNATURES.get(tuple(sorted(type_words)))
             if primitive is not None:
@@ -1423,12 +1256,8 @@ class CParser:
                     qualifiers=self._qualifiers(qualifiers),
                     source_text=" ".join([*qualifiers, *type_words]),
                 )
-            elif (
-                sum(word in _EXTENDED_SCALAR_WORDS for word in type_words) == 1
-                and all(
-                    word in _EXTENDED_SCALAR_WORDS | {"signed", "unsigned", "_Complex"}
-                    for word in type_words
-                )
+            elif sum(word in _EXTENDED_SCALAR_WORDS for word in type_words) == 1 and all(
+                word in _EXTENDED_SCALAR_WORDS | {"signed", "unsigned", "_Complex"} for word in type_words
             ):
                 type_ = CUnknownType(
                     spelling=spelling,
@@ -1442,9 +1271,7 @@ class CParser:
                     source_text=" ".join([*qualifiers, *type_words]),
                 )
             else:
-                raise _InvalidSpecifierSequence(
-                    f"Invalid type specifier sequence {spelling!r}."
-                )
+                raise _InvalidSpecifierSequence(f"Invalid type specifier sequence {spelling!r}.")
         else:
             type_ = CUnknownType(
                 qualifiers=self._qualifiers(qualifiers),
@@ -1726,10 +1553,7 @@ class CParser:
                             kind="compiler_type",
                             name=word,
                             offset=index,
-                            message=(
-                                f"Compiler type expression {word!r} was accepted as "
-                                "an opaque type placeholder."
-                            ),
+                            message=(f"Compiler type expression {word!r} was accepted as an opaque type placeholder."),
                         )
                     )
                     self._replace_span(characters, index, span_end, placeholder)
@@ -2107,9 +1931,7 @@ class CParser:
         source_parts = [spec_text.strip(), declarator_fragment.strip()]
         type_.source_text = " ".join(part for part in source_parts if part).strip()
         direct_function = (
-            parsed.operations[-1]
-            if parsed.operations and isinstance(parsed.operations[-1], _FunctionOp)
-            else None
+            parsed.operations[-1] if parsed.operations and isinstance(parsed.operations[-1], _FunctionOp) else None
         )
         return parsed.name, type_, storage, function_specifiers, direct_function
 
@@ -2291,8 +2113,10 @@ class CParser:
                     continue
                 if stripped.startswith("{"):
                     mapping = line_mappings[index] if index < len(line_mappings) else None
-                    source_line = mapping.source_line if mapping is not None else (
-                        source_lines[index] if index < len(source_lines) else line
+                    source_line = (
+                        mapping.source_line
+                        if mapping is not None
+                        else (source_lines[index] if index < len(source_lines) else line)
                     )
                     raise CParseError(
                         "K&R style function definitions are not supported",
@@ -2309,8 +2133,10 @@ class CParser:
 
             if saw_old_style_declaration:
                 mapping = line_mappings[index] if index < len(line_mappings) else None
-                source_line = mapping.source_line if mapping is not None else (
-                    source_lines[index] if index < len(source_lines) else line
+                source_line = (
+                    mapping.source_line
+                    if mapping is not None
+                    else (source_lines[index] if index < len(source_lines) else line)
                 )
                 raise CParseError(
                     "K&R style function definitions are not supported",
@@ -2406,10 +2232,7 @@ class CParser:
                 continue
             prefix: list[str] = []
             for prefix_word in words[:index]:
-                normalized = (
-                    self._canonical_storage_class(prefix_word)
-                    or self._canonical_type_qualifier(prefix_word)
-                )
+                normalized = self._canonical_storage_class(prefix_word) or self._canonical_type_qualifier(prefix_word)
                 if normalized is None:
                     return None
                 prefix.append(normalized)
@@ -2720,9 +2543,7 @@ class CParser:
                 )
                 continue
             if "{" in text or "}" in text:
-                nested = self._parse_tag_definition(
-                    self._nested_field_segment(segment, text, member_offset)
-                )
+                nested = self._parse_tag_definition(self._nested_field_segment(segment, text, member_offset))
                 if nested is not None:
                     aggregate, functions, typedefs, variables, nested_diagnostics = nested
                     if not functions and not typedefs:
@@ -2775,9 +2596,7 @@ class CParser:
                 except _InvalidSpecifierSequence as error:
                     raise self._invalid_specifier_error(segment, str(error), offset=member_offset) from None
                 except _UnsupportedDeclaratorSyntax as error:
-                    diagnostics.append(
-                        self._field_diagnostic(segment, owner_kind, str(error), offset=member_offset)
-                    )
+                    diagnostics.append(self._field_diagnostic(segment, owner_kind, str(error), offset=member_offset))
                     continue
                 if name is None and bit_width is None:
                     diagnostics.append(
@@ -2823,13 +2642,16 @@ class CParser:
     def _parse_tag_definition(
         self,
         segment: CTopLevelSegment,
-    ) -> tuple[
-        CStruct | CUnion | CEnum,
-        list[CFunction],
-        list[CTypedef],
-        list[CVariable],
-        list[CDiagnostic],
-    ] | None:
+    ) -> (
+        tuple[
+            CStruct | CUnion | CEnum,
+            list[CFunction],
+            list[CTypedef],
+            list[CVariable],
+            list[CDiagnostic],
+        ]
+        | None
+    ):
         """Parse a top-level struct, union, or enum definition segment."""
         text = segment.text.strip()
         if self._has_unsupported_declaration_marker(text):
@@ -2912,11 +2734,7 @@ class CParser:
     ) -> tuple[list[CFunction], list[CTypedef], list[CVariable], list[CDiagnostic]]:
         """Parse an ordinary top-level declaration segment."""
         text = segment.text.strip()
-        if (
-            not text
-            or text.startswith("_Static_assert")
-            or self._has_unsupported_declaration_marker(text)
-        ):
+        if not text or text.startswith("_Static_assert") or self._has_unsupported_declaration_marker(text):
             return [], [], [], []
 
         spec_text, declarator_list = self._split_declaration_specifiers(text)
@@ -2976,10 +2794,7 @@ class CParser:
         source: str,
         filename: str | None,
         *,
-        function_like_macros: set[str] | None = None,
-        object_like_macros: set[str] | None = None,
         use_linemarkers: bool = False,
-        condition_sets_by_line: Mapping[int, frozenset[str]] | None = None,
         normalize_compiler_extensions: bool = False,
     ) -> tuple[
         list[CFunction],
@@ -2992,10 +2807,9 @@ class CParser:
     ]:
         """Dispatch top-level C external declarations by grammar role.
 
-        The ordering here is intentional: macro-dependent declarations are
-        deferred before ordinary parsing, aggregate definitions are parsed
-        before function/declaration fallback, and ordinary `;` declarations all
-        flow through the shared declaration backend.
+        The ordering here is intentional: aggregate definitions are parsed
+        before function/declaration fallback, and ordinary `;` declarations
+        all flow through the shared declaration backend.
         """
         self._raise_for_unsupported_old_style_definitions(
             source,
@@ -3012,9 +2826,6 @@ class CParser:
         variables: list[CVariable] = []
         diagnostics: list[CDiagnostic] = []
 
-        function_like_names = function_like_macros or set()
-        object_like_names = object_like_macros or set()
-        condition_sets = condition_sets_by_line or {}
         for segment in split_top_level_c_source(
             source,
             filename=filename,
@@ -3027,20 +2838,6 @@ class CParser:
                 if not segment.text.strip():
                     continue
             self._raise_for_invalid_top_level_syntax(segment)
-            macro_dependency = self._segment_macro_dependency(
-                segment,
-                function_like_names,
-                object_like_names,
-            )
-            if macro_dependency is not None:
-                diagnostics.append(
-                    self._macro_dependent_declaration_diagnostic(
-                        segment,
-                        macro_dependency,
-                        function_like=macro_dependency.name in function_like_names,
-                    )
-                )
-                continue
             try:
                 tag_definition = self._parse_tag_definition(segment)
             except _InvalidCGrammarSyntax as error:
@@ -3054,11 +2851,6 @@ class CParser:
                 else:
                     enums.append(aggregate)
                 functions.extend(parsed_functions)
-                for function in parsed_functions:
-                    function.condition_set = condition_sets.get(
-                        segment.original_start_line,
-                        frozenset(),
-                    )
                 typedefs.extend(parsed_typedefs)
                 variables.extend(parsed_variables)
                 diagnostics.extend(parsed_diagnostics)
@@ -3072,10 +2864,6 @@ class CParser:
                 except _InvalidCGrammarSyntax as error:
                     raise self._invalid_syntax_error(segment, str(error), context="function declaration") from None
                 if function is not None:
-                    function.condition_set = condition_sets.get(
-                        segment.original_start_line,
-                        frozenset(),
-                    )
                     functions.append(function)
                     self._append_union_by_value_diagnostics(function, diagnostics)
                     continue
@@ -3098,22 +2886,12 @@ class CParser:
             except _InvalidCGrammarSyntax as error:
                 raise self._invalid_syntax_error(segment, str(error), context="declaration") from None
             functions.extend(parsed_functions)
-            for function in parsed_functions:
-                function.condition_set = condition_sets.get(
-                    segment.original_start_line,
-                    frozenset(),
-                )
             typedefs.extend(parsed_typedefs)
             variables.extend(parsed_variables)
             for function in parsed_functions:
                 self._append_union_by_value_diagnostics(function, diagnostics)
             diagnostics.extend(declarator_diagnostics)
-            if (
-                not parsed_functions
-                and not parsed_typedefs
-                and not parsed_variables
-                and not declarator_diagnostics
-            ):
+            if not parsed_functions and not parsed_typedefs and not parsed_variables and not declarator_diagnostics:
                 unsupported = self._unsupported_declaration_diagnostic(segment)
                 if unsupported is not None:
                     diagnostics.append(unsupported)
@@ -3154,19 +2932,10 @@ class CParser:
         self._index_header_source_pairs(project)
         resolve_project_types(project)
         normalized_functions = self._deduplicate_functions(all_functions, project.diagnostics)
-        functions_by_name: dict[str, list[CFunction]] = {}
         for function in normalized_functions:
-            functions_by_name.setdefault(function.name, []).append(function)
-        for name, variants in functions_by_name.items():
-            if len(variants) == 1:
-                project.functions[name] = variants[0]
-            else:
-                project.conditional_function_variants[name] = variants
+            project.functions[function.name] = function
         for function in project.functions.values():
             self._append_union_by_value_diagnostics(function, project.diagnostics)
-        for variants in project.conditional_function_variants.values():
-            for function in variants:
-                self._append_union_by_value_diagnostics(function, project.diagnostics)
         return project
 
     def _index_struct(
@@ -3313,6 +3082,7 @@ class CParser:
             for included in project.include_graph.get(source, set()):
                 if included in project.files and _is_header_key(included):
                     project.header_source_pairs.setdefault(included, set()).add(source)
+
 
 _DEFAULT_PARSER = CParser()
 

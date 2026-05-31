@@ -146,6 +146,10 @@ _UNSUPPORTED_PATTERN_KEYS = (
     "unsupported_procedure_pointer",
     "unsupported_c_ptr",
 )
+_FORTRAN_LINEMARKER_RE = re.compile(
+    r'^\s*#\s*(?:line\s+)?\d+(?:\s+(?:"(?:[^"\\]|\\.)*"|\S+))?(?:\s+\d+)*\s*$',
+    re.IGNORECASE,
+)
 
 
 _PreprocessedLines = list[tuple[str, int | None, str | None]]
@@ -159,7 +163,6 @@ class _SourceUnit:
     lines: _PreprocessedLines
     start_line: int | None
     end_line: int | None
-    condition_set: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -289,8 +292,8 @@ class FortranParser:
       dummy arguments.
     - Derived-type scopes parse fields in the specification region and
       type-bound procedure/generic bindings in the `contains` region.
-    - Same-level unit names are validated by the slicer with preprocessor
-      branch-awareness, while identical names in different scopes remain valid.
+    - Same-level unit names are validated by the slicer, while identical names
+      in different scopes remain valid.
 
     `visit_project` composes multiple `FortranFile` objects into one
     `FortranProject` registry and validates duplicate symbols by scope.
@@ -954,8 +957,36 @@ class FortranParser:
     def _preprocessed_lines(self, source: _SourceOrLines, filename: str | None) -> _PreprocessedLines:
         """Return preprocessed source lines, reusing file-level preprocessing when supplied."""
         if isinstance(source, list):
-            return source
-        return preprocess_lines(source, filename)
+            lines = source
+        else:
+            for lineno, source_line in enumerate(source.splitlines(), start=1):
+                self._raise_for_raw_cpp_directive(source_line, filename, lineno, source_line)
+            source_without_linemarkers = "".join(
+                re.sub(r"[^\r\n]", "", line) if _FORTRAN_LINEMARKER_RE.match(line.strip()) else line
+                for line in source.splitlines(keepends=True)
+            )
+            lines = preprocess_lines(source_without_linemarkers, filename)
+        for line, lineno, source_line in lines:
+            self._raise_for_raw_cpp_directive(line, filename, lineno, source_line)
+        return lines
+
+    @staticmethod
+    def _raise_for_raw_cpp_directive(
+        line: str,
+        filename: str | None,
+        lineno: int,
+        source_line: str,
+    ) -> None:
+        """Reject raw CPP directives while accepting compiler linemarkers."""
+        stripped = line.strip()
+        if stripped.startswith("#") and not _FORTRAN_LINEMARKER_RE.match(stripped):
+            raise FortranParseError(
+                "Fortran CPP directives require compiler preprocessing before parsing.",
+                filename=filename,
+                line_number=lineno,
+                source_line=source_line,
+                code="PARSE_PREPROCESSING_REQUIRED",
+            )
 
     def _helper_collect_namespace(
         self,
@@ -1155,74 +1186,6 @@ class FortranParser:
         collect(root_scope, self._helper_slice_child_units(lines, parent_scope=root_scope, filename=filename))
         return types
 
-    def _handle_procedure_preprocessor_line(
-        self,
-        line: str,
-        *,
-        pp_condition_stack: list[tuple[int, int]],
-        pp_active_stack: list[bool],
-        pp_group_counter: int,
-    ) -> tuple[bool, int]:
-        """Update conditional-compilation state while collecting source units.
-
-        The slicer calls this while scanning sibling units so duplicate checks
-        can distinguish mutually exclusive preprocessor branches.
-
-        Example:
-            Seeing ``#ifdef USE_MPI`` pushes a new condition branch; a later
-            ``#else`` advances that branch id. Two procedures with the same
-            name under those two branches are allowed because their condition
-            sets do not overlap.
-        """
-        if not line.startswith("#"):
-            return False, pp_group_counter
-
-        directive = line[1:].strip()
-        directive_low = directive.lower()
-        if directive_low.startswith("ifdef "):
-            pp_group_counter += 1
-            pp_condition_stack.append((pp_group_counter, 0))
-            pp_active_stack.append(True)
-            return True, pp_group_counter
-        if directive_low.startswith("ifndef "):
-            pp_group_counter += 1
-            pp_condition_stack.append((pp_group_counter, 0))
-            pp_active_stack.append(True)
-            return True, pp_group_counter
-        if directive_low.startswith("if "):
-            pp_group_counter += 1
-            pp_condition_stack.append((pp_group_counter, 0))
-            pp_active_stack.append(True)
-            return True, pp_group_counter
-        if directive_low.startswith("else"):
-            if pp_condition_stack:
-                group_id, branch_id = pp_condition_stack.pop()
-                pp_condition_stack.append((group_id, branch_id + 1))
-            if pp_active_stack:
-                pp_active_stack.pop()
-                pp_active_stack.append(True)
-            return True, pp_group_counter
-        if directive_low.startswith("elif "):
-            if pp_condition_stack:
-                group_id, branch_id = pp_condition_stack.pop()
-                pp_condition_stack.append((group_id, branch_id + 1))
-            if pp_active_stack:
-                pp_active_stack.pop()
-                pp_active_stack.append(True)
-            return True, pp_group_counter
-        if directive_low.startswith("endif"):
-            if pp_condition_stack:
-                pp_condition_stack.pop()
-            if pp_active_stack:
-                pp_active_stack.pop()
-            return True, pp_group_counter
-        return False, pp_group_counter
-
-    @staticmethod
-    def _procedure_preprocessor_condition_set(pp_condition_stack: list[tuple[int, int]]) -> frozenset[str]:
-        """Serialize the active raw CPP branch stack for sibling comparison."""
-        return frozenset(f"g{group_id}:b{branch_id}" for group_id, branch_id in pp_condition_stack)
-
     def _helper_validate_possible_unit_header(
         self,
         line: str,
@@ -1267,22 +1230,10 @@ class FortranParser:
         rejected via the generic invalid-syntax diagnostic path.
         """
         index = 0
-        pp_condition_stack: list[tuple[int, int]] = []
-        pp_active_stack: list[bool] = []
-        pp_group_counter = 0
         while index < len(lines):
             line, lineno, source_line = lines[index]
             stripped = line.strip()
             if not stripped:
-                index += 1
-                continue
-            handled_pp, pp_group_counter = self._handle_procedure_preprocessor_line(
-                stripped,
-                pp_condition_stack=pp_condition_stack,
-                pp_active_stack=pp_active_stack,
-                pp_group_counter=pp_group_counter,
-            )
-            if handled_pp:
                 index += 1
                 continue
 
@@ -1368,20 +1319,11 @@ class FortranParser:
         """
         units: list[_SourceUnit] = []
         index = 0
-        pp_condition_stack: list[tuple[int, int]] = []
-        pp_active_stack: list[bool] = []
-        pp_group_counter = 0
         region = "specification"
         while index < len(lines):
             line, lineno, _ = lines[index]
             stripped = line.strip()
-            handled_pp, pp_group_counter = self._handle_procedure_preprocessor_line(
-                stripped,
-                pp_condition_stack=pp_condition_stack,
-                pp_active_stack=pp_active_stack,
-                pp_group_counter=pp_group_counter,
-            )
-            if handled_pp:
+            if stripped.startswith("#"):
                 index += 1
                 continue
             if skip_execution_region:
@@ -1436,7 +1378,6 @@ class FortranParser:
                     lines=lines[index : end_index + 1],
                     start_line=lineno,
                     end_line=end_line,
-                    condition_set=self._procedure_preprocessor_condition_set(pp_condition_stack),
                 )
             )
             index = end_index + 1
@@ -1922,14 +1863,12 @@ class FortranParser:
 
         The check is scope-local: two modules may each define ``type state``,
         but two direct children with the same relevant kind/name in one scope
-        are rejected unless they are guarded by mutually exclusive preprocessor
-        branches.
+        are rejected.
 
         Example:
             Two ``module mesh`` units at file scope raise a duplicate-module
             error. Two ``subroutine step`` children in one module raise a
-            duplicate-procedure error when their preprocessor conditions can
-            both be active.
+            duplicate-procedure error.
         """
         seen: dict[tuple[str, str], list[_SourceUnit]] = {}
         for unit in units:
@@ -1942,8 +1881,6 @@ class FortranParser:
             else:
                 continue
             for existing in seen.get(key, []):
-                if not self._preprocessor_conditions_overlap(existing.condition_set, unit.condition_set):
-                    continue
                 if unit.kind == "procedure":
                     scope_label = (
                         f"module '{parent_scope.name}'"
@@ -4343,19 +4280,6 @@ class FortranParser:
         if class_derived:
             return "derived", class_derived.group("dtype")
         return None  # pragma: no cover - unsupported prefixes are rejected by public grammar.
-
-    @staticmethod
-    def _preprocessor_conditions_overlap(c1: frozenset[str], c2: frozenset[str]) -> bool:
-        """Return True when two preprocessor condition sets may both be active."""
-        if not c1 or not c2:
-            return True
-        values: dict[str, str] = {}
-        for token in c1 | c2:
-            group, _, branch = token.partition(":")
-            if group in values and values[group] != branch:
-                return False
-            values[group] = branch
-        return True
 
     @staticmethod
     def _looks_like_existing_source_path(source: str | Path) -> bool:

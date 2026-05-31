@@ -412,6 +412,23 @@ _Atomic(int) *pointer_to_atomic;
     assert parsed.diagnostics == []
 
 
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        ("_Atomic(int) long value;\n", "Invalid type specifier sequence"),
+        ("_Atomic() value;\n", "Invalid _Atomic type-name"),
+        ("_Atomic(int named) value;\n", "Invalid _Atomic type-name"),
+    ],
+)
+def test_invalid_atomic_type_specifiers_raise_focused_errors(source, message):
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError, match=message) as exc_info:
+        parse_c_file(source, filename="invalid_atomic.h")
+
+    assert exc_info.value.code == "CPARSE_INVALID_SPECIFIER_SEQUENCE"
+
+
 def test_function_bodies_do_not_contribute_local_variables():
     from c_parser import parse_c_file
 

@@ -234,29 +234,6 @@ def test_fixed_form_and_interface_detection():
     assert parsed.interfaces[0].procedures[0].in_interface is True
 
 
-def test_preprocessor_branches_are_preserved_from_inline_fortran():
-    source = """
-#ifdef USE_A
-subroutine selected_a(x)
-  integer, intent(in) :: x
-end subroutine selected_a
-#elif defined(USE_B)
-subroutine selected_b(x)
-  real(8), intent(in) :: x
-end subroutine selected_b
-#else
-subroutine fallback(x)
-  logical, intent(in) :: x
-end subroutine fallback
-#endif
-"""
-
-    parsed = parse_fortran_file(source)
-
-    assert [proc.name for proc in parsed.procedures] == ["selected_a", "selected_b", "fallback"]
-    assert [proc.arguments[0].base_type for proc in parsed.procedures] == ["integer", "real", "logical"]
-
-
 def test_legacy_character_and_star_kind_declarations_from_inline_fortran():
     source = """
       subroutine label(name, x)

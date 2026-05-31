@@ -2,8 +2,8 @@
 
 Status: partial parser plus raw directive metadata implemented. The `c_parser`
 package, typed parser models, public entrypoints, explicit
-`x2py --language c --parse` CLI path, raw include/macro/undef/conditional
-metadata collection, top-level redeclaration handling, project include/index
+`x2py --language c --parse` CLI path, raw include/pragma metadata collection,
+strict unresolved-preprocessing rejection, top-level redeclaration handling, project include/index
 reporting, top-level source splitting, and a first simple
 declaration/function subset with function-definition start/end locations and
 aggregate declarations exist. Declarators are parsed through a recursive
@@ -39,10 +39,10 @@ Implemented now:
   records, exposes lightweight token records, and provides top-level splitting
   helpers that track braces, parentheses, brackets, literals, and
   function-definition end locations.
-- `c_parser.preprocessor` records raw `#include` directives, simple object-like
-  macros, `#undef` directives, conditional/pragma directive provenance
-  including OpenMP declaration pragmas, and unsupported function-like macro
-  diagnostics without expanding macros.
+- `c_parser.preprocessor` records raw `#include` directives and pragma
+  provenance, including OpenMP declaration pragmas. `c_parser.parser` rejects
+  raw macro, conditional, macro-include, and other unresolved preprocessing
+  directives with `CPARSE_PREPROCESSING_REQUIRED`.
 - `c_parser.parser` parses variables, typedefs, incomplete `struct`/`union`
   tags, basic struct/union/enum definitions, function prototypes, and
   function-definition signatures while skipping bodies. Declarator handling
@@ -64,9 +64,7 @@ Implemented now:
   models expose `result_type` and named `parameters`; their derived
   `CFunctionType` is the nameless callable signature. Array and function
   parameter declarations preserve their written `declared_type` and expose
-  pointer-adjusted effective `type` values. Declarations prefixed by
-  unexpanded object-like macros are deferred as macro dependencies rather than
-  misreported as invalid type sequences. In compiler/preprocessed mode, common
+  pointer-adjusted effective `type` values. In compiler/preprocessed mode, common
   GCC/Clang and MS declaration syntax is normalized before grammar parsing:
   attributes, `__declspec(...)`,
   `[[...]]`, `__extension__`, alternate qualifier/inline spellings,
@@ -89,10 +87,6 @@ Implemented now:
   declarations, preserves related declaration locations, and reports duplicate
   definitions or incompatible redeclarations as diagnostics. Local declarations
   inside function bodies remain out of scope because bodies are skipped.
-- Raw same-name function alternatives in mutually exclusive conditional
-  branches retain Fortran-style `condition_set` identity; a project keeps
-  ambiguous alternatives in `conditional_function_variants` rather than
-  inventing one selected function.
 - `c_parser.cli` provides C-specific partial report formatting.
 - `x2py.cli` dispatches `--language c --parse` to the C parser path.
 - `x2py.c_type_probe` compiles and runs a generated C11 query for
@@ -108,14 +102,14 @@ Implemented now:
   exact-contract `--language c --pyi` output are enabled for the supported C
   semantic subset.
 - Focused partial CLI/API, declaration/function, diagnostic color, project
-  include/index, raw lexer/directive, project golden, error golden, preprocessed
+  include/index, raw lexer/directive, error golden, preprocessed
   linemarker remapping, JSON schema, and cJSON partial-parse regression tests
   are active. A separately pinned/provenanced corpus remains deferred work,
   not a skipped test.
 - `tests/data/c/` contains general fixtures modeled after the Fortran general
   fixture themes, additional C-specific API shapes, fatal diagnostic inputs,
-  and real-world cJSON/jsmn/tinyexpr/linmath/NanoSVG/stb inputs whose partial
-  project parse reports are covered by regression goldens.
+  and real-world cJSON/jsmn/tinyexpr/linmath/NanoSVG/stb inputs used for
+  preprocessing-boundary and curated corpus coverage.
 
 Deferred:
 
@@ -167,7 +161,6 @@ should not wait for a separate request.
 - `tests/pyi/test_pyi_fixture_suite.py`
 - `tests/parser/fortran/generate_fortran_parser_goldens.py`
 - `tests/parser/fortran/errors/generate_fortran_parser_error_goldens.py`
-- `tests/parser/c/generate_c_parser_goldens.py`
 - `tests/parser/c/errors/generate_c_parser_error_goldens.py`
 - `tests/semantics/generate_semantic_fixtures.py`
 - `tests/pyi/generate_pyi_fixtures.py`
@@ -202,8 +195,9 @@ architectural properties are:
 - Semantic IR conversion is a separate visitor layer. Parser output is a helper
   input, not the source of truth.
 - `.pyi` generation and parsing operate over semantic IR, not parser internals.
-- Fixture testing combines focused unit tests, parser JSON goldens, error
-  goldens, semantic fixtures, `.pyi` fixtures, and corpus parse-only coverage.
+- Fixture testing combines focused unit tests, legacy JSON schema snapshots,
+  error goldens, semantic fixtures, `.pyi` fixtures, and compiler-preprocessed
+  corpus coverage.
 
 The C parser should follow these patterns where they map cleanly to C syntax.
 It should not be a giant regex parser, a compiler wrapper, or a libclang-only
@@ -278,9 +272,8 @@ Current and planned responsibilities:
   - Planned: richer token helpers as extension and initializer-expression
     parsing require them.
 - `c_parser/preprocessor.py`
-  - Implemented: lightweight raw directive metadata for includes,
-    object-like macros, `#undef` directives, function-like macro diagnostics,
-    and local include resolution when a matching file is available.
+  - Implemented: lightweight raw directive metadata for includes and pragmas,
+    plus local include resolution when a matching file is available.
   - Compiler-assisted recipe metadata is persisted by the shared
     `x2py.preprocessing` CLI input path and attached to generated `CFile`
     JSON output.
@@ -299,8 +292,8 @@ Current and planned responsibilities:
     primitive-specifier combinations are rejected with
     `CPARSE_INVALID_SPECIFIER_SEQUENCE`. Array and
     function parameters preserve `declared_type` while effective `type` uses C
-    parameter adjustment. Raw declarations beginning with an object-like macro
-    name are retained as macro-dependent diagnostics. Compiler/preprocessed mode
+    parameter adjustment. Raw unresolved preprocessing directives fail with
+    `CPARSE_PREPROCESSING_REQUIRED`. Compiler/preprocessed mode
     normalizes common GCC/Clang and MS declaration extensions before grammar
     parsing; ignored ABI-relevant semantics produce
     `C_UNMODELED_COMPILER_EXTENSION` warnings.
@@ -339,8 +332,8 @@ parse_c_project(files, include_dirs=None, preprocessing="raw", encoding="utf-8")
 ```
 
 Raw mode does not evaluate C preprocessor conditionals or expand macros inside
-x2py. Compiler mode receives already-expanded source from the shared
-preprocessing layer.
+x2py. It rejects directives that require those operations. Compiler mode
+receives already-expanded source from the shared preprocessing layer.
 
 Implemented companion class:
 
@@ -409,10 +402,8 @@ Declaration objects are separate from the type components:
   locations; there is no separate field class.
 - `CFunction` has `name`, `result_type`, named `parameters`, storage and
   function specifiers, `is_variadic`, prototype style, and source/definition
-  locations plus related declaration locations. Raw alternative declarations
-  can also carry `condition_set` tokens such as `g1:b0`, matching the
-  Fortran parser's conditional-sibling identity convention. Its `type`
-  property builds the corresponding nameless `CFunctionType`.
+  locations plus related declaration locations. Its `type` property builds the
+  corresponding nameless `CFunctionType`.
 - `CParameter` has a source name, written `declared_type`, and effective
   `type`; outer array parameters and direct function parameters adjust to
   pointer `type` values while their source form is retained.
@@ -472,7 +463,6 @@ Declaration objects are separate from the type components:
   - `system_includes`
   - `unresolved_includes`
   - `header_source_pairs`
-  - `conditional_function_variants`
   - `diagnostics`
 
 Serialization uses `"model"` to identify concrete `CType` nodes; `"type"` is
@@ -517,7 +507,7 @@ be:
    - function definition
    - forward struct declaration or struct/union/enum definition
    - file-scope variable/static const
-   - unsupported/macro-dependent declaration
+   - unsupported declaration
 6. Dispatch to a small visitor for that declaration kind.
 7. Use a shared declaration-specifier and declarator parser to build type
    references for functions, parameters, members, variables, and typedefs.
@@ -581,19 +571,11 @@ Raw-source mode target:
 - Strip comments safely while preserving line numbers.
 - Fold backslash-newline continuations.
 - Record `#include` directives as structured include dependencies.
-- Record `#define` object-like macros for simple constants.
-- Record `#undef` directives as macro provenance.
-- Record function-like macros as unsupported or deferred metadata.
-- Record conditional directive presence as metadata only when needed for
-  provenance.
-- Preserve same-name function declarations from mutually exclusive raw
-  conditional branches as separate `condition_set` variants; do not select an
-  active branch in raw mode.
+- Record pragmas as provenance metadata.
 - Parse ordinary declarations only when they are visible without macro
   expansion.
-- Mark function-like wrappers and object-like declaration-prefix regions as
-  unsupported/deferred rather than treating them as parsed declarations.
-- Do not select active branches from `#if`/`#ifdef` in raw mode.
+- Raise `CPARSE_PREPROCESSING_REQUIRED` for macro definitions, undefines,
+  conditionals, macro includes, and other directives that need preprocessing.
 
 Compiler-assisted preprocessing target:
 
@@ -621,8 +603,8 @@ Compiler-assisted preprocessing target:
 - Record the macro definitions/include directories/preprocessor command that
   produced the parse, because different `-D` and `-I` settings can expose
   different public APIs.
-- Treat function-like macros as metadata in raw mode, but allow their expanded
-  declarations to be parsed when they appear in compiler-preprocessed input.
+- Allow expanded declarations to be parsed when they appear in
+  compiler-preprocessed input.
 - Require preprocessed input whenever public declarations depend on macros for
   names, types, declarators, attributes, storage classes, calling conventions,
   visibility annotations, or active conditional branches.
@@ -644,9 +626,10 @@ Current behavior:
 - `parse_c_project` accepts mappings, explicit paths, and directories.
 - Directory mode discovers `.c`, `.h`, and `.i` files.
 - Returned `CProject` objects contain `CFile` parser models with raw include,
-  macro, metadata diagnostics, and supported declarations populated per file.
+  pragma, metadata diagnostics, and supported declarations populated per file.
 - Basic project-level indexes are populated for parsed functions, typedefs,
-  variables, macros, includes, functions by file, and enum constants.
+  variables, attached compiler-recipe macros, includes, functions by file, and
+  enum constants.
 - Quoted local includes are recorded in an `include_graph`; system includes
   are recorded separately. Unresolved quoted includes remain diagnostics
   rather than hard failures, and include cycles are represented as graph edges
@@ -692,7 +675,6 @@ later stage:
 
 - unresolved include references
 - unresolved typedef/tag references
-- macro-dependent declarations
 - variadic functions
 - pointer ownership and mutability ambiguity
 - incomplete public types

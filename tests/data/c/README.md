@@ -9,17 +9,11 @@ Directories:
 
 - `general/`: small hand-written C headers and sources that mirror the themes
   in `tests/data/fortran/general/`, plus C-specific API shapes.
-- `json/`: JSON-library source/header inputs used for grouped project
-  regression goldens; diagnostics are permitted in these real-world inputs.
-- `tinyexpr/`: tinyexpr source/header inputs used for grouped project
-  regression goldens; diagnostics are permitted in these real-world inputs.
-- `linmath/`: header-only linmath input used for a one-file project regression
-  golden; diagnostics are permitted in this macro-heavy real-world input.
-- `nanosvg/`: NanoSVG headers used for one dependent-header project golden;
-  `nanosvgrast.h` is parsed with its `nanosvg.h` dependency.
-- `stb/`: top-level stb single-file library C inputs, each treated as its own
-  one-file project regression golden; nested repository metadata is not a
-  parser fixture.
+- `json/`: JSON-library source/header inputs used for compiler-preprocessed
+  corpus regression coverage.
+- `tinyexpr/`, `linmath/`, `nanosvg/`, and `stb/`: macro-heavy real-world
+  inputs used for raw-preprocessing boundary coverage and future curated
+  compiler-preprocessed corpus work.
 - `errors/parser/`: invalid C snippets for parser diagnostic goldens.
 - `corpus/`: future pinned third-party C corpus fixtures with license
   provenance.

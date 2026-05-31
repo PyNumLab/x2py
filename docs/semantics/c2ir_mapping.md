@@ -49,7 +49,7 @@ The converter does not silently invent wrapper policy. It attaches
 `readiness_blockers` metadata that the semantic readiness checker reports:
 
 - unresolved typedef or unknown type references;
-- macro-dependent declarations in raw C input;
+- legacy parser reports carrying macro-dependent declarations;
 - variadic functions;
 - function pointer/callback signatures without edited `.pyi` `Callable`
   policy;

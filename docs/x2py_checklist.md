@@ -30,11 +30,9 @@ Language scope is stated in each section or subsection heading:
       `--parse-c` spelling while it would only duplicate that path.
 - [x] Expose `parse_c_file` and `parse_c_project` from `x2py` as well as from
       `c_parser`, matching the Fortran public entrypoint style.
-- [x] Preserve same-name function variants in mutually exclusive raw
-      preprocessor branches. `CFunction.condition_set` uses the Fortran-style
-      `gN:bN` branch tokens; ambiguous project names are retained in
-      `CProject.conditional_function_variants` instead of being collapsed into
-      one `CProject.functions` entry.
+- [x] Reject raw C macro, conditional, macro-include, and other unresolved
+      preprocessing directives with `CPARSE_PREPROCESSING_REQUIRED`. Parse
+      each compiler-selected configuration separately.
 - [x] Keep "no functions found" out of parser diagnostics. Whether a source
       has no wrappable public API is a Step 4 semantic-readiness decision.
 - [x] Preserve enum initializer expression text in parser models rather than

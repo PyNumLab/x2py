@@ -105,6 +105,29 @@ __asm__(".ident \\"compiler metadata\\"");
     ]
 
 
+def test_bare_compiler_extensions_and_comments_are_tolerated():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+/* block
+   comment */
+__attribute__ int attributed;
+// line comment
+_Alignas int aligned;
+extern int renamed __asm__;
+""",
+        filename="bare_extensions.h",
+        preprocessing="compiler",
+    )
+
+    assert [variable.name for variable in parsed.variables] == ["attributed", "aligned", "renamed"]
+    assert [(diagnostic.unit_kind, diagnostic.unit_name) for diagnostic in parsed.diagnostics] == [
+        ("alignment_specifier", "_Alignas"),
+        ("asm_label", "__asm__"),
+    ]
+
+
 def test_abi_pointer_qualifiers_are_accepted_with_explicit_warning():
     from c_parser import parse_c_file
 

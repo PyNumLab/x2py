@@ -17,6 +17,7 @@ from c_parser.models import (
     CInitializer,
     CInt,
     CLongDouble,
+    CMacro,
     CMacroDependency,
     CParameter,
     CPointer,
@@ -231,11 +232,11 @@ void use_context(struct private_context ctx);
 def test_c2ir_converts_enum_constants_and_simple_macro_constants():
     parsed = parse_c_file(
         """
-#define API_VERSION 3
 enum status { STATUS_OK = 0, STATUS_WARN, STATUS_ERROR = 10 };
 """,
         filename="constants.h",
     )
+    parsed.macros = [CMacro(name="API_VERSION", value="3")]
     module = c_file_to_semantic_modules(parsed)[0]
 
     constants = {var.name: var for var in module.variables}
@@ -248,14 +249,16 @@ enum status { STATUS_OK = 0, STATUS_WARN, STATUS_ERROR = 10 };
 def test_c2ir_converts_integer_expression_macro_constants_when_resolvable():
     parsed = parse_c_file(
         """
-#define API_N0 4
-#define API_N1 (API_N0 + 2)
-#define API_MASK (1U << API_N1)
-#define API_TEXT "not a semantic integer constant"
 void fill(int x[static API_N1]);
 """,
         filename="shape_macros.h",
     )
+    parsed.macros = [
+        CMacro(name="API_N0", value="4"),
+        CMacro(name="API_N1", value="(API_N0 + 2)"),
+        CMacro(name="API_MASK", value="(1U << API_N1)"),
+        CMacro(name="API_TEXT", value='"not a semantic integer constant"'),
+    ]
     module = c_file_to_semantic_modules(parsed)[0]
 
     constants = {var.name: var for var in module.variables}
@@ -484,9 +487,13 @@ def test_c2ir_standard_type_facts_and_numeric_constant_edge_cases():
     assert CToIRConverter._integer_macro_expression("(1 +)", {}) is False
 
     parsed = parse_c_file(
-        "#define RATE 1.5\n#define BAD (MISSING + 1)\nenum status { STATUS_EXPR = UNKNOWN, STATUS_NEXT };\n",
+        "enum status { STATUS_EXPR = UNKNOWN, STATUS_NEXT };\n",
         filename="edge_constants.h",
     )
+    parsed.macros = [
+        CMacro(name="RATE", value="1.5"),
+        CMacro(name="BAD", value="(MISSING + 1)"),
+    ]
     constants = {variable.name: variable for variable in converter.visit_file(parsed).variables}
     assert constants["RATE"].semantic_type.name == "Float64"
     assert constants["STATUS_EXPR"].default_value == "UNKNOWN"

@@ -111,11 +111,7 @@ def _resolve_language(
 ) -> str:
     def language_for_suffix(suffix: str) -> str | None:
         return next(
-            (
-                language
-                for language, suffixes in _SOURCE_SUFFIXES_BY_LANGUAGE.items()
-                if suffix in suffixes
-            ),
+            (language for language, suffixes in _SOURCE_SUFFIXES_BY_LANGUAGE.items() if suffix in suffixes),
             None,
         )
 
@@ -143,10 +139,7 @@ def _resolve_language(
 
         suffix = path.suffix.lower()
         if suffix in _C_SOURCE_SUFFIXES:
-            parser.error(
-                f"C input {path} requires explicit --language c. "
-                "Use --help for examples."
-            )
+            parser.error(f"C input {path} requires explicit --language c. Use --help for examples.")
         if suffix not in _FORTRAN_SOURCE_SUFFIXES and suffix != ".pyi":
             parser.error(
                 f"Cannot determine the input language for {path}; "
@@ -221,10 +214,7 @@ def _parse_c_project(
     preprocessing: PreprocessingConfig,
 ):
     parser = CParser()
-    parsed_files = {
-        str(path): _parse_c_path(parser, path, preprocessing)
-        for path in expand_c_paths(paths)
-    }
+    parsed_files = {str(path): _parse_c_path(parser, path, preprocessing) for path in expand_c_paths(paths)}
     return parser.visit_parsed_project(parsed_files)
 
 
@@ -262,15 +252,8 @@ def _semantic_report(
     out: dict[str, dict] = {}
     if language == "c":
         project = _parse_c_project(paths, preprocessing)
-        converted_files = {
-            module.origin.native_name: [module]
-            for module in c_project_to_semantic_modules(project)
-        }
-        available_modules = [
-            module
-            for modules in converted_files.values()
-            for module in modules
-        ]
+        converted_files = {module.origin.native_name: [module] for module in c_project_to_semantic_modules(project)}
+        available_modules = [module for modules in converted_files.values() for module in modules]
         for p in expand_c_paths(paths):
             modules = converted_files[str(p)]
             stubs = emit_module_stubs(modules, available_modules=available_modules)
@@ -280,9 +263,7 @@ def _semantic_report(
                 "pyi": "\n\n".join(stubs[module.name] for module in modules).strip(),
             }
             dependencies = {
-                module_name: text
-                for module_name, text in stubs.items()
-                if module_name not in primary_names
+                module_name: text for module_name, text in stubs.items() if module_name not in primary_names
             }
             if dependencies:
                 out[str(p)]["pyi_dependencies"] = dependencies
@@ -315,11 +296,7 @@ def _semantic_report(
             "semantic_modules": [asdict(m) for m in modules],
             "pyi": "\n\n".join(stubs[module.name] for module in modules).strip(),
         }
-        dependencies = {
-            module_name: text
-            for module_name, text in stubs.items()
-            if module_name not in primary_names
-        }
+        dependencies = {module_name: text for module_name, text in stubs.items() if module_name not in primary_names}
         if dependencies:
             out[str(p)]["pyi_dependencies"] = dependencies
     return out
@@ -370,17 +347,10 @@ def _wrap_readiness_report(
     preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
     if language == "c":
-        c_paths = [
-            path
-            for path in expand_c_paths(paths)
-            if path.suffix.lower() != ".pyi"
-        ]
+        c_paths = [path for path in expand_c_paths(paths) if path.suffix.lower() != ".pyi"]
         if c_paths:
             project = _parse_c_project([str(path) for path in c_paths], preprocessing)
-            converted_files = {
-                module.origin.native_name: [module]
-                for module in c_project_to_semantic_modules(project)
-            }
+            converted_files = {module.origin.native_name: [module] for module in c_project_to_semantic_modules(project)}
             for p in c_paths:
                 modules = converted_files[str(p)]
                 out[str(p)] = {
@@ -392,11 +362,7 @@ def _wrap_readiness_report(
         return out
 
     parser = FortranParser()
-    expanded_paths = [
-        path
-        for path in _expand_readiness_paths(paths)
-        if path.suffix.lower() != ".pyi"
-    ]
+    expanded_paths = [path for path in _expand_readiness_paths(paths) if path.suffix.lower() != ".pyi"]
     parsed_files = {}
     for p in expanded_paths:
         code, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
@@ -428,13 +394,7 @@ def _pyi_readiness_report(paths: list[str]) -> dict[str, dict]:
     pyi_paths = _expand_pyi_paths(paths)
     if not pyi_paths:
         return {}
-    modules = load_pyi_modules(
-        [
-            raw
-            for raw in paths
-            if Path(raw).is_dir() or Path(raw).suffix.lower() == ".pyi"
-        ]
-    )
+    modules = load_pyi_modules([raw for raw in paths if Path(raw).is_dir() or Path(raw).suffix.lower() == ".pyi"])
     return {
         str(path): {
             "source_kind": "pyi",
@@ -506,10 +466,7 @@ def _format_semantic_readiness(readiness_report: dict[str, dict]) -> str:
     lines: list[str] = []
     for fname, payload in readiness_report.items():
         readiness = payload.get("wrap_readiness", {})
-        module_names = [
-            module.get("name", "<unknown>")
-            for module in payload.get("semantic_modules", [])
-        ]
+        module_names = [module.get("name", "<unknown>") for module in payload.get("semantic_modules", [])]
         lines.append(f"File: {fname}")
         lines.append(f"  Source: {payload.get('source_kind', '<unknown>')}")
         lines.append(f"  Semantic modules: {', '.join(module_names) or '<none>'}")
@@ -579,13 +536,19 @@ def _build_preprocessing_config(args: argparse.Namespace, parser: argparse.Argum
     if config.uses_compiler and config.command_template and config.adapter != "command-template":
         parser.error("--preprocess-template requires --preprocessor-adapter command-template")
     if config.uses_compiler and not config.compiler and not config.compile_commands and not config.command_template:
-        parser.error("--preprocess compiler requires --compiler with an exact executable, for example gcc-13 or /usr/bin/clang-18")
+        parser.error(
+            "--preprocess compiler requires --compiler with an exact executable, for example gcc-13 or /usr/bin/clang-18"
+        )
     if config.compile_commands and not config.uses_compiler:
         parser.error("--compile-commands requires --preprocess compiler")
     if args.language == "c" and not config.uses_compiler and (defines or undefs):
-        parser.error("-D/--define and -U/--undef affect C only with --preprocess compiler; raw C mode records source macros without selecting branches")
+        parser.error(
+            "-D/--define and -U/--undef affect C only with --preprocess compiler; raw C parsing rejects unresolved preprocessing directives"
+        )
     if args.language == "fortran" and not config.uses_compiler and (defines or undefs):
-        parser.error("-D/--define and -U/--undef affect Fortran only with --preprocess compiler; internal Fortran parsing does not evaluate CPP branches")
+        parser.error(
+            "-D/--define and -U/--undef affect Fortran only with --preprocess compiler; raw Fortran CPP directives require compiler preprocessing"
+        )
     if args.language == "fortran" and not config.uses_compiler and config.include_dirs:
         parser.error("-I/--include-dir affects Fortran only with --preprocess compiler")
     return config
@@ -609,7 +572,7 @@ def print_pyi_output(code: str) -> None:
         syntax = Syntax(
             code,
             "python",
-            theme="ansi_dark",   # terminal-friendly
+            theme="ansi_dark",  # terminal-friendly
             background_color="default",
             line_numbers=False,
             word_wrap=False,
@@ -618,6 +581,7 @@ def print_pyi_output(code: str) -> None:
     except Exception:
         # Never let colored output crash the CLI.
         print(code)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -794,10 +758,14 @@ def main() -> int:
         action="store_true",
         help="Convert Fortran, C, or .pyi input to semantic IR and show wrapper readiness",
     )
-    parser.add_argument("--semantics", action="store_true", help="Generate semantic IR models from parsed source modules")
+    parser.add_argument(
+        "--semantics", action="store_true", help="Generate semantic IR models from parsed source modules"
+    )
     parser.add_argument("--pyi", action="store_true", help="Generate semantic Python .pyi content")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
-    parser.add_argument("--out", nargs="?", const="", type=str, help="Write stage output to file (optional explicit output filename)")
+    parser.add_argument(
+        "--out", nargs="?", const="", type=str, help="Write stage output to file (optional explicit output filename)"
+    )
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI color in parse diagnostics")
     parser.add_argument(
         "--debug",
@@ -812,7 +780,9 @@ def main() -> int:
 
     if args.language == "c":
         if not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
-            parser.error("--language c requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness")
+            parser.error(
+                "--language c requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness"
+            )
         if args.show_vars or args.print_limit is not None or args.vars_limit is not None:
             parser.error("--show-vars/--print-limit are Fortran-only and are not supported for --language c")
 
@@ -838,20 +808,32 @@ def main() -> int:
                 source_loader=_c_source_loader(preprocessing),
             )
             if args.parse and args.language == "c"
-            else _parse_report(args.paths, preprocessing) if args.parse else None
+            else _parse_report(args.paths, preprocessing)
+            if args.parse
+            else None
         )
-        semantic_payload = _semantic_report(args.paths, preprocessing, language=args.language) if (args.semantics or args.pyi) else None
-        readiness_payload = _wrap_readiness_report(args.paths, preprocessing, language=args.language) if args.wrap_readiness else None
+        semantic_payload = (
+            _semantic_report(args.paths, preprocessing, language=args.language)
+            if (args.semantics or args.pyi)
+            else None
+        )
+        readiness_payload = (
+            _wrap_readiness_report(args.paths, preprocessing, language=args.language) if args.wrap_readiness else None
+        )
         _attach_wrap_readiness(semantic_payload, readiness_payload)
     except CParseError as exc:
         if args.debug or _env_flag("C_PARSER_DEBUG"):
             raise
-        print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
+        print(
+            exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr
+        )
         return 1
     except FortranParseError as exc:
         if args.debug or _env_flag("FORTRAN_PARSER_DEBUG"):
             raise
-        print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
+        print(
+            exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr
+        )
         return 1
     except PreprocessingError as exc:
         if args.debug or _env_flag("X2PY_DEBUG"):
@@ -892,7 +874,9 @@ def main() -> int:
 
         if args.pyi:
             if args.out:
-                pyi_text = "\n\n".join((report.get("pyi") or "") for report in (semantic_payload or {}).values()).strip()
+                pyi_text = "\n\n".join(
+                    (report.get("pyi") or "") for report in (semantic_payload or {}).values()
+                ).strip()
                 Path(args.out).write_text(pyi_text + "\n", encoding="utf-8")
                 _write_pyi_dependencies(semantic_payload or {}, output_dir=Path(args.out).parent)
             else:
@@ -906,13 +890,18 @@ def main() -> int:
                 for fname, report in payload.items():
                     Path(fname).with_suffix(".json").write_text(json.dumps({fname: report}, indent=2), encoding="utf-8")
 
-
     if args.out is not None:
         return 0
 
     if args.wrap_readiness:
         if args.parse and not args.json:
-            print(_format_report(parse_payload or {}, show_vars=args.show_vars or args.vars_limit is not None, print_limit=print_limit))
+            print(
+                _format_report(
+                    parse_payload or {},
+                    show_vars=args.show_vars or args.vars_limit is not None,
+                    print_limit=print_limit,
+                )
+            )
             print()
             print(_format_semantic_readiness(readiness_payload or {}))
         elif args.pyi and not args.json:
@@ -931,7 +920,13 @@ def main() -> int:
         if args.language == "c":
             print(format_c_report(parse_payload or {}))
         else:
-            print(_format_report(parse_payload or {}, show_vars=args.show_vars or args.vars_limit is not None, print_limit=print_limit))
+            print(
+                _format_report(
+                    parse_payload or {},
+                    show_vars=args.show_vars or args.vars_limit is not None,
+                    print_limit=print_limit,
+                )
+            )
     else:
         print(json.dumps(payload, indent=2))
 

@@ -152,6 +152,28 @@ def test_incomplete_union_and_tag_typedef_aliases_use_concrete_tag_classes():
     assert typedefs["payload_t"].type.name == "payload"
 
 
+def test_repeated_union_and_enum_tags_normalize_with_duplicate_diagnostics():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+union value;
+union value { int integer; };
+union value { double real; };
+enum status { STATUS_OK };
+enum status { STATUS_ERROR };
+""",
+        filename="duplicate_tags.h",
+    )
+
+    assert [member.name for member in parsed.unions[0].members] == ["integer"]
+    assert [constant.name for constant in parsed.enums[0].constants] == ["STATUS_OK"]
+    assert [(diagnostic.code, diagnostic.unit_kind) for diagnostic in parsed.diagnostics] == [
+        ("C_DUPLICATE_TAG_DEFINITION", "union"),
+        ("C_DUPLICATE_TAG_DEFINITION", "enum"),
+    ]
+
+
 def test_enum_constants_preserve_explicit_implicit_and_symbolic_values():
     from c_parser import parse_c_file
 

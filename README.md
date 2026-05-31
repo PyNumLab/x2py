@@ -54,9 +54,9 @@ Current handled coverage:
 
 The C frontend is currently parse-only. It supports:
 
-- Raw-source directive metadata for includes, simple macros, conditionals, and
-  pragmas. Raw mode records these facts but does not expand macros or select
-  conditional branches.
+- Raw-source directive metadata for includes and pragmas. Raw macro and
+  conditional directives fail with `CPARSE_PREPROCESSING_REQUIRED`; use
+  compiler mode so the configured toolchain expands them first.
 - Compiler-assisted preprocessing through the shared CLI flags, with `#line`
   and GCC/Clang linemarker remapping back to original source locations.
 - Top-level variables, typedefs, function declarations/definitions, structs,
@@ -67,9 +67,9 @@ The C frontend is currently parse-only. It supports:
 - Project include/index facts through `parse_c_project(...)`, with includes
   recorded non-recursively: only explicitly supplied files or files below an
   explicitly supplied directory are parsed.
-- Compiler mode is the wrapper-facing path for macro-dependent APIs: it parses
-  one compiler-expanded translation unit and keeps mutually exclusive branches
-  separate across build configurations.
+- Compiler mode is the wrapper-facing path for macro-dependent APIs: parse
+  each compiler-expanded translation unit separately for each build
+  configuration.
 
 The supported C subset continues through semantic IR conversion, `.pyi`
 generation, and wrap-readiness.
@@ -166,8 +166,9 @@ input contains C/CPP preprocessing. The selected compiler is authoritative for
 macro expansion, `#if`/`#ifdef` branch selection, C `#include`, Fortran CPP
 `#include`, predefined macros, `-D`/`-U`, include paths, target flags, and
 sysroot behavior. Internal parser mode remains available for plain source,
-already-preprocessed source, and focused parser tests; it does not evaluate CPP
-branches.
+already-preprocessed source, and focused parser tests. Raw Fortran CPP
+directives require compiler preprocessing; compiler linemarkers remain
+accepted for provenance.
 
 The shared compiler mode is:
 

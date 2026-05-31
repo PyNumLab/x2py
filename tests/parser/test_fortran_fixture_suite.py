@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import os
+import shutil
 from dataclasses import asdict
 from pathlib import Path
 
@@ -18,6 +19,10 @@ _FIXTURES_DIR = Path(__file__).parent / "fortran" / "fixtures"
 _SOURCE_SUFFIXES = {".f", ".f90", ".f95", ".f03", ".f08", ".for", ".f77", ".ftn"}
 
 
+def _requires_compiler_preprocessing(fixture: Path) -> bool:
+    return any(line.lstrip().startswith("#") for line in fixture.read_text(encoding="utf-8").splitlines())
+
+
 def _has_direct_expected_json(fixture: Path) -> bool:
     return (_FIXTURES_DIR / fixture.relative_to(_TESTS_DIR)).with_suffix(".json").exists()
 
@@ -31,36 +36,32 @@ def _source_json_relpaths(root: Path) -> set[Path]:
 
 
 def _fixture_json_relpaths(root: Path) -> set[Path]:
-    return {
-        path.relative_to(root)
-        for path in root.rglob("*.json")
-        if path.is_file()
-    }
+    return {path.relative_to(root) for path in root.rglob("*.json") if path.is_file()}
 
 
 _GOLDEN_FIXTURES = sorted(
-    f for f in (_TESTS_DIR / "general").glob("*")
-    if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES
-    and _has_direct_expected_json(f)
+    f
+    for f in (_TESTS_DIR / "general").glob("*")
+    if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES and _has_direct_expected_json(f)
 )
 _BLAS_FIXTURES = sorted(
-    f
-    for f in (_TESTS_DIR / "blas").rglob("*")
-    if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES
+    f for f in (_TESTS_DIR / "blas").rglob("*") if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES
 )
 _LAPACK_FIXTURES = sorted(
-    f
-    for f in (_TESTS_DIR / "lapack").rglob("*")
-    if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES
+    f for f in (_TESTS_DIR / "lapack").rglob("*") if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES
 )
 _SCIFORTRAN_FIXTURES = sorted(
     f
     for f in (_TESTS_DIR / "scifortran").glob("*")
-    if f.is_file()
-    and f.suffix.lower() in _SOURCE_SUFFIXES
-    and _has_direct_expected_json(f)
-    )
-
+    if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES and _has_direct_expected_json(f)
+)
+_CPP_FIXTURES = [
+    fixture for fixture in [*_LAPACK_FIXTURES, *_SCIFORTRAN_FIXTURES] if _requires_compiler_preprocessing(fixture)
+]
+_DIRECT_LAPACK_FIXTURES = [fixture for fixture in _LAPACK_FIXTURES if not _requires_compiler_preprocessing(fixture)]
+_DIRECT_SCIFORTRAN_FIXTURES = [
+    fixture for fixture in _SCIFORTRAN_FIXTURES if not _requires_compiler_preprocessing(fixture)
+]
 
 
 def _expected_json_for_fixture(fixture: Path) -> Path:
@@ -80,6 +81,8 @@ def _parser_filename_for_fixture(fixture: Path) -> str:
             return relpath.replace("scifortran/", "SciFortran/", 1)
         return fixture.name
     return relpath if "/" in relpath else fixture.name
+
+
 def _load_expected(expected_path: Path):
     with expected_path.open("r", encoding="utf-8") as f:
         return json.load(f)
@@ -171,7 +174,7 @@ def test_fortran_lapack_parse_suite_has_fixtures():
     assert _LAPACK_FIXTURES, "No LAPACK fixtures found in tests/data/fortran/lapack"
 
 
-@pytest.mark.parametrize("fixture", _LAPACK_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
+@pytest.mark.parametrize("fixture", _DIRECT_LAPACK_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
 def test_fortran_lapack_parse_suite(fixture):
     _run_fixture_comparison(
         fixture,
@@ -184,10 +187,51 @@ def test_fortran_scifortran_parse_suite_has_fixtures():
     assert _SCIFORTRAN_FIXTURES, "No scifortran fixtures found in tests/data/fortran/scifortran"
 
 
-@pytest.mark.parametrize("fixture", _SCIFORTRAN_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
+@pytest.mark.parametrize("fixture", _DIRECT_SCIFORTRAN_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
 def test_fortran_scifortran_parse_suite(fixture):
     _run_fixture_comparison(
         fixture,
         filename_for_parser=_parser_filename_for_fixture(fixture),
         expected_path=_expected_json_for_fixture(fixture),
     )
+
+
+@pytest.mark.parametrize("fixture", _CPP_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
+def test_fortran_cpp_corpus_fixtures_require_compiler_preprocessing(fixture):
+    from x2py import FortranParseError
+
+    with pytest.raises(FortranParseError, match="require compiler preprocessing") as exc_info:
+        parse_fortran_file(
+            fixture.read_text(encoding="utf-8"),
+            filename=_parser_filename_for_fixture(fixture),
+        )
+
+    assert exc_info.value.code == "PARSE_PREPROCESSING_REQUIRED"
+
+
+@pytest.mark.parametrize("fixture", _CPP_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
+def test_fortran_cpp_corpus_fixtures_parse_after_compiler_preprocessing(fixture, tmp_path):
+    from x2py.preprocessing import PreprocessingConfig, preprocess_source
+
+    compiler = shutil.which("gfortran")
+    if compiler is None:
+        pytest.skip("gfortran is not available")
+    (tmp_path / "arpackdef.h").write_text("", encoding="utf-8")
+    (tmp_path / "error_msg_arpack.h90").write_text("", encoding="utf-8")
+    (tmp_path / "info_msg_arpack.h90").write_text("", encoding="utf-8")
+    preprocessed = preprocess_source(
+        fixture,
+        language="fortran",
+        config=PreprocessingConfig(
+            mode="compiler",
+            compiler=compiler,
+            include_dirs=[str(fixture.parent), str(tmp_path)],
+        ),
+    )
+
+    parsed = parse_fortran_file(
+        preprocessed.source,
+        filename=_parser_filename_for_fixture(fixture),
+    )
+
+    assert parsed.modules or parsed.procedures

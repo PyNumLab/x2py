@@ -1,9 +1,8 @@
 # C Parser CLI Workflow Plan
 
-Status: C parser partial subset plus raw directive metadata implemented. The
-CLI command shape exists and parse reports can include raw includes, simple
-macros, `#undef` and conditional directive provenance, raw conditional
-function variants, top-level redeclaration diagnostics, project include/index
+Status: C parser partial subset plus raw include/pragma metadata implemented.
+The CLI command shape exists and parse reports can include raw includes,
+pragma provenance, top-level redeclaration diagnostics, project include/index
 metadata, diagnostics,
 variables, typedefs,
 aggregate declarations, function prototypes, prototype-style metadata, and
@@ -59,8 +58,9 @@ including function pointers, functions returning function pointers, and
 legal final flexible struct members marked with `is_flexible=True`. Array and
 function parameters preserve written `declared_type` forms while effective
 `type` values use pointer adjustment. Raw
-`includes`, `macros`, `raw_directives`, `macro_dependencies`, and metadata
-`diagnostics` can also be populated. `--preprocess compiler` runs an exact
+`includes`, `raw_directives`, and metadata `diagnostics` can also be populated.
+Compiler preprocessing recipes can attach macro provenance. `--preprocess
+compiler` runs an exact
 user-supplied compiler/preprocessor executable or uses a C
 `compile_commands.json` entry, then feeds the preprocessed stdout through the
 same parser with `preprocessing: "compiler"`. `#line` and GCC/Clang
@@ -69,11 +69,7 @@ source. `parse_c_project(...)` additionally
 populates project-level include/index fields such as `include_graph`,
 `system_includes`, `unresolved_includes`, `functions_by_file`,
 `enum_constants`, and `header_source_pairs`. Those fields require project
-context; a single-file parse only records the local file facts. If raw
-conditional branches expose incompatible alternatives of one function,
-`CFunction.condition_set` records the alternatives and
-`CProject.conditional_function_variants` retains them outside the unique
-function index.
+context; a single-file parse only records the local file facts.
 The object class distinguishes declarations (`CFunction`,
 `CVariable`, `CTypedef`, `CStruct`, `CUnion`, or `CEnum`), and incomplete tag
 declarations set `is_incomplete=True`.
@@ -227,10 +223,10 @@ Implemented shared preprocessing flags:
 
 `--preprocess internal` is the default. For C it means the current raw
 directive metadata mode: x2py reads `.h`/`.c` input directly, records includes
-and macros from the file, parses ordinary visible declarations, and does not
-expand macros or select `#if` branches. For Fortran it means plain or
-already-preprocessed parser input; internal mode does not evaluate CPP
-branches through `-D` or `-U`.
+and pragmas from the file, parses ordinary visible declarations, and rejects
+directives that require preprocessing. For Fortran it means plain or
+already-preprocessed parser input; raw CPP directives also require compiler
+preprocessing.
 
 `--preprocess compiler` means x2py runs an external compiler/preprocessor and
 parses stdout. The user must pass an exact compiler executable with
@@ -378,11 +374,9 @@ Flag meanings:
   use the equals form, for example `--compiler-arg=-target`.
 
 `--define` and `--undef` belong to compiler-assisted preprocessing for C and
-Fortran, not to raw parser-side macro evaluation. Raw C mode records directives
-and parses ordinary visible declarations only; it does not select `#if`
-branches or expand macros. A declaration prefixed by an unexpanded object-like
-macro is deferred as macro-dependent rather than treated as an invalid type
-sequence.
+Fortran, not to raw parser-side macro evaluation. Raw C parsing accepts literal
+includes and pragmas as metadata. Macro, conditional, macro-include, and other
+directives that require preprocessing raise `CPARSE_PREPROCESSING_REQUIRED`.
 
 ## Current Partial Behavior
 
@@ -457,21 +451,14 @@ The parser should not claim C files are wrappable. C readiness follows the
 semantics-owned readiness boundary used elsewhere in x2py and does not become
 parser JSON.
 
-For raw directives, the same JSON shape is used, but `includes`, `macros`,
-`raw_directives`, `macro_dependencies`, and `diagnostics` may contain populated
-model dictionaries. Function-like macros are recorded as macro metadata and
-also produce a non-fatal `C_UNSUPPORTED_FUNCTION_LIKE_MACRO` diagnostic.
-Function-like declaration wrappers and object-like declaration prefixes are
-marked through `macro_dependencies` without being parsed as expanded
-declarations. Local quoted includes are resolved
+For raw directives, the same JSON shape is used, but `includes`,
+`raw_directives`, and `diagnostics` may contain populated model dictionaries.
+Local quoted includes are resolved
 relative to the current file or configured include dirs when possible;
 unresolved local includes produce `C_UNRESOLVED_INCLUDE` diagnostics instead
 of hard failures. Resolution records an edge; it does not make the included
 file a parser input. System includes are recorded but neither searched nor
 parsed recursively. Generated headers follow the same explicit-input rule.
-Raw same-name functions in mutually exclusive conditional branches carry
-`condition_set` branch tokens and are retained as alternatives rather than
-misdiagnosed as incompatible redeclarations.
 
 Raw mode must not claim support for macro-generated declarations. If macros
 affect function names, types, parameters, attributes, storage classes, calling
@@ -519,11 +506,6 @@ diagnostics
 Declaration/directive records include `source_location`; diagnostics use
 `location`. Concrete type components preserve `source_text` rather than their
 own source-location object:
-
-`condition_set` is emitted only for raw same-name `CFunction` alternatives
-that survive normalization. For project-model JSON,
-`conditional_function_variants` is emitted only when those alternatives
-cannot be represented by one unique `functions` entry.
 
 ```text
 source_location: {
@@ -632,14 +614,12 @@ The active CLI/parser tests cover the current partial subset:
 - `python -m x2py <file.c> --language c --parse` is accepted.
 - No `--parse-c` alias is provided; C uses `--language c --parse`.
 - `--language c --parse --json` emits stable partial-parser JSON with raw
-  include/macro metadata and supported declarations when present.
+  include/pragma metadata and supported declarations when present.
 - `--language c --parse --out report.json` writes JSON and suppresses stdout.
 - `--language c --parse --no-color` is accepted.
 - `--language c --parse --debug` is accepted.
 - raw comment stripping, line-continuation folding, top-level splitting,
-  include collection, simple macro collection, function-like macro diagnostics,
-  object-like macro declaration-prefix deferral,
-  conditional non-selection and mutually exclusive function variants, simple
+  include collection, pragma metadata, preprocessing-required failures, simple
   declarations, variables, typedefs,
   parenthesized declarators, function pointer typedefs/parameters, recursive
   declarator combinations, concrete declaration objects, aggregate
@@ -672,8 +652,8 @@ Completed order:
 5. Added CLI/API tests around discovery, stable command behavior, JSON, output
    files, public entrypoints, and diagnostic formatting.
 6. Added raw lexer/directive metadata collection for comments,
-   continuations, includes, simple macros, and unsupported function-like
-   macros.
+   continuations, includes, and pragmas, then tightened raw macro and
+   conditional input to fail with `CPARSE_PREPROCESSING_REQUIRED`.
 7. Added top-level splitting and a first partial grammar subset for simple
    variables, typedefs, function prototypes, and function-definition headers.
 8. Added function-definition start/end locations while continuing to skip

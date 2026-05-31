@@ -57,8 +57,8 @@ GitHub Actions jobs provide broader repeated coverage.
 
 Validated locally on 2026-05-31:
 
-- [x] Full CI-shaped pytest run: `3437 passed`.
-- [x] Combined xdist and subprocess branch coverage: `95.13%`, above the
+- [x] Full CI-shaped pytest run: `3474 passed`.
+- [x] Combined xdist and subprocess branch coverage: `95.31%`, above the
       configured `95%` gate.
 - [x] Ruff lint and changed-file Ruff formatting checks pass.
 - [x] Pre-commit hooks pass.
@@ -136,9 +136,9 @@ Saving minimized failures prevents rediscovery of the same bug.
       parser-owned errors.
 - [x] Add generated C nested declarators: pointers, arrays, callbacks, and
       composed types.
-- [ ] Add generated C preprocessing cases: conditional branches, linemarkers,
-      includes, and compiler extensions.
-- [ ] Add generated Fortran module, derived-type, kind, include, and
+- [x] Add generated C preprocessing cases: raw directive rejection,
+      linemarkers, includes, and compiler extensions.
+- [x] Add generated Fortran module, derived-type, kind, include, and
       preprocessor cases.
 - [ ] Add AST and semantic-IR transformation invariants.
 - [ ] Add code-generation escaping, stable-ordering, and parse-back invariants.
@@ -474,3 +474,4 @@ Add a row when a QA adoption task or subsystem campaign is completed.
 | 2026-05-31 | Vulture | Narrowed ignore names and made the clean report blocking in CI. | Keep API exclusions narrow. |
 | 2026-05-31 | Bandit | Reviewed 19 low-severity parser-token, template-token, and argv-based subprocess findings. | Re-review when command trust boundaries change. |
 | 2026-05-31 | Hypothesis and Radon hotspot | Added generated nested C declarators and top-level lexer delimiter properties. | Expand preprocessing generators next. |
+| 2026-05-31 | Parser preprocessing boundary | Added generated Fortran structure/preprocessing properties and aligned raw Fortran/C macro handling around compiler-required errors. | Expand AST and semantic-IR invariants next. |
