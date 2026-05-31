@@ -119,7 +119,7 @@ contains
 end module m
 """
     with pytest.raises(FortranParseError, match="Duplicate procedure name"):
-        parse_fortran_file(code, filename="scope_ifdef_overlap.f90", macro_defines={"USE_A", "USE_B"})
+        parse_fortran_file(code, filename="scope_ifdef_overlap.f90")
 
 
 def test_module_symbol_tables_keep_derived_type_fields_scoped_to_type():

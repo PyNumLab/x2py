@@ -28,6 +28,8 @@ Implemented now:
 - `c_parser/` package exists and is included in package discovery.
 - `c_parser.models` defines JSON-stable parser dataclasses and `CParseError`.
 - `c_parser.parser` exposes `CParser`, `parse_c_file`, and `parse_c_project`.
+  `CParser.visit_parsed_project` is the documented orchestration hook for
+  assembling translation units that were parsed individually.
 - `x2py` re-exports `parse_c_file` and `parse_c_project`, matching its
   Fortran file/project entrypoint style.
 - `c_parser.parser` keeps parser helpers on `CParser`, matching the Fortran
@@ -64,11 +66,16 @@ Implemented now:
   parameter declarations preserve their written `declared_type` and expose
   pointer-adjusted effective `type` values. Declarations prefixed by
   unexpanded object-like macros are deferred as macro dependencies rather than
-  misreported as invalid type sequences. Selected unsupported declaration
-  forms, including attributes, alignment specifiers and static assertions, are
-  reported as diagnostics with explicit `unit_kind` values. A declarator must
-  be fully consumed before a concrete object is returned; unknown suffixes
-  become diagnostics. Grammar-invalid input raises `CParseError` with
+  misreported as invalid type sequences. In compiler/preprocessed mode, common
+  GCC/Clang and MS declaration syntax is normalized before grammar parsing:
+  attributes, `__declspec(...)`,
+  `[[...]]`, `__extension__`, alternate qualifier/inline spellings,
+  declaration-level `asm(...)`, calling-convention keywords, `typeof(...)`,
+  `_BitInt(...)`, and selected extended scalar names. Ignored extension
+  semantics that can affect ABI, layout, symbol identity, or type identity
+  produce `C_UNMODELED_COMPILER_EXTENSION` warnings. Static assertions remain
+  diagnostic-only. A declarator must be fully consumed before a concrete object
+  is returned; unknown suffixes become diagnostics. Grammar-invalid input raises `CParseError` with
   `CPARSE_INVALID_SYNTAX`; identifier spellings are not used to guess another
   language. Primitive specifier order is normalized, and invalid combinations
   such as `unsigned float` raise `CParseError` with code
@@ -115,7 +122,9 @@ Deferred:
 - full typedef/tag resolution policy beyond basic project-level link-up and
   callback policy metadata, for example conflict diagnostics, active
   semantic wrappability decisions
-- compiler attributes and alignment specifiers
+- semantic modeling for compiler attributes, alignment, calling conventions,
+  assembler aliases, opaque compiler type expressions, and extended scalar ABI
+  facts beyond the accepted declaration syntax
 - broader compiler-family validation for preprocessing; parsed declarations
   already retain preprocessed origin and mapped source identity
 - broader C callback/ownership policy beyond exact starter `.pyi` stubs
@@ -264,7 +273,8 @@ Current and planned responsibilities:
     record folding for backslash-newline, string/character literal awareness,
     lightweight tokens with source locations, preprocessed `#line`/linemarker
     remapping for top-level segments, top-level splitting with block end
-    locations, and delimiter splitting aware of nesting and literals.
+    locations, aggregate-header attribute tolerance during brace
+    classification, and delimiter splitting aware of nesting and literals.
   - Planned: richer token helpers as extension and initializer-expression
     parsing require them.
 - `c_parser/preprocessor.py`
@@ -276,6 +286,7 @@ Current and planned responsibilities:
     JSON output.
 - `c_parser/parser.py`
   - Implemented: `CParser`, `parse_c_file`, `parse_c_project`,
+    `CParser.visit_parsed_project`,
     translation-unit visiting, declaration/function visitors, grammar-shaped
     recursive declarator parsing, concrete `CType` construction, and aggregate
     member extraction. Helper methods live on `CParser` rather than as broad
@@ -289,13 +300,17 @@ Current and planned responsibilities:
     `CPARSE_INVALID_SPECIFIER_SEQUENCE`. Array and
     function parameters preserve `declared_type` while effective `type` uses C
     parameter adjustment. Raw declarations beginning with an object-like macro
-    name are retained as macro-dependent diagnostics.
+    name are retained as macro-dependent diagnostics. Compiler/preprocessed mode
+    normalizes common GCC/Clang and MS declaration extensions before grammar
+    parsing; ignored ABI-relevant semantics produce
+    `C_UNMODELED_COMPILER_EXTENSION` warnings.
   - Planned: symbol resolution and additional declaration-specifier and
     extension coverage.
 - `c_parser/project.py`
   - Compatibility export for project parsing.
-  - Project behavior is implemented through `CParser.visit_project`, including
-    `.c`/`.h`/`.i` discovery, include graphs, and header/source association.
+  - Project behavior is implemented through `CParser.visit_project` and
+    `CParser.visit_parsed_project`, including `.c`/`.h`/`.i` discovery,
+    include graphs, and header/source association.
 - `c_parser/type_resolver.py`
   - Resolves tag and typedef references, typedef chains/cycles, and aggregate
     references across parsed project files.
@@ -319,13 +334,13 @@ Current and planned responsibilities:
 The public C API mirrors the Fortran style but remains C-specific:
 
 ```python
-parse_c_file(source_or_path, filename=None, macro_defines=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile
-parse_c_project(files, include_dirs=None, macro_defines=None, preprocessing="raw", encoding="utf-8") -> CProject
+parse_c_file(source_or_path, filename=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile
+parse_c_project(files, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CProject
 ```
 
-`macro_defines` is reserved for future compiler-assisted preprocessing
-configuration. It must not cause raw mode to evaluate C preprocessor
-conditionals or expand macros inside x2py.
+Raw mode does not evaluate C preprocessor conditionals or expand macros inside
+x2py. Compiler mode receives already-expanded source from the shared
+preprocessing layer.
 
 Implemented companion class:
 
@@ -333,12 +348,18 @@ Implemented companion class:
 class CParser:
     def visit_file(...): ...
     def visit_project(...): ...
+    def visit_parsed_project(...): ...
 ```
 
 These entrypoints are exposed from both `c_parser` and `x2py.__init__`, using
 the same top-level file/project invocation pattern already provided for
 Fortran. C semantic conversion is exposed separately through
 `semantics.c2ir` and top-level `x2py` compatibility helpers.
+
+`visit_parsed_project` is a class-level orchestration hook rather than an
+additional module-level wrapper. It is used when a caller preprocesses each
+translation unit first, attaches recipe metadata, and then asks the parser to
+resolve the resulting file set as one `CProject`.
 
 ## Core Model Families
 

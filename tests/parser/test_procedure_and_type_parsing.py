@@ -236,7 +236,7 @@ def test_fixed_form_and_interface_detection():
     assert parsed.interfaces[0].procedures[0].in_interface is True
 
 
-def test_preprocessor_macro_selection_uses_active_branch_from_inline_fortran():
+def test_preprocessor_branches_are_preserved_from_inline_fortran():
     source = """
 #ifdef USE_A
 subroutine selected_a(x)
@@ -253,13 +253,10 @@ end subroutine fallback
 #endif
 """
 
-    selected = parse_fortran_file(source, macro_defines={"USE_B": True})
-    fallback = parse_fortran_file(source, macro_defines={"USE_A": False, "USE_B": False})
+    parsed = parse_fortran_file(source)
 
-    assert [proc.name for proc in selected.procedures] == ["selected_b"]
-    assert selected.procedures[0].arguments[0].base_type == "real"
-    assert [proc.name for proc in fallback.procedures] == ["fallback"]
-    assert fallback.procedures[0].arguments[0].base_type == "logical"
+    assert [proc.name for proc in parsed.procedures] == ["selected_a", "selected_b", "fallback"]
+    assert [proc.arguments[0].base_type for proc in parsed.procedures] == ["integer", "real", "logical"]
 
 
 def test_legacy_character_and_star_kind_declarations_from_inline_fortran():
@@ -902,10 +899,15 @@ def test_fortran_variable_spec_expressions_parse_function_calls():
 
 
 def test_structured_shape_handles_empty_dimensions_and_use_mapping_equality():
+    from fortran_parser.type_resolver import extract_kind_from_type_spec
+
     var = FortranVariable(name="empty", shape=[""])
+    assert var.shape_info == [{"raw": "", "lower": None, "upper": None}]
     shape = var.structured_shape
     assert shape.raw == [""]
     assert shape.dimensions == [None]
+    assert extract_kind_from_type_spec("real", "()") is None
+    assert extract_kind_from_type_spec("real", "(len=5)") is None
 
     renamed = FortranUseMapping(source="delete_input_list", target="delete_input")
     assert renamed == "delete_input"

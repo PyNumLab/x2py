@@ -5,6 +5,9 @@ from dataclasses import dataclass, field
 from typing import Optional, Any
 
 
+EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
+
+
 # ============================================================
 # Semantic Constraints
 # ============================================================
@@ -484,3 +487,31 @@ class SemanticModule:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
+
+
+def _iter_semantic_type_tree(semantic_type: SemanticType | None):
+    if semantic_type is None:
+        return
+    yield semantic_type
+    if semantic_type.name == "Callable":
+        arguments = semantic_type.metadata.get("arguments")
+        if isinstance(arguments, list):
+            for argument in arguments:
+                yield from _iter_semantic_type_tree(argument)
+        yield from _iter_semantic_type_tree(semantic_type.metadata.get("return"))
+
+
+def _iter_module_semantic_types(module: SemanticModule):
+    for variable in module.variables:
+        yield from _iter_semantic_type_tree(variable.semantic_type)
+    for cls in module.classes:
+        for field in cls.fields:
+            yield from _iter_semantic_type_tree(field.semantic_type)
+        for method in cls.methods:
+            for argument in method.arguments:
+                yield from _iter_semantic_type_tree(argument.semantic_type)
+            yield from _iter_semantic_type_tree(method.return_type)
+    for function in module.functions:
+        for argument in function.arguments:
+            yield from _iter_semantic_type_tree(argument.semantic_type)
+        yield from _iter_semantic_type_tree(function.return_type)

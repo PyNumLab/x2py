@@ -22,6 +22,7 @@ from semantics.fortran2ir import (
     collect_semantic_compile_time_requirements,
     fortran_file_to_semantic_modules,
     fortran_module_to_semantic_module,
+    fortran_project_to_semantic_modules,
     resolve_semantic_compile_time_values,
 )
 from semantics.c2ir import (
@@ -35,7 +36,8 @@ from semantics.c2ir import (
     c_struct_to_semantic_class,
     c_type_to_semantic_type,
 )
-from semantics.pyi_parser import convert_pyi_to_ir, load_pyi_file, parse_pyi_text
+from semantics.pyi_parser import convert_pyi_to_ir, load_pyi_file, load_pyi_modules, parse_pyi_text
+from semantics.pyi_printer import emit_module_stubs, opaque_dependency_modules
 from semantics.readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
 
 from .cli import main
@@ -87,12 +89,16 @@ __all__ = (
     "c_type_to_semantic_type",
     "collect_semantic_compile_time_requirements",
     "convert_pyi_to_ir",
+    "emit_module_stubs",
     "evaluate_fortran_type_requirements",
     "fortran_file_to_semantic_modules",
     "fortran_type_probe_expressions",
     "fortran_module_to_semantic_module",
+    "fortran_project_to_semantic_modules",
     "load_pyi_file",
+    "load_pyi_modules",
     "main",
+    "opaque_dependency_modules",
     "parse_c_file",
     "parse_c_project",
     "parse_fortran_file",

@@ -71,6 +71,60 @@ def test_top_level_split_helpers_ignore_nested_commas_and_function_bodies():
     ]
 
 
+def test_c_lexer_covers_linemarker_escapes_top_level_strings_and_eof_records():
+    from c_parser import parse_c_file
+    from c_parser.lexer import (
+        CLogicalRecord,
+        _unescape_linemarker_filename,
+        lex_c_source,
+        line_mappings_for_source,
+        normalize_c_source,
+        split_top_level_c_source,
+    )
+    from c_parser.preprocessor import _record_location
+
+    assert _unescape_linemarker_filename(r"a\nb\rc\td\\e\"f\x") == "a\nb\rc\td\\e\"fx"
+    assert _unescape_linemarker_filename("tail\\") == "tail\\"
+
+    mappings = line_mappings_for_source(
+        '#line 7\nint local;\n# 3 "dir\\\\api\\".h"\nint named;\n',
+        filename="generated.i",
+        use_linemarkers=True,
+    )
+    assert mappings[1].filename == "generated.i"
+    assert mappings[1].line == 7
+    assert mappings[3].filename == 'dir\\api".h'
+    assert mappings[3].line == 3
+
+    segments = split_top_level_c_source('"literal";\nint unfinished', filename="odd.c")
+    assert [(segment.text, segment.terminator) for segment in segments] == [
+        ('"literal"', ";"),
+        ("int unfinished", "eof"),
+    ]
+
+    normalized = normalize_c_source("#define API \\\n", filename="defs.h")
+    assert normalized.records[0].text == "#define API"
+    assert _record_location(
+        CLogicalRecord(text="#define API", filename="defs.h", original_source_lines=())
+    ).source_line is None
+    assert _record_location(
+        CLogicalRecord(text="define API", filename="defs.h", original_source_lines=("define API",))
+    ).column == 1
+
+    token = lex_c_source(r'char *s = "unterminated\\', filename="bad.c")[-1]
+    assert token.kind == "string"
+    assert token.text == r'"unterminated\\'
+
+    parsed = parse_c_file(
+        '#line 11 "dir\\\\api\\".h"\n'
+        'struct __attribute__((annotate("tag\\"ged"))) named { int value; };\n',
+        filename="generated.i",
+        preprocessing="preprocessed",
+    )
+    assert parsed.structs[0].name == "named"
+    assert parsed.structs[0].source_location.filename == 'dir\\api".h'
+
+
 def test_raw_mode_records_includes_without_expanding_them():
     from c_parser import parse_c_file
 

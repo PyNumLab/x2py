@@ -208,6 +208,16 @@ another source language.
 - Semantic IR imports use structured `SemanticImport` / `SemanticImportItem`
   entries when a Fortran `use` has an explicit symbol list; bare imports remain
   plain module names for compatibility.
+- Imported derived types remain external references by default. Semantic type
+  `external_type_ref` metadata records the defining module, whether that owner
+  module is explicitly wrapped, and whether the boundary representation is
+  `opaque` or `wrapped`. The importing module does not emit or re-export a
+  duplicate class. When the owner is not explicitly wrapped,
+  `emit_module_stubs(...)` emits an owner-module `class Name(Opaque): pass`
+  dependency stub. `load_pyi_modules(...)` restores the file set and reconciles
+  an edited concrete owner class back to a wrapped reference. A future
+  recursive dependency mode would expand Fortran `use` dependencies only;
+  preprocessing include exposure is already handled separately.
 - The `.pyi` printer emits structured imports as `from module import name` or
   `from module import source as target`; the `.pyi` parser accepts the same
   syntax and restores the semantic import mapping.
@@ -325,7 +335,11 @@ Dedicated tests for the error handling system:
 - `fortran_parser/lexer.py`
   - line preprocessing, source-form handling, continuation/comment normalization; returns tuples of `(preprocessed_line, original_line_number, original_source_line)` for downstream error reporting.
 - `fortran_parser/parser.py`
-  - main grammar subset parser and orchestration functions.
+  - main grammar subset parser and orchestration functions. The file embeds a
+    maintainer guide and keeps parser methods documented. Read the thin public
+    wrappers first, then follow `FortranParser` through public visitors,
+    grammar-unit visitors, scoped `_helper_*` methods, and low-level lexical
+    utilities.
 - `fortran_parser/type_resolver.py`
   - kind extraction and symbol/expression helpers.
 - `fortran_parser/models.py`
@@ -385,7 +399,8 @@ ask it to implement each of these layers explicitly:
 
 Use this as the mental model when changing `fortran_parser/parser.py`: parsing
 is recursive over source units, and each unit is handled by the same grammar
-shape before grammar-specific exceptions are applied.
+shape before grammar-specific exceptions are applied. The parser method
+docstrings are the local reference for individual helper responsibilities.
 
 ```fortran
 module m
@@ -653,20 +668,21 @@ When updating parser behavior, keep this fail-fast contract aligned with tests:
   - "Unsupported but recognized" constructs may be carried far enough for
     semantic readiness or `.pyi` completion to decide wrappability. Unknown
     datatype syntax should crash early.
-- **Preprocessor-conditional duplicate procedures (guarded allowance):**
-  - The parser does **not** run a full C preprocessor stage before parsing.
-  - While slicing source units, simple directive structure is tracked for
-    `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` to model
-    mutually-exclusive branches.
-  - `visit_file(..., macro_defines=...)` can provide macro decisions; inactive conditional branches are skipped before unit parsing so the active code path is selected. The module-level `parse_fortran_file(...)` convenience function delegates to this visitor.
-    - accepted forms: `set[str]` or `dict[str, int|bool|str]`
-    - dictionary values are truthy/falsey (`0`, `False`, `"0"`, `"false"` treated as undefined/disabled)
-  - Basic `#if` expressions are supported for branch selection (`defined(X)`, `!`, `&&`, `||`, parentheses, `0`/`1`).
+- **Preprocessor-conditional duplicate procedures (raw parser tolerance):**
+  - The parser does **not** run a C preprocessor or evaluate CPP expressions.
+    Compiler preprocessing is responsible for `#if`, `#ifdef`, macro
+    expansion, and CPP includes before production wrapper parsing.
+  - While slicing raw source units, simple directive structure is tracked for
+    `#ifdef`, `#ifndef`, `#elif`, `#else`, and `#endif` only to recognize
+    mutually exclusive branches in unresolved raw input.
+  - Active branch selection must happen in the compiler-backed preprocessing
+    layer.
   - Duplicate procedure-name checks in a module/global scope are evaluated
-    against same-level sliced units and this branch context:
+    against same-level sliced units and this structural branch context:
     - if two same-name procedure headers are reachable in an overlapping branch context, raise `FortranParseError` (duplicate procedure name).
     - if they are only present in mutually-exclusive branches of the same conditional group, allow both signatures.
-  - This is a structural exclusivity model (branch groups), not semantic evaluation of macro expressions. In other words, branch mutual exclusivity is honored without requiring expression truth evaluation.
+  - This is not semantic macro evaluation. Multiple build configurations
+    should be preprocessed and parsed separately.
 
 `FortranParseError` is a subclass of `ValueError` and carries structured location metadata:
 - `filename` — source file path (if provided)

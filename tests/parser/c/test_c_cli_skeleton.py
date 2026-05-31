@@ -3,11 +3,15 @@
 
 import json
 import os
+import runpy
 import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
+from c_parser import CParseError
 from c_parser import cli as c_parser_cli
 from x2py import cli as x2py_cli
 from x2py.preprocessing import PreprocessingConfig
@@ -78,6 +82,64 @@ def test_cli_c_parse_json_reports_raw_preprocessor_metadata(tmp_path: Path):
     assert macros["API_VERSION"]["value"] == "3"
     assert macros["API_DECL"]["function_like"] is True
     assert file_payload["diagnostics"][0]["code"] == "C_UNSUPPORTED_FUNCTION_LIKE_MACRO"
+
+
+def test_attach_preprocessing_recipe_filters_invalid_and_duplicate_macros():
+    empty = c_parser_cli.CFile()
+    c_parser_cli.attach_preprocessing_recipe(empty, None)
+    assert empty.preprocessing_recipe is None
+
+    parsed = c_parser_cli.CFile(
+        macros=[
+            c_parser_cli.CMacro(
+                name="EXISTING",
+                source_location=c_parser_cli.CSourceLocation(filename="api.h", line=2),
+            )
+        ]
+    )
+    recipe = {
+        "macros": [
+            None,
+            {"name": ""},
+            {"name": "EXISTING", "path": "api.h", "line": 2},
+            {"name": "NEW", "value": 123, "function_like": 1, "path": 42, "line": "bad"},
+            {"name": "WITH_LOC", "value": "1", "path": "api.h", "line": 4},
+        ]
+    }
+
+    c_parser_cli.attach_preprocessing_recipe(parsed, recipe)
+
+    assert parsed.preprocessing_recipe == recipe
+    assert [macro.name for macro in parsed.macros] == ["EXISTING", "NEW", "WITH_LOC"]
+    assert parsed.macros[1].value is None
+    assert parsed.macros[1].function_like is True
+    assert parsed.macros[1].source_location.filename is None
+    assert parsed.macros[2].source_location.line == 4
+
+
+def test_c_parser_cli_helpers_errors_and_module_entrypoint(monkeypatch, capsys):
+    monkeypatch.setenv("C_PARSER_TEST_FLAG", " on ")
+    assert c_parser_cli._env_flag("C_PARSER_TEST_FLAG") is True
+    monkeypatch.delenv("C_PARSER_TEST_FLAG")
+    assert c_parser_cli._env_flag("C_PARSER_TEST_FLAG") is False
+
+    assert c_parser_cli._diagnostic_color_enabled(disabled=True) is False
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert c_parser_cli._diagnostic_color_enabled(disabled=False) is False
+    monkeypatch.delenv("NO_COLOR")
+    assert c_parser_cli._diagnostic_color_enabled(disabled=False) is True
+
+    def fail_parse(_paths):
+        raise CParseError("invalid", filename="bad.h", line_number=1, column=1, source_line="@@@")
+
+    monkeypatch.setattr(c_parser_cli, "parse_c_report", fail_parse)
+    assert c_parser_cli.main(["bad.h", "--no-color"]) == 1
+    assert "bad.h:1:1: error[CPARSE_ERROR]: invalid" in capsys.readouterr().err
+
+    monkeypatch.setattr(c_parser_cli, "main", lambda _argv=None: 0)
+    with pytest.raises(SystemExit) as exc_info:
+        runpy.run_module("c_parser.__main__", run_name="__main__")
+    assert exc_info.value.code == 0
 
 
 def test_cli_c_parse_json_out_writes_file_and_suppresses_stdout(tmp_path: Path):
@@ -154,6 +216,50 @@ def test_cli_c_wrap_readiness_human_output_for_header(tmp_path: Path):
     assert "Wrappable: yes" in res.stdout
 
 
+def test_cli_c_wrap_readiness_directory_includes_native_and_pyi_inputs(tmp_path: Path):
+    header = tmp_path / "api.h"
+    pyi = tmp_path / "solver.pyi"
+    header.write_text("int add(int a, int b);\n", encoding="utf-8")
+    pyi.write_text("def fill(n: Int32) -> None: ...\n", encoding="utf-8")
+    cmd = [
+        sys.executable,
+        "-m",
+        "x2py",
+        str(tmp_path),
+        "--language",
+        "c",
+        "--wrap-readiness",
+        "--json",
+    ]
+
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+
+    assert payload[str(header)]["source_kind"] == "c"
+    assert payload[str(pyi)]["source_kind"] == "pyi"
+
+
+def test_cli_c_wrap_readiness_accepts_language_neutral_pyi_input(tmp_path: Path):
+    pyi = tmp_path / "solver.pyi"
+    pyi.write_text("def fill(n: Int32) -> None: ...\n", encoding="utf-8")
+    cmd = [
+        sys.executable,
+        "-m",
+        "x2py",
+        str(pyi),
+        "--language",
+        "c",
+        "--wrap-readiness",
+        "--json",
+    ]
+
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)
+
+    assert payload[str(pyi)]["source_kind"] == "pyi"
+    assert payload[str(pyi)]["wrap_readiness"]["wrappable"] is True
+
+
 def test_cli_c_pyi_human_output_for_header(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
@@ -189,6 +295,39 @@ def test_cli_c_pyi_out_requires_explicit_language_and_writes_when_selected(tmp_p
     )
     assert selected.stdout == ""
     assert "def add(" in output.read_text(encoding="utf-8")
+
+
+def test_cli_c_pyi_out_writes_explicit_multi_header_owner_stubs(tmp_path: Path):
+    types = tmp_path / "types.h"
+    api = tmp_path / "api.h"
+    types.write_text("struct state { int id; };\n", encoding="utf-8")
+    api.write_text("struct state;\nvoid step(struct state *state);\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(types),
+            str(api),
+            "--language",
+            "c",
+            "--pyi",
+            "--out",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert result.stdout == ""
+    assert "class state:" in (tmp_path / "types.pyi").read_text(encoding="utf-8")
+    api_stub = (tmp_path / "api.pyi").read_text(encoding="utf-8")
+    assert "from types import state" in api_stub
+    assert "class state" not in api_stub
+    assert "state: Ptr(state)" in api_stub
+    readiness = x2py_cli._wrap_readiness_report([str(types), str(api)], language="c")
+    assert readiness[str(api)]["wrap_readiness"]["wrappable"] is True
 
 
 def test_cli_c_input_rejects_explicit_fortran_frontend(tmp_path: Path):
@@ -375,7 +514,6 @@ def test_c_parser_cli_module_handles_directory_loader_and_output_modes(tmp_path:
 
 def test_c_parser_module_entrypoint_and_compatibility_exports(tmp_path: Path):
     import c_parser.__main__ as c_module_entrypoint
-    import c_parser.utils as c_utils
     from c_parser.parser import parse_c_project
     from c_parser.project import parse_c_project as compatibility_parse_c_project
 
@@ -391,7 +529,6 @@ def test_c_parser_module_entrypoint_and_compatibility_exports(tmp_path: Path):
     assert json.loads(result.stdout)[str(header)]["functions"][0]["name"] == "run"
     assert c_module_entrypoint.main is c_parser_cli.main
     assert compatibility_parse_c_project is parse_c_project
-    assert c_utils.__all__ == ()
 
 
 def test_c_parser_module_formats_parse_errors_without_traceback(tmp_path: Path):

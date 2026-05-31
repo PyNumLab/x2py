@@ -77,7 +77,7 @@ and practical usage from terminal and Python.
 
 Supported public API:
 
-- `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
+- `parse_fortran_file(source_or_path, filename=None, encoding="utf-8") -> FortranFile`
 - `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
 - `assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
 - `assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`
@@ -85,14 +85,14 @@ Supported public API:
 ## Parser organization notes
 
 `fortran_parser/parser.py` is now intentionally organized into clearly labeled
-sections so maintainers can navigate the file by concern instead of by history:
+sections and carries an embedded maintainer guide. Start with the thin public
+wrappers at the bottom, then read the class from top to bottom:
 
-- Regex/constants and parser-wide type aliases
-- Module-level helper blocks (source-form rules, preprocessor logic,
-  diagnostics, compile-time expression resolution, dependency ordering)
+- Regex/constants, parser-wide type aliases, private unit dataclasses, and the
+  compile-time resolver
 - `FortranParser` internals grouped by domain:
-  - internal visitor entrypoints (`visit_file`, `visit_project`). The public
-    API remains the module-level wrappers listed above.
+  - public visitor entrypoints (`visit_file`, `visit_project`). The supported
+    module-level API remains the wrappers listed above.
   - source-unit visitors for files, modules, submodules, programs,
     procedures, interfaces, derived types, and block data
   - recursive source-unit slicing (`header`, specification part, execution
@@ -100,10 +100,13 @@ sections so maintainers can navigate the file by concern instead of by history:
   - shared declaration parsing for module variables, program/block-data
     variables, procedure arguments/results, and derived-type fields
   - `_helper_*` methods for scoped parsing, expression resolution,
-    preprocessor branch selection, same-level duplicate checks, and shared
+    raw preprocessor branch structure, same-level duplicate checks, and shared
     specification-part collection
 - Thin module-level convenience wrappers that delegate to a shared parser
   instance
+
+Parser methods carry focused docstrings, with examples where a compatibility
+visitor or lexical helper is easier to understand from a concrete call.
 
 `visit_file` is the central orchestration path. It first slices the source into
 direct file-level units, then each unit visitor parses only its own substring
@@ -370,12 +373,22 @@ Expected JSON layout:
   - `programs`
   - `block_data`
 
-When `x2py --parse --json` applies Fortran preprocessing settings, the
-per-file payload also contains `preprocessing_recipe`. Internal `-D`/`-U`
-branch selection records those macro settings. `--preprocess compiler` records
-the exact compiler executable and argv, include paths, macro flags, standard,
-extra compiler arguments, and working directory used to produce the parsed
-stdout stream.
+When `x2py --parse --json` applies compiler preprocessing, the per-file payload
+also contains `preprocessing_recipe`. Internal parser mode accepts plain or
+already-preprocessed source and does not evaluate `-D`/`-U` CPP branches.
+`--preprocess compiler` records the exact compiler executable or adapter,
+argv, include paths, macro flags, standard, extra compiler arguments, working
+directory, include graph, source mappings, diagnostics, and optional macro
+metadata used to produce the parsed stdout stream.
+
+Fortran CPP directives are handled by the configured compiler. Native Fortran
+`include "file.inc"` statements are then expanded recursively by the
+preprocessing layer before the single parser pass. Native INCLUDE is textual
+insertion into the current scope; it is not a `use` import from a separately
+compiled module. Include lookup is relative to the including file first, then
+the configured include directories, duplicate textual inclusion is preserved,
+and missing files or cycles produce `INCLUDE_NOT_FOUND` or `INCLUDE_CYCLE`
+diagnostics.
 
 `use` import shape:
 
@@ -993,7 +1006,7 @@ Under `implicit none`, these declarations count as valid argument declarations, 
 
 Use the stable top-level API:
 
-- `parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
+- `parse_fortran_file(source_or_path, filename=None, encoding="utf-8") -> FortranFile`
 - `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
 - `assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
 - `assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`

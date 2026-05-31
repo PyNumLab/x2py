@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+"""Wrapper-oriented Fortran parser with recursive grammar-unit visitors.
+
+Read the module-level wrappers at the bottom first, then `FortranParser`
+public visitors, source-unit visitors, `_helper_*` scoped parsing methods, and
+finally low-level lexical/static utilities. The detailed maintainer guide
+below documents the same file order with a control-flow example.
+"""
 from __future__ import annotations
 
 import re
@@ -12,7 +19,7 @@ from .models        import FortranArgument, FortranBlockData, FortranDerivedType
 from .type_resolver import extract_kind_from_type_spec
 from .utils         import split_csv
 
-"""
+_PARSER_ARCHITECTURE_GUIDE = """
 Parser architecture quick guide
 ===============================
 
@@ -172,10 +179,12 @@ class _CompileTimeResolver:
     """Resolve compile-time expressions against one immutable symbol snapshot."""
 
     def __init__(self, symbols: dict[str, str]):
+        """Normalize symbol names and initialize the expression cache."""
         self.symbols = {name.lower(): str(value) for name, value in symbols.items()}
         self.cache: dict[tuple[str, bool], str] = {}
 
     def resolve(self, expr: str, prefer_symbolic: bool = True, resolving: frozenset[str] = frozenset()) -> str:
+        """Resolve symbols in one expression and fold integer-only results."""
         text = expr.strip()
         if not text:
             return expr
@@ -195,6 +204,7 @@ class _CompileTimeResolver:
             changed = False
 
             def replace_symbol(match: re.Match[str]) -> str:
+                """Replace one resolvable symbol while detecting cycles."""
                 nonlocal changed
                 token = match.group(0)
                 key = token.lower()
@@ -224,9 +234,8 @@ class _CompileTimeResolver:
 class FortranParser:
     """Stateful parser entrypoint and orchestration object.
 
-    State carried on the instance:
-    - `macro_defines`: optional macro-selection configuration used while
-      selecting preprocessor branches before source-unit slicing.
+    Raw parser entrypoints preserve all CPP branch alternatives. Branch
+    selection belongs to the compiler preprocessing layer.
 
     Parsing pipeline used by `visit_file`:
     1. Preprocess source into normalized lines (`_preprocessed_lines`).
@@ -271,14 +280,10 @@ class FortranParser:
     # Public visitor entrypoints
     # ------------------------------------------------------------------
 
-    def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):
-        self.macro_defines = macro_defines
-
     def visit_file(
         self,
         source_or_path: str | Path,
         filename: str | None = None,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
         encoding: str = "utf-8",
     ) -> FortranFile:
         """Parse one source string/path into a `FortranFile` aggregate model."""
@@ -289,11 +294,9 @@ class FortranParser:
         else:
             code = str(source_or_path)
 
-        effective_macro_defines = self.macro_defines if macro_defines is None else macro_defines
         lines, root_scope, top_units = self._helper_prepare_source_units(
             code,
             filename,
-            macro_defines=effective_macro_defines,
         )
         modules: list[FortranModule] = []
         submodules: list[FortranSubmodule] = []
@@ -474,6 +477,12 @@ class FortranParser:
         return project
 
     def visit_fortran_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
+        """Parse exactly one module unit from inline source or normalized lines.
+
+        Example:
+            >>> FortranParser().visit_fortran_module("module m\\nend module m\\n").name
+            'm'
+        """
         _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
         module_units = [unit for unit in all_units if unit.kind == "module"]
         if not module_units and any(unit.kind == "procedure" for unit in all_units):
@@ -491,6 +500,7 @@ class FortranParser:
         return self.visit_module_unit(unit, parent_scope=root_scope, filename=filename)
 
     def visit_fortran_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
+        """Parse exactly one submodule unit from inline source or normalized lines."""
         _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
         unit = self._expect_single_parse_result(
             [unit for unit in all_units if unit.kind == "submodule"],
@@ -501,6 +511,7 @@ class FortranParser:
         return self.visit_submodule_unit(unit, parent_scope=root_scope, filename=filename)
 
     def visit_fortran_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
+        """Parse exactly one interface block, including nested procedure declarations."""
         unit, scope = self._expect_single_parse_result(
             self._collect_interface_source_units(code, filename),
             parser_name="visit_fortran_interface",
@@ -510,6 +521,7 @@ class FortranParser:
         return self.visit_interface_unit(unit, parent_scope=scope, filename=filename)
 
     def visit_fortran_derived_type(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
+        """Parse exactly one derived-type block and its wrapper-relevant fields."""
         unit, scope = self._expect_single_parse_result(
             self._collect_derived_type_source_units(code, filename),
             parser_name="visit_fortran_derived_type",
@@ -519,6 +531,7 @@ class FortranParser:
         return self.visit_derived_type_unit(unit, parent_scope=scope, filename=filename)
 
     def visit_fortran_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
+        """Parse exactly one program unit and its specification declarations."""
         _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
         unit = self._expect_single_parse_result(
             [unit for unit in all_units if unit.kind == "program"],
@@ -529,6 +542,7 @@ class FortranParser:
         return self.visit_program_unit(unit, parent_scope=root_scope, filename=filename)
 
     def visit_fortran_block_data_unit(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
+        """Parse exactly one block-data unit and its specification declarations."""
         _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
         unit = self._expect_single_parse_result(
             [unit for unit in all_units if unit.kind == "block_data"],
@@ -932,8 +946,6 @@ class FortranParser:
         self,
         code: _SourceOrLines,
         filename: str | None,
-        *,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     ) -> tuple[_PreprocessedLines, _ParserScope, list[_SourceUnit]]:
         """Preprocess, validate, and slice file-level source units.
 
@@ -948,7 +960,6 @@ class FortranParser:
             carrying original source line numbers.
         """
         lines = self._preprocessed_lines(code, filename)
-        lines = self._helper_select_active_preprocessor_lines(lines, macro_defines)
         root_scope = _ParserScope(kind="file", name=None)
         units = self._helper_slice_child_units(lines, parent_scope=root_scope, filename=filename)
         self._helper_validate_file_scope_unparsed_lines(lines, filename)
@@ -970,6 +981,7 @@ class FortranParser:
         interfaces: list[tuple[_SourceUnit, _ParserScope]] = []
 
         def collect(scope: _ParserScope, child_units: list[_SourceUnit]) -> None:
+            """Walk non-execution children and retain interface units."""
             for child in child_units:
                 if child.kind == "interface":
                     interfaces.append((child, scope))
@@ -1011,6 +1023,7 @@ class FortranParser:
         types: list[tuple[_SourceUnit, _ParserScope]] = []
 
         def collect(scope: _ParserScope, child_units: list[_SourceUnit]) -> None:
+            """Walk nested grammar units and retain derived-type units."""
             for child in child_units:
                 if child.kind == "derived_type":
                     types.append((child, scope))
@@ -1041,46 +1054,6 @@ class FortranParser:
 
         collect(root_scope, self._helper_slice_child_units(lines, parent_scope=root_scope, filename=filename))
         return types
-
-    def _helper_select_active_preprocessor_lines(
-        self,
-        lines: _PreprocessedLines,
-        macro_defines: set[str] | dict[str, int | bool | str] | None,
-    ) -> _PreprocessedLines:
-        """Drop inactive preprocessor branches when macro selection is enabled.
-
-        This runs before source-unit slicing, so duplicate declarations hidden
-        behind inactive ``#ifdef`` branches do not produce false same-scope
-        conflicts.
-
-        Example:
-            With ``macro_defines={"USE_FAST"}``, only the active branch of
-            ``#ifdef USE_FAST`` is returned to `_helper_slice_child_units`;
-            with ``macro_defines=None``, all branches are preserved and their
-            condition sets are used for overlap-aware duplicate checks.
-        """
-        if macro_defines is None:
-            return lines
-        selected: _PreprocessedLines = []
-        macro_names = self._normalize_macro_defines(macro_defines)
-        pp_condition_stack: list[tuple[int, int]] = []
-        pp_active_stack: list[bool] = []
-        pp_group_counter = 0
-        for line, _lineno, _source_line in lines:
-            handled_pp, pp_group_counter = self._handle_procedure_preprocessor_line(
-                line.strip(),
-                macro_selection_enabled=True,
-                macro_names=macro_names,
-                pp_condition_stack=pp_condition_stack,
-                pp_active_stack=pp_active_stack,
-                pp_group_counter=pp_group_counter,
-            )
-            if handled_pp:
-                continue
-            if pp_active_stack and not all(pp_active_stack):
-                continue
-            selected.append((line, _lineno, _source_line))
-        return selected
 
     def _handle_procedure_preprocessor_line(
         self,
@@ -1113,28 +1086,25 @@ class FortranParser:
         if directive_low.startswith("ifdef "):
             pp_group_counter += 1
             pp_condition_stack.append((pp_group_counter, 0))
-            expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-            pp_active_stack.append((bool(expr) and expr.lower() in macro_names) if macro_selection_enabled else True)
+            pp_active_stack.append(True)
             return True, pp_group_counter
         if directive_low.startswith("ifndef "):
             pp_group_counter += 1
             pp_condition_stack.append((pp_group_counter, 0))
-            expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-            pp_active_stack.append(((not expr) or expr.lower() not in macro_names) if macro_selection_enabled else True)
+            pp_active_stack.append(True)
             return True, pp_group_counter
         if directive_low.startswith("if "):
             pp_group_counter += 1
             pp_condition_stack.append((pp_group_counter, 0))
-            expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-            pp_active_stack.append(self._eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
+            pp_active_stack.append(True)
             return True, pp_group_counter
         if directive_low.startswith("else"):
             if pp_condition_stack:
                 group_id, branch_id = pp_condition_stack.pop()
                 pp_condition_stack.append((group_id, branch_id + 1))
             if pp_active_stack:
-                prev = pp_active_stack.pop()
-                pp_active_stack.append((not prev) if macro_selection_enabled else True)
+                pp_active_stack.pop()
+                pp_active_stack.append(True)
             return True, pp_group_counter
         if directive_low.startswith("elif "):
             if pp_condition_stack:
@@ -1142,8 +1112,7 @@ class FortranParser:
                 pp_condition_stack.append((group_id, branch_id + 1))
             if pp_active_stack:
                 pp_active_stack.pop()
-                expr = directive.split(None, 1)[1].strip() if len(directive.split(None, 1)) > 1 else ""
-                pp_active_stack.append(self._eval_cpp_expr(expr, macro_names) if macro_selection_enabled else True)
+                pp_active_stack.append(True)
             return True, pp_group_counter
         if directive_low.startswith("endif"):
             if pp_condition_stack:
@@ -1155,6 +1124,7 @@ class FortranParser:
 
     @staticmethod
     def _procedure_preprocessor_condition_set(pp_condition_stack: list[tuple[int, int]]) -> frozenset[str]:
+        """Serialize the active raw CPP branch stack for sibling comparison."""
         return frozenset(f"g{group_id}:b{branch_id}" for group_id, branch_id in pp_condition_stack)
 
     def _helper_validate_possible_unit_header(
@@ -1252,6 +1222,7 @@ class FortranParser:
 
     @staticmethod
     def _is_allowed_unparsed_file_scope_line(line: str) -> bool:
+        """Return whether a file-scope line is intentionally metadata-only."""
         stripped = line.strip()
         return (
             stripped.startswith("#")
@@ -1268,6 +1239,7 @@ class FortranParser:
         lineno: int | None,
         source_line: str | None,
     ) -> None:
+        """Raise the shared invalid-syntax diagnostic for one source line."""
         raise FortranParseError(
             f"Invalid Fortran syntax in {context}: {line.strip()}",
             filename=filename,
@@ -2073,6 +2045,7 @@ class FortranParser:
 
     @staticmethod
     def _is_contains_transition(line: str) -> bool:
+        """Return whether `line` starts a unit's `contains` region."""
         return line.lower() == "contains"
 
     # ------------------------------------------------------------------
@@ -2086,6 +2059,7 @@ class FortranParser:
         lineno: int | None = None,
         source_line: str | None = None,
     ) -> FortranModule | None:
+        """Parse a module header or reject a malformed module-like line."""
         module_match = _REGEX["module"].match(line)
         if not module_match:
             if line.lower().startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", line, re.IGNORECASE):
@@ -2100,6 +2074,7 @@ class FortranParser:
         return FortranModule(name=module_match.group("name"), filename=filename)
 
     def _parse_submodule_header(self, line: str, filename: str | None) -> FortranSubmodule | None:
+        """Parse a submodule header, including parent and optional ancestor."""
         match = _REGEX["submodule"].match(line)
         if not match:
             return None
@@ -2112,18 +2087,21 @@ class FortranParser:
         )
 
     def _parse_program_header(self, line: str, filename: str | None) -> FortranProgram | None:
+        """Parse a program header when `line` starts a program unit."""
         match = _REGEX["program"].match(line)
         if not match:
             return None
         return FortranProgram(name=match.group("name"), filename=filename)
 
     def _parse_block_data_header(self, line: str, filename: str | None) -> FortranBlockData | None:
+        """Parse a named or unnamed block-data header."""
         match = _REGEX["block_data"].match(line)
         if not match:
             return None
         return FortranBlockData(name=match.group("name"), filename=filename)
 
     def _parse_derived_type_start(self, line: str) -> tuple[str, list[str]] | None:
+        """Parse modern or legacy derived-type opening syntax."""
         stripped = line.strip()
         tm = _REGEX["derived_type"].match(stripped)
         if tm:
@@ -2141,6 +2119,7 @@ class FortranParser:
         *,
         current_module: str | None,
     ) -> FortranDerivedType | None:
+        """Build a derived-type model from one recognized opening line."""
         parsed_type = self._parse_derived_type_start(line)
         if not parsed_type:
             return None
@@ -2164,6 +2143,7 @@ class FortranParser:
 
     @staticmethod
     def _parse_interface_header(line: str) -> tuple[bool, str | None]:
+        """Return whether `line` opens an interface and its optional name."""
         lower = line.lower()
         if not (lower.startswith("interface") or lower.startswith("abstract interface")):
             return False, None
@@ -2180,6 +2160,7 @@ class FortranParser:
         lineno: int | None = None,
         source_line: str | None = None,
     ):
+        """Build procedure scope state from a subroutine or function header."""
         module_proc = _REGEX["module_procedure_impl"].match(line)
         if module_proc and not in_interface:
             name = module_proc.group("name")
@@ -2256,6 +2237,7 @@ class FortranParser:
         lineno: int | None,
         source_line: str | None,
     ) -> None:
+        """Reject malformed lines that still resemble procedure headers."""
         stripped = line.strip()
         if not stripped:
             return
@@ -2281,6 +2263,7 @@ class FortranParser:
 
     @staticmethod
     def _add_interface_attribute(sig: FortranProcedureSignature, interface_name: str | None) -> None:
+        """Attach a stable `interface(name)` marker to a procedure signature."""
         if not interface_name:
             return
         iface_attr = f"interface({interface_name})"
@@ -2289,6 +2272,7 @@ class FortranParser:
 
     @staticmethod
     def _resolve_derived_type_extensions(types: list[FortranDerivedType]) -> None:
+        """Link same-file `extends(parent)` names to parsed type models."""
         by_name = {t.name.lower(): t for t in types}
         for dtype in types:
             if isinstance(dtype.extends, str):
@@ -2336,6 +2320,7 @@ class FortranParser:
 
     @staticmethod
     def _scope_key(name: str) -> str:
+        """Normalize a case-insensitive Fortran scope key."""
         return name.lower()
 
     def _new_procedure_scope_state(
@@ -2346,6 +2331,7 @@ class FortranParser:
         typed_symbols: set[str] | None = None,
         explicit_result: bool = False,
     ) -> dict:
+        """Create mutable procedure parsing state shared by spec-line helpers."""
         state = {
             "signature": signature,
             "symbols": symbols,
@@ -2368,9 +2354,11 @@ class FortranParser:
         return state
 
     def _proc_scope_get_symbol(self, proc_state: dict, name: str) -> FortranArgument | None:
+        """Return one procedure symbol by case-insensitive name."""
         return proc_state["symbols"].get(self._scope_key(name))
 
     def _proc_scope_symbol_is_declared(self, proc_state: dict, name: str) -> bool:
+        """Return whether a procedure symbol already has an explicit type."""
         return self._scope_key(name) in proc_state["typed_symbols"]
 
     def _proc_scope_mark_declared_symbol(
@@ -2382,6 +2370,7 @@ class FortranParser:
         line_number: int | None = None,
         source_line: str | None = None,
     ) -> str:
+        """Record an explicitly typed procedure symbol and reject duplicates."""
         key = self._scope_key(name)
         if key in proc_state["typed_symbols"]:
             raise FortranParseError(
@@ -2395,6 +2384,7 @@ class FortranParser:
         return key
 
     def _proc_scope_add_external_symbol(self, proc_state: dict, name: str) -> str:
+        """Record an external procedure symbol and update a matching dummy."""
         key = self._scope_key(name)
         proc_state.setdefault("external_symbols", set()).add(key)
         arg = self._proc_scope_get_symbol(proc_state, key)
@@ -2403,12 +2393,15 @@ class FortranParser:
         return key
 
     def _proc_scope_add_include(self, proc_state: dict, include_path: str) -> None:
+        """Record one procedure-local include path."""
         proc_state.setdefault("includes", []).append(include_path)
 
     def _proc_scope_add_imports(self, proc_state: dict, names: list[str]) -> None:
+        """Record interface imports visible inside a procedure declaration."""
         proc_state.setdefault("imports", set()).update(self._scope_key(n) for n in names if n.strip())
 
     def _proc_scope_set_declared_local_type(self, proc_state: dict, name: str, meta: dict) -> None:
+        """Store type metadata for a declared local symbol."""
         key = self._scope_key(name)
         proc_state["declared_local_types"][key] = {
             "base_type": meta["base_type"],
@@ -2428,6 +2421,7 @@ class FortranParser:
         register_implicit_if_missing: bool = False,
         legacy: bool = False,
     ) -> None:
+        """Store one local parameter expression and validate declaration policy."""
         key = self._scope_key(name)
         if require_declared and not self._proc_scope_symbol_is_declared(proc_state, key):
             raise FortranParseError(
@@ -2460,6 +2454,7 @@ class FortranParser:
         label: str,
         filename: str | None = None,
     ) -> None:
+        """Insert one scope symbol or raise a duplicate-name diagnostic."""
         if key in scope:
             raise FortranParseError(
                 f"Duplicate symbol '{key}' in {label}.",
@@ -2798,6 +2793,7 @@ class FortranParser:
         lineno: int | None = None,
         source_line: str | None = None,
     ) -> None:
+        """Parse type-bound procedure and generic bindings after `contains`."""
         proc_binding = _REGEX["procedure_binding"].match(line)
         if proc_binding:
             binding_names = split_csv(proc_binding.group("names"))
@@ -2941,6 +2937,7 @@ class FortranParser:
         *,
         parse_character_star: bool = True,
     ) -> tuple[dict, list[str]] | None:
+        """Parse a declaration prefix into normalized metadata and attributes."""
         star_kind = self._find_legacy_star_kind(left)
         char_star = _REGEX["char_star"].match(left) if parse_character_star else None
         if char_star:
@@ -3085,6 +3082,7 @@ class FortranParser:
 
     @staticmethod
     def _new_decl_meta(base_type: str, kind: str | None) -> dict:
+        """Return default declaration metadata for one normalized base type."""
         return {
             "base_type": base_type,
             "kind": kind or "",
@@ -3102,6 +3100,7 @@ class FortranParser:
 
     @staticmethod
     def _apply_decl_attrs(meta: dict, attrs: list[str], *, include_intent: bool = False) -> None:
+        """Merge declaration attributes into normalized metadata."""
         for a in attrs:
             la = a.lower()
             if include_intent and la.startswith("intent") and "(" in la and ")" in la:
@@ -3127,6 +3126,7 @@ class FortranParser:
 
     @staticmethod
     def _normalize_declared_name(name: str, meta: dict) -> str:
+        """Strip legacy entity-local spelling from a declared symbol name."""
         normalized_name = re.sub(r"^\*\s*[0-9]+\s*", "", name).strip()
         if meta["base_type"] == "character" and "*" in normalized_name:
             # Legacy CHARACTER declarations may carry entity-local length
@@ -3137,6 +3137,7 @@ class FortranParser:
 
     @staticmethod
     def _strip_legacy_star_kind_prefix(left: str) -> str:
+        """Remove an intrinsic `type*kind` prefix from a legacy declaration."""
         return re.sub(
             r"^(integer|real|complex|logical)\s*\*\s*[0-9]+\s*",
             "",
@@ -3146,6 +3147,7 @@ class FortranParser:
 
     @staticmethod
     def _var(entry: str):
+        """Split one declaration entity into its name and inline dimensions."""
         e = entry.strip()
         if not e:  # pragma: no cover - split_csv omits empty declaration entities for valid declarations.
             return "", []
@@ -3159,6 +3161,7 @@ class FortranParser:
 
     @staticmethod
     def _apply(arg: FortranArgument, meta: dict, shape: list[str]):
+        """Apply normalized declaration metadata to an argument-like model."""
         arg.base_type = meta["base_type"]
         arg.kind = meta["kind"] or ""
         arg.intent = meta["intent"]
@@ -3178,6 +3181,7 @@ class FortranParser:
 
     @staticmethod
     def _split_dim_bounds(dim: str) -> tuple[str | None, str | None]:
+        """Normalize one dimension into lower and upper bound text."""
         part = dim.strip()
         if not part:  # pragma: no cover - empty dimensions are invalid Fortran and not emitted by split_csv.
             return None, None
@@ -3190,6 +3194,7 @@ class FortranParser:
 
     @staticmethod
     def _extract_bounds(shape: list[str]) -> tuple[list[str | None], list[str | None]]:
+        """Extract parallel lower/upper bound lists from serialized dimensions."""
         lbounds: list[str | None] = []
         ubounds: list[str | None] = []
         for dim in shape:
@@ -3241,6 +3246,7 @@ class FortranParser:
 
     @staticmethod
     def _is_ignored_proc_spec_line(line: str) -> bool:
+        """Return whether a procedure spec line is intentionally metadata-only."""
         ignored_patterns = (
             r"^(function|subroutine)\b",
             r"^intrinsic\b",
@@ -3336,6 +3342,7 @@ class FortranParser:
 
     @staticmethod
     def _looks_like_unknown_proc_declaration(line: str) -> bool:
+        """Return whether an unparsed procedure line still looks declarative."""
         m_first = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)", line.strip())
         first_word = m_first.group(1).lower() if m_first else ""
         non_decl_starts = {
@@ -3396,6 +3403,7 @@ class FortranParser:
     # ------------------------------------------------------------------
 
     def _finalize_proc(self, state: dict) -> FortranProcedureSignature:
+        """Validate and freeze one procedure signature from mutable scope state."""
         sig = state["signature"]
         symbols = state["symbols"]
         local_params = state.get("local_params", {})
@@ -3494,6 +3502,7 @@ class FortranParser:
 
     @staticmethod
     def _validate_all_args_declared(sig: FortranProcedureSignature, filename: str | None, *, explicit_result: bool) -> None:
+        """Require explicit argument/result types when `implicit none` is active."""
         for arg in sig.arguments:
             if arg.base_type == "unknown":
                 raise FortranParseError(
@@ -3516,6 +3525,7 @@ class FortranParser:
 
     @staticmethod
     def _validate_function_result(sig: FortranProcedureSignature, filename: str | None) -> None:
+        """Validate function result existence and argument-name separation."""
         if sig.result is None:  # pragma: no cover - function signatures are constructed with result objects.
             raise FortranParseError(
                 f"Function '{sig.name}' has no result variable.",
@@ -3540,6 +3550,7 @@ class FortranParser:
         owner_name: str | None,
         filename: str | None,
     ) -> None:
+        """Reject incompatible duplicate variables in one module-like scope."""
         seen: dict[str, FortranArgument] = {}
         display_name = owner_name or "<unnamed>"
         for var in variables:
@@ -3564,6 +3575,7 @@ class FortranParser:
 
     @staticmethod
     def _variable_scope_label(scope) -> tuple[str, str | None]:
+        """Return the diagnostic owner label for a module-like scope."""
         if isinstance(scope, FortranSubmodule):
             return "submodule", scope.name
         if isinstance(scope, FortranProgram):
@@ -3574,6 +3586,7 @@ class FortranParser:
 
     @staticmethod
     def _validate_module_variables(module: FortranModule | FortranSubmodule, filename: str | None) -> None:
+        """Validate variables declared by a module or submodule."""
         owner_kind, owner_name = FortranParser._variable_scope_label(module)
         FortranParser._validate_variable_declarations(
             module.variables,
@@ -3584,6 +3597,7 @@ class FortranParser:
 
     @staticmethod
     def _apply_module_visibility(module: FortranModule, filename: str | None) -> None:
+        """Apply module default and explicit public/private visibility rules."""
         public_set = {s.lower() for s in module.public_symbols}
         private_set = {s.lower() for s in module.private_symbols}
         for var in module.variables:
@@ -3603,6 +3617,7 @@ class FortranParser:
 
     @staticmethod
     def _validate_derived_type_fields(dtype: FortranDerivedType, filename: str | None) -> None:
+        """Reject duplicate or unresolved fields in one derived type."""
         seen: set[str] = set()
         for f in dtype.fields:
             if f.name.lower() in seen:
@@ -3627,6 +3642,7 @@ class FortranParser:
         line_number: int | None = None,
         source_line: str | None = None,
     ) -> None:
+        """Reject duplicate dummy argument names in one procedure header."""
         seen: set[str] = set()
         for arg in args:
             key = arg.name.lower()
@@ -3641,6 +3657,7 @@ class FortranParser:
             seen.add(key)
 
     def _collect_module_parameters(self, code: _SourceOrLines, filename: str | None) -> dict[str, dict[str, str]]:
+        """Collect module specification-part parameter expressions by module."""
         lines = self._preprocessed_lines(code, filename)
         current_module = None
         in_module_spec_part = False
@@ -3681,6 +3698,7 @@ class FortranParser:
 
     @staticmethod
     def _resolve_module_parameter_values(module_params: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
+        """Resolve transitive parameter expressions inside each module."""
         resolved: dict[str, dict[str, str]] = {}
         for module_name, params in module_params.items():
             resolver = _CompileTimeResolver(params)
@@ -3697,6 +3715,7 @@ class FortranParser:
         *,
         resolve_shapes: bool = True,
     ) -> None:
+        """Resolve procedure kind and optional shape expressions from scope facts."""
         module_params = FortranParser._resolve_module_parameter_values(module_params)
         symbol_to_value: dict[str, str] = {}
         if sig.module:
@@ -3741,6 +3760,7 @@ class FortranParser:
         module: FortranModule | FortranSubmodule | FortranProgram | FortranBlockData,
         module_params: dict[str, dict[str, str]],
     ) -> None:
+        """Resolve kind, value, and shape facts for module-like variables."""
         module_params = FortranParser._resolve_module_parameter_values(module_params)
         symbol_to_value: dict[str, str] = {}
         if getattr(module, "name", None):
@@ -3781,6 +3801,7 @@ class FortranParser:
         *,
         resolver: _CompileTimeResolver | None = None,
     ) -> str:
+        """Resolve one kind or character-length expression against symbols."""
         active_resolver = resolver or _CompileTimeResolver(symbols)
         text = expr.strip()
         if text.lower().startswith("len="):
@@ -3790,6 +3811,7 @@ class FortranParser:
 
     @staticmethod
     def _resolve_symbol_reference(expr: str, symbols: dict[str, str]) -> str:
+        """Follow direct symbol aliases until a stable expression is reached."""
         out = expr.strip()
         seen: set[str] = set()
         while out.lower() in symbols and out.lower() not in seen:
@@ -3799,6 +3821,7 @@ class FortranParser:
 
     @staticmethod
     def _collect_relevant_local_params(sig: FortranProcedureSignature, local_params: dict[str, str]) -> dict[str, str]:
+        """Keep only local parameters reachable from a wrapper signature."""
         if not local_params:
             return {}
         if not sig.arguments and sig.result is None:
@@ -3823,6 +3846,7 @@ class FortranParser:
 
     @staticmethod
     def _extract_symbol_names(expr: str) -> set[str]:
+        """Extract lowercase identifier tokens from one expression."""
         keywords = {"and", "or", "not"}
         return {
             token.lower()
@@ -3832,6 +3856,7 @@ class FortranParser:
 
     @staticmethod
     def _normalize_parameter_value(value: str) -> str | None:
+        """Return a stable literal value or `None` for unresolved expressions."""
         parsed_int = FortranParser._safe_eval_int_expr(value)
         if parsed_int is not None:
             return str(parsed_int)
@@ -3850,6 +3875,7 @@ class FortranParser:
 
     @staticmethod
     def _is_literal_parameter_value(value: str) -> bool:
+        """Return whether `value` is a supported serialized literal."""
         text = value.strip()
         if not text:
             return False
@@ -3874,6 +3900,7 @@ class FortranParser:
         base_types: dict[str, str] | None = None,
         symbolic_values: dict[str, str | None] | None = None,
     ) -> dict[str, FortranVariable]:
+        """Build resolved parameter variables from a symbol-expression map."""
         base_types = base_types or {}
         symbolic_values = symbolic_values or {}
         valued: dict[str, FortranVariable] = {}
@@ -3915,6 +3942,7 @@ class FortranParser:
         allowed_unary = (ast.UAdd, ast.USub)
 
         def _eval(n):
+            """Evaluate one allowed AST node, returning None when unsupported."""
             if isinstance(n, ast.Expression):
                 return _eval(n.body)
             if isinstance(n, ast.Constant) and isinstance(n.value, (int, float, str, bool)):
@@ -4018,6 +4046,7 @@ class FortranParser:
 
     @staticmethod
     def _topological_files(file_deps: dict[str, set[str]]) -> list[str]:
+        """Return dependency-first file order while tolerating dependency cycles."""
         in_degree = {f: 0 for f in file_deps}
         for f, deps in file_deps.items():
             for d in deps:
@@ -4101,6 +4130,7 @@ class FortranParser:
 
     @staticmethod
     def _source_form(filename: str | None) -> str:
+        """Infer fixed, modern, or unknown source form from a filename suffix."""
         if not filename:
             return "unknown"
         ext = Path(filename).suffix.lower()
@@ -4112,6 +4142,7 @@ class FortranParser:
 
     @staticmethod
     def _infer_implicit_base_type(symbol_name: str) -> str:
+        """Apply the default Fortran I-N integer implicit typing rule."""
         first = symbol_name.strip()[:1].lower()
         if "i" <= first <= "n":
             return "integer"
@@ -4119,6 +4150,7 @@ class FortranParser:
 
     @staticmethod
     def _find_legacy_star_kind(type_left: str) -> tuple[str, str] | None:
+        """Return base type and width from a legacy `type*kind` prefix."""
         m = re.match(r"^(integer|real|complex|logical|character)\s*\*\s*([0-9]+)\b", type_left, re.IGNORECASE)
         if not m:
             return None
@@ -4126,6 +4158,7 @@ class FortranParser:
 
     @staticmethod
     def _parse_type_prefix(prefix: str) -> tuple[str, str | None] | None:
+        """Parse a standalone intrinsic, derived, or class type prefix."""
         txt = prefix.strip()
         if not txt:
             return None
@@ -4171,42 +4204,6 @@ class FortranParser:
         return True
 
     @staticmethod
-    def _normalize_macro_defines(macro_defines: set[str] | dict[str, int | bool | str] | None) -> set[str]:
-        if not macro_defines:
-            return set()
-        if isinstance(macro_defines, dict):
-            out = set()
-            for k, v in macro_defines.items():
-                if str(v).strip() not in {"", "0", "false", "False"}:
-                    out.add(str(k).lower())
-            return out
-        return {str(x).lower() for x in macro_defines}
-
-    @staticmethod
-    def _eval_cpp_expr(expr: str, macro_names: set[str]) -> bool:
-        """Evaluate a small C-preprocessor boolean expression."""
-        txt = expr.strip()
-        if not txt:  # pragma: no cover - bare #if is not valid Fortran preprocessing input.
-            return False
-        txt = re.sub(r"defined\s*\(\s*([A-Za-z_]\w*)\s*\)", lambda m: str(m.group(1).lower() in macro_names), txt)
-        txt = re.sub(r"\bdefined\s+([A-Za-z_]\w*)\b", lambda m: str(m.group(1).lower() in macro_names), txt)
-        def _ident_to_bool(m: re.Match[str]) -> str:
-            token = m.group(1)
-            if token in {"True", "False", "and", "or", "not"}:
-                return token
-            return "True" if token.lower() in macro_names else "False"
-        txt = re.sub(r"\b([A-Za-z_]\w*)\b", _ident_to_bool, txt)
-        txt = txt.replace("&&", " and ").replace("||", " or ")
-        txt = re.sub(r"(?<![=!<>])!(?!=)", " not ", txt)
-        txt = re.sub(r"\b0\b", "False", txt)
-        txt = re.sub(r"\b1\b", "True", txt)
-        try:
-            node = ast.parse(txt, mode="eval")
-            return bool(eval(compile(node, "<cpp-expr>", "eval"), {"__builtins__": {}}, {}))
-        except Exception:
-            return False
-
-    @staticmethod
     def _looks_like_existing_source_path(source: str | Path) -> bool:
         """Return True when ``source`` names a readable source file path."""
         if not isinstance(source, (str, Path)):
@@ -4218,6 +4215,7 @@ class FortranParser:
 
     @staticmethod
     def _split_submodule_parent(parent_spec: str) -> tuple[str, str | None]:
+        """Split `ancestor:parent` or plain `parent` submodule syntax."""
         parts = [p.strip() for p in parent_spec.split(":", 1)]
         if len(parts) == 2:
             ancestor, parent = parts
@@ -4226,6 +4224,7 @@ class FortranParser:
 
     @staticmethod
     def _attrs(prefix: str, tail: str) -> list[str]:
+        """Collect supported procedure header attributes."""
         attrs = [t.lower() for t in prefix.split() if t.lower() in _ATTR_PREFIX_WORDS]
         if _REGEX["bind_c"].search(tail):
             attrs.append("bind(c)")
@@ -4233,6 +4232,7 @@ class FortranParser:
 
     @staticmethod
     def _looks_like_procedure_header(line: str) -> bool:
+        """Return whether a line resembles a subroutine or function header."""
         stripped = line.strip()
         if not stripped:
             return False
@@ -4244,10 +4244,12 @@ class FortranParser:
 
     @staticmethod
     def _is_openmp_directive(line: str) -> bool:
+        """Return whether a line begins an OpenMP sentinel directive."""
         return line.lstrip().lower().startswith("!$omp")
 
     @staticmethod
     def _is_openmp_declarative_directive(line: str) -> bool:
+        """Return whether an OpenMP directive belongs in a specification part."""
         directive = line.lstrip()[5:].strip().lower() if FortranParser._is_openmp_directive(line) else ""
         return directive.startswith(
             (
@@ -4262,6 +4264,7 @@ class FortranParser:
 
     @staticmethod
     def _looks_like_declaration_or_spec(line: str) -> bool:
+        """Return whether a line resembles a specification-part statement."""
         stripped = line.strip()
         if not stripped:
             return False
@@ -4283,6 +4286,7 @@ class FortranParser:
 
     @staticmethod
     def _is_statement_function_statement(line: str) -> bool:
+        """Return whether a line has legacy statement-function syntax."""
         stripped = line.strip()
         return bool(
             re.match(
@@ -4294,6 +4298,7 @@ class FortranParser:
 
     @staticmethod
     def _is_ignored_spec_statement(line: str) -> bool:
+        """Return whether a recognized specification statement needs no model."""
         return bool(
             _REGEX["include"].match(line)
             or re.match(
@@ -4305,6 +4310,12 @@ class FortranParser:
 
     @staticmethod
     def _parse_use_statement(line: str) -> tuple[str, list[FortranUseMapping]] | None:
+        """Parse a `use` statement into its module and explicit symbol mappings.
+
+        Example:
+            >>> FortranParser._parse_use_statement("use kinds, only: local => remote")
+            ('kinds', [FortranUseMapping(source='remote', target='local')])
+        """
         match = _REGEX["use"].match(line)
         if not match:
             return None
@@ -4330,6 +4341,7 @@ class FortranParser:
 
     @staticmethod
     def _is_executable_statement_start(line: str) -> bool:
+        """Return whether a line starts execution rather than specification."""
         stripped = line.strip()
         if not stripped:  # pragma: no cover - callers skip blank lines before executable checks.
             return False
@@ -4389,16 +4401,27 @@ _DEFAULT_PARSER = FortranParser()
 def parse_fortran_file(
     source_or_path: str | Path,
     filename: str | None = None,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     encoding: str = "utf-8",
 ) -> FortranFile:
+    """Parse one Fortran source string or path with the shared parser.
+
+    Example:
+        >>> parse_fortran_file("subroutine ping()\\nend subroutine ping\\n").procedures[0].name
+        'ping'
+    """
     return _DEFAULT_PARSER.visit_file(
         source_or_path,
         filename=filename,
-        macro_defines=macro_defines,
         encoding=encoding,
     )
 
 
 def parse_fortran_project(files, *, encoding: str = "utf-8") -> FortranProject:
+    """Parse explicit Fortran sources or a directory into one project model.
+
+    Example:
+        >>> project = parse_fortran_project({"types.f90": "module types\\nend module types\\n"})
+        >>> sorted(project.modules)
+        ['types']
+    """
     return _DEFAULT_PARSER.visit_project(files, encoding=encoding)

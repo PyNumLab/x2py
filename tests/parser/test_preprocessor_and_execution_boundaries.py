@@ -74,7 +74,7 @@ end subroutine fill
     assert evaluated.arguments[0].shape == ["0:3", "1:3"]
     assert sig.arguments[0].shape == ["0:nx-1", "1:ny"]
 
-def test_ifndef_and_defined_without_parentheses_macro_selection():
+def test_cpp_directives_are_preserved_without_parser_branch_selection():
     code = """
 #if defined USE_FAST
 subroutine fast_path(x)
@@ -97,9 +97,14 @@ end subroutine selected_slow_path
 #endif
 """
 
-    parsed = parse_fortran_file(code, macro_defines={"USE_FAST": True})
+    parsed = parse_fortran_file(code)
 
-    assert [proc.name for proc in parsed.procedures] == ["fast_path", "default_path"]
+    assert [proc.name for proc in parsed.procedures] == [
+        "fast_path",
+        "slow_path",
+        "default_path",
+        "selected_slow_path",
+    ]
 
 def test_include_and_ignored_spec_lines_do_not_change_public_signature():
     code = """
@@ -224,7 +229,7 @@ C$OMP PARALLEL DO
     assert parse_fortran_file(executable, filename="omp_body.f90").procedures[0].name == "omp_body"
     assert parse_fortran_file(fixed_form_executable, filename="fixed_omp.f").procedures[0].name == "fixed_omp"
 
-def test_cpp_selection_false_and_malformed_expressions_choose_else_branch():
+def test_cpp_false_and_malformed_expressions_are_not_evaluated_by_parser():
     code = """
 #if 0
 subroutine false_if_branch()
@@ -243,9 +248,14 @@ end subroutine malformed_if_else
 #endif
 """
 
-    parsed = parse_fortran_file(code, macro_defines=set())
+    parsed = parse_fortran_file(code)
 
-    assert [proc.name for proc in parsed.procedures] == ["false_if_else", "malformed_if_else"]
+    assert [proc.name for proc in parsed.procedures] == [
+        "false_if_branch",
+        "false_if_else",
+        "malformed_if_branch",
+        "malformed_if_else",
+    ]
 
 def test_statement_function_and_numeric_label_before_execution_part():
     code = """
@@ -261,7 +271,7 @@ end subroutine old_style
 
     assert sig.arguments[0].base_type == "real"
 
-def test_preprocessor_boolean_identifiers_and_stray_directives_from_public_parse():
+def test_preprocessor_boolean_identifiers_are_not_evaluated_by_public_parse():
     code = """
 #if USE_FAST && !USE_SLOW
 subroutine selected_fast()
@@ -279,10 +289,11 @@ subroutine after_stray_directives()
 end subroutine after_stray_directives
 """
 
-    parsed = parse_fortran_file(code, filename="cpp_edges.f90", macro_defines={"USE_FAST": True})
+    parsed = parse_fortran_file(code, filename="cpp_edges.f90")
 
     assert [proc.name for proc in parsed.procedures] == [
         "selected_fast",
+        "selected_slow",
         "after_stray_directives",
     ]
 

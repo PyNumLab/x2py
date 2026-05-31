@@ -12,7 +12,7 @@ from semantics.models import (
     SemanticModule,
     SemanticType,
 )
-from semantics.pyi_parser import _PyiAstParser, convert_pyi_to_ir, load_pyi_file, parse_pyi_text
+from semantics.pyi_parser import _PyiAstParser, convert_pyi_to_ir, load_pyi_file, load_pyi_modules, parse_pyi_text
 from semantics.pyi_printer import emit_module
 from tests._shared.fixture_outputs import FORTRAN_DATA_DIR, FORTRAN_SUFFIXES
 from x2py import parse_fortran_file
@@ -128,6 +128,84 @@ def test_parse_pyi_text_accepts_import_aliases():
             items=[SemanticImportItem(source="delete_input_list", target="delete_input")],
         )
     ]
+
+
+def test_load_pyi_modules_reconciles_opaque_and_edited_external_types(tmp_path: Path):
+    physics = tmp_path / "physics.pyi"
+    types_mod = tmp_path / "types_mod.pyi"
+    physics.write_text(
+        """
+from types_mod import particle
+
+def create_particle() -> Ptr(particle): ...
+
+def move(p: Annotated[Ptr(particle), CompatibleHandle]) -> None: ...
+""",
+        encoding="utf-8",
+    )
+    types_mod.write_text(
+        """
+class particle(Opaque):
+    pass
+""",
+        encoding="utf-8",
+    )
+
+    modules = {module.name: module for module in load_pyi_modules(tmp_path)}
+    opaque = modules["types_mod"].classes[0]
+    create_ref = modules["physics"].functions[0].return_type.metadata["external_type_ref"]
+    move_type = modules["physics"].functions[1].arguments[0].semantic_type
+
+    assert opaque.metadata == {"representation": "opaque"}
+    assert create_ref == {
+        "name": "particle",
+        "local_name": "particle",
+        "origin_module": "types_mod",
+        "wrapped": False,
+        "representation": "opaque",
+    }
+    assert [constraint.name for constraint in move_type.constraints] == ["CompatibleHandle"]
+
+    types_mod.write_text(
+        """
+class particle:
+    mass: Float64
+""",
+        encoding="utf-8",
+    )
+    edited_modules = {module.name: module for module in load_pyi_modules([physics, types_mod])}
+    edited_ref = edited_modules["physics"].functions[0].return_type.metadata["external_type_ref"]
+
+    assert edited_ref["wrapped"] is True
+    assert edited_ref["representation"] == "wrapped"
+    assert edited_modules["types_mod"].classes[0].fields[0].name == "mass"
+
+
+def test_load_pyi_modules_preserves_dotted_module_names_from_directory(tmp_path: Path):
+    package = tmp_path / "shared"
+    package.mkdir()
+    (tmp_path / "physics.pyi").write_text(
+        """
+from shared.types_mod import particle
+
+def move(p: Ptr(particle)) -> None: ...
+""",
+        encoding="utf-8",
+    )
+    (package / "types_mod.pyi").write_text(
+        """
+class particle(Opaque):
+    pass
+""",
+        encoding="utf-8",
+    )
+
+    modules = {module.name: module for module in load_pyi_modules(tmp_path)}
+    particle_ref = modules["physics"].functions[0].arguments[0].semantic_type.metadata["external_type_ref"]
+
+    assert "shared.types_mod" in modules
+    assert particle_ref["origin_module"] == "shared.types_mod"
+    assert particle_ref["representation"] == "opaque"
 
 
 def test_convert_pyi_to_ir_and_import_parser_edge_cases():

@@ -3,6 +3,8 @@
 
 from pathlib import Path
 
+from c_parser import CParser, parse_c_file, parse_c_project
+
 
 def test_parse_c_file_accepts_inline_source_and_returns_typed_model():
     from c_parser import CFile, parse_c_file
@@ -222,14 +224,6 @@ def test_unresolved_typedef_reference_metadata_is_preserved_in_json():
     assert result_type["type"] is None
 
 
-def test_public_c_parser_entrypoints_do_not_include_parser_side_readiness():
-    import c_parser
-
-    assert hasattr(c_parser, "parse_c_file")
-    assert hasattr(c_parser, "parse_c_project")
-    assert not hasattr(c_parser, "assess_c_wrap_readiness")
-
-
 def test_c_parser_instance_entrypoints_match_public_functions():
     from c_parser import CParser, parse_c_file, parse_c_project
 
@@ -238,10 +232,13 @@ def test_c_parser_instance_entrypoints_match_public_functions():
 
     assert parser.visit_file(source, filename="api.h") == parse_c_file(source, filename="api.h")
     assert parser.visit_project({"api.h": source}) == parse_c_project({"api.h": source})
+    assert parser.visit_parsed_project(
+        {"api.h": parser.visit_file(source, filename="api.h")}
+    ) == parse_c_project({"api.h": source})
 
 
 def test_c_parse_error_attributes_and_diagnostic_formatting():
-    from c_parser import CParseError
+    from c_parser import CArray, CComposedType, CInt, CParseError, CPointer, CSourceLocation
 
     err = CParseError(
         "unexpected token",
@@ -261,6 +258,11 @@ def test_c_parse_error_attributes_and_diagnostic_formatting():
     assert "bad.h:2:5: error[CPARSE_ERROR]: unexpected token" in diagnostic
     assert "2 | int broken(;" in diagnostic
     assert "note: parser raised at" in diagnostic
+
+    assert CSourceLocation(filename="api.h").display == "api.h"
+    composed = CComposedType(components=[CPointer(), CArray(bound="4"), CInt()])
+    assert composed.pointer_depth == 1
+    assert composed.array_rank == 1
 
 
 def test_c_parse_error_color_and_no_color_formatting():

@@ -93,6 +93,7 @@ _GCC_LINEMARKER_RE = re.compile(
 _LINE_DIRECTIVE_RE = re.compile(
     r'^\s*#\s*line\s+(?P<line>\d+)(?:\s+(?:"(?P<quoted>(?:[^"\\]|\\.)*)"|(?P<bare>\S+)))?'
 )
+_AGGREGATE_HEADER_ATTRIBUTE_RE = re.compile(r"\b(?:__attribute__?|__declspec(?:__)?)\b")
 
 
 def _source_line(lines: list[str], line_number: int) -> str | None:
@@ -317,8 +318,56 @@ def top_level_partition(text: str, delimiter: str = "=") -> tuple[str, str | Non
     return text.strip(), None
 
 
-def _is_aggregate_definition_header(header: str) -> bool:
+def _balanced_invocation_end(text: str, open_index: int) -> int | None:
+    """Return the offset after one balanced parenthesized invocation."""
+    depth = 0
+    quote = ""
+    escaped = False
+    for index in range(open_index, len(text)):
+        char = text[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = ""
+            continue
+        if char in {'"', "'"}:
+            quote = char
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    return None
+
+
+def _strip_aggregate_header_attributes(header: str) -> str:
+    """Blank attributes that can appear between an aggregate keyword and tag."""
+    characters = list(header)
+    for match in _AGGREGATE_HEADER_ATTRIBUTE_RE.finditer(header):
+        end = match.end()
+        open_index = end
+        while open_index < len(header) and header[open_index].isspace():
+            open_index += 1
+        if open_index < len(header) and header[open_index] == "(":
+            end = _balanced_invocation_end(header, open_index) or end
+        for index in range(match.start(), end):
+            if characters[index] != "\n":
+                characters[index] = " "
+    return "".join(characters)
+
+
+def _is_aggregate_definition_header(
+    header: str,
+    *,
+    tolerate_compiler_extensions: bool = False,
+) -> bool:
     """Identify a tag definition before deciding that a brace starts a body."""
+    if tolerate_compiler_extensions:
+        header = _strip_aggregate_header_attributes(header)
     compact = " ".join(header.split())
     if "(" in compact or "=" in compact:
         return False
@@ -326,9 +375,19 @@ def _is_aggregate_definition_header(header: str) -> bool:
     return any(word in {"struct", "union", "enum"} for word in words)
 
 
-def _is_braced_declaration_header(header: str) -> bool:
+def _is_braced_declaration_header(
+    header: str,
+    *,
+    tolerate_compiler_extensions: bool = False,
+) -> bool:
     """Return whether a brace belongs to a declaration preserved through `;`."""
-    return _is_aggregate_definition_header(header) or top_level_partition(header, "=")[1] is not None
+    return (
+        _is_aggregate_definition_header(
+            header,
+            tolerate_compiler_extensions=tolerate_compiler_extensions,
+        )
+        or top_level_partition(header, "=")[1] is not None
+    )
 
 
 def split_top_level_c_source(
@@ -337,6 +396,7 @@ def split_top_level_c_source(
     *,
     skip_preprocessor: bool = True,
     use_linemarkers: bool = False,
+    tolerate_compiler_extensions: bool = False,
 ) -> list[CTopLevelSegment]:
     """Split C source into top-level declarations and definition headers."""
     stripped = strip_c_comments(source)
@@ -420,7 +480,10 @@ def split_top_level_c_source(
                     block_start_line = start_line
                     block_start_column = start_column
                     block_source_line = start_mapping.source_line
-                    braced_declaration = _is_braced_declaration_header(header)
+                    braced_declaration = _is_braced_declaration_header(
+                        header,
+                        tolerate_compiler_extensions=tolerate_compiler_extensions,
+                    )
             brace_depth = 1
             if not braced_declaration:
                 start_index = None

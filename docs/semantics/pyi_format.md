@@ -418,6 +418,45 @@ exact-reference adaptation, coercion/contract execution or C wrapper lowering.
 The C frontend can generate starter exact-contract `.pyi` output for the
 implemented semantic subset.
 
+## External Opaque Type Stubs
+
+An external source-language type whose owner module is not part of the explicit
+wrapping target is emitted as an owner-module opaque dependency stub. This
+applies to imported Fortran derived types and to C opaque structs from external
+header surfaces:
+
+```python
+# types_mod.pyi
+class particle(Opaque):
+    pass
+```
+
+The importing module references that owner rather than re-exporting the type:
+
+```python
+# physics.pyi
+from types_mod import particle
+
+def move(p: Ptr(particle)) -> None: ...
+```
+
+`emit_module_stubs(...)` produces the complete stub mapping. `load_pyi_modules`
+loads one or more files or directories and reconciles those imports back into
+semantic `external_type_ref` metadata. If the user replaces the opaque owner
+stub with a concrete class body, the imported semantic reference becomes
+`representation="wrapped"` without changing the importing stub.
+
+This file-set round-trip is the editing boundary for future wrapper policy.
+Existing type constraints encoded with `Annotated[...]` are preserved now.
+Additional coercion and executable contract syntax remains deferred.
+
+For C, an unresolved typedef is not automatically opaque: its ABI could be an
+integer, pointer, struct, or another representation. The C frontend emits an
+opaque class when declarations establish that contract, such as a forward
+struct declaration or a private included struct used through pointers. An
+edited `.pyi` file may also state the policy explicitly with `class
+Name(Opaque): pass`.
+
 ## Deferred C Work
 
 The shared model represents the current C semantic conversion subset for

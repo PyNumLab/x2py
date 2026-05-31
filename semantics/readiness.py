@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .models import (
+    EXTERNAL_TYPE_REF_METADATA,
     SemanticArgument,
     SemanticClass,
     SemanticFunction,
@@ -13,7 +14,7 @@ from .models import (
     SemanticModule,
     SemanticType,
 )
-from .pyi_parser import load_pyi_file
+from .pyi_parser import load_pyi_modules
 
 
 __all__ = ("assess_pyi_wrap_readiness", "assess_semantic_wrap_readiness")
@@ -54,8 +55,9 @@ def assess_pyi_wrap_readiness(
     encoding: str = "utf-8",
 ) -> dict:
     """Load one or more edited .pyi files and assess semantic wrap-readiness."""
-    expanded = _expand_pyi_paths(paths)
-    modules = [load_pyi_file(path, encoding=encoding) for path in expanded]
+    raw_paths = [paths] if isinstance(paths, (str, Path)) else list(paths)
+    expanded = _expand_pyi_paths(raw_paths)
+    modules = load_pyi_modules(raw_paths, encoding=encoding)
     return assess_semantic_wrap_readiness(modules, source=[str(path) for path in expanded])
 
 
@@ -338,7 +340,7 @@ class _SemanticReadinessChecker:
             )
             return
 
-        if not self.index.is_known_type(type_name, module):
+        if not self.index.is_known_type(type_name, module) and not _is_external_type_ref(semantic_type):
             self._add_blocker(
                 "unresolved_semantic_types",
                 "Some semantic type references are not declared by the .pyi interface or its imports.",
@@ -584,6 +586,18 @@ def _constant_names(arguments: list[SemanticArgument]) -> set[str]:
 
 def _is_constant(semantic_type: SemanticType) -> bool:
     return any(constraint.name == "Constant" for constraint in semantic_type.constraints)
+
+
+def _is_external_type_ref(semantic_type: SemanticType) -> bool:
+    ref = semantic_type.metadata.get(EXTERNAL_TYPE_REF_METADATA)
+    return (
+        isinstance(ref, dict)
+        and isinstance(ref.get("name"), str)
+        and bool(ref["name"])
+        and isinstance(ref.get("origin_module"), str)
+        and bool(ref["origin_module"])
+        and ref.get("representation") in {"opaque", "wrapped"}
+    )
 
 
 def _shape_expressions(semantic_type: SemanticType) -> list[str]:

@@ -9,6 +9,24 @@ The public wrappers call the same orchestration object:
     parse_c_file(...) -> CParser.visit_file(...) -> CFile
     parse_c_project(...) -> CParser.visit_project(...) -> CProject
 
+Recommended reading order for maintainers:
+
+1. Start from the module-level wrappers: `parse_c_file` and `parse_c_project`.
+2. Read `CParser.visit_file`, `visit_project`, and `visit_parsed_project`.
+3. Follow `_parse_translation_unit`, which dispatches one top-level C segment.
+4. Read the declaration/declarator helpers used by each dispatched segment.
+5. Finish with `_build_project` and the index helpers.
+
+`CParser` is organized in that same order:
+
+- public visitor entrypoints;
+- source locations, diagnostics, macro provenance, and redeclaration merging;
+- declaration-specifier and compiler-extension lexical helpers;
+- recursive declarator grammar and parameter helpers;
+- function and aggregate visitors;
+- translation-unit dispatch and project assembly;
+- thin module-level wrappers backed by `_DEFAULT_PARSER`.
+
 One source file follows this path:
 
     source text/path
@@ -39,7 +57,7 @@ Executable walkthroughs live in
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import re
 from collections.abc import Mapping, Sequence
 from pathlib import Path, PurePosixPath
@@ -108,6 +126,46 @@ _IDENTIFIER_RE = re.compile(r"[A-Za-z_]\w*")
 _STORAGE_CLASSES = {"typedef", "extern", "static", "register", "_Thread_local"}
 _TYPE_QUALIFIERS = {"const", "restrict", "volatile", "_Atomic"}
 _FUNCTION_SPECIFIERS = {"inline", "_Noreturn"}
+_STORAGE_CLASS_ALIASES = {"_tls": "_Thread_local"}
+_COMPILER_KEYWORD_NORMALIZATIONS = {
+    "__thread": "_tls",
+    "__const": "const",
+    "__const__": "const",
+    "__restrict": "restrict",
+    "__restrict__": "restrict",
+    "__volatile": "volatile",
+    "__volatile__": "volatile",
+    "__inline": "inline",
+    "__inline__": "inline",
+    "__forceinline": "inline",
+    "__signed": "signed",
+    "__signed__": "signed",
+}
+_EXTENDED_SCALAR_NORMALIZATIONS = {
+    "__int8": "_xi8",
+    "__int16": "_xi16",
+    "__int32": "_xi32",
+    "__int64": "_xi64",
+    "__int128": "_xi128",
+    "__int128_t": "_xi128t",
+    "__uint128_t": "_xu128t",
+    "__fp16": "_xhf16",
+    "_Float16": "_xf16",
+    "_Float32": "_xf32",
+    "_Float32x": "_xf32x",
+    "_Float64": "_xf64",
+    "_Float64x": "_xf64x",
+    "_Float128": "_xf128",
+    "_Decimal32": "_xd32",
+    "_Decimal64": "_xd64",
+    "_Decimal128": "_xd128",
+}
+_COMPILER_KEYWORD_NORMALIZATIONS.update(_EXTENDED_SCALAR_NORMALIZATIONS)
+_EXTENDED_SCALAR_SPELLINGS = {
+    normalized: spelling
+    for spelling, normalized in _EXTENDED_SCALAR_NORMALIZATIONS.items()
+}
+_EXTENDED_SCALAR_WORDS = set(_EXTENDED_SCALAR_SPELLINGS)
 _TAG_KINDS = {"struct", "union", "enum"}
 _UNSUPPORTED_DECLARATION_MARKERS = (
     "__attribute__",
@@ -119,6 +177,48 @@ _UNSUPPORTED_DECLARATION_MARKERS = (
 _RAW_CONDITIONAL_DIRECTIVE_RE = re.compile(
     r"^\s*#\s*(?P<directive>if|ifdef|ifndef|elif|else|endif)\b"
 )
+_GNU_ATTRIBUTE_KEYWORDS = {"__attribute", "__attribute__"}
+_DECLSPEC_KEYWORDS = {"__declspec", "__declspec__"}
+_ASM_KEYWORDS = {"asm", "__asm", "__asm__"}
+_TYPEOF_KEYWORDS = {"typeof", "__typeof", "__typeof__"}
+_ALIGNMENT_KEYWORDS = {"_Alignas", "alignas"}
+_IGNORABLE_EXTENSION_KEYWORDS = {"__extension__"}
+_CALLING_CONVENTION_KEYWORDS = {
+    "__cdecl",
+    "__fastcall",
+    "__regcall",
+    "__stdcall",
+    "__thiscall",
+    "__vectorcall",
+}
+_IGNORABLE_DECLARATION_KEYWORDS = {
+    "__w64",
+}
+_ABI_DECLARATION_KEYWORDS = {
+    "__ptr32",
+    "__ptr64",
+    "__unaligned",
+}
+_ABI_SIGNIFICANT_ATTRIBUTE_NAMES = {
+    "alias",
+    "align",
+    "aligned",
+    "cdecl",
+    "fastcall",
+    "ifunc",
+    "mode",
+    "ms_abi",
+    "packed",
+    "regcall",
+    "stdcall",
+    "sysv_abi",
+    "thiscall",
+    "thread",
+    "transparent_union",
+    "vector_size",
+    "vectorcall",
+}
+_ATTRIBUTE_NAME_RE = re.compile(r"[A-Za-z_]\w*")
 _PRIMITIVE_WORDS = {
     "void",
     "char",
@@ -216,6 +316,16 @@ class _ParsedDeclarator:
     source_text: str = ""
 
 
+@dataclass(frozen=True)
+class _UnmodeledCompilerExtension:
+    """Ignored compiler syntax whose semantics can matter to generated wrappers."""
+
+    kind: str
+    name: str
+    offset: int
+    message: str
+
+
 class _UnsupportedDeclaratorSyntax(ValueError):
     """Raised internally when a declarator has unconsumed syntax."""
 
@@ -284,6 +394,14 @@ class CParser:
     The instance carries no parse stack; per-call input and preprocessing
     configuration flow explicitly through `visit_file` and `visit_project`.
     See the module sketch and developer tutorial tests for the helper path.
+
+    Class section map:
+    - public file/project visitor entrypoints;
+    - source-location, diagnostic, macro, and redeclaration helpers;
+    - declaration-specifier and compiler-extension helpers;
+    - recursive declarator and parameter grammar helpers;
+    - function and aggregate visitors;
+    - translation-unit dispatch and project assembly.
     """
 
     # ------------------------------------------------------------------
@@ -295,7 +413,6 @@ class CParser:
         source_or_path: str | Path,
         filename: str | None = None,
         *,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
         include_dirs: Sequence[str | Path] | None = None,
         preprocessing: str = "raw",
         encoding: str = "utf-8",
@@ -304,11 +421,8 @@ class CParser:
 
         The current implementation supports raw preprocessing metadata,
         compiler-fed preprocessed text, and the partial grammar subset
-        documented in `docs/c_parser`. `macro_defines` is accepted for API
-        compatibility with compiler-assisted preprocessing, but raw mode does
-        not evaluate conditional branches.
+        documented in `docs/c_parser`.
         """
-        del macro_defines
         source_path: Path | None = None
         if _looks_like_existing_source_path(source_or_path):
             path = Path(source_or_path)
@@ -374,6 +488,7 @@ class CParser:
                 source,
                 filename,
                 use_linemarkers=True,
+                normalize_compiler_extensions=True,
             )
             parsed.functions = functions
             parsed.structs = structs
@@ -400,7 +515,6 @@ class CParser:
         files: Mapping[str, str] | Sequence[str | Path] | str | Path,
         *,
         include_dirs: Sequence[str | Path] | None = None,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
         preprocessing: str = "raw",
         encoding: str = "utf-8",
     ) -> CProject:
@@ -416,13 +530,12 @@ class CParser:
                     source,
                     filename=name,
                     include_dirs=include_dirs,
-                    macro_defines=macro_defines,
                     preprocessing=preprocessing,
                     encoding=encoding,
                 )
                 for name, source in files.items()
             }
-            return self._build_project(parsed_files)
+            return self.visit_parsed_project(parsed_files)
 
         paths: list[Path] = []
         root: Path | None = None
@@ -445,11 +558,25 @@ class CParser:
                 path,
                 filename=key,
                 include_dirs=include_dirs,
-                macro_defines=macro_defines,
                 preprocessing=preprocessing,
                 encoding=encoding,
             )
-        return self._build_project(parsed_files)
+        return self.visit_parsed_project(parsed_files)
+
+    def visit_parsed_project(self, files: Mapping[str, CFile]) -> CProject:
+        """Assemble already parsed translation units into one `CProject`.
+
+        This visitor is useful when an orchestration layer preprocesses each
+        source first and attaches recipe metadata before project resolution.
+
+        Example:
+            >>> parser = CParser()
+            >>> parsed = parser.visit_file("int answer(void);", filename="api.h")
+            >>> project = parser.visit_parsed_project({"api.h": parsed})
+            >>> sorted(project.functions)
+            ['answer']
+        """
+        return self._build_project(dict(files))
 
     # ------------------------------------------------------------------
     # Source locations, diagnostics, and macro provenance
@@ -461,6 +588,7 @@ class CParser:
         seen_types: set[int] = set()
 
         def mark_type(type_: CType | None) -> None:
+            """Mark one reachable type graph as originating in preprocessed text."""
             if type_ is None:
                 return
             if isinstance(type_, CComposedType):
@@ -496,6 +624,7 @@ class CParser:
                 mark_type(type_.type)
 
         def mark_variable(variable: CVariable) -> None:
+            """Mark a variable and recursively mark its declared type."""
             variable.origin = "preprocessed"
             mark_type(variable.type)
 
@@ -567,11 +696,13 @@ class CParser:
 
     @staticmethod
     def _could_start_c_external_declaration(text: str) -> bool:
+        """Return whether `text` begins like a C external declaration."""
         stripped = text.lstrip()
         return bool(stripped) and (stripped[0].isalpha() or stripped[0] == "_")
 
     @staticmethod
     def _raise_for_invalid_top_level_syntax(segment: CTopLevelSegment) -> None:
+        """Raise a focused syntax error for a segment that cannot begin C."""
         text = segment.text.strip()
         if not text:
             return
@@ -1233,13 +1364,17 @@ class CParser:
         function_specifiers: list[str] = []
         type_words: list[str] = []
 
-        for word in words:
-            if word in _STORAGE_CLASSES:
-                storage.append(word)
-            elif word in _TYPE_QUALIFIERS:
-                qualifiers.append(word)
-            elif word in _FUNCTION_SPECIFIERS:
-                function_specifiers.append(word)
+        for raw_word in words:
+            word = self._canonical_primitive_word(raw_word)
+            storage_class = self._canonical_storage_class(word)
+            qualifier = self._canonical_type_qualifier(word)
+            function_specifier = self._canonical_function_specifier(word)
+            if storage_class is not None:
+                storage.append(storage_class)
+            elif qualifier is not None:
+                qualifiers.append(qualifier)
+            elif function_specifier is not None:
+                function_specifiers.append(function_specifier)
             else:
                 type_words.append(word)
 
@@ -1277,12 +1412,28 @@ class CParser:
                 tag_kwargs["is_incomplete"] = True
             type_: CType = tag_type(**tag_kwargs)
         elif type_words:
-            spelling = " ".join(type_words)
+            displayed_type_words = [
+                _EXTENDED_SCALAR_SPELLINGS.get(word, word)
+                for word in type_words
+            ]
+            spelling = " ".join(displayed_type_words)
             primitive = _PRIMITIVE_TYPE_SIGNATURES.get(tuple(sorted(type_words)))
             if primitive is not None:
                 type_ = primitive(
                     qualifiers=self._qualifiers(qualifiers),
                     source_text=" ".join([*qualifiers, *type_words]),
+                )
+            elif (
+                sum(word in _EXTENDED_SCALAR_WORDS for word in type_words) == 1
+                and all(
+                    word in _EXTENDED_SCALAR_WORDS | {"signed", "unsigned", "_Complex"}
+                    for word in type_words
+                )
+            ):
+                type_ = CUnknownType(
+                    spelling=spelling,
+                    qualifiers=self._qualifiers(qualifiers),
+                    source_text=" ".join([*qualifiers, *displayed_type_words]),
                 )
             elif len(type_words) == 1 and type_words[0] not in _PRIMITIVE_WORDS:
                 type_ = CTypedef(
@@ -1319,6 +1470,331 @@ class CParser:
         while end < len(text) and (text[end] == "_" or text[end].isalnum()):
             end += 1
         return text[index:end], end
+
+    @staticmethod
+    def _canonical_storage_class(word: str) -> str | None:
+        """Return the standard spelling for a recognized storage class."""
+        if word in _STORAGE_CLASSES:
+            return word
+        return _STORAGE_CLASS_ALIASES.get(word)
+
+    @staticmethod
+    def _canonical_type_qualifier(word: str) -> str | None:
+        """Return the standard spelling for a recognized type qualifier."""
+        return word if word in _TYPE_QUALIFIERS else None
+
+    @staticmethod
+    def _canonical_function_specifier(word: str) -> str | None:
+        """Return the standard spelling for a recognized function specifier."""
+        return word if word in _FUNCTION_SPECIFIERS else None
+
+    @staticmethod
+    def _canonical_primitive_word(word: str) -> str:
+        """Normalize alternate compiler spellings for primitive type words."""
+        return word
+
+    @staticmethod
+    def _blank_span(characters: list[str], start: int, end: int) -> None:
+        """Blank one syntax span while retaining line and column accounting."""
+        for index in range(start, end):
+            if characters[index] != "\n":
+                characters[index] = " "
+
+    @staticmethod
+    def _replace_span(characters: list[str], start: int, end: int, replacement: str) -> None:
+        """Replace a syntax span with a short token and pad the remaining width."""
+        writable = [index for index in range(start, end) if characters[index] != "\n"]
+        if len(replacement) > len(writable):
+            replacement = "_T"
+        for index, char in zip(writable, replacement):
+            characters[index] = char
+        for index in writable[len(replacement) :]:
+            characters[index] = " "
+
+    @staticmethod
+    def _significant_attribute_names(payload: str) -> list[str]:
+        """Return ABI- or linkage-relevant attribute names from one payload."""
+        names: list[str] = []
+        for raw_name in _ATTRIBUTE_NAME_RE.findall(payload):
+            name = raw_name.strip("_")
+            if name in _ABI_SIGNIFICANT_ATTRIBUTE_NAMES and name not in names:
+                names.append(name)
+        return names
+
+    def _attribute_extension_facts(
+        self,
+        payload: str,
+        *,
+        offset: int,
+    ) -> list[_UnmodeledCompilerExtension]:
+        """Describe ignored attributes whose semantics remain wrapper-relevant."""
+        return [
+            _UnmodeledCompilerExtension(
+                kind="compiler_attribute",
+                name=name,
+                offset=offset,
+                message=(
+                    f"Compiler attribute {name!r} was accepted for parsing but "
+                    "its ABI or linkage semantics are not modeled."
+                ),
+            )
+            for name in self._significant_attribute_names(payload)
+        ]
+
+    @staticmethod
+    def _find_double_bracket_end(text: str, start: int) -> int | None:
+        """Return the end offset after one C23/C++-style `[[...]]` attribute."""
+        index = start + 2
+        quote = ""
+        escaped = False
+        while index < len(text) - 1:
+            char = text[index]
+            if quote:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == quote:
+                    quote = ""
+                index += 1
+                continue
+            if char in {'"', "'"}:
+                quote = char
+                index += 1
+                continue
+            if text[index : index + 2] == "]]":
+                return index + 2
+            index += 1
+        return None
+
+    def _compiler_extension_invocation_end(self, text: str, start: int) -> int:
+        """Return the end of a keyword's optional balanced parenthesized payload."""
+        open_index = self._skip_whitespace(text, start)
+        if open_index >= len(text) or text[open_index] != "(":
+            return start
+        close_index = self._find_matching_delimiter(text, open_index, "(", ")")
+        return close_index + 1 if close_index is not None else start
+
+    def _normalize_compiler_extensions(
+        self,
+        text: str,
+    ) -> tuple[str, list[_UnmodeledCompilerExtension]]:
+        """Remove tolerated compiler syntax while retaining source coordinates.
+
+        The parser extracts wrapper-facing C types, not compiler attribute
+        semantics. Harmless syntax is blanked before grammar parsing. Extensions
+        that can affect ABI, layout, or symbol identity also produce warnings.
+        """
+        characters = list(text)
+        extensions: list[_UnmodeledCompilerExtension] = []
+        index = 0
+        state = "normal"
+        quote = ""
+
+        while index < len(text):
+            char = text[index]
+            nxt = text[index + 1] if index + 1 < len(text) else ""
+            if state == "line_comment":
+                if char == "\n":
+                    state = "normal"
+                index += 1
+                continue
+            if state == "block_comment":
+                if char == "*" and nxt == "/":
+                    state = "normal"
+                    index += 2
+                else:
+                    index += 1
+                continue
+            if state in {"string", "char"}:
+                if char == "\\" and nxt:
+                    index += 2
+                    continue
+                if char == quote:
+                    state = "normal"
+                    quote = ""
+                index += 1
+                continue
+            if char == "/" and nxt == "/":
+                state = "line_comment"
+                index += 2
+                continue
+            if char == "/" and nxt == "*":
+                state = "block_comment"
+                index += 2
+                continue
+            if char in {'"', "'"}:
+                state = "string" if char == '"' else "char"
+                quote = char
+                index += 1
+                continue
+
+            if text[index : index + 2] == "[[":
+                span_end = self._find_double_bracket_end(text, index)
+                if span_end is not None:
+                    extensions.extend(
+                        self._attribute_extension_facts(
+                            text[index + 2 : span_end - 2],
+                            offset=index,
+                        )
+                    )
+                    self._blank_span(characters, index, span_end)
+                    index = span_end
+                    continue
+
+            identifier = self._read_identifier(text, index)
+            if identifier is None:
+                index += 1
+                continue
+            word, word_end = identifier
+
+            if word in _COMPILER_KEYWORD_NORMALIZATIONS:
+                self._replace_span(
+                    characters,
+                    index,
+                    word_end,
+                    _COMPILER_KEYWORD_NORMALIZATIONS[word],
+                )
+                index = word_end
+                continue
+
+            if word in _GNU_ATTRIBUTE_KEYWORDS | _DECLSPEC_KEYWORDS:
+                span_end = self._compiler_extension_invocation_end(text, word_end)
+                if span_end > word_end:
+                    extensions.extend(
+                        self._attribute_extension_facts(
+                            text[word_end:span_end],
+                            offset=index,
+                        )
+                    )
+                else:
+                    span_end = word_end
+                self._blank_span(characters, index, span_end)
+                index = span_end
+                continue
+
+            if word in _ALIGNMENT_KEYWORDS:
+                span_end = self._compiler_extension_invocation_end(text, word_end)
+                if span_end <= word_end:
+                    span_end = word_end
+                extensions.append(
+                    _UnmodeledCompilerExtension(
+                        kind="alignment_specifier",
+                        name=word,
+                        offset=index,
+                        message=(
+                            f"Alignment specifier {word!r} was accepted for parsing "
+                            "but its layout semantics are not modeled."
+                        ),
+                    )
+                )
+                self._blank_span(characters, index, span_end)
+                index = span_end
+                continue
+
+            if word in _ASM_KEYWORDS:
+                payload_start = self._skip_whitespace(text, word_end)
+                while True:
+                    qualifier = self._read_identifier(text, payload_start)
+                    if qualifier is None or qualifier[0] not in {"goto", "volatile", "__volatile", "__volatile__"}:
+                        break
+                    payload_start = self._skip_whitespace(text, qualifier[1])
+                span_end = self._compiler_extension_invocation_end(text, payload_start)
+                if span_end <= payload_start:
+                    span_end = word_end
+                extensions.append(
+                    _UnmodeledCompilerExtension(
+                        kind="asm_label",
+                        name=word,
+                        offset=index,
+                        message=(
+                            "Assembler label syntax was accepted for parsing but "
+                            "the alternate native symbol identity is not modeled."
+                        ),
+                    )
+                )
+                self._blank_span(characters, index, span_end)
+                index = span_end
+                continue
+
+            if word in _TYPEOF_KEYWORDS or word == "_BitInt":
+                span_end = self._compiler_extension_invocation_end(text, word_end)
+                if span_end > word_end:
+                    placeholder = "_typeof" if word in _TYPEOF_KEYWORDS else "_bitint"
+                    extensions.append(
+                        _UnmodeledCompilerExtension(
+                            kind="compiler_type",
+                            name=word,
+                            offset=index,
+                            message=(
+                                f"Compiler type expression {word!r} was accepted as "
+                                "an opaque type placeholder."
+                            ),
+                        )
+                    )
+                    self._replace_span(characters, index, span_end, placeholder)
+                    index = span_end
+                    continue
+
+            if word in _CALLING_CONVENTION_KEYWORDS:
+                extensions.append(
+                    _UnmodeledCompilerExtension(
+                        kind="calling_convention",
+                        name=word,
+                        offset=index,
+                        message=(
+                            f"Calling convention {word!r} was accepted for parsing "
+                            "but its ABI semantics are not modeled."
+                        ),
+                    )
+                )
+                self._blank_span(characters, index, word_end)
+                index = word_end
+                continue
+
+            if word in _ABI_DECLARATION_KEYWORDS:
+                extensions.append(
+                    _UnmodeledCompilerExtension(
+                        kind="compiler_qualifier",
+                        name=word,
+                        offset=index,
+                        message=(
+                            f"Compiler qualifier {word!r} was accepted for parsing "
+                            "but its ABI semantics are not modeled."
+                        ),
+                    )
+                )
+                self._blank_span(characters, index, word_end)
+                index = word_end
+                continue
+
+            if word in _IGNORABLE_EXTENSION_KEYWORDS | _IGNORABLE_DECLARATION_KEYWORDS:
+                self._blank_span(characters, index, word_end)
+                index = word_end
+                continue
+
+            index = word_end
+
+        return "".join(characters), extensions
+
+    def _normalized_extension_segment(
+        self,
+        segment: CTopLevelSegment,
+    ) -> tuple[CTopLevelSegment, list[CDiagnostic]]:
+        """Normalize one segment and report semantically significant omissions."""
+        normalized, extensions = self._normalize_compiler_extensions(segment.text)
+        diagnostics = [
+            CDiagnostic(
+                code="C_UNMODELED_COMPILER_EXTENSION",
+                message=extension.message,
+                severity="warning",
+                location=self._source_location_at(segment, extension.offset),
+                unit_kind=extension.kind,
+                unit_name=extension.name,
+            )
+            for extension in extensions
+        ]
+        return replace(segment, text=normalized), diagnostics
 
     def _find_matching_delimiter(
         self,
@@ -1389,12 +1865,16 @@ class CParser:
                     spec_end = index
                     continue
 
-            if word in _STORAGE_CLASSES or word in _TYPE_QUALIFIERS or word in _FUNCTION_SPECIFIERS:
+            if (
+                self._canonical_storage_class(word) is not None
+                or self._canonical_type_qualifier(word) is not None
+                or self._canonical_function_specifier(word) is not None
+            ):
                 index = end
                 spec_end = end
                 continue
 
-            if word in _PRIMITIVE_WORDS:
+            if self._canonical_primitive_word(word) in _PRIMITIVE_WORDS or word in _EXTENDED_SCALAR_WORDS:
                 consumed_type = True
                 index = end
                 spec_end = end
@@ -1441,9 +1921,10 @@ class CParser:
                 if identifier is None:
                     break
                 word, end = identifier
-                if word not in _TYPE_QUALIFIERS:
+                qualifier = self._canonical_type_qualifier(word)
+                if qualifier is None:
                     break
-                qualifiers.append(word)
+                qualifiers.append(qualifier)
                 index = end
             pointers.append(_PointerOp(qualifiers=qualifiers))
             index = self._skip_whitespace(text, index)
@@ -1458,8 +1939,8 @@ class CParser:
         for word in words:
             if word == "static":
                 is_static = True
-            elif word in _TYPE_QUALIFIERS:
-                qualifiers.append(word)
+            elif self._canonical_type_qualifier(word) is not None:
+                qualifiers.append(self._canonical_type_qualifier(word))
             else:
                 remaining.append(word)
         normalized = " ".join(remaining)
@@ -1763,10 +2244,14 @@ class CParser:
         filename: str | None,
         *,
         use_linemarkers: bool = False,
+        normalize_compiler_extensions: bool = False,
     ) -> None:
         """Raise before top-level splitting hides unsupported K&R declarations."""
         source_lines = source.splitlines()
-        stripped_lines = strip_c_comments(source).splitlines()
+        normalized_source = source
+        if normalize_compiler_extensions:
+            normalized_source, _extensions = self._normalize_compiler_extensions(source)
+        stripped_lines = strip_c_comments(normalized_source).splitlines()
         line_mappings = line_mappings_for_source(
             source,
             filename=filename,
@@ -1919,10 +2404,16 @@ class CParser:
         for index, word in enumerate(words):
             if word not in _TAG_KINDS:
                 continue
-            prefix = words[:index]
+            prefix: list[str] = []
+            for prefix_word in words[:index]:
+                normalized = (
+                    self._canonical_storage_class(prefix_word)
+                    or self._canonical_type_qualifier(prefix_word)
+                )
+                if normalized is None:
+                    return None
+                prefix.append(normalized)
             suffix = words[index + 1 :]
-            if any(item not in _STORAGE_CLASSES | _TYPE_QUALIFIERS for item in prefix):
-                return None
             if len(suffix) > 1:
                 return None
             return word, prefix, suffix[0] if suffix else None
@@ -2489,6 +2980,7 @@ class CParser:
         object_like_macros: set[str] | None = None,
         use_linemarkers: bool = False,
         condition_sets_by_line: Mapping[int, frozenset[str]] | None = None,
+        normalize_compiler_extensions: bool = False,
     ) -> tuple[
         list[CFunction],
         list[CStruct],
@@ -2509,6 +3001,7 @@ class CParser:
             source,
             filename,
             use_linemarkers=use_linemarkers,
+            normalize_compiler_extensions=normalize_compiler_extensions,
         )
 
         functions: list[CFunction] = []
@@ -2526,7 +3019,13 @@ class CParser:
             source,
             filename=filename,
             use_linemarkers=use_linemarkers,
+            tolerate_compiler_extensions=normalize_compiler_extensions,
         ):
+            if normalize_compiler_extensions:
+                segment, extension_diagnostics = self._normalized_extension_segment(segment)
+                diagnostics.extend(extension_diagnostics)
+                if not segment.text.strip():
+                    continue
             self._raise_for_invalid_top_level_syntax(segment)
             macro_dependency = self._segment_macro_dependency(
                 segment,
@@ -2827,16 +3326,19 @@ def parse_c_file(
     source_or_path: str | Path,
     filename: str | None = None,
     *,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     include_dirs: Sequence[str | Path] | None = None,
     preprocessing: str = "raw",
     encoding: str = "utf-8",
 ) -> CFile:
-    """Parse one C source string/path using the default parser instance."""
+    """Parse one C source string/path using the default parser instance.
+
+    Example:
+        >>> parse_c_file("int answer(void);", filename="api.h").functions[0].name
+        'answer'
+    """
     return _DEFAULT_PARSER.visit_file(
         source_or_path,
         filename=filename,
-        macro_defines=macro_defines,
         include_dirs=include_dirs,
         preprocessing=preprocessing,
         encoding=encoding,
@@ -2847,15 +3349,19 @@ def parse_c_project(
     files: Mapping[str, str] | Sequence[str | Path] | str | Path,
     *,
     include_dirs: Sequence[str | Path] | None = None,
-    macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     preprocessing: str = "raw",
     encoding: str = "utf-8",
 ) -> CProject:
-    """Parse multiple C files or a directory using the default parser instance."""
+    """Parse multiple C files or a directory using the default parser instance.
+
+    Example:
+        >>> project = parse_c_project({"api.h": "int answer(void);"})
+        >>> sorted(project.functions)
+        ['answer']
+    """
     return _DEFAULT_PARSER.visit_project(
         files,
         include_dirs=include_dirs,
-        macro_defines=macro_defines,
         preprocessing=preprocessing,
         encoding=encoding,
     )

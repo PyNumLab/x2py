@@ -305,23 +305,18 @@ def test_inline_function_body_in_header_is_recorded_as_definition():
     assert function.end.line == 1
 
 
-def test_function_declaration_attributes_are_diagnosed_until_extension_support_lands():
+def test_function_declaration_attributes_are_tolerated_when_type_shape_is_unchanged():
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
         'int exported(void) __attribute__((visibility("default")));\n'
         "int deprecated(void) [[deprecated]];\n",
         filename="function_attributes.h",
+        preprocessing="compiler",
     )
 
-    assert parsed.functions == []
-    assert [
-        (diagnostic.code, diagnostic.unit_kind, diagnostic.location.line)
-        for diagnostic in parsed.diagnostics
-    ] == [
-        ("C_UNSUPPORTED_DECLARATION", "attribute_declaration", 1),
-        ("C_UNSUPPORTED_DECLARATION", "attribute_declaration", 2),
-    ]
+    assert [function.name for function in parsed.functions] == ["exported", "deprecated"]
+    assert parsed.diagnostics == []
 
 
 def test_conflicting_function_prototypes_report_diagnostic():

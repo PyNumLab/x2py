@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from .models import (
+    EXTERNAL_TYPE_REF_METADATA,
     ProjectionMapping,
     SemanticArgument,
     SemanticArrayContract,
@@ -17,9 +19,10 @@ from .models import (
     SemanticModule,
     SemanticStorageContract,
     SemanticType,
+    _iter_module_semantic_types,
 )
 
-__all__ = ("convert_pyi_to_ir", "load_pyi_file", "parse_pyi_text")
+__all__ = ("convert_pyi_to_ir", "load_pyi_file", "load_pyi_modules", "parse_pyi_text")
 
 
 def load_pyi_file(path: str | Path, *, module_name: str | None = None, encoding: str = "utf-8") -> SemanticModule:
@@ -31,13 +34,43 @@ def load_pyi_file(path: str | Path, *, module_name: str | None = None, encoding:
     )
 
 
+def load_pyi_modules(
+    paths: str | Path | Iterable[str | Path],
+    *,
+    encoding: str = "utf-8",
+) -> list[SemanticModule]:
+    raw_paths = [paths] if isinstance(paths, (str, Path)) else list(paths)
+    expanded: dict[Path, str | None] = {}
+    for raw_path in raw_paths:
+        path = Path(raw_path)
+        if path.is_dir():
+            for item in path.rglob("*.pyi"):
+                if not item.is_file():
+                    continue
+                module_name = ".".join(item.relative_to(path).with_suffix("").parts)
+                previous = expanded.get(item)
+                if previous is not None and previous != module_name:
+                    raise ValueError(f"Ambiguous module name for {item}: {previous!r} or {module_name!r}")
+                expanded[item] = module_name
+        else:
+            expanded.setdefault(path, None)
+    return _reconcile_external_type_refs(
+        [
+            load_pyi_file(path, module_name=module_name, encoding=encoding)
+            for path, module_name in sorted(expanded.items())
+        ]
+    )
+
+
 def convert_pyi_to_ir(source: str, *, module_name: str = "<pyi>") -> SemanticModule:
     return parse_pyi_text(source, module_name=module_name)
 
 
 def parse_pyi_text(source: str, *, module_name: str = "<pyi>", filename: str = "<pyi>") -> SemanticModule:
     tree = ast.parse(source or "\n", filename=filename)
-    return _PyiAstParser(module_name=module_name).parse(tree)
+    module = _PyiAstParser(module_name=module_name).parse(tree)
+    _annotate_imported_external_type_refs(module)
+    return module
 
 
 @dataclass
@@ -71,13 +104,15 @@ class _PyiAstParser:
     def class_def(self, node: ast.ClassDef, *, visibility: str) -> SemanticClass:
         body = _ClassBodyVisitor(self)
         body.visit_body(node.body)
+        base_classes = [ast.unparse(base) for base in node.bases]
 
         return SemanticClass(
             name=node.name,
             native_name=node.name,
             fields=body.fields,
             methods=body.methods,
-            base_classes=[ast.unparse(base) for base in node.bases],
+            base_classes=base_classes,
+            metadata={"representation": "opaque"} if "Opaque" in base_classes else {},
             visibility=visibility,
         )
 
@@ -907,3 +942,64 @@ class _ModuleVisitor(ast.NodeVisitor):
 def _node_text(node: ast.AST) -> str:
     text = ast.unparse(node)
     return text.splitlines()[0] if text else type(node).__name__
+
+
+def _annotate_imported_external_type_refs(module: SemanticModule) -> None:
+    imported = _imported_type_refs(module)
+    for semantic_type in _iter_module_semantic_types(module):
+        imported_ref = imported.get(semantic_type.name)
+        if imported_ref is None:
+            continue
+        origin_module, source_name, local_name = imported_ref
+        semantic_type.metadata.setdefault(
+            EXTERNAL_TYPE_REF_METADATA,
+            {
+                "name": source_name,
+                "local_name": local_name,
+                "origin_module": origin_module,
+                "wrapped": False,
+                "representation": "opaque",
+            },
+        )
+
+
+def _imported_type_refs(module: SemanticModule) -> dict[str, tuple[str, str, str]]:
+    imported: dict[str, tuple[str, str, str]] = {}
+    for imp in module.imports:
+        if isinstance(imp, SemanticImport):
+            for item in imp.items:
+                local_name = item.target or item.source
+                imported[local_name] = (imp.module, item.source, local_name)
+            continue
+        for item in imp.split(","):
+            module_name, _, alias = item.strip().partition(" as ")
+            visible_name = alias or module_name
+            imported[visible_name] = (module_name, visible_name, visible_name)
+
+    for semantic_type in _iter_module_semantic_types(module):
+        if "." not in semantic_type.name:
+            continue
+        module_name, type_name = semantic_type.name.rsplit(".", 1)
+        visible_module = module_name.split(".", 1)[0]
+        imported_module = imported.get(visible_module)
+        if imported_module is not None:
+            imported[semantic_type.name] = (imported_module[0], type_name, semantic_type.name)
+    return imported
+
+
+def _reconcile_external_type_refs(modules: list[SemanticModule]) -> list[SemanticModule]:
+    definitions = {
+        (module.name, cls.name): cls
+        for module in modules
+        for cls in module.classes
+    }
+    for module in modules:
+        for semantic_type in _iter_module_semantic_types(module):
+            ref = semantic_type.metadata.get(EXTERNAL_TYPE_REF_METADATA)
+            if not isinstance(ref, dict):
+                continue
+            cls = definitions.get((ref.get("origin_module"), ref.get("name")))
+            wrapped = cls is not None and "Opaque" not in cls.base_classes
+            ref["wrapped"] = wrapped
+            ref["representation"] = "wrapped" if wrapped else "opaque"
+    return modules

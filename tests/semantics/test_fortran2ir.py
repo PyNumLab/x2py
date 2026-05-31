@@ -16,6 +16,7 @@ from fortran_parser.models import (
     FortranVariable,
 )
 from x2py import parse_fortran_file as parse_fortran_source
+from x2py import parse_fortran_project
 
 from semantics.fortran2ir import (
     FortranToIRConverter,
@@ -24,6 +25,7 @@ from semantics.fortran2ir import (
     collect_semantic_compile_time_requirements,
     fortran_file_to_semantic_modules,
     fortran_module_to_semantic_module,
+    fortran_project_to_semantic_modules,
     resolve_semantic_compile_time_values,
 )
 from semantics import models as semantic_models
@@ -1078,6 +1080,70 @@ end subroutine scale
     assert func.projection[0].python_position == 0
     assert func.projection[1].python_position == 1
     assert func.projection[1].result_position is None
+
+
+def test_imported_derived_type_is_an_opaque_external_reference_by_default():
+    parsed = parse_fortran_source(
+        """
+module physics
+  use types_mod, only: particle
+contains
+  subroutine move(p)
+    type(particle), intent(inout) :: p
+  end subroutine move
+end module physics
+"""
+    )
+
+    module = fortran_module_to_semantic_module(parsed)
+    particle = get_function(module, "move").arguments[0].semantic_type
+
+    assert module.classes == []
+    assert particle.storage.kind == "reference"
+    assert particle.metadata["external_type_ref"] == {
+        "name": "particle",
+        "local_name": "particle",
+        "origin_module": "types_mod",
+        "wrapped": False,
+        "representation": "opaque",
+    }
+
+
+def test_explicit_project_target_resolves_imported_derived_type_without_reexport():
+    project = parse_fortran_project(
+        {
+            "types_mod.f90": """
+module types_mod
+  type :: particle
+    real :: mass
+  end type particle
+end module types_mod
+""",
+            "physics.f90": """
+module physics
+  use types_mod, only: particle
+contains
+  subroutine move(p)
+    type(particle), intent(inout) :: p
+  end subroutine move
+end module physics
+""",
+        }
+    )
+
+    modules = {module.name: module for module in fortran_project_to_semantic_modules(project)}
+    particle = get_function(modules["physics"], "move").arguments[0].semantic_type
+
+    assert [cls.name for cls in modules["types_mod"].classes] == ["particle"]
+    assert modules["physics"].classes == []
+    assert sum(cls.name == "particle" for module in modules.values() for cls in module.classes) == 1
+    assert particle.metadata["external_type_ref"] == {
+        "name": "particle",
+        "local_name": "particle",
+        "origin_module": "types_mod",
+        "wrapped": True,
+        "representation": "wrapped",
+    }
 
 
 def test_semantic_function_projection_equality_and_placeholders():

@@ -32,6 +32,11 @@ semantic IR used by Fortran and edited `.pyi` files.
   variables through the `Constant` constraint.
 - Struct definitions become `SemanticClass` entries. Incomplete structs become
   opaque classes and may be used through direct `Ptr(...)` identity contracts.
+- Explicit multi-header conversion resolves a struct to the header that defines
+  it. Other generated stubs import that owner class instead of emitting
+  duplicate definitions.
+- Structs originating from private included headers remain usable through
+  generated owner-module `class Name(Opaque): pass` dependency stubs.
 - Declared C arrays, including adjusted array parameters, become semantic array
   storage contracts with C order for rank greater than one.
 - Pointers become explicit `SemanticStorageContract` pointer/reference
@@ -51,7 +56,7 @@ The converter does not silently invent wrapper policy. It attaches
 - mutable numeric or `void *` pointer parameters without ownership,
   scalar-reference, or array policy;
 - arrays with unknown extents;
-- incomplete structs used by value;
+- incomplete or external opaque structs used by value;
 - unions used in semantic signatures;
 - `long double`, `volatile`, `_Atomic`, bitfields, and unsupported declarator
   compositions.
@@ -61,4 +66,5 @@ The current C semantic path supports `--language c --semantics`,
 `--language c --pyi` output for this supported subset. Generated stubs remain
 conservative: ambiguous ownership, callback, ABI-extension, and Pythonic
 projection policy stays out of the generated `.pyi` until supplied by the
-semantic model or an edited interface.
+semantic model or an edited interface. In particular, an unresolved typedef is
+not assumed to be opaque because its ABI representation is unknown.

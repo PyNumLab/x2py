@@ -21,7 +21,7 @@ import shlex
 import subprocess
 import tempfile
 
-from .preprocessing import PreprocessingConfig, validate_macro_name
+from .preprocessing import PreprocessingConfig, PreprocessingError, validate_macro_name
 
 
 class FortranTypeProbeError(ValueError):
@@ -400,7 +400,7 @@ def main(argv: list[str] | None = None) -> int:
             args.expressions,
             runner=args.runner or None,
         )
-    except ValueError as exc:
+    except (PreprocessingError, ValueError) as exc:
         parser.error(str(exc))
     print(json.dumps(report.to_dict(), indent=2))
     return 0

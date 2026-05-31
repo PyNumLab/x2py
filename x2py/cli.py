@@ -7,15 +7,15 @@ import sys
 from dataclasses import asdict, fields, is_dataclass
 from pathlib import Path
 
-from c_parser.cli import expand_c_paths, format_c_report, parse_c_report
+from c_parser.cli import attach_preprocessing_recipe, expand_c_paths, format_c_report, parse_c_report
 from c_parser.models import CParseError
 from c_parser.parser import CParser
 from fortran_parser.models import FortranParseError
 from fortran_parser.parser import FortranParser
 from fortran_parser.cli import _format_report
-from semantics.c2ir import c_file_to_semantic_modules
+from semantics.c2ir import c_project_to_semantic_modules
 from semantics.fortran2ir import fortran_file_to_semantic_modules
-from semantics.pyi_parser import load_pyi_file
+from semantics.pyi_parser import load_pyi_modules
 from semantics.readiness import assess_semantic_wrap_readiness
 from x2py.preprocessing import (
     PreprocessingConfig,
@@ -93,6 +93,17 @@ def _expand_readiness_paths(paths: list[str]) -> list[Path]:
     return sorted(set(expanded))
 
 
+def _expand_pyi_paths(paths: list[str]) -> list[Path]:
+    expanded: list[Path] = []
+    for raw in paths:
+        p = Path(raw)
+        if p.is_dir():
+            expanded.extend(_collect_pyi_extensions(p))
+        elif p.suffix.lower() == ".pyi":
+            expanded.append(p)
+    return sorted(set(expanded))
+
+
 def _resolve_language(
     paths: list[str],
     requested: str | None,
@@ -147,18 +158,16 @@ def _resolve_language(
 def _fortran_source_for_path(
     path: Path,
     preprocessing: PreprocessingConfig,
-) -> tuple[str, dict[str, int | str] | None, dict[str, object] | None]:
+) -> tuple[str, dict[str, object] | None]:
     if preprocessing.uses_compiler:
         source, recipe = run_compiler_preprocessor_with_recipe(
             path,
             language="fortran",
             config=preprocessing,
         )
-        return source, None, recipe.to_dict()
-    macro_defines = preprocessing.fortran_macro_defines()
+        return source, recipe.to_dict()
     return (
         path.read_text(encoding="utf-8"),
-        macro_defines or None,
         preprocessing.fortran_internal_recipe(path),
     )
 
@@ -203,8 +212,20 @@ def _parse_c_path(
         include_dirs=preprocessing.include_dirs,
         preprocessing=_c_parser_preprocessing_mode(preprocessing),
     )
-    parsed.preprocessing_recipe = preprocessing_recipe
+    attach_preprocessing_recipe(parsed, preprocessing_recipe)
     return parsed
+
+
+def _parse_c_project(
+    paths: list[str],
+    preprocessing: PreprocessingConfig,
+):
+    parser = CParser()
+    parsed_files = {
+        str(path): _parse_c_path(parser, path, preprocessing)
+        for path in expand_c_paths(paths)
+    }
+    return parser.visit_parsed_project(parsed_files)
 
 
 def _parse_report(paths: list[str], preprocessing: PreprocessingConfig | None = None) -> dict[str, dict]:
@@ -212,8 +233,8 @@ def _parse_report(paths: list[str], preprocessing: PreprocessingConfig | None = 
     out: dict[str, dict] = {}
     parser = FortranParser()
     for p in _expand_paths(paths):
-        code, macro_defines, preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
-        parsed = parser.visit_file(code, filename=str(p), macro_defines=macro_defines)
+        code, preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
+        parsed = parser.visit_file(code, filename=str(p))
         payload = {
             "signatures": [_to_dict_no_parent(s) for s in parsed.procedures],
             "types": [_to_dict_no_parent(t) for t in parsed.derived_types],
@@ -235,44 +256,109 @@ def _semantic_report(
     language: str = "fortran",
 ) -> dict[str, dict]:
     from semantics.fortran2ir import fortran_module_to_semantic_module
-    from semantics.pyi_printer import emit_module
+    from semantics.pyi_printer import emit_module_stubs
 
     preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
     if language == "c":
-        parser = CParser()
+        project = _parse_c_project(paths, preprocessing)
+        converted_files = {
+            module.origin.native_name: [module]
+            for module in c_project_to_semantic_modules(project)
+        }
+        available_modules = [
+            module
+            for modules in converted_files.values()
+            for module in modules
+        ]
         for p in expand_c_paths(paths):
-            parsed = _parse_c_path(parser, p, preprocessing)
-            modules = c_file_to_semantic_modules(parsed)
+            modules = converted_files[str(p)]
+            stubs = emit_module_stubs(modules, available_modules=available_modules)
+            primary_names = {module.name for module in modules}
             out[str(p)] = {
                 "semantic_modules": [asdict(module) for module in modules],
-                "pyi": "\n\n".join(emit_module(module) for module in modules).strip(),
+                "pyi": "\n\n".join(stubs[module.name] for module in modules).strip(),
             }
+            dependencies = {
+                module_name: text
+                for module_name, text in stubs.items()
+                if module_name not in primary_names
+            }
+            if dependencies:
+                out[str(p)]["pyi_dependencies"] = dependencies
         return out
 
     parser = FortranParser()
+    parsed_files = []
     for p in _expand_paths(paths):
-        code, macro_defines, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
-        fobj = parser.visit_file(code, filename=str(p), macro_defines=macro_defines)
+        code, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
+        fobj = parser.visit_file(code, filename=str(p))
+        parsed_files.append((p, fobj))
+    wrapped_derived_types = _fortran_wrapped_derived_types(fobj for _p, fobj in parsed_files)
+    converted_files = []
+    for p, fobj in parsed_files:
         compile_time_values = _fortran_compile_time_values(fobj, preprocessing)
         modules = [
-            fortran_module_to_semantic_module(m, compile_time_values=compile_time_values)
+            fortran_module_to_semantic_module(
+                m,
+                compile_time_values=compile_time_values,
+                wrapped_derived_types=wrapped_derived_types,
+            )
             for m in fobj.modules
         ]
+        converted_files.append((p, modules))
+    available_modules = [module for _p, modules in converted_files for module in modules]
+    for p, modules in converted_files:
+        stubs = emit_module_stubs(modules, available_modules=available_modules)
+        primary_names = {module.name for module in modules}
         out[str(p)] = {
             "semantic_modules": [asdict(m) for m in modules],
-            "pyi": "\n\n".join(emit_module(m) for m in modules).strip(),
+            "pyi": "\n\n".join(stubs[module.name] for module in modules).strip(),
         }
+        dependencies = {
+            module_name: text
+            for module_name, text in stubs.items()
+            if module_name not in primary_names
+        }
+        if dependencies:
+            out[str(p)]["pyi_dependencies"] = dependencies
     return out
 
 
 def _format_pyi_report(semantic_report: dict[str, dict]) -> str:
     lines: list[str] = []
+    emitted_dependencies: set[str] = set()
     for fname, payload in semantic_report.items():
         lines.append(f"File: {fname}")
         lines.append(payload.get("pyi") or "<no module declarations found>")
         lines.append("")
+        for module_name, text in payload.get("pyi_dependencies", {}).items():
+            if module_name in emitted_dependencies:
+                continue
+            emitted_dependencies.add(module_name)
+            lines.append(f"Dependency stub: {module_name}.pyi")
+            lines.append(text)
+            lines.append("")
     return "\n".join(lines).rstrip()
+
+
+def _write_pyi_dependencies(
+    semantic_report: dict[str, dict],
+    *,
+    output_dir: Path | None = None,
+) -> None:
+    outputs: dict[Path, str] = {}
+    for fname, payload in semantic_report.items():
+        parent = output_dir or Path(fname).parent
+        for module_name, text in payload.get("pyi_dependencies", {}).items():
+            path = parent.joinpath(*module_name.split(".")).with_suffix(".pyi")
+            existing = outputs.get(path)
+            if existing is not None and existing != text:
+                raise ValueError(f"Conflicting generated dependency stub for {path}")
+            outputs[path] = text
+    for path, text in outputs.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text + "\n", encoding="utf-8")
 
 
 def _wrap_readiness_report(
@@ -284,39 +370,89 @@ def _wrap_readiness_report(
     preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
     if language == "c":
-        parser = CParser()
-        for p in expand_c_paths(paths):
-            parsed = _parse_c_path(parser, p, preprocessing)
-            modules = c_file_to_semantic_modules(parsed)
-            out[str(p)] = {
-                "source_kind": "c",
-                "semantic_modules": [asdict(module) for module in modules],
-                "wrap_readiness": assess_semantic_wrap_readiness(modules, source=str(p)),
+        c_paths = [
+            path
+            for path in expand_c_paths(paths)
+            if path.suffix.lower() != ".pyi"
+        ]
+        if c_paths:
+            project = _parse_c_project([str(path) for path in c_paths], preprocessing)
+            converted_files = {
+                module.origin.native_name: [module]
+                for module in c_project_to_semantic_modules(project)
             }
+            for p in c_paths:
+                modules = converted_files[str(p)]
+                out[str(p)] = {
+                    "source_kind": "c",
+                    "semantic_modules": [asdict(module) for module in modules],
+                    "wrap_readiness": assess_semantic_wrap_readiness(modules, source=str(p)),
+                }
+        out.update(_pyi_readiness_report(paths))
         return out
 
     parser = FortranParser()
-    for p in _expand_readiness_paths(paths):
-        if p.suffix.lower() == ".pyi":
-            modules = [load_pyi_file(p)]
-            source_kind = "pyi"
-        else:
-            code, macro_defines, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
-            parsed = parser.visit_file(code, filename=str(p), macro_defines=macro_defines)
-            compile_time_values = _fortran_compile_time_values(parsed, preprocessing)
-            modules = fortran_file_to_semantic_modules(
-                parsed,
-                standalone_module_name=p.stem,
-                compile_time_values=compile_time_values,
-            )
-            source_kind = "fortran"
+    expanded_paths = [
+        path
+        for path in _expand_readiness_paths(paths)
+        if path.suffix.lower() != ".pyi"
+    ]
+    parsed_files = {}
+    for p in expanded_paths:
+        code, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
+        parsed_files[p] = parser.visit_file(code, filename=str(p))
+    wrapped_derived_types = _fortran_wrapped_derived_types(parsed_files.values())
+
+    for p in expanded_paths:
+        parsed = parsed_files[p]
+        compile_time_values = _fortran_compile_time_values(parsed, preprocessing)
+        modules = fortran_file_to_semantic_modules(
+            parsed,
+            standalone_module_name=p.stem,
+            compile_time_values=compile_time_values,
+            wrapped_derived_types=wrapped_derived_types,
+        )
 
         out[str(p)] = {
-            "source_kind": source_kind,
+            "source_kind": "fortran",
             "semantic_modules": [asdict(module) for module in modules],
             "wrap_readiness": assess_semantic_wrap_readiness(modules, source=str(p)),
         }
+    out.update(_pyi_readiness_report(paths))
     return out
+
+
+def _pyi_readiness_report(paths: list[str]) -> dict[str, dict]:
+    """Load one edited `.pyi` file set and report each interface path."""
+
+    pyi_paths = _expand_pyi_paths(paths)
+    if not pyi_paths:
+        return {}
+    modules = load_pyi_modules(
+        [
+            raw
+            for raw in paths
+            if Path(raw).is_dir() or Path(raw).suffix.lower() == ".pyi"
+        ]
+    )
+    return {
+        str(path): {
+            "source_kind": "pyi",
+            "semantic_modules": [asdict(module) for module in modules],
+            "wrap_readiness": assess_semantic_wrap_readiness(modules, source=str(path)),
+        }
+        for path in pyi_paths
+    }
+
+
+def _fortran_wrapped_derived_types(parsed_files) -> set[tuple[str, str]]:
+    return {
+        (dtype.module.lower(), dtype.name.lower())
+        for parsed in parsed_files
+        for module in parsed.modules
+        for dtype in module.derived_types
+        if dtype.module
+    }
 
 
 def _fortran_compile_time_values(
@@ -413,31 +549,43 @@ def _build_preprocessing_config(args: argparse.Namespace, parser: argparse.Argum
         mode=args.preprocess,
         compiler=args.compiler,
         compile_commands=args.compile_commands,
+        adapter=args.preprocessor_adapter,
+        command_template=args.preprocess_template,
         include_dirs=list(args.include_dirs or []),
         defines=defines,
         undefs=undefs,
         std=args.std,
         compiler_args=list(args.compiler_args or []),
+        include_exposure=args.include_exposure,
+        public_includes=list(args.public_includes or []),
+        private_includes=list(args.private_includes or []),
     )
 
     compiler_only_flags = [
         ("--compiler", args.compiler),
         ("--compile-commands", args.compile_commands),
+        ("--preprocessor-adapter", None if args.preprocessor_adapter == "auto" else args.preprocessor_adapter),
+        ("--preprocess-template", args.preprocess_template),
         ("--std", args.std),
         ("--compiler-arg", args.compiler_args),
+        ("--include-exposure", None if args.include_exposure == "reachable-project" else args.include_exposure),
+        ("--public-include", args.public_includes),
+        ("--private-include", args.private_includes),
     ]
     for option, value in compiler_only_flags:
         if value and not config.uses_compiler:
             parser.error(f"{option} requires --preprocess compiler")
 
-    if config.uses_compiler and not config.compiler and not config.compile_commands:
+    if config.uses_compiler and config.command_template and config.adapter != "command-template":
+        parser.error("--preprocess-template requires --preprocessor-adapter command-template")
+    if config.uses_compiler and not config.compiler and not config.compile_commands and not config.command_template:
         parser.error("--preprocess compiler requires --compiler with an exact executable, for example gcc-13 or /usr/bin/clang-18")
-    if config.compile_commands and args.language != "c":
-        parser.error("--compile-commands is only supported with --language c")
     if config.compile_commands and not config.uses_compiler:
         parser.error("--compile-commands requires --preprocess compiler")
     if args.language == "c" and not config.uses_compiler and (defines or undefs):
         parser.error("-D/--define and -U/--undef affect C only with --preprocess compiler; raw C mode records source macros without selecting branches")
+    if args.language == "fortran" and not config.uses_compiler and (defines or undefs):
+        parser.error("-D/--define and -U/--undef affect Fortran only with --preprocess compiler; internal Fortran parsing does not evaluate CPP branches")
     if args.language == "fortran" and not config.uses_compiler and config.include_dirs:
         parser.error("-I/--include-dir affects Fortran only with --preprocess compiler")
     return config
@@ -497,10 +645,10 @@ def main() -> int:
             "    python -m x2py path/to/api.c --language c --parse --preprocess compiler --compiler /usr/bin/gcc-13 --compiler-arg=--sysroot=/opt/sdk\n"
             "  Parse C with compile_commands.json for project flags:\n"
             "    python -m x2py path/to/api.c --language c --parse --preprocess compiler --compile-commands build/compile_commands.json\n"
-            "  Parse Fortran with internal macro branch selection:\n"
-            "    python -m x2py path/to/file.F90 --parse -D USE_MPI -U DEBUG\n"
             "  Parse Fortran with an exact compiler executable:\n"
             "    python -m x2py path/to/file.F90 --parse --preprocess compiler --compiler /usr/bin/gfortran-12 -I include -D USE_MPI\n"
+            "  Parse with a custom preprocessing command template:\n"
+            "    python -m x2py path/to/api.h --language c --parse --preprocess compiler --preprocessor-adapter command-template --preprocess-template 'cc -E {include_dirs} {defines} {source}'\n"
             "  Write parser JSON:\n"
             "    python -m x2py path/to/file.f90 --parse --json --out report.json\n"
             "  Write one JSON file next to each source:\n"
@@ -540,10 +688,16 @@ def main() -> int:
         choices=("internal", "compiler"),
         default="internal",
         help=(
-            "Preprocessing mode. 'internal' keeps the current lightweight parser preprocessing "
-            "(Fortran macro selection, C raw directive metadata). 'compiler' runs the exact "
+            "Preprocessing mode. 'internal' parses plain or already-expanded source without CPP branch selection. "
+            "'compiler' runs the exact "
             "compiler/preprocessor configured by --compiler or --compile-commands."
         ),
+    )
+    parser.add_argument(
+        "--preprocessor-adapter",
+        choices=("auto", "gcc-compatible-c", "gnu-fortran", "command-template"),
+        default="auto",
+        help="Compiler adapter family. Use command-template for unsupported compiler families.",
     )
     parser.add_argument(
         "--compiler",
@@ -555,7 +709,12 @@ def main() -> int:
     parser.add_argument(
         "--compile-commands",
         metavar="PATH",
-        help="C compile_commands.json database used with --language c --preprocess compiler.",
+        help="compile_commands.json database used with --preprocess compiler.",
+    )
+    parser.add_argument(
+        "--preprocess-template",
+        metavar="TEMPLATE",
+        help="Custom preprocessing command template. Supported placeholders include {source}, {include_dirs}, {defines}, {undefs}, {standard}, and {compiler_args}.",
     )
     parser.add_argument(
         "-I",
@@ -592,6 +751,26 @@ def main() -> int:
         action="append",
         metavar="ARG",
         help="Raw compiler preprocessing argument. Use --compiler-arg=-target for values starting with '-'.",
+    )
+    parser.add_argument(
+        "--include-exposure",
+        choices=("reachable-project", "roots-only"),
+        default="reachable-project",
+        help="Public wrapper exposure policy for reachable included files.",
+    )
+    parser.add_argument(
+        "--public-include",
+        dest="public_includes",
+        action="append",
+        metavar="PATH_OR_PATTERN",
+        help="Force a matched included file to be public in wrapper output.",
+    )
+    parser.add_argument(
+        "--private-include",
+        dest="private_includes",
+        action="append",
+        metavar="PATH_OR_PATTERN",
+        help="Force a matched included file to be private in wrapper output.",
     )
     parser.add_argument(
         "--show-vars",
@@ -674,6 +853,21 @@ def main() -> int:
             raise
         print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
         return 1
+    except PreprocessingError as exc:
+        if args.debug or _env_flag("X2PY_DEBUG"):
+            raise
+        if exc.diagnostics:
+            for diagnostic in exc.diagnostics:
+                location = diagnostic.path or "<preprocessor>"
+                if diagnostic.line is not None:
+                    location = f"{location}:{diagnostic.line}"
+                print(
+                    f"{location}: error[{diagnostic.category}]: {diagnostic.message}",
+                    file=sys.stderr,
+                )
+        else:
+            print(f"x2py: error[{exc.category}]: {exc}", file=sys.stderr)
+        return 1
     except (SyntaxError, ValueError) as exc:
         if args.debug or _env_flag("X2PY_DEBUG"):
             raise
@@ -700,9 +894,11 @@ def main() -> int:
             if args.out:
                 pyi_text = "\n\n".join((report.get("pyi") or "") for report in (semantic_payload or {}).values()).strip()
                 Path(args.out).write_text(pyi_text + "\n", encoding="utf-8")
+                _write_pyi_dependencies(semantic_payload or {}, output_dir=Path(args.out).parent)
             else:
                 for fname, report in (semantic_payload or {}).items():
                     Path(fname).with_suffix(".pyi").write_text((report.get("pyi") or "") + "\n", encoding="utf-8")
+                _write_pyi_dependencies(semantic_payload or {})
         else:
             if args.out:
                 Path(args.out).write_text(json.dumps(payload, indent=2), encoding="utf-8")

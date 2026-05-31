@@ -498,7 +498,6 @@ def test_function_type_discards_placeholder_parameter_names():
     signature = type_.components[1]
     assert isinstance(signature, CFunctionType)
     assert len(signature.parameter_types) == 2
-    assert not hasattr(signature, "parameters")
 
 
 def test_conflicting_function_pointer_typedefs_report_diagnostic():
@@ -548,7 +547,7 @@ int direct(void), *value;
     ]
 
 
-def test_unimplemented_declaration_extensions_are_diagnosed_not_partially_modeled():
+def test_declaration_attributes_are_tolerated_and_layout_omissions_are_diagnosed():
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
@@ -556,15 +555,17 @@ def test_unimplemented_declaration_extensions_are_diagnosed_not_partially_modele
 int visible __attribute__((visibility("default")));
 int outdated [[deprecated]];
 _Alignas(16) int aligned_value;
-""",
+        """,
         filename="extensions.h",
+        preprocessing="compiler",
     )
 
-    assert parsed.variables == []
-    assert [diagnostic.unit_kind for diagnostic in parsed.diagnostics] == [
-        "attribute_declaration",
-        "attribute_declaration",
-        "alignment_declaration",
+    assert [variable.name for variable in parsed.variables] == ["visible", "outdated", "aligned_value"]
+    assert [
+        (diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name)
+        for diagnostic in parsed.diagnostics
+    ] == [
+        ("C_UNMODELED_COMPILER_EXTENSION", "alignment_specifier", "_Alignas"),
     ]
 
 
@@ -623,19 +624,23 @@ def test_braced_and_designated_initializer_declarations_preserve_source_text():
     assert parsed.diagnostics == []
 
 
-def test_unconsumed_declarator_suffixes_are_diagnosed_not_silently_discarded():
+def test_asm_declarator_suffixes_are_tolerated_with_symbol_identity_diagnostics():
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
         'extern int retained, pinned asm("r0");\nint run(int value asm("r0"));\n',
         filename="declarator_extensions.h",
+        preprocessing="compiler",
     )
 
-    assert [variable.name for variable in parsed.variables] == ["retained"]
-    assert parsed.functions == []
-    assert [diagnostic.code for diagnostic in parsed.diagnostics] == [
-        "C_UNSUPPORTED_DECLARATOR",
-        "C_UNSUPPORTED_DECLARATOR",
+    assert [variable.name for variable in parsed.variables] == ["retained", "pinned"]
+    assert [function.name for function in parsed.functions] == ["run"]
+    assert [
+        (diagnostic.code, diagnostic.unit_kind)
+        for diagnostic in parsed.diagnostics
+    ] == [
+        ("C_UNMODELED_COMPILER_EXTENSION", "asm_label"),
+        ("C_UNMODELED_COMPILER_EXTENSION", "asm_label"),
     ]
 
 

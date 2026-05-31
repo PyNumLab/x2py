@@ -55,7 +55,8 @@ Current handled coverage:
 The C frontend is currently parse-only. It supports:
 
 - Raw-source directive metadata for includes, simple macros, conditionals, and
-  pragmas.
+  pragmas. Raw mode records these facts but does not expand macros or select
+  conditional branches.
 - Compiler-assisted preprocessing through the shared CLI flags, with `#line`
   and GCC/Clang linemarker remapping back to original source locations.
 - Top-level variables, typedefs, function declarations/definitions, structs,
@@ -66,8 +67,9 @@ The C frontend is currently parse-only. It supports:
 - Project include/index facts through `parse_c_project(...)`, with includes
   recorded non-recursively: only explicitly supplied files or files below an
   explicitly supplied directory are parsed.
-- Raw mutually exclusive function alternatives preserved for later semantic
-  selection rather than collapsed into one signature.
+- Compiler mode is the wrapper-facing path for macro-dependent APIs: it parses
+  one compiler-expanded translation unit and keeps mutually exclusive branches
+  separate across build configurations.
 
 The supported C subset continues through semantic IR conversion, `.pyi`
 generation, and wrap-readiness.
@@ -76,11 +78,16 @@ generation, and wrap-readiness.
 
 Public API entrypoints include:
 
-- `x2py.parse_fortran_file(source_or_path, filename=None, macro_defines=None, encoding="utf-8") -> FortranFile`
+- `x2py.parse_fortran_file(source_or_path, filename=None, encoding="utf-8") -> FortranFile`
 - `x2py.parse_fortran_project(files, encoding="utf-8") -> FortranProject`
-- `x2py.parse_c_file(source_or_path, filename=None, macro_defines=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile`
-- `x2py.parse_c_project(files, include_dirs=None, macro_defines=None, preprocessing="raw", encoding="utf-8") -> CProject`
+- `x2py.parse_c_file(source_or_path, filename=None, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CFile`
+- `x2py.parse_c_project(files, include_dirs=None, preprocessing="raw", encoding="utf-8") -> CProject`
 - `x2py.fortran_file_to_semantic_modules(parsed_file, standalone_module_name=None) -> list[SemanticModule]`
+- `x2py.fortran_project_to_semantic_modules(project) -> list[SemanticModule]`
+- `x2py.c_file_to_semantic_modules(parsed_file) -> list[SemanticModule]`
+- `x2py.c_project_to_semantic_modules(project) -> list[SemanticModule]`
+- `x2py.emit_module_stubs(module_or_modules) -> dict[str, str]`
+- `x2py.load_pyi_modules(path_or_paths, encoding="utf-8") -> list[SemanticModule]`
 - `x2py.assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
 - `x2py.assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`
 - `x2py.c_type_probe.probe_c_standard_types(config, runner=None) -> CStandardTypeProbeReport`
@@ -152,7 +159,15 @@ python -m x2py path/to/c_src --language c --parse
 Fortran directories scan `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`,
 `.f08`; C directories scan `.c`, `.h`, and `.i` files.
 
-### Compiler preprocessing and target probes
+### Compiler preprocessing, includes, and target probes
+
+Wrapper-facing source parsing should use compiler preprocessing whenever the
+input contains C/CPP preprocessing. The selected compiler is authoritative for
+macro expansion, `#if`/`#ifdef` branch selection, C `#include`, Fortran CPP
+`#include`, predefined macros, `-D`/`-U`, include paths, target flags, and
+sysroot behavior. Internal parser mode remains available for plain source,
+already-preprocessed source, and focused parser tests; it does not evaluate CPP
+branches.
 
 The shared compiler mode is:
 
@@ -168,9 +183,45 @@ python -m x2py path/to/source.f90 --language fortran --parse \
 ```
 
 For C, `--language c --preprocess compiler` runs the exact compiler
-preprocessor and parses stdout. C also supports `--compile-commands
-build/compile_commands.json`; the matching entry supplies the compiler and
-project flags.
+preprocessor and parses stdout. C and Fortran can use `--compile-commands
+build/compile_commands.json` when a matching entry supplies the compiler and
+project flags. GCC-compatible C/Clang invocations use `-E -x c`; GNU Fortran
+invocations use `-E -cpp`. Linemarkers are preserved so parser locations can be
+mapped back to original files. For unsupported compiler families, use
+`--preprocessor-adapter command-template --preprocess-template '...'`; the
+minimum adapter contract is expanded source on stdout.
+
+Fortran native `include "file.inc"` is resolved after compiler CPP output and
+before parsing. This is textual insertion into the current module, procedure,
+interface, or execution scope; it is not the same as `use module_name`. Native
+includes are resolved relative to the including file first, then configured
+`-I` directories, and duplicate textual inclusion is preserved. Missing
+includes and cycles are reported as preprocessing diagnostics.
+
+Preprocessing JSON records the exact recipe: compiler or adapter, argv, working
+directory, include directories, defines, undefs, standard, extra compiler
+arguments, included files, source mappings, diagnostics, and optional macro
+metadata when the adapter output exposes it. System-header declarations are
+classified private by default. Reachable project includes are public by
+default; use `--include-exposure roots-only`, `--public-include`, and
+`--private-include` to control wrapper export. Private declarations remain
+available internally for type resolution. Public signatures that refer to
+private C handle types can use private opaque classes rather than exposing data
+members.
+
+The C parser tolerates common compiler-expanded declaration syntax from system
+headers, including GNU attributes, `__declspec(...)`, alternate qualifier
+spellings, declaration-level `asm(...)`, calling-convention keywords,
+`typeof(...)`, `_BitInt(...)`, and selected extended scalar names. Harmless
+syntax is accepted without exposing private header declarations. Ignored
+extensions that can affect ABI, layout, symbol identity, or type identity
+produce `C_UNMODELED_COMPILER_EXTENSION` warnings.
+
+Preprocessing failures print explicit categories such as
+`PREPROCESSOR_NOT_FOUND`, `PREPROCESSOR_FAILED`,
+`INVALID_COMPILER_ARGUMENTS`, `UNSUPPORTED_COMPILER_CAPABILITY`,
+`PROVENANCE_UNAVAILABLE`, `INCLUDE_NOT_FOUND`, and `INCLUDE_CYCLE` without a
+Python traceback. Pass `--debug` to re-raise and show the traceback.
 
 Target-dependent type facts are not hard-coded. They are probed with the same
 compiler path and target-relevant flags because results may change with ABI,
@@ -757,3 +808,46 @@ source/target mapping. A non-renamed `use iso_c_binding, only: c_int` maps
 `source="delete_input_list"` and `target="delete_input"`. The semantic layer
 uses that information to emit Python stub imports such as
 `from list_input import delete_input_list as delete_input`.
+
+Fortran `use` dependencies are not parsed or wrapped recursively. If a
+procedure refers to an imported derived type, semantic IR records its defining
+module and represents the reference as an opaque handle unless the defining
+module is explicitly part of the wrapping target. Explicitly supplied modules
+share one wrapped-type registry, so the imported reference resolves to the
+single class emitted by its owner module without being re-exported by the
+importing module. Reachable include exposure is already handled separately by
+the preprocessing include policy; a future dependency-expansion option would
+apply specifically to recursive Fortran `use` traversal.
+
+When an imported derived type remains external, `.pyi` generation emits an
+owner-module dependency stub. For example, wrapping only `physics.f90` may
+produce:
+
+```python
+# physics.pyi
+from types_mod import particle
+
+def move(p: Ptr(particle)) -> None: ...
+```
+
+```python
+# types_mod.pyi
+class particle(Opaque):
+    pass
+```
+
+`python -m x2py physics.f90 --pyi --out` writes both files beside the source.
+`load_pyi_modules(...)` loads a file set or directory, preserves opaque classes,
+and reconciles imported references against edited owner stubs. Replacing the
+opaque placeholder with a concrete edited class changes the semantic reference
+from `representation="opaque"` to `representation="wrapped"`. Existing
+`Annotated[...]` constraints also round-trip through this editable interface;
+richer coercion syntax can be added to the same `.pyi` format later.
+
+The same opaque-handle file-set model applies to C. A local forward declaration
+such as `struct context;` emits `class context(Opaque): pass`. When a public C
+header uses a struct from another explicitly supplied header, its generated
+stub imports the class from that header's stub. A private included struct used
+through a public pointer boundary emits an opaque owner-module dependency stub.
+An unresolved C typedef is left unresolved rather than guessed to be opaque,
+because its ABI may not be pointer-shaped.
