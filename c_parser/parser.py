@@ -1191,7 +1191,7 @@ class CParser:
             line_number=location.line,
             column=location.column,
             source_line=location.source_line,
-            code="CPARSE003",
+            code="CPARSE_INVALID_SPECIFIER_SEQUENCE",
         )
 
     def _atomic_type_specifier_parts(self, spec_text: str) -> tuple[str, str] | None:
@@ -1815,7 +1815,7 @@ class CParser:
                         line_number=mapping.line if mapping is not None else index + 1,
                         column=max(line.find(name_match.group(0)) + 1, 1),
                         source_line=source_line,
-                        code="CPARSE002",
+                        code="CPARSE_UNSUPPORTED_KNR_DEFINITION",
                     )
                 if stripped.endswith(";"):
                     saw_old_style_declaration = True
@@ -1833,7 +1833,7 @@ class CParser:
                     line_number=mapping.line if mapping is not None else index + 1,
                     column=max(line.find(name_match.group(0)) + 1, 1),
                     source_line=source_line,
-                    code="CPARSE002",
+                    code="CPARSE_UNSUPPORTED_KNR_DEFINITION",
                 )
 
     def _prototype_style(self, parameters_text: str) -> str:
@@ -1869,7 +1869,7 @@ class CParser:
                     line_number=segment.original_start_line,
                     column=segment.original_start_column,
                     source_line=segment.original_source_line,
-                    code="CPARSE002",
+                    code="CPARSE_UNSUPPORTED_KNR_DEFINITION",
                 )
         return self._function_from_type(
             name,

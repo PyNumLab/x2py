@@ -296,7 +296,7 @@ def test_cli_c_invalid_primitive_specifier_sequence_is_fatal(tmp_path: Path):
     res = subprocess.run(cmd, capture_output=True, text=True)
 
     assert res.returncode == 1
-    assert "error[CPARSE003]: Invalid type specifier sequence 'unsigned float'." in res.stderr
+    assert "error[CPARSE_INVALID_SPECIFIER_SEQUENCE]: Invalid type specifier sequence 'unsigned float'." in res.stderr
     assert "\x1b[" not in res.stderr
 
 

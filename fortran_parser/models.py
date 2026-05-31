@@ -136,7 +136,7 @@ def _enable_windows_ansi() -> None:  # pragma: no cover - Windows-only console s
 class FortranParseError(ValueError):
     """Parser error with compiler-style diagnostic rendering support."""
 
-    default_code = "PARSE001"
+    default_code = "PARSE_ERROR"
 
     def __init__(
         self,

@@ -120,10 +120,9 @@ silently dropping malformed input.
 Parse failures print a compiler-style diagnostic without a Python traceback.
 Use `--debug` to re-raise the parser error and print the traceback;
 `--debug-traceback` remains accepted as a compatibility alias. Diagnostic codes
-such as `PARSE001`, `CPARSE003`, and `CPARSE_INVALID_SYNTAX` are stable error
-category identifiers for tests, tools, and documentation. Their numbers do not
-represent the source line, the number of errors, or the process exit status.
-The current categories are listed in
+such as `PARSE_UNSUPPORTED_DECLARATION`, `CPARSE_INVALID_SPECIFIER_SEQUENCE`,
+and `CPARSE_INVALID_SYNTAX` are stable, explicit error-category identifiers for
+tests, tools, and documentation. The current categories are listed in
 [`docs/diagnostic_codes.md`](docs/diagnostic_codes.md).
 
 For parse output, `--show-vars` expands scope-level variables that are normally

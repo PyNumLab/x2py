@@ -71,7 +71,8 @@ Implemented:
 - raw `#undef` directive provenance in macro metadata
 - concrete primitive `CType` objects, pointer/array composition, and concrete
   qualifier objects
-- order-insensitive primitive specifier matching with `CPARSE003` errors for
+- order-insensitive primitive specifier matching with
+  `CPARSE_INVALID_SPECIFIER_SEQUENCE` errors for
   invalid combinations such as `unsigned float`
 - recursive declarator extraction for parenthesized pointer/array precedence
 - nameless `CFunctionType` signatures for function pointer typedefs and
@@ -357,8 +358,8 @@ type component they qualify. `_Atomic int value;` is stored with a `CAtomic`
 qualifier; `_Atomic(int) value;` is represented the same way, while
 `_Atomic(int *) value;` qualifies the pointer component. Equivalent primitive orderings, such as
 `int unsigned` and `double long`, map to the same concrete type while
-invalid combinations, such as `unsigned float`, raise `CParseError` with
-code `CPARSE003`. A single unresolved typedef-name use remains a `CTypedef`
+invalid combinations, such as `unsigned float`, raise `CParseError` with code
+`CPARSE_INVALID_SPECIFIER_SEQUENCE`. A single unresolved typedef-name use remains a `CTypedef`
 until resolution can establish whether a matching declaration exists.
 
 Nested declarators are `CComposedType` objects whose `components` are read
@@ -597,13 +598,13 @@ non-fatal metadata diagnostics, such as unresolved local includes or macros
 that affect declarations but were recorded rather than expanded. K&R-style function
 definitions now raise `CParseError` because the current function parser only
 models prototype-style declarations and definitions. Invalid primitive
-specifier combinations also raise `CParseError` (`CPARSE003`) because their
+specifier combinations also raise `CParseError`
+(`CPARSE_INVALID_SPECIFIER_SEQUENCE`) because their
 invalidity does not depend on later typedef resolution. Known unsupported
 declaration extensions are diagnosed rather than partially modeled; additional
 syntax diagnostics should be added only with focused tests.
 Generic grammar rejection uses `CPARSE_INVALID_SYNTAX`. Diagnostic codes are
-stable category identifiers for tests, tools, and documentation; numeric
-suffixes are not line numbers, occurrence counters, or exit statuses. The
+stable, explicit category identifiers for tests, tools, and documentation. The
 shared registry is [`docs/diagnostic_codes.md`](../diagnostic_codes.md).
 
 ## Testing Workflow

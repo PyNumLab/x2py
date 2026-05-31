@@ -5,7 +5,7 @@
     "Argument 'y' in procedure 'foo' has no type declaration (implicit none is active)."
   ],
   "diagnostic_contains": [
-    "error[PARSE001]",
+    "error[PARSE_IMPLICIT_NONE_UNDECLARED_SYMBOL]",
     "Argument 'y' in procedure 'foo' has no type declaration (implicit none is active).",
     ""
   ]

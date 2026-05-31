@@ -5,7 +5,7 @@
     "Invalid type specifier sequence 'unsigned float'."
   ],
   "diagnostic_contains": [
-    "error[CPARSE003]",
+    "error[CPARSE_INVALID_SPECIFIER_SEQUENCE]",
     "Invalid type specifier sequence 'unsigned float'.",
     "unsigned float value;"
   ]
