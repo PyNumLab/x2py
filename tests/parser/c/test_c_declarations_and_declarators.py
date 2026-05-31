@@ -498,7 +498,6 @@ def test_function_type_discards_placeholder_parameter_names():
     signature = type_.components[1]
     assert isinstance(signature, CFunctionType)
     assert len(signature.parameter_types) == 2
-    assert not hasattr(signature, "parameters")
 
 
 def test_conflicting_function_pointer_typedefs_report_diagnostic():

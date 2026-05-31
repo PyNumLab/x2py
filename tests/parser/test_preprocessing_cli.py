@@ -502,6 +502,18 @@ def test_linemarker_dependency_exposure_and_macro_edges(tmp_path: Path):
     assert preprocessing._unescape_linemarker_filename("trailing\\") == "trailing\\"
     assert preprocessing._dependency_kind("<command-line>") == "system"
     assert preprocessing._mapping_for_generated_line(mappings, mappings[0].generated_line, root) == mappings[0]
+    fallback = preprocessing._mapping_for_generated_line([], 99, root)
+    assert fallback.original_path == str(root)
+    assert fallback.original_line == 99
+    no_filename_mappings = preprocessing.parse_linemarker_mappings("#line 42\nint next;\n", filename=str(root))
+    assert no_filename_mappings[0].original_path == str(root)
+    assert no_filename_mappings[0].original_line == 42
+    assert preprocessing._included_files_from_linemarkers(
+        "#line 5\nint next;\n",
+        root_path=root,
+        language="c",
+        config=PreprocessingConfig(),
+    ) == [files[0]]
     assert macros[0].name == "BUILTIN"
     assert macros[0].builtin is True
     assert by_path[str(root)].dependency_kind == "root"

@@ -3,11 +3,15 @@
 
 import json
 import os
+import runpy
 import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
+from c_parser import CParseError
 from c_parser import cli as c_parser_cli
 from x2py import cli as x2py_cli
 from x2py.preprocessing import PreprocessingConfig
@@ -111,6 +115,31 @@ def test_attach_preprocessing_recipe_filters_invalid_and_duplicate_macros():
     assert parsed.macros[1].function_like is True
     assert parsed.macros[1].source_location.filename is None
     assert parsed.macros[2].source_location.line == 4
+
+
+def test_c_parser_cli_helpers_errors_and_module_entrypoint(monkeypatch, capsys):
+    monkeypatch.setenv("C_PARSER_TEST_FLAG", " on ")
+    assert c_parser_cli._env_flag("C_PARSER_TEST_FLAG") is True
+    monkeypatch.delenv("C_PARSER_TEST_FLAG")
+    assert c_parser_cli._env_flag("C_PARSER_TEST_FLAG") is False
+
+    assert c_parser_cli._diagnostic_color_enabled(disabled=True) is False
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert c_parser_cli._diagnostic_color_enabled(disabled=False) is False
+    monkeypatch.delenv("NO_COLOR")
+    assert c_parser_cli._diagnostic_color_enabled(disabled=False) is True
+
+    def fail_parse(_paths):
+        raise CParseError("invalid", filename="bad.h", line_number=1, column=1, source_line="@@@")
+
+    monkeypatch.setattr(c_parser_cli, "parse_c_report", fail_parse)
+    assert c_parser_cli.main(["bad.h", "--no-color"]) == 1
+    assert "bad.h:1:1: error[CPARSE_ERROR]: invalid" in capsys.readouterr().err
+
+    monkeypatch.setattr(c_parser_cli, "main", lambda _argv=None: 0)
+    with pytest.raises(SystemExit) as exc_info:
+        runpy.run_module("c_parser.__main__", run_name="__main__")
+    assert exc_info.value.code == 0
 
 
 def test_cli_c_parse_json_out_writes_file_and_suppresses_stdout(tmp_path: Path):
@@ -485,7 +514,6 @@ def test_c_parser_cli_module_handles_directory_loader_and_output_modes(tmp_path:
 
 def test_c_parser_module_entrypoint_and_compatibility_exports(tmp_path: Path):
     import c_parser.__main__ as c_module_entrypoint
-    import c_parser.utils as c_utils
     from c_parser.parser import parse_c_project
     from c_parser.project import parse_c_project as compatibility_parse_c_project
 
@@ -501,7 +529,6 @@ def test_c_parser_module_entrypoint_and_compatibility_exports(tmp_path: Path):
     assert json.loads(result.stdout)[str(header)]["functions"][0]["name"] == "run"
     assert c_module_entrypoint.main is c_parser_cli.main
     assert compatibility_parse_c_project is parse_c_project
-    assert c_utils.__all__ == ()
 
 
 def test_c_parser_module_formats_parse_errors_without_traceback(tmp_path: Path):

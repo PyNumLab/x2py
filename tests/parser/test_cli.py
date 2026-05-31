@@ -3,6 +3,7 @@ import builtins
 from dataclasses import dataclass
 import json
 import os
+import runpy
 import subprocess
 import sys
 import types
@@ -11,7 +12,9 @@ from pathlib import Path
 import pytest
 
 from fortran_parser import cli as fortran_parser_cli
+from x2py import FortranParseError
 from x2py import cli as x2py_cli
+from x2py.preprocessing import PreprocessingConfig, PreprocessingDiagnostic, PreprocessingError
 
 
 TEST_FILE = Path(__file__).parent.parent / "data" / "fortran" / "general" / "basic_subroutine.f90"
@@ -550,6 +553,186 @@ end module physics
 
     assert (tmp_path / "physics.pyi").exists()
     assert (tmp_path / "types_mod.pyi").read_text(encoding="utf-8") == "class particle(Opaque):\n    pass\n"
+
+
+def test_x2py_pyi_report_formats_and_rejects_conflicting_dependency_stubs():
+    report = {
+        "first.f90": {
+            "pyi": "def first() -> None: ...",
+            "pyi_dependencies": {"shared": "class shared(Opaque):\n    pass"},
+        },
+        "second.f90": {
+            "pyi": "def second() -> None: ...",
+            "pyi_dependencies": {"shared": "class shared(Opaque):\n    pass"},
+        },
+    }
+
+    text = x2py_cli._format_pyi_report(report)
+
+    assert text.count("Dependency stub: shared.pyi") == 1
+    assert "def first() -> None: ..." in text
+    with pytest.raises(ValueError, match="Conflicting generated dependency stub"):
+        x2py_cli._write_pyi_dependencies(
+            {
+                "first.f90": {"pyi_dependencies": {"shared": "class shared:\n    pass"}},
+                "second.f90": {"pyi_dependencies": {"shared": "class shared:\n    value: int"}},
+            }
+        )
+
+
+def test_x2py_main_formats_preprocessing_errors_with_and_without_diagnostics(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["x2py", str(TEST_FILE), "--parse"])
+
+    def fail_with_diagnostic(_paths, _preprocessing):
+        raise PreprocessingError(
+            "compiler failed",
+            category="PREPROCESSOR_FAILED",
+            diagnostics=[
+                PreprocessingDiagnostic(
+                    category="PREPROCESSOR_FAILED",
+                    message="bad include",
+                    path="source.F90",
+                    line=9,
+                )
+            ],
+        )
+
+    monkeypatch.setattr(x2py_cli, "_parse_report", fail_with_diagnostic)
+    assert x2py_cli.main() == 1
+    assert "source.F90:9: error[PREPROCESSOR_FAILED]: bad include" in capsys.readouterr().err
+
+    def fail_without_diagnostic(_paths, _preprocessing):
+        raise PreprocessingError("plain failure", category="PREPROCESSOR_FAILED")
+
+    monkeypatch.setattr(x2py_cli, "_parse_report", fail_without_diagnostic)
+    assert x2py_cli.main() == 1
+    assert "x2py: error[PREPROCESSOR_FAILED]: plain failure" in capsys.readouterr().err
+
+
+def test_x2py_cli_helpers_cover_language_and_preprocessing_edges(tmp_path: Path, monkeypatch):
+    class ErrorParser:
+        def error(self, message):
+            raise ValueError(message)
+
+    def args(**overrides):
+        values = {
+            "defines": [],
+            "undefs": [],
+            "preprocess": "raw",
+            "compiler": None,
+            "compile_commands": None,
+            "preprocessor_adapter": "auto",
+            "preprocess_template": None,
+            "include_dirs": [],
+            "std": None,
+            "compiler_args": [],
+            "include_exposure": "reachable-project",
+            "public_includes": [],
+            "private_includes": [],
+            "language": "fortran",
+        }
+        values.update(overrides)
+        return types.SimpleNamespace(**values)
+
+    parser = ErrorParser()
+    api_h = tmp_path / "api.h"
+    api_h.write_text("int add(int x);\n", encoding="utf-8")
+    stub = tmp_path / "api.pyi"
+    stub.write_text("def add(x: Int32) -> Int32: ...\n", encoding="utf-8")
+    (tmp_path / "notes.txt").write_text("ignore", encoding="utf-8")
+
+    assert x2py_cli._expand_pyi_paths([str(tmp_path), str(stub)]) == [stub]
+    assert x2py_cli._resolve_language([str(api_h)], "c", parser) == "c"
+    with pytest.raises(ValueError, match="incompatible with --language fortran"):
+        x2py_cli._resolve_language([str(api_h)], "fortran", parser)
+    with pytest.raises(ValueError, match="requires explicit --language c"):
+        x2py_cli._resolve_language([str(api_h)], None, parser)
+    with pytest.raises(ValueError, match="Cannot determine"):
+        x2py_cli._resolve_language([str(tmp_path / "notes.txt")], None, parser)
+
+    with pytest.raises(ValueError, match="--compiler requires --preprocess compiler"):
+        x2py_cli._build_preprocessing_config(args(compiler="gfortran"), parser)
+    with pytest.raises(ValueError, match="--preprocess-template requires"):
+        x2py_cli._build_preprocessing_config(
+            args(
+                preprocess="compiler",
+                compiler="cc",
+                preprocess_template="{compiler} -E {source}",
+            ),
+            parser,
+        )
+    with pytest.raises(ValueError, match="requires --compiler"):
+        x2py_cli._build_preprocessing_config(args(preprocess="compiler"), parser)
+    with pytest.raises(ValueError, match="--compile-commands requires"):
+        x2py_cli._build_preprocessing_config(args(compile_commands="compile_commands.json"), parser)
+    with pytest.raises(ValueError, match="raw C mode records source macros"):
+        x2py_cli._build_preprocessing_config(args(language="c", defines=["USE_FAST"]), parser)
+    with pytest.raises(ValueError, match="internal Fortran parsing does not evaluate CPP branches"):
+        x2py_cli._build_preprocessing_config(args(defines=["USE_FAST"]), parser)
+    with pytest.raises(ValueError, match="-I/--include-dir affects Fortran only"):
+        x2py_cli._build_preprocessing_config(args(include_dirs=["include"]), parser)
+
+    class Recipe:
+        def to_dict(self):
+            return {"mode": "compiler"}
+
+    def preprocess(path, *, language, config):
+        assert path == api_h.with_suffix(".f90")
+        assert language == "fortran"
+        assert config.compiler == "gfortran"
+        return "subroutine work()\nend subroutine work\n", Recipe()
+
+    source = api_h.with_suffix(".f90")
+    source.write_text("subroutine ignored()\nend subroutine ignored\n", encoding="utf-8")
+    monkeypatch.setattr(x2py_cli, "run_compiler_preprocessor_with_recipe", preprocess)
+    code, recipe = x2py_cli._fortran_source_for_path(
+        source,
+        PreprocessingConfig(mode="compiler", compiler="gfortran"),
+    )
+    assert "subroutine work" in code
+    assert recipe == {"mode": "compiler"}
+    report = x2py_cli._parse_report(
+        [str(source)],
+        PreprocessingConfig(mode="compiler", compiler="gfortran"),
+    )
+    assert report[str(source)]["preprocessing_recipe"] == {"mode": "compiler"}
+
+
+def test_x2py_and_fortran_module_entrypoints_and_debug_errors(monkeypatch, capsys):
+    original_fortran_main = fortran_parser_cli.main
+    monkeypatch.setattr(x2py_cli, "main", lambda: 0)
+    with pytest.raises(SystemExit) as x2py_exit:
+        runpy.run_module("x2py.__main__", run_name="__main__")
+    assert x2py_exit.value.code == 0
+
+    monkeypatch.setattr(fortran_parser_cli, "main", lambda: 0)
+    with pytest.raises(SystemExit) as fortran_exit:
+        runpy.run_module("fortran_parser.__main__", run_name="__main__")
+    assert fortran_exit.value.code == 0
+    monkeypatch.setattr(fortran_parser_cli, "main", original_fortran_main)
+
+    def fail_parse(_paths):
+        raise FortranParseError("bad", filename="bad.f90", line_number=1, source_line="bad")
+
+    monkeypatch.setattr(fortran_parser_cli, "_parse_paths", fail_parse)
+    monkeypatch.setattr(sys, "argv", ["fortran_parser", "bad.f90", "--no-color"])
+    assert fortran_parser_cli.main() == 1
+    assert "bad.f90:1:1: error[PARSE_ERROR]: bad" in capsys.readouterr().err
+    monkeypatch.setenv("FORTRAN_PARSER_DEBUG", "1")
+    with pytest.raises(FortranParseError):
+        fortran_parser_cli.main()
+
+
+def test_x2py_main_debug_reraises_preprocessing_errors(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["x2py", str(TEST_FILE), "--parse"])
+    monkeypatch.setenv("X2PY_DEBUG", "1")
+
+    def fail_parse(_paths, _preprocessing):
+        raise PreprocessingError("plain failure", category="PREPROCESSOR_FAILED")
+
+    monkeypatch.setattr(x2py_cli, "_parse_report", fail_parse)
+    with pytest.raises(PreprocessingError):
+        x2py_cli.main()
 
 
 

@@ -899,10 +899,15 @@ def test_fortran_variable_spec_expressions_parse_function_calls():
 
 
 def test_structured_shape_handles_empty_dimensions_and_use_mapping_equality():
+    from fortran_parser.type_resolver import extract_kind_from_type_spec
+
     var = FortranVariable(name="empty", shape=[""])
+    assert var.shape_info == [{"raw": "", "lower": None, "upper": None}]
     shape = var.structured_shape
     assert shape.raw == [""]
     assert shape.dimensions == [None]
+    assert extract_kind_from_type_spec("real", "()") is None
+    assert extract_kind_from_type_spec("real", "(len=5)") is None
 
     renamed = FortranUseMapping(source="delete_input_list", target="delete_input")
     assert renamed == "delete_input"
