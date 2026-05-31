@@ -224,9 +224,8 @@ class _CompileTimeResolver:
 class FortranParser:
     """Stateful parser entrypoint and orchestration object.
 
-    State carried on the instance:
-    - `macro_defines`: accepted for backward-compatible call signatures, but
-      CPP branch selection is handled by the compiler preprocessing layer.
+    Raw parser entrypoints preserve all CPP branch alternatives. Branch
+    selection belongs to the compiler preprocessing layer.
 
     Parsing pipeline used by `visit_file`:
     1. Preprocess source into normalized lines (`_preprocessed_lines`).
@@ -271,10 +270,6 @@ class FortranParser:
     # Public visitor entrypoints
     # ------------------------------------------------------------------
 
-    def __init__(self, macro_defines: set[str] | dict[str, int | bool | str] | None = None):
-        del macro_defines
-        self.macro_defines = None
-
     def visit_file(
         self,
         source_or_path: str | Path,
@@ -282,7 +277,11 @@ class FortranParser:
         macro_defines: set[str] | dict[str, int | bool | str] | None = None,
         encoding: str = "utf-8",
     ) -> FortranFile:
-        """Parse one source string/path into a `FortranFile` aggregate model."""
+        """Parse one source string/path into a `FortranFile` aggregate model.
+
+        `macro_defines` is a legacy no-op. Raw parsing does not evaluate CPP
+        branches; use compiler preprocessing when branch selection is needed.
+        """
         if filename is None and self._looks_like_existing_source_path(source_or_path):
             path = Path(source_or_path)
             filename = str(path)
@@ -290,7 +289,6 @@ class FortranParser:
         else:
             code = str(source_or_path)
 
-        del macro_defines
         lines, root_scope, top_units = self._helper_prepare_source_units(
             code,
             filename,
@@ -932,8 +930,6 @@ class FortranParser:
         self,
         code: _SourceOrLines,
         filename: str | None,
-        *,
-        macro_defines: set[str] | dict[str, int | bool | str] | None = None,
     ) -> tuple[_PreprocessedLines, _ParserScope, list[_SourceUnit]]:
         """Preprocess, validate, and slice file-level source units.
 
@@ -947,7 +943,6 @@ class FortranParser:
             `_SourceUnit` objects, one module unit and one procedure unit, both
             carrying original source line numbers.
         """
-        del macro_defines
         lines = self._preprocessed_lines(code, filename)
         root_scope = _ParserScope(kind="file", name=None)
         units = self._helper_slice_child_units(lines, parent_scope=root_scope, filename=filename)

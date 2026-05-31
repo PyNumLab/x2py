@@ -147,17 +147,16 @@ def _resolve_language(
 def _fortran_source_for_path(
     path: Path,
     preprocessing: PreprocessingConfig,
-) -> tuple[str, dict[str, int | str] | None, dict[str, object] | None]:
+) -> tuple[str, dict[str, object] | None]:
     if preprocessing.uses_compiler:
         source, recipe = run_compiler_preprocessor_with_recipe(
             path,
             language="fortran",
             config=preprocessing,
         )
-        return source, None, recipe.to_dict()
+        return source, recipe.to_dict()
     return (
         path.read_text(encoding="utf-8"),
-        None,
         preprocessing.fortran_internal_recipe(path),
     )
 
@@ -211,8 +210,8 @@ def _parse_report(paths: list[str], preprocessing: PreprocessingConfig | None = 
     out: dict[str, dict] = {}
     parser = FortranParser()
     for p in _expand_paths(paths):
-        code, macro_defines, preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
-        parsed = parser.visit_file(code, filename=str(p), macro_defines=macro_defines)
+        code, preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
+        parsed = parser.visit_file(code, filename=str(p))
         payload = {
             "signatures": [_to_dict_no_parent(s) for s in parsed.procedures],
             "types": [_to_dict_no_parent(t) for t in parsed.derived_types],
@@ -251,8 +250,8 @@ def _semantic_report(
 
     parser = FortranParser()
     for p in _expand_paths(paths):
-        code, macro_defines, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
-        fobj = parser.visit_file(code, filename=str(p), macro_defines=macro_defines)
+        code, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
+        fobj = parser.visit_file(code, filename=str(p))
         compile_time_values = _fortran_compile_time_values(fobj, preprocessing)
         modules = [
             fortran_module_to_semantic_module(m, compile_time_values=compile_time_values)
@@ -300,8 +299,8 @@ def _wrap_readiness_report(
             modules = [load_pyi_file(p)]
             source_kind = "pyi"
         else:
-            code, macro_defines, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
-            parsed = parser.visit_file(code, filename=str(p), macro_defines=macro_defines)
+            code, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
+            parsed = parser.visit_file(code, filename=str(p))
             compile_time_values = _fortran_compile_time_values(parsed, preprocessing)
             modules = fortran_file_to_semantic_modules(
                 parsed,

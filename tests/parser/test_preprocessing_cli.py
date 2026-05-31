@@ -125,11 +125,93 @@ def test_preprocessing_config_internal_macros_recipe_and_validation(tmp_path: Pa
     selected = PreprocessingConfig(defines=["USE_MPI", "VALUE=3"], undefs=["DEBUG"])
 
     assert plain.uses_compiler is False
+    assert plain.fortran_macro_defines() is None
+    assert PreprocessingConfig(mode="compiler", defines=["USE_MPI"]).fortran_macro_defines() is None
     assert plain.fortran_internal_recipe(source) is None
     assert selected.fortran_macro_defines() == {"USE_MPI": 1, "VALUE": "3", "DEBUG": 0}
     assert selected.fortran_internal_recipe(source)["source_path"] == str(source)
     with pytest.raises(PreprocessingError, match="requires a macro name"):
         validate_macro_name("=value", "--define")
+    with pytest.raises(PreprocessingError, match="requires a macro name"):
+        validate_macro_name("", "--define")
+    with pytest.raises(PreprocessingError, match="invalid macro name"):
+        validate_macro_name("bad-name", "--define")
+
+
+def test_preprocessing_metadata_models_and_adapter_helpers(tmp_path: Path):
+    source = tmp_path / "api.c"
+    source.write_text("int api(void);\n", encoding="utf-8")
+    diagnostic = preprocessing.PreprocessingDiagnostic(
+        category="PREPROCESSOR_FAILED",
+        message="bad flag",
+        path=str(source),
+        line=3,
+        command=["cc", "-E"],
+    )
+    included = preprocessing.IncludedFile(
+        path=str(tmp_path / "public.h"),
+        included_by=str(source),
+        include_line=1,
+    )
+    mapping = preprocessing.SourceMapping(
+        generated_line=2,
+        original_path=str(source),
+        original_line=7,
+        include_stack=[str(source)],
+    )
+    macro = preprocessing.MacroDefinition(
+        name="SQR",
+        value="((x) * (x))",
+        function_like=True,
+        parameters=["x"],
+        path=str(source),
+        line=4,
+    )
+    plan = preprocessing.PreprocessingPlan(
+        language="c",
+        source_path=str(source),
+        adapter="direct",
+        compiler="cc",
+        include_dirs=["include"],
+        defines=["API=1"],
+        undefs=["DEBUG"],
+        standard="c11",
+        compiler_args=["-Wall"],
+    )
+    result = preprocessing.PreprocessResult(
+        source="#define SQR(x) ((x) * (x))\n",
+        recipe={"mode": "compiler"},
+        included_files=[included],
+        source_mappings=[mapping],
+        macros=[macro],
+        diagnostics=[diagnostic],
+    )
+    recipe = preprocessing.PreprocessingRecipe(language="c", compiler="cc", standard="c11")
+
+    assert diagnostic.to_dict()["command"] == ["cc", "-E"]
+    assert plan.to_dict()["include_dirs"] == ["include"]
+    assert result.to_dict()["macros"][0]["parameters"] == ["x"]
+    assert recipe.std == "c11"
+
+    adapter = preprocessing.GCCCompatibleCAdapter()
+    config = PreprocessingConfig(mode="compiler", compiler="cc")
+    assert adapter.build_preprocess_invocation(source, language="c", config=config).argv[0] == "cc"
+    assert adapter.collect_dependencies(result) == [included]
+    assert adapter.collect_macros(result) == [macro]
+    assert adapter.parse_linemarkers('#line 7 "dir\\\\api\\".h"\nint x;\n')[0].original_line == 7
+
+    invocation = preprocessing.CommandTemplateAdapter().build_preprocess_invocation(
+        source,
+        language="c",
+        config=PreprocessingConfig(
+            mode="compiler",
+            compiler="vendor-cc",
+            adapter="command-template",
+            command_template="{compiler} --lang {language} {source}",
+        ),
+    )
+    assert invocation.argv == ["vendor-cc", "--lang", "c", str(source)]
+    assert preprocessing.GNUFortranAdapter().name == "gnu-fortran"
 
 
 def test_direct_preprocess_invocation_rejects_missing_compiler_and_unknown_language(tmp_path: Path):
@@ -197,6 +279,8 @@ def test_compile_commands_invocation_uses_database_compiler_and_filters_compile_
             "multiple compile_commands entries",
         ),
         ('[{"directory": ".", "arguments": ["cc"]}]', "missing 'file'"),
+        ('[{"directory": ".", "file": "api.c", "arguments": "cc -c api.c"}]', "'arguments' must contain a list"),
+        ('[{"directory": ".", "file": "api.c", "command": ["cc"]}]', "'command' must contain a string"),
         ('[{"directory": ".", "file": "api.c"}]', "must contain 'arguments' or 'command'"),
         ('[{"directory": ".", "file": "api.c", "arguments": []}]', "empty command"),
     ],
@@ -237,6 +321,44 @@ def test_compile_commands_invocation_reports_missing_file_and_supports_command_s
         config=PreprocessingConfig(mode="compiler", compile_commands=str(database), compiler="clang"),
     )
     assert invocation.argv == ["clang", "-E", str(source)]
+
+
+def test_compile_commands_filters_dependency_and_windows_compile_flags(tmp_path: Path):
+    source = tmp_path / "src" / "api.c"
+    source.parent.mkdir()
+    source.write_text("int api(void);\n", encoding="utf-8")
+    compiler = tmp_path / "cc"
+    database = tmp_path / "compile_commands.json"
+    database.write_text(
+        json.dumps(
+            [
+                {
+                    "directory": str(tmp_path),
+                    "file": str(source),
+                    "arguments": [
+                        str(compiler),
+                        "-MF",
+                        "deps.d",
+                        "-MT",
+                        "api.o",
+                        "-MQtarget",
+                        "-MFdeps2.d",
+                        "/c",
+                        "src/api.c",
+                        "-Wall",
+                    ],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    invocation = build_compile_commands_invocation(
+        source,
+        config=PreprocessingConfig(mode="compiler", compile_commands=str(database)),
+    )
+
+    assert invocation.argv == [str(compiler), "-E", "-Wall", str(source)]
 
 
 def test_build_preprocess_invocation_supports_fortran_compile_database(tmp_path: Path):
@@ -307,6 +429,89 @@ def test_command_template_preprocess_invocation_expands_placeholders(tmp_path: P
         "--target=x86_64-linux",
         str(source),
     ]
+
+
+def test_command_template_validation_and_dispatch_edges(tmp_path: Path):
+    source = tmp_path / "api.h"
+    source.write_text("int api(void);\n", encoding="utf-8")
+
+    with pytest.raises(PreprocessingError, match="requires --preprocess-template"):
+        build_template_preprocess_invocation(
+            source,
+            language="c",
+            config=PreprocessingConfig(mode="compiler", adapter="command-template"),
+        )
+    with pytest.raises(PreprocessingError, match="expanded to an empty command"):
+        build_template_preprocess_invocation(
+            source,
+            language="c",
+            config=PreprocessingConfig(
+                mode="compiler",
+                adapter="command-template",
+                command_template="''",
+            ),
+        )
+
+    invocation = build_preprocess_invocation(
+        source,
+        language="c",
+        config=PreprocessingConfig(
+            mode="compiler",
+            compiler="vendor-cc",
+            adapter="command-template",
+            command_template="{compiler} {language} --std={standard} {source}",
+            std="c99",
+        ),
+    )
+
+    assert invocation.argv == ["vendor-cc", "c", "--std=c99", str(source)]
+
+
+def test_linemarker_dependency_exposure_and_macro_edges(tmp_path: Path):
+    root = tmp_path / "root.c"
+    source = "\n".join(
+        [
+            '#line 7 "src\\\\api\\".h"',
+            "int from_line;",
+            '# 1 "<built-in>" 1 3',
+            "#define BUILTIN 1",
+            '# 2 "<built-in>" 2',
+            '# 2 "src/api.h" 2',
+            '# 1 "public/api.h" 1',
+            "int public_api;",
+            '# 1 "private/internal.h" 1',
+            "int private_api;",
+            '# 1 "project/hidden.h" 1',
+            "int hidden_api;",
+        ]
+    )
+
+    mappings = preprocessing.parse_linemarker_mappings(source, filename=str(root))
+    macros = preprocessing._parse_macro_definitions(source, mappings)
+    files = preprocessing._included_files_from_linemarkers(
+        source,
+        root_path=root,
+        language="c",
+        config=PreprocessingConfig(
+            include_exposure="roots-only",
+            public_includes=["public"],
+            private_includes=["private"],
+        ),
+    )
+    by_path = {item.path: item for item in files}
+
+    assert mappings[0].original_line == 7
+    assert 'api".h' in mappings[0].original_path
+    assert preprocessing._unescape_linemarker_filename("trailing\\") == "trailing\\"
+    assert preprocessing._dependency_kind("<command-line>") == "system"
+    assert preprocessing._mapping_for_generated_line(mappings, mappings[0].generated_line, root) == mappings[0]
+    assert macros[0].name == "BUILTIN"
+    assert macros[0].builtin is True
+    assert by_path[str(root)].dependency_kind == "root"
+    assert by_path["<built-in>"].dependency_kind == "system"
+    assert by_path["public/api.h"].exposure == "public"
+    assert by_path["private/internal.h"].exposure == "private"
+    assert by_path["project/hidden.h"].exposure == "private"
 
 
 def test_native_fortran_include_expansion_is_recursive_and_preserves_duplicates(tmp_path: Path):
@@ -398,6 +603,85 @@ def test_run_compiler_preprocessor_success_and_failures(monkeypatch, tmp_path: P
     )
     with pytest.raises(PreprocessingError, match="compiler preprocessing failed"):
         run_compiler_preprocessor(source, language="c", config=config)
+
+
+def test_preprocess_source_error_paths_and_fortran_include_diagnostics(monkeypatch, tmp_path: Path):
+    c_source = tmp_path / "api.c"
+    c_source.write_text("int api(void);\n", encoding="utf-8")
+
+    with pytest.raises(PreprocessingError, match="not configured"):
+        preprocessing.preprocess_source(c_source, language="c", config=PreprocessingConfig())
+    with pytest.raises(PreprocessingError, match="preprocessor not found"):
+        preprocessing.preprocess_source(
+            c_source,
+            language="c",
+            config=PreprocessingConfig(mode="compiler", compiler="x2py-definitely-missing-preprocessor"),
+        )
+
+    def raise_file_not_found(*_args, **_kwargs):
+        raise FileNotFoundError("missing")
+
+    monkeypatch.setattr(preprocessing.subprocess, "run", raise_file_not_found)
+    with pytest.raises(PreprocessingError, match="preprocessor not found"):
+        preprocessing.preprocess_source(
+            c_source,
+            language="c",
+            config=PreprocessingConfig(mode="compiler", compiler=str(tmp_path / "missing-cc")),
+        )
+
+    def raise_timeout(*_args, **_kwargs):
+        raise subprocess.TimeoutExpired(cmd="cc", timeout=60)
+
+    monkeypatch.setattr(preprocessing.subprocess, "run", raise_timeout)
+    with pytest.raises(PreprocessingError, match="timed out"):
+        preprocessing.preprocess_source(
+            c_source,
+            language="c",
+            config=PreprocessingConfig(mode="compiler", compiler=str(tmp_path / "slow-cc")),
+        )
+
+    monkeypatch.setattr(
+        preprocessing.subprocess,
+        "run",
+        lambda *_args, **_kwargs: type("Done", (), {"returncode": 2, "stdout": "", "stderr": ""})(),
+    )
+    with pytest.raises(PreprocessingError, match="exit code 2"):
+        preprocessing.preprocess_source(
+            c_source,
+            language="c",
+            config=PreprocessingConfig(mode="compiler", compiler=str(tmp_path / "bad-cc")),
+        )
+
+    monkeypatch.setattr(
+        preprocessing.subprocess,
+        "run",
+        lambda *_args, **_kwargs: type("Done", (), {"returncode": 0, "stdout": "", "stderr": ""})(),
+    )
+    result = preprocessing.preprocess_source(
+        c_source,
+        language="c",
+        config=PreprocessingConfig(
+            mode="compiler",
+            adapter="command-template",
+            command_template=f"{sys.executable} {{source}}",
+        ),
+    )
+    assert [diagnostic.category for diagnostic in result.diagnostics] == ["PROVENANCE_UNAVAILABLE"]
+
+    fortran_source = tmp_path / "solver.F90"
+    fortran_source.write_text('include "missing.inc"\n', encoding="utf-8")
+    monkeypatch.setattr(
+        preprocessing.subprocess,
+        "run",
+        lambda *_args, **_kwargs: type("Done", (), {"returncode": 0, "stdout": 'include "missing.inc"\n', "stderr": ""})(),
+    )
+    with pytest.raises(PreprocessingError) as exc_info:
+        preprocessing.preprocess_source(
+            fortran_source,
+            language="fortran",
+            config=PreprocessingConfig(mode="compiler", compiler=str(tmp_path / "gfortran")),
+        )
+    assert exc_info.value.category == "INCLUDE_NOT_FOUND"
 
 
 def test_cli_help_documents_exact_compiler_and_preprocessing_examples():

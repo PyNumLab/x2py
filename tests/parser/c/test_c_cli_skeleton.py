@@ -80,6 +80,39 @@ def test_cli_c_parse_json_reports_raw_preprocessor_metadata(tmp_path: Path):
     assert file_payload["diagnostics"][0]["code"] == "C_UNSUPPORTED_FUNCTION_LIKE_MACRO"
 
 
+def test_attach_preprocessing_recipe_filters_invalid_and_duplicate_macros():
+    empty = c_parser_cli.CFile()
+    c_parser_cli.attach_preprocessing_recipe(empty, None)
+    assert empty.preprocessing_recipe is None
+
+    parsed = c_parser_cli.CFile(
+        macros=[
+            c_parser_cli.CMacro(
+                name="EXISTING",
+                source_location=c_parser_cli.CSourceLocation(filename="api.h", line=2),
+            )
+        ]
+    )
+    recipe = {
+        "macros": [
+            None,
+            {"name": ""},
+            {"name": "EXISTING", "path": "api.h", "line": 2},
+            {"name": "NEW", "value": 123, "function_like": 1, "path": 42, "line": "bad"},
+            {"name": "WITH_LOC", "value": "1", "path": "api.h", "line": 4},
+        ]
+    }
+
+    c_parser_cli.attach_preprocessing_recipe(parsed, recipe)
+
+    assert parsed.preprocessing_recipe == recipe
+    assert [macro.name for macro in parsed.macros] == ["EXISTING", "NEW", "WITH_LOC"]
+    assert parsed.macros[1].value is None
+    assert parsed.macros[1].function_like is True
+    assert parsed.macros[1].source_location.filename is None
+    assert parsed.macros[2].source_location.line == 4
+
+
 def test_cli_c_parse_json_out_writes_file_and_suppresses_stdout(tmp_path: Path):
     header = tmp_path / "api.h"
     output = tmp_path / "report.json"
