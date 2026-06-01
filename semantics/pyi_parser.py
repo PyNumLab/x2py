@@ -96,10 +96,7 @@ class _PyiAstParser:
         )
 
     def import_name(self, node: ast.Import) -> str:
-        return ", ".join(
-            f"{alias.name} as {alias.asname}" if alias.asname else alias.name
-            for alias in node.names
-        )
+        return ", ".join(f"{alias.name} as {alias.asname}" if alias.asname else alias.name for alias in node.names)
 
     def class_def(self, node: ast.ClassDef, *, visibility: str) -> SemanticClass:
         body = _ClassBodyVisitor(self)
@@ -192,8 +189,7 @@ class _PyiAstParser:
         if not isinstance(entries, ast.List):
             raise ValueError("native_call expects a list of projection entries")
         return [
-            self.native_projection_entry(entry, native_position)
-            for native_position, entry in enumerate(entries.elts)
+            self.native_projection_entry(entry, native_position) for native_position, entry in enumerate(entries.elts)
         ]
 
     def native_projection_entry(self, node: ast.AST, native_position: int) -> ProjectionMapping:
@@ -521,8 +517,7 @@ class _PyiAstParser:
     @staticmethod
     def _is_ptr_call(node: ast.Call) -> bool:
         return _PyiAstParser.matches_name(node.func, "Ptr") or (
-            isinstance(node.func, ast.Subscript)
-            and _PyiAstParser.matches_name(node.func.value, "Ptr")
+            isinstance(node.func, ast.Subscript) and _PyiAstParser.matches_name(node.func.value, "Ptr")
         )
 
     @staticmethod
@@ -542,11 +537,12 @@ class _PyiAstParser:
             return False
         if any(isinstance(item, (ast.Slice, ast.Constant)) for item in items):
             return True
-        if any(isinstance(item, ast.Name) and item.id not in self._non_dimension_subscription_names() for item in items):
+        if any(
+            isinstance(item, ast.Name) and item.id not in self._non_dimension_subscription_names() for item in items
+        ):
             return True
         if any(
-            isinstance(item, ast.Call)
-            and self.required_name(item.func) in self._non_dimension_subscription_names()
+            isinstance(item, ast.Call) and self.required_name(item.func) in self._non_dimension_subscription_names()
             for item in items
         ):
             return False
@@ -788,11 +784,7 @@ class _PyiAstParser:
         if len(node.body) != 1:
             raise ValueError(f"Unsupported function header: {_node_text(node)!r}")
         body = node.body[0]
-        if not (
-            isinstance(body, ast.Expr)
-            and isinstance(body.value, ast.Constant)
-            and body.value.value is Ellipsis
-        ):
+        if not (isinstance(body, ast.Expr) and isinstance(body.value, ast.Constant) and body.value.value is Ellipsis):
             raise ValueError(f"Unsupported function header: {_node_text(node)!r}")
 
     @staticmethod
@@ -988,11 +980,7 @@ def _imported_type_refs(module: SemanticModule) -> dict[str, tuple[str, str, str
 
 
 def _reconcile_external_type_refs(modules: list[SemanticModule]) -> list[SemanticModule]:
-    definitions = {
-        (module.name, cls.name): cls
-        for module in modules
-        for cls in module.classes
-    }
+    definitions = {(module.name, cls.name): cls for module in modules for cls in module.classes}
     for module in modules:
         for semantic_type in _iter_module_semantic_types(module):
             ref = semantic_type.metadata.get(EXTERNAL_TYPE_REF_METADATA)

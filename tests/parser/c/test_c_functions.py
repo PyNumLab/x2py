@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C function prototype and definition parser tests."""
 
 import pytest
@@ -309,8 +308,7 @@ def test_function_declaration_attributes_are_tolerated_when_type_shape_is_unchan
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
-        'int exported(void) __attribute__((visibility("default")));\n'
-        "int deprecated(void) [[deprecated]];\n",
+        'int exported(void) __attribute__((visibility("default")));\nint deprecated(void) [[deprecated]];\n',
         filename="function_attributes.h",
         preprocessing="compiler",
     )

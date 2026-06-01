@@ -103,9 +103,7 @@ def _normalize_compile_time_values(
         '8'
     """
     return {
-        str(key).strip().lower(): str(value)
-        for key, value in (compile_time_values or {}).items()
-        if str(key).strip()
+        str(key).strip().lower(): str(value) for key, value in (compile_time_values or {}).items() if str(key).strip()
     }
 
 
@@ -156,8 +154,7 @@ class FortranToIRConverter:
         self.type_map = FORTRAN_TYPE_MAP if type_map is None else type_map
         self.compile_time_values = _normalize_compile_time_values(compile_time_values)
         self.wrapped_derived_types = {
-            (str(module).lower(), str(name).lower())
-            for module, name in (wrapped_derived_types or [])
+            (str(module).lower(), str(name).lower()) for module, name in (wrapped_derived_types or [])
         }
 
     def visit(self, node, **context):
@@ -206,11 +203,7 @@ class FortranToIRConverter:
 
     def visit_project(self, project: FortranProject) -> list[SemanticModule]:
         converter = self._with_additional_wrapped_types(self._wrapped_types_from_project(project))
-        return [
-            module
-            for parsed_file in project.files
-            for module in converter.visit_file_modules(parsed_file)
-        ]
+        return [module for parsed_file in project.files for module in converter.visit_file_modules(parsed_file)]
 
     def visit_variable(
         self,
@@ -324,10 +317,7 @@ class FortranToIRConverter:
         return SemanticClass(
             name=dtype.name,
             native_name=dtype.name,
-            fields=[
-                self.visit_data_member(field, intent="in", derived_type_context=context)
-                for field in dtype.fields
-            ],
+            fields=[self.visit_data_member(field, intent="in", derived_type_context=context) for field in dtype.fields],
             methods=self._bound_methods(dtype, lookup),
             base_classes=self._base_classes(dtype),
             visibility=getattr(dtype, "visibility", "public"),
@@ -438,10 +428,7 @@ class FortranToIRConverter:
                 imports.append(
                     SemanticImport(
                         module=module_name,
-                        items=[
-                            SemanticImportItem(source=item.source, target=item.target)
-                            for item in mappings
-                        ],
+                        items=[SemanticImportItem(source=item.source, target=item.target) for item in mappings],
                     )
                 )
         return imports
@@ -465,8 +452,7 @@ class FortranToIRConverter:
         wrapped_types: Iterable[tuple[str, str]],
     ) -> "FortranToIRConverter":
         merged = self.wrapped_derived_types | {
-            (str(module).lower(), str(name).lower())
-            for module, name in wrapped_types
+            (str(module).lower(), str(name).lower()) for module, name in wrapped_types
         }
         if merged == self.wrapped_derived_types:
             return self
@@ -487,11 +473,7 @@ class FortranToIRConverter:
 
     @staticmethod
     def _wrapped_types_from_project(project: FortranProject) -> set[tuple[str, str]]:
-        return {
-            (dtype.module.lower(), dtype.name.lower())
-            for dtype in project.derived_types.values()
-            if dtype.module
-        }
+        return {(dtype.module.lower(), dtype.name.lower()) for dtype in project.derived_types.values() if dtype.module}
 
     @staticmethod
     def _module_derived_type_context(module: FortranModule) -> _DerivedTypeContext:
@@ -526,17 +508,10 @@ class FortranToIRConverter:
             return None
 
         origin_module, source_name = self._resolve_derived_type_origin(local_name, context)
-        local_type = bool(
-            context is not None
-            and context.module
-            and local_name.lower() in context.local_types
-        )
+        local_type = bool(context is not None and context.module and local_name.lower() in context.local_types)
         if local_type or origin_module is None:
             return None
-        wrapped = bool(
-            origin_module
-            and (origin_module.lower(), source_name.lower()) in self.wrapped_derived_types
-        )
+        wrapped = bool(origin_module and (origin_module.lower(), source_name.lower()) in self.wrapped_derived_types)
         return local_name, {
             "name": source_name,
             "local_name": local_name,
@@ -745,7 +720,11 @@ class FortranToIRConverter:
         if any(dim.endswith(":*") for dim in cleaned):
             return "assumed_size"
         if isinstance(var, FortranArgument) and (getattr(var, "allocatable", False) or getattr(var, "pointer", False)):
-            return "deferred_shape" if any(FortranToIRConverter._has_omitted_upper_bound(dim) for dim in cleaned) else "explicit_shape"
+            return (
+                "deferred_shape"
+                if any(FortranToIRConverter._has_omitted_upper_bound(dim) for dim in cleaned)
+                else "explicit_shape"
+            )
         if any(FortranToIRConverter._has_omitted_upper_bound(dim) for dim in cleaned):
             return "assumed_shape"
         return "explicit_shape"
@@ -879,16 +858,8 @@ class FortranToIRConverter:
     def _projected_procedure_arguments(proc: FortranProcedureSignature) -> list[FortranArgument]:
         args = list(proc.arguments)
         return [
-            *[
-                arg
-                for arg in args
-                if getattr(arg, "intent", "in") != "out" and not getattr(arg, "optional", False)
-            ],
-            *[
-                arg
-                for arg in args
-                if getattr(arg, "intent", "in") != "out" and getattr(arg, "optional", False)
-            ],
+            *[arg for arg in args if getattr(arg, "intent", "in") != "out" and not getattr(arg, "optional", False)],
+            *[arg for arg in args if getattr(arg, "intent", "in") != "out" and getattr(arg, "optional", False)],
             *[arg for arg in args if getattr(arg, "intent", "in") == "out"],
         ]
 
@@ -967,13 +938,16 @@ def _iter_fortran_variable_contexts(
     if isinstance(node, FortranFile):
         file_unit = node.filename or "<source>"
         for var in getattr(node, "variables", []):
-            yield var, {
-                "unit_kind": "file",
-                "unit": file_unit,
-                "module": None,
-                "symbol": var.name,
-                "role": "variable",
-            }
+            yield (
+                var,
+                {
+                    "unit_kind": "file",
+                    "unit": file_unit,
+                    "module": None,
+                    "symbol": var.name,
+                    "role": "variable",
+                },
+            )
         for module in node.modules:
             yield from _iter_fortran_variable_contexts(module)
         for submodule in node.submodules:
@@ -991,13 +965,16 @@ def _iter_fortran_variable_contexts(
     if isinstance(node, (FortranModule, FortranSubmodule)):
         owner = node.name
         for var in node.variables:
-            yield var, {
-                "unit_kind": "module" if isinstance(node, FortranModule) else "submodule",
-                "unit": owner,
-                "module": owner,
-                "symbol": var.name,
-                "role": "variable",
-            }
+            yield (
+                var,
+                {
+                    "unit_kind": "module" if isinstance(node, FortranModule) else "submodule",
+                    "unit": owner,
+                    "module": owner,
+                    "symbol": var.name,
+                    "role": "variable",
+                },
+            )
         for proc in node.procedures:
             yield from _iter_fortran_variable_contexts(proc, module_name=owner)
         for dtype in node.derived_types:
@@ -1007,13 +984,16 @@ def _iter_fortran_variable_contexts(
     if isinstance(node, FortranProgram):
         owner = node.name or "<program>"
         for var in node.variables:
-            yield var, {
-                "unit_kind": "program",
-                "unit": owner,
-                "module": None,
-                "symbol": var.name,
-                "role": "variable",
-            }
+            yield (
+                var,
+                {
+                    "unit_kind": "program",
+                    "unit": owner,
+                    "module": None,
+                    "symbol": var.name,
+                    "role": "variable",
+                },
+            )
         for proc in node.procedures:
             yield from _iter_fortran_variable_contexts(proc, unit_kind="program", unit_name=owner)
         return
@@ -1021,58 +1001,73 @@ def _iter_fortran_variable_contexts(
     if isinstance(node, FortranBlockData):
         owner = node.name or "<block_data>"
         for var in node.variables:
-            yield var, {
-                "unit_kind": "block_data",
-                "unit": owner,
-                "module": None,
-                "symbol": var.name,
-                "role": "variable",
-            }
+            yield (
+                var,
+                {
+                    "unit_kind": "block_data",
+                    "unit": owner,
+                    "module": None,
+                    "symbol": var.name,
+                    "role": "variable",
+                },
+            )
         return
 
     if isinstance(node, FortranProcedureSignature):
         proc_module = module_name or node.module
         owner = _requirement_unit_name(module=proc_module, unit_name=node.name)
         for arg in node.arguments:
-            yield arg, {
-                "unit_kind": "procedure",
-                "unit": owner,
-                "module": proc_module,
-                "procedure": node.name,
-                "symbol": arg.name,
-                "role": "argument",
-            }
+            yield (
+                arg,
+                {
+                    "unit_kind": "procedure",
+                    "unit": owner,
+                    "module": proc_module,
+                    "procedure": node.name,
+                    "symbol": arg.name,
+                    "role": "argument",
+                },
+            )
         if node.result is not None:
-            yield node.result, {
-                "unit_kind": "procedure",
-                "unit": owner,
-                "module": proc_module,
-                "procedure": node.name,
-                "symbol": node.result.name,
-                "role": "result",
-            }
+            yield (
+                node.result,
+                {
+                    "unit_kind": "procedure",
+                    "unit": owner,
+                    "module": proc_module,
+                    "procedure": node.name,
+                    "symbol": node.result.name,
+                    "role": "result",
+                },
+            )
         for var in node.variables.values():
-            yield var, {
-                "unit_kind": "procedure",
-                "unit": owner,
-                "module": proc_module,
-                "procedure": node.name,
-                "symbol": var.name,
-                "role": "variable",
-            }
+            yield (
+                var,
+                {
+                    "unit_kind": "procedure",
+                    "unit": owner,
+                    "module": proc_module,
+                    "procedure": node.name,
+                    "symbol": var.name,
+                    "role": "variable",
+                },
+            )
         return
 
     if isinstance(node, FortranDerivedType):
         owner = _requirement_unit_name(module=module_name or node.module, unit_name=node.name)
         for field in node.fields:
-            yield field, {
-                "unit_kind": "derived_type",
-                "unit": owner,
-                "module": module_name or node.module,
-                "type_owner": node.name,
-                "symbol": field.name,
-                "role": "field",
-            }
+            yield (
+                field,
+                {
+                    "unit_kind": "derived_type",
+                    "unit": owner,
+                    "module": module_name or node.module,
+                    "type_owner": node.name,
+                    "symbol": field.name,
+                    "role": "field",
+                },
+            )
 
 
 def _compile_time_requirement_message(code: str, symbol: str, expression: str) -> str:
@@ -1109,7 +1104,9 @@ def collect_semantic_compile_time_requirements(
     requirements: list[dict[str, str | None]] = []
     seen: set[tuple[str | None, ...]] = set()
 
-    def add_requirement(code: str, ctx: dict, *, expression: str, base_type: str | None = None, kind: str | None = None) -> None:
+    def add_requirement(
+        code: str, ctx: dict, *, expression: str, base_type: str | None = None, kind: str | None = None
+    ) -> None:
         symbol = str(ctx.get("symbol") or "")
         item = {
             "code": code,
@@ -1125,7 +1122,9 @@ def collect_semantic_compile_time_requirements(
             "expression": expression,
             "message": _compile_time_requirement_message(code, symbol, expression),
         }
-        key = tuple(str(item.get(field) or "") for field in ("code", "unit", "symbol", "base_type", "kind", "expression"))
+        key = tuple(
+            str(item.get(field) or "") for field in ("code", "unit", "symbol", "base_type", "kind", "expression")
+        )
         if key in seen:
             return
         seen.add(key)
@@ -1164,10 +1163,7 @@ def _resolve_semantic_value(value, compile_time_values: dict[str, str]):
     if isinstance(value, tuple):
         return tuple(_resolve_semantic_value(item, compile_time_values) for item in value)
     if isinstance(value, dict):
-        return {
-            key: _resolve_semantic_value(item, compile_time_values)
-            for key, item in value.items()
-        }
+        return {key: _resolve_semantic_value(item, compile_time_values) for key, item in value.items()}
     return value
 
 
@@ -1177,10 +1173,7 @@ def _resolve_semantic_type_compile_time_values(
 ) -> None:
     if semantic_type is None:
         return
-    semantic_type.shape = [
-        _resolve_compile_time_text(dim, compile_time_values)
-        for dim in semantic_type.shape
-    ]
+    semantic_type.shape = [_resolve_compile_time_text(dim, compile_time_values) for dim in semantic_type.shape]
     for constraint in semantic_type.constraints:
         constraint.arguments = _resolve_semantic_value(constraint.arguments, compile_time_values)
     semantic_type.metadata = _resolve_semantic_value(semantic_type.metadata, compile_time_values)
@@ -1191,14 +1184,8 @@ def _resolve_semantic_type_compile_time_values(
         )
         if semantic_type.storage.array is not None:
             array = semantic_type.storage.array
-            array.shape = [
-                _resolve_compile_time_text(dim, compile_time_values)
-                for dim in array.shape
-            ]
-            array.source_shape = [
-                _resolve_compile_time_text(dim, compile_time_values)
-                for dim in array.source_shape
-            ]
+            array.shape = [_resolve_compile_time_text(dim, compile_time_values) for dim in array.shape]
+            array.source_shape = [_resolve_compile_time_text(dim, compile_time_values) for dim in array.source_shape]
             array.lower_bounds = [
                 None if dim is None else _resolve_compile_time_text(dim, compile_time_values)
                 for dim in array.lower_bounds

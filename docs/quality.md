@@ -221,8 +221,8 @@ For parser/compiler changes, high-value mutants are usually around:
 
 Current defaults are intentionally staged for an existing parser codebase:
 
-- Hard gate: pytest, coverage threshold, Ruff bug-focused lint, Bandit,
-  pip-audit, and Vulture.
+- Hard gate: pytest, coverage threshold, Ruff bug-focused lint and formatting,
+  Bandit, pip-audit, and Vulture.
 - Advisory: Radon full reports, because complexity reduction needs focused
   tests and gradual refactoring.
 - Manual: mutmut full-project runs.
@@ -231,11 +231,10 @@ Current defaults are intentionally staged for an existing parser codebase:
 
 After the first cleanup pass, ratchet strictness in this order:
 
-1. Run `ruff format .` once and make `ruff format --check .` a full CI gate.
-2. Remove Ruff baseline ignores one rule family at a time.
-3. Keep Vulture exclusions narrow as new public/plugin APIs are added.
-4. Lower Ruff `max-complexity` from 50 toward 20 for new code.
-5. Add benchmark comparison thresholds only for stable, meaningful workloads.
+1. Remove Ruff baseline ignores one rule family at a time.
+2. Keep Vulture exclusions narrow as new public/plugin APIs are added.
+3. Lower Ruff `max-complexity` from 50 toward 20 for new code.
+4. Add benchmark comparison thresholds only for stable, meaningful workloads.
 
 ## Parser And Codegen Practices
 

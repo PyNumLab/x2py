@@ -686,10 +686,7 @@ def consume(
         module_name="edited",
     )
 
-    arrays = [
-        arg.semantic_type.storage.array
-        for arg in module.functions[0].arguments
-    ]
+    arrays = [arg.semantic_type.storage.array for arg in module.functions[0].arguments]
     assert arrays[0].order == "ORDER_C"
     assert arrays[1].order == "ORDER_F"
     assert arrays[0].category is None

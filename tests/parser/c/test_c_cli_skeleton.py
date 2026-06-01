@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C parser CLI coverage for the current partial subset."""
 
 import json

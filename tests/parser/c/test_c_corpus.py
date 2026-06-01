@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Active cJSON parser regression tests.
 
 cJSON is the first target corpus because it is small, realistic, and exercises

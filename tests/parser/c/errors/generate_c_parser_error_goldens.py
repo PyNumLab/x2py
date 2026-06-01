@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Generate/update golden files for C parser error fixtures."""
 
 from __future__ import annotations
@@ -32,8 +31,7 @@ def _serialize_error_fixture(fixture: Path) -> dict:
             ],
         }
     raise SystemExit(
-        f"ERROR: {fixture.name} did not raise CParseError; "
-        "error fixture files must trigger a parse error."
+        f"ERROR: {fixture.name} did not raise CParseError; error fixture files must trigger a parse error."
     )
 
 

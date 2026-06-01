@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Declaration parsing, interfaces, and less common scope edges."""
 
 import pytest

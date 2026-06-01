@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """JSON schema sanity tests for legacy C parser project snapshots."""
 
 import json

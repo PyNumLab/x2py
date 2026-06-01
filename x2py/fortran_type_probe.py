@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Compiler-derived Fortran kind expression facts.
 
 Fortran kind values and intrinsics such as ``selected_real_kind`` are
@@ -175,9 +174,7 @@ def probe_fortran_type_expressions(
     command; the command is recorded in the result.
     """
     if not config.compiler:
-        raise FortranTypeProbeError(
-            "Fortran type probing requires an exact compiler executable"
-        )
+        raise FortranTypeProbeError("Fortran type probing requires an exact compiler executable")
     if config.compile_commands:
         raise FortranTypeProbeError(
             "Fortran type probing does not consume compile_commands directly; "
@@ -189,9 +186,7 @@ def probe_fortran_type_expressions(
 
     with tempfile.TemporaryDirectory(prefix="x2py-fortran-type-probe-") as temp_dir:
         source_path = Path(temp_dir) / "fortran_type_probe.F90"
-        executable_path = Path(temp_dir) / (
-            "fortran_type_probe.exe" if os.name == "nt" else "fortran_type_probe"
-        )
+        executable_path = Path(temp_dir) / ("fortran_type_probe.exe" if os.name == "nt" else "fortran_type_probe")
         source_path.write_text(source_text, encoding="utf-8")
 
         compile_argv = [
@@ -215,9 +210,7 @@ def probe_fortran_type_expressions(
         if compiled.returncode != 0:
             command = " ".join(shlex.quote(arg) for arg in compile_argv)
             detail = f": {compiled.stderr.strip()}" if compiled.stderr.strip() else ""
-            raise FortranTypeProbeError(
-                f"Fortran type probe compilation failed with `{command}`{detail}"
-            )
+            raise FortranTypeProbeError(f"Fortran type probe compilation failed with `{command}`{detail}")
 
         run_argv = [*(runner or ()), str(executable_path)]
         try:
@@ -229,21 +222,16 @@ def probe_fortran_type_expressions(
             )
         except OSError as exc:
             raise FortranTypeProbeError(
-                "failed to execute Fortran type probe; provide a compatible "
-                f"runner for cross-compiled targets: {exc}"
+                f"failed to execute Fortran type probe; provide a compatible runner for cross-compiled targets: {exc}"
             ) from exc
         if completed.returncode != 0:
             command = " ".join(shlex.quote(arg) for arg in run_argv)
             detail = f": {completed.stderr.strip()}" if completed.stderr.strip() else ""
-            raise FortranTypeProbeError(
-                f"Fortran type probe execution failed with `{command}`{detail}"
-            )
+            raise FortranTypeProbeError(f"Fortran type probe execution failed with `{command}`{detail}")
         try:
             payload = json.loads(completed.stdout)
         except json.JSONDecodeError as exc:
-            raise FortranTypeProbeError(
-                f"Fortran type probe produced invalid JSON: {exc}"
-            ) from exc
+            raise FortranTypeProbeError(f"Fortran type probe produced invalid JSON: {exc}") from exc
 
     raw_values = payload.get("values")
     if not isinstance(raw_values, list):
@@ -254,9 +242,7 @@ def probe_fortran_type_expressions(
     values: dict[str, int] = {}
     for expression, value in zip(unique_expressions, raw_values):
         if not isinstance(value, int):
-            raise FortranTypeProbeError(
-                f"Fortran type probe value for {expression!r} is not an integer"
-            )
+            raise FortranTypeProbeError(f"Fortran type probe value for {expression!r} is not an integer")
         values[expression] = value
 
     return FortranTypeProbeReport(
@@ -317,17 +303,11 @@ def _validate_expression(expression: str) -> None:
             f"Fortran type probe expression is not a single initialization expression: {expression!r}"
         )
     if _SAFE_EXPRESSION_RE.fullmatch(expression) is None:
-        raise FortranTypeProbeError(
-            f"Fortran type probe expression contains unsupported characters: {expression!r}"
-        )
+        raise FortranTypeProbeError(f"Fortran type probe expression contains unsupported characters: {expression!r}")
 
 
 def _probe_import_lines(expressions: Sequence[str]) -> list[str]:
-    tokens = {
-        token.lower()
-        for expression in expressions
-        for token in _TOKEN_RE.findall(expression)
-    }
+    tokens = {token.lower() for expression in expressions for token in _TOKEN_RE.findall(expression)}
     lines: list[str] = []
     env_names = sorted(tokens & _ISO_FORTRAN_ENV_NAMES)
     c_names = sorted(tokens & _ISO_C_BINDING_NAMES)
@@ -380,7 +360,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("-U", "--undef", dest="undefs", action="append", default=[])
     parser.add_argument("--std", help="Project Fortran standard passed to the probe compiler.")
     parser.add_argument("--compiler-arg", dest="compiler_args", action="append", default=[])
-    parser.add_argument("--runner", dest="runner", action="append", default=[], help="Runner command item for cross targets; repeat for arguments.")
+    parser.add_argument(
+        "--runner",
+        dest="runner",
+        action="append",
+        default=[],
+        help="Runner command item for cross targets; repeat for arguments.",
+    )
     args = parser.parse_args(argv)
     try:
         for define in args.defines:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Partial C parser for wrapper-oriented declaration extraction.
 
 Parsing sketch

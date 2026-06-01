@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import builtins
 from dataclasses import dataclass
 import json

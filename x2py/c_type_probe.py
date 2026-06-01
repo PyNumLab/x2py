@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Compiler-derived ABI facts for common C standard-library types.
 
 This module deliberately runs a generated C executable instead of hard-coding
@@ -171,9 +170,7 @@ def probe_c_standard_types(
     runner such as an emulator; the command is recorded in the result.
     """
     if not config.compiler:
-        raise CStandardTypeProbeError(
-            "C standard type probing requires an exact compiler executable"
-        )
+        raise CStandardTypeProbeError("C standard type probing requires an exact compiler executable")
     if config.compile_commands:
         raise CStandardTypeProbeError(
             "C standard type probing does not consume compile_commands directly; "
@@ -182,9 +179,7 @@ def probe_c_standard_types(
 
     with tempfile.TemporaryDirectory(prefix="x2py-c-type-probe-") as temp_dir:
         source_path = Path(temp_dir) / "c_standard_type_probe.c"
-        executable_path = Path(temp_dir) / (
-            "c_standard_type_probe.exe" if os.name == "nt" else "c_standard_type_probe"
-        )
+        executable_path = Path(temp_dir) / ("c_standard_type_probe.exe" if os.name == "nt" else "c_standard_type_probe")
         source_text = build_c_standard_type_probe_source()
         source_path.write_text(source_text, encoding="utf-8")
 
@@ -205,15 +200,11 @@ def probe_c_standard_types(
                 check=False,
             )
         except OSError as exc:
-            raise CStandardTypeProbeError(
-                f"failed to run C type probe compiler {config.compiler!r}: {exc}"
-            ) from exc
+            raise CStandardTypeProbeError(f"failed to run C type probe compiler {config.compiler!r}: {exc}") from exc
         if compiled.returncode != 0:
             command = " ".join(shlex.quote(arg) for arg in compile_argv)
             detail = f": {compiled.stderr.strip()}" if compiled.stderr.strip() else ""
-            raise CStandardTypeProbeError(
-                f"C standard type probe compilation failed with `{command}`{detail}"
-            )
+            raise CStandardTypeProbeError(f"C standard type probe compilation failed with `{command}`{detail}")
 
         run_argv = [*(runner or ()), str(executable_path)]
         try:
@@ -231,15 +222,11 @@ def probe_c_standard_types(
         if completed.returncode != 0:
             command = " ".join(shlex.quote(arg) for arg in run_argv)
             detail = f": {completed.stderr.strip()}" if completed.stderr.strip() else ""
-            raise CStandardTypeProbeError(
-                f"C standard type probe execution failed with `{command}`{detail}"
-            )
+            raise CStandardTypeProbeError(f"C standard type probe execution failed with `{command}`{detail}")
         try:
             payload = json.loads(completed.stdout)
         except json.JSONDecodeError as exc:
-            raise CStandardTypeProbeError(
-                f"C standard type probe produced invalid JSON: {exc}"
-            ) from exc
+            raise CStandardTypeProbeError(f"C standard type probe produced invalid JSON: {exc}") from exc
 
     types = payload.get("types")
     if not isinstance(types, dict):
@@ -272,7 +259,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("-U", "--undef", dest="undefs", action="append", default=[])
     parser.add_argument("--std", help="Original project standard recorded as provenance; the probe itself uses C11.")
     parser.add_argument("--compiler-arg", dest="compiler_args", action="append", default=[])
-    parser.add_argument("--runner", dest="runner", action="append", default=[], help="Runner command item for cross targets; repeat for arguments.")
+    parser.add_argument(
+        "--runner",
+        dest="runner",
+        action="append",
+        default=[],
+        help="Runner command item for cross targets; repeat for arguments.",
+    )
     args = parser.parse_args(argv)
     try:
         for define in args.defines:

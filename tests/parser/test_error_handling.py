@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import pytest
 
 from x2py import FortranParseError, parse_fortran_file

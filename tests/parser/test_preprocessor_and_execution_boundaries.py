@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Preprocessor selection and declaration/execution boundary handling."""
 
 import ast

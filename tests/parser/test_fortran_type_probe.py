@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Compiler-derived Fortran kind expression probe tests."""
 
 import json

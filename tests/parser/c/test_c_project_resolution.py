@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Active coverage for current C project include/index behavior."""
 
 from pathlib import Path

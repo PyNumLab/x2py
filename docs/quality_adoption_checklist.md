@@ -8,7 +8,7 @@ report, or merged configuration change.
 The recurring checks remain required after adoption is complete. The adoption
 sections track the finite work needed to reach the intended steady state.
 
-Last reviewed: 2026-05-31
+Last reviewed: 2026-06-01
 
 ## General Goal
 
@@ -55,12 +55,13 @@ GitHub Actions jobs provide broader repeated coverage.
 
 ## Current Baseline
 
-Validated locally on 2026-05-31:
+Fully validated locally on 2026-05-31. Ruff lint/formatting and
+CI-shaped pytest/coverage were refreshed on 2026-06-01:
 
 - [x] Full CI-shaped pytest run: `3487 passed`.
 - [x] Combined xdist and subprocess branch coverage: `95.34%`, above the
       configured `95%` gate.
-- [x] Ruff lint and changed-file Ruff formatting checks pass.
+- [x] Ruff lint and full-tree Ruff formatting checks pass.
 - [x] Pre-commit hooks pass.
 - [x] Vulture reports no current findings.
 - [x] Bandit reports no medium- or high-severity findings.
@@ -104,11 +105,11 @@ parser functions are improved incrementally.
 - [x] Configure bug-focused lint families and Ruff formatting.
 - [x] Run `ruff check .` in CI.
 - [x] Run Ruff lint and formatting in pre-commit.
-- [x] Require Ruff formatting for changed Python files in CI.
-- [x] Remove the first safe baseline-ignore families: `B009`, `C420`, `F402`,
-      and `UP035`.
-- [ ] Format the historical Python tree in a dedicated mechanical change.
-- [ ] Change CI from changed-file formatting to `ruff format --check .`.
+- [x] Require Ruff formatting in CI.
+- [x] Remove the first safe baseline-ignore families: `B009`, `C420`, `E741`,
+      `F402`, `UP009`, and `UP035`.
+- [x] Format the historical Python tree in a dedicated mechanical change.
+- [x] Change CI from changed-file formatting to `ruff format --check .`.
 - [ ] Review and remove baseline ignores one rule family at a time.
 - [ ] Lower `tool.ruff.lint.mccabe.max-complexity` from `50` toward `20`.
 - [ ] Define a stricter complexity policy for new or materially changed
@@ -541,3 +542,5 @@ Add a row when a QA adoption task or subsystem campaign is completed.
 | 2026-05-31 | Hypothesis code generation | Added generated native-name escaping, stable synthetic-import ordering, and semantic-IR-to-Pyi parse-back invariants; fixed quoted `Name(...)` emission and stored focused regressions for discovered failures. | Continue focused mutation campaigns and keep storing minimized failures. |
 | 2026-05-31 | Full validation | `3487 passed`, combined coverage `95.34%`, Ruff, pre-commit, Vulture, and Radon review clean. | Preserve the baseline while continuing focused mutation campaigns. |
 | 2026-05-31 | Mutmut: `semantics/pyi_printer.py` | Made focused workspaces use local package dependencies, prevented process-local stats instrumentation from leaking into fresh CLI subprocesses, added behavioral assertions for meaningful survivors, and established a reviewed `385/395` baseline. | Continue subsystem campaigns; the remaining `6` survivors and `4` timeouts are classified equivalents or mutmut artifacts. |
+| 2026-06-01 | Ruff formatting rollout | Formatted the historical Python tree, changed CI from changed-file formatting to `ruff format --check .`, and revalidated with `3487 passed` plus `95.34%` combined coverage. | Continue baseline-ignore and complexity-policy ratchets. |
+| 2026-06-01 | Ruff ratchet | Removed redundant UTF-8 encoding headers and ambiguous one-letter variables, enabled `UP009` and `E741`, and revalidated with Ruff, pre-commit, and CI-shaped coverage. | Continue one reviewed rule family at a time. |

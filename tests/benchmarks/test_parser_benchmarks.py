@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Representative parser and code-generation performance benchmarks."""
 
 from __future__ import annotations

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C parser grouped-project fixture regression tests."""
 
 import shutil

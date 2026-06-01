@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import argparse
@@ -79,7 +78,6 @@ def _parse_paths(paths: list[str]) -> dict[str, dict]:
     return out
 
 
-
 def _semantic_report(paths: list[str]) -> dict[str, dict]:
     """Generate semantic IR and pyi text per parsed file."""
     from semantics.fortran2ir import fortran_module_to_semantic_module
@@ -110,6 +108,7 @@ def _format_pyi_report(semantic_report: dict[str, dict]) -> str:
         lines.append("")
     return "\n".join(lines).rstrip()
 
+
 def _format_var_type(var: dict) -> str:
     base = var.get("base_type", "unknown")
     kind = var.get("kind")
@@ -121,6 +120,7 @@ def _format_var_type(var: dict) -> str:
     else:
         base_repr = base
     return f"{base_repr}[{rank}]"
+
 
 def _limit_items(items: list[dict], print_limit: int | None) -> tuple[list[dict], int]:
     if print_limit is None:
@@ -162,7 +162,7 @@ def _format_report(
             visible_procedures, hidden = _limit_items(free_procedures, print_limit)
             for s in visible_procedures:
                 args = ", ".join(f"{a['name']}:{_format_var_type(a)}" for a in s["arguments"])
-                result_txt = f" -> {_format_var_type(s['result'])}" if s.get('result') else ""
+                result_txt = f" -> {_format_var_type(s['result'])}" if s.get("result") else ""
                 lines.append(f"    - {s['kind']} {s['name']}({args}){result_txt}")
             if hidden > 0:
                 lines.append(f"    ... {hidden} more procedures")
@@ -186,7 +186,9 @@ def _format_report(
                     lines.append(f"      Derived types: {len(mod['derived_types'])}")
                     visible_types, hidden = _limit_items(mod["derived_types"], print_limit)
                     for t in visible_types:
-                        lines.append(f"        - type {t['name']} (fields={len(t['fields'])}, methods={len(t['methods'])})")
+                        lines.append(
+                            f"        - type {t['name']} (fields={len(t['fields'])}, methods={len(t['methods'])})"
+                        )
                         if t.get("fields"):
                             lines.append(f"          Fields: {len(t['fields'])}")
                             visible_fields, hidden_fields = _limit_items(t["fields"], print_limit)
@@ -201,7 +203,7 @@ def _format_report(
                     visible_procedures, hidden = _limit_items(mod["procedures"], print_limit)
                     for s in visible_procedures:
                         args = ", ".join(f"{a['name']}:{_format_var_type(a)}" for a in s["arguments"])
-                        result_txt = f" -> {_format_var_type(s['result'])}" if s.get('result') else ""
+                        result_txt = f" -> {_format_var_type(s['result'])}" if s.get("result") else ""
                         lines.append(f"        - {s['kind']} {s['name']}({args}){result_txt}")
                     if hidden > 0:
                         lines.append(f"        ... {hidden} more procedures")
@@ -212,8 +214,12 @@ def _format_report(
             lines.append(f"  Submodules: {len(parsed['submodules'])}")
             visible_submodules, hidden_submodules = _limit_items(parsed["submodules"], print_limit)
             for submod in visible_submodules:
-                parent = submod["parent"] if submod.get("ancestor") is None else f"{submod['ancestor']}:{submod['parent']}"
-                lines.append(f"    - submodule {submod['name']} (parent={parent}, vars={len(submod['variables'])}, uses={len(submod['uses'])})")
+                parent = (
+                    submod["parent"] if submod.get("ancestor") is None else f"{submod['ancestor']}:{submod['parent']}"
+                )
+                lines.append(
+                    f"    - submodule {submod['name']} (parent={parent}, vars={len(submod['variables'])}, uses={len(submod['uses'])})"
+                )
                 if show_vars:
                     lines.extend(_format_variable_lines(submod["variables"], indent="      ", print_limit=print_limit))
                 if submod.get("procedures"):
@@ -221,7 +227,7 @@ def _format_report(
                     visible_procedures, hidden = _limit_items(submod["procedures"], print_limit)
                     for proc in visible_procedures:
                         args = ", ".join(f"{a['name']}:{_format_var_type(a)}" for a in proc["arguments"])
-                        result_txt = f" -> {_format_var_type(proc['result'])}" if proc.get('result') else ""
+                        result_txt = f" -> {_format_var_type(proc['result'])}" if proc.get("result") else ""
                         lines.append(f"        - {proc['kind']} {proc['name']}({args}){result_txt}")
                     if hidden > 0:
                         lines.append(f"        ... {hidden} more procedures")
@@ -264,8 +270,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Parse Fortran files and print a human-readable report or JSON.")
     parser.add_argument("paths", nargs="+", help="Fortran file(s) or directory path(s)")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
-    parser.add_argument("--semantics", action="store_true", help="Generate semantic IR models from parsed Fortran modules")
-    parser.add_argument("--pyi", action="store_true", help="Print the generated Python .pyi content from semantic models")
+    parser.add_argument(
+        "--semantics", action="store_true", help="Generate semantic IR models from parsed Fortran modules"
+    )
+    parser.add_argument(
+        "--pyi", action="store_true", help="Print the generated Python .pyi content from semantic models"
+    )
     parser.add_argument(
         "--show-vars",
         action="store_true",
@@ -309,7 +319,9 @@ def main() -> int:
     except FortranParseError as exc:
         if args.debug or _env_flag("FORTRAN_PARSER_DEBUG"):
             raise
-        print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
+        print(
+            exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr
+        )
         return 1
 
     payload = report

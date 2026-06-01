@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C aggregate type, enum, and typedef parser tests."""
 
 import pytest

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import inspect
@@ -77,20 +76,10 @@ def c_model_to_dict(obj: Any, _seen: set[int] | None = None) -> Any:
                     and f.name in {"preprocessing_recipe", "preprocessed_source_path"}
                     and getattr(obj, f.name) is None
                 )
+                or (isinstance(obj, CFile) and f.name == "original_source_paths" and not getattr(obj, f.name))
+                or (isinstance(obj, CFunction) and f.name == "condition_set" and not getattr(obj, f.name))
                 or (
-                    isinstance(obj, CFile)
-                    and f.name == "original_source_paths"
-                    and not getattr(obj, f.name)
-                )
-                or (
-                    isinstance(obj, CFunction)
-                    and f.name == "condition_set"
-                    and not getattr(obj, f.name)
-                )
-                or (
-                    isinstance(obj, CProject)
-                    and f.name == "conditional_function_variants"
-                    and not getattr(obj, f.name)
+                    isinstance(obj, CProject) and f.name == "conditional_function_variants" and not getattr(obj, f.name)
                 )
             )
         }

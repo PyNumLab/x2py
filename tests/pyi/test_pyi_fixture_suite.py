@@ -36,11 +36,7 @@ def test_pyi_fixtures_match_fortran_data_one_to_one():
 
 def test_c_pyi_fixtures_match_general_c_projects_one_to_one():
     expected = {project_key.with_suffix(".pyi") for project_key, _fixtures in C_FIXTURE_PROJECTS}
-    actual = {
-        path.relative_to(C_PYI_FIXTURE_DIR)
-        for path in C_PYI_FIXTURE_DIR.rglob("*.pyi")
-        if path.is_file()
-    }
+    actual = {path.relative_to(C_PYI_FIXTURE_DIR) for path in C_PYI_FIXTURE_DIR.rglob("*.pyi") if path.is_file()}
 
     assert not sorted(expected - actual)
     assert not sorted(actual - expected)
@@ -48,9 +44,7 @@ def test_c_pyi_fixtures_match_general_c_projects_one_to_one():
 
 def test_pyi_fixtures_do_not_contain_unknown_types():
     unknown_fixtures = [
-        path.name
-        for path in PYI_FIXTURE_DIR.glob("*.pyi")
-        if "Unknown" in path.read_text(encoding="utf-8")
+        path.name for path in PYI_FIXTURE_DIR.glob("*.pyi") if "Unknown" in path.read_text(encoding="utf-8")
     ]
     unknown_fixtures.extend(
         f"c/{path.relative_to(C_PYI_FIXTURE_DIR)}"

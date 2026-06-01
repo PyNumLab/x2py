@@ -208,16 +208,26 @@ def test_readiness_skips_private_api_and_normalizes_metadata_blocker_items():
         },
         variables=[SemanticArgument("hidden", SemanticType("Undeclared"), visibility="private")],
         classes=[
-            SemanticClass(name="Private", fields=[SemanticArgument("missing", SemanticType("Undeclared"))], visibility="private"),
+            SemanticClass(
+                name="Private", fields=[SemanticArgument("missing", SemanticType("Undeclared"))], visibility="private"
+            ),
             SemanticClass(
                 name="Public",
                 methods=[
-                    SemanticMethod(name="hidden", arguments=[SemanticArgument("missing", SemanticType("Undeclared"))], visibility="private"),
+                    SemanticMethod(
+                        name="hidden",
+                        arguments=[SemanticArgument("missing", SemanticType("Undeclared"))],
+                        visibility="private",
+                    ),
                     SemanticMethod(name="ready", arguments=[SemanticArgument("value", SemanticType("Int32"))]),
                 ],
             ),
         ],
-        functions=[SemanticFunction(name="hidden", arguments=[SemanticArgument("missing", SemanticType("Undeclared"))], visibility="private")],
+        functions=[
+            SemanticFunction(
+                name="hidden", arguments=[SemanticArgument("missing", SemanticType("Undeclared"))], visibility="private"
+            )
+        ],
     )
 
     report = assess_semantic_wrap_readiness(module)
@@ -410,10 +420,7 @@ class particle:
     )
 
     payload = x2py_cli._wrap_readiness_report([str(tmp_path)])
-    modules = {
-        module["name"]: module
-        for module in payload[str(physics)]["semantic_modules"]
-    }
+    modules = {module["name"]: module for module in payload[str(physics)]["semantic_modules"]}
     particle_ref = modules["physics"]["functions"][0]["return_type"]["metadata"]["external_type_ref"]
 
     assert particle_ref["origin_module"] == "types_mod"

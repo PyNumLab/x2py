@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C lexer and lightweight preprocessing coverage."""
 
 import pytest

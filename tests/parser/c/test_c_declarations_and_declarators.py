@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C declaration-specifier and composed-type parser tests."""
 
 import pytest

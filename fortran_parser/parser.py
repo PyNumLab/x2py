@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Wrapper-oriented Fortran parser with recursive grammar-unit visitors.
 
 Read the module-level wrappers at the bottom first, then `FortranParser`
@@ -3752,22 +3751,22 @@ class FortranParser:
             s = line.strip()
             if not s:
                 continue
-            l = s.lower()
-            if l.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", l):
+            lowered = s.lower()
+            if lowered.startswith("module ") and not re.match(r"^module\s+(procedure|subroutine|function)\b", lowered):
                 current_module = s.split()[1].lower()
                 in_module_spec_part = True
                 output.setdefault(current_module, {})
                 continue
-            if l.startswith("contains") and current_module is not None:
+            if lowered.startswith("contains") and current_module is not None:
                 in_module_spec_part = False
                 continue
-            if l.startswith("end module"):
+            if lowered.startswith("end module"):
                 current_module = None
                 in_module_spec_part = False
                 continue
             if current_module is None or not in_module_spec_part:
                 continue
-            if l == "contains":
+            if lowered == "contains":
                 in_module_spec_part = False
                 continue
             if not in_module_spec_part:

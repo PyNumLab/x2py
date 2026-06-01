@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import argparse
@@ -26,11 +25,7 @@ def _diagnostic_color_enabled(*, disabled: bool) -> bool:
 
 
 def _collect_c_extensions(path: Path) -> list[Path]:
-    return sorted(
-        p
-        for p in path.rglob("*")
-        if p.is_file() and p.suffix.lower() in _C_SOURCE_SUFFIXES
-    )
+    return sorted(p for p in path.rglob("*") if p.is_file() and p.suffix.lower() in _C_SOURCE_SUFFIXES)
 
 
 def expand_c_paths(paths: list[str]) -> list[Path]:
@@ -50,7 +45,14 @@ def attach_preprocessing_recipe(parsed: CFile, preprocessing_recipe: dict[str, A
     parsed.preprocessing_recipe = preprocessing_recipe
     if not preprocessing_recipe:
         return
-    existing = {(macro.name, macro.source_location.filename if macro.source_location else None, macro.source_location.line if macro.source_location else None) for macro in parsed.macros}
+    existing = {
+        (
+            macro.name,
+            macro.source_location.filename if macro.source_location else None,
+            macro.source_location.line if macro.source_location else None,
+        )
+        for macro in parsed.macros
+    }
     for item in preprocessing_recipe.get("macros") or []:
         if not isinstance(item, dict):
             continue
@@ -146,7 +148,9 @@ def main(argv: list[str] | None = None) -> int:
     except CParseError as exc:
         if args.debug or _env_flag("C_PARSER_DEBUG"):
             raise
-        print(exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr)
+        print(
+            exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr
+        )
         return 1
     if args.out:
         Path(args.out).write_text(json.dumps(payload, indent=2), encoding="utf-8")

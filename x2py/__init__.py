@@ -58,6 +58,7 @@ def __getattr__(name: str):
         return getattr(module, name)
     raise AttributeError(f"module 'x2py' has no attribute {name!r}")
 
+
 __all__ = (
     "CToIRConverter",
     "CFile",

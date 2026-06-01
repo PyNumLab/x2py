@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Generate/update golden files for Fortran parser fixtures."""
 
 from __future__ import annotations
@@ -74,6 +73,7 @@ def main() -> None:
         for fixture, exc in failures:
             print(f"failed {fixture}: {exc}", file=sys.stderr)
         raise SystemExit(1)
+
 
 if __name__ == "__main__":
     main()

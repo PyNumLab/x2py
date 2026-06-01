@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import pytest
 
 from fortran_parser.models import FortranFunctionCall, FortranSlice, FortranUseMapping, FortranVariable

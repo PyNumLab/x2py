@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -87,12 +86,8 @@ _TWO_CHAR_OPERATORS = {
 
 _BRACKET_PAIRS = {"(": ")", "[": "]", "{": "}"}
 _BRACKET_CLOSERS = {")": "(", "]": "[", "}": "{"}
-_GCC_LINEMARKER_RE = re.compile(
-    r'^\s*#\s+(?P<line>\d+)\s+(?:"(?P<quoted>(?:[^"\\]|\\.)*)"|(?P<bare>\S+))'
-)
-_LINE_DIRECTIVE_RE = re.compile(
-    r'^\s*#\s*line\s+(?P<line>\d+)(?:\s+(?:"(?P<quoted>(?:[^"\\]|\\.)*)"|(?P<bare>\S+)))?'
-)
+_GCC_LINEMARKER_RE = re.compile(r'^\s*#\s+(?P<line>\d+)\s+(?:"(?P<quoted>(?:[^"\\]|\\.)*)"|(?P<bare>\S+))')
+_LINE_DIRECTIVE_RE = re.compile(r'^\s*#\s*line\s+(?P<line>\d+)(?:\s+(?:"(?P<quoted>(?:[^"\\]|\\.)*)"|(?P<bare>\S+)))?')
 _AGGREGATE_HEADER_ATTRIBUTE_RE = re.compile(r"\b(?:__attribute__?|__declspec(?:__)?)\b")
 
 
@@ -200,10 +195,7 @@ def _mapped_source_lines(
     end_line: int,
 ) -> tuple[str, ...]:
     """Return source-line text for a physical line range."""
-    return tuple(
-        mapping.source_line or ""
-        for mapping in mappings[start_line - 1 : end_line]
-    )
+    return tuple(mapping.source_line or "" for mapping in mappings[start_line - 1 : end_line])
 
 
 def _mapped_filenames(
@@ -512,13 +504,7 @@ def split_top_level_c_source(
                 )
                 block_header = None
                 block_source_line = None
-        elif (
-            char == ";"
-            and paren_depth == 0
-            and bracket_depth == 0
-            and brace_depth == 0
-            and start_index is not None
-        ):
+        elif char == ";" and paren_depth == 0 and bracket_depth == 0 and brace_depth == 0 and start_index is not None:
             text = stripped[start_index:i].strip()
             if text:
                 start_mapping = _line_mapping(line_mappings, start_line, filename)

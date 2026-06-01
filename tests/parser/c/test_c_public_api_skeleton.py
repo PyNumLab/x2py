@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C parser public API coverage for the current partial subset."""
 
 from pathlib import Path

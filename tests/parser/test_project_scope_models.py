@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """Project-level registries, dependencies, and scope model behavior."""
 
 import pytest
 
 from x2py import FortranParseError, parse_fortran_file, parse_fortran_project
+
 
 def test_module_visibility_public_and_private_spec_lines_are_applied():
     code = """
@@ -30,6 +30,7 @@ end module public_mod
         "inherited": "private",
     }
     assert modules["public_mod"].variables[0].visibility == "public"
+
 
 def test_submodule_types_interfaces_and_project_dependencies_attach_to_public_models():
     code = """
@@ -61,6 +62,7 @@ end submodule child_mod
     project = parse_fortran_project({"child.f90": code})
     assert project.dependencies["child_mod"] == {"ancestor_mod", "parent_mod"}
     assert "child_mod.reset" in project.procedures
+
 
 def test_project_registry_includes_module_types_interfaces_and_program_dependencies():
     project = parse_fortran_project(
@@ -97,6 +99,7 @@ end program driver
     assert "apply" in project.interfaces
     assert project.dependencies["driver"] == {"api_mod"}
 
+
 def test_duplicate_project_scope_names_raise_public_parse_errors():
     with pytest.raises(FortranParseError, match="Duplicate symbol 'dup_mod' in project module scope"):
         parse_fortran_project(
@@ -105,6 +108,7 @@ def test_duplicate_project_scope_names_raise_public_parse_errors():
                 "b.f90": "module dup_mod\nend module dup_mod\n",
             }
         )
+
 
 def test_project_directory_namespace_orders_ancestor_submodule_dependencies(tmp_path):
     (tmp_path / "ancestor.f90").write_text(
@@ -148,6 +152,7 @@ end module helper_mod
     assert "child_mod" in project.submodules
     assert project.dependencies["child_mod"] == {"ancestor_mod", "parent_mod", "helper_mod"}
 
+
 def test_program_contains_and_unnamed_block_data_public_models():
     code = """
 program main
@@ -169,6 +174,7 @@ end
     assert [var.name for var in parsed.programs[0].variables] == ["ierr"]
     assert parsed.block_data_units[0].name is None
     assert [var.name for var in parsed.block_data_units[0].variables] == ["seed"]
+
 
 def test_public_models_finalize_program_block_data_and_file_level_types_interfaces():
     project = parse_fortran_project(
@@ -204,6 +210,7 @@ end program worker
     assert "driver" in project.programs
     assert "worker" in project.programs
 
+
 def test_duplicate_program_and_block_data_variables_report_scope_labels():
     with pytest.raises(FortranParseError, match="Duplicate variable 'status' in program 'driver'"):
         parse_fortran_file(
@@ -226,6 +233,7 @@ end block data init_data
 """,
             filename="dup_block_var.f90",
         )
+
 
 def test_directory_project_resolves_module_kinds_and_orders_dependencies(tmp_path):
     (tmp_path / "kinds.f90").write_text(
@@ -257,6 +265,7 @@ end module solver_mod
     assert proc.arguments[0].shape == ["1:rk"]
     assert proc.result.kind == "8"
     assert project.dependencies["solver_mod"] == {"kinds_mod"}
+
 
 def test_directory_project_tracks_renamed_kind_imports_from_other_files(tmp_path):
     (tmp_path / "precision.f90").write_text(
@@ -298,6 +307,7 @@ end module solver_mod
     ]
     assert project.dependencies["solver_mod"] == {"precision_mod"}
 
+
 def test_directory_namespace_records_missing_and_parent_only_submodule_dependencies(tmp_path):
     (tmp_path / "parent.f90").write_text(
         """
@@ -321,6 +331,7 @@ end submodule child_mod
     project = parse_fortran_project(tmp_path)
 
     assert project.dependencies["child_mod"] == {"parent_mod", "missing_mod"}
+
 
 def test_program_and_block_data_scope_errors_use_public_parse_paths():
     with pytest.raises(FortranParseError, match="Unsupported OpenMP declarative directive in program 'driver'"):
@@ -353,7 +364,9 @@ end program driver
             filename="program_unknown_decl.f90",
         )
 
-    with pytest.raises(FortranParseError, match="Unknown or unsupported datatype declaration in block data 'init_data'"):
+    with pytest.raises(
+        FortranParseError, match="Unknown or unsupported datatype declaration in block data 'init_data'"
+    ):
         parse_fortran_file(
             """
 block data init_data
@@ -362,6 +375,7 @@ end block data init_data
 """,
             filename="block_unknown_decl.f90",
         )
+
 
 def test_project_resolution_keeps_relevant_local_parameter_variables():
     project = parse_fortran_project(
@@ -380,6 +394,7 @@ end subroutine use_relevant_local_param
 
     assert proc.arguments[0].shape == ["1:+(8)-one"]
     assert proc.variables["one"].value == "1"
+
 
 def test_project_resolution_uses_file_level_use_only_and_local_parameters(tmp_path):
     (tmp_path / "params.f90").write_text(

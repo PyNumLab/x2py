@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Public C parser package."""
 
 from .models import (

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Compiler-derived C standard-library type fact tests."""
 
 import json
@@ -120,9 +119,7 @@ def test_c_standard_type_probe_accepts_explicit_runner_and_cli_validates_macros(
 
 def test_c_standard_type_probe_reports_semantic_facts_from_native_compiler():
     compiler = _required_c_compiler()
-    report = probe_c_standard_types(
-        PreprocessingConfig(mode="compiler", compiler=compiler, std="c11")
-    )
+    report = probe_c_standard_types(PreprocessingConfig(mode="compiler", compiler=compiler, std="c11"))
 
     size_t = report.types["size_t"]
     assert size_t["available"] is True

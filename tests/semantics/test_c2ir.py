@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C parser model to semantic IR conversion tests."""
 
 import pytest

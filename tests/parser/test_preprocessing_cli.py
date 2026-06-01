@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Shared preprocessing CLI and compiler-command contract tests."""
 
 import json

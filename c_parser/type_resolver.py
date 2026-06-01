@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Basic C project type resolution for parser models."""
 
 from __future__ import annotations

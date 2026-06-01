@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C semantic wrap-readiness tests.
 
 These tests intentionally live under ``tests/semantics`` because readiness is

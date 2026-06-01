@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Minimal JSON-shape coverage for C parser model dataclasses."""
 
 from dataclasses import is_dataclass

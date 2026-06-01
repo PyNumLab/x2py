@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Pytest import setup for in-place repository runs."""
 
 import os

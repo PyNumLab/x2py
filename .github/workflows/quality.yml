@@ -31,23 +31,8 @@ jobs:
           python -m pip install -e ".[qa]"
       - name: Ruff lint
         run: python -m ruff check .
-      - name: Ruff format on changed Python files
-        if: github.event_name == 'pull_request' || github.event_name == 'push'
-        env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PUSH_BEFORE_SHA: ${{ github.event.before }}
-        run: |
-          set -euo pipefail
-          BASE_SHA="${PR_BASE_SHA:-${PUSH_BEFORE_SHA:-}}"
-          if [ -z "${BASE_SHA:-}" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
-            BASE_SHA="$(git rev-list --max-parents=0 HEAD)"
-          fi
-          mapfile -t changed < <(git diff --name-only --diff-filter=ACMRT "$BASE_SHA" HEAD -- '*.py' '*.pyi')
-          if [ "${#changed[@]}" -eq 0 ]; then
-            echo "No changed Python files."
-            exit 0
-          fi
-          python -m ruff format --check "${changed[@]}"
+      - name: Ruff format
+        run: python -m ruff format --check .
       - name: Bandit security scan
         run: bandit -c pyproject.toml -r c_parser fortran_parser semantics x2py --severity-level medium --confidence-level medium
       - name: pip-audit dependency scan

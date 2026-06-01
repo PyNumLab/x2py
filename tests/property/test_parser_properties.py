@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Property-based parser invariants for small generated source subsets."""
 
 from __future__ import annotations

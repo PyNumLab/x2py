@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Generate/update golden files for Fortran parser error fixtures."""
 
 from __future__ import annotations
@@ -8,6 +7,7 @@ import sys
 from pathlib import Path
 
 from x2py import FortranParseError, parse_fortran_file
+
 
 def parse_fortran_procedures(source, filename=None):
     return parse_fortran_file(source, filename=filename).procedures
@@ -50,8 +50,7 @@ def _serialize_error_fixture(fixture: Path) -> dict:
     try:
         parser_fn(source, filename=fixture.name)
         raise SystemExit(
-            f"ERROR: {fixture.name} did not raise FortranParseError — "
-            "error fixture files must trigger a parse error."
+            f"ERROR: {fixture.name} did not raise FortranParseError — error fixture files must trigger a parse error."
         )
     except FortranParseError as exc:
         return {
@@ -78,10 +77,7 @@ def main() -> None:
             fixtures.append(p)
     else:
         extensions = {".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"}
-        fixtures = sorted(
-            f for f in _ERRORS_DIR.glob("*")
-            if f.is_file() and f.suffix.lower() in extensions
-        )
+        fixtures = sorted(f for f in _ERRORS_DIR.glob("*") if f.is_file() and f.suffix.lower() in extensions)
     if not fixtures:
         raise SystemExit("No Fortran error fixtures found")
 

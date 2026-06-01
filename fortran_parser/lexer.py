@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from .utils import detect_source_form
@@ -59,7 +58,10 @@ def preprocess_lines(code: str, filename: str | None = None) -> list[tuple[str, 
     """
     form = detect_source_form(code, filename)
     raw_lines = code.splitlines()
-    raw = [(strip_comment(l.rstrip("\n"), form), i + 1, l.rstrip("\n")) for i, l in enumerate(raw_lines)]
+    raw = [
+        (strip_comment(raw_line.rstrip("\n"), form), i + 1, raw_line.rstrip("\n"))
+        for i, raw_line in enumerate(raw_lines)
+    ]
 
     folded: list[tuple[str, int, str]] = []
     pending = ""
