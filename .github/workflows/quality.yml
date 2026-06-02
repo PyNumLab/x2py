@@ -39,6 +39,11 @@ jobs:
         run: pip-audit . --cache-dir /tmp/pip-audit-cache
       - name: Vulture dead-code scan
         run: vulture
+      - name: Radon complexity policy
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: python tools/check_radon_policy.py --base-ref auto
       - name: Radon complexity report
         continue-on-error: true
         run: radon cc c_parser fortran_parser semantics x2py -n C -s --total-average
@@ -112,31 +117,33 @@ jobs:
       - name: Run tests with a changing random seed
         env:
           PYTHONPATH: .
-        run: python -m pytest -q -n auto --randomly-seed=${{ github.run_id }} --benchmark-disable
+        run: python -m pytest -q -n auto --randomly-seed=${{ github.run_id }}
 
-  benchmark:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install QA dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[qa]"
-      - name: Run parser benchmarks
-        env:
-          PYTHONPATH: .
-        run: python -m pytest -q tests/benchmarks -m benchmark --benchmark-only --benchmark-json=benchmark.json
-      - name: Upload benchmark report
-        uses: actions/upload-artifact@v4
-        with:
-          name: parser-benchmark-${{ github.run_id }}
-          path: benchmark.json
+  # Benchmark workflow is intentionally parked for later activation.
+  # benchmark:
+  #   if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 15
+  #   permissions:
+  #     contents: read
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.12"
+  #     - name: Install QA dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         python -m pip install -e ".[qa]"
+  #     - name: Run parser benchmarks
+  #       env:
+  #         PYTHONPATH: .
+  #       run: python -m pytest -q tests/benchmarks -m benchmark --benchmark-only --benchmark-json=benchmark.json
+  #     - name: Upload benchmark report
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: parser-benchmark-${{ github.run_id }}
+  #         path: benchmark.json
+  #         retention-days: 90

@@ -74,9 +74,6 @@ def _resolve_typedef_definition(
 ) -> None:
     if typedef.type is None:
         return
-    if typedef.name in stack:
-        _record_typedef_cycle(project, [*stack, typedef.name], typedef, emitted_cycles)
-        return
     typedef.type = _resolve_type(project, typedef.type, [*stack, typedef.name], emitted_cycles)
 
 
@@ -129,10 +126,7 @@ def _record_typedef_cycle(
     emitted_cycles: set[tuple[str, ...]],
 ) -> None:
     first = cycle[-1]
-    try:
-        start = cycle.index(first)
-    except ValueError:  # pragma: no cover - defensive only.
-        start = 0
+    start = cycle.index(first)
     loop = cycle[start:-1]
     rotations = [tuple(loop[index:] + loop[:index]) for index in range(len(loop))]
     normalized_loop = min(rotations)

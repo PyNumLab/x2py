@@ -5,7 +5,7 @@ import os
 import re
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 _ANSI = {
@@ -251,7 +251,7 @@ class FortranVariable:
 
 @dataclass
 class FortranArgument(FortranVariable):
-    procedure: Optional[str] = None
+    procedure: str | None = None
     intent: str = "unknown"
     optional: bool = False
     pass_by_value: bool = False
@@ -270,7 +270,7 @@ class FortranArgument(FortranVariable):
 @dataclass(eq=False)
 class FortranUseMapping:
     source: str
-    target: Optional[str] = None
+    target: str | None = None
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, str):
@@ -288,9 +288,9 @@ class FortranUseMapping:
 class FortranProcedureSignature:
     name: str
     kind: str
-    module: Optional[str] = None
+    module: str | None = None
     arguments: list[FortranArgument] = field(default_factory=list)
-    result: Optional[FortranArgument] = None
+    result: FortranArgument | None = None
     attributes: list[str] = field(default_factory=list)
     uses: dict[str, list[FortranUseMapping]] = field(default_factory=dict)
     in_interface: bool = False
@@ -300,10 +300,10 @@ class FortranProcedureSignature:
 @dataclass
 class FortranDerivedType:
     name: str
-    module: Optional[str] = None
+    module: str | None = None
     fields: list[FortranArgument] = field(default_factory=list)
     methods: list[str] = field(default_factory=list)
-    extends: Optional["FortranDerivedType | str"] = None
+    extends: FortranDerivedType | str | None = None
     attributes: list[str] = field(default_factory=list)
     procedure_bindings: list[dict] = field(default_factory=list)
     generic_bindings: list[dict] = field(default_factory=list)
@@ -312,14 +312,14 @@ class FortranDerivedType:
 @dataclass
 class FortranInterface:
     name: str | None = None
-    module: Optional[str] = None
+    module: str | None = None
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
 
 
 @dataclass
 class FortranModule:
     name: str
-    filename: Optional[str] = None
+    filename: str | None = None
     uses: dict[str, list[FortranUseMapping]] = field(default_factory=dict)
     variables: list[FortranVariable] = field(default_factory=list)
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
@@ -334,8 +334,8 @@ class FortranModule:
 class FortranSubmodule:
     name: str
     parent: str
-    ancestor: Optional[str] = None
-    filename: Optional[str] = None
+    ancestor: str | None = None
+    filename: str | None = None
     uses: dict[str, list[FortranUseMapping]] = field(default_factory=dict)
     variables: list[FortranVariable] = field(default_factory=list)
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
@@ -345,8 +345,8 @@ class FortranSubmodule:
 
 @dataclass
 class FortranProgram:
-    name: Optional[str] = None
-    filename: Optional[str] = None
+    name: str | None = None
+    filename: str | None = None
     uses: dict[str, list[FortranUseMapping]] = field(default_factory=dict)
     variables: list[FortranVariable] = field(default_factory=list)
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
@@ -354,8 +354,8 @@ class FortranProgram:
 
 @dataclass
 class FortranBlockData:
-    name: Optional[str] = None
-    filename: Optional[str] = None
+    name: str | None = None
+    filename: str | None = None
     variables: list[FortranVariable] = field(default_factory=list)
 
 
@@ -365,9 +365,9 @@ class FortranFile:
     # File metadata
     # --------------------------------------------------------
 
-    filename: Optional[str] = None
+    filename: str | None = None
 
-    source: Optional[str] = None
+    source: str | None = None
 
     encoding: str = "utf-8"
 

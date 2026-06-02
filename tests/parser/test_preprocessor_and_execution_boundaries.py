@@ -9,6 +9,55 @@ import pytest
 from x2py import FortranParseError, parse_fortran_file
 
 
+def test_fortran_lexer_strip_comment_preserves_directives_and_quoted_bangs():
+    from fortran_parser.lexer import strip_comment
+
+    assert strip_comment("  !$OMP parallel do", "free") == "!$OMP parallel do"
+    assert strip_comment("C$OMP PARALLEL DO", "fixed") == "!$omp PARALLEL DO"
+    assert strip_comment("*$omp end parallel do", "fixed") == "!$omp end parallel do"
+    assert strip_comment("#ifdef USE_FAST", "fixed") == "#ifdef USE_FAST"
+    assert strip_comment("   #ifdef USE_FAST", "fixed") == "   #ifdef USE_FAST"
+    assert strip_comment("   #define BANG !", "fixed") == "   #define BANG !"
+    assert strip_comment("c ordinary comment", "fixed") == ""
+    assert strip_comment("C ordinary comment", "fixed") == ""
+    assert strip_comment("* ordinary comment", "fixed") == ""
+    assert strip_comment("! ordinary comment", "fixed") == ""
+    assert strip_comment("print *, 'kept ! text' ! removed", "free") == "print *, 'kept ! text' "
+    assert strip_comment('print *, "kept ! text" ! removed', "free") == 'print *, "kept ! text" '
+    assert strip_comment("""print *, 'kept " ! text' ! removed""", "free") == """print *, 'kept " ! text' """
+
+
+def test_fortran_lexer_preprocess_lines_folds_free_and_fixed_continuations():
+    from fortran_parser.lexer import preprocess_lines
+
+    free = "alpha = one &\n  & + two ! removed\n\nbeta = 3\n! removed\n"
+    assert preprocess_lines(free, filename="free.f90") == [
+        ("alpha = one+ two", 1, "alpha = one &"),
+        ("beta = 3", 4, "beta = 3"),
+    ]
+    assert preprocess_lines("alpha = one&\n&two\n", filename="free.f90") == [
+        ("alpha = onetwo", 1, "alpha = one&"),
+    ]
+    assert preprocess_lines("alpha = X\nbeta = 1  \n", filename="free.f90") == [
+        ("alpha = X", 1, "alpha = X"),
+        ("beta = 1", 2, "beta = 1  "),
+    ]
+
+    fixed = "      alpha = one\n     1 + two\nC comment\n      beta = 3\n"
+    assert preprocess_lines(fixed, filename="fixed.f") == [
+        ("alpha = one + two", 1, "      alpha = one"),
+        ("beta = 3", 4, "      beta = 3"),
+    ]
+    assert preprocess_lines("      alpha = one\n\n     1x\n\n     1y\n", filename="fixed.f") == [
+        ("alpha = one x y", 1, "      alpha = one"),
+    ]
+    assert preprocess_lines("      alpha = one\n!$omp parallel do\n      beta = 3\n", filename="fixed.f") == [
+        ("alpha = one", 1, "      alpha = one"),
+        ("!$omp parallel do", 2, "!$omp parallel do"),
+        ("beta = 3", 3, "      beta = 3"),
+    ]
+
+
 def collect_signature_shape_symbols(signature):
     symbols = set()
     for arg in signature.arguments:
@@ -45,7 +94,7 @@ def evaluate_signature_shapes(signature, symbol_values=None):
         if any(not isinstance(node, allowed) for node in ast.walk(tree)):
             return text
         value = eval(compile(tree, "<shape>", "eval"), {"__builtins__": {}}, {})
-        return str(int(value)) if isinstance(value, (int, float)) and value == int(value) else text
+        return str(int(value)) if isinstance(value, int | float) and value == int(value) else text
 
     for arg in out.arguments:
         arg.shape = list(arg.shape)

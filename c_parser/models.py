@@ -52,9 +52,9 @@ def c_model_to_dict(obj: Any, _seen: set[int] | None = None) -> Any:
     if isinstance(obj, CQualifier):
         return obj.spelling
     if isinstance(obj, CType):
-        if isinstance(obj, (CStruct, CUnion, CEnum, CTypedef)) and id(obj) in _seen:
+        if isinstance(obj, CStruct | CUnion | CEnum | CTypedef) and id(obj) in _seen:
             return {"reference": obj.reference_name}
-        if isinstance(obj, (CStruct, CUnion, CEnum, CTypedef)):
+        if isinstance(obj, CStruct | CUnion | CEnum | CTypedef):
             _seen.add(id(obj))
         payload = {"model": type(obj).__name__}
         payload.update(
@@ -87,7 +87,7 @@ def c_model_to_dict(obj: Any, _seen: set[int] | None = None) -> Any:
         return [c_model_to_dict(v, _seen) for v in obj]
     if isinstance(obj, dict):
         return {k: c_model_to_dict(v, _seen) for k, v in obj.items()}
-    if isinstance(obj, (set, frozenset)):
+    if isinstance(obj, set | frozenset):
         return sorted(c_model_to_dict(v, _seen) for v in obj)
     return obj
 
@@ -406,7 +406,7 @@ class CFunction:
 @dataclass
 class CStruct(CType):
     name: str | None = None
-    members: list["CVariable"] = field(default_factory=list)
+    members: list[CVariable] = field(default_factory=list)
     anonymous_id: str | None = None
     is_incomplete: bool = False
     source_location: CSourceLocation | None = None
@@ -420,7 +420,7 @@ class CStruct(CType):
 @dataclass
 class CUnion(CType):
     name: str | None = None
-    members: list["CVariable"] = field(default_factory=list)
+    members: list[CVariable] = field(default_factory=list)
     anonymous_id: str | None = None
     is_incomplete: bool = False
     source_location: CSourceLocation | None = None

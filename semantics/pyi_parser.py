@@ -39,7 +39,7 @@ def load_pyi_modules(
     *,
     encoding: str = "utf-8",
 ) -> list[SemanticModule]:
-    raw_paths = [paths] if isinstance(paths, (str, Path)) else list(paths)
+    raw_paths = [paths] if isinstance(paths, str | Path) else list(paths)
     expanded: dict[Path, str | None] = {}
     for raw_path in raw_paths:
         path = Path(raw_path)
@@ -375,7 +375,7 @@ class _PyiAstParser:
             shape=list(dims),
             order="ORDER_C" if rank is not None and rank > 1 else None,
             axes=["strided" if "Strided" in dim else "dense" for dim in dims],
-            contiguous=False if any("Strided" in dim for dim in dims) else True,
+            contiguous=not any("Strided" in dim for dim in dims),
         )
         storage = SemanticStorageContract(kind="array", array=array)
         return SemanticType(
@@ -535,7 +535,7 @@ class _PyiAstParser:
         items = self.subscript_items(node)
         if not items:
             return False
-        if any(isinstance(item, (ast.Slice, ast.Constant)) for item in items):
+        if any(isinstance(item, ast.Slice | ast.Constant) for item in items):
             return True
         if any(
             isinstance(item, ast.Name) and item.id not in self._non_dimension_subscription_names() for item in items
@@ -548,9 +548,7 @@ class _PyiAstParser:
             return False
         if any(isinstance(item, ast.Call) for item in items):
             return True
-        if any(isinstance(item, (ast.BinOp, ast.UnaryOp)) for item in items):
-            return True
-        return False
+        return any(isinstance(item, ast.BinOp | ast.UnaryOp) for item in items)
 
     @staticmethod
     def _non_dimension_subscription_names() -> set[str]:
@@ -573,7 +571,7 @@ class _PyiAstParser:
             return self.slice_text(node)
         if isinstance(node, ast.Constant):
             return str(node.value)
-        if isinstance(node, (ast.Attribute, ast.Subscript)):
+        if isinstance(node, ast.Attribute | ast.Subscript):
             raise ValueError(f"Unsupported array dimension expression: {ast.unparse(node)!r}")
         return ast.unparse(node)
 
@@ -745,7 +743,7 @@ class _PyiAstParser:
         if node.args.vararg or node.args.kwarg or node.args.kwonlyargs or node.args.posonlyargs:
             raise ValueError(f"Unsupported function header: {_node_text(node)!r}")
 
-        args = list(zip(node.args.args, self._argument_defaults(node)))
+        args = list(zip(node.args.args, self._argument_defaults(node), strict=False))
         if drop_untyped_self and args and args[0][0].arg == "self" and args[0][0].annotation is None:
             args = args[1:]
 

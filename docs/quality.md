@@ -1,11 +1,21 @@
 # Quality Assurance
 
 This project uses a staged Python QA stack: fast bug-focused checks are suitable
-for every pull request, while heavier dead-code, complexity, benchmark, fuzz,
-and mutation workflows are run manually or on a schedule.
+for every pull request, while heavier dead-code, complexity, fuzz, and mutation
+workflows are run manually or on a schedule.
 
-Track the remaining rollout work and record completed QA passes in the
-[`quality adoption checklist`](quality_adoption_checklist.md).
+Track the remaining rollout work, the current effort-weighted completion
+estimate, and completed QA passes in the
+[`quality adoption checklist`](quality_adoption_checklist.md). As of
+2026-06-02, the documented estimate is about `92%` adopted by effort, with
+about `8%` of the active rollout still remaining. The
+[`quality tool retention report`](quality_tool_retention_report.md) records the
+recommended steady-state cadence and the evidence for keeping each tool.
+
+Full adoption means the fast gates are blocking, the deeper scheduled/manual
+jobs are in place, mutation campaigns have reviewed survivors for every listed
+subsystem, Ruff/Radon ratchets have stable policies, and the
+checklist records any scheduled failures until they are fixed.
 
 ## Tool Roles
 
@@ -28,8 +38,6 @@ Track the remaining rollout work and record completed QA passes in the
   hidden test ordering dependencies.
 - `pytest-xdist`: parallel pytest execution, useful for keeping broad parser
   and fixture suites fast.
-- `pytest-benchmark`: repeatable benchmark tests and JSON output for
-  performance regression tracking.
 
 ## Install
 
@@ -62,8 +70,6 @@ Use the current test tree as the default split:
 - Property tests: put generated invariant tests in `tests/property`.
 - Fuzz-like parser tests: keep bounded generators in `tests/property`, mark
   with `@pytest.mark.fuzz`, and run with the `fuzz` Hypothesis profile.
-- Benchmark tests: put explicit benchmarks in `tests/benchmarks` and mark with
-  `@pytest.mark.benchmark`.
 
 ## Local Commands
 
@@ -82,8 +88,7 @@ CI Hypothesis profile:
 HYPOTHESIS_PROFILE=ci \
 COVERAGE_PROCESS_START=pyproject.toml \
 PYTHONPATH=. \
-python -m coverage run -m pytest -q -n auto --randomly-seed=1 \
-  --benchmark-disable
+python -m coverage run -m pytest -q -n auto --randomly-seed=1
 python -m coverage combine
 python -m coverage report
 ```
@@ -132,9 +137,15 @@ Run dead-code and complexity reports:
 
 ```bash
 vulture
+python tools/check_radon_policy.py
 radon cc c_parser fortran_parser semantics x2py -n C -s --total-average
 radon mi c_parser fortran_parser semantics x2py -s
 ```
+
+The policy check is blocking. It prevents the reviewed C-or-worse hotspot
+average from rising above `19.01` and, when a Git base ref is supplied, rejects
+changed production-code blocks above complexity `20`. The full Radon reports
+remain useful for hotspot planning and threshold ratchets.
 
 Run mutation testing:
 
@@ -155,13 +166,6 @@ is mutated.
 For a focused local mutation pass, temporarily narrow `tool.mutmut.paths_to_mutate`
 in `pyproject.toml` to the subsystem you are improving, then restore it before
 committing.
-
-Run benchmarks and save results:
-
-```bash
-pytest -q -m benchmark --benchmark-only --benchmark-autosave
-pytest-benchmark compare
-```
 
 ## Hypothesis Patterns
 
@@ -203,10 +207,41 @@ Use mutation testing after adding or changing behavior, not on every edit:
 
 1. Run the focused normal tests first.
 2. Narrow `tool.mutmut.paths_to_mutate` if the full mutation pass is too broad.
-3. Run `python tools/run_mutmut.py run`.
+3. Run `python tools/run_mutmut.py run`. For large local parser campaigns, keep
+   the run serialized with `--max-children 1` and use an outer timeout.
 4. Inspect survivors with `mutmut results` and `mutmut show <id>`.
 5. Add assertions that fail for real behavioral changes.
 6. Avoid tests that only assert implementation details or removed behavior.
+
+The reviewed `c_parser/lexer.py` baseline is `794/1171` killed mutants,
+`10` equivalent or mutmut-wrapper survivors, `367` bounded-run timeout
+detections recorded by function cluster, and `0` mutants without covering
+tests. The checklist records the survivor IDs and timeout-cluster inventory.
+The reviewed `c_parser/preprocessor.py` baseline is `105/108` killed mutants
+with `3` equivalent boundary or default-value survivors.
+The reviewed `fortran_parser/type_resolver.py` baseline is `34/34` killed
+mutants.
+The reviewed `fortran_parser/lexer.py` baseline is `150/185` killed mutants
+with `35` equivalent normalization, state, or boundary survivors.
+The reviewed `c_parser/models.py` baseline is `304/310` killed mutants with
+`6` equivalent or mutmut-wrapper survivors.
+The reviewed `semantics/readiness.py` baseline is `804/827` killed mutants with
+`23` equivalent or mutmut-wrapper survivors.
+The reviewed `x2py/preprocessing.py` baseline is `1496/1564` killed mutants,
+`52` equivalent or mutmut-wrapper survivors, `16` bounded-run timeout
+detections, and `0` mutants without covering tests.
+The reviewed `semantics/c2ir.py` baseline is `1785/1821` killed mutants,
+`34` equivalent or mutmut-wrapper survivors, `2` bounded-run timeout
+detections, and `0` mutants without covering tests.
+The reviewed `semantics/fortran2ir.py` baseline is `1225/1339` killed mutants
+with `114` equivalent, default-value, or mutmut-wrapper survivors and `0`
+timeouts or mutants without covering tests.
+The reviewed `semantics/pyi_parser.py` baseline is `1266/1288` killed mutants,
+with `21` equivalent, default-value, or mutmut-wrapper survivors, `1` manually
+verified equivalent timeout, and `0` mutants without covering tests.
+The initial `fortran_parser/parser.py` campaign recorded `3233/5278` killed
+mutants, `745` survivors, and `1300` bounded-run timeouts. Its survivor review
+is still in progress, so this is not yet a reviewed subsystem baseline.
 
 For parser/compiler changes, high-value mutants are usually around:
 
@@ -222,19 +257,31 @@ For parser/compiler changes, high-value mutants are usually around:
 Current defaults are intentionally staged for an existing parser codebase:
 
 - Hard gate: pytest, coverage threshold, Ruff bug-focused lint and formatting,
-  Bandit, pip-audit, and Vulture.
+  Bandit, pip-audit, Vulture, and the staged Radon complexity policy.
 - Advisory: Radon full reports, because complexity reduction needs focused
   tests and gradual refactoring.
 - Manual: mutmut full-project runs.
-- Scheduled or manual: long Hypothesis fuzz profiles, changing random-order
-  runs, and performance benchmark comparisons.
+- Scheduled or manual: long Hypothesis fuzz profiles and changing random-order
+  runs.
+
+The remaining rollout is dominated by mutation testing, not by tool
+installation. Most fast gates are already wired; the expensive work is reviewing
+mutation survivors subsystem by subsystem, then tightening complexity where the
+reports are stable enough to make good blocking checks. Ruff's historical
+baseline-ignore list is empty. Line-length diagnostics remain intentionally
+unselected because wrapping parser diagnostics and embedded test sources would
+add noise without improving correctness.
+
+When updating the estimate, separate one-time adoption from recurring
+maintenance. A new completed mutation campaign, a CI gate becoming blocking, or
+a scheduled workflow review that records actionable results should change the
+percentage. A routine clean run of an already-adopted check should update the
+baseline date or progress log only when it provides new evidence.
 
 After the first cleanup pass, ratchet strictness in this order:
 
-1. Remove Ruff baseline ignores one rule family at a time.
-2. Keep Vulture exclusions narrow as new public/plugin APIs are added.
-3. Lower Ruff `max-complexity` from 50 toward 20 for new code.
-4. Add benchmark comparison thresholds only for stable, meaningful workloads.
+1. Keep Vulture exclusions narrow as new public/plugin APIs are added.
+2. Lower Ruff `max-complexity` from 45 toward 20 as hotspots are decomposed.
 
 ## Parser And Codegen Practices
 
@@ -247,19 +294,32 @@ After the first cleanup pass, ratchet strictness in this order:
 - Assert diagnostics structurally: code, severity, location, and message class.
 - Keep fuzz generators bounded. Prefer many small syntactically valid programs
   over huge random strings in pull-request CI.
-- Benchmark parser/codegen hot paths with representative generated sources and
-  real corpus fixtures.
 
 ## CI Layout
 
 - `.github/workflows/tests.yml` runs pytest with xdist, pytest-randomly,
   Hypothesis CI profile, and coverage combine/report.
-- `.github/workflows/quality.yml` runs Ruff, Bandit, pip-audit, blocking Vulture,
-  and advisory Radon reports. Manual dispatch runs mutmut. Scheduled/manual jobs run
-  bounded parser fuzzing, a changing pytest-randomly seed, and parser/codegen
-  benchmarks. Benchmark JSON is uploaded as a workflow artifact for comparison.
-- `.pre-commit-config.yaml` runs Ruff and Bandit on commit, with Vulture and
-  Radon available as manual reports.
+- `.github/workflows/quality.yml` runs Ruff, Bandit, pip-audit, blocking
+  Vulture, the staged Radon policy, and advisory full Radon reports. Manual
+  dispatch runs mutmut. Scheduled/manual jobs run bounded parser fuzzing and a
+  changing pytest-randomly seed.
+- `.pre-commit-config.yaml` runs Ruff, Bandit, and the staged Radon policy on
+  commit, with Vulture and full Radon reports available manually.
+
+## Scheduled Workflow Triage
+
+The `Quality` workflow runs its deeper discovery jobs every Monday and by
+manual dispatch. Review the latest scheduled run after each execution:
+
+1. Re-run a failing job once to separate actionable failures from transient
+   runner or package-index failures.
+2. Reproduce actionable fuzz failures with the logged Hypothesis profile and
+   save minimized examples as focused regression tests.
+3. Reproduce random-order failures with the logged `--randomly-seed` value and
+   add a regression test before fixing leaked state.
+4. Add each actionable scheduled failure to the adoption checklist progress
+   log with its run URL, job, reproduction command, and follow-up status. Keep
+   the entry open until the regression test and fix pass.
 
 ## References
 
@@ -274,4 +334,3 @@ After the first cleanup pass, ratchet strictness in this order:
 - pip-audit: https://github.com/pypa/pip-audit
 - pytest-xdist: https://pytest-xdist.readthedocs.io/
 - pytest-randomly: https://github.com/pytest-dev/pytest-randomly
-- pytest-benchmark: https://pytest-benchmark.readthedocs.io/

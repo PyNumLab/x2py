@@ -125,6 +125,190 @@ def test_c_lexer_covers_linemarker_escapes_top_level_strings_and_eof_records():
     assert parsed.structs[0].source_location.filename == 'dir\\api".h'
 
 
+def test_c_lexer_mapping_helpers_cover_boundaries_ranges_and_position_updates():
+    from c_parser.lexer import (
+        CLineMapping,
+        _advance_position,
+        _line_mapping,
+        _mapped_filenames,
+        _mapped_line_numbers,
+        _mapped_source_lines,
+        _source_line,
+        _source_lines,
+    )
+
+    source_lines = ["first", "second", "third"]
+    assert _source_line(source_lines, 1) == "first"
+    assert _source_line(source_lines, 3) == "third"
+    assert _source_line(source_lines, 0) is None
+    assert _source_line(source_lines, 4) is None
+    assert _source_lines(source_lines, 2, 3) == ("second", "third")
+
+    mappings = [
+        CLineMapping("first.h", 11, "first source"),
+        CLineMapping("second.h", 22, None),
+    ]
+    assert _line_mapping(mappings, 1, "fallback.h") == mappings[0]
+    assert _line_mapping(mappings, 2, "fallback.h") == mappings[1]
+    assert _line_mapping(mappings, 0, "fallback.h") == CLineMapping("fallback.h", 0, None)
+    assert _line_mapping(mappings, 3, "fallback.h") == CLineMapping("fallback.h", 3, None)
+    assert _mapped_source_lines(mappings, 1, 2) == ("first source", "")
+    assert _mapped_filenames(mappings, 1, 2) == ("first.h", "second.h")
+    assert _mapped_line_numbers(mappings, 1, 2) == (11, 22)
+
+    assert _advance_position("x", 4, 7) == (4, 8)
+    assert _advance_position("\n", 4, 7) == (5, 1)
+
+
+def test_c_lexer_linemarker_and_directive_helpers_cover_raw_and_preprocessed_modes():
+    from c_parser.lexer import (
+        CLineMapping,
+        _blank_preprocessor_directives,
+        _parse_linemarker,
+        line_mappings_for_source,
+    )
+
+    assert _parse_linemarker('# 12 "api.h" 1') == (12, "api.h")
+    assert _parse_linemarker("#line 7 generated.h") == (7, "generated.h")
+    assert _parse_linemarker("#line 9") == (9, None)
+    assert _parse_linemarker("#pragma once") is None
+
+    raw = line_mappings_for_source("int first;\nint second;", filename="raw.h")
+    assert raw == [
+        CLineMapping("raw.h", 1, "int first;"),
+        CLineMapping("raw.h", 2, "int second;"),
+    ]
+
+    preprocessed = line_mappings_for_source(
+        '# 40 "api.h"\nint first;\n#line 7\nint second;\n',
+        filename="generated.i",
+        use_linemarkers=True,
+    )
+    assert preprocessed == [
+        CLineMapping("api.h", 40, '# 40 "api.h"'),
+        CLineMapping("api.h", 40, "int first;"),
+        CLineMapping("api.h", 7, "#line 7"),
+        CLineMapping("api.h", 7, "int second;"),
+    ]
+
+    blanked = _blank_preprocessor_directives("#define VALUE \\\n  continued\nint kept;\n#pragma once")
+    assert blanked.splitlines() == [
+        " " * len("#define VALUE \\"),
+        " " * len("  continued"),
+        "int kept;",
+        " " * len("#pragma once"),
+    ]
+
+
+def test_c_lexer_delimiter_helpers_cover_literals_nesting_offsets_and_validation():
+    from c_parser.lexer import (
+        _scan_code_states,
+        top_level_partition,
+        top_level_split,
+        top_level_split_with_offsets,
+    )
+
+    source = 'first("x,y", [a,b]), second'
+    assert top_level_split_with_offsets(source) == [
+        ('first("x,y", [a,b])', 0),
+        ("second", source.index("second")),
+    ]
+    assert top_level_split(source) == ['first("x,y", [a,b])', "second"]
+    assert top_level_partition('name = call("=", [x=y])') == ("name", 'call("=", [x=y])')
+    assert top_level_partition("name") == ("name", None)
+
+    states = list(_scan_code_states(source))
+    quote_index = source.index('"')
+    nested_comma_index = source.index(",", source.index("["))
+    top_level_comma_index = source.index(",", source.index("]"))
+    assert states[quote_index][3] == "normal"
+    assert states[quote_index + 1][3] == "string"
+    assert states[nested_comma_index][2] == ("(", "[")
+    assert states[top_level_comma_index][2] == ()
+
+    with pytest.raises(ValueError, match="single character"):
+        top_level_split_with_offsets("a, b", "::")
+    with pytest.raises(ValueError, match="single character"):
+        top_level_partition("a=b", "==")
+
+
+def test_c_lexer_aggregate_attribute_helpers_preserve_shape_and_classify_headers():
+    from c_parser.lexer import (
+        _balanced_invocation_end,
+        _is_aggregate_definition_header,
+        _is_braced_declaration_header,
+        _strip_aggregate_header_attributes,
+    )
+
+    invocation = '(outer(")") + nested(1))'
+    assert _balanced_invocation_end(invocation, 0) == len(invocation)
+    prefixed_invocation = "ignored) (nested(1))"
+    assert _balanced_invocation_end(prefixed_invocation, prefixed_invocation.index("(")) == len(prefixed_invocation)
+    single_quoted_invocation = "(outer(')') + nested(1))"
+    assert _balanced_invocation_end(single_quoted_invocation, 0) == len(single_quoted_invocation)
+    empty_quoted_invocation = '(outer("") + nested(1))'
+    assert _balanced_invocation_end(empty_quoted_invocation, 0) == len(empty_quoted_invocation)
+    assert _balanced_invocation_end("(unterminated", 0) is None
+
+    header = "struct __attribute__((packed)) packet"
+    stripped = _strip_aggregate_header_attributes(header)
+    assert len(stripped) == len(header)
+    assert stripped.split() == ["struct", "packet"]
+    spaced_header = "struct __attribute__ ((packed)) packet"
+    assert _strip_aggregate_header_attributes(spaced_header).split() == ["struct", "packet"]
+    bare_header = "struct __attribute__"
+    assert _strip_aggregate_header_attributes(bare_header).split() == ["struct"]
+    multiline_header = "struct __attribute__((\npacked)) packet"
+    assert _strip_aggregate_header_attributes(multiline_header).count("\n") == 1
+    assert _is_aggregate_definition_header(header, tolerate_compiler_extensions=True)
+    assert not _is_aggregate_definition_header(header)
+    assert not _is_aggregate_definition_header("int factory(void)")
+    assert not _is_aggregate_definition_header("struct packet(value)")
+    assert not _is_aggregate_definition_header("struct packet = value")
+    assert _is_braced_declaration_header("int values =")
+    assert not _is_braced_declaration_header(header)
+    assert not _is_braced_declaration_header("int function(void)")
+
+
+def test_c_lexer_comment_normalization_and_tokens_preserve_source_accounting():
+    from c_parser.lexer import lex_c_source, normalize_c_source, strip_c_comments
+
+    source = 'int first; // removed\nchar *text = "/* kept */"; /* block\n removed */ int second;\n'
+    stripped = strip_c_comments(source)
+    assert len(stripped) == len(source)
+    assert stripped.count("\n") == source.count("\n")
+    assert '"/* kept */"' in stripped
+    assert "removed" not in stripped
+    assert "int second;" in stripped
+
+    normalized = normalize_c_source("int first = \\\n  1;\n\nint second;\n", filename="records.h")
+    assert [(record.text, record.original_start_line, record.original_end_line) for record in normalized.records] == [
+        ("int first = 1;", 1, 2),
+        ("int second;", 4, 4),
+    ]
+    assert normalized.records[0].original_source_lines == ("int first = \\", "  1;")
+
+    tokens = lex_c_source("int value = 12;\nvalue += 3;\nchar quote = '\\n';\n", filename="tokens.c")
+    assert [(token.text, token.kind, token.line, token.column) for token in tokens] == [
+        ("int", "identifier", 1, 1),
+        ("value", "identifier", 1, 5),
+        ("=", "punctuation", 1, 11),
+        ("12", "number", 1, 13),
+        (";", "punctuation", 1, 15),
+        ("value", "identifier", 2, 1),
+        ("+=", "punctuation", 2, 7),
+        ("3", "number", 2, 10),
+        (";", "punctuation", 2, 11),
+        ("char", "identifier", 3, 1),
+        ("quote", "identifier", 3, 6),
+        ("=", "punctuation", 3, 12),
+        ("'\\n'", "char", 3, 14),
+        (";", "punctuation", 3, 18),
+    ]
+    assert all(token.filename == "tokens.c" for token in tokens)
+    assert tokens[5].source_line == "value += 3;"
+
+
 def test_raw_mode_records_includes_without_expanding_them():
     from c_parser import parse_c_file
 
@@ -150,6 +334,106 @@ def test_raw_mode_resolves_local_includes_relative_to_path_input(tmp_path):
 
     assert parsed.includes[0].resolved_path == str(types)
     assert parsed.diagnostics == []
+
+
+def test_c_preprocessor_helpers_cover_include_dirs_and_filesystem_errors(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from c_parser.lexer import CLogicalRecord
+    from c_parser.preprocessor import _record_location, _resolve_local_include
+
+    include_dir = tmp_path / "include"
+    include_dir.mkdir()
+    types = include_dir / "api_types.h"
+    types.write_text("typedef int api_int;\n", encoding="utf-8")
+
+    assert _resolve_local_include("api_types.h", None, [include_dir]) == str(types)
+    assert _resolve_local_include("missing.h", None, [include_dir]) is None
+
+    unreadable_dir = tmp_path / "unreadable"
+    unreadable_dir.mkdir()
+    unreadable_candidate = unreadable_dir / "api_types.h"
+    original_is_file = Path.is_file
+
+    def raise_one_os_error(path):
+        if path == unreadable_candidate:
+            raise OSError("unreadable")
+        return original_is_file(path)
+
+    monkeypatch.setattr(Path, "is_file", raise_one_os_error)
+    assert _resolve_local_include("api_types.h", str(unreadable_dir / "api.h"), [include_dir]) == str(types)
+
+    location = _record_location(
+        CLogicalRecord(
+            text="  #pragma once",
+            filename="api.h",
+            original_start_line=7,
+            original_source_lines=("  #pragma once",),
+        )
+    )
+    assert (location.filename, location.line, location.column, location.source_line) == (
+        "api.h",
+        7,
+        3,
+        "  #pragma once",
+    )
+    assert (
+        _record_location(CLogicalRecord(text="#pragma # once", original_source_lines=("#pragma # once",))).column == 1
+    )
+
+
+def test_collect_preprocessor_metadata_preserves_locations_and_diagnostics(tmp_path):
+    from c_parser.preprocessor import collect_preprocessor_metadata
+
+    include_dir = tmp_path / "include"
+    include_dir.mkdir()
+    types = include_dir / "api_types.h"
+    types.write_text("typedef int api_int;\n", encoding="utf-8")
+
+    metadata = collect_preprocessor_metadata(
+        '#pragma once\n#include "api_types.h"\n#include "missing.h"\n#include <stddef.h>\n',
+        filename=str(tmp_path / "api.h"),
+        include_dirs=[include_dir],
+    )
+    assert [(item.directive, item.argument, item.source_location.filename) for item in metadata.raw_directives] == [
+        ("pragma", "once", str(tmp_path / "api.h")),
+    ]
+    assert [
+        (item.target, item.kind, item.resolved_path, item.source_location.filename, item.source_location.line)
+        for item in metadata.includes
+    ] == [
+        ("api_types.h", "local", str(types), str(tmp_path / "api.h"), 2),
+        ("missing.h", "local", None, str(tmp_path / "api.h"), 3),
+        ("stddef.h", "system", None, str(tmp_path / "api.h"), 4),
+    ]
+    diagnostic = metadata.diagnostics[0]
+    assert (
+        diagnostic.code,
+        diagnostic.message,
+        diagnostic.severity,
+        diagnostic.location.filename,
+        diagnostic.location.line,
+        diagnostic.unit_kind,
+        diagnostic.unit_name,
+    ) == (
+        "C_UNRESOLVED_INCLUDE",
+        'Could not resolve local include "missing.h".',
+        "warning",
+        str(tmp_path / "api.h"),
+        3,
+        "include",
+        "missing.h",
+    )
+
+    relative_dir = tmp_path / "relative"
+    relative_dir.mkdir()
+    relative_types = relative_dir / "relative_types.h"
+    relative_types.write_text("typedef int relative_int;\n", encoding="utf-8")
+    relative_metadata = collect_preprocessor_metadata(
+        '#include "relative_types.h"\n',
+        filename=str(relative_dir / "api.h"),
+    )
+    assert relative_metadata.includes[0].resolved_path == str(relative_types)
 
 
 @pytest.mark.parametrize(

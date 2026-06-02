@@ -68,8 +68,7 @@ def _expected_json_for_fixture(fixture: Path) -> Path:
     direct = (_FIXTURES_DIR / rel).with_suffix(".json")
     if direct.exists():
         return direct
-    fallback = _FIXTURES_DIR / "general" / (fixture.stem + ".json")
-    return fallback
+    return _FIXTURES_DIR / "general" / (fixture.stem + ".json")
 
 
 def _parser_filename_for_fixture(fixture: Path) -> str:

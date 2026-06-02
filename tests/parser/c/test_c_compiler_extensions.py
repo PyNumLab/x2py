@@ -128,6 +128,64 @@ extern int renamed __asm__;
     ]
 
 
+def test_compiler_extension_normalization_preserves_coordinates_and_source_states():
+    from c_parser import CParser
+
+    source = (
+        'const char *s = "__attribute__((packed))";\n'
+        "// __attribute__((unused)) ignored\n"
+        "/* keep * __declspec(dllexport) */\n"
+        "extern int packed_call(void) __attribute__((packed, ms_abi));\n"
+        "__extension__ extern __inline__ int __stdcall run(__const char *__restrict p) "
+        '__attribute__((visibility("default")));\n'
+        "_Alignas(16) int aligned;\n"
+        'extern int renamed __asm__("renamed_v2");\n'
+        "_BitInt(17) bits;\n"
+        "__typeof__(errno) err;\n"
+        "int *__ptr64 ptr;\n"
+    )
+
+    normalized, extensions = CParser()._normalize_compiler_extensions(source)
+
+    assert len(normalized) == len(source)
+    assert normalized == (
+        'const char *s = "__attribute__((packed))";\n'
+        "// __attribute__((unused)) ignored\n"
+        "/* keep * __declspec(dllexport) */\n"
+        "extern int packed_call(void)                                ;\n"
+        "              extern inline     int           run(const   char *restrict   p) "
+        "                                      ;\n"
+        "             int aligned;\n"
+        "extern int renamed                      ;\n"
+        "_bitint     bits;\n"
+        "_typeof           err;\n"
+        "int *        ptr;\n"
+    )
+    assert [(extension.kind, extension.name, extension.offset) for extension in extensions] == [
+        ("compiler_attribute", "packed", source.index("__attribute__((packed, ms_abi))")),
+        ("compiler_attribute", "ms_abi", source.index("__attribute__((packed, ms_abi))")),
+        ("calling_convention", "__stdcall", source.index("__stdcall")),
+        ("alignment_specifier", "_Alignas", source.index("_Alignas")),
+        ("asm_label", "__asm__", source.index("__asm__")),
+        ("compiler_type", "_BitInt", source.index("_BitInt")),
+        ("compiler_type", "__typeof__", source.index("__typeof__")),
+        ("compiler_qualifier", "__ptr64", source.index("__ptr64")),
+    ]
+
+
+def test_compiler_extension_only_segment_does_not_stop_later_declarations():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        "__attribute__((deprecated));\nint kept;\n",
+        filename="blank_extension_segment.h",
+        preprocessing="compiler",
+    )
+
+    assert [variable.name for variable in parsed.variables] == ["kept"]
+    assert parsed.diagnostics == []
+
+
 def test_abi_pointer_qualifiers_are_accepted_with_explicit_warning():
     from c_parser import parse_c_file
 

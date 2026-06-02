@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Optional, Any
+from typing import Any
 
 
 EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
@@ -51,27 +51,27 @@ class OwnershipPolicy:
 
 @dataclass
 class SemanticOrigin:
-    source_language: Optional[str] = None
-    native_name: Optional[str] = None
-    native_scope: Optional[str] = None
-    source_kind: Optional[str] = None
-    source_type: Optional[str] = None
+    source_language: str | None = None
+    native_name: str | None = None
+    native_scope: str | None = None
+    source_kind: str | None = None
+    source_type: str | None = None
     source_location: dict[str, Any] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class SemanticArrayContract:
-    rank: Optional[int] = None
+    rank: int | None = None
     shape: list[str] = field(default_factory=list)
     # Native-source provenance, excluded from public contract equality.
-    lower_bounds: list[Optional[str]] = field(default_factory=list)
-    upper_bounds: list[Optional[str]] = field(default_factory=list)
+    lower_bounds: list[str | None] = field(default_factory=list)
+    upper_bounds: list[str | None] = field(default_factory=list)
     source_shape: list[str] = field(default_factory=list)
-    category: Optional[str] = None
-    order: Optional[str] = None
+    category: str | None = None
+    order: str | None = None
     axes: list[str] = field(default_factory=list)
-    contiguous: Optional[bool] = None
+    contiguous: bool | None = None
     allocatable: bool = False
     pointer: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -84,8 +84,8 @@ class SemanticStorageContract:
     mutable: bool = False
     pointer_depth: int = 0
     ownership: str = "borrowed"
-    array: Optional[SemanticArrayContract] = None
-    calling_convention: Optional[str] = None
+    array: SemanticArrayContract | None = None
+    calling_convention: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -100,7 +100,7 @@ class SemanticType:
 
     rank: int = 0
 
-    dtype: Optional[str] = None
+    dtype: str | None = None
 
     shape: list[str] = field(default_factory=list)
 
@@ -112,7 +112,7 @@ class SemanticType:
 
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    storage: Optional[SemanticStorageContract] = None
+    storage: SemanticStorageContract | None = None
 
     origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
 
@@ -138,7 +138,7 @@ class SemanticArgument:
     optional: bool = False
     visibility: str = "public"
 
-    default_value: Optional[str] = None
+    default_value: str | None = None
 
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -152,7 +152,7 @@ class SemanticArgument:
 
 @dataclass
 class SemanticContract:
-    name: Optional[str] = None
+    name: str | None = None
 
     preconditions: list[str] = field(default_factory=list)
 
@@ -168,11 +168,11 @@ class SemanticContract:
 
 @dataclass
 class ProjectionMapping:
-    python_name: Optional[str] = None
+    python_name: str | None = None
     native_name: str = ""
-    native_position: Optional[int] = None
-    python_position: Optional[int] = None
-    result_position: Optional[int] = None
+    native_position: int | None = None
+    python_position: int | None = None
+    result_position: int | None = None
     value_kind: str = ""
     value: Any = None
     intent: str = "in"
@@ -187,11 +187,11 @@ class ProjectionMapping:
 class SemanticFunction:
     name: str
 
-    native_name: Optional[str] = None
+    native_name: str | None = None
 
     arguments: list[SemanticArgument] = field(default_factory=list)
 
-    return_type: Optional[SemanticType] = None
+    return_type: SemanticType | None = None
 
     contracts: list[SemanticContract] = field(default_factory=list)
 
@@ -393,7 +393,7 @@ def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
 def _native_projection_value_key(value: Any, name_map: dict[str, str]) -> Any:
     if isinstance(value, dict):
         return tuple(sorted((key, _native_projection_value_key(item, name_map)) for key, item in value.items()))
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return tuple(_native_projection_value_key(item, name_map) for item in value)
     return _canonical_expression(value, name_map)
 
@@ -440,7 +440,7 @@ def _canonical_expression_text(text: str, name_map: dict[str, str]) -> str:
 class SemanticClass:
     name: str
 
-    native_name: Optional[str] = None
+    native_name: str | None = None
 
     fields: list[SemanticArgument] = field(default_factory=list)
 
@@ -463,7 +463,7 @@ class SemanticClass:
 @dataclass
 class SemanticImportItem:
     source: str
-    target: Optional[str] = None
+    target: str | None = None
 
 
 @dataclass

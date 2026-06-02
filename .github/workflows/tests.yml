@@ -36,7 +36,7 @@ jobs:
           PYTHONPATH: .
           COVERAGE_PROCESS_START: ${{ github.workspace }}/pyproject.toml
           HYPOTHESIS_PROFILE: ci
-        run: python -m coverage run -m pytest -q -n auto --randomly-seed=1 --benchmark-disable
+        run: python -m coverage run -m pytest -q -n auto --randomly-seed=1
       - name: Combine coverage data
         run: python -m coverage combine
       - name: Report coverage

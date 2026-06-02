@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from c_parser import parse_c_file
 from semantics.fortran2ir import fortran_file_to_semantic_modules
 from semantics.pyi_printer import emit_module_stubs
 from x2py import parse_fortran_file
+
+pytestmark = pytest.mark.skip(reason="Benchmarks are parked until benchmark adoption resumes.")
 
 
 _C_HEADER = "".join(f"int fn_{index}(int x_{index}, double y_{index});\n" for index in range(200))
@@ -39,3 +43,14 @@ def test_parse_convert_emit_representative_fortran_module(benchmark):
     stubs = benchmark(_parse_convert_emit_fortran, _FORTRAN_MODULE)
 
     assert stubs["generated"].count("def step_") == 50
+
+
+@pytest.mark.benchmark
+def test_parse_real_lapack_dgesv(benchmark):
+    source = (Path(__file__).resolve().parents[1] / "data" / "fortran" / "lapack" / "dgesv.f").read_text(
+        encoding="utf-8"
+    )
+    parsed = benchmark(parse_fortran_file, source, filename="lapack/dgesv.f")
+
+    assert [procedure.name for procedure in parsed.procedures] == ["DGESV"]
+    assert parsed.diagnostics == []

@@ -786,13 +786,13 @@ def lex_c_source(source: str, filename: str | None = None) -> list[CToken]:
 
 
 __all__ = (
-    "CLogicalRecord",
     "CLineMapping",
+    "CLogicalRecord",
     "CToken",
     "CTopLevelSegment",
     "NormalizedCSource",
-    "line_mappings_for_source",
     "lex_c_source",
+    "line_mappings_for_source",
     "normalize_c_source",
     "split_top_level_c_source",
     "strip_c_comments",

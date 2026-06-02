@@ -25,7 +25,11 @@ examples. Contribution and pull-request requirements remain in
 - [x2py checklist](x2py_checklist.md):
   pending frontend, shared semantics, and `.pyi` tasks.
 - [Quality stack adoption checklist](quality_adoption_checklist.md):
-  recurring QA checks, staged strictness work, and subsystem progress.
+  recurring QA checks, staged strictness work, subsystem progress, and the
+  current effort-weighted estimate for full tool adoption.
+- [Quality tool retention report](quality_tool_retention_report.md):
+  per-tool benefits, discovered defects, current evidence, and recommended
+  steady-state cadence before merge.
 
 ## Parser Frontends
 

@@ -2,7 +2,8 @@
 
 import pytest
 
-from fortran_parser.parser import FortranParser
+from fortran_parser.models import FortranModule
+from fortran_parser.parser import FortranParser, _ParserScope
 from x2py import FortranParseError, parse_fortran_file, parse_fortran_project
 
 
@@ -334,6 +335,54 @@ end module type_contains_bad_mod
 """
         with pytest.raises(FortranParseError, match="Unsupported or malformed type-bound declaration"):
             parse_fortran_file(code, filename="type_contains_bad.f90")
+
+
+def test_contains_alternative_line_validation_accepts_spec_lines_without_mutating_scope():
+    parser = FortranParser()
+    module = FortranModule("alternative_mod")
+    scope = _ParserScope(kind="module", name=module.name, model=module, module_owner=module.name)
+
+    assert parser._helper_is_valid_contains_alternative_line(scope, "integer :: fallback") is True
+    assert parser._helper_is_valid_contains_alternative_line(scope, "call fallback()") is False
+    assert parser._helper_is_valid_contains_alternative_line(scope, "@@@") is False
+    assert module.variables == []
+
+
+def test_valid_enum_subunit_accepts_optional_separator_and_multiple_enumerators():
+    parsed = parse_fortran_file(
+        """
+module enum_valid_mod
+  enum, bind(c)
+    enumerator first
+    enumerator :: second = 2, third = selected_int_kind(4)
+  end enum
+end module enum_valid_mod
+""",
+        filename="valid_enum.f90",
+    )
+
+    assert parsed.modules[0].name == "enum_valid_mod"
+
+
+@pytest.mark.parametrize(
+    "invalid_line",
+    [
+        "enumerator :: valid = 1, 2invalid",
+        "integer :: invalid",
+        "interface invalid",
+    ],
+)
+def test_enum_subunit_rejects_malformed_lines_and_nested_units(invalid_line):
+    code = f"""
+module enum_invalid_mod
+  enum, bind(c)
+    {invalid_line}
+  end enum
+end module enum_invalid_mod
+"""
+
+    with pytest.raises(FortranParseError, match="Invalid Fortran syntax"):
+        parse_fortran_file(code, filename="invalid_enum.f90")
 
 
 def test_malformed_type_bound_declaration_raises():

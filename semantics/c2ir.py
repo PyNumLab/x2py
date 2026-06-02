@@ -346,7 +346,7 @@ class CToIRConverter:
                     python_position=index,
                     intent=argument.intent,
                 )
-                for index, (parameter, argument) in enumerate(zip(function.parameters, arguments))
+                for index, (parameter, argument) in enumerate(zip(function.parameters, arguments, strict=False))
             ],
             metadata=metadata,
             visibility="private" if "static" in function.storage else "public",
@@ -485,7 +485,7 @@ class CToIRConverter:
             return self._callback_placeholder(type_)
         if isinstance(type_, CUnknownType):
             return self._unresolved_type(type_.spelling, owner=owner, source_type=self._type_text(type_))
-        if isinstance(type_, (CLongDouble, CLongDoubleComplex)):
+        if isinstance(type_, CLongDouble | CLongDoubleComplex):
             return self._unsupported_type(
                 "c_long_double_unsupported",
                 "C long double types are not mapped until target precision policy is explicit.",
@@ -1204,8 +1204,7 @@ class CToIRConverter:
     def _module_name(c_file: CFile) -> str:
         if c_file.filename:
             return CToIRConverter._module_name_for_filename(c_file.filename)
-        else:
-            stem = "c_module"
+        stem = "c_module"
         return CToIRConverter._identifier(stem or "c_module")
 
     @staticmethod
@@ -1321,7 +1320,7 @@ class CToIRConverter:
         source_text = getattr(type_, "source_text", "")
         if source_text:
             return source_text
-        if isinstance(type_, (CStruct, CUnion, CEnum, CTypedef)):
+        if isinstance(type_, CStruct | CUnion | CEnum | CTypedef):
             return type_.reference_name
         return type(type_).__name__
 

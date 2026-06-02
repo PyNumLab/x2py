@@ -3,17 +3,50 @@ import pytest
 from fortran_parser.models import FortranFunctionCall, FortranSlice, FortranUseMapping, FortranVariable
 from x2py import FortranParseError, parse_fortran_file, parse_fortran_project
 
-collect_project_procedure_signatures = lambda files: list(parse_fortran_project(files).procedures.values())
-parse_fortran_modules = lambda code, filename=None: parse_fortran_file(code, filename=filename).modules
-parse_fortran_module = lambda code, filename=None: parse_fortran_modules(code, filename=filename)[0]
-parse_fortran_submodules = lambda code, filename=None: parse_fortran_file(code, filename=filename).submodules
-parse_fortran_submodule = lambda code, filename=None: parse_fortran_submodules(code, filename=filename)[0]
-parse_fortran_programs = lambda code, filename=None: parse_fortran_file(code, filename=filename).programs
-parse_fortran_program = lambda code, filename=None: parse_fortran_programs(code, filename=filename)[0]
-parse_fortran_block_data = lambda code, filename=None: parse_fortran_file(code, filename=filename).block_data_units
-parse_fortran_block_data_unit = lambda code, filename=None: parse_fortran_block_data(code, filename=filename)[0]
-parse_fortran_interfaces = lambda code, filename=None: parse_fortran_file(code, filename=filename).interfaces
-parse_fortran_interface = lambda code, filename=None: parse_fortran_interfaces(code, filename=filename)[0]
+
+def collect_project_procedure_signatures(files):
+    return list(parse_fortran_project(files).procedures.values())
+
+
+def parse_fortran_modules(code, filename=None):
+    return parse_fortran_file(code, filename=filename).modules
+
+
+def parse_fortran_module(code, filename=None):
+    return parse_fortran_modules(code, filename=filename)[0]
+
+
+def parse_fortran_submodules(code, filename=None):
+    return parse_fortran_file(code, filename=filename).submodules
+
+
+def parse_fortran_submodule(code, filename=None):
+    return parse_fortran_submodules(code, filename=filename)[0]
+
+
+def parse_fortran_programs(code, filename=None):
+    return parse_fortran_file(code, filename=filename).programs
+
+
+def parse_fortran_program(code, filename=None):
+    return parse_fortran_programs(code, filename=filename)[0]
+
+
+def parse_fortran_block_data(code, filename=None):
+    return parse_fortran_file(code, filename=filename).block_data_units
+
+
+def parse_fortran_block_data_unit(code, filename=None):
+    return parse_fortran_block_data(code, filename=filename)[0]
+
+
+def parse_fortran_interfaces(code, filename=None):
+    return parse_fortran_file(code, filename=filename).interfaces
+
+
+def parse_fortran_interface(code, filename=None):
+    return parse_fortran_interfaces(code, filename=filename)[0]
+
 
 COMPILE_TIME_EXPRESSION_SOURCE = """
 module compile_time_expression_examples
@@ -310,7 +343,7 @@ end module solver
 """,
     }
     signatures = collect_project_procedure_signatures(files)
-    step = [s for s in signatures if s.name == "step"][0]
+    step = next(s for s in signatures if s.name == "step")
     assert step.arguments[0].kind == "selected_real_kind(15, 307)"
 
 
@@ -440,7 +473,7 @@ subroutine dup(x)
 end subroutine dup
 """
     with pytest.raises(ValueError, match="Duplicate declaration"):
-        parse_fortran_file(code, filename="dup.f90").procedures
+        _ = parse_fortran_file(code, filename="dup.f90").procedures
 
 
 def test_fixed_form_character_star_length_is_parsed():
@@ -464,7 +497,7 @@ real function f(x)
 end function f
 """
     with pytest.raises(ValueError, match="Duplicate declaration"):
-        parse_fortran_file(code, filename="dup_result.f90").procedures
+        _ = parse_fortran_file(code, filename="dup_result.f90").procedures
 
 
 def test_duplicate_function_result_with_result_keyword_raises_error():
@@ -475,7 +508,7 @@ real function f(x) result(res)
 end function f
 """
     with pytest.raises(ValueError, match="Duplicate declaration"):
-        parse_fortran_file(code, filename="dup_result_kw.f90").procedures
+        _ = parse_fortran_file(code, filename="dup_result_kw.f90").procedures
 
 
 def test_fixed_form_parameter_without_typed_declaration_raises_error():
@@ -487,7 +520,7 @@ def test_fixed_form_parameter_without_typed_declaration_raises_error():
       end
 """
     with pytest.raises(ValueError, match="Unknown datatype for PARAMETER symbol"):
-        parse_fortran_file(code, filename="legacy.f").procedures
+        _ = parse_fortran_file(code, filename="legacy.f").procedures
 
 
 def test_fixed_form_parameter_without_typed_declaration_allowed_with_implicit_typing():
@@ -521,7 +554,7 @@ subroutine dup_init()
 end subroutine dup_init
 """
     with pytest.raises(ValueError, match="Duplicate declaration"):
-        parse_fortran_file(code, filename="dup_init.f90").procedures
+        _ = parse_fortran_file(code, filename="dup_init.f90").procedures
 
 
 def test_duplicate_procedure_name_same_scope_raises_error():
@@ -536,7 +569,7 @@ function work(n) result(out)
 end function work
 """
     with pytest.raises(ValueError, match="Duplicate procedure name"):
-        parse_fortran_file(code, filename="dup_proc.f90").procedures
+        _ = parse_fortran_file(code, filename="dup_proc.f90").procedures
 
 
 def test_duplicate_procedure_name_same_module_scope_raises_error():
@@ -553,7 +586,7 @@ contains
 end module m
 """
     with pytest.raises(ValueError, match="Duplicate procedure name"):
-        parse_fortran_file(code, filename="dup_mod_proc.f90").procedures
+        _ = parse_fortran_file(code, filename="dup_mod_proc.f90").procedures
 
 
 def test_legacy_star_kind_parameter_symbol_is_recognized():
@@ -763,7 +796,7 @@ end module my_kinds
     assert len(ns.files) == 2
     assert "my_kinds" in ns.modules
     assert "solver" in ns.modules
-    step = [s for s in ns.procedures.values() if s.name == "step"][0]
+    step = next(s for s in ns.procedures.values() if s.name == "step")
     assert step.arguments[0].kind == "selected_real_kind(15, 307)"
 
 
@@ -890,6 +923,25 @@ def test_structured_shape_handles_empty_dimensions_and_use_mapping_equality():
     assert renamed == FortranUseMapping(source="delete_input_list", target="delete_input")
     assert renamed != FortranUseMapping(source="delete_input_list")
     assert renamed != object()
+
+
+@pytest.mark.parametrize(
+    ("base_type", "type_spec", "expected"),
+    [
+        ("real", "", None),
+        ("real", "()", None),
+        ("real", "(8)", "8"),
+        ("real", "(kind = selected_real_kind(15, 307))", "selected_real_kind(15, 307)"),
+        ("real", "(kind=merge(8, 4, enabled=.true.))", "merge(8, 4, enabled=.true.)"),
+        ("real", "(len=5)", None),
+        ("character", "(len=8)", "len=8"),
+        ("character", "(len=8, kind=c_char)", "len=8, kind=c_char"),
+    ],
+)
+def test_extract_kind_from_type_spec_contract(base_type, type_spec, expected):
+    from fortran_parser.type_resolver import extract_kind_from_type_spec
+
+    assert extract_kind_from_type_spec(base_type, type_spec) == expected
 
 
 def test_subroutine_derived_type_arguments_are_parsed():
@@ -1198,7 +1250,7 @@ subroutine bad(x)
 end subroutine bad
 """
     with pytest.raises(ValueError, match="Unknown or unsupported datatype"):
-        parse_fortran_file(code, filename="bad.f90").procedures
+        _ = parse_fortran_file(code, filename="bad.f90").procedures
 
 
 def test_submodule_procedures_and_namespace_dependencies(tmp_path):

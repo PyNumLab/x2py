@@ -21,7 +21,6 @@ qa = [
     "pip-audit>=2.7",
     "pre-commit>=4.0",
     "pytest>=8.0",
-    "pytest-benchmark>=5.0",
     "pytest-randomly>=3.15",
     "pytest-xdist[psutil]>=3.6",
     "radon[toml]>=6.0",
@@ -42,7 +41,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-ra --strict-config --strict-markers"
 markers = [
-    "benchmark: performance regression tests run explicitly with pytest-benchmark",
+    "benchmark: parked performance tests; enable when benchmark adoption resumes",
     "fuzz: randomized parser robustness tests",
     "property: Hypothesis property-based tests",
     "regression: tests that pin previously fixed bugs",
@@ -86,35 +85,6 @@ select = [
     "RUF",  # Ruff-specific bug and maintenance rules
     "C90",  # McCabe complexity
 ]
-ignore = [
-    # Existing parser/compiler code has long diagnostic strings and generated
-    # examples; keep line length advisory until the formatter is adopted across
-    # the historical tree.
-    "E501",
-
-    # Baseline exceptions to avoid turning historical style debt into a noisy
-    # first QA change. Ratchet these down once the reports are reviewed.
-    "B007",
-    "B018",
-    "B905",
-    "E731",
-    "RET504",
-    "RET505",
-    "RET507",
-    "RUF007",
-    "RUF012",
-    "RUF015",
-    "RUF022",
-    "SIM102",
-    "SIM103",
-    "SIM105",
-    "SIM108",
-    "SIM110",
-    "SIM211",
-    "UP007",
-    "UP037",
-    "UP038",
-]
 fixable = ["ALL"]
 unfixable = []
 
@@ -122,7 +92,7 @@ unfixable = []
 known-first-party = ["c_parser", "fortran_parser", "semantics", "x2py"]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 50
+max-complexity = 45
 
 [tool.ruff.format]
 quote-style = "double"
@@ -153,6 +123,21 @@ total_average = true
 mi_min = "B"
 
 [tool.mutmut]
-paths_to_mutate = ["c_parser", "fortran_parser", "semantics", "x2py"]
-pytest_add_cli_args_test_selection = ["tests"]
-also_copy = ["c_parser", "fortran_parser", "semantics", "x2py", "conftest.py", "sitecustomize.py", "pyproject.toml"]
+paths_to_mutate = ["fortran_parser/parser.py"]
+pytest_add_cli_args_test_selection = [
+    "tests/parser/test_declaration_and_interface_edges.py",
+    "tests/parser/test_error_handling.py",
+    "tests/parser/test_fortran_error_fixture_suite.py",
+    "tests/parser/test_fortran_fixture_suite.py",
+    "tests/parser/test_fortran_json_sanity.py",
+    "tests/parser/test_fortran_parser_mutation_contracts.py",
+    "tests/parser/test_fortran_type_probe.py",
+    "tests/parser/test_function_header_parsing.py",
+    "tests/parser/test_parser_developer_tutorial.py",
+    "tests/parser/test_parser_public_entrypoints.py",
+    "tests/parser/test_preprocessor_and_execution_boundaries.py",
+    "tests/parser/test_procedure_and_type_parsing.py",
+    "tests/parser/test_project_scope_models.py",
+    "tests/parser/test_scope_handling.py",
+]
+also_copy = ["c_parser", "fortran_parser", "semantics", "x2py", "tools", "conftest.py", "sitecustomize.py", "pyproject.toml"]

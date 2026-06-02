@@ -59,6 +59,7 @@ Executable walkthroughs live in
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from itertools import pairwise
 import re
 from collections.abc import Mapping, Sequence
 from pathlib import Path, PurePosixPath
@@ -448,6 +449,8 @@ class CParser:
             functions, structs, unions, enums, typedefs, variables, parser_diagnostics = self._parse_translation_unit(
                 source,
                 filename,
+                use_linemarkers=False,
+                normalize_compiler_extensions=False,
             )
             parsed.functions = functions
             parsed.structs = structs
@@ -530,7 +533,7 @@ class CParser:
 
         paths: list[Path] = []
         root: Path | None = None
-        if isinstance(files, (str, Path)):
+        if isinstance(files, str | Path):
             path = Path(files)
             if path.is_dir():
                 root = path
@@ -591,7 +594,7 @@ class CParser:
                 for parameter_type in type_.parameter_types:
                     mark_type(parameter_type)
                 return
-            if isinstance(type_, (CStruct, CUnion)):
+            if isinstance(type_, CStruct | CUnion):
                 if id(type_) in seen_types:
                     return
                 seen_types.add(id(type_))
@@ -663,10 +666,7 @@ class CParser:
         line_offset = prefix.count("\n")
         line = segment.original_start_line + line_offset
         filename = segment.filename
-        if line_offset:
-            column = len(prefix.rsplit("\n", 1)[-1]) + 1
-        else:
-            column = segment.original_start_column + len(prefix)
+        column = len(prefix.rsplit("\n", 1)[-1]) + 1 if line_offset else segment.original_start_column + len(prefix)
         source_line = segment.original_source_line
         if line_offset < len(segment.original_line_numbers):
             line = segment.original_line_numbers[line_offset]
@@ -698,7 +698,7 @@ class CParser:
         if not text:
             return
         tokens = lex_c_source(text)
-        has_scope_operator = any(left.text == ":" and right.text == ":" for left, right in zip(tokens, tokens[1:]))
+        has_scope_operator = any(left.text == ":" and right.text == ":" for left, right in pairwise(tokens))
         if segment.terminator != "eof" and not has_scope_operator and CParser._could_start_c_external_declaration(text):
             return
         raise CParseError(
@@ -773,7 +773,7 @@ class CParser:
             return ("cycle", type(type_).__name__, getattr(type_, "reference_name", None))
         seen.add(object_id)
 
-        qualifiers = tuple(qualifier.spelling for qualifier in getattr(type_, "qualifiers", []))
+        qualifiers = tuple(qualifier.spelling for qualifier in type_.qualifiers)
         if isinstance(type_, CComposedType):
             return (
                 "CComposedType",
@@ -829,7 +829,7 @@ class CParser:
             return False
         return all(
             self._types_compatible(left_param.type, right_param.type)
-            for left_param, right_param in zip(left.parameters, right.parameters)
+            for left_param, right_param in zip(left.parameters, right.parameters, strict=False)
         )
 
     def _merge_function_declaration(
@@ -1332,7 +1332,7 @@ class CParser:
         writable = [index for index in range(start, end) if characters[index] != "\n"]
         if len(replacement) > len(writable):
             replacement = "_T"
-        for index, char in zip(writable, replacement):
+        for index, char in zip(writable, replacement, strict=False):
             characters[index] = char
         for index in writable[len(replacement) :]:
             characters[index] = " "
@@ -1934,18 +1934,6 @@ class CParser:
         )
         return parsed.name, type_, storage, function_specifiers, direct_function
 
-    def _build_type(
-        self,
-        spec_text: str,
-        declarator_fragment: str = "",
-    ) -> tuple[CType, list[str]]:
-        """Build a type-only declaration result for helper callers."""
-        _name, type_, _storage, function_specifiers, _direct_function = self._build_declared_type(
-            spec_text,
-            declarator_fragment,
-        )
-        return type_, function_specifiers
-
     def _adjust_parameter_type(self, declared_type: CType) -> CType:
         """Apply C parameter adjustment while preserving the written type."""
         if isinstance(declared_type, CFunctionType):
@@ -2054,21 +2042,17 @@ class CParser:
         stripped = parameters_text.strip()
         if not stripped or stripped == "void" or "..." in stripped:
             return False
-        for item in top_level_split(stripped, ","):
-            if not re.fullmatch(r"[A-Za-z_]\w*", item.strip()):
-                return False
-        return True
+        return all(re.fullmatch(r"[A-Za-z_]\w*", item.strip()) for item in top_level_split(stripped, ","))
 
     def _raise_for_unsupported_old_style_definitions(
         self,
         source: str,
         filename: str | None,
         *,
-        use_linemarkers: bool = False,
-        normalize_compiler_extensions: bool = False,
+        use_linemarkers: bool,
+        normalize_compiler_extensions: bool,
     ) -> None:
         """Raise before top-level splitting hides unsupported K&R declarations."""
-        source_lines = source.splitlines()
         normalized_source = source
         if normalize_compiler_extensions:
             normalized_source, _extensions = self._normalize_compiler_extensions(source)
@@ -2113,9 +2097,7 @@ class CParser:
                 if stripped.startswith("{"):
                     mapping = line_mappings[index] if index < len(line_mappings) else None
                     source_line = (
-                        mapping.source_line
-                        if mapping is not None
-                        else (source_lines[index] if index < len(source_lines) else line)
+                        mapping.source_line if mapping is not None and mapping.source_line is not None else line
                     )
                     raise CParseError(
                         "K&R style function definitions are not supported",
@@ -2132,11 +2114,7 @@ class CParser:
 
             if saw_old_style_declaration:
                 mapping = line_mappings[index] if index < len(line_mappings) else None
-                source_line = (
-                    mapping.source_line
-                    if mapping is not None
-                    else (source_lines[index] if index < len(source_lines) else line)
-                )
+                source_line = mapping.source_line if mapping is not None and mapping.source_line is not None else line
                 raise CParseError(
                     "K&R style function definitions are not supported",
                     filename=mapping.filename if mapping is not None else filename,
@@ -2266,10 +2244,10 @@ class CParser:
         """Replace a matching tag reference with the parsed aggregate object."""
         if isinstance(type_, CComposedType):
             terminal = type_.components[-1]
-            if isinstance(terminal, (CStruct, CUnion, CEnum)) and not terminal.qualifiers:
+            if isinstance(terminal, CStruct | CUnion | CEnum) and not terminal.qualifiers:
                 type_.components[-1] = aggregate
             return type_
-        if isinstance(type_, (CStruct, CUnion, CEnum)) and not type_.qualifiers:
+        if isinstance(type_, CStruct | CUnion | CEnum) and not type_.qualifiers:
             return aggregate
         return type_
 
@@ -2353,27 +2331,33 @@ class CParser:
             unit_name=None,
         )
 
-    def _union_by_value_names(self, type_: CType) -> set[str]:
+    def _union_by_value_names(self, type_: CType, seen: set[int] | None = None) -> set[str]:
         """Return union type names that appear without pointer/array indirection."""
+        if seen is None:
+            seen = set()
+        type_id = id(type_)
+        if type_id in seen:
+            return set()
+        seen.add(type_id)
         if isinstance(type_, CUnion):
             return {type_.reference_name}
         if isinstance(type_, CTypedef) and type_.type is not None:
-            return self._union_by_value_names(type_.type)
+            return self._union_by_value_names(type_.type, seen)
         if isinstance(type_, CFunctionType):
             names = set()
-            names.update(self._union_by_value_names(type_.result_type))
+            names.update(self._union_by_value_names(type_.result_type, seen))
             for parameter_type in type_.parameter_types:
-                names.update(self._union_by_value_names(parameter_type))
+                names.update(self._union_by_value_names(parameter_type, seen))
             return names
         if isinstance(type_, CComposedType):
             names = set()
             protected_by_indirection = False
             for component in type_.components:
-                if isinstance(component, (CPointer, CArray)):
+                if isinstance(component, CPointer | CArray):
                     protected_by_indirection = True
                     continue
                 if isinstance(component, CFunctionType):
-                    names.update(self._union_by_value_names(component))
+                    names.update(self._union_by_value_names(component, seen))
                     protected_by_indirection = False
                     continue
                 if isinstance(component, CUnion) and not protected_by_indirection:
@@ -2428,7 +2412,7 @@ class CParser:
         owner_kind: str,
         message: str,
         *,
-        offset: int = 0,
+        offset: int,
     ) -> CDiagnostic:
         """Build a field-level warning at a precise member offset."""
         return CDiagnostic(
@@ -2531,16 +2515,6 @@ class CParser:
         for text, field_offset in top_level_split_with_offsets(body, ";"):
             member_offset = body_offset + field_offset
             member_location = self._source_location_at(segment, member_offset)
-            if self._has_unsupported_declaration_marker(text):
-                diagnostics.append(
-                    self._field_diagnostic(
-                        segment,
-                        owner_kind,
-                        "Declaration attributes and alignment specifiers are not supported in fields yet.",
-                        offset=member_offset,
-                    )
-                )
-                continue
             if "{" in text or "}" in text:
                 nested = self._parse_tag_definition(self._nested_field_segment(segment, text, member_offset))
                 if nested is not None:
@@ -2550,7 +2524,7 @@ class CParser:
                             members.extend(variables)
                             diagnostics.extend(nested_diagnostics)
                             continue
-                        if isinstance(aggregate, (CStruct, CUnion)) and aggregate.name is None:
+                        if isinstance(aggregate, CStruct | CUnion) and aggregate.name is None:
                             members.append(
                                 CVariable(
                                     name=None,
@@ -2793,8 +2767,8 @@ class CParser:
         source: str,
         filename: str | None,
         *,
-        use_linemarkers: bool = False,
-        normalize_compiler_extensions: bool = False,
+        use_linemarkers: bool,
+        normalize_compiler_extensions: bool,
     ) -> tuple[
         list[CFunction],
         list[CStruct],

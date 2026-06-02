@@ -3,6 +3,86 @@
 from pathlib import Path
 
 
+def test_c_parser_path_and_include_key_helpers_preserve_boundary_contracts(monkeypatch):
+    from c_parser.parser import _include_key_from_current, _looks_like_existing_source_path
+
+    monkeypatch.setattr(Path, "is_file", lambda self: True)
+
+    assert _looks_like_existing_source_path(Path("api.h")) is True
+    assert _looks_like_existing_source_path("api.h") is True
+    assert _looks_like_existing_source_path("") is False
+    assert _looks_like_existing_source_path("int answer(void);\n") is False
+    assert _looks_like_existing_source_path(object()) is False
+    assert _include_key_from_current("api.h", "types.h") == "types.h"
+    assert _include_key_from_current("src/api.h", "types.h") == "src/types.h"
+
+    def raise_os_error(path):
+        raise OSError
+
+    monkeypatch.setattr(Path, "is_file", raise_os_error)
+
+    assert _looks_like_existing_source_path("api.h") is False
+
+
+def test_c_parser_public_wrappers_forward_explicit_options(monkeypatch):
+    from c_parser import parse_c_file, parse_c_project
+
+    calls = []
+
+    class RecordingParser:
+        def visit_file(self, *args, **kwargs):
+            calls.append(("file", args, kwargs))
+            return "file-result"
+
+        def visit_project(self, *args, **kwargs):
+            calls.append(("project", args, kwargs))
+            return "project-result"
+
+    monkeypatch.setattr("c_parser.parser._DEFAULT_PARSER", RecordingParser())
+
+    include_dirs = [Path("include")]
+    assert (
+        parse_c_file(
+            "api source",
+            filename="api.h",
+            include_dirs=include_dirs,
+            preprocessing="preprocessed",
+            encoding="latin-1",
+        )
+        == "file-result"
+    )
+    assert (
+        parse_c_project(
+            {"api.h": "api source"},
+            include_dirs=include_dirs,
+            preprocessing="preprocessed",
+            encoding="latin-1",
+        )
+        == "project-result"
+    )
+    assert calls == [
+        (
+            "file",
+            ("api source",),
+            {
+                "filename": "api.h",
+                "include_dirs": include_dirs,
+                "preprocessing": "preprocessed",
+                "encoding": "latin-1",
+            },
+        ),
+        (
+            "project",
+            ({"api.h": "api source"},),
+            {
+                "include_dirs": include_dirs,
+                "preprocessing": "preprocessed",
+                "encoding": "latin-1",
+            },
+        ),
+    ]
+
+
 def test_parse_c_file_accepts_inline_source_and_returns_typed_model():
     from c_parser import CFile, parse_c_file
 

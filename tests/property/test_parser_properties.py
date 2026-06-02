@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 import json
 from pathlib import Path
 import sys
@@ -420,16 +421,12 @@ def test_generated_c_visibility_attributes_are_tolerated(function_name):
 @pytest.mark.fuzz
 @given(_FUZZ_TEXT)
 def test_c_parser_fuzz_fragments_only_raise_owned_errors(source):
-    try:
+    with suppress(CParseError):
         parse_c_file(source, filename="fuzz.h")
-    except CParseError:
-        pass
 
 
 @pytest.mark.fuzz
 @given(_FUZZ_TEXT)
 def test_fortran_parser_fuzz_fragments_only_raise_owned_errors(source):
-    try:
+    with suppress(FortranParseError):
         parse_fortran_file(source, filename="fuzz.f90")
-    except FortranParseError:
-        pass

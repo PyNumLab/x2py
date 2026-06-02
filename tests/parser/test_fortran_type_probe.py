@@ -56,7 +56,7 @@ def test_x2py_public_api_lazily_exposes_type_probe_symbols_and_rejects_unknown_n
     assert x2py.FortranTypeProbeError is FortranTypeProbeError
     assert x2py.FortranTypeProbeReport is FortranTypeProbeReport
     with pytest.raises(AttributeError, match="not_exported"):
-        x2py.not_exported
+        _ = x2py.not_exported
 
 
 def test_fortran_type_probe_rejects_statement_injection():

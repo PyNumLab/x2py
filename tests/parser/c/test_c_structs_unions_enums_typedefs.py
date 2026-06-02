@@ -389,3 +389,110 @@ def test_anonymous_aggregate_member_without_a_declarator_is_retained():
     assert [member.name for member in anonymous.type.members] == ["integer", "real"]
     assert tag.name == "tag"
     assert parsed.diagnostics == []
+
+
+def test_struct_field_missing_semicolon_reports_syntax_location():
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError) as exc_info:
+        parse_c_file(
+            """struct broken {
+    int value
+};
+""",
+            filename="bad_field_syntax.h",
+        )
+
+    error = exc_info.value
+    assert error.code == "CPARSE_INVALID_SYNTAX"
+    assert error.filename == "bad_field_syntax.h"
+    assert error.line_number == 1
+    assert error.column == 16
+    assert error.source_line == "struct broken {"
+
+
+def test_nested_aggregate_field_with_function_declarator_is_rejected():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """struct outer {
+    struct inner { int x; } field, make(void);
+    int kept;
+};
+""",
+        filename="nested_bad_field.h",
+    )
+
+    assert [member.name for member in parsed.structs[0].members] == ["kept"]
+    assert len(parsed.diagnostics) == 1
+    diagnostic = parsed.diagnostics[0]
+    assert diagnostic.code == "C_UNSUPPORTED_FIELD_DECLARATION"
+    assert diagnostic.message == "Unsupported nested aggregate field declaration."
+    assert diagnostic.location is not None
+    assert diagnostic.location.line == 2
+    assert diagnostic.location.column == 5
+
+
+def test_bad_field_declarator_does_not_stop_later_declarators():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """struct bad {
+    int broken @@, kept;
+};
+""",
+        filename="bad_field_multi.h",
+    )
+
+    assert [member.name for member in parsed.structs[0].members] == ["kept"]
+    assert len(parsed.diagnostics) == 1
+    assert parsed.diagnostics[0].code == "C_UNSUPPORTED_FIELD_DECLARATION"
+
+
+def test_unnamed_field_type_without_bit_width_reports_diagnostic():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """struct bad {
+    int *;
+    int kept;
+};
+""",
+        filename="unnamed_field.h",
+    )
+
+    assert [member.name for member in parsed.structs[0].members] == ["kept"]
+    assert len(parsed.diagnostics) == 1
+    diagnostic = parsed.diagnostics[0]
+    assert diagnostic.code == "C_UNSUPPORTED_FIELD_DECLARATION"
+    assert diagnostic.message == "Unnamed field type is not supported."
+    assert diagnostic.location is not None
+    assert diagnostic.location.line == 2
+    assert diagnostic.location.column == 5
+
+
+def test_unsupported_field_declarator_is_reported_at_member_location():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """struct bad {
+    int broken @@;
+    int kept;
+};
+""",
+        filename="bad_field.h",
+    )
+
+    assert [member.name for member in parsed.structs[0].members] == ["kept"]
+    assert len(parsed.diagnostics) == 1
+    diagnostic = parsed.diagnostics[0]
+    assert diagnostic.code == "C_UNSUPPORTED_FIELD_DECLARATION"
+    assert diagnostic.severity == "warning"
+    assert diagnostic.unit_kind == "struct_field"
+    assert diagnostic.unit_name is None
+    assert diagnostic.message == "Unsupported declarator syntax after parsed type layers: '@@'."
+    assert diagnostic.location is not None
+    assert diagnostic.location.filename == "bad_field.h"
+    assert diagnostic.location.line == 2
+    assert diagnostic.location.column == 5
+    assert diagnostic.location.source_line == "    int broken @@;"

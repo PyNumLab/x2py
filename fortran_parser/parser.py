@@ -169,7 +169,7 @@ class _ParserScope:
     kind: str
     name: str | None
     model: object | None = None
-    parent: "_ParserScope | None" = None
+    parent: _ParserScope | None = None
     module_owner: str | None = None
     state: dict | None = None
 
@@ -415,8 +415,8 @@ class FortranParser:
         """Parse many sources and merge them into one dependency-aware project model."""
         if isinstance(files, dict):
             parsed_files = [self.visit_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
-        elif isinstance(files, (str, Path)):
-            namespace = self._helper_collect_namespace(files)
+        elif isinstance(files, str | Path):
+            namespace = self._helper_collect_namespace(files, encoding=encoding)
             parsed_files = [self.visit_file(path, encoding=encoding) for path in namespace["files"]]
         else:
             parsed_files = [self.visit_file(path, encoding=encoding) for path in files]
@@ -991,6 +991,8 @@ class FortranParser:
         self,
         root: str | Path,
         extensions: tuple[str, ...] = (".f", ".for", ".ftn", ".f77", ".f90", ".f95", ".f03", ".f08"),
+        *,
+        encoding: str = "utf-8",
     ) -> dict:
         """Collect parseable source files and dependency-order them.
 
@@ -1006,7 +1008,7 @@ class FortranParser:
         """
         root_path = Path(root)
         files = sorted([p for p in root_path.rglob("*") if p.suffix.lower() in extensions])
-        sources = {str(p): p.read_text(encoding="utf-8") for p in files}
+        sources = {str(p): p.read_text(encoding=encoding) for p in files}
         file_lines = {fname: preprocess_lines(code, fname) for fname, code in sources.items()}
 
         module_to_file: dict[str, str] = {}
@@ -1051,7 +1053,7 @@ class FortranParser:
         programs = []
         block_data = []
         for f in ordered_files:
-            parsed_file = self.visit_file(sources[f], filename=f)
+            parsed_file = self.visit_file(sources[f], filename=f, encoding=encoding)
             types.extend(parsed_file.derived_types)
             types.extend(dtype for module in parsed_file.modules for dtype in module.derived_types)
             types.extend(dtype for submodule in parsed_file.submodules for dtype in submodule.derived_types)
@@ -1469,7 +1471,7 @@ class FortranParser:
                 idx += 1
                 continue
 
-            for open_kind, open_name, open_line, open_source, _open_region in reversed(stack):
+            for open_kind, _open_name, _open_line, _open_source, _open_region in reversed(stack):
                 closes_open, end_name = self._helper_parse_unit_end(open_kind, line)
                 if not closes_open:
                     continue
@@ -1836,15 +1838,18 @@ class FortranParser:
     ) -> None:
         """Check or skip nested units that are intentionally omitted from metadata."""
         for child in child_units:
-            if unit is not None and parts is not None:
-                if self._helper_child_unit_region(unit, parts, child) == "execution":
-                    continue
+            if (
+                unit is not None
+                and parts is not None
+                and self._helper_child_unit_region(unit, parts, child) == "execution"
+            ):
+                continue
             if child.kind == "procedure":
                 # The slicer has already checked the nested unit boundary and
                 # the caller has checked its grammar region. Internal procedure
                 # declarations and bodies do not affect wrapper metadata.
                 continue
-            elif child.kind == "interface":
+            if child.kind == "interface":
                 self.visit_interface_unit(child, parent_scope=parent_scope, filename=filename)
             elif child.kind == "derived_type":
                 self.visit_derived_type_unit(child, parent_scope=parent_scope, filename=filename)
@@ -1879,7 +1884,7 @@ class FortranParser:
                 key = (unit.kind, unit.name.lower())
             else:
                 continue
-            for existing in seen.get(key, []):
+            for _existing in seen.get(key, []):
                 if unit.kind == "procedure":
                     scope_label = (
                         f"module '{parent_scope.name}'"
@@ -3747,7 +3752,7 @@ class FortranParser:
         current_module = None
         in_module_spec_part = False
         output: dict[str, dict[str, str]] = {}
-        for line, lineno, source_line in lines:
+        for line, _lineno, _source_line in lines:
             s = line.strip()
             if not s:
                 continue
@@ -4030,7 +4035,7 @@ class FortranParser:
             """Evaluate one allowed AST node, returning None when unsupported."""
             if isinstance(n, ast.Expression):
                 return _eval(n.body)
-            if isinstance(n, ast.Constant) and isinstance(n.value, (int, float, str, bool)):
+            if isinstance(n, ast.Constant) and isinstance(n.value, int | float | str | bool):
                 return n.value
             if isinstance(n, ast.BinOp) and isinstance(n.op, allowed_binops):
                 left = _eval(n.left)
@@ -4038,8 +4043,8 @@ class FortranParser:
                 if (
                     left is None
                     or right is None
-                    or not isinstance(left, (int, float))
-                    or not isinstance(right, (int, float))
+                    or not isinstance(left, int | float)
+                    or not isinstance(right, int | float)
                 ):
                     return None
                 if isinstance(n.op, ast.Add):
@@ -4058,7 +4063,7 @@ class FortranParser:
                     return left**right
             if isinstance(n, ast.UnaryOp) and isinstance(n.op, allowed_unary):
                 v = _eval(n.operand)
-                if v is None or not isinstance(v, (int, float)):
+                if v is None or not isinstance(v, int | float):
                     return None
                 return +v if isinstance(n.op, ast.UAdd) else -v
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Name):
@@ -4067,15 +4072,15 @@ class FortranParser:
                 if any(arg is None for arg in args):
                     return None
                 try:
-                    if name == "abs" and len(args) == 1 and isinstance(args[0], (int, float)):
+                    if name == "abs" and len(args) == 1 and isinstance(args[0], int | float):
                         return abs(args[0])
-                    if name == "max" and args and all(isinstance(arg, (int, float)) for arg in args):
+                    if name == "max" and args and all(isinstance(arg, int | float) for arg in args):
                         return max(args)
-                    if name == "min" and args and all(isinstance(arg, (int, float)) for arg in args):
+                    if name == "min" and args and all(isinstance(arg, int | float) for arg in args):
                         return min(args)
-                    if name == "mod" and len(args) == 2 and all(isinstance(arg, (int, float)) for arg in args):
+                    if name == "mod" and len(args) == 2 and all(isinstance(arg, int | float) for arg in args):
                         return args[0] % args[1]
-                    if name == "int" and args and isinstance(args[0], (int, float)):
+                    if name == "int" and args and isinstance(args[0], int | float):
                         return int(args[0])
                     if name == "len" and len(args) == 1 and isinstance(args[0], str):
                         return len(args[0])
@@ -4097,7 +4102,7 @@ class FortranParser:
                 left = _eval(n.left)
                 if left is None:
                     return None
-                for op, comparator in zip(n.ops, n.comparators):
+                for op, comparator in zip(n.ops, n.comparators, strict=False):
                     right = _eval(comparator)
                     if right is None:
                         return None
@@ -4283,7 +4288,7 @@ class FortranParser:
     @staticmethod
     def _looks_like_existing_source_path(source: str | Path) -> bool:
         """Return True when ``source`` names a readable source file path."""
-        if not isinstance(source, (str, Path)):
+        if not isinstance(source, str | Path):
             return False
         text = str(source)
         if "\n" in text or "\r" in text:
@@ -4502,15 +4507,13 @@ class FortranParser:
             # type specs with named arguments, e.g.:
             #   integer ( kind = 4 ) i
             #   character ( len = * ) s
-            if (
+            # Covers assignment and statement functions in execution part.
+            return not (
                 _REGEX["char_star"].match(stripped)
                 or _REGEX["type"].match(stripped)
                 or _REGEX["type_field"].match(stripped)
                 or _REGEX["class_field"].match(stripped)
-            ):
-                return False
-            # Covers assignment and statement functions in execution part.
-            return True
+            )
         return False
 
 

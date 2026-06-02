@@ -450,7 +450,7 @@ class FortranToIRConverter:
     def _with_additional_wrapped_types(
         self,
         wrapped_types: Iterable[tuple[str, str]],
-    ) -> "FortranToIRConverter":
+    ) -> FortranToIRConverter:
         merged = self.wrapped_derived_types | {
             (str(module).lower(), str(name).lower()) for module, name in wrapped_types
         }
@@ -962,7 +962,7 @@ def _iter_fortran_variable_contexts(
             yield from _iter_fortran_variable_contexts(dtype)
         return
 
-    if isinstance(node, (FortranModule, FortranSubmodule)):
+    if isinstance(node, FortranModule | FortranSubmodule):
         owner = node.name
         for var in node.variables:
             yield (

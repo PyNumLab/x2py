@@ -248,6 +248,90 @@ def test_project_reports_each_typedef_cycle_once_with_structured_diagnostic():
     assert diagnostic.unit_name == "a"
 
 
+def test_project_reports_prefixed_typedef_cycle_without_including_acyclic_alias():
+    from c_parser import parse_c_project
+
+    project = parse_c_project(
+        {"cycle.h": ("typedef inner_a alias;\ntypedef inner_b inner_a;\ntypedef inner_a inner_b;\n")}
+    )
+
+    cycle_diagnostics = [diagnostic for diagnostic in project.diagnostics if diagnostic.code == "C_TYPEDEF_CYCLE"]
+    assert len(cycle_diagnostics) == 1
+    assert cycle_diagnostics[0].message == "Typedef cycle detected: inner_a -> inner_b -> inner_a."
+    assert cycle_diagnostics[0].unit_name == "inner_a"
+
+
+def test_project_resolves_function_typedef_signature_references():
+    from c_parser import CComposedType, CFunctionType, parse_c_project
+
+    project = parse_c_project(
+        {
+            "callbacks.h": (
+                "typedef unsigned long api_size;\n"
+                "typedef api_size (*measure_fn)(api_size);\n"
+                "measure_fn select_measure(void);\n"
+            )
+        }
+    )
+
+    callback_type = project.typedefs["measure_fn"].type
+    assert isinstance(callback_type, CComposedType)
+    signature = callback_type.components[1]
+    assert isinstance(signature, CFunctionType)
+    assert signature.result_type is project.typedefs["api_size"]
+    assert signature.parameter_types == [project.typedefs["api_size"]]
+    assert project.functions["select_measure"].result_type is project.typedefs["measure_fn"]
+
+
+def test_project_resolves_parameter_declared_type_signature_references():
+    from c_parser import CComposedType, CFunctionType, parse_c_project
+
+    project = parse_c_project(
+        {"callbacks.h": ("typedef unsigned long api_size;\nvoid apply(api_size callback(api_size));\n")}
+    )
+
+    callback = project.functions["apply"].parameters[0]
+    declared = callback.declared_type
+    assert isinstance(declared, CFunctionType)
+    assert declared.result_type is project.typedefs["api_size"]
+    assert declared.parameter_types == [project.typedefs["api_size"]]
+    assert isinstance(callback.type, CComposedType)
+    assert callback.type.components[1] is declared
+
+
+def test_project_resolves_parameter_declared_array_references():
+    from c_parser import CComposedType, parse_c_project
+
+    project = parse_c_project({"arrays.h": ("typedef unsigned long api_size;\nvoid collect(api_size values[4]);\n")})
+
+    values = project.functions["collect"].parameters[0]
+    assert isinstance(values.declared_type, CComposedType)
+    assert values.declared_type.components[-1] is project.typedefs["api_size"]
+    assert isinstance(values.type, CComposedType)
+    assert values.type.components[-1] is project.typedefs["api_size"]
+    assert values.declared_type is not values.type
+
+
+def test_project_reuses_typedef_cycle_state_across_resolved_use_sites():
+    from c_parser import parse_c_project
+
+    project = parse_c_project(
+        {
+            "cycle_uses.h": (
+                "typedef b a;\n"
+                "typedef a b;\n"
+                "typedef a (*cycle_callback)(a);\n"
+                "a get_value(void);\n"
+                "void set_value(a value);\n"
+                "extern a *global_value;\n"
+                "struct packet { a field; };\n"
+            )
+        }
+    )
+
+    assert [diagnostic.code for diagnostic in project.diagnostics].count("C_TYPEDEF_CYCLE") == 1
+
+
 def test_project_resolves_union_and_enum_tag_references(tmp_path: Path):
     from c_parser import CComposedType, parse_c_project
 

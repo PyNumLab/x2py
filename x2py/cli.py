@@ -48,7 +48,7 @@ def _to_dict_no_parent(obj):
         out = {}
         for f in fields(obj):
             value = getattr(obj, f.name)
-            if f.name == "parent" and not isinstance(value, (str, type(None))):
+            if f.name == "parent" and not isinstance(value, str | type(None)):
                 continue
             out[f.name] = _to_dict_no_parent(value)
         return out

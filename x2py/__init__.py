@@ -60,12 +60,10 @@ def __getattr__(name: str):
 
 
 __all__ = (
-    "CToIRConverter",
     "CFile",
     "CParseError",
     "CProject",
-    "FortranTypeProbeError",
-    "FortranTypeProbeReport",
+    "CToIRConverter",
     "FortranArgument",
     "FortranBlockData",
     "FortranDerivedType",
@@ -77,6 +75,8 @@ __all__ = (
     "FortranProgram",
     "FortranProject",
     "FortranSubmodule",
+    "FortranTypeProbeError",
+    "FortranTypeProbeReport",
     "assess_pyi_wrap_readiness",
     "assess_semantic_wrap_readiness",
     "build_fortran_type_probe_source",
@@ -93,9 +93,9 @@ __all__ = (
     "emit_module_stubs",
     "evaluate_fortran_type_requirements",
     "fortran_file_to_semantic_modules",
-    "fortran_type_probe_expressions",
     "fortran_module_to_semantic_module",
     "fortran_project_to_semantic_modules",
+    "fortran_type_probe_expressions",
     "load_pyi_file",
     "load_pyi_modules",
     "main",

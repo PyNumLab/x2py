@@ -90,7 +90,7 @@ def test_c_json_types_have_distinct_names_or_anonymous_ids():
 def test_c_json_diagnostics_have_codes_locations_and_severities():
     allowed = {"info", "warning", "error"}
 
-    for path, payload in _iter_project_payloads():
+    for _path, payload in _iter_project_payloads():
         for diagnostic in payload.get("diagnostics", []):
             assert diagnostic["code"]
             assert diagnostic["severity"] in allowed

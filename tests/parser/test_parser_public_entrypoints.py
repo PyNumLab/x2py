@@ -123,6 +123,42 @@ end subroutine lone_proc
         )
 
 
+@pytest.mark.parametrize(
+    ("source", "expected_module"),
+    [
+        ("type :: file_state\nend type file_state\n", None),
+        ("module owner_mod\n  type :: file_state\n  end type file_state\nend module owner_mod\n", "owner_mod"),
+        (
+            "submodule (parent_mod) owner_submod\n"
+            "  type :: file_state\n"
+            "  end type file_state\n"
+            "end submodule owner_submod\n",
+            "owner_submod",
+        ),
+        ("program driver\n  type :: file_state\n  end type file_state\nend program driver\n", None),
+        (
+            "subroutine work()\n  type :: file_state\n  end type file_state\nend subroutine work\n",
+            None,
+        ),
+        (
+            "module owner_mod\n"
+            "contains\n"
+            "  subroutine work()\n"
+            "    type :: file_state\n"
+            "    end type file_state\n"
+            "  end subroutine work\n"
+            "end module owner_mod\n",
+            "owner_mod",
+        ),
+    ],
+)
+def test_public_derived_type_visitor_collects_nested_scope_sources(source, expected_module):
+    dtype = FortranParser().visit_fortran_derived_type(source, filename="nested_type.f90")
+
+    assert dtype.name == "file_state"
+    assert dtype.module == expected_module
+
+
 def test_public_project_parse_from_path_sequence(tmp_path):
     source_path = tmp_path / "listed_project.f90"
     source_path.write_text(

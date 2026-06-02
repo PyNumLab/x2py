@@ -16,7 +16,7 @@ import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import ClassVar, Literal, Protocol
 
 
 PreprocessingCategory = Literal[
@@ -42,7 +42,7 @@ class PreprocessingError(Exception):
         message: str,
         *,
         category: PreprocessingCategory = "PREPROCESSOR_FAILED",
-        diagnostics: Sequence["PreprocessingDiagnostic"] | None = None,
+        diagnostics: Sequence[PreprocessingDiagnostic] | None = None,
     ) -> None:
         self.category = category
         self.diagnostics = list(diagnostics or [])
@@ -300,9 +300,9 @@ class CompilerAdapter(Protocol):
         config: PreprocessingConfig,
     ) -> Invocation: ...
 
-    def collect_dependencies(self, result: "PreprocessResult") -> list[IncludedFile]: ...
+    def collect_dependencies(self, result: PreprocessResult) -> list[IncludedFile]: ...
 
-    def collect_macros(self, result: "PreprocessResult") -> list[MacroDefinition]: ...
+    def collect_macros(self, result: PreprocessResult) -> list[MacroDefinition]: ...
 
     def parse_linemarkers(self, source: str, filename: str | None = None) -> list[SourceMapping]: ...
 
@@ -378,7 +378,7 @@ def _preprocessor_options(config: PreprocessingConfig, *, language: str, include
 
 class GCCCompatibleCAdapter:
     name = "gcc-compatible-c"
-    capabilities = {"dependency_output": True, "macro_dump": True, "linemarkers": True}
+    capabilities: ClassVar[dict[str, bool]] = {"dependency_output": True, "macro_dump": True, "linemarkers": True}
 
     def build_preprocess_invocation(
         self,
@@ -405,7 +405,7 @@ class GNUFortranAdapter(GCCCompatibleCAdapter):
 
 class CommandTemplateAdapter(GCCCompatibleCAdapter):
     name = "command-template"
-    capabilities = {"dependency_output": False, "macro_dump": False, "linemarkers": False}
+    capabilities: ClassVar[dict[str, bool]] = {"dependency_output": False, "macro_dump": False, "linemarkers": False}
 
     def build_preprocess_invocation(
         self,
@@ -824,10 +824,7 @@ def _included_files_from_linemarkers(
             if 1 in flags:
                 stack.append(marker_path)
             elif 2 in flags:
-                if marker_path in stack:
-                    stack = stack[: stack.index(marker_path) + 1]
-                else:
-                    stack = [marker_path]
+                stack = stack[: stack.index(marker_path) + 1] if marker_path in stack else [marker_path]
             elif stack:
                 stack[-1] = marker_path
             current_path = marker_path

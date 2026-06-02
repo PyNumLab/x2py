@@ -240,7 +240,7 @@ def probe_fortran_type_expressions(
         raise FortranTypeProbeError("Fortran type probe output count does not match input expressions")
 
     values: dict[str, int] = {}
-    for expression, value in zip(unique_expressions, raw_values):
+    for expression, value in zip(unique_expressions, raw_values, strict=False):
         if not isinstance(value, int):
             raise FortranTypeProbeError(f"Fortran type probe value for {expression!r} is not an integer")
         values[expression] = value

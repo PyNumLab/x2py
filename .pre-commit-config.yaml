@@ -29,6 +29,13 @@ repos:
         pass_filenames: false
         files: \.py$
 
+      - id: radon-policy
+        name: radon complexity policy
+        entry: python3 tools/check_radon_policy.py
+        language: system
+        pass_filenames: false
+        files: \.py$
+
       - id: vulture
         name: vulture dead-code scan
         entry: vulture

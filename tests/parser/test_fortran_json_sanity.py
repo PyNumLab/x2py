@@ -104,7 +104,7 @@ def _is_literal_json_parameter_value(value) -> bool:
     """Return True only for evaluated/literal parameter values in JSON output."""
     if isinstance(value, bool):
         return True
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return True
     if value is None:
         return False
