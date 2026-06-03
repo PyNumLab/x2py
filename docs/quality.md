@@ -3,8 +3,7 @@
 Last reviewed: 2026-06-03
 
 This project uses a staged Python QA stack. Fast bug-focused checks run on pull
-requests, while deeper fuzzing and random-order discovery run on schedule or by
-manual dispatch.
+requests, while deeper fuzzing runs on schedule or by manual dispatch.
 
 The selected active quality stack is adopted. Scheduled workflow review and
 future Ruff/Radon threshold ratchets are ongoing maintenance, not unfinished
@@ -15,7 +14,7 @@ rollout work. Mutation testing and pre-commit are not part of the active stack.
 | Cadence | Tools |
 | --- | --- |
 | Pull request and protected-branch push | pytest, coverage.py, stable-seed pytest-randomly, Ruff, Bandit, pip-audit, Vulture, staged Radon policy |
-| Weekly and manual dispatch | Hypothesis fuzz profile, changing-seed pytest-randomly |
+| Weekly and manual dispatch | Hypothesis fuzz profile |
 | Manual triage | Full Radon reports and low-severity Bandit review |
 
 ## Install
@@ -56,7 +55,7 @@ python -m coverage report
 For subprocess coverage investigations, mirror that command shape before
 deciding a fix. A plain local coverage run can miss subprocess data.
 
-Reproduce a random-order failure:
+Reproduce an order-dependent failure from the stable CI seed:
 
 ```bash
 pytest -q --randomly-seed=<seed-from-failing-run>
@@ -106,10 +105,11 @@ subprocess branch coverage is `95.34%`, above the configured `95%` gate.
 **Role:** catches hidden test-order coupling and makes failures reproducible
 with seeds.
 
-**Evidence:** normal CI uses `--randomly-seed=1`; scheduled/manual quality runs
-use `${{ github.run_id }}` as a changing seed.
+**Evidence:** normal CI uses `--randomly-seed=1`, so order is shuffled but
+reproducible.
 
-**Decision:** keep stable-seed PR CI and changing-seed scheduled/manual runs.
+**Decision:** keep stable-seed PR CI. The changing-seed scheduled job was
+removed as redundant maintenance overhead.
 
 ### Hypothesis
 
@@ -231,7 +231,7 @@ Good invariants for this codebase:
 Full adoption for the selected stack means:
 
 - fast PR gates are blocking and stable;
-- scheduled/manual fuzzing and changing random-order jobs exist;
+- scheduled/manual fuzzing exists;
 - Ruff baseline ignores are removed or deliberately retained with a reason;
 - Radon has a documented blocking policy for new or materially changed code;
 - scheduled workflow failures have a documented triage path.
@@ -263,9 +263,7 @@ dispatch:
    runner or package-index failures.
 2. Reproduce actionable fuzz failures with the logged Hypothesis profile and
    save minimized examples as focused regression tests.
-3. Reproduce random-order failures with the logged `--randomly-seed` value and
-   add a regression test before fixing leaked state.
-4. Record each actionable scheduled failure here or in the relevant issue until
+3. Record each actionable scheduled failure here or in the relevant issue until
    the regression test and fix pass.
 
 ## Progress Log
@@ -278,7 +276,7 @@ dispatch:
 | 2026-06-01 | Ruff formatting rollout | Formatted the historical Python tree and changed CI to `ruff format --check .`. | Continue complexity-policy ratchets. |
 | 2026-06-01 | Radon and Ruff complexity policy | Added `tools/check_radon_policy.py`, made the staged Radon policy blocking in CI, and lowered Ruff McCabe from `50` to `45`. | Continue hotspot refactors and later threshold ratchets toward `20`. |
 | 2026-06-02 | Historical mutation-derived tests | Added direct Fortran parser contracts and fixed the directory namespace encoding bug. | Keep the tests as normal regression coverage. |
-| 2026-06-03 | Manual Quality workflow review | Reviewed workflow run `26832679820`: fuzz passed, changing random-order pytest passed, static analysis exposed Ruff fixes, and full-project mutation exceeded the `3h` Actions limit. | Mutation was removed from active adoption; keep scheduled fuzz/random-order review. |
+| 2026-06-03 | Manual Quality workflow review | Reviewed workflow run `26832679820`: fuzz passed, changing random-order pytest passed, static analysis exposed Ruff fixes, and full-project mutation exceeded the `3h` Actions limit. | Mutation was removed from active adoption; keep scheduled fuzz review. |
 | 2026-06-03 | Quality workflow triage | Reviewed latest Quality runs; run `26856679038` for `remove mutmut` completed successfully. | No actionable scheduled or PR quality failure remains. |
 | 2026-06-03 | Final active-stack cleanup | Consolidated quality docs, removed mutation and pre-commit from the active stack, restored the C parser golden generator, and regenerated C parser goldens. | Treat scheduled review and threshold ratchets as ongoing maintenance. |
 
