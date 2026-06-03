@@ -143,6 +143,22 @@ def test_direct_fortran_preprocess_invocation_uses_exact_compiler_and_cpp(tmp_pa
     )
 
 
+def test_direct_fortran_preprocess_invocation_hints_unknown_suffix_language(tmp_path: Path):
+    source = tmp_path / "solver.source"
+    config = PreprocessingConfig(mode="compiler", compiler="/usr/bin/gfortran-12")
+
+    invocation = build_direct_preprocess_invocation(source, language="fortran", config=config)
+
+    assert invocation.argv == [
+        "/usr/bin/gfortran-12",
+        "-E",
+        "-cpp",
+        "-x",
+        "f95-cpp-input",
+        str(source),
+    ]
+
+
 def test_preprocessing_config_internal_macros_recipe_and_validation(tmp_path: Path):
     source = tmp_path / "source.F90"
     plain = PreprocessingConfig()

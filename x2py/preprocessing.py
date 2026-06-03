@@ -376,6 +376,12 @@ def _preprocessor_options(config: PreprocessingConfig, *, language: str, include
     return args
 
 
+def _fortran_source_language_hint(source: Path) -> list[str]:
+    if source.suffix.lower() in _FORTRAN_SOURCE_SUFFIXES:
+        return []
+    return ["-x", "f95-cpp-input"]
+
+
 class GCCCompatibleCAdapter:
     name = "gcc-compatible-c"
     capabilities: ClassVar[dict[str, bool]] = {"dependency_output": True, "macro_dump": True, "linemarkers": True}
@@ -431,6 +437,7 @@ def build_direct_preprocess_invocation(
     argv = [
         compiler,
         *_preprocessor_options(config, language=language, include_language_flag=language == "c"),
+        *(_fortran_source_language_hint(source) if language == "fortran" else []),
         str(source),
     ]
     adapter = "gnu-fortran" if language == "fortran" else "gcc-compatible-c"
