@@ -3,8 +3,12 @@
     "general/constants.h": {
       "filename": "general/constants.h",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "general/constants.h",
+        "/usr/include/stdc-predef.h",
+        "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h"
+      ],
       "functions": [
         {
           "name": "coordinate_axis_name",
@@ -111,8 +115,17 @@
             "qualifiers": [],
             "source_text": "size_t",
             "name": "size_t",
-            "type": null,
-            "source_location": null,
+            "type": {
+              "model": "CUnsignedLong",
+              "qualifiers": [],
+              "source_text": "typedef long unsigned int size_t"
+            },
+            "source_location": {
+              "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
+              "line": 209,
+              "column": 1,
+              "source_line": "typedef long unsigned int size_t;"
+            },
             "declaration_locations": []
           },
           "parameters": [],
@@ -137,7 +150,62 @@
           "declaration_locations": []
         }
       ],
-      "structs": [],
+      "structs": [
+        {
+          "model": "CStruct",
+          "qualifiers": [],
+          "source_text": "",
+          "name": null,
+          "members": [
+            {
+              "name": "__max_align_ll",
+              "type": {
+                "model": "CLongLong",
+                "qualifiers": [],
+                "source_text": "long long __max_align_ll"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
+                "line": 416,
+                "column": 3,
+                "source_line": "  long long __max_align_ll __attribute__((__aligned__(__alignof__(long long))));"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "__max_align_ld",
+              "type": {
+                "model": "CLongDouble",
+                "qualifiers": [],
+                "source_text": "long double __max_align_ld"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
+                "line": 417,
+                "column": 3,
+                "source_line": "  long double __max_align_ld __attribute__((__aligned__(__alignof__(long double))));"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            }
+          ],
+          "anonymous_id": "struct@/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h:415:1",
+          "is_incomplete": false,
+          "source_location": {
+            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
+            "line": 415,
+            "column": 1,
+            "source_line": "typedef struct {"
+          }
+        }
+      ],
       "unions": [],
       "enums": [
         {
@@ -145,6 +213,61 @@
         }
       ],
       "typedefs": [
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "ptrdiff_t",
+          "name": "ptrdiff_t",
+          "type": {
+            "model": "CLong",
+            "qualifiers": [],
+            "source_text": "typedef long int ptrdiff_t"
+          },
+          "source_location": {
+            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
+            "line": 143,
+            "column": 1,
+            "source_line": "typedef long int ptrdiff_t;"
+          },
+          "declaration_locations": []
+        },
+        {
+          "reference": "size_t"
+        },
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "wchar_t",
+          "name": "wchar_t",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "typedef int wchar_t"
+          },
+          "source_location": {
+            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
+            "line": 321,
+            "column": 1,
+            "source_line": "typedef int wchar_t;"
+          },
+          "declaration_locations": []
+        },
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "max_align_t",
+          "name": "max_align_t",
+          "type": {
+            "reference": "struct@/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h:415:1"
+          },
+          "source_location": {
+            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
+            "line": 415,
+            "column": 1,
+            "source_line": "typedef struct {"
+          },
+          "declaration_locations": []
+        },
         {
           "model": "CTypedef",
           "qualifiers": [],
@@ -238,81 +361,38 @@
           "declaration_locations": []
         }
       ],
-      "macros": [
-        {
-          "name": "X2PY_GENERAL_CONSTANTS_H",
-          "value": null,
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/constants.h",
-            "line": 2,
-            "column": 1,
-            "source_line": "#define X2PY_GENERAL_CONSTANTS_H"
-          }
-        },
-        {
-          "name": "X2PY_GENERAL_NMAX",
-          "value": "100",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/constants.h",
-            "line": 6,
-            "column": 1,
-            "source_line": "#define X2PY_GENERAL_NMAX 100"
-          }
-        },
-        {
-          "name": "X2PY_GENERAL_ORIGIN_RANK",
-          "value": "3",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/constants.h",
-            "line": 7,
-            "column": 1,
-            "source_line": "#define X2PY_GENERAL_ORIGIN_RANK 3"
-          }
-        }
-      ],
-      "includes": [
-        {
-          "target": "stddef.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "general/constants.h",
-            "line": 4,
-            "column": 1,
-            "source_line": "#include <stddef.h>"
-          }
-        }
-      ],
-      "raw_directives": [
-        {
-          "directive": "ifndef",
-          "argument": "X2PY_GENERAL_CONSTANTS_H",
-          "source_location": {
-            "filename": "general/constants.h",
-            "line": 1,
-            "column": 1,
-            "source_line": "#ifndef X2PY_GENERAL_CONSTANTS_H"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "general/constants.h",
-            "line": 23,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        }
-      ],
+      "macros": [],
+      "includes": [],
+      "raw_directives": [],
       "macro_dependencies": [],
-      "diagnostics": []
+      "diagnostics": [
+        {
+          "code": "C_UNMODELED_COMPILER_EXTENSION",
+          "message": "Compiler attribute 'aligned' was accepted for parsing but its ABI or linkage semantics are not modeled.",
+          "severity": "warning",
+          "location": {
+            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
+            "line": 416,
+            "column": 28,
+            "source_line": "  long long __max_align_ll __attribute__((__aligned__(__alignof__(long long))));"
+          },
+          "unit_kind": "compiler_attribute",
+          "unit_name": "aligned"
+        },
+        {
+          "code": "C_UNMODELED_COMPILER_EXTENSION",
+          "message": "Compiler attribute 'aligned' was accepted for parsing but its ABI or linkage semantics are not modeled.",
+          "severity": "warning",
+          "location": {
+            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
+            "line": 417,
+            "column": 30,
+            "source_line": "  long double __max_align_ld __attribute__((__aligned__(__alignof__(long double))));"
+          },
+          "unit_kind": "compiler_attribute",
+          "unit_name": "aligned"
+        }
+      ]
     }
   },
   "functions": {
@@ -407,6 +487,18 @@
     }
   },
   "typedefs": {
+    "ptrdiff_t": {
+      "reference": "ptrdiff_t"
+    },
+    "size_t": {
+      "reference": "size_t"
+    },
+    "wchar_t": {
+      "reference": "wchar_t"
+    },
+    "max_align_t": {
+      "reference": "max_align_t"
+    },
     "c_int_like": {
       "reference": "c_int_like"
     },
@@ -470,57 +562,8 @@
       "declaration_locations": []
     }
   },
-  "macros": {
-    "X2PY_GENERAL_CONSTANTS_H": {
-      "name": "X2PY_GENERAL_CONSTANTS_H",
-      "value": null,
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/constants.h",
-        "line": 2,
-        "column": 1,
-        "source_line": "#define X2PY_GENERAL_CONSTANTS_H"
-      }
-    },
-    "X2PY_GENERAL_NMAX": {
-      "name": "X2PY_GENERAL_NMAX",
-      "value": "100",
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/constants.h",
-        "line": 6,
-        "column": 1,
-        "source_line": "#define X2PY_GENERAL_NMAX 100"
-      }
-    },
-    "X2PY_GENERAL_ORIGIN_RANK": {
-      "name": "X2PY_GENERAL_ORIGIN_RANK",
-      "value": "3",
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/constants.h",
-        "line": 7,
-        "column": 1,
-        "source_line": "#define X2PY_GENERAL_ORIGIN_RANK 3"
-      }
-    }
-  },
-  "includes": {
-    "general/constants.h:stddef.h": {
-      "target": "stddef.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "general/constants.h",
-        "line": 4,
-        "column": 1,
-        "source_line": "#include <stddef.h>"
-      }
-    }
-  },
+  "macros": {},
+  "includes": {},
   "functions_by_file": {
     "general/constants.h": [
       "coordinate_axis_name",
@@ -563,9 +606,7 @@
     "general/constants.h": []
   },
   "system_includes": {
-    "general/constants.h": [
-      "stddef.h"
-    ]
+    "general/constants.h": []
   },
   "unresolved_includes": {
     "general/constants.h": []
@@ -573,5 +614,32 @@
   "header_source_pairs": {
     "general/constants.h": []
   },
-  "diagnostics": []
+  "diagnostics": [
+    {
+      "code": "C_UNMODELED_COMPILER_EXTENSION",
+      "message": "Compiler attribute 'aligned' was accepted for parsing but its ABI or linkage semantics are not modeled.",
+      "severity": "warning",
+      "location": {
+        "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
+        "line": 416,
+        "column": 28,
+        "source_line": "  long long __max_align_ll __attribute__((__aligned__(__alignof__(long long))));"
+      },
+      "unit_kind": "compiler_attribute",
+      "unit_name": "aligned"
+    },
+    {
+      "code": "C_UNMODELED_COMPILER_EXTENSION",
+      "message": "Compiler attribute 'aligned' was accepted for parsing but its ABI or linkage semantics are not modeled.",
+      "severity": "warning",
+      "location": {
+        "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
+        "line": 417,
+        "column": 30,
+        "source_line": "  long double __max_align_ld __attribute__((__aligned__(__alignof__(long double))));"
+      },
+      "unit_kind": "compiler_attribute",
+      "unit_name": "aligned"
+    }
+  ]
 }

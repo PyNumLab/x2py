@@ -91,7 +91,7 @@ def test_parse_c_project_directory_discovers_preprocessed_i_files(tmp_path: Path
     assert generated.functions[0].origin == "preprocessed"
     assert generated.functions[0].source_location.filename == "include/generated_api.h"
     assert generated.functions[0].source_location.line == 8
-    assert generated.to_dict()["functions"][0]["origin"] == "preprocessed"
+    assert "origin" not in generated.to_dict()["functions"][0]
 
 
 def test_project_indexes_functions_by_file_and_enum_constants(tmp_path: Path):

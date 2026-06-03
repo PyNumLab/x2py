@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Verify parser implementation reference was updated when needed
+      - name: Verify parser reference was updated when needed
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -46,7 +46,7 @@ jobs:
           fi
 
           DOC_CHANGED=false
-          if echo "$CHANGED_FILES" | grep -Fxq "docs/fortran/parser_implementation_reference.md"; then
+          if echo "$CHANGED_FILES" | grep -Fxq "docs/fortran/fortran_parser.md"; then
             DOC_CHANGED=true
           fi
 
@@ -60,12 +60,12 @@ jobs:
           fi
 
           if [ "$DOC_CHANGED" = true ]; then
-            echo "docs/fortran/parser_implementation_reference.md changed."
+            echo "docs/fortran/fortran_parser.md changed."
             exit 0
           fi
 
-          if echo "$CHANGED_FILES" | grep -Eq "^(fortran_parser/|tests/parser/|tests/data/fortran/)"; then
-            echo "Parser-related files changed without updating docs/fortran/parser_implementation_reference.md."
+          if echo "$CHANGED_FILES" | grep -Eq "^(fortran_parser/|tests/parser/fortran/|tests/data/fortran/)"; then
+            echo "Parser-related files changed without updating docs/fortran/fortran_parser.md."
             exit 1
           fi
 

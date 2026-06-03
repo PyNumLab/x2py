@@ -3,376 +3,12 @@
     "stb/stb_perlin.h": {
       "filename": "stb/stb_perlin.h",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "stb/stb_perlin.h",
+        "/usr/include/stdc-predef.h"
+      ],
       "functions": [
-        {
-          "name": "stb__perlin_lerp",
-          "result_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float"
-          },
-          "parameters": [
-            {
-              "name": "a",
-              "type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float a"
-              },
-              "declared_type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float a"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "b",
-              "type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float b"
-              },
-              "declared_type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float b"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "t",
-              "type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float t"
-              },
-              "declared_type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float t"
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [
-            "static"
-          ],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 179,
-            "column": 1,
-            "source_line": "static float stb__perlin_lerp(float a, float b, float t)"
-          },
-          "start": {
-            "filename": "stb/stb_perlin.h",
-            "line": 179,
-            "column": 1,
-            "source_line": "static float stb__perlin_lerp(float a, float b, float t)"
-          },
-          "end": {
-            "filename": "stb/stb_perlin.h",
-            "line": 182,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
-        },
-        {
-          "name": "stb__perlin_fastfloor",
-          "result_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int"
-          },
-          "parameters": [
-            {
-              "name": "a",
-              "type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float a"
-              },
-              "declared_type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float a"
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [
-            "static"
-          ],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 184,
-            "column": 1,
-            "source_line": "static int stb__perlin_fastfloor(float a)"
-          },
-          "start": {
-            "filename": "stb/stb_perlin.h",
-            "line": 184,
-            "column": 1,
-            "source_line": "static int stb__perlin_fastfloor(float a)"
-          },
-          "end": {
-            "filename": "stb/stb_perlin.h",
-            "line": 188,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
-        },
-        {
-          "name": "stb__perlin_grad",
-          "result_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float"
-          },
-          "parameters": [
-            {
-              "name": "grad_idx",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int grad_idx"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int grad_idx"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "x",
-              "type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float x"
-              },
-              "declared_type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float x"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "y",
-              "type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float y"
-              },
-              "declared_type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float y"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "z",
-              "type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float z"
-              },
-              "declared_type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float z"
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [
-            "static"
-          ],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 191,
-            "column": 1,
-            "source_line": "static float stb__perlin_grad(int grad_idx, float x, float y, float z)"
-          },
-          "start": {
-            "filename": "stb/stb_perlin.h",
-            "line": 191,
-            "column": 1,
-            "source_line": "static float stb__perlin_grad(int grad_idx, float x, float y, float z)"
-          },
-          "end": {
-            "filename": "stb/stb_perlin.h",
-            "line": 211,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
-        },
-        {
-          "name": "stb_perlin_noise3_internal",
-          "result_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float"
-          },
-          "parameters": [
-            {
-              "name": "x",
-              "type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float x"
-              },
-              "declared_type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float x"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "y",
-              "type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float y"
-              },
-              "declared_type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float y"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "z",
-              "type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float z"
-              },
-              "declared_type": {
-                "model": "CFloat",
-                "qualifiers": [],
-                "source_text": "float z"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "x_wrap",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int x_wrap"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int x_wrap"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "y_wrap",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int y_wrap"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int y_wrap"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "z_wrap",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int z_wrap"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int z_wrap"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "seed",
-              "type": {
-                "model": "CUnsignedChar",
-                "qualifiers": [],
-                "source_text": "unsigned char seed"
-              },
-              "declared_type": {
-                "model": "CUnsignedChar",
-                "qualifiers": [],
-                "source_text": "unsigned char seed"
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 213,
-            "column": 1,
-            "source_line": "float stb_perlin_noise3_internal(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, unsigned char seed)"
-          },
-          "start": {
-            "filename": "stb/stb_perlin.h",
-            "line": 213,
-            "column": 1,
-            "source_line": "float stb_perlin_noise3_internal(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, unsigned char seed)"
-          },
-          "end": {
-            "filename": "stb/stb_perlin.h",
-            "line": 263,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
-        },
         {
           "name": "stb_perlin_noise3",
           "result_type": {
@@ -472,29 +108,26 @@
               "callback_policy": null
             }
           ],
-          "storage": [],
+          "storage": [
+            "extern"
+          ],
           "specifiers": [],
           "is_variadic": false,
-          "is_definition": true,
+          "is_definition": false,
           "prototype_style": "prototype",
           "source_location": {
             "filename": "stb/stb_perlin.h",
-            "line": 265,
+            "line": 80,
             "column": 1,
-            "source_line": "float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap)"
+            "source_line": "extern float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap);"
           },
           "start": {
             "filename": "stb/stb_perlin.h",
-            "line": 265,
+            "line": 80,
             "column": 1,
-            "source_line": "float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap)"
+            "source_line": "extern float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap);"
           },
-          "end": {
-            "filename": "stb/stb_perlin.h",
-            "line": 268,
-            "column": 1,
-            "source_line": "}"
-          },
+          "end": null,
           "declaration_locations": []
         },
         {
@@ -611,29 +244,26 @@
               "callback_policy": null
             }
           ],
-          "storage": [],
+          "storage": [
+            "extern"
+          ],
           "specifiers": [],
           "is_variadic": false,
-          "is_definition": true,
+          "is_definition": false,
           "prototype_style": "prototype",
           "source_location": {
             "filename": "stb/stb_perlin.h",
-            "line": 270,
+            "line": 81,
             "column": 1,
-            "source_line": "float stb_perlin_noise3_seed(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed)"
+            "source_line": "extern float stb_perlin_noise3_seed(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed);"
           },
           "start": {
             "filename": "stb/stb_perlin.h",
-            "line": 270,
+            "line": 81,
             "column": 1,
-            "source_line": "float stb_perlin_noise3_seed(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed)"
+            "source_line": "extern float stb_perlin_noise3_seed(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed);"
           },
-          "end": {
-            "filename": "stb/stb_perlin.h",
-            "line": 273,
-            "column": 1,
-            "source_line": "}"
-          },
+          "end": null,
           "declaration_locations": []
         },
         {
@@ -750,29 +380,26 @@
               "callback_policy": null
             }
           ],
-          "storage": [],
+          "storage": [
+            "extern"
+          ],
           "specifiers": [],
           "is_variadic": false,
-          "is_definition": true,
+          "is_definition": false,
           "prototype_style": "prototype",
           "source_location": {
             "filename": "stb/stb_perlin.h",
-            "line": 275,
+            "line": 82,
             "column": 1,
-            "source_line": "float stb_perlin_ridge_noise3(float x, float y, float z, float lacunarity, float gain, float offset, int octaves)"
+            "source_line": "extern float stb_perlin_ridge_noise3(float x, float y, float z, float lacunarity, float gain, float offset, int octaves);"
           },
           "start": {
             "filename": "stb/stb_perlin.h",
-            "line": 275,
+            "line": 82,
             "column": 1,
-            "source_line": "float stb_perlin_ridge_noise3(float x, float y, float z, float lacunarity, float gain, float offset, int octaves)"
+            "source_line": "extern float stb_perlin_ridge_noise3(float x, float y, float z, float lacunarity, float gain, float offset, int octaves);"
           },
-          "end": {
-            "filename": "stb/stb_perlin.h",
-            "line": 293,
-            "column": 1,
-            "source_line": "}"
-          },
+          "end": null,
           "declaration_locations": []
         },
         {
@@ -874,29 +501,26 @@
               "callback_policy": null
             }
           ],
-          "storage": [],
+          "storage": [
+            "extern"
+          ],
           "specifiers": [],
           "is_variadic": false,
-          "is_definition": true,
+          "is_definition": false,
           "prototype_style": "prototype",
           "source_location": {
             "filename": "stb/stb_perlin.h",
-            "line": 295,
+            "line": 83,
             "column": 1,
-            "source_line": "float stb_perlin_fbm_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)"
+            "source_line": "extern float stb_perlin_fbm_noise3(float x, float y, float z, float lacunarity, float gain, int octaves);"
           },
           "start": {
             "filename": "stb/stb_perlin.h",
-            "line": 295,
+            "line": 83,
             "column": 1,
-            "source_line": "float stb_perlin_fbm_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)"
+            "source_line": "extern float stb_perlin_fbm_noise3(float x, float y, float z, float lacunarity, float gain, int octaves);"
           },
-          "end": {
-            "filename": "stb/stb_perlin.h",
-            "line": 308,
-            "column": 1,
-            "source_line": "}"
-          },
+          "end": null,
           "declaration_locations": []
         },
         {
@@ -998,29 +622,26 @@
               "callback_policy": null
             }
           ],
-          "storage": [],
+          "storage": [
+            "extern"
+          ],
           "specifiers": [],
           "is_variadic": false,
-          "is_definition": true,
+          "is_definition": false,
           "prototype_style": "prototype",
           "source_location": {
             "filename": "stb/stb_perlin.h",
-            "line": 310,
+            "line": 84,
             "column": 1,
-            "source_line": "float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)"
+            "source_line": "extern float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves);"
           },
           "start": {
             "filename": "stb/stb_perlin.h",
-            "line": 310,
+            "line": 84,
             "column": 1,
-            "source_line": "float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)"
+            "source_line": "extern float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves);"
           },
-          "end": {
-            "filename": "stb/stb_perlin.h",
-            "line": 324,
-            "column": 1,
-            "source_line": "}"
-          },
+          "end": null,
           "declaration_locations": []
         },
         {
@@ -1137,29 +758,26 @@
               "callback_policy": null
             }
           ],
-          "storage": [],
+          "storage": [
+            "extern"
+          ],
           "specifiers": [],
           "is_variadic": false,
-          "is_definition": true,
+          "is_definition": false,
           "prototype_style": "prototype",
           "source_location": {
             "filename": "stb/stb_perlin.h",
-            "line": 326,
+            "line": 85,
             "column": 1,
-            "source_line": "float stb_perlin_noise3_wrap_nonpow2(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, unsigned char seed)"
+            "source_line": "extern float stb_perlin_noise3_wrap_nonpow2(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, unsigned char seed);"
           },
           "start": {
             "filename": "stb/stb_perlin.h",
-            "line": 326,
+            "line": 85,
             "column": 1,
-            "source_line": "float stb_perlin_noise3_wrap_nonpow2(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, unsigned char seed)"
+            "source_line": "extern float stb_perlin_noise3_wrap_nonpow2(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, unsigned char seed);"
           },
-          "end": {
-            "filename": "stb/stb_perlin.h",
-            "line": 385,
-            "column": 1,
-            "source_line": "}"
-          },
+          "end": null,
           "declaration_locations": []
         }
       ],
@@ -1167,599 +785,15 @@
       "unions": [],
       "enums": [],
       "typedefs": [],
-      "variables": [
-        {
-          "name": "stb__perlin_randtab",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "static unsigned char stb__perlin_randtab[512]",
-            "components": [
-              {
-                "model": "CArray",
-                "qualifiers": [],
-                "source_text": "",
-                "bound": "512",
-                "is_static_minimum": false,
-                "is_variable_length": false,
-                "is_flexible": false
-              },
-              {
-                "model": "CUnsignedChar",
-                "qualifiers": [],
-                "source_text": "unsigned char"
-              }
-            ]
-          },
-          "storage": [
-            "static"
-          ],
-          "initializer": {
-            "source_text": "{\n   23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123,\n   152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72,\n   175, 63, 77, 90, 181, 16, 96, 111, 133, 104, 75, 162, 93, 56, 66, 240,\n   8, 50, 84, 229, 49, 210, 173, 239, 141, 1, 87, 18, 2, 198, 143, 57,\n   225, 160, 58, 217, 168, 206, 245, 204, 199, 6, 73, 60, 20, 230, 211, 233,\n   94, 200, 88, 9, 74, 155, 33, 15, 219, 130, 226, 202, 83, 236, 42, 172,\n   165, 218, 55, 222, 46, 107, 98, 154, 109, 67, 196, 178, 127, 158, 13, 243,\n   65, 79, 166, 248, 25, 224, 115, 80, 68, 51, 184, 128, 232, 208, 151, 122,\n   26, 212, 105, 43, 179, 213, 235, 148, 146, 89, 14, 195, 28, 78, 112, 76,\n   250, 47, 24, 251, 140, 108, 186, 190, 228, 170, 183, 139, 39, 188, 244, 246,\n   132, 48, 119, 144, 180, 138, 134, 193, 82, 182, 120, 121, 86, 220, 209, 3,\n   91, 241, 149, 85, 205, 150, 113, 216, 31, 100, 41, 164, 177, 214, 153, 231,\n   38, 71, 185, 174, 97, 201, 29, 95, 7, 92, 54, 254, 191, 118, 34, 221,\n   131, 11, 163, 99, 234, 81, 227, 147, 156, 176, 17, 142, 69, 12, 110, 62,\n   27, 255, 0, 194, 59, 116, 242, 252, 19, 21, 187, 53, 207, 129, 64, 135,\n   61, 40, 167, 237, 102, 223, 106, 159, 197, 189, 215, 137, 36, 32, 22, 5,\n\n                                                                            \n   23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123,\n   152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72,\n   175, 63, 77, 90, 181, 16, 96, 111, 133, 104, 75, 162, 93, 56, 66, 240,\n   8, 50, 84, 229, 49, 210, 173, 239, 141, 1, 87, 18, 2, 198, 143, 57,\n   225, 160, 58, 217, 168, 206, 245, 204, 199, 6, 73, 60, 20, 230, 211, 233,\n   94, 200, 88, 9, 74, 155, 33, 15, 219, 130, 226, 202, 83, 236, 42, 172,\n   165, 218, 55, 222, 46, 107, 98, 154, 109, 67, 196, 178, 127, 158, 13, 243,\n   65, 79, 166, 248, 25, 224, 115, 80, 68, 51, 184, 128, 232, 208, 151, 122,\n   26, 212, 105, 43, 179, 213, 235, 148, 146, 89, 14, 195, 28, 78, 112, 76,\n   250, 47, 24, 251, 140, 108, 186, 190, 228, 170, 183, 139, 39, 188, 244, 246,\n   132, 48, 119, 144, 180, 138, 134, 193, 82, 182, 120, 121, 86, 220, 209, 3,\n   91, 241, 149, 85, 205, 150, 113, 216, 31, 100, 41, 164, 177, 214, 153, 231,\n   38, 71, 185, 174, 97, 201, 29, 95, 7, 92, 54, 254, 191, 118, 34, 221,\n   131, 11, 163, 99, 234, 81, 227, 147, 156, 176, 17, 142, 69, 12, 110, 62,\n   27, 255, 0, 194, 59, 116, 242, 252, 19, 21, 187, 53, 207, 129, 64, 135,\n   61, 40, 167, 237, 102, 223, 106, 159, 197, 189, 215, 137, 36, 32, 22, 5,\n}"
-          },
-          "bit_width": null,
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 96,
-            "column": 1,
-            "source_line": "static unsigned char stb__perlin_randtab[512] ="
-          },
-          "callback_policy": null,
-          "declaration_locations": []
-        },
-        {
-          "name": "stb__perlin_randtab_grad_idx",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "static unsigned char stb__perlin_randtab_grad_idx[512]",
-            "components": [
-              {
-                "model": "CArray",
-                "qualifiers": [],
-                "source_text": "",
-                "bound": "512",
-                "is_static_minimum": false,
-                "is_variable_length": false,
-                "is_flexible": false
-              },
-              {
-                "model": "CUnsignedChar",
-                "qualifiers": [],
-                "source_text": "unsigned char"
-              }
-            ]
-          },
-          "storage": [
-            "static"
-          ],
-          "initializer": {
-            "source_text": "{\n    7, 9, 5, 0, 11, 1, 6, 9, 3, 9, 11, 1, 8, 10, 4, 7,\n    8, 6, 1, 5, 3, 10, 9, 10, 0, 8, 4, 1, 5, 2, 7, 8,\n    7, 11, 9, 10, 1, 0, 4, 7, 5, 0, 11, 6, 1, 4, 2, 8,\n    8, 10, 4, 9, 9, 2, 5, 7, 9, 1, 7, 2, 2, 6, 11, 5,\n    5, 4, 6, 9, 0, 1, 1, 0, 7, 6, 9, 8, 4, 10, 3, 1,\n    2, 8, 8, 9, 10, 11, 5, 11, 11, 2, 6, 10, 3, 4, 2, 4,\n    9, 10, 3, 2, 6, 3, 6, 10, 5, 3, 4, 10, 11, 2, 9, 11,\n    1, 11, 10, 4, 9, 4, 11, 0, 4, 11, 4, 0, 0, 0, 7, 6,\n    10, 4, 1, 3, 11, 5, 3, 4, 2, 9, 1, 3, 0, 1, 8, 0,\n    6, 7, 8, 7, 0, 4, 6, 10, 8, 2, 3, 11, 11, 8, 0, 2,\n    4, 8, 3, 0, 0, 10, 6, 1, 2, 2, 4, 5, 6, 0, 1, 3,\n    11, 9, 5, 5, 9, 6, 9, 8, 3, 8, 1, 8, 9, 6, 9, 11,\n    10, 7, 5, 6, 5, 9, 1, 3, 7, 0, 2, 10, 11, 2, 6, 1,\n    3, 11, 7, 7, 2, 1, 7, 3, 0, 8, 1, 1, 5, 0, 6, 10,\n    11, 11, 0, 2, 7, 0, 10, 8, 3, 5, 7, 1, 11, 1, 0, 7,\n    9, 0, 11, 5, 10, 3, 2, 3, 5, 9, 7, 9, 8, 4, 6, 5,\n\n                                                                             \n    7, 9, 5, 0, 11, 1, 6, 9, 3, 9, 11, 1, 8, 10, 4, 7,\n    8, 6, 1, 5, 3, 10, 9, 10, 0, 8, 4, 1, 5, 2, 7, 8,\n    7, 11, 9, 10, 1, 0, 4, 7, 5, 0, 11, 6, 1, 4, 2, 8,\n    8, 10, 4, 9, 9, 2, 5, 7, 9, 1, 7, 2, 2, 6, 11, 5,\n    5, 4, 6, 9, 0, 1, 1, 0, 7, 6, 9, 8, 4, 10, 3, 1,\n    2, 8, 8, 9, 10, 11, 5, 11, 11, 2, 6, 10, 3, 4, 2, 4,\n    9, 10, 3, 2, 6, 3, 6, 10, 5, 3, 4, 10, 11, 2, 9, 11,\n    1, 11, 10, 4, 9, 4, 11, 0, 4, 11, 4, 0, 0, 0, 7, 6,\n    10, 4, 1, 3, 11, 5, 3, 4, 2, 9, 1, 3, 0, 1, 8, 0,\n    6, 7, 8, 7, 0, 4, 6, 10, 8, 2, 3, 11, 11, 8, 0, 2,\n    4, 8, 3, 0, 0, 10, 6, 1, 2, 2, 4, 5, 6, 0, 1, 3,\n    11, 9, 5, 5, 9, 6, 9, 8, 3, 8, 1, 8, 9, 6, 9, 11,\n    10, 7, 5, 6, 5, 9, 1, 3, 7, 0, 2, 10, 11, 2, 6, 1,\n    3, 11, 7, 7, 2, 1, 7, 3, 0, 8, 1, 1, 5, 0, 6, 10,\n    11, 11, 0, 2, 7, 0, 10, 8, 3, 5, 7, 1, 11, 1, 0, 7,\n    9, 0, 11, 5, 10, 3, 2, 3, 5, 9, 7, 9, 8, 4, 6, 5,\n}"
-          },
-          "bit_width": null,
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 141,
-            "column": 1,
-            "source_line": "static unsigned char stb__perlin_randtab_grad_idx[512] ="
-          },
-          "callback_policy": null,
-          "declaration_locations": []
-        }
-      ],
-      "macros": [
-        {
-          "name": "stb__perlin_ease",
-          "value": "(((a*6-15)*a + 10) * a * a * a)",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 231,
-            "column": 4,
-            "source_line": "   #define stb__perlin_ease(a)   (((a*6-15)*a + 10) * a * a * a)"
-          }
-        },
-        {
-          "name": "stb__perlin_ease",
-          "value": "(((a*6-15)*a + 10) * a * a * a)",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 351,
-            "column": 4,
-            "source_line": "   #define stb__perlin_ease(a)   (((a*6-15)*a + 10) * a * a * a)"
-          }
-        }
-      ],
-      "includes": [
-        {
-          "target": "math.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 92,
-            "column": 1,
-            "source_line": "#include <math.h> // fabs()"
-          }
-        }
-      ],
-      "raw_directives": [
-        {
-          "directive": "ifdef",
-          "argument": "__cplusplus",
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 77,
-            "column": 1,
-            "source_line": "#ifdef __cplusplus"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 79,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "__cplusplus",
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 86,
-            "column": 1,
-            "source_line": "#ifdef __cplusplus"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 88,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "STB_PERLIN_IMPLEMENTATION",
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 90,
-            "column": 1,
-            "source_line": "#ifdef STB_PERLIN_IMPLEMENTATION"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 386,
-            "column": 1,
-            "source_line": "#endif  // STB_PERLIN_IMPLEMENTATION"
-          }
-        }
-      ],
+      "variables": [],
+      "macros": [],
+      "includes": [],
+      "raw_directives": [],
       "macro_dependencies": [],
-      "diagnostics": [
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'stb__perlin_ease' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 231,
-            "column": 4,
-            "source_line": "   #define stb__perlin_ease(a)   (((a*6-15)*a + 10) * a * a * a)"
-          },
-          "unit_kind": "macro",
-          "unit_name": "stb__perlin_ease"
-        },
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'stb__perlin_ease' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 351,
-            "column": 4,
-            "source_line": "   #define stb__perlin_ease(a)   (((a*6-15)*a + 10) * a * a * a)"
-          },
-          "unit_kind": "macro",
-          "unit_name": "stb__perlin_ease"
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATOR",
-          "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_perlin.h",
-            "line": 78,
-            "column": 1,
-            "source_line": "extern \"C\" {"
-          },
-          "unit_kind": "declarator",
-          "unit_name": null
-        }
-      ]
+      "diagnostics": []
     }
   },
   "functions": {
-    "stb__perlin_lerp": {
-      "name": "stb__perlin_lerp",
-      "result_type": {
-        "model": "CFloat",
-        "qualifiers": [],
-        "source_text": "float"
-      },
-      "parameters": [
-        {
-          "name": "a",
-          "type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float a"
-          },
-          "declared_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float a"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "b",
-          "type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float b"
-          },
-          "declared_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float b"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "t",
-          "type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float t"
-          },
-          "declared_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float t"
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [
-        "static"
-      ],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_perlin.h",
-        "line": 179,
-        "column": 1,
-        "source_line": "static float stb__perlin_lerp(float a, float b, float t)"
-      },
-      "start": {
-        "filename": "stb/stb_perlin.h",
-        "line": 179,
-        "column": 1,
-        "source_line": "static float stb__perlin_lerp(float a, float b, float t)"
-      },
-      "end": {
-        "filename": "stb/stb_perlin.h",
-        "line": 182,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
-    "stb__perlin_fastfloor": {
-      "name": "stb__perlin_fastfloor",
-      "result_type": {
-        "model": "CInt",
-        "qualifiers": [],
-        "source_text": "int"
-      },
-      "parameters": [
-        {
-          "name": "a",
-          "type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float a"
-          },
-          "declared_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float a"
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [
-        "static"
-      ],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_perlin.h",
-        "line": 184,
-        "column": 1,
-        "source_line": "static int stb__perlin_fastfloor(float a)"
-      },
-      "start": {
-        "filename": "stb/stb_perlin.h",
-        "line": 184,
-        "column": 1,
-        "source_line": "static int stb__perlin_fastfloor(float a)"
-      },
-      "end": {
-        "filename": "stb/stb_perlin.h",
-        "line": 188,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
-    "stb__perlin_grad": {
-      "name": "stb__perlin_grad",
-      "result_type": {
-        "model": "CFloat",
-        "qualifiers": [],
-        "source_text": "float"
-      },
-      "parameters": [
-        {
-          "name": "grad_idx",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int grad_idx"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int grad_idx"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "x",
-          "type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float x"
-          },
-          "declared_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float x"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "y",
-          "type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float y"
-          },
-          "declared_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float y"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "z",
-          "type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float z"
-          },
-          "declared_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float z"
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [
-        "static"
-      ],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_perlin.h",
-        "line": 191,
-        "column": 1,
-        "source_line": "static float stb__perlin_grad(int grad_idx, float x, float y, float z)"
-      },
-      "start": {
-        "filename": "stb/stb_perlin.h",
-        "line": 191,
-        "column": 1,
-        "source_line": "static float stb__perlin_grad(int grad_idx, float x, float y, float z)"
-      },
-      "end": {
-        "filename": "stb/stb_perlin.h",
-        "line": 211,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
-    "stb_perlin_noise3_internal": {
-      "name": "stb_perlin_noise3_internal",
-      "result_type": {
-        "model": "CFloat",
-        "qualifiers": [],
-        "source_text": "float"
-      },
-      "parameters": [
-        {
-          "name": "x",
-          "type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float x"
-          },
-          "declared_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float x"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "y",
-          "type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float y"
-          },
-          "declared_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float y"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "z",
-          "type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float z"
-          },
-          "declared_type": {
-            "model": "CFloat",
-            "qualifiers": [],
-            "source_text": "float z"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "x_wrap",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int x_wrap"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int x_wrap"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "y_wrap",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int y_wrap"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int y_wrap"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "z_wrap",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int z_wrap"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int z_wrap"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "seed",
-          "type": {
-            "model": "CUnsignedChar",
-            "qualifiers": [],
-            "source_text": "unsigned char seed"
-          },
-          "declared_type": {
-            "model": "CUnsignedChar",
-            "qualifiers": [],
-            "source_text": "unsigned char seed"
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_perlin.h",
-        "line": 213,
-        "column": 1,
-        "source_line": "float stb_perlin_noise3_internal(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, unsigned char seed)"
-      },
-      "start": {
-        "filename": "stb/stb_perlin.h",
-        "line": 213,
-        "column": 1,
-        "source_line": "float stb_perlin_noise3_internal(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, unsigned char seed)"
-      },
-      "end": {
-        "filename": "stb/stb_perlin.h",
-        "line": 263,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
     "stb_perlin_noise3": {
       "name": "stb_perlin_noise3",
       "result_type": {
@@ -1859,29 +893,26 @@
           "callback_policy": null
         }
       ],
-      "storage": [],
+      "storage": [
+        "extern"
+      ],
       "specifiers": [],
       "is_variadic": false,
-      "is_definition": true,
+      "is_definition": false,
       "prototype_style": "prototype",
       "source_location": {
         "filename": "stb/stb_perlin.h",
-        "line": 265,
+        "line": 80,
         "column": 1,
-        "source_line": "float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap)"
+        "source_line": "extern float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap);"
       },
       "start": {
         "filename": "stb/stb_perlin.h",
-        "line": 265,
+        "line": 80,
         "column": 1,
-        "source_line": "float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap)"
+        "source_line": "extern float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap);"
       },
-      "end": {
-        "filename": "stb/stb_perlin.h",
-        "line": 268,
-        "column": 1,
-        "source_line": "}"
-      },
+      "end": null,
       "declaration_locations": []
     },
     "stb_perlin_noise3_seed": {
@@ -1998,29 +1029,26 @@
           "callback_policy": null
         }
       ],
-      "storage": [],
+      "storage": [
+        "extern"
+      ],
       "specifiers": [],
       "is_variadic": false,
-      "is_definition": true,
+      "is_definition": false,
       "prototype_style": "prototype",
       "source_location": {
         "filename": "stb/stb_perlin.h",
-        "line": 270,
+        "line": 81,
         "column": 1,
-        "source_line": "float stb_perlin_noise3_seed(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed)"
+        "source_line": "extern float stb_perlin_noise3_seed(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed);"
       },
       "start": {
         "filename": "stb/stb_perlin.h",
-        "line": 270,
+        "line": 81,
         "column": 1,
-        "source_line": "float stb_perlin_noise3_seed(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed)"
+        "source_line": "extern float stb_perlin_noise3_seed(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed);"
       },
-      "end": {
-        "filename": "stb/stb_perlin.h",
-        "line": 273,
-        "column": 1,
-        "source_line": "}"
-      },
+      "end": null,
       "declaration_locations": []
     },
     "stb_perlin_ridge_noise3": {
@@ -2137,29 +1165,26 @@
           "callback_policy": null
         }
       ],
-      "storage": [],
+      "storage": [
+        "extern"
+      ],
       "specifiers": [],
       "is_variadic": false,
-      "is_definition": true,
+      "is_definition": false,
       "prototype_style": "prototype",
       "source_location": {
         "filename": "stb/stb_perlin.h",
-        "line": 275,
+        "line": 82,
         "column": 1,
-        "source_line": "float stb_perlin_ridge_noise3(float x, float y, float z, float lacunarity, float gain, float offset, int octaves)"
+        "source_line": "extern float stb_perlin_ridge_noise3(float x, float y, float z, float lacunarity, float gain, float offset, int octaves);"
       },
       "start": {
         "filename": "stb/stb_perlin.h",
-        "line": 275,
+        "line": 82,
         "column": 1,
-        "source_line": "float stb_perlin_ridge_noise3(float x, float y, float z, float lacunarity, float gain, float offset, int octaves)"
+        "source_line": "extern float stb_perlin_ridge_noise3(float x, float y, float z, float lacunarity, float gain, float offset, int octaves);"
       },
-      "end": {
-        "filename": "stb/stb_perlin.h",
-        "line": 293,
-        "column": 1,
-        "source_line": "}"
-      },
+      "end": null,
       "declaration_locations": []
     },
     "stb_perlin_fbm_noise3": {
@@ -2261,29 +1286,26 @@
           "callback_policy": null
         }
       ],
-      "storage": [],
+      "storage": [
+        "extern"
+      ],
       "specifiers": [],
       "is_variadic": false,
-      "is_definition": true,
+      "is_definition": false,
       "prototype_style": "prototype",
       "source_location": {
         "filename": "stb/stb_perlin.h",
-        "line": 295,
+        "line": 83,
         "column": 1,
-        "source_line": "float stb_perlin_fbm_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)"
+        "source_line": "extern float stb_perlin_fbm_noise3(float x, float y, float z, float lacunarity, float gain, int octaves);"
       },
       "start": {
         "filename": "stb/stb_perlin.h",
-        "line": 295,
+        "line": 83,
         "column": 1,
-        "source_line": "float stb_perlin_fbm_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)"
+        "source_line": "extern float stb_perlin_fbm_noise3(float x, float y, float z, float lacunarity, float gain, int octaves);"
       },
-      "end": {
-        "filename": "stb/stb_perlin.h",
-        "line": 308,
-        "column": 1,
-        "source_line": "}"
-      },
+      "end": null,
       "declaration_locations": []
     },
     "stb_perlin_turbulence_noise3": {
@@ -2385,29 +1407,26 @@
           "callback_policy": null
         }
       ],
-      "storage": [],
+      "storage": [
+        "extern"
+      ],
       "specifiers": [],
       "is_variadic": false,
-      "is_definition": true,
+      "is_definition": false,
       "prototype_style": "prototype",
       "source_location": {
         "filename": "stb/stb_perlin.h",
-        "line": 310,
+        "line": 84,
         "column": 1,
-        "source_line": "float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)"
+        "source_line": "extern float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves);"
       },
       "start": {
         "filename": "stb/stb_perlin.h",
-        "line": 310,
+        "line": 84,
         "column": 1,
-        "source_line": "float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)"
+        "source_line": "extern float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves);"
       },
-      "end": {
-        "filename": "stb/stb_perlin.h",
-        "line": 324,
-        "column": 1,
-        "source_line": "}"
-      },
+      "end": null,
       "declaration_locations": []
     },
     "stb_perlin_noise3_wrap_nonpow2": {
@@ -2524,29 +1543,26 @@
           "callback_policy": null
         }
       ],
-      "storage": [],
+      "storage": [
+        "extern"
+      ],
       "specifiers": [],
       "is_variadic": false,
-      "is_definition": true,
+      "is_definition": false,
       "prototype_style": "prototype",
       "source_location": {
         "filename": "stb/stb_perlin.h",
-        "line": 326,
+        "line": 85,
         "column": 1,
-        "source_line": "float stb_perlin_noise3_wrap_nonpow2(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, unsigned char seed)"
+        "source_line": "extern float stb_perlin_noise3_wrap_nonpow2(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, unsigned char seed);"
       },
       "start": {
         "filename": "stb/stb_perlin.h",
-        "line": 326,
+        "line": 85,
         "column": 1,
-        "source_line": "float stb_perlin_noise3_wrap_nonpow2(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, unsigned char seed)"
+        "source_line": "extern float stb_perlin_noise3_wrap_nonpow2(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, unsigned char seed);"
       },
-      "end": {
-        "filename": "stb/stb_perlin.h",
-        "line": 385,
-        "column": 1,
-        "source_line": "}"
-      },
+      "end": null,
       "declaration_locations": []
     }
   },
@@ -2554,119 +1570,11 @@
   "unions": {},
   "enums": {},
   "typedefs": {},
-  "variables": {
-    "stb__perlin_randtab": {
-      "name": "stb__perlin_randtab",
-      "type": {
-        "model": "CComposedType",
-        "qualifiers": [],
-        "source_text": "static unsigned char stb__perlin_randtab[512]",
-        "components": [
-          {
-            "model": "CArray",
-            "qualifiers": [],
-            "source_text": "",
-            "bound": "512",
-            "is_static_minimum": false,
-            "is_variable_length": false,
-            "is_flexible": false
-          },
-          {
-            "model": "CUnsignedChar",
-            "qualifiers": [],
-            "source_text": "unsigned char"
-          }
-        ]
-      },
-      "storage": [
-        "static"
-      ],
-      "initializer": {
-        "source_text": "{\n   23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123,\n   152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72,\n   175, 63, 77, 90, 181, 16, 96, 111, 133, 104, 75, 162, 93, 56, 66, 240,\n   8, 50, 84, 229, 49, 210, 173, 239, 141, 1, 87, 18, 2, 198, 143, 57,\n   225, 160, 58, 217, 168, 206, 245, 204, 199, 6, 73, 60, 20, 230, 211, 233,\n   94, 200, 88, 9, 74, 155, 33, 15, 219, 130, 226, 202, 83, 236, 42, 172,\n   165, 218, 55, 222, 46, 107, 98, 154, 109, 67, 196, 178, 127, 158, 13, 243,\n   65, 79, 166, 248, 25, 224, 115, 80, 68, 51, 184, 128, 232, 208, 151, 122,\n   26, 212, 105, 43, 179, 213, 235, 148, 146, 89, 14, 195, 28, 78, 112, 76,\n   250, 47, 24, 251, 140, 108, 186, 190, 228, 170, 183, 139, 39, 188, 244, 246,\n   132, 48, 119, 144, 180, 138, 134, 193, 82, 182, 120, 121, 86, 220, 209, 3,\n   91, 241, 149, 85, 205, 150, 113, 216, 31, 100, 41, 164, 177, 214, 153, 231,\n   38, 71, 185, 174, 97, 201, 29, 95, 7, 92, 54, 254, 191, 118, 34, 221,\n   131, 11, 163, 99, 234, 81, 227, 147, 156, 176, 17, 142, 69, 12, 110, 62,\n   27, 255, 0, 194, 59, 116, 242, 252, 19, 21, 187, 53, 207, 129, 64, 135,\n   61, 40, 167, 237, 102, 223, 106, 159, 197, 189, 215, 137, 36, 32, 22, 5,\n\n                                                                            \n   23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123,\n   152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72,\n   175, 63, 77, 90, 181, 16, 96, 111, 133, 104, 75, 162, 93, 56, 66, 240,\n   8, 50, 84, 229, 49, 210, 173, 239, 141, 1, 87, 18, 2, 198, 143, 57,\n   225, 160, 58, 217, 168, 206, 245, 204, 199, 6, 73, 60, 20, 230, 211, 233,\n   94, 200, 88, 9, 74, 155, 33, 15, 219, 130, 226, 202, 83, 236, 42, 172,\n   165, 218, 55, 222, 46, 107, 98, 154, 109, 67, 196, 178, 127, 158, 13, 243,\n   65, 79, 166, 248, 25, 224, 115, 80, 68, 51, 184, 128, 232, 208, 151, 122,\n   26, 212, 105, 43, 179, 213, 235, 148, 146, 89, 14, 195, 28, 78, 112, 76,\n   250, 47, 24, 251, 140, 108, 186, 190, 228, 170, 183, 139, 39, 188, 244, 246,\n   132, 48, 119, 144, 180, 138, 134, 193, 82, 182, 120, 121, 86, 220, 209, 3,\n   91, 241, 149, 85, 205, 150, 113, 216, 31, 100, 41, 164, 177, 214, 153, 231,\n   38, 71, 185, 174, 97, 201, 29, 95, 7, 92, 54, 254, 191, 118, 34, 221,\n   131, 11, 163, 99, 234, 81, 227, 147, 156, 176, 17, 142, 69, 12, 110, 62,\n   27, 255, 0, 194, 59, 116, 242, 252, 19, 21, 187, 53, 207, 129, 64, 135,\n   61, 40, 167, 237, 102, 223, 106, 159, 197, 189, 215, 137, 36, 32, 22, 5,\n}"
-      },
-      "bit_width": null,
-      "source_location": {
-        "filename": "stb/stb_perlin.h",
-        "line": 96,
-        "column": 1,
-        "source_line": "static unsigned char stb__perlin_randtab[512] ="
-      },
-      "callback_policy": null,
-      "declaration_locations": []
-    },
-    "stb__perlin_randtab_grad_idx": {
-      "name": "stb__perlin_randtab_grad_idx",
-      "type": {
-        "model": "CComposedType",
-        "qualifiers": [],
-        "source_text": "static unsigned char stb__perlin_randtab_grad_idx[512]",
-        "components": [
-          {
-            "model": "CArray",
-            "qualifiers": [],
-            "source_text": "",
-            "bound": "512",
-            "is_static_minimum": false,
-            "is_variable_length": false,
-            "is_flexible": false
-          },
-          {
-            "model": "CUnsignedChar",
-            "qualifiers": [],
-            "source_text": "unsigned char"
-          }
-        ]
-      },
-      "storage": [
-        "static"
-      ],
-      "initializer": {
-        "source_text": "{\n    7, 9, 5, 0, 11, 1, 6, 9, 3, 9, 11, 1, 8, 10, 4, 7,\n    8, 6, 1, 5, 3, 10, 9, 10, 0, 8, 4, 1, 5, 2, 7, 8,\n    7, 11, 9, 10, 1, 0, 4, 7, 5, 0, 11, 6, 1, 4, 2, 8,\n    8, 10, 4, 9, 9, 2, 5, 7, 9, 1, 7, 2, 2, 6, 11, 5,\n    5, 4, 6, 9, 0, 1, 1, 0, 7, 6, 9, 8, 4, 10, 3, 1,\n    2, 8, 8, 9, 10, 11, 5, 11, 11, 2, 6, 10, 3, 4, 2, 4,\n    9, 10, 3, 2, 6, 3, 6, 10, 5, 3, 4, 10, 11, 2, 9, 11,\n    1, 11, 10, 4, 9, 4, 11, 0, 4, 11, 4, 0, 0, 0, 7, 6,\n    10, 4, 1, 3, 11, 5, 3, 4, 2, 9, 1, 3, 0, 1, 8, 0,\n    6, 7, 8, 7, 0, 4, 6, 10, 8, 2, 3, 11, 11, 8, 0, 2,\n    4, 8, 3, 0, 0, 10, 6, 1, 2, 2, 4, 5, 6, 0, 1, 3,\n    11, 9, 5, 5, 9, 6, 9, 8, 3, 8, 1, 8, 9, 6, 9, 11,\n    10, 7, 5, 6, 5, 9, 1, 3, 7, 0, 2, 10, 11, 2, 6, 1,\n    3, 11, 7, 7, 2, 1, 7, 3, 0, 8, 1, 1, 5, 0, 6, 10,\n    11, 11, 0, 2, 7, 0, 10, 8, 3, 5, 7, 1, 11, 1, 0, 7,\n    9, 0, 11, 5, 10, 3, 2, 3, 5, 9, 7, 9, 8, 4, 6, 5,\n\n                                                                             \n    7, 9, 5, 0, 11, 1, 6, 9, 3, 9, 11, 1, 8, 10, 4, 7,\n    8, 6, 1, 5, 3, 10, 9, 10, 0, 8, 4, 1, 5, 2, 7, 8,\n    7, 11, 9, 10, 1, 0, 4, 7, 5, 0, 11, 6, 1, 4, 2, 8,\n    8, 10, 4, 9, 9, 2, 5, 7, 9, 1, 7, 2, 2, 6, 11, 5,\n    5, 4, 6, 9, 0, 1, 1, 0, 7, 6, 9, 8, 4, 10, 3, 1,\n    2, 8, 8, 9, 10, 11, 5, 11, 11, 2, 6, 10, 3, 4, 2, 4,\n    9, 10, 3, 2, 6, 3, 6, 10, 5, 3, 4, 10, 11, 2, 9, 11,\n    1, 11, 10, 4, 9, 4, 11, 0, 4, 11, 4, 0, 0, 0, 7, 6,\n    10, 4, 1, 3, 11, 5, 3, 4, 2, 9, 1, 3, 0, 1, 8, 0,\n    6, 7, 8, 7, 0, 4, 6, 10, 8, 2, 3, 11, 11, 8, 0, 2,\n    4, 8, 3, 0, 0, 10, 6, 1, 2, 2, 4, 5, 6, 0, 1, 3,\n    11, 9, 5, 5, 9, 6, 9, 8, 3, 8, 1, 8, 9, 6, 9, 11,\n    10, 7, 5, 6, 5, 9, 1, 3, 7, 0, 2, 10, 11, 2, 6, 1,\n    3, 11, 7, 7, 2, 1, 7, 3, 0, 8, 1, 1, 5, 0, 6, 10,\n    11, 11, 0, 2, 7, 0, 10, 8, 3, 5, 7, 1, 11, 1, 0, 7,\n    9, 0, 11, 5, 10, 3, 2, 3, 5, 9, 7, 9, 8, 4, 6, 5,\n}"
-      },
-      "bit_width": null,
-      "source_location": {
-        "filename": "stb/stb_perlin.h",
-        "line": 141,
-        "column": 1,
-        "source_line": "static unsigned char stb__perlin_randtab_grad_idx[512] ="
-      },
-      "callback_policy": null,
-      "declaration_locations": []
-    }
-  },
-  "macros": {
-    "stb__perlin_ease": {
-      "name": "stb__perlin_ease",
-      "value": "(((a*6-15)*a + 10) * a * a * a)",
-      "function_like": true,
-      "directive": "define",
-      "source_location": {
-        "filename": "stb/stb_perlin.h",
-        "line": 351,
-        "column": 4,
-        "source_line": "   #define stb__perlin_ease(a)   (((a*6-15)*a + 10) * a * a * a)"
-      }
-    }
-  },
-  "includes": {
-    "stb/stb_perlin.h:math.h": {
-      "target": "math.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "stb/stb_perlin.h",
-        "line": 92,
-        "column": 1,
-        "source_line": "#include <math.h> // fabs()"
-      }
-    }
-  },
+  "variables": {},
+  "macros": {},
+  "includes": {},
   "functions_by_file": {
     "stb/stb_perlin.h": [
-      "stb__perlin_lerp",
-      "stb__perlin_fastfloor",
-      "stb__perlin_grad",
-      "stb_perlin_noise3_internal",
       "stb_perlin_noise3",
       "stb_perlin_noise3_seed",
       "stb_perlin_ridge_noise3",
@@ -2680,9 +1588,7 @@
     "stb/stb_perlin.h": []
   },
   "system_includes": {
-    "stb/stb_perlin.h": [
-      "math.h"
-    ]
+    "stb/stb_perlin.h": []
   },
   "unresolved_includes": {
     "stb/stb_perlin.h": []
@@ -2690,45 +1596,5 @@
   "header_source_pairs": {
     "stb/stb_perlin.h": []
   },
-  "diagnostics": [
-    {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'stb__perlin_ease' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_perlin.h",
-        "line": 231,
-        "column": 4,
-        "source_line": "   #define stb__perlin_ease(a)   (((a*6-15)*a + 10) * a * a * a)"
-      },
-      "unit_kind": "macro",
-      "unit_name": "stb__perlin_ease"
-    },
-    {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'stb__perlin_ease' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_perlin.h",
-        "line": 351,
-        "column": 4,
-        "source_line": "   #define stb__perlin_ease(a)   (((a*6-15)*a + 10) * a * a * a)"
-      },
-      "unit_kind": "macro",
-      "unit_name": "stb__perlin_ease"
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATOR",
-      "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_perlin.h",
-        "line": 78,
-        "column": 1,
-        "source_line": "extern \"C\" {"
-      },
-      "unit_kind": "declarator",
-      "unit_name": null
-    }
-  ]
+  "diagnostics": []
 }

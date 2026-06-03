@@ -1,5 +1,7 @@
 """C parser grouped-project fixture regression tests."""
 
+import importlib.util
+import json
 import shutil
 from pathlib import Path
 
@@ -15,6 +17,16 @@ _PROJECT_OVERRIDES = {
         "nanosvg": ("nanosvg.h", "nanosvgrast.h"),
     },
 }
+
+
+def _load_golden_generator():
+    module_path = Path(__file__).with_name("generate_c_parser_goldens.py")
+    spec = importlib.util.spec_from_file_location("generate_c_parser_goldens", module_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load C golden generator from {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _fixture_sort_key(fixture: Path) -> tuple[int, str]:
@@ -55,7 +67,6 @@ def test_c_fixture_suite_has_inputs(data_subdir):
 @pytest.mark.parametrize(
     "fixture",
     [
-        _DATA_DIR / "general" / "basic_array_update.h",
         _DATA_DIR / "json" / "cJSON.h",
         _DATA_DIR / "tinyexpr" / "tinyexpr.h",
         _DATA_DIR / "linmath" / "linmath.h",
@@ -139,3 +150,15 @@ def test_c_fixture_suite_groups_dependent_headers_dependency_first():
     fixtures = projects[Path("nanosvg")]
 
     assert [fixture.name for fixture in fixtures] == ["nanosvg.h", "nanosvgrast.h"]
+
+
+def test_c_project_goldens_match_generated_payloads():
+    if shutil.which("cc") is None:
+        pytest.skip("cc is not available")
+
+    generator = _load_golden_generator()
+    for project_key, fixtures in generator._default_projects():
+        expected_path = generator._output_path_for_project(project_key)
+        expected = json.loads(expected_path.read_text(encoding="utf-8"))
+
+        assert generator._serialize_project(fixtures) == expected, f"C parser golden is stale: {expected_path}"

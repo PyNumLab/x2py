@@ -65,6 +65,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path, PurePosixPath
 
 from .lexer import (
+    CLogicalRecord,
     CTopLevelSegment,
     lex_c_source,
     line_mappings_for_source,
@@ -431,7 +432,7 @@ class CParser:
         if preprocessing == "raw" and inferred_preprocessed_path is not None:
             preprocessing = "preprocessed"
 
-        parsed = CFile(filename=filename, parser_status="partial", preprocessing=preprocessing)
+        parsed = CFile(filename=filename, preprocessing=preprocessing)
         if preprocessing == "raw":
             self._raise_for_raw_preprocessing_directives(source, filename)
             effective_include_dirs = list(include_dirs or ())
@@ -489,9 +490,13 @@ class CParser:
     @staticmethod
     def _raise_for_raw_preprocessing_directives(source: str, filename: str | None) -> None:
         """Reject raw directives that require a real C preprocessor."""
-        for record in normalize_c_source(source, filename=filename).records:
+        normalized = normalize_c_source(source, filename=filename)
+        include_guard_lines = CParser._trivial_include_guard_lines(normalized.records)
+        for record in normalized.records:
             stripped = record.text.strip()
             if not stripped.startswith("#") or _ALLOWED_RAW_DIRECTIVE_RE.match(stripped):
+                continue
+            if record.original_start_line in include_guard_lines:
                 continue
             source_line = record.source_line
             column = source_line.find("#") + 1 if source_line and "#" in source_line else 1
@@ -503,6 +508,46 @@ class CParser:
                 source_line=source_line,
                 code="CPARSE_PREPROCESSING_REQUIRED",
             )
+
+    @staticmethod
+    def _trivial_include_guard_lines(records: Sequence[CLogicalRecord]) -> set[int]:
+        """Return directive lines for a simple whole-file include guard."""
+        directive_records: list[tuple[CLogicalRecord, str, str]] = []
+        for record in records:
+            stripped = record.text.strip()
+            if not stripped.startswith("#"):
+                continue
+            match = re.match(r"^\s*#\s*(ifndef|define|endif)\b(.*)$", stripped)
+            if match is None:
+                continue
+            directive, argument = match.groups()
+            directive_records.append((record, directive.lower(), argument.strip()))
+
+        if len(directive_records) != 3:
+            return set()
+
+        (
+            (ifndef_record, ifndef_directive, ifndef_name),
+            (
+                define_record,
+                define_directive,
+                define_name,
+            ),
+            (endif_record, endif_directive, endif_argument),
+        ) = directive_records
+        if ifndef_directive != "ifndef" or define_directive != "define" or endif_directive != "endif":
+            return set()
+        if not ifndef_name or ifndef_name != define_name or endif_argument:
+            return set()
+        if ifndef_record.original_start_line > define_record.original_start_line:
+            return set()
+        if define_record.original_start_line > endif_record.original_start_line:
+            return set()
+        return {
+            ifndef_record.original_start_line,
+            define_record.original_start_line,
+            endif_record.original_start_line,
+        }
 
     def visit_project(
         self,

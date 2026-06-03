@@ -76,8 +76,14 @@ FORTRAN_TYPE_MAP = {
     ("complex", "c_float_complex"): "Complex64",
     ("complex", "c_double_complex"): "Complex128",
     ("logical", None): "Bool",
+    ("logical", "1"): "Bool",
+    ("logical", "2"): "Bool",
+    ("logical", "4"): "Bool",
+    ("logical", "8"): "Bool",
     ("logical", "c_bool"): "Bool",
     ("character", None): "String",
+    ("character", "1"): "String",
+    ("character", "c_char"): "String",
 }
 
 

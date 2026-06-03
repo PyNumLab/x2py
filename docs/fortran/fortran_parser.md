@@ -107,6 +107,34 @@ wrappers at the bottom, then read the class from top to bottom:
 Parser methods carry focused docstrings, with examples where a compatibility
 visitor or lexical helper is easier to understand from a concrete call.
 
+## Implementation Inventory And Maintenance
+
+This file is the single maintained Fortran parser reference. It replaces the
+older standalone implementation-reference document; parser feature inventory,
+testing workflow, and maintenance guard policy live here.
+
+The implementation inventory is maintained across these surfaces:
+
+- `fortran_parser/parser.py` owns source slicing, declaration extraction,
+  diagnostics, project ordering, dependency resolution, and compile-time
+  expression resolution.
+- `fortran_parser/models.py` owns parse-only dataclasses and JSON-compatible
+  parser facts.
+- `semantics/fortran2ir.py` owns conversion from parser facts to semantic IR,
+  including kind mapping, compile-time specialization, storage contracts,
+  projection metadata, and readiness inputs.
+- `tests/parser/` covers parser contracts, source-unit slicing, diagnostics,
+  project behavior, and fixture regressions.
+- `tests/semantics/` covers semantic conversion, datatype precision mapping,
+  readiness, `.pyi` emission, and compile-time specialization.
+
+Parser-related pull requests should update this file when the documented
+feature inventory, public API, diagnostics, project behavior, semantic handoff,
+or maintenance workflow changes. The parser-reference guard watches
+`fortran_parser/`, `tests/parser/fortran/`, and `tests/data/fortran/` changes and
+expects `docs/fortran/fortran_parser.md` to change unless the PR is explicitly
+labeled to skip the guard.
+
 `visit_file` is the central orchestration path. It first slices the source into
 direct file-level units, then each unit visitor parses only its own substring
 and recursively slices direct children. This is the key parser design: each
@@ -373,13 +401,12 @@ Expected JSON layout:
   - `block_data`
 
 When `x2py --parse --json` applies compiler preprocessing, the per-file payload
-also contains `preprocessing_recipe`. Internal parser mode accepts plain or
-already-preprocessed source. Raw Fortran CPP directives require
-`--preprocess compiler`; compiler linemarkers remain accepted for provenance.
-`--preprocess compiler` records the exact compiler executable or adapter,
-argv, include paths, macro flags, standard, extra compiler arguments, working
-directory, include graph, source mappings, diagnostics, and optional macro
-metadata used to produce the parsed stdout stream.
+also contains `preprocessing_recipe`. The CLI applies compiler preprocessing
+for file-based parsing; compiler linemarkers remain accepted for provenance.
+The recipe records the exact compiler executable or adapter, argv, include
+paths, macro flags, standard, extra compiler arguments, working directory,
+include graph, source mappings, diagnostics, and optional macro metadata used
+to produce the parsed stdout stream.
 
 Fortran CPP directives are handled by the configured compiler. Native Fortran
 `include "file.inc"` statements are then expanded recursively by the

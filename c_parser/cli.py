@@ -123,7 +123,6 @@ def format_c_report(report: dict[str, dict]) -> str:
         lines.append(f"  Macros: {len(parsed.get('macros') or [])}")
         lines.append(f"  Includes: {len(parsed.get('includes') or [])}")
         lines.append(f"  Diagnostics: {len(parsed.get('diagnostics') or [])}")
-        lines.append(f"  Parser status: {parsed.get('parser_status', 'partial')}")
         lines.append("")
     return "\n".join(lines).rstrip()
 

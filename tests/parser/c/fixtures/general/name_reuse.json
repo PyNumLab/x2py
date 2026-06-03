@@ -3,8 +3,12 @@
     "general/name_reuse.h": {
       "filename": "general/name_reuse.h",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "general/name_reuse.h",
+        "/usr/include/stdc-predef.h",
+        "/usr/lib/gcc/x86_64-linux-gnu/11/include/stdbool.h"
+      ],
       "functions": [
         {
           "name": "do_work_i",
@@ -129,16 +133,14 @@
             {
               "name": "same_name",
               "type": {
-                "model": "CTypedef",
+                "model": "CBool",
                 "qualifiers": [],
-                "source_text": "bool same_name",
-                "name": "bool",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
+                "source_text": "_Bool same_name"
               },
               "declared_type": {
-                "reference": "bool"
+                "model": "CBool",
+                "qualifiers": [],
+                "source_text": "_Bool same_name"
               },
               "source_location": null,
               "callback_policy": null
@@ -220,13 +222,13 @@
             "filename": "general/name_reuse.h",
             "line": 18,
             "column": 1,
-            "source_line": "void do_work_l(bool same_name, struct same_name *shared);"
+            "source_line": "void do_work_l("
           },
           "start": {
             "filename": "general/name_reuse.h",
             "line": 18,
             "column": 1,
-            "source_line": "void do_work_l(bool same_name, struct same_name *shared);"
+            "source_line": "void do_work_l("
           },
           "end": null,
           "declaration_locations": []
@@ -365,13 +367,9 @@
         {
           "name": "convert_to_logical",
           "result_type": {
-            "model": "CTypedef",
+            "model": "CBool",
             "qualifiers": [],
-            "source_text": "bool",
-            "name": "bool",
-            "type": null,
-            "source_location": null,
-            "declaration_locations": []
+            "source_text": "_Bool"
           },
           "parameters": [
             {
@@ -427,13 +425,13 @@
             "filename": "general/name_reuse.h",
             "line": 21,
             "column": 1,
-            "source_line": "bool convert_to_logical(const char *same_name);"
+            "source_line": "_Bool "
           },
           "start": {
             "filename": "general/name_reuse.h",
             "line": 21,
             "column": 1,
-            "source_line": "bool convert_to_logical(const char *same_name);"
+            "source_line": "_Bool "
           },
           "end": null,
           "declaration_locations": []
@@ -493,13 +491,9 @@
         {
           "name": "same_name_l",
           "type": {
-            "model": "CTypedef",
+            "model": "CBool",
             "qualifiers": [],
-            "source_text": "extern bool same_name_l",
-            "name": "bool",
-            "type": null,
-            "source_location": null,
-            "declaration_locations": []
+            "source_text": "extern \n                                                                \n      _Bool same_name_l"
           },
           "storage": [
             "extern"
@@ -510,7 +504,7 @@
             "filename": "general/name_reuse.h",
             "line": 12,
             "column": 1,
-            "source_line": "extern bool same_name_l;"
+            "source_line": "extern "
           },
           "callback_policy": null,
           "declaration_locations": []
@@ -574,55 +568,9 @@
           "declaration_locations": []
         }
       ],
-      "macros": [
-        {
-          "name": "X2PY_GENERAL_NAME_REUSE_H",
-          "value": null,
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/name_reuse.h",
-            "line": 2,
-            "column": 1,
-            "source_line": "#define X2PY_GENERAL_NAME_REUSE_H"
-          }
-        }
-      ],
-      "includes": [
-        {
-          "target": "stdbool.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "general/name_reuse.h",
-            "line": 4,
-            "column": 1,
-            "source_line": "#include <stdbool.h>"
-          }
-        }
-      ],
-      "raw_directives": [
-        {
-          "directive": "ifndef",
-          "argument": "X2PY_GENERAL_NAME_REUSE_H",
-          "source_location": {
-            "filename": "general/name_reuse.h",
-            "line": 1,
-            "column": 1,
-            "source_line": "#ifndef X2PY_GENERAL_NAME_REUSE_H"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "general/name_reuse.h",
-            "line": 23,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        }
-      ],
+      "macros": [],
+      "includes": [],
+      "raw_directives": [],
       "macro_dependencies": [],
       "diagnostics": []
     }
@@ -751,10 +699,14 @@
         {
           "name": "same_name",
           "type": {
-            "reference": "bool"
+            "model": "CBool",
+            "qualifiers": [],
+            "source_text": "_Bool same_name"
           },
           "declared_type": {
-            "reference": "bool"
+            "model": "CBool",
+            "qualifiers": [],
+            "source_text": "_Bool same_name"
           },
           "source_location": null,
           "callback_policy": null
@@ -804,13 +756,13 @@
         "filename": "general/name_reuse.h",
         "line": 18,
         "column": 1,
-        "source_line": "void do_work_l(bool same_name, struct same_name *shared);"
+        "source_line": "void do_work_l("
       },
       "start": {
         "filename": "general/name_reuse.h",
         "line": 18,
         "column": 1,
-        "source_line": "void do_work_l(bool same_name, struct same_name *shared);"
+        "source_line": "void do_work_l("
       },
       "end": null,
       "declaration_locations": []
@@ -949,7 +901,9 @@
     "convert_to_logical": {
       "name": "convert_to_logical",
       "result_type": {
-        "reference": "bool"
+        "model": "CBool",
+        "qualifiers": [],
+        "source_text": "_Bool"
       },
       "parameters": [
         {
@@ -1005,13 +959,13 @@
         "filename": "general/name_reuse.h",
         "line": 21,
         "column": 1,
-        "source_line": "bool convert_to_logical(const char *same_name);"
+        "source_line": "_Bool "
       },
       "start": {
         "filename": "general/name_reuse.h",
         "line": 21,
         "column": 1,
-        "source_line": "bool convert_to_logical(const char *same_name);"
+        "source_line": "_Bool "
       },
       "end": null,
       "declaration_locations": []
@@ -1071,7 +1025,9 @@
     "same_name_l": {
       "name": "same_name_l",
       "type": {
-        "reference": "bool"
+        "model": "CBool",
+        "qualifiers": [],
+        "source_text": "extern \n                                                                \n      _Bool same_name_l"
       },
       "storage": [
         "extern"
@@ -1082,7 +1038,7 @@
         "filename": "general/name_reuse.h",
         "line": 12,
         "column": 1,
-        "source_line": "extern bool same_name_l;"
+        "source_line": "extern "
       },
       "callback_policy": null,
       "declaration_locations": []
@@ -1146,33 +1102,8 @@
       "declaration_locations": []
     }
   },
-  "macros": {
-    "X2PY_GENERAL_NAME_REUSE_H": {
-      "name": "X2PY_GENERAL_NAME_REUSE_H",
-      "value": null,
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/name_reuse.h",
-        "line": 2,
-        "column": 1,
-        "source_line": "#define X2PY_GENERAL_NAME_REUSE_H"
-      }
-    }
-  },
-  "includes": {
-    "general/name_reuse.h:stdbool.h": {
-      "target": "stdbool.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "general/name_reuse.h",
-        "line": 4,
-        "column": 1,
-        "source_line": "#include <stdbool.h>"
-      }
-    }
-  },
+  "macros": {},
+  "includes": {},
   "functions_by_file": {
     "general/name_reuse.h": [
       "do_work_i",
@@ -1188,9 +1119,7 @@
     "general/name_reuse.h": []
   },
   "system_includes": {
-    "general/name_reuse.h": [
-      "stdbool.h"
-    ]
+    "general/name_reuse.h": []
   },
   "unresolved_includes": {
     "general/name_reuse.h": []

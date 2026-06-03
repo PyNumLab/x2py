@@ -2,7 +2,8 @@
 
 Status: first C semantic conversion subset implemented in `semantics/c2ir.py`.
 The converter consumes `c_parser` models and emits the same language-neutral
-semantic IR used by Fortran and edited `.pyi` files.
+semantic IR used by Fortran and edited `.pyi` files. Shared primitive dtype
+policy is documented in [`datatype_mapping.md`](datatype_mapping.md).
 
 ## Supported Identity Subset
 
@@ -19,8 +20,9 @@ semantic IR used by Fortran and edited `.pyi` files.
 - Unsigned integer spellings map to `UInt16`, `UInt32`, `UInt64`, and
   `UInt64`; fixed-width typedef spellings such as `uint32_t` map to the
   matching `UInt*` fallback.
-- `float` -> `Float32`; `double` -> `Float64`.
-- `float _Complex` -> `Complex64`; `double _Complex` -> `Complex128`.
+- `float` -> `Float32`; `double` -> `Float64`; `long double` -> `Float128`.
+- `float _Complex` -> `Complex64`; `double _Complex` -> `Complex128`;
+  `long double _Complex` -> `Complex256`.
 - Local typedef chains are resolved when their parser model definitions are
   available.
 - `size_t` maps to `SizeT` without a target probe; supplied
@@ -58,8 +60,7 @@ The converter does not silently invent wrapper policy. It attaches
 - arrays with unknown extents;
 - incomplete or external opaque structs used by value;
 - unions used in semantic signatures;
-- `long double`, `volatile`, `_Atomic`, bitfields, and unsupported declarator
-  compositions.
+- `volatile`, `_Atomic`, bitfields, and unsupported declarator compositions.
 
 The current C semantic path supports `--language c --semantics`,
 `--language c --wrap-readiness`, and starter exact-contract

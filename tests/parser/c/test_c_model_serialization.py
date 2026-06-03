@@ -195,7 +195,6 @@ def test_each_c_model_has_minimal_json_shape():
             {
                 "filename": "api.h",
                 "language": "c",
-                "parser_status": "partial",
                 "preprocessing": "raw",
                 "functions": [],
                 "structs": [],

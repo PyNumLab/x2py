@@ -94,7 +94,7 @@ jobs:
       - name: Run tests with a changing random seed
         env:
           PYTHONPATH: .
-        run: python -m pytest -q -n auto --randomly-seed=${{ github.run_id }}
+        run: python -m pytest -q --randomly-seed=${{ github.run_id }}
 
   # Benchmark workflow is intentionally parked for later activation.
   # benchmark:

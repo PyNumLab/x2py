@@ -3,8 +3,12 @@
     "general/basic_array_update.c": {
       "filename": "general/basic_array_update.c",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "general/basic_array_update.c",
+        "/usr/include/stdc-predef.h",
+        "general/basic_array_update.h"
+      ],
       "functions": [
         {
           "name": "add1",
@@ -226,19 +230,7 @@
       "typedefs": [],
       "variables": [],
       "macros": [],
-      "includes": [
-        {
-          "target": "basic_array_update.h",
-          "kind": "local",
-          "resolved_path": "general/basic_array_update.h",
-          "source_location": {
-            "filename": "general/basic_array_update.c",
-            "line": 1,
-            "column": 1,
-            "source_line": "#include \"basic_array_update.h\""
-          }
-        }
-      ],
+      "includes": [],
       "raw_directives": [],
       "macro_dependencies": [],
       "diagnostics": []
@@ -246,8 +238,11 @@
     "general/basic_array_update.h": {
       "filename": "general/basic_array_update.h",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "general/basic_array_update.h",
+        "/usr/include/stdc-predef.h"
+      ],
       "functions": [
         {
           "name": "add1",
@@ -444,43 +439,9 @@
       "enums": [],
       "typedefs": [],
       "variables": [],
-      "macros": [
-        {
-          "name": "X2PY_GENERAL_BASIC_ARRAY_UPDATE_H",
-          "value": null,
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/basic_array_update.h",
-            "line": 2,
-            "column": 1,
-            "source_line": "#define X2PY_GENERAL_BASIC_ARRAY_UPDATE_H"
-          }
-        }
-      ],
+      "macros": [],
       "includes": [],
-      "raw_directives": [
-        {
-          "directive": "ifndef",
-          "argument": "X2PY_GENERAL_BASIC_ARRAY_UPDATE_H",
-          "source_location": {
-            "filename": "general/basic_array_update.h",
-            "line": 1,
-            "column": 1,
-            "source_line": "#ifndef X2PY_GENERAL_BASIC_ARRAY_UPDATE_H"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "general/basic_array_update.h",
-            "line": 7,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        }
-      ],
+      "raw_directives": [],
       "macro_dependencies": [],
       "diagnostics": []
     }
@@ -705,33 +666,8 @@
   "enums": {},
   "typedefs": {},
   "variables": {},
-  "macros": {
-    "X2PY_GENERAL_BASIC_ARRAY_UPDATE_H": {
-      "name": "X2PY_GENERAL_BASIC_ARRAY_UPDATE_H",
-      "value": null,
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/basic_array_update.h",
-        "line": 2,
-        "column": 1,
-        "source_line": "#define X2PY_GENERAL_BASIC_ARRAY_UPDATE_H"
-      }
-    }
-  },
-  "includes": {
-    "general/basic_array_update.c:basic_array_update.h": {
-      "target": "basic_array_update.h",
-      "kind": "local",
-      "resolved_path": "general/basic_array_update.h",
-      "source_location": {
-        "filename": "general/basic_array_update.c",
-        "line": 1,
-        "column": 1,
-        "source_line": "#include \"basic_array_update.h\""
-      }
-    }
-  },
+  "macros": {},
+  "includes": {},
   "functions_by_file": {
     "general/basic_array_update.c": [
       "add1",
@@ -744,9 +680,7 @@
   },
   "enum_constants": {},
   "include_graph": {
-    "general/basic_array_update.c": [
-      "general/basic_array_update.h"
-    ],
+    "general/basic_array_update.c": [],
     "general/basic_array_update.h": []
   },
   "system_includes": {

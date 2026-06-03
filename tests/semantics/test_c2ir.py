@@ -9,29 +9,43 @@ from c_parser import parse_c_file, parse_c_project
 from c_parser.models import (
     CArray,
     CAtomic,
+    CBool,
     CChar,
     CComposedType,
     CConst,
     CDiagnostic,
     CDouble,
+    CDoubleComplex,
     CEnum,
     CFile,
+    CFloat,
+    CFloatComplex,
     CFunction,
     CFunctionType,
     CInitializer,
     CInt,
+    CLong,
     CLongDouble,
+    CLongDoubleComplex,
+    CLongLong,
     CMacro,
     CMacroDependency,
     CParameter,
     CPointer,
     CProject,
     CRestrict,
+    CShort,
+    CSignedChar,
     CSourceLocation,
     CStruct,
     CTypedef,
     CUnion,
     CUnknownType,
+    CUnsignedChar,
+    CUnsignedInt,
+    CUnsignedLong,
+    CUnsignedLongLong,
+    CUnsignedShort,
     CVariable,
     CVolatile,
     CVoid,
@@ -180,7 +194,7 @@ def test_c2ir_converts_scalar_function_signatures_and_preserves_native_order():
         native_name="api.h",
         native_scope="api.h",
         source_kind="translation_unit",
-        metadata={"preprocessing": "raw", "parser_status": "partial"},
+        metadata={"preprocessing": "raw"},
     )
 
 
@@ -848,6 +862,56 @@ def test_c_compatibility_helpers_forward_standard_type_reports():
     ).return_type.name == ("UInt32")
 
 
+@pytest.mark.parametrize(
+    ("ctype", "expected"),
+    [
+        (CBool(), "Bool"),
+        (CChar(), "Int8"),
+        (CSignedChar(), "Int8"),
+        (CUnsignedChar(), "UInt8"),
+        (CShort(), "Int16"),
+        (CUnsignedShort(), "UInt16"),
+        (CInt(), "Int32"),
+        (CUnsignedInt(), "UInt32"),
+        (CLong(), "Int64"),
+        (CUnsignedLong(), "UInt64"),
+        (CLongLong(), "Int64"),
+        (CUnsignedLongLong(), "UInt64"),
+        (CFloat(), "Float32"),
+        (CDouble(), "Float64"),
+        (CLongDouble(), "Float128"),
+        (CFloatComplex(), "Complex64"),
+        (CDoubleComplex(), "Complex128"),
+        (CLongDoubleComplex(), "Complex256"),
+    ],
+)
+def test_c_primitive_precisions_map_to_semantic_types(ctype, expected):
+    semantic_type = CToIRConverter().visit_type(ctype)
+
+    assert semantic_type.name == expected
+    assert semantic_type.dtype == expected
+
+
+@pytest.mark.parametrize(
+    ("name", "fact", "expected"),
+    [
+        ("int8_t", {"available": True, "kind": "integer", "signed": True, "bits": 8}, "Int8"),
+        ("int16_t", {"available": True, "kind": "integer", "signed": True, "bits": 16}, "Int16"),
+        ("int32_t", {"available": True, "kind": "integer", "signed": True, "bits": 32}, "Int32"),
+        ("int64_t", {"available": True, "kind": "integer", "signed": True, "bits": 64}, "Int64"),
+        ("uint8_t", {"available": True, "kind": "integer", "signed": False, "bits": 8}, "UInt8"),
+        ("uint16_t", {"available": True, "kind": "integer", "signed": False, "bits": 16}, "UInt16"),
+        ("uint32_t", {"available": True, "kind": "integer", "signed": False, "bits": 32}, "UInt32"),
+        ("uint64_t", {"available": True, "kind": "integer", "signed": False, "bits": 64}, "UInt64"),
+    ],
+)
+def test_c_standard_integer_precision_facts_map_to_semantic_types(name, fact, expected):
+    semantic_type = CToIRConverter(standard_type_report={"types": {name: fact}}).visit_type(CTypedef(name=name))
+
+    assert semantic_type.name == expected
+    assert semantic_type.dtype == expected
+
+
 def test_c2ir_visitor_and_project_compatibility_entrypoints_cover_supported_nodes():
     first = parse_c_file("struct point { int x; };\nint value;\nint f(int x);\n", filename="a.h")
     second = parse_c_file("double g(double y);\n", filename="b.h")
@@ -1154,7 +1218,6 @@ def test_c2ir_reports_unsupported_type_and_declarator_compositions():
         owner="missing_owner",
     )
     unsupported_integer = converter.visit_type(CInt(source_text="int"), owner="integer_owner")
-    unsupported_precision = converter.visit_type(CLongDouble(source_text="long double"), owner="precision_owner")
     empty = converter.visit_type(CComposedType(components=[], source_text="empty"), owner="empty_owner")
     array_missing_element = converter.visit_type(
         CComposedType(components=[CArray(bound="4")], source_text="missing element"),
@@ -1195,13 +1258,6 @@ def test_c2ir_reports_unsupported_type_and_declarator_compositions():
         message="This C type is not supported by the semantic converter.",
         owner="integer_owner",
         source_type="int",
-    )
-    _assert_unsupported_type(
-        unsupported_precision,
-        code="c_long_double_unsupported",
-        message="C long double types are not mapped until target precision policy is explicit.",
-        owner="precision_owner",
-        source_type="long double",
     )
     _assert_unsupported_type(
         empty,

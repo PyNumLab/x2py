@@ -42,7 +42,7 @@ def test_cjson_header_raw_parse_requires_preprocessing():
     assert exc_info.value.code == "CPARSE_PREPROCESSING_REQUIRED"
 
 
-def test_cjson_header_preprocessed_mode_preserves_explicit_partial_status():
+def test_cjson_header_preprocessed_mode_has_no_error_diagnostics():
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
@@ -51,7 +51,6 @@ def test_cjson_header_preprocessed_mode_preserves_explicit_partial_status():
         preprocessing="compiler",
     )
 
-    assert parsed.parser_status == "partial"
     assert not any(diag.severity == "error" for diag in parsed.diagnostics)
 
 
@@ -78,7 +77,6 @@ def test_cjson_source_file_parse_skips_function_bodies_safely():
     )
 
     assert any(fn.name == "parse_number" for fn in parsed.functions)
-    assert parsed.parser_status == "partial"
     assert not any(hasattr(fn, "body") for fn in parsed.functions)
 
 

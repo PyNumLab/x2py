@@ -17,6 +17,8 @@ examples. Contribution and pull-request requirements remain in
   interface syntax and conversion behavior.
 - [C to semantic IR mapping](semantics/c2ir_mapping.md): implemented C
   semantic conversion subset and blocker policy.
+- [Datatype mapping](semantics/datatype_mapping.md): C and Fortran primitive
+  type mapping to semantic and NumPy dtype names.
 - [Self-contained C semantic `.pyi` specification](semantics/c_pyi_self_contained_specification.md):
   staged C wrapper interface design.
 
@@ -24,30 +26,23 @@ examples. Contribution and pull-request requirements remain in
 
 - [x2py checklist](x2py_checklist.md):
   pending frontend, shared semantics, and `.pyi` tasks.
-- [Quality stack adoption checklist](quality_adoption_checklist.md):
-  recurring QA checks, staged strictness work, subsystem progress, and the
-  current effort-weighted estimate for full tool adoption.
-- [Quality tool retention report](quality_tool_retention_report.md):
-  per-tool benefits, discovered defects, current evidence, and recommended
-  steady-state cadence before merge.
+- [Quality assurance](quality.md):
+  QA commands, active tool cadence, per-tool benefits, discovered defects,
+  adoption status, and scheduled-triage process.
 
 ## Parser Frontends
 
 ### Fortran
 
 - [Fortran parser reference](fortran/fortran_parser.md): supported subset,
-  command-line usage, APIs, and diagnostics.
-- [Fortran parser implementation reference](fortran/parser_implementation_reference.md):
-  implementation inventory, testing workflow, and maintenance guard policy.
+  command-line usage, APIs, diagnostics, implementation inventory, and
+  maintenance guard policy.
 
 ### C
 
 - [C parser reference](c_parser/c_parser_reference.md): implemented parser
-  behavior, semantic handoff, and testing workflow.
-- [C parser architecture plan](c_parser/c_parser_architecture.md): design and
-  integration decisions.
-- [C parser CLI workflow plan](c_parser/c_parser_cli_workflow.md): command
-  surface and output contracts.
+  behavior, command workflow, semantic handoff, architecture notes, and testing
+  workflow.
 
 ## Fixture Notes
 

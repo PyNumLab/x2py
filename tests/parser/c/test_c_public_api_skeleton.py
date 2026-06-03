@@ -91,7 +91,6 @@ def test_parse_c_file_accepts_inline_source_and_returns_typed_model():
     assert isinstance(parsed, CFile)
     assert parsed.filename == "inline.h"
     assert parsed.language == "c"
-    assert parsed.parser_status == "partial"
     assert [fn.name for fn in parsed.functions] == ["add"]
 
 
@@ -213,7 +212,6 @@ def test_c_file_serialization_is_json_stable():
     assert parsed.to_dict() == {
         "filename": "empty.c",
         "language": "c",
-        "parser_status": "partial",
         "preprocessing": "raw",
         "functions": [],
         "structs": [],

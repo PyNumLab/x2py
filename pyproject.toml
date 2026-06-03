@@ -20,7 +20,6 @@ qa = [
     "pip-audit>=2.7",
     "pytest>=8.0",
     "pytest-randomly>=3.15",
-    "pytest-xdist[psutil]>=3.6",
     "radon[toml]>=6.0",
     "ruff>=0.11",
     "vulture>=2.14",

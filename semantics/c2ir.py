@@ -108,8 +108,10 @@ _NUMERIC_SEMANTIC_TYPES = frozenset(
         "UInt64",
         "Float32",
         "Float64",
+        "Float128",
         "Complex64",
         "Complex128",
+        "Complex256",
         "Any",
         "SizeT",
     }
@@ -131,8 +133,10 @@ _PRIMITIVE_TYPE_MAP: dict[type[CType], str | None] = {
     CUnsignedLongLong: "UInt64",
     CFloat: "Float32",
     CDouble: "Float64",
+    CLongDouble: "Float128",
     CFloatComplex: "Complex64",
     CDoubleComplex: "Complex128",
+    CLongDoubleComplex: "Complex256",
 }
 
 _STANDARD_TYPE_FALLBACKS = {
@@ -292,7 +296,6 @@ class CToIRConverter:
                     source_kind="translation_unit",
                     metadata={
                         "preprocessing": c_file.preprocessing,
-                        "parser_status": c_file.parser_status,
                     },
                 ),
             )
@@ -485,13 +488,6 @@ class CToIRConverter:
             return self._callback_placeholder(type_)
         if isinstance(type_, CUnknownType):
             return self._unresolved_type(type_.spelling, owner=owner, source_type=self._type_text(type_))
-        if isinstance(type_, CLongDouble | CLongDoubleComplex):
-            return self._unsupported_type(
-                "c_long_double_unsupported",
-                "C long double types are not mapped until target precision policy is explicit.",
-                owner=owner,
-                source_type=self._type_text(type_),
-            )
         if isinstance(type_, CVoid):
             return SemanticType(
                 name="Any",

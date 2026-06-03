@@ -491,6 +491,9 @@ def _build_preprocessing_config(args: argparse.Namespace, parser: argparse.Argum
     """Build and validate the shared preprocessing CLI configuration."""
     defines = list(args.defines or [])
     undefs = list(args.undefs or [])
+    compiler = args.compiler
+    if compiler is None and args.compile_commands is None and args.preprocess_template is None:
+        compiler = "cc" if args.language == "c" else "gfortran"
     for define in defines:
         try:
             validate_macro_name(define, "--define/-D")
@@ -503,8 +506,8 @@ def _build_preprocessing_config(args: argparse.Namespace, parser: argparse.Argum
             parser.error(str(exc))
 
     config = PreprocessingConfig(
-        mode=args.preprocess,
-        compiler=args.compiler,
+        mode="compiler",
+        compiler=compiler,
         compile_commands=args.compile_commands,
         adapter=args.preprocessor_adapter,
         command_template=args.preprocess_template,
@@ -518,39 +521,8 @@ def _build_preprocessing_config(args: argparse.Namespace, parser: argparse.Argum
         private_includes=list(args.private_includes or []),
     )
 
-    compiler_only_flags = [
-        ("--compiler", args.compiler),
-        ("--compile-commands", args.compile_commands),
-        ("--preprocessor-adapter", None if args.preprocessor_adapter == "auto" else args.preprocessor_adapter),
-        ("--preprocess-template", args.preprocess_template),
-        ("--std", args.std),
-        ("--compiler-arg", args.compiler_args),
-        ("--include-exposure", None if args.include_exposure == "reachable-project" else args.include_exposure),
-        ("--public-include", args.public_includes),
-        ("--private-include", args.private_includes),
-    ]
-    for option, value in compiler_only_flags:
-        if value and not config.uses_compiler:
-            parser.error(f"{option} requires --preprocess compiler")
-
     if config.uses_compiler and config.command_template and config.adapter != "command-template":
         parser.error("--preprocess-template requires --preprocessor-adapter command-template")
-    if config.uses_compiler and not config.compiler and not config.compile_commands and not config.command_template:
-        parser.error(
-            "--preprocess compiler requires --compiler with an exact executable, for example gcc-13 or /usr/bin/clang-18"
-        )
-    if config.compile_commands and not config.uses_compiler:
-        parser.error("--compile-commands requires --preprocess compiler")
-    if args.language == "c" and not config.uses_compiler and (defines or undefs):
-        parser.error(
-            "-D/--define and -U/--undef affect C only with --preprocess compiler; raw C parsing rejects unresolved preprocessing directives"
-        )
-    if args.language == "fortran" and not config.uses_compiler and (defines or undefs):
-        parser.error(
-            "-D/--define and -U/--undef affect Fortran only with --preprocess compiler; raw Fortran CPP directives require compiler preprocessing"
-        )
-    if args.language == "fortran" and not config.uses_compiler and config.include_dirs:
-        parser.error("-I/--include-dir affects Fortran only with --preprocess compiler")
     return config
 
 
@@ -604,15 +576,15 @@ def main() -> int:
             "  Parse C subset JSON:\n"
             "    python -m x2py path/to/api.h --language c --parse --json\n"
             "  Parse C with an exact compiler executable and API flags:\n"
-            "    python -m x2py path/to/api.h --language c --parse --preprocess compiler --compiler clang-18 -I include -D API_EXPORT= --std c11\n"
+            "    python -m x2py path/to/api.h --language c --parse --compiler clang-18 -I include -D API_EXPORT= --std c11\n"
             "  Parse C with a compiler path and target/sysroot passthrough flags:\n"
-            "    python -m x2py path/to/api.c --language c --parse --preprocess compiler --compiler /usr/bin/gcc-13 --compiler-arg=--sysroot=/opt/sdk\n"
+            "    python -m x2py path/to/api.c --language c --parse --compiler /usr/bin/gcc-13 --compiler-arg=--sysroot=/opt/sdk\n"
             "  Parse C with compile_commands.json for project flags:\n"
-            "    python -m x2py path/to/api.c --language c --parse --preprocess compiler --compile-commands build/compile_commands.json\n"
+            "    python -m x2py path/to/api.c --language c --parse --compile-commands build/compile_commands.json\n"
             "  Parse Fortran with an exact compiler executable:\n"
-            "    python -m x2py path/to/file.F90 --parse --preprocess compiler --compiler /usr/bin/gfortran-12 -I include -D USE_MPI\n"
+            "    python -m x2py path/to/file.F90 --parse --compiler /usr/bin/gfortran-12 -I include -D USE_MPI\n"
             "  Parse with a custom preprocessing command template:\n"
-            "    python -m x2py path/to/api.h --language c --parse --preprocess compiler --preprocessor-adapter command-template --preprocess-template 'cc -E {include_dirs} {defines} {source}'\n"
+            "    python -m x2py path/to/api.h --language c --parse --preprocessor-adapter command-template --preprocess-template 'cc -E {include_dirs} {defines} {source}'\n"
             "  Write parser JSON:\n"
             "    python -m x2py path/to/file.f90 --parse --json --out report.json\n"
             "  Write one JSON file next to each source:\n"
@@ -648,16 +620,6 @@ def main() -> int:
     )
     parser.add_argument("--parse", action="store_true", help="Run and output parser stage report")
     parser.add_argument(
-        "--preprocess",
-        choices=("internal", "compiler"),
-        default="internal",
-        help=(
-            "Preprocessing mode. 'internal' parses plain or already-expanded source without CPP branch selection. "
-            "'compiler' runs the exact "
-            "compiler/preprocessor configured by --compiler or --compile-commands."
-        ),
-    )
-    parser.add_argument(
         "--preprocessor-adapter",
         choices=("auto", "gcc-compatible-c", "gnu-fortran", "command-template"),
         default="auto",
@@ -666,14 +628,14 @@ def main() -> int:
     parser.add_argument(
         "--compiler",
         help=(
-            "Exact compiler/preprocessor executable for --preprocess compiler, e.g. gcc-13, "
+            "Exact compiler/preprocessor executable, e.g. gcc-13, "
             "clang-18, /usr/bin/gfortran-12, or /opt/intel/oneapi/compiler/latest/bin/ifx."
         ),
     )
     parser.add_argument(
         "--compile-commands",
         metavar="PATH",
-        help="compile_commands.json database used with --preprocess compiler.",
+        help="compile_commands.json database used for compiler preprocessing.",
     )
     parser.add_argument(
         "--preprocess-template",

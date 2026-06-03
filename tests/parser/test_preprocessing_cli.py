@@ -2125,7 +2125,7 @@ def test_cli_help_documents_exact_compiler_and_preprocessing_examples():
         check=True,
     )
 
-    assert "--preprocess {internal,compiler}" in res.stdout
+    assert "--preprocess {internal,compiler}" not in res.stdout
     assert "--compiler COMPILER" in res.stdout
     assert "gcc-13" in res.stdout
     assert "clang-18" in res.stdout
@@ -2134,7 +2134,7 @@ def test_cli_help_documents_exact_compiler_and_preprocessing_examples():
     assert "-D USE_MPI" in res.stdout
 
 
-def test_cli_c_internal_mode_accepts_include_dirs_for_raw_include_resolution(tmp_path: Path):
+def test_cli_c_default_compiler_mode_accepts_include_dirs(tmp_path: Path):
     include_dir = tmp_path / "include"
     include_dir.mkdir()
     dependency = include_dir / "types.h"
@@ -2161,11 +2161,11 @@ def test_cli_c_internal_mode_accepts_include_dirs_for_raw_include_resolution(tmp
     )
     payload = json.loads(res.stdout)[str(header)]
 
-    assert payload["preprocessing"] == "raw"
-    assert payload["includes"][0]["resolved_path"] == str(dependency)
+    assert payload["preprocessing"] == "compiler"
+    assert payload["preprocessing_recipe"]["compiler"] == "cc"
 
 
-def test_cli_c_internal_mode_rejects_define_flags_that_need_compiler_selection(tmp_path: Path):
+def test_cli_c_default_compiler_mode_accepts_define_flags(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int run(void);\n", encoding="utf-8")
 
@@ -2185,11 +2185,10 @@ def test_cli_c_internal_mode_rejects_define_flags_that_need_compiler_selection(t
         text=True,
     )
 
-    assert res.returncode == 2
-    assert "raw C parsing rejects unresolved preprocessing directives" in res.stderr
+    assert res.returncode == 0
 
 
-def test_cli_compiler_mode_requires_exact_compiler_or_compile_database(tmp_path: Path):
+def test_cli_compiler_mode_uses_default_c_compiler(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int run(void);\n", encoding="utf-8")
 
@@ -2202,18 +2201,17 @@ def test_cli_compiler_mode_requires_exact_compiler_or_compile_database(tmp_path:
             "--language",
             "c",
             "--parse",
-            "--preprocess",
-            "compiler",
+            "--json",
         ],
         capture_output=True,
         text=True,
     )
 
-    assert res.returncode == 2
-    assert "requires --compiler with an exact executable" in res.stderr
+    assert res.returncode == 0
+    assert json.loads(res.stdout)[str(header)]["preprocessing_recipe"]["compiler"] == "cc"
 
 
-def test_cli_compiler_specific_flags_require_compiler_mode(tmp_path: Path):
+def test_cli_accepts_explicit_compiler_flag(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int run(void);\n", encoding="utf-8")
 
@@ -2233,8 +2231,7 @@ def test_cli_compiler_specific_flags_require_compiler_mode(tmp_path: Path):
         text=True,
     )
 
-    assert res.returncode == 2
-    assert "--compiler requires --preprocess compiler" in res.stderr
+    assert res.returncode in {0, 1}
 
 
 def test_cli_accepts_compile_database_for_fortran_compiler_mode(tmp_path: Path):
@@ -2266,8 +2263,6 @@ def test_cli_accepts_compile_database_for_fortran_compiler_mode(tmp_path: Path):
             str(source),
             "--parse",
             "--json",
-            "--preprocess",
-            "compiler",
             "--compile-commands",
             str(database),
         ],
@@ -2297,8 +2292,6 @@ def test_cli_c_compiler_mode_runs_exact_compiler_and_parses_preprocessed_stdout(
             "c",
             "--parse",
             "--json",
-            "--preprocess",
-            "compiler",
             "--compiler",
             str(compiler),
             "-I",
@@ -2365,8 +2358,6 @@ def test_cli_preprocessing_failure_has_category_without_traceback_unless_debug(t
             "--language",
             "c",
             "--parse",
-            "--preprocess",
-            "compiler",
             "--compiler",
             str(compiler),
         ],
@@ -2382,8 +2373,6 @@ def test_cli_preprocessing_failure_has_category_without_traceback_unless_debug(t
             "--language",
             "c",
             "--parse",
-            "--preprocess",
-            "compiler",
             "--compiler",
             str(compiler),
             "--debug",
@@ -2436,8 +2425,6 @@ def test_cli_c_compile_commands_mode_uses_exact_database_compiler(tmp_path: Path
             "c",
             "--parse",
             "--json",
-            "--preprocess",
-            "compiler",
             "--compile-commands",
             str(database),
         ],
@@ -2480,8 +2467,6 @@ def test_cli_c_compiler_mode_macro_metadata_flows_to_semantic_constants(tmp_path
             "c",
             "--semantics",
             "--json",
-            "--preprocess",
-            "compiler",
             "--compiler",
             str(compiler),
         ],
@@ -2496,32 +2481,7 @@ def test_cli_c_compiler_mode_macro_metadata_flows_to_semantic_constants(tmp_path
     assert constants["API_VERSION"]["default_value"] == "3"
 
 
-def test_cli_fortran_internal_mode_rejects_define_flags_that_need_compiler_selection(tmp_path: Path):
-    source = tmp_path / "branch.F90"
-    source.write_text(
-        """
-#ifdef USE_MPI
-subroutine selected()
-end subroutine selected
-#else
-subroutine fallback()
-end subroutine fallback
-#endif
-""".strip(),
-        encoding="utf-8",
-    )
-
-    res = subprocess.run(
-        [sys.executable, "-m", "x2py", str(source), "--parse", "-D", "USE_MPI"],
-        capture_output=True,
-        text=True,
-    )
-
-    assert res.returncode == 2
-    assert "raw Fortran CPP directives require compiler preprocessing" in res.stderr
-
-
-def test_cli_fortran_internal_json_does_not_record_macro_selection_recipe(tmp_path: Path):
+def test_cli_fortran_default_compiler_json_records_preprocessing_recipe(tmp_path: Path):
     source = tmp_path / "branch.F90"
     source.write_text(
         "subroutine selected()\nend subroutine selected\n",
@@ -2535,10 +2495,10 @@ def test_cli_fortran_internal_json_does_not_record_macro_selection_recipe(tmp_pa
         check=True,
     )
 
-    assert "preprocessing_recipe" not in json.loads(res.stdout)[str(source)]
+    assert json.loads(res.stdout)[str(source)]["preprocessing_recipe"]["compiler"] == "gfortran"
 
 
-def test_cli_fortran_internal_mode_rejects_include_dirs_that_need_compiler(tmp_path: Path):
+def test_cli_fortran_default_compiler_mode_accepts_include_dirs(tmp_path: Path):
     source = tmp_path / "mini.F90"
     source.write_text("subroutine work()\nend subroutine work\n", encoding="utf-8")
 
@@ -2548,8 +2508,7 @@ def test_cli_fortran_internal_mode_rejects_include_dirs_that_need_compiler(tmp_p
         text=True,
     )
 
-    assert res.returncode == 2
-    assert "affects Fortran only with --preprocess compiler" in res.stderr
+    assert res.returncode == 0
 
 
 def test_cli_fortran_compiler_mode_runs_exact_compiler_and_parses_stdout(tmp_path: Path):
@@ -2568,8 +2527,6 @@ def test_cli_fortran_compiler_mode_runs_exact_compiler_and_parses_stdout(tmp_pat
             str(source),
             "--parse",
             "--json",
-            "--preprocess",
-            "compiler",
             "--compiler",
             str(compiler),
             "-I",

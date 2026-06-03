@@ -1,41 +1,22 @@
 # Quality Assurance
 
-This project uses a staged Python QA stack: fast bug-focused checks are suitable
-for every pull request, while heavier dead-code, complexity, and fuzz workflows
-are run manually or on a schedule.
+Last reviewed: 2026-06-03
 
-Track the remaining rollout work, the current effort-weighted completion
-estimate, and completed QA passes in the
-[`quality adoption checklist`](quality_adoption_checklist.md). As of
-2026-06-03, with mutation testing removed from the active stack, the documented
-estimate is about `98-99%` adopted by effort, with about `1-2%` of the active
-rollout still remaining. The
-[`quality tool retention report`](quality_tool_retention_report.md) records the
-recommended steady-state cadence and the evidence for keeping each tool.
+This project uses a staged Python QA stack. Fast bug-focused checks run on pull
+requests, while deeper fuzzing and random-order discovery run on schedule or by
+manual dispatch.
 
-Full adoption means the fast gates are blocking, the deeper scheduled/manual
-jobs are in place, Ruff/Radon ratchets have stable policies, and the checklist
-records any scheduled failures until they are fixed.
+The selected active quality stack is adopted. Scheduled workflow review and
+future Ruff/Radon threshold ratchets are ongoing maintenance, not unfinished
+rollout work. Mutation testing and pre-commit are not part of the active stack.
 
-## Tool Roles
+## Active Cadence
 
-- `ruff`: fast linting and formatting. It catches undefined names, unused
-  imports, import-order drift, suspicious bug patterns, simplifiable code, and
-  very high cyclomatic complexity.
-- `hypothesis`: property-based testing. It generates edge cases and shrinks
-  failures to small examples, which is useful for parsers, AST transforms, and
-  code generators.
-- `vulture`: dead-code detection. It finds likely unused functions, classes,
-  variables, and unreachable definitions.
-- `radon`: complexity and maintainability metrics. It identifies functions
-  whose control flow is risky enough to deserve decomposition or focused tests.
-- `bandit`: security scanning for unsafe Python patterns such as risky
-  subprocess, file, crypto, or deserialization usage.
-- `pip-audit`: dependency vulnerability scanning against Python advisory data.
-- `pytest-randomly`: randomized test order and repeatable random seeds to catch
-  hidden test ordering dependencies.
-- `pytest-xdist`: parallel pytest execution, useful for keeping broad parser
-  and fixture suites fast.
+| Cadence | Tools |
+| --- | --- |
+| Pull request and protected-branch push | pytest, coverage.py, stable-seed pytest-randomly, Ruff, Bandit, pip-audit, Vulture, staged Radon policy |
+| Weekly and manual dispatch | Hypothesis fuzz profile, changing-seed pytest-randomly |
+| Manual triage | Full Radon reports and low-severity Bandit review |
 
 ## Install
 
@@ -51,18 +32,6 @@ If your shell only exposes `python3`, use:
 python3 -m pip install -e ".[qa]"
 ```
 
-## Test Organization
-
-Use the current test tree as the default split:
-
-- Unit tests: keep narrow behavior tests near the existing domain folders such
-  as `tests/parser`, `tests/semantics`, and `tests/pyi`.
-- Regression tests: add a test next to the subsystem that failed, with a name
-  describing the bug shape. Mark with `@pytest.mark.regression` when useful.
-- Property tests: put generated invariant tests in `tests/property`.
-- Fuzz-like parser tests: keep bounded generators in `tests/property`, mark
-  with `@pytest.mark.fuzz`, and run with the `fuzz` Hypothesis profile.
-
 ## Local Commands
 
 Fast inner loop:
@@ -73,17 +42,19 @@ ruff check .
 ruff format .
 ```
 
-CI-like test run with randomized ordering, xdist, subprocess coverage, and the
-CI Hypothesis profile:
+CI-shaped test and coverage run:
 
 ```bash
 HYPOTHESIS_PROFILE=ci \
 COVERAGE_PROCESS_START=pyproject.toml \
 PYTHONPATH=. \
-python -m coverage run -m pytest -q -n auto --randomly-seed=1
+python -m coverage run -m pytest -q --randomly-seed=1
 python -m coverage combine
 python -m coverage report
 ```
+
+For subprocess coverage investigations, mirror that command shape before
+deciding a fix. A plain local coverage run can miss subprocess data.
 
 Reproduce a random-order failure:
 
@@ -91,15 +62,10 @@ Reproduce a random-order failure:
 pytest -q --randomly-seed=<seed-from-failing-run>
 ```
 
-Run property tests only:
+Run property and fuzz tests:
 
 ```bash
 pytest -q -m property --hypothesis-profile=ci
-```
-
-Run longer fuzz-like tests:
-
-```bash
 HYPOTHESIS_PROFILE=fuzz pytest -q -m fuzz --hypothesis-show-statistics
 ```
 
@@ -110,22 +76,7 @@ bandit -c pyproject.toml -r c_parser fortran_parser semantics x2py --severity-le
 pip-audit . --cache-dir /tmp/pip-audit-cache
 ```
 
-For a full low-severity Bandit review, omit the severity and confidence flags.
-Expect reviewed subprocess usage and parser tokens such as `"*"` to need triage.
-
-Current low-severity Bandit findings were reviewed on 2026-05-31:
-
-- `B105` findings are parser sentinel text such as `"*"` and preprocessing
-  template tokens such as `"{source}"`; they are not credentials.
-- `B404` and `B603` findings are intentional compiler, probe-executable, and
-  preprocessor invocation paths. They pass argument vectors to `subprocess.run`
-  without shell execution. Re-review them if command construction or trust
-  boundaries change.
-
-Keep these findings visible in full Bandit reports instead of suppressing them
-globally.
-
-Run dead-code and complexity reports:
+Run dead-code and complexity checks:
 
 ```bash
 vulture
@@ -134,34 +85,136 @@ radon cc c_parser fortran_parser semantics x2py -n C -s --total-average
 radon mi c_parser fortran_parser semantics x2py -s
 ```
 
-The policy check is blocking. It prevents the reviewed C-or-worse hotspot
+The Radon policy check is blocking. It prevents the reviewed C-or-worse hotspot
 average from rising above `19.01` and, when a Git base ref is supplied, rejects
-changed production-code blocks above complexity `20`. The full Radon reports
-remain useful for hotspot planning and threshold ratchets.
+new or worsened changed production blocks above complexity `20`. Full Radon
+reports remain advisory for refactor planning.
 
-## Hypothesis Patterns
+## Tool Decisions
 
-Prefer generated valid subsets before generating arbitrary invalid text. Valid
-subset tests give strong invariants with fewer false positives.
+### pytest And coverage.py
 
-Example parser invariant:
+**Role:** behavioral regression backbone and branch-coverage floor.
 
-```python
-from hypothesis import given, strategies as st
+**Evidence:** recorded full-suite baseline is `3497 passed`; combined
+subprocess branch coverage is `95.34%`, above the configured `95%` gate.
 
-from c_parser import parse_c_file
+**Decision:** keep as required baseline project gates.
 
+### pytest-randomly
 
-@given(st.lists(st.integers(min_value=0, max_value=20), unique=True))
-def test_generated_c_prototypes_preserve_parameter_order(ids):
-    params = ", ".join(f"int p_{i}" for i in ids) or "void"
-    source = f"int fn({params});\n"
+**Role:** catches hidden test-order coupling and makes failures reproducible
+with seeds.
 
-    parsed = parse_c_file(source, filename="generated.h")
+**Evidence:** normal CI uses `--randomly-seed=1`; scheduled/manual quality runs
+use `${{ github.run_id }}` as a changing seed.
 
-    assert parsed.diagnostics == []
-    assert [p.name for p in parsed.functions[0].parameters] == [f"p_{i}" for i in ids]
-```
+**Decision:** keep stable-seed PR CI and changing-seed scheduled/manual runs.
+
+### Hypothesis
+
+**Role:** generates edge cases for parsers, AST transforms, semantic IR, and
+code generation.
+
+**Bugs found:** generated code-generation cases exposed quoted `Name(...)`
+emission. Generated preprocessing inputs also aligned raw Fortran and C macro
+handling around compiler-required errors.
+
+**Decision:** keep bounded property tests in normal test coverage and longer
+fuzz profiles on schedule/manual dispatch.
+
+### Ruff
+
+**Role:** fast linting and formatting for undefined names, unused imports,
+suspicious patterns, modernization, simplified control flow, and high McCabe
+complexity.
+
+**Bugs or issues found:** raw regex issues, formatting drift, and static-risk
+maintenance debt. These are static-risk findings, not runtime defects.
+
+**Decision:** keep as a blocking gate. Line-length diagnostics remain
+intentionally unselected because wrapping parser diagnostics and embedded test
+sources would add noise without improving correctness.
+
+### Bandit
+
+**Role:** security scanning for subprocess, filesystem, deserialization, and
+credential-like patterns.
+
+**Evidence:** no medium- or high-severity findings. Reviewed low-severity
+findings are parser sentinel/template tokens and intentional argv-based
+compiler/preprocessor subprocess calls without shell execution.
+
+**Decision:** keep blocking at medium confidence/severity in CI. Re-review the
+full low-severity report after subprocess-boundary changes.
+
+### pip-audit
+
+**Role:** dependency vulnerability scanning.
+
+**Evidence:** no known vulnerability is present in the current dependency set.
+
+**Decision:** keep blocking in CI and re-run locally when dependencies change.
+
+### Vulture
+
+**Role:** dead-code detection.
+
+**Bugs or issues found:** removed dead Fortran parser parameters and unused test
+lambda parameters reported by CI.
+
+**Decision:** keep blocking in CI with narrow exclusions.
+
+### Radon
+
+**Role:** complexity and maintainability tracking.
+
+**Evidence:** reviewed average complexity is `C (18.95)`. The staged policy
+allows unchanged legacy hotspots while blocking new or worsened changed
+production hotspots above complexity `20`.
+
+**Bugs or issues found:** Radon found maintainability hotspots. CI also exposed
+that the first staged policy was too strict for unchanged legacy hotspots; the
+policy was corrected.
+
+**Decision:** keep `tools/check_radon_policy.py` blocking and keep full Radon
+reports advisory/manual.
+
+### GitHub Actions
+
+**Role:** reproducible CI and scheduled discovery.
+
+**Bugs or issues found:** recent remote quality runs found Ruff raw-regex
+issues, Ruff formatting drift, Vulture unused test parameters, and the
+too-strict Radon policy.
+
+**Decision:** keep. Review scheduled results and record actionable failures
+until fixed.
+
+## Historical Mutation Findings
+
+Mutation testing was useful during rollout, but it is no longer an adopted
+tool. Do not keep `mutmut` as a regular dependency, workflow, or local wrapper.
+A future annual mutation audit can be run outside the normal QA stack if
+needed.
+
+Keep the ordinary regression tests and fixes that came from it:
+
+- duplicate typedef-cycle diagnostic coverage;
+- cycle-safe union-by-value diagnostics;
+- Fortran project namespace collection respecting the requested encoding;
+- direct Fortran parser contracts for diagnostics, forwarding, registries,
+  ownership, provenance, source locations, boundaries, and loop progress.
+
+## Test Organization
+
+- Unit tests: keep narrow behavior tests near existing domain folders such as
+  `tests/parser`, `tests/semantics`, and `tests/pyi`.
+- Regression tests: add focused tests next to the subsystem that failed. Mark
+  with `@pytest.mark.regression` when useful.
+- Property tests: put generated invariant tests in `tests/property`.
+- Fuzz-like parser tests: keep bounded generators in `tests/property`, mark
+  with `@pytest.mark.fuzz`, and run with the `fuzz` Hypothesis profile.
 
 Good invariants for this codebase:
 
@@ -173,70 +226,38 @@ Good invariants for this codebase:
 - malformed input raises parser-owned diagnostic exceptions, not arbitrary
   exceptions.
 
-## Historical Mutation Findings
+## Adoption Status
 
-Mutation testing is no longer part of the active QA stack. Earlier focused
-campaigns still produced useful regression tests and fixes, including duplicate
-typedef-cycle diagnostics, cycle-safe union-by-value diagnostics, and a Fortran
-project namespace-collection encoding bug. Keep those ordinary regression tests
-in the suite. A future mutation review can be run as an occasional external
-audit, such as annually, without keeping `mutmut` in the normal dependency set
-or CI workflow.
+Full adoption for the selected stack means:
 
-## Strictness Defaults
+- fast PR gates are blocking and stable;
+- scheduled/manual fuzzing and changing random-order jobs exist;
+- Ruff baseline ignores are removed or deliberately retained with a reason;
+- Radon has a documented blocking policy for new or materially changed code;
+- scheduled workflow failures have a documented triage path.
 
-Current defaults are intentionally staged for an existing parser codebase:
+Current status by area:
 
-- Hard gate: pytest, coverage threshold, Ruff bug-focused lint and formatting,
-  Bandit, pip-audit, Vulture, and the staged Radon complexity policy.
-- Advisory: Radon full reports, because complexity reduction needs focused
-  tests and gradual refactoring.
-- Scheduled or manual: long Hypothesis fuzz profiles and changing random-order
-  runs.
+| Area | Status | Explanation |
+| --- | --- | --- |
+| Fast pull-request gates | Complete for adoption | Tests, coverage, Ruff, Bandit, pip-audit, Vulture, and staged Radon are wired as blocking gates. |
+| Property and fuzz testing | Complete for adoption | Current parser, AST, semantic-IR, and code-generation invariants exist; future failures still need regression tests. |
+| Dead-code detection | Complete for adoption | Vulture is clean and blocking; future public API additions should keep exclusions narrow. |
+| Security and dependency scanning | Complete for adoption | Bandit and pip-audit are blocking; low-severity and dependency reviews recur when related code changes. |
+| Complexity tracking | Complete for adoption | The staged Radon policy is blocking in CI; future hotspot decomposition can ratchet thresholds further. |
+| Scheduled workflow triage | Complete for adoption | Jobs exist and the triage process is documented; scheduled failures remain ordinary maintenance. |
 
-Most fast gates are already wired. The remaining rollout is small and centered
-on scheduled workflow review plus future complexity tightening where the
-reports are stable enough to make good blocking checks. Ruff's historical
-baseline-ignore list is empty. Line-length diagnostics remain intentionally
-unselected because wrapping parser diagnostics and embedded test sources would
-add noise without improving correctness.
+Ongoing maintenance:
 
-When updating the estimate, separate one-time adoption from recurring
-maintenance. A CI gate becoming blocking or a scheduled workflow review that
-records actionable results should change the percentage. A routine clean run of
-an already-adopted check should update the baseline date or progress log only
-when it provides new evidence.
-
-After the first cleanup pass, ratchet strictness in this order:
-
-1. Keep Vulture exclusions narrow as new public/plugin APIs are added.
-2. Lower Ruff `max-complexity` from 45 toward 20 as hotspots are decomposed.
-
-## Parser And Codegen Practices
-
-- Store minimal failing parser inputs from Hypothesis in regression tests.
-- Keep golden files for broad compatibility, but add small unit tests for the
-  exact rule that changed.
-- Test round trips where possible: parse, convert to IR, emit, parse again.
-- Use metamorphic tests: whitespace changes, declaration order changes, and
-  equivalent type spellings should preserve semantics where the language allows.
-- Assert diagnostics structurally: code, severity, location, and message class.
-- Keep fuzz generators bounded. Prefer many small syntactically valid programs
-  over huge random strings in pull-request CI.
-
-## CI Layout
-
-- `.github/workflows/tests.yml` runs pytest with xdist, pytest-randomly,
-  Hypothesis CI profile, and coverage combine/report.
-- `.github/workflows/quality.yml` runs Ruff, Bandit, pip-audit, blocking
-  Vulture, the staged Radon policy, and advisory full Radon reports. Manual
-  dispatch and scheduled jobs run bounded parser fuzzing and a changing
-  pytest-randomly seed.
+1. Review scheduled workflow results regularly and record actionable failures
+   until fixed.
+2. Lower Ruff/Radon complexity thresholds after hotspot refactors make that
+   safe.
 
 ## Scheduled Workflow Triage
 
-The `Quality` workflow runs its deeper discovery jobs every Monday and by
-manual dispatch. Review the latest scheduled run after each execution:
+The `Quality` workflow runs deeper discovery jobs every Monday and by manual
+dispatch:
 
 1. Re-run a failing job once to separate actionable failures from transient
    runner or package-index failures.
@@ -244,9 +265,22 @@ manual dispatch. Review the latest scheduled run after each execution:
    save minimized examples as focused regression tests.
 3. Reproduce random-order failures with the logged `--randomly-seed` value and
    add a regression test before fixing leaked state.
-4. Add each actionable scheduled failure to the adoption checklist progress
-   log with its run URL, job, reproduction command, and follow-up status. Keep
-   the entry open until the regression test and fix pass.
+4. Record each actionable scheduled failure here or in the relevant issue until
+   the regression test and fix pass.
+
+## Progress Log
+
+| Date | Area | Result | Follow-up |
+| --- | --- | --- | --- |
+| 2026-05-31 | Initial stack integration | Added configuration, CI, documentation, and Hypothesis tests. | Continue staged strictness rollout. |
+| 2026-05-31 | Bandit | Reviewed low-severity findings and confirmed no medium- or high-severity findings. | Re-review when command trust boundaries change. |
+| 2026-05-31 | Hypothesis code generation | Added generated native-name escaping, stable synthetic-import ordering, and semantic-IR-to-Pyi parse-back invariants; fixed quoted `Name(...)` emission. | Keep storing minimized failures. |
+| 2026-06-01 | Ruff formatting rollout | Formatted the historical Python tree and changed CI to `ruff format --check .`. | Continue complexity-policy ratchets. |
+| 2026-06-01 | Radon and Ruff complexity policy | Added `tools/check_radon_policy.py`, made the staged Radon policy blocking in CI, and lowered Ruff McCabe from `50` to `45`. | Continue hotspot refactors and later threshold ratchets toward `20`. |
+| 2026-06-02 | Historical mutation-derived tests | Added direct Fortran parser contracts and fixed the directory namespace encoding bug. | Keep the tests as normal regression coverage. |
+| 2026-06-03 | Manual Quality workflow review | Reviewed workflow run `26832679820`: fuzz passed, changing random-order pytest passed, static analysis exposed Ruff fixes, and full-project mutation exceeded the `3h` Actions limit. | Mutation was removed from active adoption; keep scheduled fuzz/random-order review. |
+| 2026-06-03 | Quality workflow triage | Reviewed latest Quality runs; run `26856679038` for `remove mutmut` completed successfully. | No actionable scheduled or PR quality failure remains. |
+| 2026-06-03 | Final active-stack cleanup | Consolidated quality docs, removed mutation and pre-commit from the active stack, restored the C parser golden generator, and regenerated C parser goldens. | Treat scheduled review and threshold ratchets as ongoing maintenance. |
 
 ## References
 
@@ -258,5 +292,4 @@ manual dispatch. Review the latest scheduled run after each execution:
 - Radon command line: https://radon.readthedocs.io/en/stable/commandline.html
 - Bandit configuration: https://bandit.readthedocs.io/en/latest/config.html
 - pip-audit: https://github.com/pypa/pip-audit
-- pytest-xdist: https://pytest-xdist.readthedocs.io/
 - pytest-randomly: https://github.com/pytest-dev/pytest-randomly

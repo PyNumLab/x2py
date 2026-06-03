@@ -456,6 +456,27 @@ def test_raw_mode_rejects_directives_that_require_preprocessing(directive):
     assert exc_info.value.line_number == 1
 
 
+def test_raw_mode_accepts_trivial_include_guards_without_preprocessing():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+#ifndef API_H
+#define API_H
+
+int run(void);
+
+#endif
+""",
+        filename="api.h",
+    )
+
+    assert parsed.preprocessing == "raw"
+    assert [function.name for function in parsed.functions] == ["run"]
+    assert parsed.macros == []
+    assert parsed.raw_directives == []
+
+
 def test_raw_mode_records_pragmas_as_metadata_without_hiding_declarations():
     from c_parser import parse_c_file
 
@@ -525,7 +546,7 @@ double scale(double x);
     assert parsed.functions[0].source_location.line == 1
     assert parsed.functions[1].source_location.line == 20
     payload = parsed.to_dict()
-    assert payload["functions"][0]["origin"] == "preprocessed"
+    assert "origin" not in payload["functions"][0]
     assert payload["preprocessed_source_path"] == "api.i"
     assert payload["original_source_paths"] == ["api.h"]
 

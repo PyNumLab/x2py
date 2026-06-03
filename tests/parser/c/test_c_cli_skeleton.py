@@ -35,20 +35,29 @@ def test_cli_c_parse_human_tree_output_for_header(tmp_path: Path):
     assert f"File: {header}" in res.stdout
     assert "Language: c" in res.stdout
     assert "Functions: 1" in res.stdout
-    assert "Parser status: partial" in res.stdout
+    assert "Parser status" not in res.stdout
 
 
 def test_cli_c_parse_json_stdout_for_header(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
-    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--parse", "--json"]
+    cmd = [
+        sys.executable,
+        "-m",
+        "x2py",
+        str(header),
+        "--language",
+        "c",
+        "--parse",
+        "--json",
+    ]
 
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     payload = json.loads(res.stdout)
     file_payload = payload[str(header)]
 
     assert file_payload["language"] == "c"
-    assert file_payload["parser_status"] == "partial"
+    assert "parser_status" not in file_payload
     assert [fn["name"] for fn in file_payload["functions"]] == ["add"]
     assert file_payload["structs"] == []
     assert file_payload["unions"] == []
@@ -60,20 +69,21 @@ def test_cli_c_parse_json_stdout_for_header(tmp_path: Path):
     assert file_payload["diagnostics"] == []
 
 
-def test_cli_c_parse_rejects_raw_macros_that_need_preprocessing(tmp_path: Path):
+def test_cli_c_parse_preprocesses_macros_by_default(tmp_path: Path):
     header = tmp_path / "api.h"
     types = tmp_path / "api_types.h"
     types.write_text("typedef int api_int;\n", encoding="utf-8")
     header.write_text(
-        '#include "api_types.h"\n#define API_VERSION 3\n#define API_DECL(ret) ret\n',
+        '#include "api_types.h"\n#define API_DECL(ret) ret\nAPI_DECL(api_int) run(void);\n',
         encoding="utf-8",
     )
     cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--parse", "--json"]
 
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(res.stdout)[str(header)]
 
-    assert res.returncode == 1
-    assert "CPARSE_PREPROCESSING_REQUIRED" in res.stderr
+    assert payload["preprocessing"] == "compiler"
+    assert [function["name"] for function in payload["functions"]] == ["run"]
 
 
 def test_attach_preprocessing_recipe_filters_invalid_and_duplicate_macros():
@@ -156,7 +166,7 @@ def test_cli_c_parse_json_out_writes_file_and_suppresses_stdout(tmp_path: Path):
 
     assert res.stdout == ""
     assert payload[str(header)]["language"] == "c"
-    assert payload[str(header)]["parser_status"] == "partial"
+    assert "parser_status" not in payload[str(header)]
 
 
 def test_cli_c_parse_out_without_json_writes_json_and_suppresses_stdout(tmp_path: Path):
@@ -179,7 +189,7 @@ def test_cli_c_parse_out_without_json_writes_json_and_suppresses_stdout(tmp_path
     payload = json.loads(output.read_text(encoding="utf-8"))
 
     assert res.stdout == ""
-    assert payload[str(header)]["parser_status"] == "partial"
+    assert "parser_status" not in payload[str(header)]
 
 
 def test_cli_c_semantics_json_stdout_for_header(tmp_path: Path):
@@ -385,7 +395,7 @@ def test_cli_c_no_color_and_debug_traceback_flags_are_accepted(tmp_path: Path):
 
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
-    assert "Parser status: partial" in res.stdout
+    assert "Parser status" not in res.stdout
 
 
 def test_cli_c_no_color_and_no_color_env_format_parse_errors_without_ansi(tmp_path: Path):
@@ -501,7 +511,7 @@ def test_c_parser_cli_module_handles_directory_loader_and_output_modes(tmp_path:
 
     assert c_parser_cli.main([str(header), "--out", str(output)]) == 0
     assert capsys.readouterr().out == ""
-    assert json.loads(output.read_text(encoding="utf-8"))[str(header)]["parser_status"] == "partial"
+    assert "parser_status" not in json.loads(output.read_text(encoding="utf-8"))[str(header)]
 
 
 def test_c_parser_module_entrypoint_and_compatibility_exports(tmp_path: Path):

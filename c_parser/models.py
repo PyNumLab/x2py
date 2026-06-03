@@ -58,11 +58,7 @@ def c_model_to_dict(obj: Any, _seen: set[int] | None = None) -> Any:
             _seen.add(id(obj))
         payload = {"model": type(obj).__name__}
         payload.update(
-            {
-                f.name: c_model_to_dict(getattr(obj, f.name), _seen)
-                for f in fields(obj)
-                if not (f.name == "origin" and getattr(obj, f.name) is None)
-            }
+            {f.name: c_model_to_dict(getattr(obj, f.name), _seen) for f in fields(obj) if f.name != "origin"}
         )
         return payload
     if is_dataclass(obj):
@@ -70,7 +66,7 @@ def c_model_to_dict(obj: Any, _seen: set[int] | None = None) -> Any:
             f.name: c_model_to_dict(getattr(obj, f.name), _seen)
             for f in fields(obj)
             if not (
-                (f.name == "origin" and getattr(obj, f.name) is None)
+                f.name == "origin"
                 or (
                     isinstance(obj, CFile)
                     and f.name in {"preprocessing_recipe", "preprocessed_source_path"}
@@ -523,7 +519,6 @@ class CInclude:
 class CFile:
     filename: str | None = None
     language: str = "c"
-    parser_status: str = "partial"
     preprocessing: str = "raw"
     preprocessing_recipe: dict[str, Any] | None = None
     preprocessed_source_path: str | None = None

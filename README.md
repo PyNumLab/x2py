@@ -161,20 +161,17 @@ Fortran directories scan `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`,
 
 ### Compiler preprocessing, includes, and target probes
 
-Wrapper-facing source parsing should use compiler preprocessing whenever the
-input contains C/CPP preprocessing. The selected compiler is authoritative for
+Wrapper-facing CLI source parsing uses compiler preprocessing. The selected
+compiler is authoritative for
 macro expansion, `#if`/`#ifdef` branch selection, C `#include`, Fortran CPP
 `#include`, predefined macros, `-D`/`-U`, include paths, target flags, and
-sysroot behavior. Internal parser mode remains available for plain source,
-already-preprocessed source, and focused parser tests. Raw Fortran CPP
-directives require compiler preprocessing; compiler linemarkers remain
-accepted for provenance.
+sysroot behavior. If no compiler is specified, C defaults to `cc` and Fortran
+defaults to `gfortran`. Compiler linemarkers remain accepted for provenance.
 
 The shared compiler mode is:
 
 ```bash
 python -m x2py path/to/source.f90 --language fortran --parse \
-  --preprocess compiler \
   --compiler /path/to/compiler \
   -I include \
   -D FEATURE=1 \
@@ -183,11 +180,11 @@ python -m x2py path/to/source.f90 --language fortran --parse \
   --compiler-arg=-fdefault-real-8
 ```
 
-For C, `--language c --preprocess compiler` runs the exact compiler
-preprocessor and parses stdout. C and Fortran can use `--compile-commands
-build/compile_commands.json` when a matching entry supplies the compiler and
-project flags. GCC-compatible C/Clang invocations use `-E -x c`; GNU Fortran
-invocations use `-E -cpp`. Linemarkers are preserved so parser locations can be
+For C, `--language c` runs the compiler preprocessor and parses stdout. C and
+Fortran can use `--compile-commands build/compile_commands.json` when a
+matching entry supplies the compiler and project flags. GCC-compatible C/Clang
+invocations use `-E -x c`; GNU Fortran invocations use `-E -cpp`. Linemarkers
+are preserved so parser locations can be
 mapped back to original files. For unsupported compiler families, use
 `--preprocessor-adapter command-template --preprocess-template '...'`; the
 minimum adapter contract is expanded source on stdout.
@@ -259,7 +256,7 @@ python -m x2py.fortran_type_probe --compiler /usr/bin/gfortran-12 \
 
 The Fortran probe passes `-I`, `-D`, `-U`, `--std`, and `--compiler-arg` to the
 generated probe. The semantic CLI path uses this automatically when Fortran
-input is converted with `--preprocess compiler --compiler ...`: it collects
+input is converted with compiler preprocessing: it collects
 unresolved compiler-dependent values, evaluates them with the probe, and feeds
 the resulting `compile_time_values` into semantic conversion.
 
@@ -269,7 +266,7 @@ execution only describes the host target.
 
 ### C parser examples
 
-Parse a C header in raw mode:
+Parse a C header:
 
 ```bash
 python -m x2py include/api.h --language c --parse
@@ -285,7 +282,6 @@ Parse a macro-shaped API through the configured compiler preprocessor:
 
 ```bash
 python -m x2py include/api.h --language c --parse \
-  --preprocess compiler \
   --compiler clang-18 \
   -I include \
   -D API_EXPORT=
@@ -295,7 +291,6 @@ Parse a C source using a compile database entry:
 
 ```bash
 python -m x2py src/api.c --language c --parse \
-  --preprocess compiler \
   --compile-commands build/compile_commands.json
 ```
 
@@ -799,8 +794,8 @@ For compiler-specific constants, use
 values. With a configured Fortran compiler, pass those requirements to
 `evaluate_fortran_type_requirements(config, requirements)` and provide the
 returned dictionary to semantic conversion via `compile_time_values`. The CLI
-does this automatically for Fortran semantic stages when `--preprocess
-compiler --compiler ...` is active.
+does this automatically for Fortran semantic stages when compiler preprocessing
+is active.
 
 For Fortran `use` imports, the parser stores each explicit imported symbol as a
 source/target mapping. A non-renamed `use iso_c_binding, only: c_int` maps
