@@ -3,7 +3,8 @@
 Last reviewed: 2026-06-03
 
 This project uses a staged Python QA stack. Fast bug-focused checks run on pull
-requests, while deeper fuzzing runs on schedule or by manual dispatch.
+requests, while the separate `Fuzz` workflow runs deeper Hypothesis discovery
+on schedule or by manual dispatch.
 
 The selected active quality stack is adopted. Scheduled workflow review and
 future Ruff/Radon threshold ratchets are ongoing maintenance, not unfinished
@@ -14,7 +15,7 @@ rollout work. Mutation testing and pre-commit are not part of the active stack.
 | Cadence | Tools |
 | --- | --- |
 | Pull request and protected-branch push | pytest, coverage.py, stable-seed pytest-randomly, Ruff, Bandit, pip-audit, Vulture, staged Radon policy |
-| Weekly and manual dispatch | Hypothesis fuzz profile |
+| Weekly and manual dispatch | `Fuzz` workflow with Hypothesis fuzz profile |
 | Manual triage | Full Radon reports and low-severity Bandit review |
 
 ## Install
@@ -256,8 +257,7 @@ Ongoing maintenance:
 
 ## Scheduled Workflow Triage
 
-The `Quality` workflow runs deeper discovery jobs every Monday and by manual
-dispatch:
+The `Fuzz` workflow runs deeper discovery every Monday and by manual dispatch:
 
 1. Re-run a failing job once to separate actionable failures from transient
    runner or package-index failures.
@@ -276,7 +276,7 @@ dispatch:
 | 2026-06-01 | Ruff formatting rollout | Formatted the historical Python tree and changed CI to `ruff format --check .`. | Continue complexity-policy ratchets. |
 | 2026-06-01 | Radon and Ruff complexity policy | Added `tools/check_radon_policy.py`, made the staged Radon policy blocking in CI, and lowered Ruff McCabe from `50` to `45`. | Continue hotspot refactors and later threshold ratchets toward `20`. |
 | 2026-06-02 | Historical mutation-derived tests | Added direct Fortran parser contracts and fixed the directory namespace encoding bug. | Keep the tests as normal regression coverage. |
-| 2026-06-03 | Manual Quality workflow review | Reviewed workflow run `26832679820`: fuzz passed, changing random-order pytest passed, static analysis exposed Ruff fixes, and full-project mutation exceeded the `3h` Actions limit. | Mutation was removed from active adoption; keep scheduled fuzz review. |
+| 2026-06-03 | Manual Quality workflow review | Reviewed workflow run `26832679820`: fuzz passed, changing random-order pytest passed, static analysis exposed Ruff fixes, and full-project mutation exceeded the `3h` Actions limit. | Mutation was removed from active adoption; scheduled fuzz moved to its own workflow. |
 | 2026-06-03 | Quality workflow triage | Reviewed latest Quality runs; run `26856679038` for `remove mutmut` completed successfully. | No actionable scheduled or PR quality failure remains. |
 | 2026-06-03 | Final active-stack cleanup | Consolidated quality docs, removed mutation and pre-commit from the active stack, restored the C parser golden generator, and regenerated C parser goldens. | Treat scheduled review and threshold ratchets as ongoing maintenance. |
 
