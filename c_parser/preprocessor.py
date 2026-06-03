@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import re
@@ -11,10 +10,8 @@ from .models import CDiagnostic, CInclude, CMacro, CRawDirective, CSourceLocatio
 
 
 _INCLUDE_RE = re.compile(r'^\s*#\s*include\s*(?:"([^"]+)"|<([^>]+)>)')
-_DEFINE_RE = re.compile(r"^\s*#\s*define\s+([A-Za-z_]\w*)(\([^)]*\))?(?:\s+(.*))?$")
-_UNDEF_RE = re.compile(r"^\s*#\s*undef\s+([A-Za-z_]\w*)\s*$")
 _DIRECTIVE_RE = re.compile(r"^\s*#\s*([A-Za-z_]\w*)\b(.*)$")
-_RAW_PROVENANCE_DIRECTIVES = {"if", "ifdef", "ifndef", "elif", "else", "endif", "pragma"}
+_RAW_PROVENANCE_DIRECTIVES = {"pragma"}
 
 
 @dataclass
@@ -87,11 +84,7 @@ def collect_preprocessor_metadata(
             local_target, system_target = include_match.groups()
             target = local_target or system_target
             kind = "local" if local_target is not None else "system"
-            resolved_path = (
-                _resolve_local_include(target, filename, include_dirs)
-                if kind == "local"
-                else None
-            )
+            resolved_path = _resolve_local_include(target, filename, include_dirs) if kind == "local" else None
             location = _record_location(record)
             metadata.includes.append(
                 CInclude(
@@ -113,44 +106,6 @@ def collect_preprocessor_metadata(
                     )
                 )
             continue
-
-        define_match = _DEFINE_RE.match(record.text)
-        if define_match:
-            name, parameters, value = define_match.groups()
-            location = _record_location(record)
-            function_like = parameters is not None
-            metadata.macros.append(
-                CMacro(
-                    name=name,
-                    value=value.strip() if value else None,
-                    function_like=function_like,
-                    source_location=location,
-                )
-            )
-            if function_like:
-                metadata.diagnostics.append(
-                    CDiagnostic(
-                        code="C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-                        message=f"Function-like macro {name!r} is recorded but not expanded.",
-                        severity="warning",
-                        location=location,
-                        unit_kind="macro",
-                        unit_name=name,
-                    )
-                )
-            continue
-
-        undef_match = _UNDEF_RE.match(record.text)
-        if undef_match:
-            name = undef_match.group(1)
-            metadata.macros.append(
-                CMacro(
-                    name=name,
-                    directive="undef",
-                    source_location=_record_location(record),
-                )
-            )
-
     return metadata
 
 

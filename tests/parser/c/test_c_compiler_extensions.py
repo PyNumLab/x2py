@@ -16,10 +16,7 @@ def test_raw_mode_keeps_compiler_extension_declarations_conservative():
     )
 
     assert parsed.functions == []
-    assert [
-        (diagnostic.code, diagnostic.unit_kind)
-        for diagnostic in parsed.diagnostics
-    ] == [
+    assert [(diagnostic.code, diagnostic.unit_kind) for diagnostic in parsed.diagnostics] == [
         ("C_UNSUPPORTED_DECLARATION", "attribute_declaration"),
     ]
 
@@ -73,10 +70,7 @@ extern int abi_call(void) __attribute__((ms_abi));
     assert [member.name for member in parsed.structs[0].members] == ["value"]
     assert [typedef.name for typedef in parsed.typedefs] == ["vector4"]
     assert [function.name for function in parsed.functions] == ["abi_call"]
-    assert [
-        (diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name)
-        for diagnostic in parsed.diagnostics
-    ] == [
+    assert [(diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name) for diagnostic in parsed.diagnostics] == [
         ("C_UNMODELED_COMPILER_EXTENSION", "compiler_attribute", "packed"),
         ("C_UNMODELED_COMPILER_EXTENSION", "compiler_attribute", "aligned"),
         ("C_UNMODELED_COMPILER_EXTENSION", "compiler_attribute", "vector_size"),
@@ -102,16 +96,120 @@ __asm__(".ident \\"compiler metadata\\"");
     assert [struct.name for struct in parsed.structs] == ["block"]
     assert [function.name for function in parsed.functions] == ["imported", "renamed"]
     assert [variable.name for variable in parsed.variables] == ["tls_value"]
-    assert [
-        (diagnostic.unit_kind, diagnostic.unit_name)
-        for diagnostic in parsed.diagnostics
-    ] == [
+    assert [(diagnostic.unit_kind, diagnostic.unit_name) for diagnostic in parsed.diagnostics] == [
         ("compiler_attribute", "align"),
         ("calling_convention", "__stdcall"),
         ("compiler_attribute", "thread"),
         ("asm_label", "__asm__"),
         ("asm_label", "__asm__"),
     ]
+
+
+def test_bare_compiler_extensions_and_comments_are_tolerated():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+/* block
+   comment */
+__attribute__ int attributed;
+// line comment
+_Alignas int aligned;
+extern int renamed __asm__;
+""",
+        filename="bare_extensions.h",
+        preprocessing="compiler",
+    )
+
+    assert [variable.name for variable in parsed.variables] == ["attributed", "aligned", "renamed"]
+    assert [(diagnostic.unit_kind, diagnostic.unit_name) for diagnostic in parsed.diagnostics] == [
+        ("alignment_specifier", "_Alignas"),
+        ("asm_label", "__asm__"),
+    ]
+
+
+def test_compiler_extension_normalization_preserves_coordinates_and_source_states():
+    from c_parser import CParser
+
+    source = (
+        'const char *s = "__attribute__((packed))";\n'
+        "// __attribute__((unused)) ignored\n"
+        "/* keep * __declspec(dllexport) */\n"
+        "extern int packed_call(void) __attribute__((packed, ms_abi));\n"
+        "__extension__ extern __inline__ int __stdcall run(__const char *__restrict p) "
+        '__attribute__((visibility("default")));\n'
+        "_Alignas(16) int aligned;\n"
+        'extern int renamed __asm__("renamed_v2");\n'
+        "_BitInt(17) bits;\n"
+        "__typeof__(errno) err;\n"
+        "int *__ptr64 ptr;\n"
+    )
+
+    normalized, extensions = CParser()._normalize_compiler_extensions(source)
+
+    assert len(normalized) == len(source)
+    assert normalized == (
+        'const char *s = "__attribute__((packed))";\n'
+        "// __attribute__((unused)) ignored\n"
+        "/* keep * __declspec(dllexport) */\n"
+        "extern int packed_call(void)                                ;\n"
+        "              extern inline     int           run(const   char *restrict   p) "
+        "                                      ;\n"
+        "             int aligned;\n"
+        "extern int renamed                      ;\n"
+        "_bitint     bits;\n"
+        "_typeof           err;\n"
+        "int *        ptr;\n"
+    )
+    assert [(extension.kind, extension.name, extension.offset) for extension in extensions] == [
+        ("compiler_attribute", "packed", source.index("__attribute__((packed, ms_abi))")),
+        ("compiler_attribute", "ms_abi", source.index("__attribute__((packed, ms_abi))")),
+        ("calling_convention", "__stdcall", source.index("__stdcall")),
+        ("alignment_specifier", "_Alignas", source.index("_Alignas")),
+        ("asm_label", "__asm__", source.index("__asm__")),
+        ("compiler_type", "_BitInt", source.index("_BitInt")),
+        ("compiler_type", "__typeof__", source.index("__typeof__")),
+        ("compiler_qualifier", "__ptr64", source.index("__ptr64")),
+    ]
+
+
+def test_compiler_extension_only_segment_does_not_stop_later_declarations():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        "__attribute__((deprecated));\nint kept;\n",
+        filename="blank_extension_segment.h",
+        preprocessing="compiler",
+    )
+
+    assert [variable.name for variable in parsed.variables] == ["kept"]
+    assert parsed.diagnostics == []
+
+
+def test_abi_pointer_qualifiers_are_accepted_with_explicit_warning():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        "int *__ptr64 global_ptr;\n",
+        filename="abi_pointer_qualifier.h",
+        preprocessing="compiler",
+    )
+
+    assert [variable.name for variable in parsed.variables] == ["global_ptr"]
+    assert [(diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name) for diagnostic in parsed.diagnostics] == [
+        ("C_UNMODELED_COMPILER_EXTENSION", "compiler_qualifier", "__ptr64"),
+    ]
+
+
+def test_double_bracket_attribute_scanner_ignores_quoted_closers():
+    from c_parser import CParser
+
+    text = '[[vendor::attr("escaped \\" quote and ]] text")]] int value;'
+
+    end = CParser._find_double_bracket_end(text, 0)
+
+    assert end == text.index(" int value")
+    assert CParser._find_double_bracket_end("[[unterminated", 0) is None
 
 
 def test_typeof_bitint_and_extended_scalars_remain_parseable_as_opaque_types():
@@ -137,10 +235,7 @@ _Float128 wide_float;
     assert variables["wide_counter"].type.spelling == "unsigned __int128"
     assert isinstance(variables["wide_float"].type, CUnknownType)
     assert variables["wide_float"].type.spelling == "_Float128"
-    assert [
-        (diagnostic.unit_kind, diagnostic.unit_name)
-        for diagnostic in parsed.diagnostics
-    ] == [
+    assert [(diagnostic.unit_kind, diagnostic.unit_name) for diagnostic in parsed.diagnostics] == [
         ("compiler_type", "__typeof__"),
         ("compiler_type", "_BitInt"),
     ]

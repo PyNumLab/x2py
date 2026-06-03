@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Active cJSON parser regression tests.
 
 cJSON is the first target corpus because it is small, realistic, and exercises
@@ -7,9 +6,25 @@ constants, and callback hook fields without requiring a large build system.
 """
 
 from pathlib import Path
+import shutil
+
+import pytest
 
 _TESTS_DIR = Path(__file__).resolve().parents[2]
 _CJSON_DIR = _TESTS_DIR / "data" / "c" / "json"
+
+
+def _preprocessed_cjson_source(filename: str) -> str:
+    from x2py.preprocessing import PreprocessingConfig, preprocess_source
+
+    compiler = shutil.which("cc")
+    if compiler is None:
+        pytest.skip("cc is not available")
+    return preprocess_source(
+        _CJSON_DIR / filename,
+        language="c",
+        config=PreprocessingConfig(mode="compiler", compiler=compiler),
+    ).source
 
 
 def test_cjson_regression_source_and_header_are_available():
@@ -17,59 +32,59 @@ def test_cjson_regression_source_and_header_are_available():
     assert (_CJSON_DIR / "cJSON.c").exists()
 
 
-def test_cjson_header_parse_records_unsupported_wrapped_declarations_explicitly():
+def test_cjson_header_raw_parse_requires_preprocessing():
+    import pytest
+
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError, match="require compiler preprocessing") as exc_info:
+        parse_c_file(_CJSON_DIR / "cJSON.h")
+    assert exc_info.value.code == "CPARSE_PREPROCESSING_REQUIRED"
+
+
+def test_cjson_header_preprocessed_mode_has_no_error_diagnostics():
     from c_parser import parse_c_file
 
-    parsed = parse_c_file(_CJSON_DIR / "cJSON.h")
+    parsed = parse_c_file(
+        _preprocessed_cjson_source("cJSON.h"),
+        filename=str(_CJSON_DIR / "cJSON.h"),
+        preprocessing="compiler",
+    )
 
-    assert parsed.parser_status == "partial"
-    assert "CJSON_PUBLIC" in {macro.name for macro in parsed.macros}
-    assert any(diag.code == "C_UNSUPPORTED_DECLARATOR" for diag in parsed.diagnostics)
-
-
-def test_cjson_header_raw_mode_records_public_macro_wrappers():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(_CJSON_DIR / "cJSON.h", preprocessing="raw")
-
-    assert "CJSON_PUBLIC" in {macro.name for macro in parsed.macros}
-    assert any(diag.code == "C_UNSUPPORTED_FUNCTION_LIKE_MACRO" for diag in parsed.diagnostics)
-
-
-def test_cjson_header_preprocessed_mode_preserves_explicit_partial_status():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(_CJSON_DIR / "cJSON.h", preprocessing="compiler")
-
-    assert parsed.parser_status == "partial"
-    assert any(diag.code == "C_UNSUPPORTED_DECLARATOR" for diag in parsed.diagnostics)
     assert not any(diag.severity == "error" for diag in parsed.diagnostics)
 
 
-def test_cjson_callback_hook_declarations_are_deferred_without_error_diagnostics():
+def test_cjson_callback_hook_declarations_are_preprocessed_without_error_diagnostics():
     from c_parser import parse_c_file
 
-    parsed = parse_c_file(_CJSON_DIR / "cJSON.h")
+    parsed = parse_c_file(
+        _preprocessed_cjson_source("cJSON.h"),
+        filename=str(_CJSON_DIR / "cJSON.h"),
+        preprocessing="compiler",
+    )
 
-    assert not parsed.structs
-    assert any(diag.code == "C_UNSUPPORTED_DECLARATOR" for diag in parsed.diagnostics)
+    assert any(struct.name == "cJSON_Hooks" for struct in parsed.structs)
     assert not any(diag.severity == "error" for diag in parsed.diagnostics)
 
 
 def test_cjson_source_file_parse_skips_function_bodies_safely():
     from c_parser import parse_c_file
 
-    parsed = parse_c_file(_CJSON_DIR / "cJSON.c")
+    parsed = parse_c_file(
+        _preprocessed_cjson_source("cJSON.c"),
+        filename=str(_CJSON_DIR / "cJSON.c"),
+        preprocessing="compiler",
+    )
 
     assert any(fn.name == "parse_number" for fn in parsed.functions)
-    assert parsed.parser_status == "partial"
     assert not any(hasattr(fn, "body") for fn in parsed.functions)
 
 
 def test_cjson_project_parse_links_header_and_source():
     from c_parser import parse_c_project
 
-    project = parse_c_project(_CJSON_DIR)
+    sources = {filename: _preprocessed_cjson_source(filename) for filename in ("cJSON.h", "cJSON.c")}
+    project = parse_c_project(sources, preprocessing="compiler")
 
     assert "cJSON.h" in project.files
     assert "cJSON.c" in project.files

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Executable walkthroughs for maintainers reading `c_parser.parser`.
 
 These tests intentionally expose the internal declaration gateway named in the

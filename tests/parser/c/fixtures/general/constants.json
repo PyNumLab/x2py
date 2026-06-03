@@ -3,8 +3,10 @@
     "general/constants.h": {
       "filename": "general/constants.h",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "general/constants.h"
+      ],
       "functions": [
         {
           "name": "coordinate_axis_name",
@@ -107,13 +109,7 @@
         {
           "name": "coordinate_axis_count",
           "result_type": {
-            "model": "CTypedef",
-            "qualifiers": [],
-            "source_text": "size_t",
-            "name": "size_t",
-            "type": null,
-            "source_location": null,
-            "declaration_locations": []
+            "reference": "size_t"
           },
           "parameters": [],
           "storage": [],
@@ -139,11 +135,7 @@
       ],
       "structs": [],
       "unions": [],
-      "enums": [
-        {
-          "reference": "enum coordinate_axis"
-        }
-      ],
+      "enums": [],
       "typedefs": [
         {
           "model": "CTypedef",
@@ -238,79 +230,9 @@
           "declaration_locations": []
         }
       ],
-      "macros": [
-        {
-          "name": "X2PY_GENERAL_CONSTANTS_H",
-          "value": null,
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/constants.h",
-            "line": 2,
-            "column": 1,
-            "source_line": "#define X2PY_GENERAL_CONSTANTS_H"
-          }
-        },
-        {
-          "name": "X2PY_GENERAL_NMAX",
-          "value": "100",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/constants.h",
-            "line": 6,
-            "column": 1,
-            "source_line": "#define X2PY_GENERAL_NMAX 100"
-          }
-        },
-        {
-          "name": "X2PY_GENERAL_ORIGIN_RANK",
-          "value": "3",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/constants.h",
-            "line": 7,
-            "column": 1,
-            "source_line": "#define X2PY_GENERAL_ORIGIN_RANK 3"
-          }
-        }
-      ],
-      "includes": [
-        {
-          "target": "stddef.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "general/constants.h",
-            "line": 4,
-            "column": 1,
-            "source_line": "#include <stddef.h>"
-          }
-        }
-      ],
-      "raw_directives": [
-        {
-          "directive": "ifndef",
-          "argument": "X2PY_GENERAL_CONSTANTS_H",
-          "source_location": {
-            "filename": "general/constants.h",
-            "line": 1,
-            "column": 1,
-            "source_line": "#ifndef X2PY_GENERAL_CONSTANTS_H"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "general/constants.h",
-            "line": 23,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        }
-      ],
+      "macros": [],
+      "includes": [],
+      "raw_directives": [],
       "macro_dependencies": [],
       "diagnostics": []
     }
@@ -401,11 +323,7 @@
   },
   "structs": {},
   "unions": {},
-  "enums": {
-    "coordinate_axis": {
-      "reference": "enum coordinate_axis"
-    }
-  },
+  "enums": {},
   "typedefs": {
     "c_int_like": {
       "reference": "c_int_like"
@@ -470,57 +388,8 @@
       "declaration_locations": []
     }
   },
-  "macros": {
-    "X2PY_GENERAL_CONSTANTS_H": {
-      "name": "X2PY_GENERAL_CONSTANTS_H",
-      "value": null,
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/constants.h",
-        "line": 2,
-        "column": 1,
-        "source_line": "#define X2PY_GENERAL_CONSTANTS_H"
-      }
-    },
-    "X2PY_GENERAL_NMAX": {
-      "name": "X2PY_GENERAL_NMAX",
-      "value": "100",
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/constants.h",
-        "line": 6,
-        "column": 1,
-        "source_line": "#define X2PY_GENERAL_NMAX 100"
-      }
-    },
-    "X2PY_GENERAL_ORIGIN_RANK": {
-      "name": "X2PY_GENERAL_ORIGIN_RANK",
-      "value": "3",
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/constants.h",
-        "line": 7,
-        "column": 1,
-        "source_line": "#define X2PY_GENERAL_ORIGIN_RANK 3"
-      }
-    }
-  },
-  "includes": {
-    "general/constants.h:stddef.h": {
-      "target": "stddef.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "general/constants.h",
-        "line": 4,
-        "column": 1,
-        "source_line": "#include <stddef.h>"
-      }
-    }
-  },
+  "macros": {},
+  "includes": {},
   "functions_by_file": {
     "general/constants.h": [
       "coordinate_axis_name",
@@ -563,9 +432,7 @@
     "general/constants.h": []
   },
   "system_includes": {
-    "general/constants.h": [
-      "stddef.h"
-    ]
+    "general/constants.h": []
   },
   "unresolved_includes": {
     "general/constants.h": []

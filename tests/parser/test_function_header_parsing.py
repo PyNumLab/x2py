@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """Procedure and function header parsing behavior."""
 
 import pytest
 
 from x2py import FortranParseError, parse_fortran_file
+
 
 def test_typed_function_result_headers_are_parsed_from_inline_fortran():
     code = """
@@ -41,6 +41,7 @@ end module typed_result_mod
     assert procedures["weighted_value"].result.kind == "8"
     assert procedures["norm2"].result.base_type == "real"
 
+
 def test_legacy_star_kind_function_headers_are_parsed_from_inline_fixed_form():
     code = """
       complex*16 function zdotc(n, zx, zy)
@@ -68,6 +69,7 @@ def test_legacy_star_kind_function_headers_are_parsed_from_inline_fixed_form():
     assert procedures["any_name"].result.base_type == "character"
     assert procedures["any_name"].result.kind == "*"
 
+
 def test_no_argument_headers_without_parentheses_are_parsed():
     code = """
 subroutine setup
@@ -85,6 +87,7 @@ end function answer
     assert procedures["answer"].kind == "function"
     assert procedures["answer"].result.base_type == "integer"
 
+
 def test_typed_nested_interface_function_marks_dummy_as_procedure():
     code = """
 subroutine caller(cb)
@@ -100,6 +103,7 @@ end subroutine caller
 
     assert sig.arguments[0].base_type == "procedure"
 
+
 def test_unsupported_procedure_like_header_raises_instead_of_being_dropped():
     code = """
 vector function make_value(x)
@@ -110,6 +114,7 @@ end function make_value
     with pytest.raises(FortranParseError, match="Unsupported function result type prefix 'vector'"):
         parse_fortran_file(code, filename="bad_header.f90")
 
+
 def test_malformed_module_header_raises_instead_of_creating_bad_symbol():
     code = """
 module :: bad_mod
@@ -118,6 +123,7 @@ end module bad_mod
 
     with pytest.raises(FortranParseError, match="Unsupported or malformed module header"):
         parse_fortran_file(code, filename="bad_module_header.f90")
+
 
 def test_malformed_public_procedure_headers_raise_from_source_lines():
     with pytest.raises(FortranParseError, match="Unsupported or malformed module procedure header"):
@@ -140,6 +146,7 @@ end subroutine broken_header
 """,
             filename="bad_proc_header.f90",
         )
+
 
 def test_interface_finalizes_pending_procedure_at_end_interface_and_import_attrs():
     code = """

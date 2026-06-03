@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
 import pytest
 
 from x2py import FortranParseError, parse_fortran_file
 
 
-
-
 # ---------------------------------------------------------------------------
 # FortranParseError attributes
 # ---------------------------------------------------------------------------
+
 
 def test_parse_error_carries_filename():
     code = """
@@ -59,8 +57,6 @@ end subroutine bad
         parse_fortran_file(code)
     msg = str(exc_info.value)
     assert "Unknown or unsupported datatype" in msg
-
-
 
 
 def test_parse_error_formats_compiler_style_diagnostic():
@@ -129,6 +125,7 @@ end subroutine bad
 # Duplicate declaration errors
 # ---------------------------------------------------------------------------
 
+
 def test_duplicate_declaration_raises_parse_error():
     code = """
 subroutine dup(x)
@@ -176,6 +173,7 @@ end subroutine dup_init
 # ---------------------------------------------------------------------------
 # Duplicate procedure name errors
 # ---------------------------------------------------------------------------
+
 
 def test_duplicate_procedure_name_global_scope_raises_parse_error():
     code = """
@@ -230,78 +228,6 @@ end module m
     assert [sig.name.lower() for sig in parsed.modules[0].procedures] == ["host_a", "host_b"]
 
 
-def test_duplicate_procedure_name_in_mutually_exclusive_macro_branches_allowed():
-    code = """
-module m
-#ifdef USE_MPI
-contains
-  subroutine work(n)
-    integer, intent(in) :: n
-  end subroutine work
-#else
-contains
-  function work(n) result(out)
-    integer, intent(in) :: n
-    integer :: out
-  end function work
-#endif
-end module m
-"""
-    parsed = parse_fortran_file(code, filename="macro_alt_work.f90")
-    procedures = parsed.modules[0].procedures
-    assert len(procedures) == 2
-    assert all(sig.name.lower() == "work" for sig in procedures)
-
-
-def test_ifdef_macro_branch_is_not_selected_by_parser():
-    code = """
-module m
-#ifdef USE_MPI
-contains
-  subroutine work(n)
-    integer, intent(in) :: n
-  end subroutine work
-#else
-contains
-  function work(n) result(out)
-    integer, intent(in) :: n
-    integer :: out
-  end function work
-#endif
-end module m
-"""
-    parsed = parse_fortran_file(code, filename="macro_alt_work.f90")
-    procedures = parsed.modules[0].procedures
-    assert len(procedures) == 2
-    assert {proc.kind for proc in procedures} == {"subroutine", "function"}
-
-
-def test_if_defined_macro_expression_is_not_evaluated_by_parser():
-    code = """
-module m
-#if defined(USE_MPI) && !defined(USE_SERIAL)
-contains
-  subroutine work(n)
-    integer, intent(in) :: n
-  end subroutine work
-#else
-contains
-  function work(n) result(out)
-    integer, intent(in) :: n
-    integer :: out
-  end function work
-#endif
-end module m
-"""
-    parsed = parse_fortran_file(
-        code,
-        filename="macro_if_expr.f90",
-    )
-    procedures = parsed.modules[0].procedures
-    assert len(procedures) == 2
-    assert {proc.kind for proc in procedures} == {"subroutine", "function"}
-
-
 def test_duplicate_procedure_name_error_carries_location():
     code = """
 subroutine work(n)
@@ -322,6 +248,7 @@ end subroutine work
 # ---------------------------------------------------------------------------
 # Star-kind declarations
 # ---------------------------------------------------------------------------
+
 
 def test_star_kind_in_modern_source_is_parsed():
     code = """
@@ -361,6 +288,7 @@ end module m
 # ---------------------------------------------------------------------------
 # Unknown/unsupported type declaration errors
 # ---------------------------------------------------------------------------
+
 
 def test_unknown_type_in_subroutine_raises_parse_error():
     code = """
@@ -412,6 +340,7 @@ end module m
 # Module variable type validation
 # ---------------------------------------------------------------------------
 
+
 def test_module_variable_with_unknown_type_raises_parse_error():
     code = """
 module m
@@ -441,6 +370,7 @@ end module cfg
 # Derived type field type validation
 # ---------------------------------------------------------------------------
 
+
 def test_derived_type_fields_have_known_types():
     code = """
 module m
@@ -459,6 +389,7 @@ end module m
 # ---------------------------------------------------------------------------
 # Parameter symbol errors
 # ---------------------------------------------------------------------------
+
 
 def test_parameter_without_type_in_implicit_none_scope_raises_parse_error():
     code = """
@@ -487,6 +418,7 @@ end subroutine dup_param
 # Mixed-era source forms
 # ---------------------------------------------------------------------------
 
+
 def test_f77_source_with_module_keyword_is_parsed():
     code = """
       module bad_module
@@ -510,6 +442,7 @@ def test_f77_source_file_metadata_is_preserved():
 # Function result type errors
 # ---------------------------------------------------------------------------
 
+
 def test_function_with_implicit_none_and_missing_result_type_raises():
     code = """
 function f(x) result(res)
@@ -517,13 +450,14 @@ function f(x) result(res)
   real :: x
 end function f
 """
-    with pytest.raises(FortranParseError, match="has no type declaration|Unknown datatype for function result"):
+    with pytest.raises(FortranParseError, match=r"has no type declaration|Unknown datatype for function result"):
         parse_fortran_file(code, filename="bad.f90")
 
 
 # ---------------------------------------------------------------------------
 # Error location accuracy
 # ---------------------------------------------------------------------------
+
 
 def test_error_reports_correct_line_number():
     code = "subroutine foo(x)\n  integer :: x\n  weirdtype :: y\nend subroutine foo\n"
@@ -544,6 +478,7 @@ def test_error_reports_source_line_content():
 # ---------------------------------------------------------------------------
 # Duplicate argument name errors
 # ---------------------------------------------------------------------------
+
 
 def test_duplicate_argument_name_in_subroutine_raises_parse_error():
     code = """
@@ -571,6 +506,7 @@ end function f
 # ---------------------------------------------------------------------------
 # Implicit none: undeclared arguments
 # ---------------------------------------------------------------------------
+
 
 def test_implicit_none_undeclared_arg_raises_parse_error():
     code = """
@@ -603,13 +539,14 @@ function f(x)
   integer, intent(in) :: x
 end function f
 """
-    with pytest.raises(FortranParseError, match="has no type declaration|Unknown datatype for function result"):
+    with pytest.raises(FortranParseError, match=r"has no type declaration|Unknown datatype for function result"):
         parse_fortran_file(code, filename="implicit_none_func.f90")
 
 
 # ---------------------------------------------------------------------------
 # Function result validation
 # ---------------------------------------------------------------------------
+
 
 def test_function_result_shadowing_arg_name_raises_parse_error():
     code = """
@@ -639,6 +576,7 @@ end function f
 # ---------------------------------------------------------------------------
 # Derived type duplicate field names
 # ---------------------------------------------------------------------------
+
 
 def test_duplicate_field_in_derived_type_raises_parse_error():
     code = """
@@ -672,6 +610,7 @@ end module m
 # Module duplicate variable names
 # ---------------------------------------------------------------------------
 
+
 def test_duplicate_variable_in_module_raises_parse_error():
     code = """
 module m
@@ -702,7 +641,7 @@ program main
   real n
 end program main
 """
-    with pytest.raises(FortranParseError, match="Duplicate variable.*program"):
+    with pytest.raises(FortranParseError, match=r"Duplicate variable.*program"):
         parse_fortran_file(code, filename="dup_program_var.f90")
 
 
@@ -713,7 +652,7 @@ def test_duplicate_variable_in_block_data_raises_parse_error():
       real n
       end
 """
-    with pytest.raises(FortranParseError, match="Duplicate variable.*block data"):
+    with pytest.raises(FortranParseError, match=r"Duplicate variable.*block data"):
         parse_fortran_file(code, filename="dup_block_data_var.f")
 
 

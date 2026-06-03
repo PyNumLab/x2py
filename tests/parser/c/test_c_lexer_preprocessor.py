@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
 """C lexer and lightweight preprocessing coverage."""
-
-from pathlib import Path
 
 import pytest
 
@@ -10,12 +7,12 @@ def test_lexer_removes_comments_without_changing_string_or_char_literals():
     from c_parser.lexer import lex_c_source
 
     tokens = lex_c_source(
-        r'''
+        r"""
 const char *url = "https://example.invalid/a//b";
 char slash = '/';
 /* removed block comment */
 int value; // removed line comment
-''',
+""",
         filename="comments.c",
     )
 
@@ -83,7 +80,7 @@ def test_c_lexer_covers_linemarker_escapes_top_level_strings_and_eof_records():
     )
     from c_parser.preprocessor import _record_location
 
-    assert _unescape_linemarker_filename(r"a\nb\rc\td\\e\"f\x") == "a\nb\rc\td\\e\"fx"
+    assert _unescape_linemarker_filename(r"a\nb\rc\td\\e\"f\x") == 'a\nb\rc\td\\e"fx'
     assert _unescape_linemarker_filename("tail\\") == "tail\\"
 
     mappings = line_mappings_for_source(
@@ -104,25 +101,212 @@ def test_c_lexer_covers_linemarker_escapes_top_level_strings_and_eof_records():
 
     normalized = normalize_c_source("#define API \\\n", filename="defs.h")
     assert normalized.records[0].text == "#define API"
-    assert _record_location(
-        CLogicalRecord(text="#define API", filename="defs.h", original_source_lines=())
-    ).source_line is None
-    assert _record_location(
-        CLogicalRecord(text="define API", filename="defs.h", original_source_lines=("define API",))
-    ).column == 1
+    assert (
+        _record_location(CLogicalRecord(text="#define API", filename="defs.h", original_source_lines=())).source_line
+        is None
+    )
+    assert (
+        _record_location(
+            CLogicalRecord(text="define API", filename="defs.h", original_source_lines=("define API",))
+        ).column
+        == 1
+    )
 
     token = lex_c_source(r'char *s = "unterminated\\', filename="bad.c")[-1]
     assert token.kind == "string"
     assert token.text == r'"unterminated\\'
 
     parsed = parse_c_file(
-        '#line 11 "dir\\\\api\\".h"\n'
-        'struct __attribute__((annotate("tag\\"ged"))) named { int value; };\n',
+        '#line 11 "dir\\\\api\\".h"\nstruct __attribute__((annotate("tag\\"ged"))) named { int value; };\n',
         filename="generated.i",
         preprocessing="preprocessed",
     )
     assert parsed.structs[0].name == "named"
     assert parsed.structs[0].source_location.filename == 'dir\\api".h'
+
+
+def test_c_lexer_mapping_helpers_cover_boundaries_ranges_and_position_updates():
+    from c_parser.lexer import (
+        CLineMapping,
+        _advance_position,
+        _line_mapping,
+        _mapped_filenames,
+        _mapped_line_numbers,
+        _mapped_source_lines,
+        _source_line,
+        _source_lines,
+    )
+
+    source_lines = ["first", "second", "third"]
+    assert _source_line(source_lines, 1) == "first"
+    assert _source_line(source_lines, 3) == "third"
+    assert _source_line(source_lines, 0) is None
+    assert _source_line(source_lines, 4) is None
+    assert _source_lines(source_lines, 2, 3) == ("second", "third")
+
+    mappings = [
+        CLineMapping("first.h", 11, "first source"),
+        CLineMapping("second.h", 22, None),
+    ]
+    assert _line_mapping(mappings, 1, "fallback.h") == mappings[0]
+    assert _line_mapping(mappings, 2, "fallback.h") == mappings[1]
+    assert _line_mapping(mappings, 0, "fallback.h") == CLineMapping("fallback.h", 0, None)
+    assert _line_mapping(mappings, 3, "fallback.h") == CLineMapping("fallback.h", 3, None)
+    assert _mapped_source_lines(mappings, 1, 2) == ("first source", "")
+    assert _mapped_filenames(mappings, 1, 2) == ("first.h", "second.h")
+    assert _mapped_line_numbers(mappings, 1, 2) == (11, 22)
+
+    assert _advance_position("x", 4, 7) == (4, 8)
+    assert _advance_position("\n", 4, 7) == (5, 1)
+
+
+def test_c_lexer_linemarker_and_directive_helpers_cover_raw_and_preprocessed_modes():
+    from c_parser.lexer import (
+        CLineMapping,
+        _blank_preprocessor_directives,
+        _parse_linemarker,
+        line_mappings_for_source,
+    )
+
+    assert _parse_linemarker('# 12 "api.h" 1') == (12, "api.h")
+    assert _parse_linemarker("#line 7 generated.h") == (7, "generated.h")
+    assert _parse_linemarker("#line 9") == (9, None)
+    assert _parse_linemarker("#pragma once") is None
+
+    raw = line_mappings_for_source("int first;\nint second;", filename="raw.h")
+    assert raw == [
+        CLineMapping("raw.h", 1, "int first;"),
+        CLineMapping("raw.h", 2, "int second;"),
+    ]
+
+    preprocessed = line_mappings_for_source(
+        '# 40 "api.h"\nint first;\n#line 7\nint second;\n',
+        filename="generated.i",
+        use_linemarkers=True,
+    )
+    assert preprocessed == [
+        CLineMapping("api.h", 40, '# 40 "api.h"'),
+        CLineMapping("api.h", 40, "int first;"),
+        CLineMapping("api.h", 7, "#line 7"),
+        CLineMapping("api.h", 7, "int second;"),
+    ]
+
+    blanked = _blank_preprocessor_directives("#define VALUE \\\n  continued\nint kept;\n#pragma once")
+    assert blanked.splitlines() == [
+        " " * len("#define VALUE \\"),
+        " " * len("  continued"),
+        "int kept;",
+        " " * len("#pragma once"),
+    ]
+
+
+def test_c_lexer_delimiter_helpers_cover_literals_nesting_offsets_and_validation():
+    from c_parser.lexer import (
+        _scan_code_states,
+        top_level_partition,
+        top_level_split,
+        top_level_split_with_offsets,
+    )
+
+    source = 'first("x,y", [a,b]), second'
+    assert top_level_split_with_offsets(source) == [
+        ('first("x,y", [a,b])', 0),
+        ("second", source.index("second")),
+    ]
+    assert top_level_split(source) == ['first("x,y", [a,b])', "second"]
+    assert top_level_partition('name = call("=", [x=y])') == ("name", 'call("=", [x=y])')
+    assert top_level_partition("name") == ("name", None)
+
+    states = list(_scan_code_states(source))
+    quote_index = source.index('"')
+    nested_comma_index = source.index(",", source.index("["))
+    top_level_comma_index = source.index(",", source.index("]"))
+    assert states[quote_index][3] == "normal"
+    assert states[quote_index + 1][3] == "string"
+    assert states[nested_comma_index][2] == ("(", "[")
+    assert states[top_level_comma_index][2] == ()
+
+    with pytest.raises(ValueError, match="single character"):
+        top_level_split_with_offsets("a, b", "::")
+    with pytest.raises(ValueError, match="single character"):
+        top_level_partition("a=b", "==")
+
+
+def test_c_lexer_aggregate_attribute_helpers_preserve_shape_and_classify_headers():
+    from c_parser.lexer import (
+        _balanced_invocation_end,
+        _is_aggregate_definition_header,
+        _is_braced_declaration_header,
+        _strip_aggregate_header_attributes,
+    )
+
+    invocation = '(outer(")") + nested(1))'
+    assert _balanced_invocation_end(invocation, 0) == len(invocation)
+    prefixed_invocation = "ignored) (nested(1))"
+    assert _balanced_invocation_end(prefixed_invocation, prefixed_invocation.index("(")) == len(prefixed_invocation)
+    single_quoted_invocation = "(outer(')') + nested(1))"
+    assert _balanced_invocation_end(single_quoted_invocation, 0) == len(single_quoted_invocation)
+    empty_quoted_invocation = '(outer("") + nested(1))'
+    assert _balanced_invocation_end(empty_quoted_invocation, 0) == len(empty_quoted_invocation)
+    assert _balanced_invocation_end("(unterminated", 0) is None
+
+    header = "struct __attribute__((packed)) packet"
+    stripped = _strip_aggregate_header_attributes(header)
+    assert len(stripped) == len(header)
+    assert stripped.split() == ["struct", "packet"]
+    spaced_header = "struct __attribute__ ((packed)) packet"
+    assert _strip_aggregate_header_attributes(spaced_header).split() == ["struct", "packet"]
+    bare_header = "struct __attribute__"
+    assert _strip_aggregate_header_attributes(bare_header).split() == ["struct"]
+    multiline_header = "struct __attribute__((\npacked)) packet"
+    assert _strip_aggregate_header_attributes(multiline_header).count("\n") == 1
+    assert _is_aggregate_definition_header(header, tolerate_compiler_extensions=True)
+    assert not _is_aggregate_definition_header(header)
+    assert not _is_aggregate_definition_header("int factory(void)")
+    assert not _is_aggregate_definition_header("struct packet(value)")
+    assert not _is_aggregate_definition_header("struct packet = value")
+    assert _is_braced_declaration_header("int values =")
+    assert not _is_braced_declaration_header(header)
+    assert not _is_braced_declaration_header("int function(void)")
+
+
+def test_c_lexer_comment_normalization_and_tokens_preserve_source_accounting():
+    from c_parser.lexer import lex_c_source, normalize_c_source, strip_c_comments
+
+    source = 'int first; // removed\nchar *text = "/* kept */"; /* block\n removed */ int second;\n'
+    stripped = strip_c_comments(source)
+    assert len(stripped) == len(source)
+    assert stripped.count("\n") == source.count("\n")
+    assert '"/* kept */"' in stripped
+    assert "removed" not in stripped
+    assert "int second;" in stripped
+
+    normalized = normalize_c_source("int first = \\\n  1;\n\nint second;\n", filename="records.h")
+    assert [(record.text, record.original_start_line, record.original_end_line) for record in normalized.records] == [
+        ("int first = 1;", 1, 2),
+        ("int second;", 4, 4),
+    ]
+    assert normalized.records[0].original_source_lines == ("int first = \\", "  1;")
+
+    tokens = lex_c_source("int value = 12;\nvalue += 3;\nchar quote = '\\n';\n", filename="tokens.c")
+    assert [(token.text, token.kind, token.line, token.column) for token in tokens] == [
+        ("int", "identifier", 1, 1),
+        ("value", "identifier", 1, 5),
+        ("=", "punctuation", 1, 11),
+        ("12", "number", 1, 13),
+        (";", "punctuation", 1, 15),
+        ("value", "identifier", 2, 1),
+        ("+=", "punctuation", 2, 7),
+        ("3", "number", 2, 10),
+        (";", "punctuation", 2, 11),
+        ("char", "identifier", 3, 1),
+        ("quote", "identifier", 3, 6),
+        ("=", "punctuation", 3, 12),
+        ("'\\n'", "char", 3, 14),
+        (";", "punctuation", 3, 18),
+    ]
+    assert all(token.filename == "tokens.c" for token in tokens)
+    assert tokens[5].source_line == "value += 3;"
 
 
 def test_raw_mode_records_includes_without_expanding_them():
@@ -152,154 +336,145 @@ def test_raw_mode_resolves_local_includes_relative_to_path_input(tmp_path):
     assert parsed.diagnostics == []
 
 
-def test_raw_mode_records_simple_object_like_macros_as_constants():
-    from c_parser import parse_c_file
+def test_c_preprocessor_helpers_cover_include_dirs_and_filesystem_errors(tmp_path, monkeypatch):
+    from pathlib import Path
 
-    parsed = parse_c_file(
-        """
-#define API_VERSION 3
-#define API_NAME "demo"
-int version(void);
-""",
-        filename="macros.h",
-        preprocessing="raw",
+    from c_parser.lexer import CLogicalRecord
+    from c_parser.preprocessor import _record_location, _resolve_local_include
+
+    include_dir = tmp_path / "include"
+    include_dir.mkdir()
+    types = include_dir / "api_types.h"
+    types.write_text("typedef int api_int;\n", encoding="utf-8")
+
+    assert _resolve_local_include("api_types.h", None, [include_dir]) == str(types)
+    assert _resolve_local_include("missing.h", None, [include_dir]) is None
+
+    unreadable_dir = tmp_path / "unreadable"
+    unreadable_dir.mkdir()
+    unreadable_candidate = unreadable_dir / "api_types.h"
+    original_is_file = Path.is_file
+
+    def raise_one_os_error(path):
+        if path == unreadable_candidate:
+            raise OSError("unreadable")
+        return original_is_file(path)
+
+    monkeypatch.setattr(Path, "is_file", raise_one_os_error)
+    assert _resolve_local_include("api_types.h", str(unreadable_dir / "api.h"), [include_dir]) == str(types)
+
+    location = _record_location(
+        CLogicalRecord(
+            text="  #pragma once",
+            filename="api.h",
+            original_start_line=7,
+            original_source_lines=("  #pragma once",),
+        )
+    )
+    assert (location.filename, location.line, location.column, location.source_line) == (
+        "api.h",
+        7,
+        3,
+        "  #pragma once",
+    )
+    assert (
+        _record_location(CLogicalRecord(text="#pragma # once", original_source_lines=("#pragma # once",))).column == 1
     )
 
-    macros = {macro.name: macro for macro in parsed.macros}
-    assert macros["API_VERSION"].value == "3"
-    assert macros["API_NAME"].value == '"demo"'
-    assert macros["API_VERSION"].function_like is False
 
+def test_collect_preprocessor_metadata_preserves_locations_and_diagnostics(tmp_path):
+    from c_parser.preprocessor import collect_preprocessor_metadata
 
-def test_raw_mode_records_undef_directives_as_macro_provenance():
-    from c_parser import parse_c_file
+    include_dir = tmp_path / "include"
+    include_dir.mkdir()
+    types = include_dir / "api_types.h"
+    types.write_text("typedef int api_int;\n", encoding="utf-8")
 
-    parsed = parse_c_file(
-        """
-#define API_FEATURE 1
-#undef API_FEATURE
-""",
-        filename="undefs.h",
-        preprocessing="raw",
+    metadata = collect_preprocessor_metadata(
+        '#pragma once\n#include "api_types.h"\n#include "missing.h"\n#include <stddef.h>\n',
+        filename=str(tmp_path / "api.h"),
+        include_dirs=[include_dir],
     )
-
-    assert [(macro.name, macro.directive, macro.value) for macro in parsed.macros] == [
-        ("API_FEATURE", "define", "1"),
-        ("API_FEATURE", "undef", None),
+    assert [(item.directive, item.argument, item.source_location.filename) for item in metadata.raw_directives] == [
+        ("pragma", "once", str(tmp_path / "api.h")),
     ]
-
-
-def test_raw_mode_marks_function_like_macros_as_unsupported_until_expanded():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#define API_DECL(ret) ret
-API_DECL(int) exported(void);
-""",
-        filename="macro_decl.h",
-        preprocessing="raw",
-    )
-
-    macros = {macro.name: macro for macro in parsed.macros}
-    assert macros["API_DECL"].function_like is True
-    assert parsed.functions == []
-    assert any(diag.code == "C_UNSUPPORTED_FUNCTION_LIKE_MACRO" for diag in parsed.diagnostics)
-    assert any(diag.code == "C_MACRO_DEPENDENT_DECLARATION" for diag in parsed.diagnostics)
-
-
-def test_raw_mode_fixture_keeps_macro_shaped_declaration_deferred_until_preprocessing():
-    from c_parser import parse_c_file
-
-    fixture = (
-        Path(__file__).resolve().parents[2]
-        / "data"
-        / "c"
-        / "general"
-        / "c_richer_features.h"
-    )
-
-    parsed = parse_c_file(fixture)
-
-    function_names = {fn.name for fn in parsed.functions}
-    assert "x2py_sort" not in function_names
-    assert any(
-        diag.code == "C_UNSUPPORTED_FUNCTION_LIKE_MACRO" and diag.unit_name == "X2PY_API"
-        for diag in parsed.diagnostics
-    )
-    assert any(macro.name == "X2PY_API" and macro.directive == "undef" for macro in parsed.macros)
-
-
-def test_raw_conditional_directives_do_not_select_active_branches():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#ifdef USE_FAST
-int run_fast(void);
-#else
-int run_slow(void);
-#endif
-""",
-        filename="conditional.h",
-        preprocessing="raw",
-    )
-
-    assert {fn.name for fn in parsed.functions} == {"run_fast", "run_slow"}
-    assert [(item.directive, item.argument) for item in parsed.raw_directives] == [
-        ("ifdef", "USE_FAST"),
-        ("else", None),
-        ("endif", None),
+    assert [
+        (item.target, item.kind, item.resolved_path, item.source_location.filename, item.source_location.line)
+        for item in metadata.includes
+    ] == [
+        ("api_types.h", "local", str(types), str(tmp_path / "api.h"), 2),
+        ("missing.h", "local", None, str(tmp_path / "api.h"), 3),
+        ("stddef.h", "system", None, str(tmp_path / "api.h"), 4),
     ]
+    diagnostic = metadata.diagnostics[0]
+    assert (
+        diagnostic.code,
+        diagnostic.message,
+        diagnostic.severity,
+        diagnostic.location.filename,
+        diagnostic.location.line,
+        diagnostic.unit_kind,
+        diagnostic.unit_name,
+    ) == (
+        "C_UNRESOLVED_INCLUDE",
+        'Could not resolve local include "missing.h".',
+        "warning",
+        str(tmp_path / "api.h"),
+        3,
+        "include",
+        "missing.h",
+    )
+
+    relative_dir = tmp_path / "relative"
+    relative_dir.mkdir()
+    relative_types = relative_dir / "relative_types.h"
+    relative_types.write_text("typedef int relative_int;\n", encoding="utf-8")
+    relative_metadata = collect_preprocessor_metadata(
+        '#include "relative_types.h"\n',
+        filename=str(relative_dir / "api.h"),
+    )
+    assert relative_metadata.includes[0].resolved_path == str(relative_types)
 
 
-def test_raw_mode_keeps_incompatible_function_variants_from_alternative_branches():
+@pytest.mark.parametrize(
+    "directive",
+    [
+        "#define API_VERSION 3",
+        "#undef API_VERSION",
+        "#ifdef API_VERSION",
+        "#include API_HEADER",
+        "#error configure preprocessing",
+    ],
+)
+def test_raw_mode_rejects_directives_that_require_preprocessing(directive):
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError, match="require compiler preprocessing") as exc_info:
+        parse_c_file(f"{directive}\nint run(void);\n", filename="raw_macro.h")
+
+    assert exc_info.value.code == "CPARSE_PREPROCESSING_REQUIRED"
+    assert exc_info.value.line_number == 1
+
+
+def test_raw_mode_accepts_trivial_include_guards_without_preprocessing():
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
         """
-#ifdef USE_FLOAT
-float scale(float value);
-#else
-double scale(double value);
+#ifndef API_H
+#define API_H
+
+int run(void);
+
 #endif
 """,
-        filename="conditional_signature.h",
-        preprocessing="raw",
+        filename="api.h",
     )
 
-    assert [fn.name for fn in parsed.functions] == ["scale", "scale"]
-    assert [fn.condition_set for fn in parsed.functions] == [
-        frozenset({"g1:b0"}),
-        frozenset({"g1:b1"}),
-    ]
-    assert not any(
-        diag.code == "C_CONFLICTING_FUNCTION_DECLARATION"
-        for diag in parsed.diagnostics
-    )
-    assert parsed.to_dict()["functions"][0]["condition_set"] == ["g1:b0"]
-
-
-def test_raw_mode_does_not_treat_independent_conditional_groups_as_exclusive():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#ifdef USE_FLOAT
-float scale(float value);
-#endif
-#ifdef USE_DOUBLE
-double scale(double value);
-#endif
-""",
-        filename="overlapping_signatures.h",
-        preprocessing="raw",
-    )
-
-    assert any(
-        diag.code == "C_CONFLICTING_FUNCTION_DECLARATION"
-        for diag in parsed.diagnostics
-    )
+    assert parsed.preprocessing == "raw"
+    assert [function.name for function in parsed.functions] == ["run"]
+    assert parsed.macros == []
+    assert parsed.raw_directives == []
 
 
 def test_raw_mode_records_pragmas_as_metadata_without_hiding_declarations():
@@ -349,90 +524,6 @@ int omp_helper(void);
     ]
 
 
-def test_raw_mode_records_macro_dependency_metadata_for_macro_shaped_declarations():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#define API_DECL(ret) ret
-API_DECL(int) exported(void);
-""",
-        filename="macro_dependency.h",
-        preprocessing="raw",
-    )
-
-    assert [(item.name, item.context) for item in parsed.macro_dependencies] == [
-        ("API_DECL", "declaration")
-    ]
-    assert parsed.macro_dependencies[0].source_text == "API_DECL(int) exported(void)"
-    assert parsed.macro_dependencies[0].source_location.line == 3
-    assert [(diag.code, diag.unit_kind, diag.unit_name) for diag in parsed.diagnostics] == [
-        ("C_UNSUPPORTED_FUNCTION_LIKE_MACRO", "macro", "API_DECL"),
-        ("C_MACRO_DEPENDENT_DECLARATION", "macro_dependent_declaration", "API_DECL"),
-    ]
-
-
-def test_raw_mode_conditional_macro_directive_is_not_treated_as_knr_function():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#define ENABLED(value) value
-#if ENABLED(API)
-typedef int api_value;
-#endif
-int run(void);
-""",
-        filename="conditional_macro.h",
-        preprocessing="raw",
-    )
-
-    assert [function.name for function in parsed.functions] == ["run"]
-    assert any(macro.name == "ENABLED" for macro in parsed.macros)
-
-
-def test_raw_mode_defers_declarations_prefixed_by_object_like_macros():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#define API_INLINE inline
-static API_INLINE void run(void) {}
-""",
-        filename="object_macro_decl.h",
-        preprocessing="raw",
-    )
-
-    assert parsed.functions == []
-    assert [(item.name, item.context) for item in parsed.macro_dependencies] == [
-        ("API_INLINE", "declaration")
-    ]
-    assert [(diag.code, diag.unit_kind, diag.unit_name) for diag in parsed.diagnostics] == [
-        ("C_MACRO_DEPENDENT_DECLARATION", "macro_dependent_declaration", "API_INLINE"),
-    ]
-
-
-def test_raw_mode_macro_initializers_do_not_hide_parseable_declarations():
-    from c_parser import parse_c_file
-
-    parsed = parse_c_file(
-        """
-#define INIT(value) value
-int answer = INIT(42);
-""",
-        filename="macro_initializer.h",
-        preprocessing="raw",
-    )
-
-    assert [variable.name for variable in parsed.variables] == ["answer"]
-    assert parsed.variables[0].initializer is not None
-    assert parsed.variables[0].initializer.source_text == "INIT(42)"
-    assert parsed.macro_dependencies == []
-    assert [diagnostic.code for diagnostic in parsed.diagnostics] == [
-        "C_UNSUPPORTED_FUNCTION_LIKE_MACRO"
-    ]
-
-
 def test_compiler_preprocessed_mode_accepts_line_markers_and_expanded_declarations():
     from c_parser import parse_c_file
 
@@ -455,7 +546,7 @@ double scale(double x);
     assert parsed.functions[0].source_location.line == 1
     assert parsed.functions[1].source_location.line == 20
     payload = parsed.to_dict()
-    assert payload["functions"][0]["origin"] == "preprocessed"
+    assert "origin" not in payload["functions"][0]
     assert payload["preprocessed_source_path"] == "api.i"
     assert payload["original_source_paths"] == ["api.h"]
 

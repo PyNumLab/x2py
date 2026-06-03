@@ -1,49 +1,26 @@
 # Documentation
 
-The repository [`README.md`](../README.md) is the starting point for usage and
-examples. Contribution and pull-request requirements remain in
+Use the audience-specific entrypoints first:
+
+- [User documentation](user.md): CLI/API usage, parser output, diagnostics,
+  generated `.pyi` files, semantic contracts, and readiness.
+- [Developer documentation](developer.md): parser and semantic implementation
+  references, focused test files, fixture generators, CLI test commands, and
+  maintenance workflows.
+
+The repository [`README.md`](../README.md) remains the user-facing project
+overview. Contribution and pull-request requirements remain in
 [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
-## Diagnostics
+## Reference Files
 
-- [Diagnostic code registry](diagnostic_codes.md): stable parser error and
-  report-diagnostic categories shared by the frontend documentation.
-
-## Architecture And Semantic Interfaces
-
-- [Semantic multilanguage wrapper runtime architecture](architecture/semantic_multilanguage_wrapper_runtime_architecture.md):
-  long-term architecture and runtime model.
-- [Wrapper `.pyi` format](semantics/pyi_format.md): editable semantic
-  interface syntax and conversion behavior.
-- [C to semantic IR mapping](semantics/c2ir_mapping.md): implemented C
-  semantic conversion subset and blocker policy.
-- [Self-contained C semantic `.pyi` specification](semantics/c_pyi_self_contained_specification.md):
-  staged C wrapper interface design.
-
-## Roadmap And Backlog
-
-- [x2py checklist](x2py_checklist.md):
-  pending frontend, shared semantics, and `.pyi` tasks.
-
-## Parser Frontends
-
-### Fortran
-
-- [Fortran parser reference](fortran/fortran_parser.md): supported subset,
-  command-line usage, APIs, and diagnostics.
-- [Fortran parser implementation reference](fortran/parser_implementation_reference.md):
-  implementation inventory, testing workflow, and maintenance guard policy.
-
-### C
-
-- [C parser reference](c_parser/c_parser_reference.md): implemented parser
-  behavior, semantic handoff, and testing workflow.
-- [C parser architecture plan](c_parser/c_parser_architecture.md): design and
-  integration decisions.
-- [C parser CLI workflow plan](c_parser/c_parser_cli_workflow.md): command
-  surface and output contracts.
-
-## Fixture Notes
+- [C parser reference](c_parser.md)
+- [Fortran parser reference](fortran_parser.md)
+- [Semantic IR and `.pyi` reference](semantics.md)
+- [Wrapper design notes](wrapper_design_notes.md)
+- [Diagnostic code registry](diagnostic_codes.md)
+- [Quality assurance](quality.md)
+- [Semantic multilanguage wrapper runtime architecture](architecture/semantic_multilanguage_wrapper_runtime_architecture.md)
 
 README files under `tests/` intentionally remain next to the fixtures or
 expected outputs they describe. They are local test-maintenance instructions,

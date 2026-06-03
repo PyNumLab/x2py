@@ -3,8 +3,10 @@
     "general/shape_exprs.h": {
       "filename": "general/shape_exprs.h",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "general/shape_exprs.h"
+      ],
       "functions": [
         {
           "name": "fill_grid",
@@ -19,7 +21,7 @@
               "type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x[static 1][X2PY_EXPR_N1]",
+                "source_text": "int x[static 1][(4 + 2)]",
                 "components": [
                   {
                     "model": "CPointer",
@@ -30,7 +32,7 @@
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "X2PY_EXPR_N1",
+                    "bound": "(4 + 2)",
                     "is_static_minimum": false,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -45,7 +47,7 @@
               "declared_type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x[static 1][X2PY_EXPR_N1]",
+                "source_text": "int x[static 1][(4 + 2)]",
                 "components": [
                   {
                     "model": "CArray",
@@ -60,7 +62,7 @@
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "X2PY_EXPR_N1",
+                    "bound": "(4 + 2)",
                     "is_static_minimum": false,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -85,13 +87,13 @@
             "filename": "general/shape_exprs.h",
             "line": 10,
             "column": 1,
-            "source_line": "void fill_grid(int x[static 1][X2PY_EXPR_N1]);"
+            "source_line": "void fill_grid(int x[static 1][(4 + 2)]);"
           },
           "start": {
             "filename": "general/shape_exprs.h",
             "line": 10,
             "column": 1,
-            "source_line": "void fill_grid(int x[static 1][X2PY_EXPR_N1]);"
+            "source_line": "void fill_grid(int x[static 1][(4 + 2)]);"
           },
           "end": null,
           "declaration_locations": []
@@ -214,7 +216,7 @@
               "type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x[static X2PY_EXPR_N1]",
+                "source_text": "int x[static (4 + 2)]",
                 "components": [
                   {
                     "model": "CPointer",
@@ -231,13 +233,13 @@
               "declared_type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x[static X2PY_EXPR_N1]",
+                "source_text": "int x[static (4 + 2)]",
                 "components": [
                   {
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "X2PY_EXPR_N1",
+                    "bound": "(4 + 2)",
                     "is_static_minimum": true,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -257,7 +259,7 @@
               "type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "float y[static X2PY_EXPR_N0 * 2]",
+                "source_text": "float y[static 4 * 2]",
                 "components": [
                   {
                     "model": "CPointer",
@@ -274,13 +276,13 @@
               "declared_type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "float y[static X2PY_EXPR_N0 * 2]",
+                "source_text": "float y[static 4 * 2]",
                 "components": [
                   {
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "X2PY_EXPR_N0 * 2",
+                    "bound": "4 * 2",
                     "is_static_minimum": true,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -329,7 +331,7 @@
               "type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x1[static X2PY_EXPR_A + X2PY_EXPR_B]",
+                "source_text": "int x1[static 8 + 3]",
                 "components": [
                   {
                     "model": "CPointer",
@@ -346,13 +348,13 @@
               "declared_type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x1[static X2PY_EXPR_A + X2PY_EXPR_B]",
+                "source_text": "int x1[static 8 + 3]",
                 "components": [
                   {
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "X2PY_EXPR_A + X2PY_EXPR_B",
+                    "bound": "8 + 3",
                     "is_static_minimum": true,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -372,7 +374,7 @@
               "type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x2[static X2PY_EXPR_A - X2PY_EXPR_B]",
+                "source_text": "int x2[static 8 - 3]",
                 "components": [
                   {
                     "model": "CPointer",
@@ -389,13 +391,13 @@
               "declared_type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x2[static X2PY_EXPR_A - X2PY_EXPR_B]",
+                "source_text": "int x2[static 8 - 3]",
                 "components": [
                   {
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "X2PY_EXPR_A - X2PY_EXPR_B",
+                    "bound": "8 - 3",
                     "is_static_minimum": true,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -415,7 +417,7 @@
               "type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x3[static X2PY_EXPR_B * X2PY_EXPR_C]",
+                "source_text": "int x3[static 3 * 2]",
                 "components": [
                   {
                     "model": "CPointer",
@@ -432,13 +434,13 @@
               "declared_type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x3[static X2PY_EXPR_B * X2PY_EXPR_C]",
+                "source_text": "int x3[static 3 * 2]",
                 "components": [
                   {
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "X2PY_EXPR_B * X2PY_EXPR_C",
+                    "bound": "3 * 2",
                     "is_static_minimum": true,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -458,7 +460,7 @@
               "type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x4[static X2PY_EXPR_A / X2PY_EXPR_C]",
+                "source_text": "int x4[static 8 / 2]",
                 "components": [
                   {
                     "model": "CPointer",
@@ -475,13 +477,13 @@
               "declared_type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x4[static X2PY_EXPR_A / X2PY_EXPR_C]",
+                "source_text": "int x4[static 8 / 2]",
                 "components": [
                   {
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "X2PY_EXPR_A / X2PY_EXPR_C",
+                    "bound": "8 / 2",
                     "is_static_minimum": true,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -501,7 +503,7 @@
               "type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x5[static 1 << X2PY_EXPR_B]",
+                "source_text": "int x5[static 1 << 3]",
                 "components": [
                   {
                     "model": "CPointer",
@@ -518,13 +520,13 @@
               "declared_type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x5[static 1 << X2PY_EXPR_B]",
+                "source_text": "int x5[static 1 << 3]",
                 "components": [
                   {
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "1 << X2PY_EXPR_B",
+                    "bound": "1 << 3",
                     "is_static_minimum": true,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -544,7 +546,7 @@
               "type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x6[static (X2PY_EXPR_A + X2PY_EXPR_B) * X2PY_EXPR_C - 1]",
+                "source_text": "int x6[static (8 + 3) * 2 - 1]",
                 "components": [
                   {
                     "model": "CPointer",
@@ -561,13 +563,13 @@
               "declared_type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x6[static (X2PY_EXPR_A + X2PY_EXPR_B) * X2PY_EXPR_C - 1]",
+                "source_text": "int x6[static (8 + 3) * 2 - 1]",
                 "components": [
                   {
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "(X2PY_EXPR_A + X2PY_EXPR_B) * X2PY_EXPR_C - 1",
+                    "bound": "(8 + 3) * 2 - 1",
                     "is_static_minimum": true,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -587,7 +589,7 @@
               "type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x7[static -(-X2PY_EXPR_A + X2PY_EXPR_B)]",
+                "source_text": "int x7[static -(-8 + 3)]",
                 "components": [
                   {
                     "model": "CPointer",
@@ -604,13 +606,13 @@
               "declared_type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x7[static -(-X2PY_EXPR_A + X2PY_EXPR_B)]",
+                "source_text": "int x7[static -(-8 + 3)]",
                 "components": [
                   {
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "-(-X2PY_EXPR_A + X2PY_EXPR_B)",
+                    "bound": "-(-8 + 3)",
                     "is_static_minimum": true,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -630,7 +632,7 @@
               "type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x8[static (X2PY_EXPR_A + X2PY_EXPR_B) * (X2PY_EXPR_C + 1) - 1]",
+                "source_text": "int x8[static (8 + 3) * (2 + 1) - 1]",
                 "components": [
                   {
                     "model": "CPointer",
@@ -647,13 +649,13 @@
               "declared_type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x8[static (X2PY_EXPR_A + X2PY_EXPR_B) * (X2PY_EXPR_C + 1) - 1]",
+                "source_text": "int x8[static (8 + 3) * (2 + 1) - 1]",
                 "components": [
                   {
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "(X2PY_EXPR_A + X2PY_EXPR_B) * (X2PY_EXPR_C + 1) - 1",
+                    "bound": "(8 + 3) * (2 + 1) - 1",
                     "is_static_minimum": true,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -673,7 +675,7 @@
               "type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x9[static (X2PY_EXPR_A - X2PY_EXPR_B) * (X2PY_EXPR_A - X2PY_EXPR_C)]",
+                "source_text": "int x9[static (8 - 3) * (8 - 2)]",
                 "components": [
                   {
                     "model": "CPointer",
@@ -690,13 +692,13 @@
               "declared_type": {
                 "model": "CComposedType",
                 "qualifiers": [],
-                "source_text": "int x9[static (X2PY_EXPR_A - X2PY_EXPR_B) * (X2PY_EXPR_A - X2PY_EXPR_C)]",
+                "source_text": "int x9[static (8 - 3) * (8 - 2)]",
                 "components": [
                   {
                     "model": "CArray",
                     "qualifiers": [],
                     "source_text": "",
-                    "bound": "(X2PY_EXPR_A - X2PY_EXPR_B) * (X2PY_EXPR_A - X2PY_EXPR_C)",
+                    "bound": "(8 - 3) * (8 - 2)",
                     "is_static_minimum": true,
                     "is_variable_length": false,
                     "is_flexible": false
@@ -738,103 +740,9 @@
       "enums": [],
       "typedefs": [],
       "variables": [],
-      "macros": [
-        {
-          "name": "X2PY_GENERAL_SHAPE_EXPRS_H",
-          "value": null,
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/shape_exprs.h",
-            "line": 2,
-            "column": 1,
-            "source_line": "#define X2PY_GENERAL_SHAPE_EXPRS_H"
-          }
-        },
-        {
-          "name": "X2PY_EXPR_N0",
-          "value": "4",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/shape_exprs.h",
-            "line": 4,
-            "column": 1,
-            "source_line": "#define X2PY_EXPR_N0 4"
-          }
-        },
-        {
-          "name": "X2PY_EXPR_N1",
-          "value": "(X2PY_EXPR_N0 + 2)",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/shape_exprs.h",
-            "line": 5,
-            "column": 1,
-            "source_line": "#define X2PY_EXPR_N1 (X2PY_EXPR_N0 + 2)"
-          }
-        },
-        {
-          "name": "X2PY_EXPR_A",
-          "value": "8",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/shape_exprs.h",
-            "line": 6,
-            "column": 1,
-            "source_line": "#define X2PY_EXPR_A 8"
-          }
-        },
-        {
-          "name": "X2PY_EXPR_B",
-          "value": "3",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/shape_exprs.h",
-            "line": 7,
-            "column": 1,
-            "source_line": "#define X2PY_EXPR_B 3"
-          }
-        },
-        {
-          "name": "X2PY_EXPR_C",
-          "value": "2",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/shape_exprs.h",
-            "line": 8,
-            "column": 1,
-            "source_line": "#define X2PY_EXPR_C 2"
-          }
-        }
-      ],
+      "macros": [],
       "includes": [],
-      "raw_directives": [
-        {
-          "directive": "ifndef",
-          "argument": "X2PY_GENERAL_SHAPE_EXPRS_H",
-          "source_location": {
-            "filename": "general/shape_exprs.h",
-            "line": 1,
-            "column": 1,
-            "source_line": "#ifndef X2PY_GENERAL_SHAPE_EXPRS_H"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "general/shape_exprs.h",
-            "line": 30,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        }
-      ],
+      "raw_directives": [],
       "macro_dependencies": [],
       "diagnostics": []
     }
@@ -853,7 +761,7 @@
           "type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x[static 1][X2PY_EXPR_N1]",
+            "source_text": "int x[static 1][(4 + 2)]",
             "components": [
               {
                 "model": "CPointer",
@@ -864,7 +772,7 @@
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "X2PY_EXPR_N1",
+                "bound": "(4 + 2)",
                 "is_static_minimum": false,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -879,7 +787,7 @@
           "declared_type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x[static 1][X2PY_EXPR_N1]",
+            "source_text": "int x[static 1][(4 + 2)]",
             "components": [
               {
                 "model": "CArray",
@@ -894,7 +802,7 @@
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "X2PY_EXPR_N1",
+                "bound": "(4 + 2)",
                 "is_static_minimum": false,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -919,13 +827,13 @@
         "filename": "general/shape_exprs.h",
         "line": 10,
         "column": 1,
-        "source_line": "void fill_grid(int x[static 1][X2PY_EXPR_N1]);"
+        "source_line": "void fill_grid(int x[static 1][(4 + 2)]);"
       },
       "start": {
         "filename": "general/shape_exprs.h",
         "line": 10,
         "column": 1,
-        "source_line": "void fill_grid(int x[static 1][X2PY_EXPR_N1]);"
+        "source_line": "void fill_grid(int x[static 1][(4 + 2)]);"
       },
       "end": null,
       "declaration_locations": []
@@ -1048,7 +956,7 @@
           "type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x[static X2PY_EXPR_N1]",
+            "source_text": "int x[static (4 + 2)]",
             "components": [
               {
                 "model": "CPointer",
@@ -1065,13 +973,13 @@
           "declared_type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x[static X2PY_EXPR_N1]",
+            "source_text": "int x[static (4 + 2)]",
             "components": [
               {
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "X2PY_EXPR_N1",
+                "bound": "(4 + 2)",
                 "is_static_minimum": true,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -1091,7 +999,7 @@
           "type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "float y[static X2PY_EXPR_N0 * 2]",
+            "source_text": "float y[static 4 * 2]",
             "components": [
               {
                 "model": "CPointer",
@@ -1108,13 +1016,13 @@
           "declared_type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "float y[static X2PY_EXPR_N0 * 2]",
+            "source_text": "float y[static 4 * 2]",
             "components": [
               {
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "X2PY_EXPR_N0 * 2",
+                "bound": "4 * 2",
                 "is_static_minimum": true,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -1163,7 +1071,7 @@
           "type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x1[static X2PY_EXPR_A + X2PY_EXPR_B]",
+            "source_text": "int x1[static 8 + 3]",
             "components": [
               {
                 "model": "CPointer",
@@ -1180,13 +1088,13 @@
           "declared_type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x1[static X2PY_EXPR_A + X2PY_EXPR_B]",
+            "source_text": "int x1[static 8 + 3]",
             "components": [
               {
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "X2PY_EXPR_A + X2PY_EXPR_B",
+                "bound": "8 + 3",
                 "is_static_minimum": true,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -1206,7 +1114,7 @@
           "type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x2[static X2PY_EXPR_A - X2PY_EXPR_B]",
+            "source_text": "int x2[static 8 - 3]",
             "components": [
               {
                 "model": "CPointer",
@@ -1223,13 +1131,13 @@
           "declared_type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x2[static X2PY_EXPR_A - X2PY_EXPR_B]",
+            "source_text": "int x2[static 8 - 3]",
             "components": [
               {
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "X2PY_EXPR_A - X2PY_EXPR_B",
+                "bound": "8 - 3",
                 "is_static_minimum": true,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -1249,7 +1157,7 @@
           "type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x3[static X2PY_EXPR_B * X2PY_EXPR_C]",
+            "source_text": "int x3[static 3 * 2]",
             "components": [
               {
                 "model": "CPointer",
@@ -1266,13 +1174,13 @@
           "declared_type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x3[static X2PY_EXPR_B * X2PY_EXPR_C]",
+            "source_text": "int x3[static 3 * 2]",
             "components": [
               {
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "X2PY_EXPR_B * X2PY_EXPR_C",
+                "bound": "3 * 2",
                 "is_static_minimum": true,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -1292,7 +1200,7 @@
           "type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x4[static X2PY_EXPR_A / X2PY_EXPR_C]",
+            "source_text": "int x4[static 8 / 2]",
             "components": [
               {
                 "model": "CPointer",
@@ -1309,13 +1217,13 @@
           "declared_type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x4[static X2PY_EXPR_A / X2PY_EXPR_C]",
+            "source_text": "int x4[static 8 / 2]",
             "components": [
               {
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "X2PY_EXPR_A / X2PY_EXPR_C",
+                "bound": "8 / 2",
                 "is_static_minimum": true,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -1335,7 +1243,7 @@
           "type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x5[static 1 << X2PY_EXPR_B]",
+            "source_text": "int x5[static 1 << 3]",
             "components": [
               {
                 "model": "CPointer",
@@ -1352,13 +1260,13 @@
           "declared_type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x5[static 1 << X2PY_EXPR_B]",
+            "source_text": "int x5[static 1 << 3]",
             "components": [
               {
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "1 << X2PY_EXPR_B",
+                "bound": "1 << 3",
                 "is_static_minimum": true,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -1378,7 +1286,7 @@
           "type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x6[static (X2PY_EXPR_A + X2PY_EXPR_B) * X2PY_EXPR_C - 1]",
+            "source_text": "int x6[static (8 + 3) * 2 - 1]",
             "components": [
               {
                 "model": "CPointer",
@@ -1395,13 +1303,13 @@
           "declared_type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x6[static (X2PY_EXPR_A + X2PY_EXPR_B) * X2PY_EXPR_C - 1]",
+            "source_text": "int x6[static (8 + 3) * 2 - 1]",
             "components": [
               {
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "(X2PY_EXPR_A + X2PY_EXPR_B) * X2PY_EXPR_C - 1",
+                "bound": "(8 + 3) * 2 - 1",
                 "is_static_minimum": true,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -1421,7 +1329,7 @@
           "type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x7[static -(-X2PY_EXPR_A + X2PY_EXPR_B)]",
+            "source_text": "int x7[static -(-8 + 3)]",
             "components": [
               {
                 "model": "CPointer",
@@ -1438,13 +1346,13 @@
           "declared_type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x7[static -(-X2PY_EXPR_A + X2PY_EXPR_B)]",
+            "source_text": "int x7[static -(-8 + 3)]",
             "components": [
               {
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "-(-X2PY_EXPR_A + X2PY_EXPR_B)",
+                "bound": "-(-8 + 3)",
                 "is_static_minimum": true,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -1464,7 +1372,7 @@
           "type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x8[static (X2PY_EXPR_A + X2PY_EXPR_B) * (X2PY_EXPR_C + 1) - 1]",
+            "source_text": "int x8[static (8 + 3) * (2 + 1) - 1]",
             "components": [
               {
                 "model": "CPointer",
@@ -1481,13 +1389,13 @@
           "declared_type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x8[static (X2PY_EXPR_A + X2PY_EXPR_B) * (X2PY_EXPR_C + 1) - 1]",
+            "source_text": "int x8[static (8 + 3) * (2 + 1) - 1]",
             "components": [
               {
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "(X2PY_EXPR_A + X2PY_EXPR_B) * (X2PY_EXPR_C + 1) - 1",
+                "bound": "(8 + 3) * (2 + 1) - 1",
                 "is_static_minimum": true,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -1507,7 +1415,7 @@
           "type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x9[static (X2PY_EXPR_A - X2PY_EXPR_B) * (X2PY_EXPR_A - X2PY_EXPR_C)]",
+            "source_text": "int x9[static (8 - 3) * (8 - 2)]",
             "components": [
               {
                 "model": "CPointer",
@@ -1524,13 +1432,13 @@
           "declared_type": {
             "model": "CComposedType",
             "qualifiers": [],
-            "source_text": "int x9[static (X2PY_EXPR_A - X2PY_EXPR_B) * (X2PY_EXPR_A - X2PY_EXPR_C)]",
+            "source_text": "int x9[static (8 - 3) * (8 - 2)]",
             "components": [
               {
                 "model": "CArray",
                 "qualifiers": [],
                 "source_text": "",
-                "bound": "(X2PY_EXPR_A - X2PY_EXPR_B) * (X2PY_EXPR_A - X2PY_EXPR_C)",
+                "bound": "(8 - 3) * (8 - 2)",
                 "is_static_minimum": true,
                 "is_variable_length": false,
                 "is_flexible": false
@@ -1572,80 +1480,7 @@
   "enums": {},
   "typedefs": {},
   "variables": {},
-  "macros": {
-    "X2PY_GENERAL_SHAPE_EXPRS_H": {
-      "name": "X2PY_GENERAL_SHAPE_EXPRS_H",
-      "value": null,
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/shape_exprs.h",
-        "line": 2,
-        "column": 1,
-        "source_line": "#define X2PY_GENERAL_SHAPE_EXPRS_H"
-      }
-    },
-    "X2PY_EXPR_N0": {
-      "name": "X2PY_EXPR_N0",
-      "value": "4",
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/shape_exprs.h",
-        "line": 4,
-        "column": 1,
-        "source_line": "#define X2PY_EXPR_N0 4"
-      }
-    },
-    "X2PY_EXPR_N1": {
-      "name": "X2PY_EXPR_N1",
-      "value": "(X2PY_EXPR_N0 + 2)",
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/shape_exprs.h",
-        "line": 5,
-        "column": 1,
-        "source_line": "#define X2PY_EXPR_N1 (X2PY_EXPR_N0 + 2)"
-      }
-    },
-    "X2PY_EXPR_A": {
-      "name": "X2PY_EXPR_A",
-      "value": "8",
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/shape_exprs.h",
-        "line": 6,
-        "column": 1,
-        "source_line": "#define X2PY_EXPR_A 8"
-      }
-    },
-    "X2PY_EXPR_B": {
-      "name": "X2PY_EXPR_B",
-      "value": "3",
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/shape_exprs.h",
-        "line": 7,
-        "column": 1,
-        "source_line": "#define X2PY_EXPR_B 3"
-      }
-    },
-    "X2PY_EXPR_C": {
-      "name": "X2PY_EXPR_C",
-      "value": "2",
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/shape_exprs.h",
-        "line": 8,
-        "column": 1,
-        "source_line": "#define X2PY_EXPR_C 2"
-      }
-    }
-  },
+  "macros": {},
   "includes": {},
   "functions_by_file": {
     "general/shape_exprs.h": [

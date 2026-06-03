@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Compiler-derived Fortran kind expression probe tests."""
 
 import json
@@ -37,9 +36,7 @@ def _required_fortran_compiler() -> str:
 
 
 def test_fortran_type_probe_source_evaluates_integer_initialization_expressions():
-    source = build_fortran_type_probe_source(
-        ["selected_real_kind(12)", "real64", "c_double"]
-    )
+    source = build_fortran_type_probe_source(["selected_real_kind(12)", "real64", "c_double"])
 
     assert "use, intrinsic :: iso_fortran_env, only: real64" in source
     assert "use, intrinsic :: iso_c_binding, only: c_double" in source
@@ -59,7 +56,7 @@ def test_x2py_public_api_lazily_exposes_type_probe_symbols_and_rejects_unknown_n
     assert x2py.FortranTypeProbeError is FortranTypeProbeError
     assert x2py.FortranTypeProbeReport is FortranTypeProbeReport
     with pytest.raises(AttributeError, match="not_exported"):
-        getattr(x2py, "not_exported")
+        _ = x2py.not_exported
 
 
 def test_fortran_type_probe_rejects_statement_injection():
@@ -143,11 +140,17 @@ def test_fortran_type_probe_report_resolves_only_matching_parameter_requirements
             "missing 'values'",
         ),
         (
-            [SimpleNamespace(returncode=0, stderr=""), SimpleNamespace(returncode=0, stdout='{"values":[]}', stderr="")],
+            [
+                SimpleNamespace(returncode=0, stderr=""),
+                SimpleNamespace(returncode=0, stdout='{"values":[]}', stderr=""),
+            ],
             "count does not match",
         ),
         (
-            [SimpleNamespace(returncode=0, stderr=""), SimpleNamespace(returncode=0, stdout='{"values":["bad"]}', stderr="")],
+            [
+                SimpleNamespace(returncode=0, stderr=""),
+                SimpleNamespace(returncode=0, stdout='{"values":["bad"]}', stderr=""),
+            ],
             "is not an integer",
         ),
     ],
@@ -312,8 +315,6 @@ end module solver_mod
             "x2py",
             str(source),
             "--semantics",
-            "--preprocess",
-            "compiler",
             "--compiler",
             compiler,
             "--json",
@@ -324,7 +325,5 @@ end module solver_mod
     )
 
     payload = json.loads(completed.stdout)
-    semantic_type = payload[str(source)]["semantic_modules"][0]["functions"][0]["arguments"][0][
-        "semantic_type"
-    ]
+    semantic_type = payload[str(source)]["semantic_modules"][0]["functions"][0]["arguments"][0]["semantic_type"]
     assert semantic_type["name"] == "Float64"

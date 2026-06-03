@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import json
 import os
 from pathlib import Path
@@ -7,9 +6,17 @@ import pytest
 
 from x2py import FortranParseError, parse_fortran_file
 
-parse_fortran_procedures = lambda source, filename=None: parse_fortran_file(source, filename=filename).procedures
-parse_fortran_types = lambda source, filename=None: parse_fortran_file(source, filename=filename).derived_types
-parse_fortran_modules = lambda source, filename=None: parse_fortran_file(source, filename=filename).modules
+
+def parse_fortran_procedures(source, filename=None):
+    return parse_fortran_file(source, filename=filename).procedures
+
+
+def parse_fortran_types(source, filename=None):
+    return parse_fortran_file(source, filename=filename).derived_types
+
+
+def parse_fortran_modules(source, filename=None):
+    return parse_fortran_file(source, filename=filename).modules
 
 
 _TESTS_DIR = Path(__file__).resolve().parents[1]
@@ -58,9 +65,7 @@ def _run_error_fixture(fixture: Path, *, filename_for_parser: str, expected_path
         parser_fn = _PARSER_MAP[parser_name]
         try:
             parser_fn(source, filename=filename_for_parser)
-            raise AssertionError(
-                f"Expected FortranParseError from {fixture.name} but no error was raised"
-            )
+            raise AssertionError(f"Expected FortranParseError from {fixture.name} but no error was raised")
         except FortranParseError as exc:
             _dump_expected_error(expected_path, "FortranParseError", exc, parser_name)
         return
@@ -80,8 +85,7 @@ def _run_error_fixture(fixture: Path, *, filename_for_parser: str, expected_path
     err_msg = str(exc_info.value)
     for fragment in message_contains:
         assert fragment in err_msg, (
-            f"Expected fragment {fragment!r} not found in error message for {fixture.name}.\n"
-            f"Got: {err_msg!r}"
+            f"Expected fragment {fragment!r} not found in error message for {fixture.name}.\nGot: {err_msg!r}"
         )
 
     diagnostic = exc_info.value.format_diagnostic(color=False)
@@ -89,8 +93,7 @@ def _run_error_fixture(fixture: Path, *, filename_for_parser: str, expected_path
         if not fragment:
             continue
         assert fragment in diagnostic, (
-            f"Expected diagnostic fragment {fragment!r} not found for {fixture.name}.\n"
-            f"Got: {diagnostic!r}"
+            f"Expected diagnostic fragment {fragment!r} not found for {fixture.name}.\nGot: {diagnostic!r}"
         )
 
 

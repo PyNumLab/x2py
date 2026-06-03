@@ -44,8 +44,10 @@ traceback unless `--debug` is used.
 | `PARSE_DUPLICATE_FIELD` | Fortran | A derived type contains duplicate fields. |
 | `PARSE_UNKNOWN_FIELD_TYPE` | Fortran | A derived-type field still has an unknown datatype after parsing. |
 | `PARSE_DUPLICATE_ARGUMENT` | Fortran | A procedure argument list repeats a name. |
+| `PARSE_PREPROCESSING_REQUIRED` | Fortran | Raw CPP directives require compiler preprocessing before parser entry. |
 | `PARSE_INTERNAL_STATE` | Fortran | A defensive internal parser invariant was violated. |
 | `CPARSE_ERROR` | C | Fallback for a manually constructed or defensive C parse error without a narrower category. |
+| `CPARSE_PREPROCESSING_REQUIRED` | C | Raw preprocessing directives require compiler preprocessing before parser entry. |
 | `CPARSE_UNSUPPORTED_KNR_DEFINITION` | C | Unsupported K&R-style function definition. |
 | `CPARSE_INVALID_SPECIFIER_SEQUENCE` | C | Invalid C primitive-specifier sequence. |
 | `CPARSE_INVALID_SYNTAX` | C | Syntax cannot be consumed in a modeled C grammar region. |
@@ -75,8 +77,6 @@ These records do not necessarily stop parsing; inspect each diagnostic's
 | Code | Meaning |
 | --- | --- |
 | `C_UNRESOLVED_INCLUDE` | A local include could not be resolved. |
-| `C_UNSUPPORTED_FUNCTION_LIKE_MACRO` | A function-like macro was recorded but not expanded. |
-| `C_MACRO_DEPENDENT_DECLARATION` | Declaration parsing requires macro expansion. |
 | `C_UNMODELED_COMPILER_EXTENSION` | Compiler syntax was accepted for declaration extraction, but ABI-, layout-, type-, or symbol-relevant extension semantics remain unmodeled. |
 | `C_UNSUPPORTED_DECLARATION` | Recognized declaration form is outside the modeled subset. |
 | `C_UNSUPPORTED_DECLARATOR` | Declarator form is outside the modeled subset. |

@@ -3,11 +3,137 @@
     "tinyexpr/tinyexpr.c": {
       "filename": "tinyexpr/tinyexpr.c",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "tinyexpr/tinyexpr.c",
+        "tinyexpr/tinyexpr.h"
+      ],
       "functions": [
         {
-          "name": "new_expr",
+          "name": "te_interp",
+          "result_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double"
+          },
+          "parameters": [
+            {
+              "name": "expression",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *expression",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *expression",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "error",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "int *error",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "int *error",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 693,
+            "column": 1,
+            "source_line": "double te_interp(const char *expression, int *error) {"
+          },
+          "start": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 693,
+            "column": 1,
+            "source_line": "double te_interp(const char *expression, int *error) {"
+          },
+          "end": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 704,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "tinyexpr/tinyexpr.h",
+              "line": 66,
+              "column": 1,
+              "source_line": "double te_interp(const char *expression, int *error);"
+            }
+          ]
+        },
+        {
+          "name": "te_compile",
           "result_type": {
             "model": "CComposedType",
             "qualifiers": [],
@@ -23,9 +149,756 @@
                 "qualifiers": [],
                 "source_text": "te_expr",
                 "name": "te_expr",
-                "type": null,
-                "source_location": null,
+                "type": {
+                  "model": "CStruct",
+                  "qualifiers": [],
+                  "source_text": "",
+                  "name": "te_expr",
+                  "members": [
+                    {
+                      "name": "type",
+                      "type": {
+                        "model": "CInt",
+                        "qualifiers": [],
+                        "source_text": "int type"
+                      },
+                      "storage": [],
+                      "initializer": null,
+                      "bit_width": null,
+                      "source_location": {
+                        "filename": "tinyexpr/tinyexpr.h",
+                        "line": 37,
+                        "column": 5,
+                        "source_line": "    int type;"
+                      },
+                      "callback_policy": null,
+                      "declaration_locations": []
+                    },
+                    {
+                      "name": null,
+                      "type": {
+                        "model": "CUnion",
+                        "qualifiers": [],
+                        "source_text": "",
+                        "name": null,
+                        "members": [
+                          {
+                            "name": "value",
+                            "type": {
+                              "model": "CDouble",
+                              "qualifiers": [],
+                              "source_text": "double value"
+                            },
+                            "storage": [],
+                            "initializer": null,
+                            "bit_width": null,
+                            "source_location": {
+                              "filename": "tinyexpr/tinyexpr.h",
+                              "line": 38,
+                              "column": 12,
+                              "source_line": "    union {double value; const double *bound; const void *function;};"
+                            },
+                            "callback_policy": null,
+                            "declaration_locations": []
+                          },
+                          {
+                            "name": "bound",
+                            "type": {
+                              "model": "CComposedType",
+                              "qualifiers": [],
+                              "source_text": "const double *bound",
+                              "components": [
+                                {
+                                  "model": "CPointer",
+                                  "qualifiers": [],
+                                  "source_text": ""
+                                },
+                                {
+                                  "model": "CDouble",
+                                  "qualifiers": [
+                                    "const"
+                                  ],
+                                  "source_text": "const double"
+                                }
+                              ]
+                            },
+                            "storage": [],
+                            "initializer": null,
+                            "bit_width": null,
+                            "source_location": {
+                              "filename": "tinyexpr/tinyexpr.h",
+                              "line": 38,
+                              "column": 26,
+                              "source_line": "    union {double value; const double *bound; const void *function;};"
+                            },
+                            "callback_policy": null,
+                            "declaration_locations": []
+                          },
+                          {
+                            "name": "function",
+                            "type": {
+                              "model": "CComposedType",
+                              "qualifiers": [],
+                              "source_text": "const void *function",
+                              "components": [
+                                {
+                                  "model": "CPointer",
+                                  "qualifiers": [],
+                                  "source_text": ""
+                                },
+                                {
+                                  "model": "CVoid",
+                                  "qualifiers": [
+                                    "const"
+                                  ],
+                                  "source_text": "const void"
+                                }
+                              ]
+                            },
+                            "storage": [],
+                            "initializer": null,
+                            "bit_width": null,
+                            "source_location": {
+                              "filename": "tinyexpr/tinyexpr.h",
+                              "line": 38,
+                              "column": 47,
+                              "source_line": "    union {double value; const double *bound; const void *function;};"
+                            },
+                            "callback_policy": null,
+                            "declaration_locations": []
+                          }
+                        ],
+                        "anonymous_id": "union@<system-header>:0:0",
+                        "is_incomplete": false,
+                        "source_location": {
+                          "filename": "tinyexpr/tinyexpr.h",
+                          "line": 38,
+                          "column": 5,
+                          "source_line": "    union {double value; const double *bound; const void *function;};"
+                        }
+                      },
+                      "storage": [],
+                      "initializer": null,
+                      "bit_width": null,
+                      "source_location": {
+                        "filename": "tinyexpr/tinyexpr.h",
+                        "line": 38,
+                        "column": 5,
+                        "source_line": "    union {double value; const double *bound; const void *function;};"
+                      },
+                      "callback_policy": null,
+                      "declaration_locations": []
+                    },
+                    {
+                      "name": "parameters",
+                      "type": {
+                        "model": "CComposedType",
+                        "qualifiers": [],
+                        "source_text": "void *parameters[1]",
+                        "components": [
+                          {
+                            "model": "CArray",
+                            "qualifiers": [],
+                            "source_text": "",
+                            "bound": "1",
+                            "is_static_minimum": false,
+                            "is_variable_length": false,
+                            "is_flexible": false
+                          },
+                          {
+                            "model": "CPointer",
+                            "qualifiers": [],
+                            "source_text": ""
+                          },
+                          {
+                            "model": "CVoid",
+                            "qualifiers": [],
+                            "source_text": "void"
+                          }
+                        ]
+                      },
+                      "storage": [],
+                      "initializer": null,
+                      "bit_width": null,
+                      "source_location": {
+                        "filename": "tinyexpr/tinyexpr.h",
+                        "line": 39,
+                        "column": 5,
+                        "source_line": "    void *parameters[1];"
+                      },
+                      "callback_policy": null,
+                      "declaration_locations": []
+                    }
+                  ],
+                  "anonymous_id": null,
+                  "is_incomplete": false,
+                  "source_location": {
+                    "filename": "tinyexpr/tinyexpr.h",
+                    "line": 36,
+                    "column": 1,
+                    "source_line": "typedef struct te_expr {"
+                  }
+                },
+                "source_location": {
+                  "filename": "tinyexpr/tinyexpr.h",
+                  "line": 36,
+                  "column": 1,
+                  "source_line": "typedef struct te_expr {"
+                },
                 "declaration_locations": []
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "expression",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *expression",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *expression",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "variables",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const te_variable *variables",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "te_variable",
+                    "name": "te_variable",
+                    "type": {
+                      "model": "CStruct",
+                      "qualifiers": [],
+                      "source_text": "",
+                      "name": "te_variable",
+                      "members": [
+                        {
+                          "name": "name",
+                          "type": {
+                            "model": "CComposedType",
+                            "qualifiers": [],
+                            "source_text": "const char *name",
+                            "components": [
+                              {
+                                "model": "CPointer",
+                                "qualifiers": [],
+                                "source_text": ""
+                              },
+                              {
+                                "model": "CChar",
+                                "qualifiers": [
+                                  "const"
+                                ],
+                                "source_text": "const char"
+                              }
+                            ]
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "tinyexpr/tinyexpr.h",
+                            "line": 56,
+                            "column": 5,
+                            "source_line": "    const char *name;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "address",
+                          "type": {
+                            "model": "CComposedType",
+                            "qualifiers": [],
+                            "source_text": "const void *address",
+                            "components": [
+                              {
+                                "model": "CPointer",
+                                "qualifiers": [],
+                                "source_text": ""
+                              },
+                              {
+                                "model": "CVoid",
+                                "qualifiers": [
+                                  "const"
+                                ],
+                                "source_text": "const void"
+                              }
+                            ]
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "tinyexpr/tinyexpr.h",
+                            "line": 57,
+                            "column": 5,
+                            "source_line": "    const void *address;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "type",
+                          "type": {
+                            "model": "CInt",
+                            "qualifiers": [],
+                            "source_text": "int type"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "tinyexpr/tinyexpr.h",
+                            "line": 58,
+                            "column": 5,
+                            "source_line": "    int type;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "context",
+                          "type": {
+                            "model": "CComposedType",
+                            "qualifiers": [],
+                            "source_text": "void *context",
+                            "components": [
+                              {
+                                "model": "CPointer",
+                                "qualifiers": [],
+                                "source_text": ""
+                              },
+                              {
+                                "model": "CVoid",
+                                "qualifiers": [],
+                                "source_text": "void"
+                              }
+                            ]
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "tinyexpr/tinyexpr.h",
+                            "line": 59,
+                            "column": 5,
+                            "source_line": "    void *context;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        }
+                      ],
+                      "anonymous_id": null,
+                      "is_incomplete": false,
+                      "source_location": {
+                        "filename": "tinyexpr/tinyexpr.h",
+                        "line": 55,
+                        "column": 1,
+                        "source_line": "typedef struct te_variable {"
+                      }
+                    },
+                    "source_location": {
+                      "filename": "tinyexpr/tinyexpr.h",
+                      "line": 55,
+                      "column": 1,
+                      "source_line": "typedef struct te_variable {"
+                    },
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const te_variable *variables",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_variable"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "var_count",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int var_count"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int var_count"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "error",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "int *error",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "int *error",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 665,
+            "column": 1,
+            "source_line": "te_expr *te_compile(const char *expression, const te_variable *variables, int var_count, int *error) {"
+          },
+          "start": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 665,
+            "column": 1,
+            "source_line": "te_expr *te_compile(const char *expression, const te_variable *variables, int var_count, int *error) {"
+          },
+          "end": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 690,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "tinyexpr/tinyexpr.h",
+              "line": 70,
+              "column": 1,
+              "source_line": "te_expr *te_compile(const char *expression, const te_variable *variables, int var_count, int *error);"
+            }
+          ]
+        },
+        {
+          "name": "te_eval",
+          "result_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const te_expr *n",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_expr"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const te_expr *n",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_expr"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 596,
+            "column": 1,
+            "source_line": "double te_eval(const te_expr *n) {"
+          },
+          "start": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 596,
+            "column": 1,
+            "source_line": "double te_eval(const te_expr *n) {"
+          },
+          "end": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 634,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "tinyexpr/tinyexpr.h",
+              "line": 73,
+              "column": 1,
+              "source_line": "double te_eval(const te_expr *n);"
+            }
+          ]
+        },
+        {
+          "name": "te_print",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const te_expr *n",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_expr"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const te_expr *n",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_expr"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 732,
+            "column": 1,
+            "source_line": "void te_print(const te_expr *n) {"
+          },
+          "start": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 732,
+            "column": 1,
+            "source_line": "void te_print(const te_expr *n) {"
+          },
+          "end": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 734,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "tinyexpr/tinyexpr.h",
+              "line": 76,
+              "column": 1,
+              "source_line": "void te_print(const te_expr *n);"
+            }
+          ]
+        },
+        {
+          "name": "te_free",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "te_expr *n",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_expr"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "te_expr *n",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_expr"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 118,
+            "column": 1,
+            "source_line": "void te_free(te_expr *n) {"
+          },
+          "start": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 118,
+            "column": 1,
+            "source_line": "void te_free(te_expr *n) {"
+          },
+          "end": {
+            "filename": "tinyexpr/tinyexpr.c",
+            "line": 122,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "tinyexpr/tinyexpr.h",
+              "line": 80,
+              "column": 1,
+              "source_line": "void te_free(te_expr *n);"
+            }
+          ]
+        },
+        {
+          "name": "new_expr",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "te_expr",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "te_expr"
               }
             ]
           },
@@ -67,15 +940,7 @@
                     "source_text": ""
                   },
                   {
-                    "model": "CTypedef",
-                    "qualifiers": [
-                      "const"
-                    ],
-                    "source_text": "const te_expr",
-                    "name": "te_expr",
-                    "type": null,
-                    "source_location": null,
-                    "declaration_locations": []
+                    "reference": "te_expr"
                   }
                 ]
               },
@@ -155,13 +1020,7 @@
                     "source_text": ""
                   },
                   {
-                    "model": "CTypedef",
-                    "qualifiers": [],
-                    "source_text": "te_expr",
-                    "name": "te_expr",
-                    "type": null,
-                    "source_location": null,
-                    "declaration_locations": []
+                    "reference": "te_expr"
                   }
                 ]
               },
@@ -204,81 +1063,6 @@
           "end": {
             "filename": "tinyexpr/tinyexpr.c",
             "line": 115,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
-        },
-        {
-          "name": "te_free",
-          "result_type": {
-            "model": "CVoid",
-            "qualifiers": [],
-            "source_text": "void"
-          },
-          "parameters": [
-            {
-              "name": "n",
-              "type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "te_expr *n",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CTypedef",
-                    "qualifiers": [],
-                    "source_text": "te_expr",
-                    "name": "te_expr",
-                    "type": null,
-                    "source_location": null,
-                    "declaration_locations": []
-                  }
-                ]
-              },
-              "declared_type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "te_expr *n",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "reference": "te_expr"
-                  }
-                ]
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 118,
-            "column": 1,
-            "source_line": "void te_free(te_expr *n) {"
-          },
-          "start": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 118,
-            "column": 1,
-            "source_line": "void te_free(te_expr *n) {"
-          },
-          "end": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 122,
             "column": 1,
             "source_line": "}"
           },
@@ -389,13 +1173,13 @@
             "filename": "tinyexpr/tinyexpr.c",
             "line": 127,
             "column": 1,
-            "source_line": "static double fac(double a) {/* simplest version of fac */"
+            "source_line": "static double fac(double a) {"
           },
           "start": {
             "filename": "tinyexpr/tinyexpr.c",
             "line": 127,
             "column": 1,
-            "source_line": "static double fac(double a) {/* simplest version of fac */"
+            "source_line": "static double fac(double a) {"
           },
           "end": {
             "filename": "tinyexpr/tinyexpr.c",
@@ -550,15 +1334,7 @@
                 "source_text": ""
               },
               {
-                "model": "CTypedef",
-                "qualifiers": [
-                  "const"
-                ],
-                "source_text": "const te_variable",
-                "name": "te_variable",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
+                "reference": "te_variable"
               }
             ]
           },
@@ -662,15 +1438,7 @@
                 "source_text": ""
               },
               {
-                "model": "CTypedef",
-                "qualifiers": [
-                  "const"
-                ],
-                "source_text": "const te_variable",
-                "name": "te_variable",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
+                "reference": "te_variable"
               }
             ]
           },
@@ -877,7 +1645,7 @@
                                 "declaration_locations": []
                               }
                             ],
-                            "anonymous_id": "union@tinyexpr/tinyexpr.c:70:5",
+                            "anonymous_id": "union@<system-header>:0:0",
                             "is_incomplete": false,
                             "source_location": {
                               "filename": "tinyexpr/tinyexpr.c",
@@ -942,15 +1710,7 @@
                                 "source_text": ""
                               },
                               {
-                                "model": "CTypedef",
-                                "qualifiers": [
-                                  "const"
-                                ],
-                                "source_text": "const te_variable",
-                                "name": "te_variable",
-                                "type": null,
-                                "source_location": null,
-                                "declaration_locations": []
+                                "reference": "te_variable"
                               }
                             ]
                           },
@@ -1572,13 +2332,7 @@
                 "source_text": ""
               },
               {
-                "model": "CTypedef",
-                "qualifiers": [],
-                "source_text": "te_expr",
-                "name": "te_expr",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
+                "reference": "te_expr"
               }
             ]
           },
@@ -1666,13 +2420,7 @@
                 "source_text": ""
               },
               {
-                "model": "CTypedef",
-                "qualifiers": [],
-                "source_text": "te_expr",
-                "name": "te_expr",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
+                "reference": "te_expr"
               }
             ]
           },
@@ -1760,13 +2508,7 @@
                 "source_text": ""
               },
               {
-                "model": "CTypedef",
-                "qualifiers": [],
-                "source_text": "te_expr",
-                "name": "te_expr",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
+                "reference": "te_expr"
               }
             ]
           },
@@ -1854,13 +2596,7 @@
                 "source_text": ""
               },
               {
-                "model": "CTypedef",
-                "qualifiers": [],
-                "source_text": "te_expr",
-                "name": "te_expr",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
+                "reference": "te_expr"
               }
             ]
           },
@@ -1941,103 +2677,7 @@
                 "source_text": ""
               },
               {
-                "model": "CTypedef",
-                "qualifiers": [],
-                "source_text": "te_expr",
-                "name": "te_expr",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
-              }
-            ]
-          },
-          "parameters": [
-            {
-              "name": "s",
-              "type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "state *s",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "reference": "state"
-                  }
-                ]
-              },
-              "declared_type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "state *s",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "reference": "state"
-                  }
-                ]
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [
-            "static"
-          ],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 448,
-            "column": 1,
-            "source_line": "static te_expr *factor(state *s) {"
-          },
-          "start": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 448,
-            "column": 1,
-            "source_line": "static te_expr *factor(state *s) {"
-          },
-          "end": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 501,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": [],
-          "condition_set": [
-            "g5:b0"
-          ]
-        },
-        {
-          "name": "factor",
-          "result_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "te_expr",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CTypedef",
-                "qualifiers": [],
-                "source_text": "te_expr",
-                "name": "te_expr",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
+                "reference": "te_expr"
               }
             ]
           },
@@ -2103,10 +2743,7 @@
             "column": 1,
             "source_line": "}"
           },
-          "declaration_locations": [],
-          "condition_set": [
-            "g5:b1"
-          ]
+          "declaration_locations": []
         },
         {
           "name": "term",
@@ -2121,13 +2758,7 @@
                 "source_text": ""
               },
               {
-                "model": "CTypedef",
-                "qualifiers": [],
-                "source_text": "te_expr",
-                "name": "te_expr",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
+                "reference": "te_expr"
               }
             ]
           },
@@ -2196,83 +2827,6 @@
           "declaration_locations": []
         },
         {
-          "name": "te_eval",
-          "result_type": {
-            "model": "CDouble",
-            "qualifiers": [],
-            "source_text": "double"
-          },
-          "parameters": [
-            {
-              "name": "n",
-              "type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "const te_expr *n",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CTypedef",
-                    "qualifiers": [
-                      "const"
-                    ],
-                    "source_text": "const te_expr",
-                    "name": "te_expr",
-                    "type": null,
-                    "source_location": null,
-                    "declaration_locations": []
-                  }
-                ]
-              },
-              "declared_type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "const te_expr *n",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "reference": "te_expr"
-                  }
-                ]
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 596,
-            "column": 1,
-            "source_line": "double te_eval(const te_expr *n) {"
-          },
-          "start": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 596,
-            "column": 1,
-            "source_line": "double te_eval(const te_expr *n) {"
-          },
-          "end": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 634,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
-        },
-        {
           "name": "optimize",
           "result_type": {
             "model": "CVoid",
@@ -2293,13 +2847,7 @@
                     "source_text": ""
                   },
                   {
-                    "model": "CTypedef",
-                    "qualifiers": [],
-                    "source_text": "te_expr",
-                    "name": "te_expr",
-                    "type": null,
-                    "source_location": null,
-                    "declaration_locations": []
+                    "reference": "te_expr"
                   }
                 ]
               },
@@ -2350,312 +2898,6 @@
           "declaration_locations": []
         },
         {
-          "name": "te_compile",
-          "result_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "te_expr",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CTypedef",
-                "qualifiers": [],
-                "source_text": "te_expr",
-                "name": "te_expr",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
-              }
-            ]
-          },
-          "parameters": [
-            {
-              "name": "expression",
-              "type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "const char *expression",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CChar",
-                    "qualifiers": [
-                      "const"
-                    ],
-                    "source_text": "const char"
-                  }
-                ]
-              },
-              "declared_type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "const char *expression",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CChar",
-                    "qualifiers": [
-                      "const"
-                    ],
-                    "source_text": "const char"
-                  }
-                ]
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "variables",
-              "type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "const te_variable *variables",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CTypedef",
-                    "qualifiers": [
-                      "const"
-                    ],
-                    "source_text": "const te_variable",
-                    "name": "te_variable",
-                    "type": null,
-                    "source_location": null,
-                    "declaration_locations": []
-                  }
-                ]
-              },
-              "declared_type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "const te_variable *variables",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "reference": "te_variable"
-                  }
-                ]
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "var_count",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int var_count"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int var_count"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "error",
-              "type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "int *error",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CInt",
-                    "qualifiers": [],
-                    "source_text": "int"
-                  }
-                ]
-              },
-              "declared_type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "int *error",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CInt",
-                    "qualifiers": [],
-                    "source_text": "int"
-                  }
-                ]
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 665,
-            "column": 1,
-            "source_line": "te_expr *te_compile(const char *expression, const te_variable *variables, int var_count, int *error) {"
-          },
-          "start": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 665,
-            "column": 1,
-            "source_line": "te_expr *te_compile(const char *expression, const te_variable *variables, int var_count, int *error) {"
-          },
-          "end": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 690,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
-        },
-        {
-          "name": "te_interp",
-          "result_type": {
-            "model": "CDouble",
-            "qualifiers": [],
-            "source_text": "double"
-          },
-          "parameters": [
-            {
-              "name": "expression",
-              "type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "const char *expression",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CChar",
-                    "qualifiers": [
-                      "const"
-                    ],
-                    "source_text": "const char"
-                  }
-                ]
-              },
-              "declared_type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "const char *expression",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CChar",
-                    "qualifiers": [
-                      "const"
-                    ],
-                    "source_text": "const char"
-                  }
-                ]
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "error",
-              "type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "int *error",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CInt",
-                    "qualifiers": [],
-                    "source_text": "int"
-                  }
-                ]
-              },
-              "declared_type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "int *error",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CInt",
-                    "qualifiers": [],
-                    "source_text": "int"
-                  }
-                ]
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 693,
-            "column": 1,
-            "source_line": "double te_interp(const char *expression, int *error) {"
-          },
-          "start": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 693,
-            "column": 1,
-            "source_line": "double te_interp(const char *expression, int *error) {"
-          },
-          "end": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 704,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
-        },
-        {
           "name": "pn",
           "result_type": {
             "model": "CVoid",
@@ -2676,15 +2918,7 @@
                     "source_text": ""
                   },
                   {
-                    "model": "CTypedef",
-                    "qualifiers": [
-                      "const"
-                    ],
-                    "source_text": "const te_expr",
-                    "name": "te_expr",
-                    "type": null,
-                    "source_location": null,
-                    "declaration_locations": []
+                    "reference": "te_expr"
                   }
                 ]
               },
@@ -2748,92 +2982,213 @@
             "source_line": "}"
           },
           "declaration_locations": []
-        },
-        {
-          "name": "te_print",
-          "result_type": {
-            "model": "CVoid",
-            "qualifiers": [],
-            "source_text": "void"
-          },
-          "parameters": [
-            {
-              "name": "n",
-              "type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "const te_expr *n",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CTypedef",
-                    "qualifiers": [
-                      "const"
-                    ],
-                    "source_text": "const te_expr",
-                    "name": "te_expr",
-                    "type": null,
-                    "source_location": null,
-                    "declaration_locations": []
-                  }
-                ]
-              },
-              "declared_type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "const te_expr *n",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "reference": "te_expr"
-                  }
-                ]
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 732,
-            "column": 1,
-            "source_line": "void te_print(const te_expr *n) {"
-          },
-          "start": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 732,
-            "column": 1,
-            "source_line": "void te_print(const te_expr *n) {"
-          },
-          "end": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 734,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
         }
       ],
       "structs": [
         {
-          "reference": "struct state"
+          "reference": "struct te_expr"
+        },
+        {
+          "reference": "struct te_variable"
         }
       ],
       "unions": [],
       "enums": [
+        {
+          "model": "CEnum",
+          "qualifiers": [],
+          "source_text": "",
+          "name": null,
+          "constants": [
+            {
+              "name": "TE_VARIABLE",
+              "value": "0",
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION0",
+              "value": "8",
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION1",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION2",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION3",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION4",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION5",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION6",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION7",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE0",
+              "value": "16",
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE1",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE2",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE3",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE4",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE5",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE6",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE7",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FLAG_PURE",
+              "value": "32",
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            }
+          ],
+          "anonymous_id": "enum@<system-header>:0:0",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 43,
+            "column": 1,
+            "source_line": "enum {"
+          }
+        },
         {
           "model": "CEnum",
           "qualifiers": [],
@@ -2931,7 +3286,7 @@
               }
             }
           ],
-          "anonymous_id": "enum@tinyexpr/tinyexpr.c:57:1",
+          "anonymous_id": "enum@<system-header>:0:0",
           "source_location": {
             "filename": "tinyexpr/tinyexpr.c",
             "line": 57,
@@ -2956,7 +3311,7 @@
               }
             }
           ],
-          "anonymous_id": "enum@tinyexpr/tinyexpr.c:63:1",
+          "anonymous_id": "enum@<system-header>:0:0",
           "source_location": {
             "filename": "tinyexpr/tinyexpr.c",
             "line": 63,
@@ -2966,6 +3321,38 @@
         }
       ],
       "typedefs": [
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "te_expr",
+          "name": "te_expr",
+          "type": {
+            "reference": "struct te_expr"
+          },
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 36,
+            "column": 1,
+            "source_line": "typedef struct te_expr {"
+          },
+          "declaration_locations": []
+        },
+        {
+          "model": "CTypedef",
+          "qualifiers": [],
+          "source_text": "te_variable",
+          "name": "te_variable",
+          "type": {
+            "reference": "struct te_variable"
+          },
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 55,
+            "column": 1,
+            "source_line": "typedef struct te_variable {"
+          },
+          "declaration_locations": []
+        },
         {
           "model": "CTypedef",
           "qualifiers": [],
@@ -3014,9 +3401,6 @@
             "source_line": "typedef double (*te_fun2)(double, double);"
           },
           "declaration_locations": []
-        },
-        {
-          "reference": "state"
         }
       ],
       "variables": [
@@ -3037,15 +3421,7 @@
                 "is_flexible": false
               },
               {
-                "model": "CTypedef",
-                "qualifiers": [
-                  "const"
-                ],
-                "source_text": "const te_variable",
-                "name": "te_variable",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
+                "reference": "te_variable"
               }
             ]
           },
@@ -3053,7 +3429,7 @@
             "static"
           ],
           "initializer": {
-            "source_text": "{\n                                       \n    {\"abs\", fabs,     TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"acos\", acos,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"asin\", asin,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"atan\", atan,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"atan2\", atan2,  TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"ceil\", ceil,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"cos\", cos,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"cosh\", cosh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"e\", e,          TE_FUNCTION0 | TE_FLAG_PURE, 0},\n    {\"exp\", exp,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"fac\", fac,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"floor\", floor,  TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"ln\", log,       TE_FUNCTION1 | TE_FLAG_PURE, 0},\n                 \n    {\"log\", log,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n     \n    {\"log\", log10,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n      \n    {\"log10\", log10,  TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"ncr\", ncr,      TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"npr\", npr,      TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"pi\", pi,        TE_FUNCTION0 | TE_FLAG_PURE, 0},\n    {\"pow\", pow,      TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"sin\", sin,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"sinh\", sinh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"sqrt\", sqrt,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"tan\", tan,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"tanh\", tanh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {0, 0, 0, 0}\n}"
+            "source_text": "{ {\"abs\", fabs, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"acos\", acos, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"asin\", asin, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"atan\", atan, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"atan2\", atan2, TE_FUNCTION2 | TE_FLAG_PURE, 0}, {\"ceil\", ceil, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"cos\", cos, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"cosh\", cosh, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"e\", e, TE_FUNCTION0 | TE_FLAG_PURE, 0}, {\"exp\", exp, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"fac\", fac, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"floor\", floor, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"ln\", log, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"log\", log10, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"log10\", log10, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"ncr\", ncr, TE_FUNCTION2 | TE_FLAG_PURE, 0}, {\"npr\", npr, TE_FUNCTION2 | TE_FLAG_PURE, 0}, {\"pi\", pi, TE_FUNCTION0 | TE_FLAG_PURE, 0}, {\"pow\", pow, TE_FUNCTION2 | TE_FLAG_PURE, 0}, {\"sin\", sin, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"sinh\", sinh, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"sqrt\", sqrt, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"tan\", tan, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"tanh\", tanh, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {0, 0, 0, 0} }"
           },
           "bit_width": null,
           "source_location": {
@@ -3066,613 +3442,1568 @@
           "declaration_locations": []
         }
       ],
-      "macros": [
-        {
-          "name": "NAN",
-          "value": "(0.0/0.0)",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 47,
-            "column": 1,
-            "source_line": "#define NAN (0.0/0.0)"
-          }
-        },
-        {
-          "name": "INFINITY",
-          "value": "(1.0/0.0)",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 51,
-            "column": 1,
-            "source_line": "#define INFINITY (1.0/0.0)"
-          }
-        },
-        {
-          "name": "TYPE_MASK",
-          "value": "((TYPE)&0x0000001F)",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 78,
-            "column": 1,
-            "source_line": "#define TYPE_MASK(TYPE) ((TYPE)&0x0000001F)"
-          }
-        },
-        {
-          "name": "IS_PURE",
-          "value": "(((TYPE) & TE_FLAG_PURE) != 0)",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 80,
-            "column": 1,
-            "source_line": "#define IS_PURE(TYPE) (((TYPE) & TE_FLAG_PURE) != 0)"
-          }
-        },
-        {
-          "name": "IS_FUNCTION",
-          "value": "(((TYPE) & TE_FUNCTION0) != 0)",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 81,
-            "column": 1,
-            "source_line": "#define IS_FUNCTION(TYPE) (((TYPE) & TE_FUNCTION0) != 0)"
-          }
-        },
-        {
-          "name": "IS_CLOSURE",
-          "value": "(((TYPE) & TE_CLOSURE0) != 0)",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 82,
-            "column": 1,
-            "source_line": "#define IS_CLOSURE(TYPE) (((TYPE) & TE_CLOSURE0) != 0)"
-          }
-        },
-        {
-          "name": "ARITY",
-          "value": "( ((TYPE) & (TE_FUNCTION0 | TE_CLOSURE0)) ? ((TYPE) & 0x00000007) : 0 )",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 83,
-            "column": 1,
-            "source_line": "#define ARITY(TYPE) ( ((TYPE) & (TE_FUNCTION0 | TE_CLOSURE0)) ? ((TYPE) & 0x00000007) : 0 )"
-          }
-        },
-        {
-          "name": "NEW_EXPR",
-          "value": "new_expr((type), (const te_expr*[]){__VA_ARGS__})",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 84,
-            "column": 1,
-            "source_line": "#define NEW_EXPR(type, ...) new_expr((type), (const te_expr*[]){__VA_ARGS__})"
-          }
-        },
-        {
-          "name": "CHECK_NULL",
-          "value": "if ((ptr) == NULL) { __VA_ARGS__; return NULL; }",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 85,
-            "column": 1,
-            "source_line": "#define CHECK_NULL(ptr, ...) if ((ptr) == NULL) { __VA_ARGS__; return NULL; }"
-          }
-        },
-        {
-          "name": "TE_FUN",
-          "value": "((double(*)(__VA_ARGS__))n->function)",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 592,
-            "column": 1,
-            "source_line": "#define TE_FUN(...) ((double(*)(__VA_ARGS__))n->function)"
-          }
-        },
-        {
-          "name": "M",
-          "value": "te_eval(n->parameters[e])",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 593,
-            "column": 1,
-            "source_line": "#define M(e) te_eval(n->parameters[e])"
-          }
-        },
-        {
-          "name": "TE_FUN",
-          "value": null,
-          "function_like": false,
-          "directive": "undef",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 636,
-            "column": 1,
-            "source_line": "#undef TE_FUN"
-          }
-        },
-        {
-          "name": "M",
-          "value": null,
-          "function_like": false,
-          "directive": "undef",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 637,
-            "column": 1,
-            "source_line": "#undef M"
-          }
-        }
-      ],
-      "includes": [
-        {
-          "target": "tinyexpr.h",
-          "kind": "local",
-          "resolved_path": "tinyexpr/tinyexpr.h",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 38,
-            "column": 1,
-            "source_line": "#include \"tinyexpr.h\""
-          }
-        },
-        {
-          "target": "stdlib.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 39,
-            "column": 1,
-            "source_line": "#include <stdlib.h>"
-          }
-        },
-        {
-          "target": "math.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 40,
-            "column": 1,
-            "source_line": "#include <math.h>"
-          }
-        },
-        {
-          "target": "string.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 41,
-            "column": 1,
-            "source_line": "#include <string.h>"
-          }
-        },
-        {
-          "target": "stdio.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 42,
-            "column": 1,
-            "source_line": "#include <stdio.h>"
-          }
-        },
-        {
-          "target": "ctype.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 43,
-            "column": 1,
-            "source_line": "#include <ctype.h>"
-          }
-        },
-        {
-          "target": "limits.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 44,
-            "column": 1,
-            "source_line": "#include <limits.h>"
-          }
-        }
-      ],
-      "raw_directives": [
-        {
-          "directive": "ifndef",
-          "argument": "NAN",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 46,
-            "column": 1,
-            "source_line": "#ifndef NAN"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 48,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifndef",
-          "argument": "INFINITY",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 50,
-            "column": 1,
-            "source_line": "#ifndef INFINITY"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 52,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "_MSC_VER",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 157,
-            "column": 1,
-            "source_line": "#ifdef _MSC_VER"
-          }
-        },
-        {
-          "directive": "pragma",
-          "argument": "function (ceil)",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 158,
-            "column": 1,
-            "source_line": "#pragma function (ceil)"
-          }
-        },
-        {
-          "directive": "pragma",
-          "argument": "function (floor)",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 159,
-            "column": 1,
-            "source_line": "#pragma function (floor)"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 160,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "TE_NAT_LOG",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 177,
-            "column": 1,
-            "source_line": "#ifdef TE_NAT_LOG"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 179,
-            "column": 1,
-            "source_line": "#else"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 181,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "TE_POW_FROM_RIGHT",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 447,
-            "column": 1,
-            "source_line": "#ifdef TE_POW_FROM_RIGHT"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 502,
-            "column": 1,
-            "source_line": "#else"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 523,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        }
-      ],
+      "macros": [],
+      "includes": [],
+      "raw_directives": [],
       "macro_dependencies": [],
-      "diagnostics": [
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'TYPE_MASK' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 78,
-            "column": 1,
-            "source_line": "#define TYPE_MASK(TYPE) ((TYPE)&0x0000001F)"
-          },
-          "unit_kind": "macro",
-          "unit_name": "TYPE_MASK"
-        },
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'IS_PURE' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 80,
-            "column": 1,
-            "source_line": "#define IS_PURE(TYPE) (((TYPE) & TE_FLAG_PURE) != 0)"
-          },
-          "unit_kind": "macro",
-          "unit_name": "IS_PURE"
-        },
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'IS_FUNCTION' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 81,
-            "column": 1,
-            "source_line": "#define IS_FUNCTION(TYPE) (((TYPE) & TE_FUNCTION0) != 0)"
-          },
-          "unit_kind": "macro",
-          "unit_name": "IS_FUNCTION"
-        },
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'IS_CLOSURE' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 82,
-            "column": 1,
-            "source_line": "#define IS_CLOSURE(TYPE) (((TYPE) & TE_CLOSURE0) != 0)"
-          },
-          "unit_kind": "macro",
-          "unit_name": "IS_CLOSURE"
-        },
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'ARITY' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 83,
-            "column": 1,
-            "source_line": "#define ARITY(TYPE) ( ((TYPE) & (TE_FUNCTION0 | TE_CLOSURE0)) ? ((TYPE) & 0x00000007) : 0 )"
-          },
-          "unit_kind": "macro",
-          "unit_name": "ARITY"
-        },
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'NEW_EXPR' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 84,
-            "column": 1,
-            "source_line": "#define NEW_EXPR(type, ...) new_expr((type), (const te_expr*[]){__VA_ARGS__})"
-          },
-          "unit_kind": "macro",
-          "unit_name": "NEW_EXPR"
-        },
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'CHECK_NULL' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 85,
-            "column": 1,
-            "source_line": "#define CHECK_NULL(ptr, ...) if ((ptr) == NULL) { __VA_ARGS__; return NULL; }"
-          },
-          "unit_kind": "macro",
-          "unit_name": "CHECK_NULL"
-        },
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'TE_FUN' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 592,
-            "column": 1,
-            "source_line": "#define TE_FUN(...) ((double(*)(__VA_ARGS__))n->function)"
-          },
-          "unit_kind": "macro",
-          "unit_name": "TE_FUN"
-        },
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'M' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.c",
-            "line": 593,
-            "column": 1,
-            "source_line": "#define M(e) te_eval(n->parameters[e])"
-          },
-          "unit_kind": "macro",
-          "unit_name": "M"
-        }
-      ]
+      "diagnostics": []
     },
     "tinyexpr/tinyexpr.h": {
       "filename": "tinyexpr/tinyexpr.h",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
-      "functions": [],
-      "structs": [],
-      "unions": [],
-      "enums": [],
-      "typedefs": [],
-      "variables": [],
-      "macros": [
-        {
-          "name": "TINYEXPR_H",
-          "value": null,
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.h",
-            "line": 27,
-            "column": 1,
-            "source_line": "#define TINYEXPR_H"
-          }
-        }
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "tinyexpr/tinyexpr.h"
       ],
-      "includes": [],
-      "raw_directives": [
+      "functions": [
         {
-          "directive": "ifndef",
-          "argument": "TINYEXPR_H",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.h",
-            "line": 26,
-            "column": 1,
-            "source_line": "#ifndef TINYEXPR_H"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "__cplusplus",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.h",
-            "line": 30,
-            "column": 1,
-            "source_line": "#ifdef __cplusplus"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.h",
-            "line": 32,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "__cplusplus",
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.h",
-            "line": 83,
-            "column": 1,
-            "source_line": "#ifdef __cplusplus"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.h",
-            "line": 85,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "tinyexpr/tinyexpr.h",
-            "line": 87,
-            "column": 1,
-            "source_line": "#endif /*TINYEXPR_H*/"
-          }
-        }
-      ],
-      "macro_dependencies": [],
-      "diagnostics": [
-        {
-          "code": "C_UNSUPPORTED_DECLARATOR",
-          "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
-          "severity": "warning",
-          "location": {
-            "filename": "tinyexpr/tinyexpr.h",
-            "line": 31,
-            "column": 1,
-            "source_line": "extern \"C\" {"
+          "name": "te_interp",
+          "result_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double"
           },
-          "unit_kind": "declarator",
-          "unit_name": null
+          "parameters": [
+            {
+              "name": "expression",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *expression",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *expression",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "error",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "int *error",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "int *error",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 66,
+            "column": 1,
+            "source_line": "double te_interp(const char *expression, int *error);"
+          },
+          "start": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 66,
+            "column": 1,
+            "source_line": "double te_interp(const char *expression, int *error);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "te_compile",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "te_expr",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "te_expr"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "expression",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *expression",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *expression",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "variables",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const te_variable *variables",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_variable"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const te_variable *variables",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_variable"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "var_count",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int var_count"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int var_count"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "error",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "int *error",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "int *error",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CInt",
+                    "qualifiers": [],
+                    "source_text": "int"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 70,
+            "column": 1,
+            "source_line": "te_expr *te_compile(const char *expression, const te_variable *variables, int var_count, int *error);"
+          },
+          "start": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 70,
+            "column": 1,
+            "source_line": "te_expr *te_compile(const char *expression, const te_variable *variables, int var_count, int *error);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "te_eval",
+          "result_type": {
+            "model": "CDouble",
+            "qualifiers": [],
+            "source_text": "double"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const te_expr *n",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_expr"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const te_expr *n",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_expr"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 73,
+            "column": 1,
+            "source_line": "double te_eval(const te_expr *n);"
+          },
+          "start": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 73,
+            "column": 1,
+            "source_line": "double te_eval(const te_expr *n);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "te_print",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const te_expr *n",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_expr"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const te_expr *n",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_expr"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 76,
+            "column": 1,
+            "source_line": "void te_print(const te_expr *n);"
+          },
+          "start": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 76,
+            "column": 1,
+            "source_line": "void te_print(const te_expr *n);"
+          },
+          "end": null,
+          "declaration_locations": []
+        },
+        {
+          "name": "te_free",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "n",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "te_expr *n",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_expr"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "te_expr *n",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "te_expr"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": false,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 80,
+            "column": 1,
+            "source_line": "void te_free(te_expr *n);"
+          },
+          "start": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 80,
+            "column": 1,
+            "source_line": "void te_free(te_expr *n);"
+          },
+          "end": null,
+          "declaration_locations": []
         }
-      ]
+      ],
+      "structs": [
+        {
+          "model": "CStruct",
+          "qualifiers": [],
+          "source_text": "",
+          "name": "te_expr",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int type"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 37,
+                "column": 5,
+                "source_line": "    int type;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": null,
+              "type": {
+                "model": "CUnion",
+                "qualifiers": [],
+                "source_text": "",
+                "name": null,
+                "members": [
+                  {
+                    "name": "value",
+                    "type": {
+                      "model": "CDouble",
+                      "qualifiers": [],
+                      "source_text": "double value"
+                    },
+                    "storage": [],
+                    "initializer": null,
+                    "bit_width": null,
+                    "source_location": {
+                      "filename": "tinyexpr/tinyexpr.h",
+                      "line": 38,
+                      "column": 12,
+                      "source_line": "    union {double value; const double *bound; const void *function;};"
+                    },
+                    "callback_policy": null,
+                    "declaration_locations": []
+                  },
+                  {
+                    "name": "bound",
+                    "type": {
+                      "model": "CComposedType",
+                      "qualifiers": [],
+                      "source_text": "const double *bound",
+                      "components": [
+                        {
+                          "model": "CPointer",
+                          "qualifiers": [],
+                          "source_text": ""
+                        },
+                        {
+                          "model": "CDouble",
+                          "qualifiers": [
+                            "const"
+                          ],
+                          "source_text": "const double"
+                        }
+                      ]
+                    },
+                    "storage": [],
+                    "initializer": null,
+                    "bit_width": null,
+                    "source_location": {
+                      "filename": "tinyexpr/tinyexpr.h",
+                      "line": 38,
+                      "column": 26,
+                      "source_line": "    union {double value; const double *bound; const void *function;};"
+                    },
+                    "callback_policy": null,
+                    "declaration_locations": []
+                  },
+                  {
+                    "name": "function",
+                    "type": {
+                      "model": "CComposedType",
+                      "qualifiers": [],
+                      "source_text": "const void *function",
+                      "components": [
+                        {
+                          "model": "CPointer",
+                          "qualifiers": [],
+                          "source_text": ""
+                        },
+                        {
+                          "model": "CVoid",
+                          "qualifiers": [
+                            "const"
+                          ],
+                          "source_text": "const void"
+                        }
+                      ]
+                    },
+                    "storage": [],
+                    "initializer": null,
+                    "bit_width": null,
+                    "source_location": {
+                      "filename": "tinyexpr/tinyexpr.h",
+                      "line": 38,
+                      "column": 47,
+                      "source_line": "    union {double value; const double *bound; const void *function;};"
+                    },
+                    "callback_policy": null,
+                    "declaration_locations": []
+                  }
+                ],
+                "anonymous_id": "union@<system-header>:0:0",
+                "is_incomplete": false,
+                "source_location": {
+                  "filename": "tinyexpr/tinyexpr.h",
+                  "line": 38,
+                  "column": 5,
+                  "source_line": "    union {double value; const double *bound; const void *function;};"
+                }
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 38,
+                "column": 5,
+                "source_line": "    union {double value; const double *bound; const void *function;};"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "parameters",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *parameters[1]",
+                "components": [
+                  {
+                    "model": "CArray",
+                    "qualifiers": [],
+                    "source_text": "",
+                    "bound": "1",
+                    "is_static_minimum": false,
+                    "is_variable_length": false,
+                    "is_flexible": false
+                  },
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 39,
+                "column": 5,
+                "source_line": "    void *parameters[1];"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            }
+          ],
+          "anonymous_id": null,
+          "is_incomplete": false,
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 36,
+            "column": 1,
+            "source_line": "typedef struct te_expr {"
+          }
+        },
+        {
+          "model": "CStruct",
+          "qualifiers": [],
+          "source_text": "",
+          "name": "te_variable",
+          "members": [
+            {
+              "name": "name",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *name",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 56,
+                "column": 5,
+                "source_line": "    const char *name;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "address",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const void *address",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const void"
+                  }
+                ]
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 57,
+                "column": 5,
+                "source_line": "    const void *address;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "type",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int type"
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 58,
+                "column": 5,
+                "source_line": "    int type;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            },
+            {
+              "name": "context",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "void *context",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CVoid",
+                    "qualifiers": [],
+                    "source_text": "void"
+                  }
+                ]
+              },
+              "storage": [],
+              "initializer": null,
+              "bit_width": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 59,
+                "column": 5,
+                "source_line": "    void *context;"
+              },
+              "callback_policy": null,
+              "declaration_locations": []
+            }
+          ],
+          "anonymous_id": null,
+          "is_incomplete": false,
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 55,
+            "column": 1,
+            "source_line": "typedef struct te_variable {"
+          }
+        }
+      ],
+      "unions": [],
+      "enums": [
+        {
+          "model": "CEnum",
+          "qualifiers": [],
+          "source_text": "",
+          "name": null,
+          "constants": [
+            {
+              "name": "TE_VARIABLE",
+              "value": "0",
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION0",
+              "value": "8",
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION1",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION2",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION3",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION4",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION5",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION6",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FUNCTION7",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE0",
+              "value": "16",
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE1",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE2",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE3",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE4",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE5",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE6",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_CLOSURE7",
+              "value": null,
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            },
+            {
+              "name": "TE_FLAG_PURE",
+              "value": "32",
+              "source_location": {
+                "filename": "tinyexpr/tinyexpr.h",
+                "line": 43,
+                "column": 1,
+                "source_line": "enum {"
+              }
+            }
+          ],
+          "anonymous_id": "enum@<system-header>:0:0",
+          "source_location": {
+            "filename": "tinyexpr/tinyexpr.h",
+            "line": 43,
+            "column": 1,
+            "source_line": "enum {"
+          }
+        }
+      ],
+      "typedefs": [
+        {
+          "reference": "te_expr"
+        },
+        {
+          "reference": "te_variable"
+        }
+      ],
+      "variables": [],
+      "macros": [],
+      "includes": [],
+      "raw_directives": [],
+      "macro_dependencies": [],
+      "diagnostics": []
     }
   },
   "functions": {
+    "te_interp": {
+      "name": "te_interp",
+      "result_type": {
+        "model": "CDouble",
+        "qualifiers": [],
+        "source_text": "double"
+      },
+      "parameters": [
+        {
+          "name": "expression",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *expression",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *expression",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "error",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "int *error",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "int *error",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 693,
+        "column": 1,
+        "source_line": "double te_interp(const char *expression, int *error) {"
+      },
+      "start": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 693,
+        "column": 1,
+        "source_line": "double te_interp(const char *expression, int *error) {"
+      },
+      "end": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 704,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "tinyexpr/tinyexpr.h",
+          "line": 66,
+          "column": 1,
+          "source_line": "double te_interp(const char *expression, int *error);"
+        }
+      ]
+    },
+    "te_compile": {
+      "name": "te_compile",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "te_expr",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "te_expr"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "expression",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *expression",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *expression",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "variables",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const te_variable *variables",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "te_variable"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const te_variable *variables",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "te_variable"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "var_count",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int var_count"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int var_count"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "error",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "int *error",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "int *error",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CInt",
+                "qualifiers": [],
+                "source_text": "int"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 665,
+        "column": 1,
+        "source_line": "te_expr *te_compile(const char *expression, const te_variable *variables, int var_count, int *error) {"
+      },
+      "start": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 665,
+        "column": 1,
+        "source_line": "te_expr *te_compile(const char *expression, const te_variable *variables, int var_count, int *error) {"
+      },
+      "end": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 690,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "tinyexpr/tinyexpr.h",
+          "line": 70,
+          "column": 1,
+          "source_line": "te_expr *te_compile(const char *expression, const te_variable *variables, int var_count, int *error);"
+        }
+      ]
+    },
+    "te_eval": {
+      "name": "te_eval",
+      "result_type": {
+        "model": "CDouble",
+        "qualifiers": [],
+        "source_text": "double"
+      },
+      "parameters": [
+        {
+          "name": "n",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const te_expr *n",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "te_expr"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const te_expr *n",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "te_expr"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 596,
+        "column": 1,
+        "source_line": "double te_eval(const te_expr *n) {"
+      },
+      "start": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 596,
+        "column": 1,
+        "source_line": "double te_eval(const te_expr *n) {"
+      },
+      "end": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 634,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "tinyexpr/tinyexpr.h",
+          "line": 73,
+          "column": 1,
+          "source_line": "double te_eval(const te_expr *n);"
+        }
+      ]
+    },
+    "te_print": {
+      "name": "te_print",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "n",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const te_expr *n",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "te_expr"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const te_expr *n",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "te_expr"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 732,
+        "column": 1,
+        "source_line": "void te_print(const te_expr *n) {"
+      },
+      "start": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 732,
+        "column": 1,
+        "source_line": "void te_print(const te_expr *n) {"
+      },
+      "end": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 734,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "tinyexpr/tinyexpr.h",
+          "line": 76,
+          "column": 1,
+          "source_line": "void te_print(const te_expr *n);"
+        }
+      ]
+    },
+    "te_free": {
+      "name": "te_free",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "n",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "te_expr *n",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "te_expr"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "te_expr *n",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "te_expr"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 118,
+        "column": 1,
+        "source_line": "void te_free(te_expr *n) {"
+      },
+      "start": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 118,
+        "column": 1,
+        "source_line": "void te_free(te_expr *n) {"
+      },
+      "end": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 122,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "tinyexpr/tinyexpr.h",
+          "line": 80,
+          "column": 1,
+          "source_line": "void te_free(te_expr *n);"
+        }
+      ]
+    },
     "new_expr": {
       "name": "new_expr",
       "result_type": {
@@ -3856,75 +5187,6 @@
       },
       "declaration_locations": []
     },
-    "te_free": {
-      "name": "te_free",
-      "result_type": {
-        "model": "CVoid",
-        "qualifiers": [],
-        "source_text": "void"
-      },
-      "parameters": [
-        {
-          "name": "n",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "te_expr *n",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "te_expr"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "te_expr *n",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "te_expr"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 118,
-        "column": 1,
-        "source_line": "void te_free(te_expr *n) {"
-      },
-      "start": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 118,
-        "column": 1,
-        "source_line": "void te_free(te_expr *n) {"
-      },
-      "end": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 122,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
     "pi": {
       "name": "pi",
       "result_type": {
@@ -4030,13 +5292,13 @@
         "filename": "tinyexpr/tinyexpr.c",
         "line": 127,
         "column": 1,
-        "source_line": "static double fac(double a) {/* simplest version of fac */"
+        "source_line": "static double fac(double a) {"
       },
       "start": {
         "filename": "tinyexpr/tinyexpr.c",
         "line": 127,
         "column": 1,
-        "source_line": "static double fac(double a) {/* simplest version of fac */"
+        "source_line": "static double fac(double a) {"
       },
       "end": {
         "filename": "tinyexpr/tinyexpr.c",
@@ -5216,6 +6478,87 @@
       },
       "declaration_locations": []
     },
+    "factor": {
+      "name": "factor",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "te_expr",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "te_expr"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "s",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "state *s",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "state"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "state *s",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "state"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 503,
+        "column": 1,
+        "source_line": "static te_expr *factor(state *s) {"
+      },
+      "start": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 503,
+        "column": 1,
+        "source_line": "static te_expr *factor(state *s) {"
+      },
+      "end": {
+        "filename": "tinyexpr/tinyexpr.c",
+        "line": 522,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
     "term": {
       "name": "term",
       "result_type": {
@@ -5297,75 +6640,6 @@
       },
       "declaration_locations": []
     },
-    "te_eval": {
-      "name": "te_eval",
-      "result_type": {
-        "model": "CDouble",
-        "qualifiers": [],
-        "source_text": "double"
-      },
-      "parameters": [
-        {
-          "name": "n",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "const te_expr *n",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "te_expr"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "const te_expr *n",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "te_expr"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 596,
-        "column": 1,
-        "source_line": "double te_eval(const te_expr *n) {"
-      },
-      "start": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 596,
-        "column": 1,
-        "source_line": "double te_eval(const te_expr *n) {"
-      },
-      "end": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 634,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
     "optimize": {
       "name": "optimize",
       "result_type": {
@@ -5432,298 +6706,6 @@
       "end": {
         "filename": "tinyexpr/tinyexpr.c",
         "line": 662,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
-    "te_compile": {
-      "name": "te_compile",
-      "result_type": {
-        "model": "CComposedType",
-        "qualifiers": [],
-        "source_text": "te_expr",
-        "components": [
-          {
-            "model": "CPointer",
-            "qualifiers": [],
-            "source_text": ""
-          },
-          {
-            "reference": "te_expr"
-          }
-        ]
-      },
-      "parameters": [
-        {
-          "name": "expression",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "const char *expression",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CChar",
-                "qualifiers": [
-                  "const"
-                ],
-                "source_text": "const char"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "const char *expression",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CChar",
-                "qualifiers": [
-                  "const"
-                ],
-                "source_text": "const char"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "variables",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "const te_variable *variables",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "te_variable"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "const te_variable *variables",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "te_variable"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "var_count",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int var_count"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int var_count"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "error",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "int *error",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "int *error",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 665,
-        "column": 1,
-        "source_line": "te_expr *te_compile(const char *expression, const te_variable *variables, int var_count, int *error) {"
-      },
-      "start": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 665,
-        "column": 1,
-        "source_line": "te_expr *te_compile(const char *expression, const te_variable *variables, int var_count, int *error) {"
-      },
-      "end": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 690,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
-    "te_interp": {
-      "name": "te_interp",
-      "result_type": {
-        "model": "CDouble",
-        "qualifiers": [],
-        "source_text": "double"
-      },
-      "parameters": [
-        {
-          "name": "expression",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "const char *expression",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CChar",
-                "qualifiers": [
-                  "const"
-                ],
-                "source_text": "const char"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "const char *expression",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CChar",
-                "qualifiers": [
-                  "const"
-                ],
-                "source_text": "const char"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "error",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "int *error",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "int *error",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 693,
-        "column": 1,
-        "source_line": "double te_interp(const char *expression, int *error) {"
-      },
-      "start": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 693,
-        "column": 1,
-        "source_line": "double te_interp(const char *expression, int *error) {"
-      },
-      "end": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 704,
         "column": 1,
         "source_line": "}"
       },
@@ -5814,90 +6796,27 @@
         "source_line": "}"
       },
       "declaration_locations": []
-    },
-    "te_print": {
-      "name": "te_print",
-      "result_type": {
-        "model": "CVoid",
-        "qualifiers": [],
-        "source_text": "void"
-      },
-      "parameters": [
-        {
-          "name": "n",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "const te_expr *n",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "te_expr"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "const te_expr *n",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "reference": "te_expr"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 732,
-        "column": 1,
-        "source_line": "void te_print(const te_expr *n) {"
-      },
-      "start": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 732,
-        "column": 1,
-        "source_line": "void te_print(const te_expr *n) {"
-      },
-      "end": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 734,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
     }
   },
   "structs": {
-    "state": {
-      "reference": "struct state"
+    "te_expr": {
+      "reference": "struct te_expr"
+    },
+    "te_variable": {
+      "reference": "struct te_variable"
     }
   },
   "unions": {},
   "enums": {},
   "typedefs": {
+    "te_expr": {
+      "reference": "te_expr"
+    },
+    "te_variable": {
+      "reference": "te_variable"
+    },
     "te_fun2": {
       "reference": "te_fun2"
-    },
-    "state": {
-      "reference": "state"
     }
   },
   "variables": {
@@ -5926,7 +6845,7 @@
         "static"
       ],
       "initializer": {
-        "source_text": "{\n                                       \n    {\"abs\", fabs,     TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"acos\", acos,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"asin\", asin,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"atan\", atan,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"atan2\", atan2,  TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"ceil\", ceil,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"cos\", cos,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"cosh\", cosh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"e\", e,          TE_FUNCTION0 | TE_FLAG_PURE, 0},\n    {\"exp\", exp,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"fac\", fac,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"floor\", floor,  TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"ln\", log,       TE_FUNCTION1 | TE_FLAG_PURE, 0},\n                 \n    {\"log\", log,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n     \n    {\"log\", log10,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n      \n    {\"log10\", log10,  TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"ncr\", ncr,      TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"npr\", npr,      TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"pi\", pi,        TE_FUNCTION0 | TE_FLAG_PURE, 0},\n    {\"pow\", pow,      TE_FUNCTION2 | TE_FLAG_PURE, 0},\n    {\"sin\", sin,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"sinh\", sinh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"sqrt\", sqrt,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"tan\", tan,      TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {\"tanh\", tanh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},\n    {0, 0, 0, 0}\n}"
+        "source_text": "{ {\"abs\", fabs, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"acos\", acos, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"asin\", asin, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"atan\", atan, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"atan2\", atan2, TE_FUNCTION2 | TE_FLAG_PURE, 0}, {\"ceil\", ceil, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"cos\", cos, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"cosh\", cosh, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"e\", e, TE_FUNCTION0 | TE_FLAG_PURE, 0}, {\"exp\", exp, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"fac\", fac, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"floor\", floor, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"ln\", log, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"log\", log10, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"log10\", log10, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"ncr\", ncr, TE_FUNCTION2 | TE_FLAG_PURE, 0}, {\"npr\", npr, TE_FUNCTION2 | TE_FLAG_PURE, 0}, {\"pi\", pi, TE_FUNCTION0 | TE_FLAG_PURE, 0}, {\"pow\", pow, TE_FUNCTION2 | TE_FLAG_PURE, 0}, {\"sin\", sin, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"sinh\", sinh, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"sqrt\", sqrt, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"tan\", tan, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {\"tanh\", tanh, TE_FUNCTION1 | TE_FLAG_PURE, 0}, {0, 0, 0, 0} }"
       },
       "bit_width": null,
       "source_location": {
@@ -5939,236 +6858,17 @@
       "declaration_locations": []
     }
   },
-  "macros": {
-    "NAN": {
-      "name": "NAN",
-      "value": "(0.0/0.0)",
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 47,
-        "column": 1,
-        "source_line": "#define NAN (0.0/0.0)"
-      }
-    },
-    "INFINITY": {
-      "name": "INFINITY",
-      "value": "(1.0/0.0)",
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 51,
-        "column": 1,
-        "source_line": "#define INFINITY (1.0/0.0)"
-      }
-    },
-    "TYPE_MASK": {
-      "name": "TYPE_MASK",
-      "value": "((TYPE)&0x0000001F)",
-      "function_like": true,
-      "directive": "define",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 78,
-        "column": 1,
-        "source_line": "#define TYPE_MASK(TYPE) ((TYPE)&0x0000001F)"
-      }
-    },
-    "IS_PURE": {
-      "name": "IS_PURE",
-      "value": "(((TYPE) & TE_FLAG_PURE) != 0)",
-      "function_like": true,
-      "directive": "define",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 80,
-        "column": 1,
-        "source_line": "#define IS_PURE(TYPE) (((TYPE) & TE_FLAG_PURE) != 0)"
-      }
-    },
-    "IS_FUNCTION": {
-      "name": "IS_FUNCTION",
-      "value": "(((TYPE) & TE_FUNCTION0) != 0)",
-      "function_like": true,
-      "directive": "define",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 81,
-        "column": 1,
-        "source_line": "#define IS_FUNCTION(TYPE) (((TYPE) & TE_FUNCTION0) != 0)"
-      }
-    },
-    "IS_CLOSURE": {
-      "name": "IS_CLOSURE",
-      "value": "(((TYPE) & TE_CLOSURE0) != 0)",
-      "function_like": true,
-      "directive": "define",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 82,
-        "column": 1,
-        "source_line": "#define IS_CLOSURE(TYPE) (((TYPE) & TE_CLOSURE0) != 0)"
-      }
-    },
-    "ARITY": {
-      "name": "ARITY",
-      "value": "( ((TYPE) & (TE_FUNCTION0 | TE_CLOSURE0)) ? ((TYPE) & 0x00000007) : 0 )",
-      "function_like": true,
-      "directive": "define",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 83,
-        "column": 1,
-        "source_line": "#define ARITY(TYPE) ( ((TYPE) & (TE_FUNCTION0 | TE_CLOSURE0)) ? ((TYPE) & 0x00000007) : 0 )"
-      }
-    },
-    "NEW_EXPR": {
-      "name": "NEW_EXPR",
-      "value": "new_expr((type), (const te_expr*[]){__VA_ARGS__})",
-      "function_like": true,
-      "directive": "define",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 84,
-        "column": 1,
-        "source_line": "#define NEW_EXPR(type, ...) new_expr((type), (const te_expr*[]){__VA_ARGS__})"
-      }
-    },
-    "CHECK_NULL": {
-      "name": "CHECK_NULL",
-      "value": "if ((ptr) == NULL) { __VA_ARGS__; return NULL; }",
-      "function_like": true,
-      "directive": "define",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 85,
-        "column": 1,
-        "source_line": "#define CHECK_NULL(ptr, ...) if ((ptr) == NULL) { __VA_ARGS__; return NULL; }"
-      }
-    },
-    "TE_FUN": {
-      "name": "TE_FUN",
-      "value": null,
-      "function_like": false,
-      "directive": "undef",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 636,
-        "column": 1,
-        "source_line": "#undef TE_FUN"
-      }
-    },
-    "M": {
-      "name": "M",
-      "value": null,
-      "function_like": false,
-      "directive": "undef",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 637,
-        "column": 1,
-        "source_line": "#undef M"
-      }
-    },
-    "TINYEXPR_H": {
-      "name": "TINYEXPR_H",
-      "value": null,
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.h",
-        "line": 27,
-        "column": 1,
-        "source_line": "#define TINYEXPR_H"
-      }
-    }
-  },
-  "includes": {
-    "tinyexpr/tinyexpr.c:tinyexpr.h": {
-      "target": "tinyexpr.h",
-      "kind": "local",
-      "resolved_path": "tinyexpr/tinyexpr.h",
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 38,
-        "column": 1,
-        "source_line": "#include \"tinyexpr.h\""
-      }
-    },
-    "tinyexpr/tinyexpr.c:stdlib.h": {
-      "target": "stdlib.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 39,
-        "column": 1,
-        "source_line": "#include <stdlib.h>"
-      }
-    },
-    "tinyexpr/tinyexpr.c:math.h": {
-      "target": "math.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 40,
-        "column": 1,
-        "source_line": "#include <math.h>"
-      }
-    },
-    "tinyexpr/tinyexpr.c:string.h": {
-      "target": "string.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 41,
-        "column": 1,
-        "source_line": "#include <string.h>"
-      }
-    },
-    "tinyexpr/tinyexpr.c:stdio.h": {
-      "target": "stdio.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 42,
-        "column": 1,
-        "source_line": "#include <stdio.h>"
-      }
-    },
-    "tinyexpr/tinyexpr.c:ctype.h": {
-      "target": "ctype.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 43,
-        "column": 1,
-        "source_line": "#include <ctype.h>"
-      }
-    },
-    "tinyexpr/tinyexpr.c:limits.h": {
-      "target": "limits.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 44,
-        "column": 1,
-        "source_line": "#include <limits.h>"
-      }
-    }
-  },
+  "macros": {},
+  "includes": {},
   "functions_by_file": {
     "tinyexpr/tinyexpr.c": [
+      "te_interp",
+      "te_compile",
+      "te_eval",
+      "te_print",
+      "te_free",
       "new_expr",
       "te_free_parameters",
-      "te_free",
       "pi",
       "e",
       "fac",
@@ -6188,18 +6888,199 @@
       "power",
       "base",
       "factor",
-      "factor",
       "term",
-      "te_eval",
       "optimize",
-      "te_compile",
-      "te_interp",
-      "pn",
-      "te_print"
+      "pn"
     ],
-    "tinyexpr/tinyexpr.h": []
+    "tinyexpr/tinyexpr.h": [
+      "te_interp",
+      "te_compile",
+      "te_eval",
+      "te_print",
+      "te_free"
+    ]
   },
   "enum_constants": {
+    "TE_VARIABLE": {
+      "name": "TE_VARIABLE",
+      "value": "0",
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_FUNCTION0": {
+      "name": "TE_FUNCTION0",
+      "value": "8",
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_FUNCTION1": {
+      "name": "TE_FUNCTION1",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_FUNCTION2": {
+      "name": "TE_FUNCTION2",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_FUNCTION3": {
+      "name": "TE_FUNCTION3",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_FUNCTION4": {
+      "name": "TE_FUNCTION4",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_FUNCTION5": {
+      "name": "TE_FUNCTION5",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_FUNCTION6": {
+      "name": "TE_FUNCTION6",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_FUNCTION7": {
+      "name": "TE_FUNCTION7",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_CLOSURE0": {
+      "name": "TE_CLOSURE0",
+      "value": "16",
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_CLOSURE1": {
+      "name": "TE_CLOSURE1",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_CLOSURE2": {
+      "name": "TE_CLOSURE2",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_CLOSURE3": {
+      "name": "TE_CLOSURE3",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_CLOSURE4": {
+      "name": "TE_CLOSURE4",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_CLOSURE5": {
+      "name": "TE_CLOSURE5",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_CLOSURE6": {
+      "name": "TE_CLOSURE6",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_CLOSURE7": {
+      "name": "TE_CLOSURE7",
+      "value": null,
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
+    "TE_FLAG_PURE": {
+      "name": "TE_FLAG_PURE",
+      "value": "32",
+      "source_location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 43,
+        "column": 1,
+        "source_line": "enum {"
+      }
+    },
     "TOK_NULL": {
       "name": "TOK_NULL",
       "value": "TE_CLOSURE7+1",
@@ -6302,20 +7183,11 @@
     }
   },
   "include_graph": {
-    "tinyexpr/tinyexpr.c": [
-      "tinyexpr/tinyexpr.h"
-    ],
+    "tinyexpr/tinyexpr.c": [],
     "tinyexpr/tinyexpr.h": []
   },
   "system_includes": {
-    "tinyexpr/tinyexpr.c": [
-      "ctype.h",
-      "limits.h",
-      "math.h",
-      "stdio.h",
-      "stdlib.h",
-      "string.h"
-    ],
+    "tinyexpr/tinyexpr.c": [],
     "tinyexpr/tinyexpr.h": []
   },
   "unresolved_includes": {
@@ -6327,308 +7199,32 @@
       "tinyexpr/tinyexpr.c"
     ]
   },
-  "conditional_function_variants": {
-    "factor": [
-      {
-        "name": "factor",
-        "result_type": {
-          "model": "CComposedType",
-          "qualifiers": [],
-          "source_text": "te_expr",
-          "components": [
-            {
-              "model": "CPointer",
-              "qualifiers": [],
-              "source_text": ""
-            },
-            {
-              "reference": "te_expr"
-            }
-          ]
-        },
-        "parameters": [
-          {
-            "name": "s",
-            "type": {
-              "model": "CComposedType",
-              "qualifiers": [],
-              "source_text": "state *s",
-              "components": [
-                {
-                  "model": "CPointer",
-                  "qualifiers": [],
-                  "source_text": ""
-                },
-                {
-                  "reference": "state"
-                }
-              ]
-            },
-            "declared_type": {
-              "model": "CComposedType",
-              "qualifiers": [],
-              "source_text": "state *s",
-              "components": [
-                {
-                  "model": "CPointer",
-                  "qualifiers": [],
-                  "source_text": ""
-                },
-                {
-                  "reference": "state"
-                }
-              ]
-            },
-            "source_location": null,
-            "callback_policy": null
-          }
-        ],
-        "storage": [
-          "static"
-        ],
-        "specifiers": [],
-        "is_variadic": false,
-        "is_definition": true,
-        "prototype_style": "prototype",
-        "source_location": {
-          "filename": "tinyexpr/tinyexpr.c",
-          "line": 448,
-          "column": 1,
-          "source_line": "static te_expr *factor(state *s) {"
-        },
-        "start": {
-          "filename": "tinyexpr/tinyexpr.c",
-          "line": 448,
-          "column": 1,
-          "source_line": "static te_expr *factor(state *s) {"
-        },
-        "end": {
-          "filename": "tinyexpr/tinyexpr.c",
-          "line": 501,
-          "column": 1,
-          "source_line": "}"
-        },
-        "declaration_locations": [],
-        "condition_set": [
-          "g5:b0"
-        ]
-      },
-      {
-        "name": "factor",
-        "result_type": {
-          "model": "CComposedType",
-          "qualifiers": [],
-          "source_text": "te_expr",
-          "components": [
-            {
-              "model": "CPointer",
-              "qualifiers": [],
-              "source_text": ""
-            },
-            {
-              "reference": "te_expr"
-            }
-          ]
-        },
-        "parameters": [
-          {
-            "name": "s",
-            "type": {
-              "model": "CComposedType",
-              "qualifiers": [],
-              "source_text": "state *s",
-              "components": [
-                {
-                  "model": "CPointer",
-                  "qualifiers": [],
-                  "source_text": ""
-                },
-                {
-                  "reference": "state"
-                }
-              ]
-            },
-            "declared_type": {
-              "model": "CComposedType",
-              "qualifiers": [],
-              "source_text": "state *s",
-              "components": [
-                {
-                  "model": "CPointer",
-                  "qualifiers": [],
-                  "source_text": ""
-                },
-                {
-                  "reference": "state"
-                }
-              ]
-            },
-            "source_location": null,
-            "callback_policy": null
-          }
-        ],
-        "storage": [
-          "static"
-        ],
-        "specifiers": [],
-        "is_variadic": false,
-        "is_definition": true,
-        "prototype_style": "prototype",
-        "source_location": {
-          "filename": "tinyexpr/tinyexpr.c",
-          "line": 503,
-          "column": 1,
-          "source_line": "static te_expr *factor(state *s) {"
-        },
-        "start": {
-          "filename": "tinyexpr/tinyexpr.c",
-          "line": 503,
-          "column": 1,
-          "source_line": "static te_expr *factor(state *s) {"
-        },
-        "end": {
-          "filename": "tinyexpr/tinyexpr.c",
-          "line": 522,
-          "column": 1,
-          "source_line": "}"
-        },
-        "declaration_locations": [],
-        "condition_set": [
-          "g5:b1"
-        ]
-      }
-    ]
-  },
   "diagnostics": [
     {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'TYPE_MASK' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 78,
-        "column": 1,
-        "source_line": "#define TYPE_MASK(TYPE) ((TYPE)&0x0000001F)"
-      },
-      "unit_kind": "macro",
-      "unit_name": "TYPE_MASK"
-    },
-    {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'IS_PURE' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 80,
-        "column": 1,
-        "source_line": "#define IS_PURE(TYPE) (((TYPE) & TE_FLAG_PURE) != 0)"
-      },
-      "unit_kind": "macro",
-      "unit_name": "IS_PURE"
-    },
-    {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'IS_FUNCTION' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 81,
-        "column": 1,
-        "source_line": "#define IS_FUNCTION(TYPE) (((TYPE) & TE_FUNCTION0) != 0)"
-      },
-      "unit_kind": "macro",
-      "unit_name": "IS_FUNCTION"
-    },
-    {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'IS_CLOSURE' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 82,
-        "column": 1,
-        "source_line": "#define IS_CLOSURE(TYPE) (((TYPE) & TE_CLOSURE0) != 0)"
-      },
-      "unit_kind": "macro",
-      "unit_name": "IS_CLOSURE"
-    },
-    {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'ARITY' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 83,
-        "column": 1,
-        "source_line": "#define ARITY(TYPE) ( ((TYPE) & (TE_FUNCTION0 | TE_CLOSURE0)) ? ((TYPE) & 0x00000007) : 0 )"
-      },
-      "unit_kind": "macro",
-      "unit_name": "ARITY"
-    },
-    {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'NEW_EXPR' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 84,
-        "column": 1,
-        "source_line": "#define NEW_EXPR(type, ...) new_expr((type), (const te_expr*[]){__VA_ARGS__})"
-      },
-      "unit_kind": "macro",
-      "unit_name": "NEW_EXPR"
-    },
-    {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'CHECK_NULL' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 85,
-        "column": 1,
-        "source_line": "#define CHECK_NULL(ptr, ...) if ((ptr) == NULL) { __VA_ARGS__; return NULL; }"
-      },
-      "unit_kind": "macro",
-      "unit_name": "CHECK_NULL"
-    },
-    {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'TE_FUN' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 592,
-        "column": 1,
-        "source_line": "#define TE_FUN(...) ((double(*)(__VA_ARGS__))n->function)"
-      },
-      "unit_kind": "macro",
-      "unit_name": "TE_FUN"
-    },
-    {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'M' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "tinyexpr/tinyexpr.c",
-        "line": 593,
-        "column": 1,
-        "source_line": "#define M(e) te_eval(n->parameters[e])"
-      },
-      "unit_kind": "macro",
-      "unit_name": "M"
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATOR",
-      "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
-      "severity": "warning",
+      "code": "C_DUPLICATE_TAG_DEFINITION",
+      "message": "Duplicate definition for struct tag 'te_expr'.",
+      "severity": "error",
       "location": {
         "filename": "tinyexpr/tinyexpr.h",
-        "line": 31,
+        "line": 36,
         "column": 1,
-        "source_line": "extern \"C\" {"
+        "source_line": "typedef struct te_expr {"
       },
-      "unit_kind": "declarator",
-      "unit_name": null
+      "unit_kind": "struct",
+      "unit_name": "te_expr"
+    },
+    {
+      "code": "C_DUPLICATE_TAG_DEFINITION",
+      "message": "Duplicate definition for struct tag 'te_variable'.",
+      "severity": "error",
+      "location": {
+        "filename": "tinyexpr/tinyexpr.h",
+        "line": 55,
+        "column": 1,
+        "source_line": "typedef struct te_variable {"
+      },
+      "unit_kind": "struct",
+      "unit_name": "te_variable"
     }
   ]
 }

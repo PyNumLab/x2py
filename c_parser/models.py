@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import inspect
@@ -53,17 +52,13 @@ def c_model_to_dict(obj: Any, _seen: set[int] | None = None) -> Any:
     if isinstance(obj, CQualifier):
         return obj.spelling
     if isinstance(obj, CType):
-        if isinstance(obj, (CStruct, CUnion, CEnum, CTypedef)) and id(obj) in _seen:
+        if isinstance(obj, CStruct | CUnion | CEnum | CTypedef) and id(obj) in _seen:
             return {"reference": obj.reference_name}
-        if isinstance(obj, (CStruct, CUnion, CEnum, CTypedef)):
+        if isinstance(obj, CStruct | CUnion | CEnum | CTypedef):
             _seen.add(id(obj))
         payload = {"model": type(obj).__name__}
         payload.update(
-            {
-                f.name: c_model_to_dict(getattr(obj, f.name), _seen)
-                for f in fields(obj)
-                if not (f.name == "origin" and getattr(obj, f.name) is None)
-            }
+            {f.name: c_model_to_dict(getattr(obj, f.name), _seen) for f in fields(obj) if f.name != "origin"}
         )
         return payload
     if is_dataclass(obj):
@@ -71,26 +66,16 @@ def c_model_to_dict(obj: Any, _seen: set[int] | None = None) -> Any:
             f.name: c_model_to_dict(getattr(obj, f.name), _seen)
             for f in fields(obj)
             if not (
-                (f.name == "origin" and getattr(obj, f.name) is None)
+                f.name == "origin"
                 or (
                     isinstance(obj, CFile)
                     and f.name in {"preprocessing_recipe", "preprocessed_source_path"}
                     and getattr(obj, f.name) is None
                 )
+                or (isinstance(obj, CFile) and f.name == "original_source_paths" and not getattr(obj, f.name))
+                or (isinstance(obj, CFunction) and f.name == "condition_set" and not getattr(obj, f.name))
                 or (
-                    isinstance(obj, CFile)
-                    and f.name == "original_source_paths"
-                    and not getattr(obj, f.name)
-                )
-                or (
-                    isinstance(obj, CFunction)
-                    and f.name == "condition_set"
-                    and not getattr(obj, f.name)
-                )
-                or (
-                    isinstance(obj, CProject)
-                    and f.name == "conditional_function_variants"
-                    and not getattr(obj, f.name)
+                    isinstance(obj, CProject) and f.name == "conditional_function_variants" and not getattr(obj, f.name)
                 )
             )
         }
@@ -98,7 +83,7 @@ def c_model_to_dict(obj: Any, _seen: set[int] | None = None) -> Any:
         return [c_model_to_dict(v, _seen) for v in obj]
     if isinstance(obj, dict):
         return {k: c_model_to_dict(v, _seen) for k, v in obj.items()}
-    if isinstance(obj, (set, frozenset)):
+    if isinstance(obj, set | frozenset):
         return sorted(c_model_to_dict(v, _seen) for v in obj)
     return obj
 
@@ -417,7 +402,7 @@ class CFunction:
 @dataclass
 class CStruct(CType):
     name: str | None = None
-    members: list["CVariable"] = field(default_factory=list)
+    members: list[CVariable] = field(default_factory=list)
     anonymous_id: str | None = None
     is_incomplete: bool = False
     source_location: CSourceLocation | None = None
@@ -431,7 +416,7 @@ class CStruct(CType):
 @dataclass
 class CUnion(CType):
     name: str | None = None
-    members: list["CVariable"] = field(default_factory=list)
+    members: list[CVariable] = field(default_factory=list)
     anonymous_id: str | None = None
     is_incomplete: bool = False
     source_location: CSourceLocation | None = None
@@ -534,7 +519,6 @@ class CInclude:
 class CFile:
     filename: str | None = None
     language: str = "c"
-    parser_status: str = "partial"
     preprocessing: str = "raw"
     preprocessing_recipe: dict[str, Any] | None = None
     preprocessed_source_path: str | None = None

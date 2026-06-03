@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C function prototype and definition parser tests."""
 
 import pytest
@@ -74,8 +73,134 @@ int b;
 }
 """
 
-    with pytest.raises(CParseError, match="K&R"):
+    with pytest.raises(CParseError, match="K&R") as exc_info:
         parse_c_file(source, filename="knr.c")
+
+    error = exc_info.value
+    assert error.code == "CPARSE_UNSUPPORTED_KNR_DEFINITION"
+    assert error.filename == "knr.c"
+    assert error.line_number == 2
+    assert error.column == 5
+    assert error.source_line == "int add(a, b)"
+
+
+def test_old_style_knr_detection_uses_linemarkers_and_normalized_headers():
+    from c_parser import CParseError, parse_c_file
+
+    source = """# 40 "generated_api.c"
+__extension__ int exported(a)
+int a;
+{
+    return a;
+}
+"""
+
+    with pytest.raises(CParseError) as exc_info:
+        parse_c_file(source, filename="generated.i", preprocessing="preprocessed")
+
+    error = exc_info.value
+    assert error.code == "CPARSE_UNSUPPORTED_KNR_DEFINITION"
+    assert error.filename == "generated_api.c"
+    assert error.line_number == 40
+    assert error.column == 19
+    assert error.source_line == "__extension__ int exported(a)"
+
+
+def test_modern_prototype_before_old_style_definition_does_not_stop_knr_detection():
+    from c_parser import CParseError, CParser, parse_c_file
+
+    source = """
+int modern(int value)
+{
+    return value;
+}
+int legacy(a)
+int a;
+{
+    return a;
+}
+"""
+
+    with pytest.raises(CParseError) as exc_info:
+        parse_c_file(source, filename="mixed_knr.c")
+
+    error = exc_info.value
+    assert error.code == "CPARSE_UNSUPPORTED_KNR_DEFINITION"
+    assert error.filename == "mixed_knr.c"
+    assert error.line_number == 6
+    assert error.column == 5
+    assert error.source_line == "int legacy(a)"
+
+    with pytest.raises(CParseError):
+        CParser()._raise_for_unsupported_old_style_definitions(
+            source,
+            "mixed_knr.c",
+            use_linemarkers=False,
+            normalize_compiler_extensions=False,
+        )
+
+
+def test_old_style_knr_scan_skips_directives_and_keeps_scanning():
+    from c_parser import CParseError, CParser
+
+    parser = CParser()
+    parser._raise_for_unsupported_old_style_definitions(
+        "#if defined(FEATURE)\nint value;\n",
+        "feature_guard.c",
+        use_linemarkers=False,
+        normalize_compiler_extensions=False,
+    )
+
+    with pytest.raises(CParseError):
+        parser._raise_for_unsupported_old_style_definitions(
+            "(not_a_declaration)\nint legacy(a)\nint a;\n",
+            "scan_through.c",
+            use_linemarkers=False,
+            normalize_compiler_extensions=False,
+        )
+
+
+def test_find_parameter_list_returns_outer_function_signature_bounds():
+    from c_parser import CParser
+
+    parser = CParser()
+    text = "int run(int (*callback)(char ch), const char *label)   "
+
+    assert parser._find_parameter_list(text) == (text.index("("), text.rstrip().rindex(")"))
+    assert parser._find_parameter_list("int value") is None
+
+
+def test_control_statement_parameter_lists_inside_function_bodies_are_not_knr_definitions():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+int run(int value)
+{
+    if (value)
+    {
+        return value;
+    }
+    while (value)
+    {
+        value--;
+    }
+loop: for (value)
+    {
+        value--;
+    }
+branch: switch (value)
+    {
+    default:
+        return value;
+    }
+    return 0;
+}
+""",
+        filename="body_control.c",
+    )
+
+    assert [function.name for function in parsed.functions] == ["run"]
 
 
 @pytest.mark.parametrize(
@@ -309,14 +434,33 @@ def test_function_declaration_attributes_are_tolerated_when_type_shape_is_unchan
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
-        'int exported(void) __attribute__((visibility("default")));\n'
-        "int deprecated(void) [[deprecated]];\n",
+        'int exported(void) __attribute__((visibility("default")));\nint deprecated(void) [[deprecated]];\n',
         filename="function_attributes.h",
         preprocessing="compiler",
     )
 
     assert [function.name for function in parsed.functions] == ["exported", "deprecated"]
     assert parsed.diagnostics == []
+
+
+def test_unsupported_function_declarator_is_reported_and_later_declarations_continue():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        "int broken @@ { return 0; }\nint kept;\n",
+        filename="bad_function_declarator.c",
+    )
+
+    assert parsed.functions == []
+    assert [variable.name for variable in parsed.variables] == ["kept"]
+    assert len(parsed.diagnostics) == 1
+    diagnostic = parsed.diagnostics[0]
+    assert diagnostic.code == "C_UNSUPPORTED_DECLARATOR"
+    assert diagnostic.unit_kind == "declarator"
+    assert diagnostic.message == "Unsupported declarator syntax after parsed type layers: '@@'."
+    assert diagnostic.location is not None
+    assert diagnostic.location.line == 1
+    assert diagnostic.location.column == 1
 
 
 def test_conflicting_function_prototypes_report_diagnostic():
@@ -329,6 +473,27 @@ def test_conflicting_function_prototypes_report_diagnostic():
 
     assert [function.name for function in parsed.functions] == ["work"]
     assert any(diag.code == "C_CONFLICTING_FUNCTION_DECLARATION" for diag in parsed.diagnostics)
+
+
+def test_function_conflicts_consider_parameters_and_variadic_marker():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file(
+        """
+int same_return(int value);
+int same_return(double value);
+int log_msg(const char *fmt);
+int log_msg(const char *fmt, ...);
+""",
+        filename="function_shape_conflicts.h",
+    )
+
+    conflicts = [
+        diagnostic.unit_name
+        for diagnostic in parsed.diagnostics
+        if diagnostic.code == "C_CONFLICTING_FUNCTION_DECLARATION"
+    ]
+    assert conflicts == ["same_return", "log_msg"]
 
 
 def test_duplicate_function_definitions_report_diagnostic():

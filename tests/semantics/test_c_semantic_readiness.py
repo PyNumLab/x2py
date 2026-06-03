@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C semantic wrap-readiness tests.
 
 These tests intentionally live under ``tests/semantics`` because readiness is
@@ -36,25 +35,6 @@ def test_c_semantic_readiness_reports_unresolved_typedefs():
 
     assert report["wrappable"] is False
     assert any(blocker["code"] == "unresolved_semantic_types" for blocker in report["wrappability_blockers"])
-
-
-def test_c_semantic_readiness_reports_macro_dependent_declarations():
-    from c_parser import parse_c_file
-    from semantics.c2ir import c_file_to_semantic_modules
-    from semantics.readiness import assess_semantic_wrap_readiness
-
-    parsed = parse_c_file(
-        """
-#define API(ret) ret
-API(int) exported(void);
-""",
-        filename="macro_dependent.h",
-    )
-    modules = c_file_to_semantic_modules(parsed)
-    report = assess_semantic_wrap_readiness(modules, source="macro_dependent.h")
-
-    assert report["wrappable"] is False
-    assert any(blocker["code"] == "c_macro_dependent_declaration" for blocker in report["wrappability_blockers"])
 
 
 def test_c_semantic_readiness_reports_variadic_functions_as_blockers():

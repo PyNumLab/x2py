@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import ast
 from collections.abc import Iterable
 from copy import deepcopy
+import json
 import keyword
 import re
 
@@ -111,7 +113,15 @@ class PyiPrinter:
         shape = list(array.shape if array is not None and array.shape else semantic_type.shape)
         if not shape and semantic_type.rank > 0:
             shape = [":" for _ in range(semantic_type.rank)]
-        return [str(dim) for dim in shape]
+        return [PyiPrinter._canonical_array_dimension(dim) for dim in shape]
+
+    @staticmethod
+    def _canonical_array_dimension(dimension: object) -> str:
+        text = str(dimension)
+        try:
+            return ast.unparse(ast.parse(text, mode="eval").body)
+        except SyntaxError:
+            return text
 
     @staticmethod
     def _array_annotation_metadata(array: SemanticArrayContract | None) -> list[str]:
@@ -158,7 +168,7 @@ class PyiPrinter:
         type_text = self.emit_semantic_type(semantic_type)
         annotation_metadata = []
         if original_name is not None:
-            annotation_metadata.append(f'Name("{original_name}")')
+            annotation_metadata.append(f"Name({json.dumps(original_name)})")
         if self._requires_intent_metadata(arg):
             annotation_metadata.append(f"Intent({arg.intent!r})")
         if annotation_metadata:
@@ -193,11 +203,7 @@ class PyiPrinter:
             rank=semantic_type.rank,
             dtype=semantic_type.dtype,
             shape=list(semantic_type.shape),
-            constraints=[
-                constraint
-                for constraint in semantic_type.constraints
-                if constraint.name != "Constant"
-            ],
+            constraints=[constraint for constraint in semantic_type.constraints if constraint.name != "Constant"],
             coercions=list(semantic_type.coercions),
             ownership=semantic_type.ownership,
             metadata=dict(semantic_type.metadata),
@@ -265,11 +271,7 @@ class PyiPrinter:
             return f"{decorator}{def_indent}def {name}(self) -> {return_type}: ..."
 
         args = (",\n" + parameter_indent).join(arguments)
-        return (
-            f"{decorator}{def_indent}def {name}(\n"
-            f"{parameter_indent}{args}\n"
-            f"{def_indent}) -> {return_type}: ..."
-        )
+        return f"{decorator}{def_indent}def {name}(\n{parameter_indent}{args}\n{def_indent}) -> {return_type}: ..."
 
     def _class_body(self, cls: SemanticClass) -> str:
         body_parts = []
@@ -381,7 +383,9 @@ class PyiPrinter:
     def _native_call(self, projection: list[ProjectionMapping]) -> str:
         entries = ", ".join(
             self._native_projection_entry(mapping)
-            for mapping in sorted(projection, key=lambda item: item.native_position if item.native_position is not None else -1)
+            for mapping in sorted(
+                projection, key=lambda item: item.native_position if item.native_position is not None else -1
+            )
         )
         return f"@native_call([{entries}])"
 
@@ -489,11 +493,7 @@ def opaque_dependency_modules(
 ) -> list[SemanticModule]:
     source_modules = _module_list(modules)
     known_modules = _module_list(available_modules) if available_modules is not None else source_modules
-    known_classes = {
-        (module.name, cls.name)
-        for module in known_modules
-        for cls in module.classes
-    }
+    known_classes = {(module.name, cls.name) for module in known_modules for cls in module.classes}
     dependencies: dict[str, set[str]] = {}
     for module in source_modules:
         for semantic_type in _iter_module_semantic_types(module):
@@ -544,10 +544,7 @@ def emit_module_stubs(
         existing = {cls.name for cls in target.classes}
         target.classes.extend(cls for cls in dependency.classes if cls.name not in existing)
 
-    return {
-        module_name: emit_module(module).strip()
-        for module_name, module in emitted_modules.items()
-    }
+    return {module_name: emit_module(module).strip() for module_name, module in emitted_modules.items()}
 
 
 def _module_list(modules: SemanticModule | Iterable[SemanticModule] | None) -> list[SemanticModule]:

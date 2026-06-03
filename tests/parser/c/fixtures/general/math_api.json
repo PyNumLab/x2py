@@ -3,8 +3,11 @@
     "general/math_api.c": {
       "filename": "general/math_api.c",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "general/math_api.c",
+        "general/math_api.h"
+      ],
       "functions": [
         {
           "name": "norm2",
@@ -482,30 +485,7 @@
       "typedefs": [],
       "variables": [],
       "macros": [],
-      "includes": [
-        {
-          "target": "math_api.h",
-          "kind": "local",
-          "resolved_path": "general/math_api.h",
-          "source_location": {
-            "filename": "general/math_api.c",
-            "line": 1,
-            "column": 1,
-            "source_line": "#include \"math_api.h\""
-          }
-        },
-        {
-          "target": "math.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "general/math_api.c",
-            "line": 3,
-            "column": 1,
-            "source_line": "#include <math.h>"
-          }
-        }
-      ],
+      "includes": [],
       "raw_directives": [],
       "macro_dependencies": [],
       "diagnostics": []
@@ -513,8 +493,10 @@
     "general/math_api.h": {
       "filename": "general/math_api.h",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "general/math_api.h"
+      ],
       "functions": [
         {
           "name": "norm2",
@@ -943,43 +925,9 @@
       "enums": [],
       "typedefs": [],
       "variables": [],
-      "macros": [
-        {
-          "name": "X2PY_GENERAL_MATH_API_H",
-          "value": null,
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/math_api.h",
-            "line": 2,
-            "column": 1,
-            "source_line": "#define X2PY_GENERAL_MATH_API_H"
-          }
-        }
-      ],
+      "macros": [],
       "includes": [],
-      "raw_directives": [
-        {
-          "directive": "ifndef",
-          "argument": "X2PY_GENERAL_MATH_API_H",
-          "source_location": {
-            "filename": "general/math_api.h",
-            "line": 1,
-            "column": 1,
-            "source_line": "#ifndef X2PY_GENERAL_MATH_API_H"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "general/math_api.h",
-            "line": 9,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        }
-      ],
+      "raw_directives": [],
       "macro_dependencies": [],
       "diagnostics": []
     }
@@ -1460,44 +1408,8 @@
   "enums": {},
   "typedefs": {},
   "variables": {},
-  "macros": {
-    "X2PY_GENERAL_MATH_API_H": {
-      "name": "X2PY_GENERAL_MATH_API_H",
-      "value": null,
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/math_api.h",
-        "line": 2,
-        "column": 1,
-        "source_line": "#define X2PY_GENERAL_MATH_API_H"
-      }
-    }
-  },
-  "includes": {
-    "general/math_api.c:math_api.h": {
-      "target": "math_api.h",
-      "kind": "local",
-      "resolved_path": "general/math_api.h",
-      "source_location": {
-        "filename": "general/math_api.c",
-        "line": 1,
-        "column": 1,
-        "source_line": "#include \"math_api.h\""
-      }
-    },
-    "general/math_api.c:math.h": {
-      "target": "math.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "general/math_api.c",
-        "line": 3,
-        "column": 1,
-        "source_line": "#include <math.h>"
-      }
-    }
-  },
+  "macros": {},
+  "includes": {},
   "functions_by_file": {
     "general/math_api.c": [
       "norm2",
@@ -1514,15 +1426,11 @@
   },
   "enum_constants": {},
   "include_graph": {
-    "general/math_api.c": [
-      "general/math_api.h"
-    ],
+    "general/math_api.c": [],
     "general/math_api.h": []
   },
   "system_includes": {
-    "general/math_api.c": [
-      "math.h"
-    ],
+    "general/math_api.c": [],
     "general/math_api.h": []
   },
   "unresolved_includes": {

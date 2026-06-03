@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Public C parser package."""
 
 from .models import (
@@ -60,9 +59,9 @@ __all__ = (
     "CChar",
     "CComposedType",
     "CConst",
+    "CDiagnostic",
     "CDouble",
     "CDoubleComplex",
-    "CDiagnostic",
     "CEnum",
     "CEnumerator",
     "CFile",
@@ -81,8 +80,8 @@ __all__ = (
     "CMacroDependency",
     "CParameter",
     "CParseError",
-    "CPointer",
     "CParser",
+    "CPointer",
     "CProject",
     "CQualifier",
     "CRawDirective",

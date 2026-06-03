@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 import json
 import re
 from pathlib import Path
-
-import pytest
 
 _FCODE_DIR = Path(__file__).parent / "fortran" / "fixtures"
 _ALLOWLIST_PATH = Path(__file__).parent / "fortran" / "json_sanity_allowlist.json"
@@ -107,7 +104,7 @@ def _is_literal_json_parameter_value(value) -> bool:
     """Return True only for evaluated/literal parameter values in JSON output."""
     if isinstance(value, bool):
         return True
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return True
     if value is None:
         return False
@@ -210,7 +207,7 @@ def test_fortran_json_fixtures_have_sane_types():
         payload = _load_fixture_payload(path)
         relpath = str(path.relative_to(_FCODE_DIR))
         if relpath.startswith("general/"):
-            relpath = relpath[len("general/"): ]
+            relpath = relpath[len("general/") :]
         if relpath.startswith("scifortran/"):
             relpath = relpath.replace("scifortran/", "SciFortran/", 1)
 
@@ -221,7 +218,9 @@ def test_fortran_json_fixtures_have_sane_types():
                 value = entry.get("value")
                 symbolic_value = entry.get("symbolic_value")
                 if value is None and symbolic_value in (None, ""):
-                    invalid_parameter_value_entries.append((relpath, entry.get("name"), "missing value and symbolic_value"))
+                    invalid_parameter_value_entries.append(
+                        (relpath, entry.get("name"), "missing value and symbolic_value")
+                    )
                 if value is not None and not _is_literal_json_parameter_value(value):
                     invalid_parameter_value_entries.append((relpath, entry.get("name"), value))
 
@@ -238,7 +237,17 @@ def test_fortran_json_fixtures_have_sane_types():
                     invalid_rank_entries.append((relpath, "argument", sig.get("name"), arg_name, arg.get("rank")))
 
                 if not _is_valid_shape_info(arg):
-                    invalid_shape_entries.append((relpath, "argument", sig.get("name"), arg_name, arg.get("rank"), arg.get("shape"), arg.get("dimensions")))
+                    invalid_shape_entries.append(
+                        (
+                            relpath,
+                            "argument",
+                            sig.get("name"),
+                            arg_name,
+                            arg.get("rank"),
+                            arg.get("shape"),
+                            arg.get("dimensions"),
+                        )
+                    )
 
                 if not _has_known_base_type(arg) and not _is_external_argument(arg):
                     unknown_entries.append((relpath, "argument", sig.get("name"), arg.get("name")))
@@ -254,7 +263,17 @@ def test_fortran_json_fixtures_have_sane_types():
                     invalid_rank_entries.append((relpath, "variable", sig.get("name"), var_name, var.get("rank")))
 
                 if not _is_valid_shape_info(var):
-                    invalid_shape_entries.append((relpath, "variable", sig.get("name"), var_name, var.get("rank"), var.get("shape"), var.get("dimensions")))
+                    invalid_shape_entries.append(
+                        (
+                            relpath,
+                            "variable",
+                            sig.get("name"),
+                            var_name,
+                            var.get("rank"),
+                            var.get("shape"),
+                            var.get("dimensions"),
+                        )
+                    )
 
                 if not _has_known_base_type(var):
                     unknown_entries.append((relpath, "variable", sig.get("name"), var_name))
@@ -265,10 +284,22 @@ def test_fortran_json_fixtures_have_sane_types():
                     invalid_name_entries.append((relpath, "field", dtype.get("name"), field.get("name")))
 
                 if not _is_valid_rank(field):
-                    invalid_rank_entries.append((relpath, "field", dtype.get("name"), field.get("name"), field.get("rank")))
+                    invalid_rank_entries.append(
+                        (relpath, "field", dtype.get("name"), field.get("name"), field.get("rank"))
+                    )
 
                 if not _is_valid_shape_info(field):
-                    invalid_shape_entries.append((relpath, "field", dtype.get("name"), field.get("name"), field.get("rank"), field.get("shape"), field.get("dimensions")))
+                    invalid_shape_entries.append(
+                        (
+                            relpath,
+                            "field",
+                            dtype.get("name"),
+                            field.get("name"),
+                            field.get("rank"),
+                            field.get("shape"),
+                            field.get("dimensions"),
+                        )
+                    )
 
                 if not _has_known_base_type(field):
                     unknown_entries.append((relpath, "field", dtype.get("name"), field.get("name")))

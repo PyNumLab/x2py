@@ -67,9 +67,7 @@ from .models import (
 
 _IDENTIFIER_RE = re.compile(r"[^0-9A-Za-z_]+")
 _C_IDENTIFIER_TOKEN_RE = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
-_C_INTEGER_LITERAL_SUFFIX_RE = re.compile(
-    r"(?<![0-9A-Za-z_.])((?:0[xX][0-9A-Fa-f]+|\d+))[uUlL]+(?![0-9A-Za-z_.])"
-)
+_C_INTEGER_LITERAL_SUFFIX_RE = re.compile(r"(?<![0-9A-Za-z_.])((?:0[xX][0-9A-Fa-f]+|\d+))[uUlL]+(?![0-9A-Za-z_.])")
 _INTEGER_EXPRESSION_CHARS_RE = re.compile(r"[0-9A-Za-z_+\-*/%<>&|^~()\s]+")
 _INTEGER_LITERAL_RE = re.compile(r"[-+]?(?:0[xX][0-9A-Fa-f]+|\d+)(?:[uUlL]*)\Z")
 _FLOAT_LITERAL_RE = re.compile(
@@ -110,8 +108,10 @@ _NUMERIC_SEMANTIC_TYPES = frozenset(
         "UInt64",
         "Float32",
         "Float64",
+        "Float128",
         "Complex64",
         "Complex128",
+        "Complex256",
         "Any",
         "SizeT",
     }
@@ -133,8 +133,10 @@ _PRIMITIVE_TYPE_MAP: dict[type[CType], str | None] = {
     CUnsignedLongLong: "UInt64",
     CFloat: "Float32",
     CDouble: "Float64",
+    CLongDouble: "Float128",
     CFloatComplex: "Complex64",
     CDoubleComplex: "Complex128",
+    CLongDoubleComplex: "Complex256",
 }
 
 _STANDARD_TYPE_FALLBACKS = {
@@ -226,27 +228,15 @@ class CToIRConverter:
         self.enums = dict(project.enums)
         self.opaque_standard_types = set()
         try:
-            semantic_functions = [
-                self.visit_function(function)
-                for function in project.functions.values()
-            ]
+            semantic_functions = [self.visit_function(function) for function in project.functions.values()]
             semantic_variables = [
                 *self._enum_constants(list(project.enums.values())),
                 *self._macro_constants_from_macros(list(project.macros.values())),
-                *[
-                    self.visit_variable(variable)
-                    for variable in project.variables.values()
-                ],
+                *[self.visit_variable(variable) for variable in project.variables.values()],
             ]
             semantic_classes = [
-                *[
-                    self.visit_struct(struct)
-                    for struct in project.structs.values()
-                ],
-                *[
-                    self.visit_union(union)
-                    for union in project.unions.values()
-                ],
+                *[self.visit_struct(struct) for struct in project.structs.values()],
+                *[self.visit_union(union) for union in project.unions.values()],
                 *self._opaque_standard_type_classes(),
             ]
             return SemanticModule(
@@ -306,7 +296,6 @@ class CToIRConverter:
                     source_kind="translation_unit",
                     metadata={
                         "preprocessing": c_file.preprocessing,
-                        "parser_status": c_file.parser_status,
                     },
                 ),
             )
@@ -360,7 +349,7 @@ class CToIRConverter:
                     python_position=index,
                     intent=argument.intent,
                 )
-                for index, (parameter, argument) in enumerate(zip(function.parameters, arguments))
+                for index, (parameter, argument) in enumerate(zip(function.parameters, arguments, strict=False))
             ],
             metadata=metadata,
             visibility="private" if "static" in function.storage else "public",
@@ -499,13 +488,6 @@ class CToIRConverter:
             return self._callback_placeholder(type_)
         if isinstance(type_, CUnknownType):
             return self._unresolved_type(type_.spelling, owner=owner, source_type=self._type_text(type_))
-        if isinstance(type_, (CLongDouble, CLongDoubleComplex)):
-            return self._unsupported_type(
-                "c_long_double_unsupported",
-                "C long double types are not mapped until target precision policy is explicit.",
-                owner=owner,
-                source_type=self._type_text(type_),
-            )
         if isinstance(type_, CVoid):
             return SemanticType(
                 name="Any",
@@ -523,14 +505,17 @@ class CToIRConverter:
                 source_type=self._type_text(type_),
             )
 
-        metadata = self._type_metadata(type_)
+        origin = self._type_origin(type_)
+        metadata = {}
+        if "readiness_blockers" in origin.metadata:
+            metadata["readiness_blockers"] = list(origin.metadata["readiness_blockers"])
         if isinstance(type_, CChar):
             metadata["c_char_policy"] = "implementation-defined signed 8-bit code unit"
         return SemanticType(
             name=semantic_name,
             dtype=semantic_name,
             metadata=metadata,
-            origin=self._type_origin(type_),
+            origin=origin,
         )
 
     def _return_type(self, type_: CType, *, owner: str) -> SemanticType | None:
@@ -682,8 +667,7 @@ class CToIRConverter:
         pointer_depth = len(pointer_components)
         read_only = self._has_qualifier(pointee_type, CConst)
         pointer_qualifiers = [
-            [qualifier.spelling for qualifier in pointer.qualifiers]
-            for pointer in pointer_components
+            [qualifier.spelling for qualifier in pointer.qualifiers] for pointer in pointer_components
         ]
         restrict = any(self._has_qualifier(pointer, CRestrict) for pointer in pointer_components)
         pointee.storage = SemanticStorageContract(
@@ -849,10 +833,7 @@ class CToIRConverter:
             return False
         return all(
             isinstance(node, _INTEGER_EXPRESSION_AST_NODES)
-            and not (
-                isinstance(node, ast.Constant)
-                and not isinstance(node.value, int)
-            )
+            and not (isinstance(node, ast.Constant) and not isinstance(node.value, int))
             for node in ast.walk(expression)
         )
 
@@ -958,11 +939,7 @@ class CToIRConverter:
                 wrapped=False,
             )
             self._add_external_opaque_by_value_blocker(semantic_type)
-        module.classes = [
-            cls
-            for cls in module.classes
-            if cls.name not in external_classes
-        ]
+        module.classes = [cls for cls in module.classes if cls.name not in external_classes]
 
     def _classify_project_external_types(
         self,
@@ -970,9 +947,7 @@ class CToIRConverter:
         project: CProject,
     ) -> None:
         modules_by_filename = {
-            module.origin.native_name: module
-            for module in modules
-            if module.origin.native_name is not None
+            module.origin.native_name: module for module in modules if module.origin.native_name is not None
         }
         owners: dict[str, tuple[str, bool]] = {}
         for struct in project.structs.values():
@@ -985,9 +960,7 @@ class CToIRConverter:
 
         for module in modules:
             external_names = {
-                name
-                for name, (origin_module, _wrapped) in owners.items()
-                if origin_module != module.name
+                name for name, (origin_module, _wrapped) in owners.items() if origin_module != module.name
             }
             if not external_names:
                 continue
@@ -1000,11 +973,7 @@ class CToIRConverter:
                     origin_module=owner[0],
                     wrapped=owner[1],
                 )
-            module.classes = [
-                cls
-                for cls in module.classes
-                if cls.name not in external_names
-            ]
+            module.classes = [cls for cls in module.classes if cls.name not in external_names]
 
     @staticmethod
     def _set_external_type_ref(
@@ -1161,18 +1130,14 @@ class CToIRConverter:
         if report is None:
             return {}
         if hasattr(report, "types"):
-            types = getattr(report, "types")
+            types = report.types
         elif isinstance(report, dict) and isinstance(report.get("types"), dict):
             types = report["types"]
         elif isinstance(report, dict):
             types = report
         else:
             return {}
-        return {
-            str(name): dict(fact)
-            for name, fact in types.items()
-            if isinstance(fact, dict)
-        }
+        return {str(name): dict(fact) for name, fact in types.items() if isinstance(fact, dict)}
 
     def _unresolved_type(
         self,
@@ -1187,9 +1152,7 @@ class CToIRConverter:
             name=name,
             dtype=name,
             metadata={
-                "readiness_blockers": [
-                    self._blocker(code, message, {"owner": owner or name, "type": source_type})
-                ]
+                "readiness_blockers": [self._blocker(code, message, {"owner": owner or name, "type": source_type})]
             },
             origin=SemanticOrigin(source_language="c", source_kind="type", source_type=source_type),
         )
@@ -1237,8 +1200,7 @@ class CToIRConverter:
     def _module_name(c_file: CFile) -> str:
         if c_file.filename:
             return CToIRConverter._module_name_for_filename(c_file.filename)
-        else:
-            stem = "c_module"
+        stem = "c_module"
         return CToIRConverter._identifier(stem or "c_module")
 
     @staticmethod
@@ -1354,7 +1316,7 @@ class CToIRConverter:
         source_text = getattr(type_, "source_text", "")
         if source_text:
             return source_text
-        if isinstance(type_, (CStruct, CUnion, CEnum, CTypedef)):
+        if isinstance(type_, CStruct | CUnion | CEnum | CTypedef):
             return type_.reference_name
         return type(type_).__name__
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Optional, Any
+from typing import Any
 
 
 EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
@@ -11,6 +11,7 @@ EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
 # ============================================================
 # Semantic Constraints
 # ============================================================
+
 
 @dataclass
 class SemanticConstraint:
@@ -21,6 +22,7 @@ class SemanticConstraint:
 # ============================================================
 # Semantic Coercions
 # ============================================================
+
 
 @dataclass
 class SemanticCoercion:
@@ -34,6 +36,7 @@ class SemanticCoercion:
 # Ownership / Lifetime
 # ============================================================
 
+
 @dataclass
 class OwnershipPolicy:
     ownership: str = "borrowed"
@@ -45,29 +48,30 @@ class OwnershipPolicy:
 # Origin And Storage Contracts
 # ============================================================
 
+
 @dataclass
 class SemanticOrigin:
-    source_language: Optional[str] = None
-    native_name: Optional[str] = None
-    native_scope: Optional[str] = None
-    source_kind: Optional[str] = None
-    source_type: Optional[str] = None
+    source_language: str | None = None
+    native_name: str | None = None
+    native_scope: str | None = None
+    source_kind: str | None = None
+    source_type: str | None = None
     source_location: dict[str, Any] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class SemanticArrayContract:
-    rank: Optional[int] = None
+    rank: int | None = None
     shape: list[str] = field(default_factory=list)
     # Native-source provenance, excluded from public contract equality.
-    lower_bounds: list[Optional[str]] = field(default_factory=list)
-    upper_bounds: list[Optional[str]] = field(default_factory=list)
+    lower_bounds: list[str | None] = field(default_factory=list)
+    upper_bounds: list[str | None] = field(default_factory=list)
     source_shape: list[str] = field(default_factory=list)
-    category: Optional[str] = None
-    order: Optional[str] = None
+    category: str | None = None
+    order: str | None = None
     axes: list[str] = field(default_factory=list)
-    contiguous: Optional[bool] = None
+    contiguous: bool | None = None
     allocatable: bool = False
     pointer: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -80,8 +84,8 @@ class SemanticStorageContract:
     mutable: bool = False
     pointer_depth: int = 0
     ownership: str = "borrowed"
-    array: Optional[SemanticArrayContract] = None
-    calling_convention: Optional[str] = None
+    array: SemanticArrayContract | None = None
+    calling_convention: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -89,13 +93,14 @@ class SemanticStorageContract:
 # Semantic Types
 # ============================================================
 
+
 @dataclass(eq=False)
 class SemanticType:
     name: str
 
     rank: int = 0
 
-    dtype: Optional[str] = None
+    dtype: str | None = None
 
     shape: list[str] = field(default_factory=list)
 
@@ -107,7 +112,7 @@ class SemanticType:
 
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    storage: Optional[SemanticStorageContract] = None
+    storage: SemanticStorageContract | None = None
 
     origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
 
@@ -121,6 +126,7 @@ class SemanticType:
 # Semantic Arguments
 # ============================================================
 
+
 @dataclass
 class SemanticArgument:
     name: str
@@ -132,7 +138,7 @@ class SemanticArgument:
     optional: bool = False
     visibility: str = "public"
 
-    default_value: Optional[str] = None
+    default_value: str | None = None
 
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -143,9 +149,10 @@ class SemanticArgument:
 # Semantic Contracts
 # ============================================================
 
+
 @dataclass
 class SemanticContract:
-    name: Optional[str] = None
+    name: str | None = None
 
     preconditions: list[str] = field(default_factory=list)
 
@@ -158,13 +165,14 @@ class SemanticContract:
 # API Projection
 # ============================================================
 
+
 @dataclass
 class ProjectionMapping:
-    python_name: Optional[str] = None
+    python_name: str | None = None
     native_name: str = ""
-    native_position: Optional[int] = None
-    python_position: Optional[int] = None
-    result_position: Optional[int] = None
+    native_position: int | None = None
+    python_position: int | None = None
+    result_position: int | None = None
     value_kind: str = ""
     value: Any = None
     intent: str = "in"
@@ -174,15 +182,16 @@ class ProjectionMapping:
 # Semantic Functions
 # ============================================================
 
+
 @dataclass(eq=False)
 class SemanticFunction:
     name: str
 
-    native_name: Optional[str] = None
+    native_name: str | None = None
 
     arguments: list[SemanticArgument] = field(default_factory=list)
 
-    return_type: Optional[SemanticType] = None
+    return_type: SemanticType | None = None
 
     contracts: list[SemanticContract] = field(default_factory=list)
 
@@ -228,6 +237,7 @@ class SemanticFunction:
 # ============================================================
 # Semantic Methods
 # ============================================================
+
 
 @dataclass(eq=False)
 class SemanticMethod(SemanticFunction):
@@ -281,10 +291,7 @@ def _semantic_type_key(
         semantic_type.rank,
         semantic_type.dtype,
         tuple(_canonical_expression(item, name_map) for item in shape),
-        tuple(
-            _constraint_key(c, name_map)
-            for c in _semantic_contract_constraints(semantic_type)
-        ),
+        tuple(_constraint_key(c, name_map) for c in _semantic_contract_constraints(semantic_type)),
         tuple(semantic_type.coercions),
         semantic_type.ownership if include_ownership else None,
         semantic_type.metadata,
@@ -302,11 +309,7 @@ def _semantic_contract_constraints(semantic_type: SemanticType) -> list[Semantic
         "ORDER_F",
         "Pointer",
     }
-    return [
-        constraint
-        for constraint in semantic_type.constraints
-        if constraint.name not in storage_constraint_names
-    ]
+    return [constraint for constraint in semantic_type.constraints if constraint.name not in storage_constraint_names]
 
 
 def _storage_contract_key(
@@ -389,13 +392,8 @@ def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
 
 def _native_projection_value_key(value: Any, name_map: dict[str, str]) -> Any:
     if isinstance(value, dict):
-        return tuple(
-            sorted(
-                (key, _native_projection_value_key(item, name_map))
-                for key, item in value.items()
-            )
-        )
-    if isinstance(value, (list, tuple)):
+        return tuple(sorted((key, _native_projection_value_key(item, name_map)) for key, item in value.items()))
+    if isinstance(value, list | tuple):
         return tuple(_native_projection_value_key(item, name_map) for item in value)
     return _canonical_expression(value, name_map)
 
@@ -419,8 +417,7 @@ def _canonical_expression(value: Any, name_map: dict[str, str]) -> Any:
         return tuple(_canonical_expression(item, name_map) for item in value)
     if isinstance(value, dict):
         return {
-            _canonical_expression(key, name_map): _canonical_expression(item, name_map)
-            for key, item in value.items()
+            _canonical_expression(key, name_map): _canonical_expression(item, name_map) for key, item in value.items()
         }
     return value
 
@@ -438,11 +435,12 @@ def _canonical_expression_text(text: str, name_map: dict[str, str]) -> str:
 # Semantic Classes
 # ============================================================
 
+
 @dataclass
 class SemanticClass:
     name: str
 
-    native_name: Optional[str] = None
+    native_name: str | None = None
 
     fields: list[SemanticArgument] = field(default_factory=list)
 
@@ -461,10 +459,11 @@ class SemanticClass:
 # Semantic Modules
 # ============================================================
 
+
 @dataclass
 class SemanticImportItem:
     source: str
-    target: Optional[str] = None
+    target: str | None = None
 
 
 @dataclass
@@ -505,8 +504,8 @@ def _iter_module_semantic_types(module: SemanticModule):
     for variable in module.variables:
         yield from _iter_semantic_type_tree(variable.semantic_type)
     for cls in module.classes:
-        for field in cls.fields:
-            yield from _iter_semantic_type_tree(field.semantic_type)
+        for semantic_field in cls.fields:
+            yield from _iter_semantic_type_tree(semantic_field.semantic_type)
         for method in cls.methods:
             for argument in method.arguments:
                 yield from _iter_semantic_type_tree(argument.semantic_type)

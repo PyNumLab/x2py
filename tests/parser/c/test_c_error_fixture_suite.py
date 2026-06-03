@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C parser error fixture and diagnostic golden regression tests."""
 
 import json
@@ -47,11 +46,7 @@ def test_c_error_fixture_suite_has_fixtures():
 
 
 def test_c_error_fixtures_have_matching_expected_json():
-    fixture_outputs = {
-        f"{path.name}.json"
-        for path in _ERRORS_DIR.glob("*")
-        if path.suffix.lower() in _SOURCE_SUFFIXES
-    }
+    fixture_outputs = {f"{path.name}.json" for path in _ERRORS_DIR.glob("*") if path.suffix.lower() in _SOURCE_SUFFIXES}
     expected_outputs = {path.name for path in _EXPECTED_ERRORS_DIR.glob("*.json")}
 
     assert not sorted(fixture_outputs - expected_outputs)
@@ -70,9 +65,7 @@ def test_c_error_fixture_suite_reports_expected_diagnostics():
         if _update_mode_enabled():
             try:
                 parse_c_file(source, filename=fixture.name)
-                raise AssertionError(
-                    f"Expected CParseError from {fixture.name} but no error was raised"
-                )
+                raise AssertionError(f"Expected CParseError from {fixture.name} but no error was raised")
             except CParseError as exc:
                 _dump_expected_error(expected_path, "CParseError", exc, "parse_c_file")
             continue

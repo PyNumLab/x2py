@@ -3,8 +3,10 @@
     "stb/stb_divide.h": {
       "filename": "stb/stb_divide.h",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "stb/stb_divide.h"
+      ],
       "functions": [
         {
           "name": "stb_div_trunc",
@@ -15,59 +17,56 @@
           },
           "parameters": [
             {
-              "name": "v1",
+              "name": "value_to_be_divided",
               "type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v1"
+                "source_text": "int value_to_be_divided"
               },
               "declared_type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v1"
+                "source_text": "int value_to_be_divided"
               },
               "source_location": null,
               "callback_policy": null
             },
             {
-              "name": "v2",
+              "name": "value_to_divide_by",
               "type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v2"
+                "source_text": "int value_to_divide_by"
               },
               "declared_type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v2"
+                "source_text": "int value_to_divide_by"
               },
               "source_location": null,
               "callback_policy": null
             }
           ],
-          "storage": [],
+          "storage": [
+            "extern"
+          ],
           "specifiers": [],
           "is_variadic": false,
-          "is_definition": true,
+          "is_definition": false,
           "prototype_style": "prototype",
           "source_location": {
             "filename": "stb/stb_divide.h",
-            "line": 147,
+            "line": 94,
             "column": 1,
-            "source_line": "int stb_div_trunc(int v1, int v2)"
+            "source_line": "extern int stb_div_trunc(int value_to_be_divided, int value_to_divide_by);"
           },
           "start": {
             "filename": "stb/stb_divide.h",
-            "line": 147,
+            "line": 94,
             "column": 1,
-            "source_line": "int stb_div_trunc(int v1, int v2)"
+            "source_line": "extern int stb_div_trunc(int value_to_be_divided, int value_to_divide_by);"
           },
-          "end": {
-            "filename": "stb/stb_divide.h",
-            "line": 162,
-            "column": 1,
-            "source_line": "}"
-          },
+          "end": null,
           "declaration_locations": []
         },
         {
@@ -79,59 +78,56 @@
           },
           "parameters": [
             {
-              "name": "v1",
+              "name": "value_to_be_divided",
               "type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v1"
+                "source_text": "int value_to_be_divided"
               },
               "declared_type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v1"
+                "source_text": "int value_to_be_divided"
               },
               "source_location": null,
               "callback_policy": null
             },
             {
-              "name": "v2",
+              "name": "value_to_divide_by",
               "type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v2"
+                "source_text": "int value_to_divide_by"
               },
               "declared_type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v2"
+                "source_text": "int value_to_divide_by"
               },
               "source_location": null,
               "callback_policy": null
             }
           ],
-          "storage": [],
+          "storage": [
+            "extern"
+          ],
           "specifiers": [],
           "is_variadic": false,
-          "is_definition": true,
+          "is_definition": false,
           "prototype_style": "prototype",
           "source_location": {
             "filename": "stb/stb_divide.h",
-            "line": 164,
+            "line": 95,
             "column": 1,
-            "source_line": "int stb_div_floor(int v1, int v2)"
+            "source_line": "extern int stb_div_floor(int value_to_be_divided, int value_to_divide_by);"
           },
           "start": {
             "filename": "stb/stb_divide.h",
-            "line": 164,
+            "line": 95,
             "column": 1,
-            "source_line": "int stb_div_floor(int v1, int v2)"
+            "source_line": "extern int stb_div_floor(int value_to_be_divided, int value_to_divide_by);"
           },
-          "end": {
-            "filename": "stb/stb_divide.h",
-            "line": 186,
-            "column": 1,
-            "source_line": "}"
-          },
+          "end": null,
           "declaration_locations": []
         },
         {
@@ -143,59 +139,56 @@
           },
           "parameters": [
             {
-              "name": "v1",
+              "name": "value_to_be_divided",
               "type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v1"
+                "source_text": "int value_to_be_divided"
               },
               "declared_type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v1"
+                "source_text": "int value_to_be_divided"
               },
               "source_location": null,
               "callback_policy": null
             },
             {
-              "name": "v2",
+              "name": "value_to_divide_by",
               "type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v2"
+                "source_text": "int value_to_divide_by"
               },
               "declared_type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v2"
+                "source_text": "int value_to_divide_by"
               },
               "source_location": null,
               "callback_policy": null
             }
           ],
-          "storage": [],
+          "storage": [
+            "extern"
+          ],
           "specifiers": [],
           "is_variadic": false,
-          "is_definition": true,
+          "is_definition": false,
           "prototype_style": "prototype",
           "source_location": {
             "filename": "stb/stb_divide.h",
-            "line": 188,
+            "line": 96,
             "column": 1,
-            "source_line": "int stb_div_eucl(int v1, int v2)"
+            "source_line": "extern int stb_div_eucl (int value_to_be_divided, int value_to_divide_by);"
           },
           "start": {
             "filename": "stb/stb_divide.h",
-            "line": 188,
+            "line": 96,
             "column": 1,
-            "source_line": "int stb_div_eucl(int v1, int v2)"
+            "source_line": "extern int stb_div_eucl (int value_to_be_divided, int value_to_divide_by);"
           },
-          "end": {
-            "filename": "stb/stb_divide.h",
-            "line": 222,
-            "column": 1,
-            "source_line": "}"
-          },
+          "end": null,
           "declaration_locations": []
         },
         {
@@ -207,59 +200,56 @@
           },
           "parameters": [
             {
-              "name": "v1",
+              "name": "value_to_be_divided",
               "type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v1"
+                "source_text": "int value_to_be_divided"
               },
               "declared_type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v1"
+                "source_text": "int value_to_be_divided"
               },
               "source_location": null,
               "callback_policy": null
             },
             {
-              "name": "v2",
+              "name": "value_to_divide_by",
               "type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v2"
+                "source_text": "int value_to_divide_by"
               },
               "declared_type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v2"
+                "source_text": "int value_to_divide_by"
               },
               "source_location": null,
               "callback_policy": null
             }
           ],
-          "storage": [],
+          "storage": [
+            "extern"
+          ],
           "specifiers": [],
           "is_variadic": false,
-          "is_definition": true,
+          "is_definition": false,
           "prototype_style": "prototype",
           "source_location": {
             "filename": "stb/stb_divide.h",
-            "line": 224,
+            "line": 97,
             "column": 1,
-            "source_line": "int stb_mod_trunc(int v1, int v2)"
+            "source_line": "extern int stb_mod_trunc(int value_to_be_divided, int value_to_divide_by);"
           },
           "start": {
             "filename": "stb/stb_divide.h",
-            "line": 224,
+            "line": 97,
             "column": 1,
-            "source_line": "int stb_mod_trunc(int v1, int v2)"
+            "source_line": "extern int stb_mod_trunc(int value_to_be_divided, int value_to_divide_by);"
           },
-          "end": {
-            "filename": "stb/stb_divide.h",
-            "line": 243,
-            "column": 1,
-            "source_line": "}"
-          },
+          "end": null,
           "declaration_locations": []
         },
         {
@@ -271,59 +261,56 @@
           },
           "parameters": [
             {
-              "name": "v1",
+              "name": "value_to_be_divided",
               "type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v1"
+                "source_text": "int value_to_be_divided"
               },
               "declared_type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v1"
+                "source_text": "int value_to_be_divided"
               },
               "source_location": null,
               "callback_policy": null
             },
             {
-              "name": "v2",
+              "name": "value_to_divide_by",
               "type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v2"
+                "source_text": "int value_to_divide_by"
               },
               "declared_type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v2"
+                "source_text": "int value_to_divide_by"
               },
               "source_location": null,
               "callback_policy": null
             }
           ],
-          "storage": [],
+          "storage": [
+            "extern"
+          ],
           "specifiers": [],
           "is_variadic": false,
-          "is_definition": true,
+          "is_definition": false,
           "prototype_style": "prototype",
           "source_location": {
             "filename": "stb/stb_divide.h",
-            "line": 245,
+            "line": 98,
             "column": 1,
-            "source_line": "int stb_mod_floor(int v1, int v2)"
+            "source_line": "extern int stb_mod_floor(int value_to_be_divided, int value_to_divide_by);"
           },
           "start": {
             "filename": "stb/stb_divide.h",
-            "line": 245,
+            "line": 98,
             "column": 1,
-            "source_line": "int stb_mod_floor(int v1, int v2)"
+            "source_line": "extern int stb_mod_floor(int value_to_be_divided, int value_to_divide_by);"
           },
-          "end": {
-            "filename": "stb/stb_divide.h",
-            "line": 264,
-            "column": 1,
-            "source_line": "}"
-          },
+          "end": null,
           "declaration_locations": []
         },
         {
@@ -335,433 +322,56 @@
           },
           "parameters": [
             {
-              "name": "v1",
+              "name": "value_to_be_divided",
               "type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v1"
+                "source_text": "int value_to_be_divided"
               },
               "declared_type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v1"
+                "source_text": "int value_to_be_divided"
               },
               "source_location": null,
               "callback_policy": null
             },
             {
-              "name": "v2",
+              "name": "value_to_divide_by",
               "type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v2"
+                "source_text": "int value_to_divide_by"
               },
               "declared_type": {
                 "model": "CInt",
                 "qualifiers": [],
-                "source_text": "int v2"
+                "source_text": "int value_to_divide_by"
               },
               "source_location": null,
               "callback_policy": null
             }
           ],
-          "storage": [],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 266,
-            "column": 1,
-            "source_line": "int stb_mod_eucl(int v1, int v2)"
-          },
-          "start": {
-            "filename": "stb/stb_divide.h",
-            "line": 266,
-            "column": 1,
-            "source_line": "int stb_mod_eucl(int v1, int v2)"
-          },
-          "end": {
-            "filename": "stb/stb_divide.h",
-            "line": 274,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
-        },
-        {
-          "name": "stbdiv_check",
-          "result_type": {
-            "model": "CVoid",
-            "qualifiers": [],
-            "source_text": "void"
-          },
-          "parameters": [
-            {
-              "name": "q",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int q"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int q"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "r",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int r"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int r"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "a",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int a"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int a"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "b",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int b"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int b"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "type",
-              "type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "char *type",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CChar",
-                    "qualifiers": [],
-                    "source_text": "char"
-                  }
-                ]
-              },
-              "declared_type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "char *type",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CChar",
-                    "qualifiers": [],
-                    "source_text": "char"
-                  }
-                ]
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "dir",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int dir"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int dir"
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
+          "storage": [
+            "extern"
           ],
-          "storage": [],
           "specifiers": [],
           "is_variadic": false,
-          "is_definition": true,
+          "is_definition": false,
           "prototype_style": "prototype",
           "source_location": {
             "filename": "stb/stb_divide.h",
-            "line": 284,
+            "line": 99,
             "column": 1,
-            "source_line": "void stbdiv_check(int q, int r, int a, int b, char *type, int dir)"
+            "source_line": "extern int stb_mod_eucl (int value_to_be_divided, int value_to_divide_by);"
           },
           "start": {
             "filename": "stb/stb_divide.h",
-            "line": 284,
+            "line": 99,
             "column": 1,
-            "source_line": "void stbdiv_check(int q, int r, int a, int b, char *type, int dir)"
+            "source_line": "extern int stb_mod_eucl (int value_to_be_divided, int value_to_divide_by);"
           },
-          "end": {
-            "filename": "stb/stb_divide.h",
-            "line": 309,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
-        },
-        {
-          "name": "test",
-          "result_type": {
-            "model": "CVoid",
-            "qualifiers": [],
-            "source_text": "void"
-          },
-          "parameters": [
-            {
-              "name": "a",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int a"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int a"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "b",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int b"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int b"
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 311,
-            "column": 1,
-            "source_line": "void test(int a, int b)"
-          },
-          "start": {
-            "filename": "stb/stb_divide.h",
-            "line": 311,
-            "column": 1,
-            "source_line": "void test(int a, int b)"
-          },
-          "end": {
-            "filename": "stb/stb_divide.h",
-            "line": 321,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
-        },
-        {
-          "name": "testh",
-          "result_type": {
-            "model": "CVoid",
-            "qualifiers": [],
-            "source_text": "void"
-          },
-          "parameters": [
-            {
-              "name": "a",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int a"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int a"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "b",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int b"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int b"
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 323,
-            "column": 1,
-            "source_line": "void testh(int a, int b)"
-          },
-          "start": {
-            "filename": "stb/stb_divide.h",
-            "line": 323,
-            "column": 1,
-            "source_line": "void testh(int a, int b)"
-          },
-          "end": {
-            "filename": "stb/stb_divide.h",
-            "line": 333,
-            "column": 1,
-            "source_line": "}"
-          },
-          "declaration_locations": []
-        },
-        {
-          "name": "main",
-          "result_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int"
-          },
-          "parameters": [
-            {
-              "name": "argc",
-              "type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int argc"
-              },
-              "declared_type": {
-                "model": "CInt",
-                "qualifiers": [],
-                "source_text": "int argc"
-              },
-              "source_location": null,
-              "callback_policy": null
-            },
-            {
-              "name": "argv",
-              "type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "char **argv",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CChar",
-                    "qualifiers": [],
-                    "source_text": "char"
-                  }
-                ]
-              },
-              "declared_type": {
-                "model": "CComposedType",
-                "qualifiers": [],
-                "source_text": "char **argv",
-                "components": [
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CPointer",
-                    "qualifiers": [],
-                    "source_text": ""
-                  },
-                  {
-                    "model": "CChar",
-                    "qualifiers": [],
-                    "source_text": "char"
-                  }
-                ]
-              },
-              "source_location": null,
-              "callback_policy": null
-            }
-          ],
-          "storage": [],
-          "specifiers": [],
-          "is_variadic": false,
-          "is_definition": true,
-          "prototype_style": "prototype",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 335,
-            "column": 1,
-            "source_line": "int main(int argc, char **argv)"
-          },
-          "start": {
-            "filename": "stb/stb_divide.h",
-            "line": 335,
-            "column": 1,
-            "source_line": "int main(int argc, char **argv)"
-          },
-          "end": {
-            "filename": "stb/stb_divide.h",
-            "line": 388,
-            "column": 1,
-            "source_line": "}"
-          },
+          "end": null,
           "declaration_locations": []
         }
       ],
@@ -769,641 +379,12 @@
       "unions": [],
       "enums": [],
       "typedefs": [],
-      "variables": [
-        {
-          "name": "show",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int show"
-          },
-          "storage": [],
-          "initializer": {
-            "source_text": "0"
-          },
-          "bit_width": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 281,
-            "column": 1,
-            "source_line": "int show=0;"
-          },
-          "callback_policy": null,
-          "declaration_locations": []
-        },
-        {
-          "name": "err",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int err"
-          },
-          "storage": [],
-          "initializer": {
-            "source_text": "0"
-          },
-          "bit_width": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 282,
-            "column": 1,
-            "source_line": "int err=0;"
-          },
-          "callback_policy": null,
-          "declaration_locations": []
-        }
-      ],
-      "macros": [
-        {
-          "name": "INCLUDE_STB_DIVIDE_H",
-          "value": null,
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 88,
-            "column": 1,
-            "source_line": "#define INCLUDE_STB_DIVIDE_H"
-          }
-        },
-        {
-          "name": "C_INTEGER_DIVISION_TRUNCATES",
-          "value": null,
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 109,
-            "column": 7,
-            "source_line": "      #define C_INTEGER_DIVISION_TRUNCATES"
-          }
-        },
-        {
-          "name": "stb__div",
-          "value": "((a)/(b))",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 120,
-            "column": 4,
-            "source_line": "   #define stb__div(a,b)  ((a)/(b))"
-          }
-        },
-        {
-          "name": "stb__mod",
-          "value": "((a)%(b))",
-          "function_like": true,
-          "directive": "define",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 121,
-            "column": 4,
-            "source_line": "   #define stb__mod(a,b)  ((a)%(b))"
-          }
-        },
-        {
-          "name": "C_INTEGER_DIVISION_TRUNCATES",
-          "value": null,
-          "function_like": false,
-          "directive": "undef",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 127,
-            "column": 4,
-            "source_line": "   #undef C_INTEGER_DIVISION_TRUNCATES"
-          }
-        }
-      ],
-      "includes": [
-        {
-          "target": "limits.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 114,
-            "column": 1,
-            "source_line": "#include <limits.h> // if you have no limits.h, #define INT_MIN yourself"
-          }
-        },
-        {
-          "target": "stdio.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 277,
-            "column": 1,
-            "source_line": "#include <stdio.h>"
-          }
-        },
-        {
-          "target": "math.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 278,
-            "column": 1,
-            "source_line": "#include <math.h>"
-          }
-        },
-        {
-          "target": "limits.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 279,
-            "column": 1,
-            "source_line": "#include <limits.h>"
-          }
-        }
-      ],
-      "raw_directives": [
-        {
-          "directive": "ifndef",
-          "argument": "INCLUDE_STB_DIVIDE_H",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 87,
-            "column": 1,
-            "source_line": "#ifndef INCLUDE_STB_DIVIDE_H"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "__cplusplus",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 90,
-            "column": 1,
-            "source_line": "#ifdef __cplusplus"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 92,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "__cplusplus",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 101,
-            "column": 1,
-            "source_line": "#ifdef __cplusplus"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 103,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "STB_DIVIDE_IMPLEMENTATION",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 105,
-            "column": 1,
-            "source_line": "#ifdef STB_DIVIDE_IMPLEMENTATION"
-          }
-        },
-        {
-          "directive": "if",
-          "argument": "defined(__STDC_VERSION) && __STDC_VERSION__ >= 19901",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 107,
-            "column": 1,
-            "source_line": "#if defined(__STDC_VERSION) && __STDC_VERSION__ >= 19901"
-          }
-        },
-        {
-          "directive": "ifndef",
-          "argument": "C_INTEGER_DIVISION_TRUNCATES",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 108,
-            "column": 4,
-            "source_line": "   #ifndef C_INTEGER_DIVISION_TRUNCATES"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 110,
-            "column": 4,
-            "source_line": "   #endif"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 111,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifndef",
-          "argument": "INT_MIN",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 113,
-            "column": 1,
-            "source_line": "#ifndef INT_MIN"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 115,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifndef",
-          "argument": "STB_DIVIDE_TEST_FLOOR",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 119,
-            "column": 1,
-            "source_line": "#ifndef STB_DIVIDE_TEST_FLOOR"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 122,
-            "column": 1,
-            "source_line": "#else"
-          }
-        },
-        {
-          "directive": "ifndef",
-          "argument": "C_INTEGER_DIVISION_TRUNCATES",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 124,
-            "column": 4,
-            "source_line": "   #ifndef C_INTEGER_DIVISION_TRUNCATES"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 126,
-            "column": 4,
-            "source_line": "   #endif"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 145,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "C_INTEGER_DIVISION_TRUNCATES",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 149,
-            "column": 4,
-            "source_line": "   #ifdef C_INTEGER_DIVISION_TRUNCATES"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 151,
-            "column": 4,
-            "source_line": "   #else"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 161,
-            "column": 4,
-            "source_line": "   #endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "C_INTEGER_DIVISION_FLOORS",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 166,
-            "column": 4,
-            "source_line": "   #ifdef C_INTEGER_DIVISION_FLOORS"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 168,
-            "column": 4,
-            "source_line": "   #else"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 185,
-            "column": 4,
-            "source_line": "   #endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "C_INTEGER_DIVISION_TRUNCATES",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 191,
-            "column": 4,
-            "source_line": "   #ifdef C_INTEGER_DIVISION_TRUNCATES"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 194,
-            "column": 4,
-            "source_line": "   #else"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 217,
-            "column": 4,
-            "source_line": "   #endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "C_INTEGER_DIVISION_TRUNCATES",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 226,
-            "column": 4,
-            "source_line": "   #ifdef C_INTEGER_DIVISION_TRUNCATES"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 228,
-            "column": 4,
-            "source_line": "   #else"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 242,
-            "column": 4,
-            "source_line": "   #endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "C_INTEGER_DIVISION_FLOORS",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 247,
-            "column": 4,
-            "source_line": "   #ifdef C_INTEGER_DIVISION_FLOORS"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 249,
-            "column": 4,
-            "source_line": "   #else"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 263,
-            "column": 4,
-            "source_line": "   #endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "STB_DIVIDE_TEST",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 276,
-            "column": 1,
-            "source_line": "#ifdef STB_DIVIDE_TEST"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "STB_DIVIDE_TEST_64",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 295,
-            "column": 4,
-            "source_line": "   #ifdef STB_DIVIDE_TEST_64"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 303,
-            "column": 4,
-            "source_line": "   #else"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 308,
-            "column": 4,
-            "source_line": "   #endif"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 389,
-            "column": 1,
-            "source_line": "#endif // STB_DIVIDE_TEST"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 390,
-            "column": 1,
-            "source_line": "#endif // STB_DIVIDE_IMPLEMENTATION"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 391,
-            "column": 1,
-            "source_line": "#endif // INCLUDE_STB_DIVIDE_H"
-          }
-        }
-      ],
-      "macro_dependencies": [
-        {
-          "name": "stb__div",
-          "context": "declaration",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 128,
-            "column": 4,
-            "source_line": "   int stb__div(int v1, int v2)"
-          },
-          "source_text": "int stb__div(int v1, int v2)"
-        },
-        {
-          "name": "stb__mod",
-          "context": "declaration",
-          "source_location": {
-            "filename": "stb/stb_divide.h",
-            "line": 137,
-            "column": 4,
-            "source_line": "   int stb__mod(int v1, int v2)"
-          },
-          "source_text": "int stb__mod(int v1, int v2)"
-        }
-      ],
-      "diagnostics": [
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'stb__div' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_divide.h",
-            "line": 120,
-            "column": 4,
-            "source_line": "   #define stb__div(a,b)  ((a)/(b))"
-          },
-          "unit_kind": "macro",
-          "unit_name": "stb__div"
-        },
-        {
-          "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-          "message": "Function-like macro 'stb__mod' is recorded but not expanded.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_divide.h",
-            "line": 121,
-            "column": 4,
-            "source_line": "   #define stb__mod(a,b)  ((a)%(b))"
-          },
-          "unit_kind": "macro",
-          "unit_name": "stb__mod"
-        },
-        {
-          "code": "C_UNSUPPORTED_DECLARATOR",
-          "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_divide.h",
-            "line": 91,
-            "column": 1,
-            "source_line": "extern \"C\" {"
-          },
-          "unit_kind": "declarator",
-          "unit_name": null
-        },
-        {
-          "code": "C_MACRO_DEPENDENT_DECLARATION",
-          "message": "Declaration depends on function-like macro 'stb__div'; provide preprocessed input to parse it.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_divide.h",
-            "line": 128,
-            "column": 4,
-            "source_line": "   int stb__div(int v1, int v2)"
-          },
-          "unit_kind": "macro_dependent_declaration",
-          "unit_name": "stb__div"
-        },
-        {
-          "code": "C_MACRO_DEPENDENT_DECLARATION",
-          "message": "Declaration depends on function-like macro 'stb__mod'; provide preprocessed input to parse it.",
-          "severity": "warning",
-          "location": {
-            "filename": "stb/stb_divide.h",
-            "line": 137,
-            "column": 4,
-            "source_line": "   int stb__mod(int v1, int v2)"
-          },
-          "unit_kind": "macro_dependent_declaration",
-          "unit_name": "stb__mod"
-        }
-      ]
+      "variables": [],
+      "macros": [],
+      "includes": [],
+      "raw_directives": [],
+      "macro_dependencies": [],
+      "diagnostics": []
     }
   },
   "functions": {
@@ -1416,59 +397,56 @@
       },
       "parameters": [
         {
-          "name": "v1",
+          "name": "value_to_be_divided",
           "type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v1"
+            "source_text": "int value_to_be_divided"
           },
           "declared_type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v1"
+            "source_text": "int value_to_be_divided"
           },
           "source_location": null,
           "callback_policy": null
         },
         {
-          "name": "v2",
+          "name": "value_to_divide_by",
           "type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v2"
+            "source_text": "int value_to_divide_by"
           },
           "declared_type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v2"
+            "source_text": "int value_to_divide_by"
           },
           "source_location": null,
           "callback_policy": null
         }
       ],
-      "storage": [],
+      "storage": [
+        "extern"
+      ],
       "specifiers": [],
       "is_variadic": false,
-      "is_definition": true,
+      "is_definition": false,
       "prototype_style": "prototype",
       "source_location": {
         "filename": "stb/stb_divide.h",
-        "line": 147,
+        "line": 94,
         "column": 1,
-        "source_line": "int stb_div_trunc(int v1, int v2)"
+        "source_line": "extern int stb_div_trunc(int value_to_be_divided, int value_to_divide_by);"
       },
       "start": {
         "filename": "stb/stb_divide.h",
-        "line": 147,
+        "line": 94,
         "column": 1,
-        "source_line": "int stb_div_trunc(int v1, int v2)"
+        "source_line": "extern int stb_div_trunc(int value_to_be_divided, int value_to_divide_by);"
       },
-      "end": {
-        "filename": "stb/stb_divide.h",
-        "line": 162,
-        "column": 1,
-        "source_line": "}"
-      },
+      "end": null,
       "declaration_locations": []
     },
     "stb_div_floor": {
@@ -1480,59 +458,56 @@
       },
       "parameters": [
         {
-          "name": "v1",
+          "name": "value_to_be_divided",
           "type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v1"
+            "source_text": "int value_to_be_divided"
           },
           "declared_type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v1"
+            "source_text": "int value_to_be_divided"
           },
           "source_location": null,
           "callback_policy": null
         },
         {
-          "name": "v2",
+          "name": "value_to_divide_by",
           "type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v2"
+            "source_text": "int value_to_divide_by"
           },
           "declared_type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v2"
+            "source_text": "int value_to_divide_by"
           },
           "source_location": null,
           "callback_policy": null
         }
       ],
-      "storage": [],
+      "storage": [
+        "extern"
+      ],
       "specifiers": [],
       "is_variadic": false,
-      "is_definition": true,
+      "is_definition": false,
       "prototype_style": "prototype",
       "source_location": {
         "filename": "stb/stb_divide.h",
-        "line": 164,
+        "line": 95,
         "column": 1,
-        "source_line": "int stb_div_floor(int v1, int v2)"
+        "source_line": "extern int stb_div_floor(int value_to_be_divided, int value_to_divide_by);"
       },
       "start": {
         "filename": "stb/stb_divide.h",
-        "line": 164,
+        "line": 95,
         "column": 1,
-        "source_line": "int stb_div_floor(int v1, int v2)"
+        "source_line": "extern int stb_div_floor(int value_to_be_divided, int value_to_divide_by);"
       },
-      "end": {
-        "filename": "stb/stb_divide.h",
-        "line": 186,
-        "column": 1,
-        "source_line": "}"
-      },
+      "end": null,
       "declaration_locations": []
     },
     "stb_div_eucl": {
@@ -1544,59 +519,56 @@
       },
       "parameters": [
         {
-          "name": "v1",
+          "name": "value_to_be_divided",
           "type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v1"
+            "source_text": "int value_to_be_divided"
           },
           "declared_type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v1"
+            "source_text": "int value_to_be_divided"
           },
           "source_location": null,
           "callback_policy": null
         },
         {
-          "name": "v2",
+          "name": "value_to_divide_by",
           "type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v2"
+            "source_text": "int value_to_divide_by"
           },
           "declared_type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v2"
+            "source_text": "int value_to_divide_by"
           },
           "source_location": null,
           "callback_policy": null
         }
       ],
-      "storage": [],
+      "storage": [
+        "extern"
+      ],
       "specifiers": [],
       "is_variadic": false,
-      "is_definition": true,
+      "is_definition": false,
       "prototype_style": "prototype",
       "source_location": {
         "filename": "stb/stb_divide.h",
-        "line": 188,
+        "line": 96,
         "column": 1,
-        "source_line": "int stb_div_eucl(int v1, int v2)"
+        "source_line": "extern int stb_div_eucl (int value_to_be_divided, int value_to_divide_by);"
       },
       "start": {
         "filename": "stb/stb_divide.h",
-        "line": 188,
+        "line": 96,
         "column": 1,
-        "source_line": "int stb_div_eucl(int v1, int v2)"
+        "source_line": "extern int stb_div_eucl (int value_to_be_divided, int value_to_divide_by);"
       },
-      "end": {
-        "filename": "stb/stb_divide.h",
-        "line": 222,
-        "column": 1,
-        "source_line": "}"
-      },
+      "end": null,
       "declaration_locations": []
     },
     "stb_mod_trunc": {
@@ -1608,59 +580,56 @@
       },
       "parameters": [
         {
-          "name": "v1",
+          "name": "value_to_be_divided",
           "type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v1"
+            "source_text": "int value_to_be_divided"
           },
           "declared_type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v1"
+            "source_text": "int value_to_be_divided"
           },
           "source_location": null,
           "callback_policy": null
         },
         {
-          "name": "v2",
+          "name": "value_to_divide_by",
           "type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v2"
+            "source_text": "int value_to_divide_by"
           },
           "declared_type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v2"
+            "source_text": "int value_to_divide_by"
           },
           "source_location": null,
           "callback_policy": null
         }
       ],
-      "storage": [],
+      "storage": [
+        "extern"
+      ],
       "specifiers": [],
       "is_variadic": false,
-      "is_definition": true,
+      "is_definition": false,
       "prototype_style": "prototype",
       "source_location": {
         "filename": "stb/stb_divide.h",
-        "line": 224,
+        "line": 97,
         "column": 1,
-        "source_line": "int stb_mod_trunc(int v1, int v2)"
+        "source_line": "extern int stb_mod_trunc(int value_to_be_divided, int value_to_divide_by);"
       },
       "start": {
         "filename": "stb/stb_divide.h",
-        "line": 224,
+        "line": 97,
         "column": 1,
-        "source_line": "int stb_mod_trunc(int v1, int v2)"
+        "source_line": "extern int stb_mod_trunc(int value_to_be_divided, int value_to_divide_by);"
       },
-      "end": {
-        "filename": "stb/stb_divide.h",
-        "line": 243,
-        "column": 1,
-        "source_line": "}"
-      },
+      "end": null,
       "declaration_locations": []
     },
     "stb_mod_floor": {
@@ -1672,59 +641,56 @@
       },
       "parameters": [
         {
-          "name": "v1",
+          "name": "value_to_be_divided",
           "type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v1"
+            "source_text": "int value_to_be_divided"
           },
           "declared_type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v1"
+            "source_text": "int value_to_be_divided"
           },
           "source_location": null,
           "callback_policy": null
         },
         {
-          "name": "v2",
+          "name": "value_to_divide_by",
           "type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v2"
+            "source_text": "int value_to_divide_by"
           },
           "declared_type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v2"
+            "source_text": "int value_to_divide_by"
           },
           "source_location": null,
           "callback_policy": null
         }
       ],
-      "storage": [],
+      "storage": [
+        "extern"
+      ],
       "specifiers": [],
       "is_variadic": false,
-      "is_definition": true,
+      "is_definition": false,
       "prototype_style": "prototype",
       "source_location": {
         "filename": "stb/stb_divide.h",
-        "line": 245,
+        "line": 98,
         "column": 1,
-        "source_line": "int stb_mod_floor(int v1, int v2)"
+        "source_line": "extern int stb_mod_floor(int value_to_be_divided, int value_to_divide_by);"
       },
       "start": {
         "filename": "stb/stb_divide.h",
-        "line": 245,
+        "line": 98,
         "column": 1,
-        "source_line": "int stb_mod_floor(int v1, int v2)"
+        "source_line": "extern int stb_mod_floor(int value_to_be_divided, int value_to_divide_by);"
       },
-      "end": {
-        "filename": "stb/stb_divide.h",
-        "line": 264,
-        "column": 1,
-        "source_line": "}"
-      },
+      "end": null,
       "declaration_locations": []
     },
     "stb_mod_eucl": {
@@ -1736,433 +702,56 @@
       },
       "parameters": [
         {
-          "name": "v1",
+          "name": "value_to_be_divided",
           "type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v1"
+            "source_text": "int value_to_be_divided"
           },
           "declared_type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v1"
+            "source_text": "int value_to_be_divided"
           },
           "source_location": null,
           "callback_policy": null
         },
         {
-          "name": "v2",
+          "name": "value_to_divide_by",
           "type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v2"
+            "source_text": "int value_to_divide_by"
           },
           "declared_type": {
             "model": "CInt",
             "qualifiers": [],
-            "source_text": "int v2"
+            "source_text": "int value_to_divide_by"
           },
           "source_location": null,
           "callback_policy": null
         }
       ],
-      "storage": [],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 266,
-        "column": 1,
-        "source_line": "int stb_mod_eucl(int v1, int v2)"
-      },
-      "start": {
-        "filename": "stb/stb_divide.h",
-        "line": 266,
-        "column": 1,
-        "source_line": "int stb_mod_eucl(int v1, int v2)"
-      },
-      "end": {
-        "filename": "stb/stb_divide.h",
-        "line": 274,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
-    "stbdiv_check": {
-      "name": "stbdiv_check",
-      "result_type": {
-        "model": "CVoid",
-        "qualifiers": [],
-        "source_text": "void"
-      },
-      "parameters": [
-        {
-          "name": "q",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int q"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int q"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "r",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int r"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int r"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "a",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int a"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int a"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "b",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int b"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int b"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "type",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "char *type",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CChar",
-                "qualifiers": [],
-                "source_text": "char"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "char *type",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CChar",
-                "qualifiers": [],
-                "source_text": "char"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "dir",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int dir"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int dir"
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
+      "storage": [
+        "extern"
       ],
-      "storage": [],
       "specifiers": [],
       "is_variadic": false,
-      "is_definition": true,
+      "is_definition": false,
       "prototype_style": "prototype",
       "source_location": {
         "filename": "stb/stb_divide.h",
-        "line": 284,
+        "line": 99,
         "column": 1,
-        "source_line": "void stbdiv_check(int q, int r, int a, int b, char *type, int dir)"
+        "source_line": "extern int stb_mod_eucl (int value_to_be_divided, int value_to_divide_by);"
       },
       "start": {
         "filename": "stb/stb_divide.h",
-        "line": 284,
+        "line": 99,
         "column": 1,
-        "source_line": "void stbdiv_check(int q, int r, int a, int b, char *type, int dir)"
+        "source_line": "extern int stb_mod_eucl (int value_to_be_divided, int value_to_divide_by);"
       },
-      "end": {
-        "filename": "stb/stb_divide.h",
-        "line": 309,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
-    "test": {
-      "name": "test",
-      "result_type": {
-        "model": "CVoid",
-        "qualifiers": [],
-        "source_text": "void"
-      },
-      "parameters": [
-        {
-          "name": "a",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int a"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int a"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "b",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int b"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int b"
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 311,
-        "column": 1,
-        "source_line": "void test(int a, int b)"
-      },
-      "start": {
-        "filename": "stb/stb_divide.h",
-        "line": 311,
-        "column": 1,
-        "source_line": "void test(int a, int b)"
-      },
-      "end": {
-        "filename": "stb/stb_divide.h",
-        "line": 321,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
-    "testh": {
-      "name": "testh",
-      "result_type": {
-        "model": "CVoid",
-        "qualifiers": [],
-        "source_text": "void"
-      },
-      "parameters": [
-        {
-          "name": "a",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int a"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int a"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "b",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int b"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int b"
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 323,
-        "column": 1,
-        "source_line": "void testh(int a, int b)"
-      },
-      "start": {
-        "filename": "stb/stb_divide.h",
-        "line": 323,
-        "column": 1,
-        "source_line": "void testh(int a, int b)"
-      },
-      "end": {
-        "filename": "stb/stb_divide.h",
-        "line": 333,
-        "column": 1,
-        "source_line": "}"
-      },
-      "declaration_locations": []
-    },
-    "main": {
-      "name": "main",
-      "result_type": {
-        "model": "CInt",
-        "qualifiers": [],
-        "source_text": "int"
-      },
-      "parameters": [
-        {
-          "name": "argc",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int argc"
-          },
-          "declared_type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "int argc"
-          },
-          "source_location": null,
-          "callback_policy": null
-        },
-        {
-          "name": "argv",
-          "type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "char **argv",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CChar",
-                "qualifiers": [],
-                "source_text": "char"
-              }
-            ]
-          },
-          "declared_type": {
-            "model": "CComposedType",
-            "qualifiers": [],
-            "source_text": "char **argv",
-            "components": [
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CPointer",
-                "qualifiers": [],
-                "source_text": ""
-              },
-              {
-                "model": "CChar",
-                "qualifiers": [],
-                "source_text": "char"
-              }
-            ]
-          },
-          "source_location": null,
-          "callback_policy": null
-        }
-      ],
-      "storage": [],
-      "specifiers": [],
-      "is_variadic": false,
-      "is_definition": true,
-      "prototype_style": "prototype",
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 335,
-        "column": 1,
-        "source_line": "int main(int argc, char **argv)"
-      },
-      "start": {
-        "filename": "stb/stb_divide.h",
-        "line": 335,
-        "column": 1,
-        "source_line": "int main(int argc, char **argv)"
-      },
-      "end": {
-        "filename": "stb/stb_divide.h",
-        "line": 388,
-        "column": 1,
-        "source_line": "}"
-      },
+      "end": null,
       "declaration_locations": []
     }
   },
@@ -2170,135 +759,9 @@
   "unions": {},
   "enums": {},
   "typedefs": {},
-  "variables": {
-    "show": {
-      "name": "show",
-      "type": {
-        "model": "CInt",
-        "qualifiers": [],
-        "source_text": "int show"
-      },
-      "storage": [],
-      "initializer": {
-        "source_text": "0"
-      },
-      "bit_width": null,
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 281,
-        "column": 1,
-        "source_line": "int show=0;"
-      },
-      "callback_policy": null,
-      "declaration_locations": []
-    },
-    "err": {
-      "name": "err",
-      "type": {
-        "model": "CInt",
-        "qualifiers": [],
-        "source_text": "int err"
-      },
-      "storage": [],
-      "initializer": {
-        "source_text": "0"
-      },
-      "bit_width": null,
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 282,
-        "column": 1,
-        "source_line": "int err=0;"
-      },
-      "callback_policy": null,
-      "declaration_locations": []
-    }
-  },
-  "macros": {
-    "INCLUDE_STB_DIVIDE_H": {
-      "name": "INCLUDE_STB_DIVIDE_H",
-      "value": null,
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 88,
-        "column": 1,
-        "source_line": "#define INCLUDE_STB_DIVIDE_H"
-      }
-    },
-    "C_INTEGER_DIVISION_TRUNCATES": {
-      "name": "C_INTEGER_DIVISION_TRUNCATES",
-      "value": null,
-      "function_like": false,
-      "directive": "undef",
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 127,
-        "column": 4,
-        "source_line": "   #undef C_INTEGER_DIVISION_TRUNCATES"
-      }
-    },
-    "stb__div": {
-      "name": "stb__div",
-      "value": "((a)/(b))",
-      "function_like": true,
-      "directive": "define",
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 120,
-        "column": 4,
-        "source_line": "   #define stb__div(a,b)  ((a)/(b))"
-      }
-    },
-    "stb__mod": {
-      "name": "stb__mod",
-      "value": "((a)%(b))",
-      "function_like": true,
-      "directive": "define",
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 121,
-        "column": 4,
-        "source_line": "   #define stb__mod(a,b)  ((a)%(b))"
-      }
-    }
-  },
-  "includes": {
-    "stb/stb_divide.h:limits.h": {
-      "target": "limits.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 279,
-        "column": 1,
-        "source_line": "#include <limits.h>"
-      }
-    },
-    "stb/stb_divide.h:stdio.h": {
-      "target": "stdio.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 277,
-        "column": 1,
-        "source_line": "#include <stdio.h>"
-      }
-    },
-    "stb/stb_divide.h:math.h": {
-      "target": "math.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "stb/stb_divide.h",
-        "line": 278,
-        "column": 1,
-        "source_line": "#include <math.h>"
-      }
-    }
-  },
+  "variables": {},
+  "macros": {},
+  "includes": {},
   "functions_by_file": {
     "stb/stb_divide.h": [
       "stb_div_trunc",
@@ -2306,11 +769,7 @@
       "stb_div_eucl",
       "stb_mod_trunc",
       "stb_mod_floor",
-      "stb_mod_eucl",
-      "stbdiv_check",
-      "test",
-      "testh",
-      "main"
+      "stb_mod_eucl"
     ]
   },
   "enum_constants": {},
@@ -2318,11 +777,7 @@
     "stb/stb_divide.h": []
   },
   "system_includes": {
-    "stb/stb_divide.h": [
-      "limits.h",
-      "math.h",
-      "stdio.h"
-    ]
+    "stb/stb_divide.h": []
   },
   "unresolved_includes": {
     "stb/stb_divide.h": []
@@ -2330,71 +785,5 @@
   "header_source_pairs": {
     "stb/stb_divide.h": []
   },
-  "diagnostics": [
-    {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'stb__div' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_divide.h",
-        "line": 120,
-        "column": 4,
-        "source_line": "   #define stb__div(a,b)  ((a)/(b))"
-      },
-      "unit_kind": "macro",
-      "unit_name": "stb__div"
-    },
-    {
-      "code": "C_UNSUPPORTED_FUNCTION_LIKE_MACRO",
-      "message": "Function-like macro 'stb__mod' is recorded but not expanded.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_divide.h",
-        "line": 121,
-        "column": 4,
-        "source_line": "   #define stb__mod(a,b)  ((a)%(b))"
-      },
-      "unit_kind": "macro",
-      "unit_name": "stb__mod"
-    },
-    {
-      "code": "C_UNSUPPORTED_DECLARATOR",
-      "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_divide.h",
-        "line": 91,
-        "column": 1,
-        "source_line": "extern \"C\" {"
-      },
-      "unit_kind": "declarator",
-      "unit_name": null
-    },
-    {
-      "code": "C_MACRO_DEPENDENT_DECLARATION",
-      "message": "Declaration depends on function-like macro 'stb__div'; provide preprocessed input to parse it.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_divide.h",
-        "line": 128,
-        "column": 4,
-        "source_line": "   int stb__div(int v1, int v2)"
-      },
-      "unit_kind": "macro_dependent_declaration",
-      "unit_name": "stb__div"
-    },
-    {
-      "code": "C_MACRO_DEPENDENT_DECLARATION",
-      "message": "Declaration depends on function-like macro 'stb__mod'; provide preprocessed input to parse it.",
-      "severity": "warning",
-      "location": {
-        "filename": "stb/stb_divide.h",
-        "line": 137,
-        "column": 4,
-        "source_line": "   int stb__mod(int v1, int v2)"
-      },
-      "unit_kind": "macro_dependent_declaration",
-      "unit_name": "stb__mod"
-    }
-  ]
+  "diagnostics": []
 }

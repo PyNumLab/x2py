@@ -1,4 +1,7 @@
+import ast
+from dataclasses import asdict
 from pathlib import Path
+
 import pytest
 
 from semantics.fortran2ir import fortran_file_to_semantic_modules
@@ -12,7 +15,14 @@ from semantics.models import (
     SemanticModule,
     SemanticType,
 )
-from semantics.pyi_parser import _PyiAstParser, convert_pyi_to_ir, load_pyi_file, load_pyi_modules, parse_pyi_text
+from semantics.pyi_parser import (
+    _PyiAstParser,
+    _node_text,
+    convert_pyi_to_ir,
+    load_pyi_file,
+    load_pyi_modules,
+    parse_pyi_text,
+)
 from semantics.pyi_printer import emit_module
 from tests._shared.fixture_outputs import FORTRAN_DATA_DIR, FORTRAN_SUFFIXES
 from x2py import parse_fortran_file
@@ -58,6 +68,31 @@ def _semantic_modules_for_source(path: Path):
         filename=str(path.relative_to(FORTRAN_DATA_DIR)),
     )
     return fortran_file_to_semantic_modules(parsed, standalone_module_name=path.stem)
+
+
+def test_parse_pyi_text_dispatches_nested_and_qualified_semantic_types():
+    module = parse_pyi_text(
+        """
+import typing
+
+public_value: Int32
+bounded: Final[Annotated[Int32, Bounded(1, 8)]]
+callback: typing.Callable
+pointer: Ptr(Float64)
+read_only_pointer: Ptr(Const(Float64))
+""",
+        module_name="dispatch",
+    )
+
+    public_value, bounded, callback, pointer, read_only_pointer = module.variables
+    assert public_value.visibility == "public"
+    assert bounded.semantic_type.constraints == [
+        SemanticConstraint("Bounded", [1, 8]),
+        SemanticConstraint("Constant"),
+    ]
+    assert callback.semantic_type.name == "Callable"
+    assert pointer.semantic_type.storage.kind == "reference"
+    assert read_only_pointer.semantic_type.storage.mutable is False
 
 
 def test_parse_pyi_text_allows_user_modified_stub():
@@ -112,6 +147,7 @@ def integrate(
 
     callback_type = module.functions[0].arguments[1].semantic_type
     assert callback_type.name == "Callable"
+    assert callback_type.dtype == "Callable"
     assert [arg.name for arg in callback_type.metadata["arguments"]] == ["sim_state", "Float64"]
     assert callback_type.metadata["return"].name == "Float64"
 
@@ -130,12 +166,68 @@ def test_parse_pyi_text_accepts_import_aliases():
     ]
 
 
+def test_parse_pyi_text_accepts_relative_imports():
+    module = parse_pyi_text("from ..types_mod import particle\nfrom . import local_particle\n", module_name="edited")
+
+    assert module.imports == [
+        SemanticImport(
+            module="..types_mod",
+            items=[SemanticImportItem(source="particle")],
+        ),
+        SemanticImport(
+            module=".",
+            items=[SemanticImportItem(source="local_particle")],
+        ),
+    ]
+
+
+def test_parse_pyi_text_annotates_types_from_each_import_statement():
+    module = parse_pyi_text(
+        """
+from first_mod import first_t
+from second_mod import second_t as local_t
+
+answer: Int32
+
+def create() -> local_t: ...
+""",
+        module_name="edited",
+    )
+
+    assert module.functions[0].return_type.metadata["external_type_ref"] == {
+        "name": "second_t",
+        "local_name": "local_t",
+        "origin_module": "second_mod",
+        "wrapped": False,
+        "representation": "opaque",
+    }
+    qualified = parse_pyi_text(
+        """
+import first_mod, shared as local_shared
+
+answer: Int32
+
+def create() -> local_shared.inner.types_mod.particle: ...
+""",
+        module_name="edited",
+    )
+    assert qualified.functions[0].return_type.metadata["external_type_ref"] == {
+        "name": "particle",
+        "local_name": "local_shared.inner.types_mod.particle",
+        "origin_module": "shared",
+        "wrapped": False,
+        "representation": "opaque",
+    }
+
+
 def test_load_pyi_modules_reconciles_opaque_and_edited_external_types(tmp_path: Path):
     physics = tmp_path / "physics.pyi"
     types_mod = tmp_path / "types_mod.pyi"
     physics.write_text(
         """
 from types_mod import particle
+
+answer: Int32
 
 def create_particle() -> Ptr(particle): ...
 
@@ -208,8 +300,44 @@ class particle(Opaque):
     assert particle_ref["representation"] == "opaque"
 
 
+def test_load_pyi_modules_handles_duplicate_roots_and_ambiguous_module_names(tmp_path: Path):
+    package = tmp_path / "shared"
+    package.mkdir()
+    pyi_path = package / "types_mod.pyi"
+    pyi_path.write_text("class particle:\n    pass\n", encoding="utf-8")
+
+    assert [module.name for module in load_pyi_modules([tmp_path, tmp_path])] == ["shared.types_mod"]
+    with pytest.raises(ValueError) as error:
+        load_pyi_modules([tmp_path, package])
+    assert str(error.value) == f"Ambiguous module name for {pyi_path}: 'shared.types_mod' or 'types_mod'"
+
+
+def test_load_pyi_modules_ignores_directories_with_pyi_suffix(tmp_path: Path):
+    (tmp_path / "ignored.pyi").mkdir()
+    (tmp_path / "types_mod.pyi").write_text("class particle:\n    pass\n", encoding="utf-8")
+
+    assert [module.name for module in load_pyi_modules(tmp_path)] == ["types_mod"]
+
+
+def test_load_pyi_file_and_modules_forward_module_name_encoding_and_filename(tmp_path: Path):
+    pyi_path = tmp_path / "types_mod.pyi"
+    pyi_path.write_bytes("# caf\xe9\nclass particle:\n    pass\n".encode("latin-1"))
+
+    module = load_pyi_file(pyi_path, module_name="custom.types_mod", encoding="latin-1")
+    assert module.name == "custom.types_mod"
+    assert module.classes[0].name == "particle"
+    assert load_pyi_modules(pyi_path, encoding="latin-1")[0].name == "types_mod"
+
+    invalid_path = tmp_path / "invalid.pyi"
+    invalid_path.write_text("from broken import\n", encoding="utf-8")
+    with pytest.raises(SyntaxError) as error:
+        load_pyi_file(invalid_path)
+    assert error.value.filename == str(invalid_path)
+
+
 def test_convert_pyi_to_ir_and_import_parser_edge_cases():
     module = convert_pyi_to_ir("from m import a, b as c\n", module_name="edited")
+    assert module.name == "edited"
     assert module.imports == [
         SemanticImport(
             module="m",
@@ -224,6 +352,12 @@ def test_convert_pyi_to_ir_and_import_parser_edge_cases():
         convert_pyi_to_ir("from m import\n", module_name="edited")
 
 
+def test_parse_pyi_text_forwards_filename_to_syntax_errors():
+    with pytest.raises(SyntaxError) as error:
+        parse_pyi_text("from broken import\n", filename="custom.pyi")
+    assert error.value.filename == "custom.pyi"
+
+
 def test_parse_pyi_text_class_body_visibility_and_native_call():
     module = parse_pyi_text(
         """
@@ -233,19 +367,45 @@ class wrapper:
 class particle:
     @private
     @native_call([Arg(0)])
-    def reset(self: particle) -> None: ...
+    def reset(self: particle) -> Int32: ...
 """,
         module_name="edited",
     )
 
     empty_cls, particle_cls = module.classes
     assert empty_cls.name == "wrapper"
+    assert particle_cls.methods[0].name == "reset"
+    assert particle_cls.methods[0].native_name == "reset"
     assert particle_cls.methods[0].visibility == "private"
-    assert particle_cls.methods[0].projection[0].python_position == 0
+    assert [arg.name for arg in particle_cls.methods[0].arguments] == ["self"]
+    assert particle_cls.methods[0].return_type.name == "Int32"
+    assert asdict(particle_cls.methods[0].projection[0]) == {
+        "python_name": "self",
+        "native_name": "self",
+        "native_position": 0,
+        "python_position": 0,
+        "result_position": None,
+        "value_kind": "",
+        "value": None,
+        "intent": "in",
+    }
+
+
+def test_parse_pyi_text_applies_decorators_after_native_call():
+    module = parse_pyi_text(
+        """
+@native_call([])
+@private
+def hidden() -> None: ...
+""",
+        module_name="edited",
+    )
+
+    assert module.functions[0].visibility == "private"
 
 
 def test_pyi_parser_reports_unsupported_lines_and_invalid_helpers():
-    with pytest.raises(ValueError, match="Unsupported .pyi node"):
+    with pytest.raises(ValueError, match=r"Unsupported .pyi node"):
         parse_pyi_text("bare_name\n", module_name="edited")
 
     with pytest.raises(ValueError, match="Unsupported class body node"):
@@ -271,7 +431,7 @@ def test_pyi_parser_preserves_generic_constraints_as_annotation_metadata():
     module = parse_pyi_text(
         """
 value: Annotated[Int32, Bounded(1, 8), Finite]
-alias: Annotated[Int32, Name("native_alias")]
+alias: Annotated[Int32, Name("native_alias"), Finite]
 """,
         module_name="edited",
     )
@@ -282,6 +442,7 @@ alias: Annotated[Int32, Name("native_alias")]
         SemanticConstraint("Finite"),
     ]
     assert module.variables[1].name == "native_alias"
+    assert module.variables[1].semantic_type.constraints == [SemanticConstraint("Finite")]
     emitted = emit_module(SemanticModule(name="constraints", variables=[module.variables[0]]))
     assert "value: Annotated[Int32, Bounded(1, 8), Finite]" in emitted
     assert parse_pyi_text(emitted, module_name="constraints").variables[0] == module.variables[0]
@@ -439,6 +600,68 @@ def wrapper(
 
     projection = module.functions[0].projection
 
+    assert [asdict(mapping) for mapping in projection] == [
+        {
+            "python_name": "x",
+            "native_name": "x",
+            "native_position": 0,
+            "python_position": 0,
+            "result_position": None,
+            "value_kind": "",
+            "value": None,
+            "intent": "inout",
+        },
+        {
+            "python_name": None,
+            "native_name": "",
+            "native_position": 1,
+            "python_position": None,
+            "result_position": None,
+            "value_kind": "const",
+            "value": 1,
+            "intent": "in",
+        },
+        {
+            "python_name": None,
+            "native_name": "",
+            "native_position": 2,
+            "python_position": None,
+            "result_position": None,
+            "value_kind": "len",
+            "value": {"kind": "arg", "position": 0},
+            "intent": "in",
+        },
+        {
+            "python_name": None,
+            "native_name": "",
+            "native_position": 3,
+            "python_position": None,
+            "result_position": None,
+            "value_kind": "shape",
+            "value": {"value": {"kind": "arg", "position": 0}, "dim": 0},
+            "intent": "in",
+        },
+        {
+            "python_name": None,
+            "native_name": "",
+            "native_position": 4,
+            "python_position": None,
+            "result_position": None,
+            "value_kind": "is_present",
+            "value": {"kind": "arg", "position": 1},
+            "intent": "in",
+        },
+        {
+            "python_name": None,
+            "native_name": "",
+            "native_position": 5,
+            "python_position": None,
+            "result_position": None,
+            "value_kind": "work",
+            "value": "tmp",
+            "intent": "in",
+        },
+    ]
     assert projection[1].value_kind == "const"
     assert projection[1].value == 1
     assert projection[2].value_kind == "len"
@@ -547,6 +770,32 @@ def split(
     assert func.arguments[1].intent == "out"
 
 
+def test_return_projection_preserves_multiple_plain_output_components():
+    parser = _PyiAstParser(module_name="internal")
+
+    return_type, returned = parser.return_projection(ast.parse("tuple[Float64, Int32, Logical]", mode="eval").body)
+
+    assert return_type.name == "Float64"
+    assert [asdict(arg) for arg in returned] == [
+        asdict(
+            SemanticArgument(
+                "__return_1",
+                SemanticType("Int32", dtype="Int32"),
+                intent="out",
+                metadata={"return_position": 1},
+            )
+        ),
+        asdict(
+            SemanticArgument(
+                "__return_2",
+                SemanticType("Logical", dtype="Logical"),
+                intent="out",
+                metadata={"return_position": 2},
+            )
+        ),
+    ]
+
+
 def test_method_equality_treats_argument_names_as_placeholders():
     left = parse_pyi_text(
         """
@@ -597,38 +846,56 @@ class vector:
 @pytest.mark.parametrize(
     "source, message",
     [
-        ("value: Int32[foo.bar]\n", "Non-dimensional type subscriptions are not supported"),
-        ("foo.bar: Int32\n", "Unsupported annotation target"),
-        ("value: Annotated[Int32, Name('x', 'y')]\n", "Name metadata expects one argument"),
-        ("def f(x: Int32): ...\n", "Unsupported function header"),
+        (
+            "value: Int32[foo.bar]\n",
+            "Non-dimensional type subscriptions are not supported; use Final[...] for constants and "
+            "Annotated[...] for constraints or array metadata",
+        ),
+        ("foo.bar: Int32\n", "Unsupported annotation target: 'foo.bar'"),
+        ("value: Annotated[Int32, Name('x', 'y')]\n", "Name metadata expects one argument: \"Name('x', 'y')\""),
+        ("def f(x: Int32): ...\n", "Unsupported function header: 'def f(x: Int32):'"),
         ("def f(\n    x: Int32,\n): ...\n", "Unterminated callable starting at line 1"),
-        ("def f(*x: Int32) -> None: ...\n", "Unsupported function header"),
-        ("def f() -> None:\n    ...\n    ...\n", "Unsupported function header"),
-        ("def f() -> None: pass\n", "Unsupported function header"),
-        ("@native_call_bad([])\ndef f(x: Int32) -> None: ...\n", "Unsupported .pyi decorator"),
-        ("@native_call([])\nclass C:\n    pass\n", "Unsupported class decorator"),
+        ("def f(*x: Int32) -> None: ...\n", "Unsupported function header: 'def f(*x: Int32) -> None:'"),
+        ("def f(*, x: Int32) -> None: ...\n", "Unsupported function header: 'def f(*, x: Int32) -> None:'"),
+        ("def f(x: Int32, /) -> None: ...\n", "Unsupported function header: 'def f(x: Int32, /) -> None:'"),
+        ("def f() -> None:\n    ...\n    ...\n", "Unsupported function header: 'def f() -> None:'"),
+        ("def f() -> None: pass\n", "Unsupported function header: 'def f() -> None:'"),
+        ("@native_call_bad([])\ndef f(x: Int32) -> None: ...\n", "Unsupported .pyi decorator: 'native_call_bad([])'"),
+        ("@bad\nclass C:\n    pass\n", "Unsupported class decorator: 'bad'"),
+        ("class C:\n    @bad\n    def f(self) -> None: ...\n", "Unsupported class body decorator: 'bad'"),
+        ("@native_call([])\nclass C:\n    pass\n", "Unsupported class decorator: 'native_call([])'"),
         ("@native_call(Arg(0))\ndef f(x: Int32) -> None: ...\n", "native_call expects a list of projection entries"),
         ("@native_call([Arg(0)], foo=1)\ndef f(x: Int32) -> None: ...\n", "native_call expects a single list argument"),
-        ("@native_call([1])\ndef f(x: Int32) -> None: ...\n", "projection entry calls"),
-        ("@native_call([Arg(1)])\ndef f(x: Int32) -> None: ...\n", "native_call argument position is out of range"),
+        ("@native_call([1])\ndef f(x: Int32) -> None: ...\n", "native_call expects projection entry calls"),
+        ("@native_call([Arg(1)])\ndef f(x: Int32) -> None: ...\n", "native_call argument position is out of range: 1"),
         ("@native_call([Arg()])\ndef f(x: Int32) -> None: ...\n", "Arg expects one positional index"),
         ("@native_call([Return()])\ndef f(x: Int32) -> None: ...\n", "Return expects one positional index"),
         ("@native_call([Const()])\ndef f(x: Int32) -> None: ...\n", "Const expects one value"),
         ("@native_call([Len()])\ndef f(x: Int32) -> None: ...\n", "Len expects one value reference"),
         ("@native_call([IsPresent()])\ndef f(x: Int32) -> None: ...\n", "IsPresent expects one value reference"),
         ("@native_call([Work()])\ndef f(x: Int32) -> None: ...\n", "Work expects one workspace name"),
-        ("@native_call([Len(1)])\ndef f(x: Int32) -> None: ...\n", "Expected Arg"),
+        (
+            "@native_call([Len(1)])\ndef f(x: Int32) -> None: ...\n",
+            "Expected Arg(...), Return(...), or Work(...) value reference",
+        ),
         (
             "@native_call([Len(Arg(0, 1))])\ndef f(x: Int32) -> None: ...\n",
-            "value reference expects one positional argument",
+            "Arg value reference expects one positional argument",
         ),
-        ("def f(x: Int32) -> Returns['x']: ...\n", "Returns expects a name and type"),
-        ("value: Final[Int32, Float64]\n", "Final expects exactly one type"),
+        (
+            "@native_call([Len(Unknown(0))])\ndef f(x: Int32) -> None: ...\n",
+            "Expected Arg(...), Return(...), or Work(...) value reference",
+        ),
+        ("def f(x: Int32) -> Returns['x']: ...\n", "Returns expects a name and type: \"Returns['x']\""),
+        ("value: Final[Int32, Float64]\n", "Final expects exactly one type: 'Final[Int32, Float64]'"),
+        ("value: Unknown\n", "Unknown semantic type is not allowed in .pyi annotations"),
+        ("value: Annotated[()]\n", "Annotated type is empty: 'Annotated[()]'"),
     ],
 )
 def test_parse_pyi_text_rejects_invalid_projection_and_type_forms(source: str, message: str):
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(ValueError) as error:
         parse_pyi_text(source, module_name="edited")
+    assert str(error.value) == message
 
 
 def test_parse_pyi_text_accepts_multiline_native_call_decorator():
@@ -649,6 +916,7 @@ def wrapper(
     assert func.name == "wrapper"
     assert func.projection[0].python_position == 0
     assert func.projection[1].result_position == 0
+    assert func.projection[1].intent == "out"
 
 
 def test_fortran_to_pyi_and_back_preserves_mixed_input_output_projection():
@@ -680,99 +948,178 @@ def test_parse_pyi_text_accepts_c_and_fortran_order_constraints():
         """
 def consume(
     a: Float64[:, :],
-    b: Annotated[Float64[:, :], ORDER_F]
+    b: Annotated[Float64[:, :], ORDER_F],
+    c: Annotated[Float64[:, :], ORDER_C],
+    any_order: Annotated[Float64[:, :], ORDER_ANY]
 ) -> None: ...
 """,
         module_name="edited",
     )
 
-    arrays = [
-        arg.semantic_type.storage.array
-        for arg in module.functions[0].arguments
-    ]
+    arrays = [arg.semantic_type.storage.array for arg in module.functions[0].arguments]
     assert arrays[0].order == "ORDER_C"
     assert arrays[1].order == "ORDER_F"
+    assert arrays[2].order == "ORDER_C"
+    assert arrays[3].order == "ORDER_ANY"
     assert arrays[0].category is None
     assert arrays[1].source_shape == []
+    assert all(not arg.semantic_type.constraints for arg in module.functions[0].arguments)
 
 
 def test_parse_pyi_text_preserves_extended_array_metadata_and_nested_selector():
     module = parse_pyi_text(
         """
-value: Annotated[Float64, ORDER_F, Pointer, Contiguous, SourceDims("1:n", "*", "extent"), LowerBounds(None, "0"), UpperBounds("n", None)]
-nested: Float64[:, :][rank]
+value: Annotated[Float64, ORDER_F, Allocatable, Pointer, Contiguous, ArrayCategory("deferred_shape"), SourceDims("1:n", "*", "extent"), LowerBounds(None, "0"), UpperBounds("n", None)]
+nested: Float64[:, :][rank, kind]
 
 def fill(x: Annotated[Float64[:], Intent("out")]) -> None: ...
 """,
         module_name="metadata",
     )
 
-    value = module.variables[0].semantic_type.storage.array
+    value_type = module.variables[0].semantic_type
+    value = value_type.storage.array
     nested = module.variables[1].semantic_type
     output = module.functions[0].arguments[0]
     assert value.order == "ORDER_F"
+    assert value.allocatable is True
     assert value.pointer is True
     assert value.contiguous is True
+    assert value.category == "deferred_shape"
     assert value.source_shape == ["1:n", "*", "extent"]
     assert value.lower_bounds == [None, "0"]
     assert value.upper_bounds == ["n", None]
-    assert nested.metadata["rank_selector"] == "rank"
+    assert value_type.constraints == []
+    assert nested.metadata["rank_selector"] == "rank, kind"
+    assert nested.storage.array.metadata["rank_selector"] == "rank, kind"
     assert output.intent == "out"
 
 
 def test_parse_pyi_text_handles_callable_and_pointer_storage_variants():
     module = parse_pyi_text(
         """
+import typing
+
 plain_callback: Callable
+qualified_callback: typing.Callable
 opaque_callback: Callable[..., Float64]
 constant: Const(Int32)
 deep: Ptr[3](Const(Float64))
 rank_any: Float64[...]
 strided: Float64[0:n:Strided]
 computed: Float64[size(xl)]
+bounded_answer: Final[Annotated[Int32, Bounded(1, 8)]]
+nested_answer: Final[Final[Int32]]
 """,
         module_name="storage",
     )
 
-    plain, callback, constant, deep, rank_any, strided, computed = [var.semantic_type for var in module.variables]
+    plain, qualified, callback, constant, deep, rank_any, strided, computed, bounded, nested = [
+        var.semantic_type for var in module.variables
+    ]
     assert plain.name == "Callable"
+    assert plain.dtype == "Callable"
+    assert qualified.name == "Callable"
+    assert qualified.dtype == "Callable"
     assert callback.metadata["arguments"] is None
+    assert callback.dtype == "Callable"
+    assert callback.metadata["return"].name == "Float64"
     assert constant.storage.kind == "value"
     assert constant.storage.read_only is True
     assert deep.storage.kind == "pointer"
     assert deep.storage.pointer_depth == 3
     assert deep.storage.read_only is True
+    assert deep.storage.mutable is False
     assert rank_any.storage.array.rank is None
+    assert rank_any.rank == 0
     assert strided.storage.array.contiguous is False
     assert computed.shape == ["size(xl)"]
+    assert bounded.constraints == [
+        SemanticConstraint("Bounded", [1, 8]),
+        SemanticConstraint("Constant"),
+    ]
+    assert nested.constraints == [SemanticConstraint("Constant")]
+
+
+def test_parse_pyi_text_preserves_module_fields_and_private_callable_arguments():
+    module = parse_pyi_text(
+        """
+output: Annotated[Float64[:], Intent("out")] = ...
+
+def consume(value: private[Int32]) -> None: ...
+""",
+        module_name="fields",
+    )
+
+    assert module.variables[0].intent == "out"
+    assert module.variables[0].optional is True
+    assert module.functions[0].arguments[0].visibility == "private"
 
 
 @pytest.mark.parametrize(
     "source, message",
     [
-        ("value: Const(Int32, Float64)\n", "Const type expects one argument"),
-        ("value: Ptr(Int32, Float64)\n", "Ptr type expects one argument"),
-        ("value: Ptr[1](Int32)\n", r"Ptr\[1\]"),
-        ("value: Callable[Int32]\n", "Callable expects argument types and a return type"),
-        ("value: Callable[Int32, Float64]\n", "Callable arguments must be a list"),
-        ("value: Annotated[Float64[:], Intent('out', 'extra')]\n", "Intent metadata expects one argument"),
-        ("value: Annotated[Float64[:], SourceShape('n')]\n", "SourceShape metadata is not supported"),
-        ("value: Int32[Constant]\n", "Non-dimensional type subscriptions are not supported"),
-        ("value: Float64[ORDER_F]\n", "Non-dimensional type subscriptions are not supported"),
-        ("value: Float64[Shape]\n", "Non-dimensional type subscriptions are not supported"),
-        ("value: Float64[Shape('n')]\n", "Non-dimensional type subscriptions are not supported"),
-        ("value: Annotated[Int32, Constant]\n", "use Final"),
-        ("value: Annotated[Float64[:], Shape('n')]\n", "put dimensions inside"),
-        ("@native_call([Arg(0).other[0]])\ndef f(x: Int32) -> None: ...\n", "projection entry calls"),
+        ("value: Const(Int32, Float64)\n", "Const type expects one argument: 'Const(Int32, Float64)'"),
+        ("value: Ptr(Int32, Float64)\n", "Ptr type expects one argument: 'Ptr(Int32, Float64)'"),
+        ("value: Ptr[1](Int32)\n", "Ptr[1](...) is invalid; use Ptr(...)"),
+        ("value: Callable[Int32]\n", "Callable expects argument types and a return type: 'Callable[Int32]'"),
+        ("value: Callable[Int32, Float64]\n", "Callable arguments must be a list: 'Callable[Int32, Float64]'"),
+        (
+            "value: Annotated[Float64[:], Intent('out', 'extra')]\n",
+            "Intent metadata expects one argument: \"Intent('out', 'extra')\"",
+        ),
+        ("value: Annotated[Float64[:], SourceShape('n')]\n", "SourceShape metadata is not supported; use SourceDims"),
+        (
+            "value: Int32[Constant]\n",
+            "Non-dimensional type subscriptions are not supported; use Final[...] for constants and "
+            "Annotated[...] for constraints or array metadata",
+        ),
+        (
+            "value: Float64[ORDER_F]\n",
+            "Non-dimensional type subscriptions are not supported; use Final[...] for constants and "
+            "Annotated[...] for constraints or array metadata",
+        ),
+        (
+            "value: Float64[Shape]\n",
+            "Non-dimensional type subscriptions are not supported; use Final[...] for constants and "
+            "Annotated[...] for constraints or array metadata",
+        ),
+        (
+            "value: Float64[Shape('n')]\n",
+            "Non-dimensional type subscriptions are not supported; use Final[...] for constants and "
+            "Annotated[...] for constraints or array metadata",
+        ),
+        ("value: Annotated[Int32, Constant]\n", "Constant metadata is not supported; use Final[...]"),
+        ("value: Annotated[Float64[:], Shape('n')]\n", "Shape metadata is not supported; put dimensions inside T[...]"),
+        (
+            "value: Annotated[Int32, Bounded(lower=1)]\n",
+            "Constraint metadata expects positional arguments only: 'Bounded(lower=1)'",
+        ),
+        ("value: Annotated[Int32, 'bad']\n", "Unsupported Annotated metadata: \"'bad'\""),
+        ("value: Float64[:, foo.bar]\n", "Unsupported array dimension expression: 'foo.bar'"),
+        (
+            "value: Int32[()]\n",
+            "Non-dimensional type subscriptions are not supported; use Final[...] for constants and "
+            "Annotated[...] for constraints or array metadata",
+        ),
+        (
+            "@native_call([Arg(0).other[0]])\ndef f(x: Int32) -> None: ...\n",
+            "native_call expects projection entry calls",
+        ),
     ],
 )
 def test_parse_pyi_text_rejects_additional_invalid_storage_forms(source: str, message: str):
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(ValueError) as error:
         parse_pyi_text(source, module_name="invalid")
+    assert str(error.value) == message
 
 
 def test_pyi_parser_internal_projection_helpers_preserve_native_names():
     parser = _PyiAstParser(module_name="internal")
+    return_type, returned_values = parser.return_projection(
+        ast.parse("tuple[Float64, Returns['extra', Int32, Optional], Returns['other', Float64]]", mode="eval").body
+    )
+    pointer = parser.semantic_type(ast.parse("Ptr(Float64)", mode="eval").body)
     returned = SemanticArgument("result", SemanticType("Float64"), intent="out", metadata={"return_position": 1})
     mapping = ProjectionMapping(native_name="native_result", result_position=1, intent="out")
     _, values = parser._apply_native_call_returns(None, [returned], [mapping])
@@ -780,8 +1127,22 @@ def test_pyi_parser_internal_projection_helpers_preserve_native_names():
     arg_mapping = ProjectionMapping(native_name="native_name", python_position=0)
     parser._apply_native_call_argument_names([native_arg], {}, [arg_mapping])
 
+    assert return_type.name == "Float64"
+    assert returned_values[0].name == "extra"
+    assert returned_values[0].intent == "out"
+    assert returned_values[0].optional is True
+    assert returned_values[0].metadata == {"return_position": 1}
+    assert returned_values[0].semantic_type.ownership.mutable is True
+    assert returned_values[1].name == "other"
+    assert returned_values[1].metadata == {"return_position": 2}
+    assert pointer.storage.mutable is True
+    assert pointer.ownership.mutable is True
     assert values[0].name == "native_result"
     assert arg_mapping.native_name == "native_name"
+
+
+def test_node_text_falls_back_to_node_type_for_empty_unparse():
+    assert _node_text(ast.Module(body=[], type_ignores=[])) == "Module"
 
 
 def test_generated_pyi_compares_equal_to_original_ir_for_all_fortran_fixtures(tmp_path: Path):

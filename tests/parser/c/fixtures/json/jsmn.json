@@ -3,521 +3,2144 @@
     "json/jsmn.h": {
       "filename": "json/jsmn.h",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
-      "functions": [],
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "json/jsmn.h"
+      ],
+      "functions": [
+        {
+          "name": "jsmn_init",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "parser",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmn_parser *parser",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "jsmn_parser",
+                    "name": "jsmn_parser",
+                    "type": {
+                      "model": "CStruct",
+                      "qualifiers": [],
+                      "source_text": "",
+                      "name": "jsmn_parser",
+                      "members": [
+                        {
+                          "name": "pos",
+                          "type": {
+                            "model": "CUnsignedInt",
+                            "qualifiers": [],
+                            "source_text": "unsigned int pos"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "json/jsmn.h",
+                            "line": 84,
+                            "column": 3,
+                            "source_line": "  unsigned int pos;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "toknext",
+                          "type": {
+                            "model": "CUnsignedInt",
+                            "qualifiers": [],
+                            "source_text": "unsigned int toknext"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "json/jsmn.h",
+                            "line": 85,
+                            "column": 3,
+                            "source_line": "  unsigned int toknext;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "toksuper",
+                          "type": {
+                            "model": "CInt",
+                            "qualifiers": [],
+                            "source_text": "int toksuper"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "json/jsmn.h",
+                            "line": 86,
+                            "column": 3,
+                            "source_line": "  int toksuper;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        }
+                      ],
+                      "anonymous_id": null,
+                      "is_incomplete": false,
+                      "source_location": {
+                        "filename": "json/jsmn.h",
+                        "line": 83,
+                        "column": 1,
+                        "source_line": "typedef struct jsmn_parser {"
+                      }
+                    },
+                    "source_location": {
+                      "filename": "json/jsmn.h",
+                      "line": 83,
+                      "column": 1,
+                      "source_line": "typedef struct jsmn_parser {"
+                    },
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmn_parser *parser",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmn_parser"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "extern"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 459,
+            "column": 1,
+            "source_line": "extern void jsmn_init(jsmn_parser *parser) {"
+          },
+          "start": {
+            "filename": "json/jsmn.h",
+            "line": 459,
+            "column": 1,
+            "source_line": "extern void jsmn_init(jsmn_parser *parser) {"
+          },
+          "end": {
+            "filename": "json/jsmn.h",
+            "line": 463,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "json/jsmn.h",
+              "line": 92,
+              "column": 1,
+              "source_line": "extern void jsmn_init(jsmn_parser *parser);"
+            }
+          ]
+        },
+        {
+          "name": "jsmn_parse",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "parser",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmn_parser *parser",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmn_parser"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmn_parser *parser",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmn_parser"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "js",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *js",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *js",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "len",
+              "type": {
+                "reference": "size_t"
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "tokens",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmntok_t *tokens",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CTypedef",
+                    "qualifiers": [],
+                    "source_text": "jsmntok_t",
+                    "name": "jsmntok_t",
+                    "type": {
+                      "model": "CStruct",
+                      "qualifiers": [],
+                      "source_text": "",
+                      "name": "jsmntok",
+                      "members": [
+                        {
+                          "name": "type",
+                          "type": {
+                            "model": "CTypedef",
+                            "qualifiers": [],
+                            "source_text": "jsmntype_t",
+                            "name": "jsmntype_t",
+                            "type": {
+                              "model": "CEnum",
+                              "qualifiers": [],
+                              "source_text": "",
+                              "name": null,
+                              "constants": [
+                                {
+                                  "name": "JSMN_UNDEFINED",
+                                  "value": "0",
+                                  "source_location": {
+                                    "filename": "json/jsmn.h",
+                                    "line": 46,
+                                    "column": 1,
+                                    "source_line": "typedef enum {"
+                                  }
+                                },
+                                {
+                                  "name": "JSMN_OBJECT",
+                                  "value": "1 << 0",
+                                  "source_location": {
+                                    "filename": "json/jsmn.h",
+                                    "line": 46,
+                                    "column": 1,
+                                    "source_line": "typedef enum {"
+                                  }
+                                },
+                                {
+                                  "name": "JSMN_ARRAY",
+                                  "value": "1 << 1",
+                                  "source_location": {
+                                    "filename": "json/jsmn.h",
+                                    "line": 46,
+                                    "column": 1,
+                                    "source_line": "typedef enum {"
+                                  }
+                                },
+                                {
+                                  "name": "JSMN_STRING",
+                                  "value": "1 << 2",
+                                  "source_location": {
+                                    "filename": "json/jsmn.h",
+                                    "line": 46,
+                                    "column": 1,
+                                    "source_line": "typedef enum {"
+                                  }
+                                },
+                                {
+                                  "name": "JSMN_PRIMITIVE",
+                                  "value": "1 << 3",
+                                  "source_location": {
+                                    "filename": "json/jsmn.h",
+                                    "line": 46,
+                                    "column": 1,
+                                    "source_line": "typedef enum {"
+                                  }
+                                }
+                              ],
+                              "anonymous_id": "enum@<system-header>:0:0",
+                              "source_location": {
+                                "filename": "json/jsmn.h",
+                                "line": 46,
+                                "column": 1,
+                                "source_line": "typedef enum {"
+                              }
+                            },
+                            "source_location": {
+                              "filename": "json/jsmn.h",
+                              "line": 46,
+                              "column": 1,
+                              "source_line": "typedef enum {"
+                            },
+                            "declaration_locations": []
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "json/jsmn.h",
+                            "line": 70,
+                            "column": 3,
+                            "source_line": "  jsmntype_t type;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "start",
+                          "type": {
+                            "model": "CInt",
+                            "qualifiers": [],
+                            "source_text": "int start"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "json/jsmn.h",
+                            "line": 71,
+                            "column": 3,
+                            "source_line": "  int start;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "end",
+                          "type": {
+                            "model": "CInt",
+                            "qualifiers": [],
+                            "source_text": "int end"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "json/jsmn.h",
+                            "line": 72,
+                            "column": 3,
+                            "source_line": "  int end;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        },
+                        {
+                          "name": "size",
+                          "type": {
+                            "model": "CInt",
+                            "qualifiers": [],
+                            "source_text": "int size"
+                          },
+                          "storage": [],
+                          "initializer": null,
+                          "bit_width": null,
+                          "source_location": {
+                            "filename": "json/jsmn.h",
+                            "line": 73,
+                            "column": 3,
+                            "source_line": "  int size;"
+                          },
+                          "callback_policy": null,
+                          "declaration_locations": []
+                        }
+                      ],
+                      "anonymous_id": null,
+                      "is_incomplete": false,
+                      "source_location": {
+                        "filename": "json/jsmn.h",
+                        "line": 69,
+                        "column": 1,
+                        "source_line": "typedef struct jsmntok {"
+                      }
+                    },
+                    "source_location": {
+                      "filename": "json/jsmn.h",
+                      "line": 69,
+                      "column": 1,
+                      "source_line": "typedef struct jsmntok {"
+                    },
+                    "declaration_locations": []
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmntok_t *tokens",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmntok_t"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "num_tokens",
+              "type": {
+                "model": "CUnsignedInt",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const unsigned int num_tokens"
+              },
+              "declared_type": {
+                "model": "CUnsignedInt",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const unsigned int num_tokens"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "extern"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 268,
+            "column": 1,
+            "source_line": "extern int jsmn_parse(jsmn_parser *parser, const char *js, const size_t len,"
+          },
+          "start": {
+            "filename": "json/jsmn.h",
+            "line": 268,
+            "column": 1,
+            "source_line": "extern int jsmn_parse(jsmn_parser *parser, const char *js, const size_t len,"
+          },
+          "end": {
+            "filename": "json/jsmn.h",
+            "line": 453,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": [
+            {
+              "filename": "json/jsmn.h",
+              "line": 99,
+              "column": 1,
+              "source_line": "extern int jsmn_parse(jsmn_parser *parser, const char *js, const size_t len,"
+            }
+          ]
+        },
+        {
+          "name": "jsmn_alloc_token",
+          "result_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmntok_t",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmntok_t"
+              }
+            ]
+          },
+          "parameters": [
+            {
+              "name": "parser",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmn_parser *parser",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmn_parser"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmn_parser *parser",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmn_parser"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "tokens",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmntok_t *tokens",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmntok_t"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmntok_t *tokens",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmntok_t"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "num_tokens",
+              "type": {
+                "reference": "size_t"
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 106,
+            "column": 1,
+            "source_line": "static jsmntok_t *jsmn_alloc_token(jsmn_parser *parser, jsmntok_t *tokens,"
+          },
+          "start": {
+            "filename": "json/jsmn.h",
+            "line": 106,
+            "column": 1,
+            "source_line": "static jsmntok_t *jsmn_alloc_token(jsmn_parser *parser, jsmntok_t *tokens,"
+          },
+          "end": {
+            "filename": "json/jsmn.h",
+            "line": 119,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "jsmn_fill_token",
+          "result_type": {
+            "model": "CVoid",
+            "qualifiers": [],
+            "source_text": "void"
+          },
+          "parameters": [
+            {
+              "name": "token",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmntok_t *token",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmntok_t"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmntok_t *token",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmntok_t"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "type",
+              "type": {
+                "reference": "jsmntype_t"
+              },
+              "declared_type": {
+                "reference": "jsmntype_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "start",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const int start"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const int start"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "end",
+              "type": {
+                "model": "CInt",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const int end"
+              },
+              "declared_type": {
+                "model": "CInt",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const int end"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 124,
+            "column": 1,
+            "source_line": "static void jsmn_fill_token(jsmntok_t *token, const jsmntype_t type,"
+          },
+          "start": {
+            "filename": "json/jsmn.h",
+            "line": 124,
+            "column": 1,
+            "source_line": "static void jsmn_fill_token(jsmntok_t *token, const jsmntype_t type,"
+          },
+          "end": {
+            "filename": "json/jsmn.h",
+            "line": 130,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "jsmn_parse_primitive",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "parser",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmn_parser *parser",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmn_parser"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmn_parser *parser",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmn_parser"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "js",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *js",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *js",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "len",
+              "type": {
+                "reference": "size_t"
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "tokens",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmntok_t *tokens",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmntok_t"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmntok_t *tokens",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmntok_t"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "num_tokens",
+              "type": {
+                "reference": "size_t"
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 135,
+            "column": 1,
+            "source_line": "static int jsmn_parse_primitive(jsmn_parser *parser, const char *js,"
+          },
+          "start": {
+            "filename": "json/jsmn.h",
+            "line": 135,
+            "column": 1,
+            "source_line": "static int jsmn_parse_primitive(jsmn_parser *parser, const char *js,"
+          },
+          "end": {
+            "filename": "json/jsmn.h",
+            "line": 188,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        },
+        {
+          "name": "jsmn_parse_string",
+          "result_type": {
+            "model": "CInt",
+            "qualifiers": [],
+            "source_text": "int"
+          },
+          "parameters": [
+            {
+              "name": "parser",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmn_parser *parser",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmn_parser"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmn_parser *parser",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmn_parser"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "js",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *js",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "const char *js",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "model": "CChar",
+                    "qualifiers": [
+                      "const"
+                    ],
+                    "source_text": "const char"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "len",
+              "type": {
+                "reference": "size_t"
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "tokens",
+              "type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmntok_t *tokens",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmntok_t"
+                  }
+                ]
+              },
+              "declared_type": {
+                "model": "CComposedType",
+                "qualifiers": [],
+                "source_text": "jsmntok_t *tokens",
+                "components": [
+                  {
+                    "model": "CPointer",
+                    "qualifiers": [],
+                    "source_text": ""
+                  },
+                  {
+                    "reference": "jsmntok_t"
+                  }
+                ]
+              },
+              "source_location": null,
+              "callback_policy": null
+            },
+            {
+              "name": "num_tokens",
+              "type": {
+                "reference": "size_t"
+              },
+              "declared_type": {
+                "reference": "size_t"
+              },
+              "source_location": null,
+              "callback_policy": null
+            }
+          ],
+          "storage": [
+            "static"
+          ],
+          "specifiers": [],
+          "is_variadic": false,
+          "is_definition": true,
+          "prototype_style": "prototype",
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 193,
+            "column": 1,
+            "source_line": "static int jsmn_parse_string(jsmn_parser *parser, const char *js,"
+          },
+          "start": {
+            "filename": "json/jsmn.h",
+            "line": 193,
+            "column": 1,
+            "source_line": "static int jsmn_parse_string(jsmn_parser *parser, const char *js,"
+          },
+          "end": {
+            "filename": "json/jsmn.h",
+            "line": 263,
+            "column": 1,
+            "source_line": "}"
+          },
+          "declaration_locations": []
+        }
+      ],
       "structs": [],
       "unions": [],
-      "enums": [],
+      "enums": [
+        {
+          "model": "CEnum",
+          "qualifiers": [],
+          "source_text": "",
+          "name": "jsmnerr",
+          "constants": [
+            {
+              "name": "JSMN_ERROR_NOMEM",
+              "value": "-1",
+              "source_location": {
+                "filename": "json/jsmn.h",
+                "line": 54,
+                "column": 1,
+                "source_line": "enum jsmnerr {"
+              }
+            },
+            {
+              "name": "JSMN_ERROR_INVAL",
+              "value": "-2",
+              "source_location": {
+                "filename": "json/jsmn.h",
+                "line": 54,
+                "column": 1,
+                "source_line": "enum jsmnerr {"
+              }
+            },
+            {
+              "name": "JSMN_ERROR_PART",
+              "value": "-3",
+              "source_location": {
+                "filename": "json/jsmn.h",
+                "line": 54,
+                "column": 1,
+                "source_line": "enum jsmnerr {"
+              }
+            }
+          ],
+          "anonymous_id": null,
+          "source_location": {
+            "filename": "json/jsmn.h",
+            "line": 54,
+            "column": 1,
+            "source_line": "enum jsmnerr {"
+          }
+        }
+      ],
       "typedefs": [],
       "variables": [],
-      "macros": [
-        {
-          "name": "JSMN_H",
-          "value": null,
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 25,
-            "column": 1,
-            "source_line": "#define JSMN_H"
-          }
-        },
-        {
-          "name": "JSMN_API",
-          "value": "static",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 34,
-            "column": 1,
-            "source_line": "#define JSMN_API static"
-          }
-        },
-        {
-          "name": "JSMN_API",
-          "value": "extern",
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 36,
-            "column": 1,
-            "source_line": "#define JSMN_API extern"
-          }
-        }
-      ],
-      "includes": [
-        {
-          "target": "stddef.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 27,
-            "column": 1,
-            "source_line": "#include <stddef.h>"
-          }
-        }
-      ],
-      "raw_directives": [
-        {
-          "directive": "ifndef",
-          "argument": "JSMN_H",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 24,
-            "column": 1,
-            "source_line": "#ifndef JSMN_H"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "__cplusplus",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 29,
-            "column": 1,
-            "source_line": "#ifdef __cplusplus"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 31,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "JSMN_STATIC",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 33,
-            "column": 1,
-            "source_line": "#ifdef JSMN_STATIC"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 35,
-            "column": 1,
-            "source_line": "#else"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 37,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "JSMN_PARENT_LINKS",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 74,
-            "column": 1,
-            "source_line": "#ifdef JSMN_PARENT_LINKS"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 76,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifndef",
-          "argument": "JSMN_HEADER",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 102,
-            "column": 1,
-            "source_line": "#ifndef JSMN_HEADER"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "JSMN_PARENT_LINKS",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 115,
-            "column": 1,
-            "source_line": "#ifdef JSMN_PARENT_LINKS"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 117,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifndef",
-          "argument": "JSMN_STRICT",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 145,
-            "column": 1,
-            "source_line": "#ifndef JSMN_STRICT"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 148,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "JSMN_STRICT",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 166,
-            "column": 1,
-            "source_line": "#ifdef JSMN_STRICT"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 170,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "JSMN_PARENT_LINKS",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 183,
-            "column": 1,
-            "source_line": "#ifdef JSMN_PARENT_LINKS"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 185,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "JSMN_PARENT_LINKS",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 217,
-            "column": 1,
-            "source_line": "#ifdef JSMN_PARENT_LINKS"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 219,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "JSMN_STRICT",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 293,
-            "column": 1,
-            "source_line": "#ifdef JSMN_STRICT"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 298,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "JSMN_PARENT_LINKS",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 300,
-            "column": 1,
-            "source_line": "#ifdef JSMN_PARENT_LINKS"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 302,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "JSMN_PARENT_LINKS",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 314,
-            "column": 1,
-            "source_line": "#ifdef JSMN_PARENT_LINKS"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 336,
-            "column": 1,
-            "source_line": "#else"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 359,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "JSMN_PARENT_LINKS",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 383,
-            "column": 1,
-            "source_line": "#ifdef JSMN_PARENT_LINKS"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 385,
-            "column": 1,
-            "source_line": "#else"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 394,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "JSMN_STRICT",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 397,
-            "column": 1,
-            "source_line": "#ifdef JSMN_STRICT"
-          }
-        },
-        {
-          "directive": "else",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 421,
-            "column": 1,
-            "source_line": "#else"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 424,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "JSMN_STRICT",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 435,
-            "column": 1,
-            "source_line": "#ifdef JSMN_STRICT"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 439,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 465,
-            "column": 1,
-            "source_line": "#endif /* JSMN_HEADER */"
-          }
-        },
-        {
-          "directive": "ifdef",
-          "argument": "__cplusplus",
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 467,
-            "column": 1,
-            "source_line": "#ifdef __cplusplus"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 469,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "json/jsmn.h",
-            "line": 471,
-            "column": 1,
-            "source_line": "#endif /* JSMN_H */"
-          }
-        }
-      ],
+      "macros": [],
+      "includes": [],
+      "raw_directives": [],
       "macro_dependencies": [],
-      "diagnostics": [
+      "diagnostics": []
+    }
+  },
+  "functions": {
+    "jsmn_init": {
+      "name": "jsmn_init",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
         {
-          "code": "C_UNSUPPORTED_DECLARATOR",
-          "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
-          "severity": "warning",
-          "location": {
-            "filename": "json/jsmn.h",
-            "line": 30,
-            "column": 1,
-            "source_line": "extern \"C\" {"
+          "name": "parser",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmn_parser *parser",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmn_parser"
+              }
+            ]
           },
-          "unit_kind": "declarator",
-          "unit_name": null
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmn_parser *parser",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmn_parser"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "extern"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 459,
+        "column": 1,
+        "source_line": "extern void jsmn_init(jsmn_parser *parser) {"
+      },
+      "start": {
+        "filename": "json/jsmn.h",
+        "line": 459,
+        "column": 1,
+        "source_line": "extern void jsmn_init(jsmn_parser *parser) {"
+      },
+      "end": {
+        "filename": "json/jsmn.h",
+        "line": 463,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "json/jsmn.h",
+          "line": 92,
+          "column": 1,
+          "source_line": "extern void jsmn_init(jsmn_parser *parser);"
         }
       ]
+    },
+    "jsmn_parse": {
+      "name": "jsmn_parse",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "parser",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmn_parser *parser",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmn_parser"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmn_parser *parser",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmn_parser"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "js",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *js",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *js",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "len",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "tokens",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmntok_t *tokens",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmntok_t"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmntok_t *tokens",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmntok_t"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "num_tokens",
+          "type": {
+            "model": "CUnsignedInt",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const unsigned int num_tokens"
+          },
+          "declared_type": {
+            "model": "CUnsignedInt",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const unsigned int num_tokens"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "extern"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 268,
+        "column": 1,
+        "source_line": "extern int jsmn_parse(jsmn_parser *parser, const char *js, const size_t len,"
+      },
+      "start": {
+        "filename": "json/jsmn.h",
+        "line": 268,
+        "column": 1,
+        "source_line": "extern int jsmn_parse(jsmn_parser *parser, const char *js, const size_t len,"
+      },
+      "end": {
+        "filename": "json/jsmn.h",
+        "line": 453,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": [
+        {
+          "filename": "json/jsmn.h",
+          "line": 99,
+          "column": 1,
+          "source_line": "extern int jsmn_parse(jsmn_parser *parser, const char *js, const size_t len,"
+        }
+      ]
+    },
+    "jsmn_alloc_token": {
+      "name": "jsmn_alloc_token",
+      "result_type": {
+        "model": "CComposedType",
+        "qualifiers": [],
+        "source_text": "jsmntok_t",
+        "components": [
+          {
+            "model": "CPointer",
+            "qualifiers": [],
+            "source_text": ""
+          },
+          {
+            "reference": "jsmntok_t"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "parser",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmn_parser *parser",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmn_parser"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmn_parser *parser",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmn_parser"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "tokens",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmntok_t *tokens",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmntok_t"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmntok_t *tokens",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmntok_t"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "num_tokens",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 106,
+        "column": 1,
+        "source_line": "static jsmntok_t *jsmn_alloc_token(jsmn_parser *parser, jsmntok_t *tokens,"
+      },
+      "start": {
+        "filename": "json/jsmn.h",
+        "line": 106,
+        "column": 1,
+        "source_line": "static jsmntok_t *jsmn_alloc_token(jsmn_parser *parser, jsmntok_t *tokens,"
+      },
+      "end": {
+        "filename": "json/jsmn.h",
+        "line": 119,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "jsmn_fill_token": {
+      "name": "jsmn_fill_token",
+      "result_type": {
+        "model": "CVoid",
+        "qualifiers": [],
+        "source_text": "void"
+      },
+      "parameters": [
+        {
+          "name": "token",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmntok_t *token",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmntok_t"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmntok_t *token",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmntok_t"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "type",
+          "type": {
+            "reference": "jsmntype_t"
+          },
+          "declared_type": {
+            "reference": "jsmntype_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "start",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const int start"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const int start"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "end",
+          "type": {
+            "model": "CInt",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const int end"
+          },
+          "declared_type": {
+            "model": "CInt",
+            "qualifiers": [
+              "const"
+            ],
+            "source_text": "const int end"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 124,
+        "column": 1,
+        "source_line": "static void jsmn_fill_token(jsmntok_t *token, const jsmntype_t type,"
+      },
+      "start": {
+        "filename": "json/jsmn.h",
+        "line": 124,
+        "column": 1,
+        "source_line": "static void jsmn_fill_token(jsmntok_t *token, const jsmntype_t type,"
+      },
+      "end": {
+        "filename": "json/jsmn.h",
+        "line": 130,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "jsmn_parse_primitive": {
+      "name": "jsmn_parse_primitive",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "parser",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmn_parser *parser",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmn_parser"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmn_parser *parser",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmn_parser"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "js",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *js",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *js",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "len",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "tokens",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmntok_t *tokens",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmntok_t"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmntok_t *tokens",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmntok_t"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "num_tokens",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 135,
+        "column": 1,
+        "source_line": "static int jsmn_parse_primitive(jsmn_parser *parser, const char *js,"
+      },
+      "start": {
+        "filename": "json/jsmn.h",
+        "line": 135,
+        "column": 1,
+        "source_line": "static int jsmn_parse_primitive(jsmn_parser *parser, const char *js,"
+      },
+      "end": {
+        "filename": "json/jsmn.h",
+        "line": 188,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
+    },
+    "jsmn_parse_string": {
+      "name": "jsmn_parse_string",
+      "result_type": {
+        "model": "CInt",
+        "qualifiers": [],
+        "source_text": "int"
+      },
+      "parameters": [
+        {
+          "name": "parser",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmn_parser *parser",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmn_parser"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmn_parser *parser",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmn_parser"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "js",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *js",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "const char *js",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "model": "CChar",
+                "qualifiers": [
+                  "const"
+                ],
+                "source_text": "const char"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "len",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "tokens",
+          "type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmntok_t *tokens",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmntok_t"
+              }
+            ]
+          },
+          "declared_type": {
+            "model": "CComposedType",
+            "qualifiers": [],
+            "source_text": "jsmntok_t *tokens",
+            "components": [
+              {
+                "model": "CPointer",
+                "qualifiers": [],
+                "source_text": ""
+              },
+              {
+                "reference": "jsmntok_t"
+              }
+            ]
+          },
+          "source_location": null,
+          "callback_policy": null
+        },
+        {
+          "name": "num_tokens",
+          "type": {
+            "reference": "size_t"
+          },
+          "declared_type": {
+            "reference": "size_t"
+          },
+          "source_location": null,
+          "callback_policy": null
+        }
+      ],
+      "storage": [
+        "static"
+      ],
+      "specifiers": [],
+      "is_variadic": false,
+      "is_definition": true,
+      "prototype_style": "prototype",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 193,
+        "column": 1,
+        "source_line": "static int jsmn_parse_string(jsmn_parser *parser, const char *js,"
+      },
+      "start": {
+        "filename": "json/jsmn.h",
+        "line": 193,
+        "column": 1,
+        "source_line": "static int jsmn_parse_string(jsmn_parser *parser, const char *js,"
+      },
+      "end": {
+        "filename": "json/jsmn.h",
+        "line": 263,
+        "column": 1,
+        "source_line": "}"
+      },
+      "declaration_locations": []
     }
   },
-  "functions": {},
   "structs": {},
   "unions": {},
-  "enums": {},
+  "enums": {
+    "jsmnerr": {
+      "reference": "enum jsmnerr"
+    }
+  },
   "typedefs": {},
   "variables": {},
-  "macros": {
-    "JSMN_H": {
-      "name": "JSMN_H",
-      "value": null,
-      "function_like": false,
-      "directive": "define",
+  "macros": {},
+  "includes": {},
+  "functions_by_file": {
+    "json/jsmn.h": [
+      "jsmn_init",
+      "jsmn_parse",
+      "jsmn_alloc_token",
+      "jsmn_fill_token",
+      "jsmn_parse_primitive",
+      "jsmn_parse_string"
+    ]
+  },
+  "enum_constants": {
+    "JSMN_UNDEFINED": {
+      "name": "JSMN_UNDEFINED",
+      "value": "0",
       "source_location": {
         "filename": "json/jsmn.h",
-        "line": 25,
+        "line": 46,
         "column": 1,
-        "source_line": "#define JSMN_H"
+        "source_line": "typedef enum {"
       }
     },
-    "JSMN_API": {
-      "name": "JSMN_API",
-      "value": "extern",
-      "function_like": false,
-      "directive": "define",
+    "JSMN_OBJECT": {
+      "name": "JSMN_OBJECT",
+      "value": "1 << 0",
       "source_location": {
         "filename": "json/jsmn.h",
-        "line": 36,
+        "line": 46,
         "column": 1,
-        "source_line": "#define JSMN_API extern"
+        "source_line": "typedef enum {"
+      }
+    },
+    "JSMN_ARRAY": {
+      "name": "JSMN_ARRAY",
+      "value": "1 << 1",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 46,
+        "column": 1,
+        "source_line": "typedef enum {"
+      }
+    },
+    "JSMN_STRING": {
+      "name": "JSMN_STRING",
+      "value": "1 << 2",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 46,
+        "column": 1,
+        "source_line": "typedef enum {"
+      }
+    },
+    "JSMN_PRIMITIVE": {
+      "name": "JSMN_PRIMITIVE",
+      "value": "1 << 3",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 46,
+        "column": 1,
+        "source_line": "typedef enum {"
+      }
+    },
+    "JSMN_ERROR_NOMEM": {
+      "name": "JSMN_ERROR_NOMEM",
+      "value": "-1",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 54,
+        "column": 1,
+        "source_line": "enum jsmnerr {"
+      }
+    },
+    "JSMN_ERROR_INVAL": {
+      "name": "JSMN_ERROR_INVAL",
+      "value": "-2",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 54,
+        "column": 1,
+        "source_line": "enum jsmnerr {"
+      }
+    },
+    "JSMN_ERROR_PART": {
+      "name": "JSMN_ERROR_PART",
+      "value": "-3",
+      "source_location": {
+        "filename": "json/jsmn.h",
+        "line": 54,
+        "column": 1,
+        "source_line": "enum jsmnerr {"
       }
     }
   },
-  "includes": {
-    "json/jsmn.h:stddef.h": {
-      "target": "stddef.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "json/jsmn.h",
-        "line": 27,
-        "column": 1,
-        "source_line": "#include <stddef.h>"
-      }
-    }
-  },
-  "functions_by_file": {
-    "json/jsmn.h": []
-  },
-  "enum_constants": {},
   "include_graph": {
     "json/jsmn.h": []
   },
   "system_includes": {
-    "json/jsmn.h": [
-      "stddef.h"
-    ]
+    "json/jsmn.h": []
   },
   "unresolved_includes": {
     "json/jsmn.h": []
@@ -525,19 +2148,5 @@
   "header_source_pairs": {
     "json/jsmn.h": []
   },
-  "diagnostics": [
-    {
-      "code": "C_UNSUPPORTED_DECLARATOR",
-      "message": "Unsupported declarator syntax after parsed type layers: '\"C\"'.",
-      "severity": "warning",
-      "location": {
-        "filename": "json/jsmn.h",
-        "line": 30,
-        "column": 1,
-        "source_line": "extern \"C\" {"
-      },
-      "unit_kind": "declarator",
-      "unit_name": null
-    }
-  ]
+  "diagnostics": []
 }

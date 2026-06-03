@@ -99,14 +99,43 @@ wrappers at the bottom, then read the class from top to bottom:
     part, `contains`) with original line numbers preserved on each slice
   - shared declaration parsing for module variables, program/block-data
     variables, procedure arguments/results, and derived-type fields
-  - `_helper_*` methods for scoped parsing, expression resolution,
-    raw preprocessor branch structure, same-level duplicate checks, and shared
-    specification-part collection
+  - `_helper_*` methods for scoped parsing, expression resolution, same-level
+    duplicate checks, and shared specification-part collection
 - Thin module-level convenience wrappers that delegate to a shared parser
   instance
 
 Parser methods carry focused docstrings, with examples where a compatibility
 visitor or lexical helper is easier to understand from a concrete call.
+
+## Implementation Inventory And Maintenance
+
+This file is the single maintained Fortran parser reference. It replaces the
+older standalone implementation-reference document; parser feature inventory,
+testing workflow, and maintenance guard policy live here.
+
+The implementation inventory is maintained across these surfaces:
+
+- `fortran_parser/parser.py` owns source slicing, declaration extraction,
+  diagnostics, project ordering, dependency resolution, and compile-time
+  expression resolution.
+- `fortran_parser/models.py` owns parse-only dataclasses and JSON-compatible
+  parser facts.
+- `semantics/fortran2ir.py` owns conversion from parser facts to semantic IR,
+  including kind mapping, compile-time specialization, storage contracts,
+  projection metadata, and readiness inputs.
+- `tests/parser/` covers parser contracts, source-unit slicing, diagnostics,
+  project behavior, and fixture regressions.
+- `tests/semantics/` covers semantic conversion, datatype precision mapping,
+  readiness, `.pyi` emission, and compile-time specialization.
+
+Parser-related pull requests should update this file when the documented
+feature inventory, public API, diagnostics, project behavior, semantic handoff,
+or maintenance workflow changes. The parser-reference guard watches
+Fortran and C references independently. For Fortran, it watches
+`fortran_parser/`, `tests/parser/fortran/`, `tests/data/fortran/`, and focused
+Fortran parser tests directly under `tests/parser/`. It expects
+`docs/fortran_parser.md` to change unless the PR is explicitly labeled to skip
+the guard.
 
 `visit_file` is the central orchestration path. It first slices the source into
 direct file-level units, then each unit visitor parses only its own substring
@@ -198,6 +227,74 @@ and are treated as valid scope references for readiness checks. Module/program
 variable shapes and parameter values can be resolved through the compile-time
 resolver when enough information is available.
 
+## Reimplementation Guide For Another Parser
+
+Use the Fortran parser as the reference for any source language with nested
+program units, scoped declarations, and a later semantic handoff. The details
+are Fortran-specific, but the parser architecture is reusable.
+
+Recommended frontend responsibilities:
+
+- Keep one typed model layer for parse-only facts.
+- Keep one parser orchestration class with thin public wrappers.
+- Slice source into grammar units before parsing declarations.
+- Pass scope explicitly into shared helpers rather than using global mutable
+  parser state for symbol resolution.
+- Parse only wrapper-relevant specification facts; skip executable bodies once
+  they are outside the parser contract.
+- Preserve source locations and original line numbers through preprocessing and
+  recursive slicing.
+- Emit parser diagnostics for malformed source, but leave wrappability policy
+  to semantic readiness.
+
+The Fortran data flow is:
+
+```text
+source path or source text
+  -> compiler/native include preprocessing
+  -> FortranParser.visit_file(...)
+  -> source-unit slices with original line numbers
+  -> scoped specification parsing
+  -> FortranFile parser facts
+  -> parse_fortran_project(...) dependency ordering and namespace resolution
+  -> semantics.fortran2ir conversion
+  -> readiness, `.pyi`, and later wrapper stages
+```
+
+The recursive parsing pattern is:
+
+1. Identify direct child units at the current grammar level.
+2. Split each child into header, specification part, execution part, and
+   `contains` part where that language construct allows them.
+3. Parse declarations only from the specification part.
+4. Recurse only into direct children that are legal for the current unit kind.
+5. Validate sibling names and scope-local duplicate declarations.
+6. Finalize procedure arguments/results after local declarations and
+   parameters are known.
+7. Resolve cross-file or imported compile-time facts only at project or
+   semantic-conversion boundaries.
+
+When adding another parser, keep these test layers separate:
+
+- parser unit tests for grammar slicing and declarations;
+- parser fixture tests for stable JSON/model output;
+- parser error fixture tests for fatal diagnostic contracts;
+- project tests for dependency ordering and cross-file resolution;
+- CLI tests for frontend selection, stage dispatch, output files, and debug
+  behavior;
+- semantic conversion tests for parser-to-IR mapping;
+- `.pyi` tests for generated and edited interface round trips.
+
+Executable references:
+
+- Fortran parser walkthrough: `tests/parser/test_parser_developer_tutorial.py`
+- Procedure/type parsing: `tests/parser/test_procedure_and_type_parsing.py`
+- Scope and project behavior: `tests/parser/test_scope_handling.py` and
+  `tests/parser/test_project_scope_models.py`
+- Fortran fixture workflow: `tests/parser/test_fortran_fixture_suite.py`
+- Shared CLI behavior: `tests/parser/test_cli.py`
+- Fortran semantic handoff: `tests/semantics/test_fortran2ir.py`
+
 ## 3) Terminal usage and expected outputs
 
 ### 3.1 Basic CLI invocation
@@ -252,12 +349,14 @@ Expected output shape:
 ```text
 File: tests/data/fortran/general/basic_subroutine.f90
   Modules: 1
-    - module m1 (vars=2, uses=0)
+    - module m1 (vars=0, uses=0)
       Procedures: 1
-        - subroutine add1(n:integer[0], x:real[1])
+        - subroutine add1(n:integer[0], x:real(8)[1])
 ```
 
-With variables expanded:
+The same command with `--show-vars` uses the variable-expanded report path.
+This fixture currently has no module variables to print, so the output remains
+compact:
 
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --show-vars
@@ -266,12 +365,9 @@ python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --show-va
 ```text
 File: tests/data/fortran/general/basic_subroutine.f90
   Modules: 1
-    - module m1 (vars=2, uses=0)
-      Variables: 2
-        - n:integer[0]
-        - x:real[1]
+    - module m1 (vars=0, uses=0)
       Procedures: 1
-        - subroutine add1(n:integer[0], x:real[1])
+        - subroutine add1(n:integer[0], x:real(8)[1])
 ```
 
 For large files:
@@ -374,12 +470,12 @@ Expected JSON layout:
   - `block_data`
 
 When `x2py --parse --json` applies compiler preprocessing, the per-file payload
-also contains `preprocessing_recipe`. Internal parser mode accepts plain or
-already-preprocessed source and does not evaluate `-D`/`-U` CPP branches.
-`--preprocess compiler` records the exact compiler executable or adapter,
-argv, include paths, macro flags, standard, extra compiler arguments, working
-directory, include graph, source mappings, diagnostics, and optional macro
-metadata used to produce the parsed stdout stream.
+also contains `preprocessing_recipe`. The CLI applies compiler preprocessing
+for file-based parsing; compiler linemarkers remain accepted for provenance.
+The recipe records the exact compiler executable or adapter, argv, include
+paths, macro flags, standard, extra compiler arguments, working directory,
+include graph, source mappings, diagnostics, and optional macro metadata used
+to produce the parsed stdout stream.
 
 Fortran CPP directives are handled by the configured compiler. Native Fortran
 `include "file.inc"` statements are then expanded recursively by the
@@ -597,10 +693,46 @@ PYTHONPATH=. pytest -q
 Run parser-focused tests:
 
 ```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --language fortran --parse --json
 PYTHONPATH=. pytest -q tests/parser/test_procedure_and_type_parsing.py
 PYTHONPATH=. pytest -q tests/parser/test_fortran_fixture_suite.py
 PYTHONPATH=. pytest -q tests/parser/test_cli.py
 ```
+
+Focused test files by implementation area:
+
+- Parser walkthrough and expected maintainer flow:
+  `tests/parser/test_parser_developer_tutorial.py`
+- Procedure headers, declarations, derived types, interfaces, and type-bound
+  procedures:
+  `tests/parser/test_procedure_and_type_parsing.py`
+- Function header edge cases:
+  `tests/parser/test_function_header_parsing.py`
+- Scope handling and project namespace behavior:
+  `tests/parser/test_scope_handling.py` and
+  `tests/parser/test_project_scope_models.py`
+- Preprocessing, native includes, and execution-boundary skipping:
+  `tests/parser/test_preprocessor_and_execution_boundaries.py`
+- Parser diagnostics and fatal error contracts:
+  `tests/parser/test_error_handling.py`
+- Regression contracts:
+  `tests/parser/test_fortran_parser_regression_contracts.py`
+- Public entrypoints:
+  `tests/parser/test_parser_public_entrypoints.py`
+- Parser fixture goldens:
+  `tests/parser/test_fortran_fixture_suite.py`
+- Parser error fixture goldens:
+  `tests/parser/test_fortran_error_fixture_suite.py`
+- Parser JSON shape:
+  `tests/parser/test_fortran_json_sanity.py`
+- Fortran compiler/type probing:
+  `tests/parser/test_fortran_type_probe.py`
+- Shared CLI behavior:
+  `tests/parser/test_cli.py`
+
+When adding or changing a Fortran parser feature, add a focused parser test
+near the implementation concern first, then update fixture goldens only when
+the serialized parser contract intentionally changes.
 
 Update golden JSON fixtures:
 
@@ -642,7 +774,7 @@ exception keeps structured metadata for consumers:
 
 Diagnostic codes are for programmatic matching in tests, tools, and
 documentation. The category name states the failure class directly. The shared
-registry is [`docs/diagnostic_codes.md`](../diagnostic_codes.md).
+registry is [`diagnostic_codes.md`](diagnostic_codes.md).
 
 `str(error)` and `error.format_diagnostic(color=False)` render a
 compiler-style diagnostic:

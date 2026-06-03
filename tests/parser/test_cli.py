@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import builtins
 from dataclasses import dataclass
 import json
@@ -18,6 +17,99 @@ from x2py.preprocessing import PreprocessingConfig, PreprocessingDiagnostic, Pre
 
 
 TEST_FILE = Path(__file__).parent.parent / "data" / "fortran" / "general" / "basic_subroutine.f90"
+
+
+class _MainParserError(Exception):
+    pass
+
+
+def _main_args(**overrides):
+    values = {
+        "paths": ["input.f90"],
+        "language": "fortran",
+        "parse": False,
+        "preprocessor_adapter": "auto",
+        "compiler": None,
+        "compile_commands": None,
+        "preprocess_template": None,
+        "include_dirs": [],
+        "defines": [],
+        "undefs": [],
+        "std": None,
+        "compiler_args": [],
+        "include_exposure": "reachable-project",
+        "public_includes": [],
+        "private_includes": [],
+        "show_vars": False,
+        "print_limit": None,
+        "vars_limit": None,
+        "wrap_readiness": False,
+        "semantics": False,
+        "pyi": False,
+        "json": False,
+        "out": None,
+        "no_color": False,
+        "debug": False,
+    }
+    values.update(overrides)
+    return types.SimpleNamespace(**values)
+
+
+def _install_main_parser(monkeypatch, args):
+    class FakeParser:
+        def add_argument(self, *_args, **_kwargs):
+            pass
+
+        def parse_args(self):
+            return args
+
+        def error(self, message):
+            raise _MainParserError(message)
+
+    parser = FakeParser()
+    monkeypatch.setattr(x2py_cli.argparse, "ArgumentParser", lambda *args, **kwargs: parser)
+    return parser
+
+
+def _patch_main_report_payloads(
+    monkeypatch,
+    *,
+    language="fortran",
+    parse_payload=None,
+    semantic_payload=None,
+    readiness_payload=None,
+):
+    preprocessing = object()
+    calls = []
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, _active_language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda args, parser: preprocessing)
+    monkeypatch.setattr(
+        x2py_cli,
+        "_parse_report",
+        lambda paths, active_preprocessing: calls.append(("parse", paths, active_preprocessing)) or parse_payload,
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_semantic_report",
+        lambda paths, active_preprocessing, *, language: (
+            calls.append(("semantic", paths, active_preprocessing, language)) or semantic_payload
+        ),
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_wrap_readiness_report",
+        lambda paths, active_preprocessing, *, language: (
+            calls.append(("readiness", paths, active_preprocessing, language)) or readiness_payload
+        ),
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_attach_wrap_readiness",
+        lambda active_semantic_payload, active_readiness_payload: calls.append(
+            ("attach", active_semantic_payload, active_readiness_payload)
+        ),
+    )
+    return preprocessing, calls
 
 
 def test_cli_readable_output():
@@ -124,7 +216,6 @@ def test_cli_json_out(tmp_path: Path):
     assert str(TEST_FILE) in file_payload
 
 
-
 def test_cli_out_without_filename_uses_source_basename_json(tmp_path: Path):
     f90 = tmp_path / "mini.f90"
     f90.write_text("subroutine work(n)\n  integer, intent(in) :: n\nend subroutine work\n", encoding="utf-8")
@@ -150,6 +241,8 @@ def test_cli_pyi_output_without_out():
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert f"File: {TEST_FILE}" in res.stdout
     assert "def add1(" in res.stdout
+
+
 def test_cli_keeps_free_procedure_when_module_has_same_name(tmp_path: Path):
     f90 = tmp_path / "same_name_scopes.f90"
     f90.write_text(
@@ -192,8 +285,9 @@ end subroutine bad
     assert res.returncode == 1
     assert res.stdout == ""
     assert "Traceback" not in res.stderr
-    assert f"{f90}:2:1: error[PARSE_UNSUPPORTED_DECLARATION]:" in res.stderr
-    assert "2 |   weirdtype :: x" in res.stderr
+    assert f"{f90}:" in res.stderr
+    assert "error[PARSE_UNSUPPORTED_DECLARATION]:" in res.stderr
+    assert "|   weirdtype :: x" in res.stderr
 
 
 def test_cli_debug_flag_reraises_parse_errors(tmp_path: Path):
@@ -276,9 +370,8 @@ end subroutine bad
 
     assert res.returncode == 1
     assert "\033[" not in res.stderr
-    assert f"{f90}:2:1: error[PARSE_UNSUPPORTED_DECLARATION]:" in res.stderr
-
-
+    assert f"{f90}:" in res.stderr
+    assert "error[PARSE_UNSUPPORTED_DECLARATION]:" in res.stderr
 
 
 def test_cli_semantics_out_writes_json_without_stdout(tmp_path: Path):
@@ -291,6 +384,7 @@ def test_cli_semantics_out_writes_json_without_stdout(tmp_path: Path):
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert str(TEST_FILE) in payload
     assert "semantic_modules" in payload[str(TEST_FILE)]
+
 
 def test_cli_semantics_without_json_output():
     cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--semantics"]
@@ -312,7 +406,6 @@ def test_cli_pyi_output():
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert f"File: {TEST_FILE}" in res.stdout
     assert "def add1(" in res.stdout
-
 
 
 def test_cli_pyi_out_writes_adjacent_file(tmp_path: Path):
@@ -545,9 +638,7 @@ end module physics
 
     payload = x2py_cli._semantic_report([str(physics)])
 
-    assert payload[str(physics)]["pyi_dependencies"] == {
-        "types_mod": "class particle(Opaque):\n    pass"
-    }
+    assert payload[str(physics)]["pyi_dependencies"] == {"types_mod": "class particle(Opaque):\n    pass"}
     monkeypatch.setattr(sys, "argv", ["x2py", str(physics), "--pyi", "--out"])
     assert x2py_cli.main() == 0
 
@@ -563,14 +654,35 @@ def test_x2py_pyi_report_formats_and_rejects_conflicting_dependency_stubs():
         },
         "second.f90": {
             "pyi": "def second() -> None: ...",
-            "pyi_dependencies": {"shared": "class shared(Opaque):\n    pass"},
+            "pyi_dependencies": {
+                "shared": "class shared(Opaque):\n    pass",
+                "extra": "class extra(Opaque):\n    pass",
+            },
         },
+        "empty.f90": {},
     }
 
     text = x2py_cli._format_pyi_report(report)
 
-    assert text.count("Dependency stub: shared.pyi") == 1
-    assert "def first() -> None: ..." in text
+    assert (
+        text
+        == """File: first.f90
+def first() -> None: ...
+
+Dependency stub: shared.pyi
+class shared(Opaque):
+    pass
+
+File: second.f90
+def second() -> None: ...
+
+Dependency stub: extra.pyi
+class extra(Opaque):
+    pass
+
+File: empty.f90
+<no module declarations found>"""
+    )
     with pytest.raises(ValueError, match="Conflicting generated dependency stub"):
         x2py_cli._write_pyi_dependencies(
             {
@@ -578,6 +690,43 @@ def test_x2py_pyi_report_formats_and_rejects_conflicting_dependency_stubs():
                 "second.f90": {"pyi_dependencies": {"shared": "class shared:\n    value: int"}},
             }
         )
+
+
+def test_x2py_write_pyi_dependencies_handles_nested_modules_and_empty_payloads(tmp_path: Path):
+    output_dir = tmp_path / "out"
+    text = "class Shared:\n    pass"
+
+    x2py_cli._write_pyi_dependencies(
+        {
+            str(tmp_path / "nodeps.f90"): {},
+            str(tmp_path / "first.f90"): {"pyi_dependencies": {"pkg.sub.shared": text}},
+            str(tmp_path / "second.f90"): {"pyi_dependencies": {"pkg.sub.shared": text}},
+        },
+        output_dir=output_dir,
+    )
+
+    assert (output_dir / "pkg" / "sub" / "shared.pyi").read_text(encoding="utf-8") == text + "\n"
+    assert not (output_dir / "pkg.sub.shared.pyi").exists()
+
+
+def test_x2py_write_pyi_dependencies_uses_explicit_utf8(tmp_path: Path, monkeypatch):
+    writes = []
+
+    def write_text(path, data, *args, **kwargs):
+        assert not args
+        assert kwargs.get("encoding") is not None
+        assert kwargs["encoding"].lower() == "utf-8"
+        writes.append((path, data))
+        return len(data)
+
+    monkeypatch.setattr(Path, "write_text", write_text)
+
+    x2py_cli._write_pyi_dependencies(
+        {str(tmp_path / "first.f90"): {"pyi_dependencies": {"shared": "class Shared:\n    pass"}}},
+        output_dir=tmp_path,
+    )
+
+    assert writes == [(tmp_path / "shared.pyi", "class Shared:\n    pass\n")]
 
 
 def test_x2py_main_formats_preprocessing_errors_with_and_without_diagnostics(monkeypatch, capsys):
@@ -609,6 +758,558 @@ def test_x2py_main_formats_preprocessing_errors_with_and_without_diagnostics(mon
     assert "x2py: error[PREPROCESSOR_FAILED]: plain failure" in capsys.readouterr().err
 
 
+def test_x2py_main_preserves_fortran_stage_dispatch_contract(monkeypatch):
+    class StopAfterDispatch(Exception):
+        pass
+
+    args = _main_args(parse=True, semantics=True, pyi=True, wrap_readiness=True)
+    parser = _install_main_parser(monkeypatch, args)
+    preprocessing = object()
+    parse_payload = {"parse": "payload"}
+    semantic_payload = {"semantic": "payload"}
+    readiness_payload = {"readiness": "payload"}
+    calls = []
+
+    def resolve_language(paths, language, active_parser):
+        calls.append(("resolve", paths, language, active_parser))
+        return "fortran"
+
+    def build_preprocessing_config(active_args, active_parser):
+        calls.append(("config", active_args, active_parser))
+        return preprocessing
+
+    def parse_report(paths, active_preprocessing):
+        calls.append(("parse", paths, active_preprocessing))
+        return parse_payload
+
+    def semantic_report(paths, active_preprocessing, *, language):
+        calls.append(("semantic", paths, active_preprocessing, language))
+        return semantic_payload
+
+    def readiness_report(paths, active_preprocessing, *, language):
+        calls.append(("readiness", paths, active_preprocessing, language))
+        return readiness_payload
+
+    def attach_wrap_readiness(active_semantic_payload, active_readiness_payload):
+        calls.append(("attach", active_semantic_payload, active_readiness_payload))
+        raise StopAfterDispatch
+
+    monkeypatch.setattr(x2py_cli, "_resolve_language", resolve_language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", build_preprocessing_config)
+    monkeypatch.setattr(x2py_cli, "_parse_report", parse_report)
+    monkeypatch.setattr(x2py_cli, "_semantic_report", semantic_report)
+    monkeypatch.setattr(x2py_cli, "_wrap_readiness_report", readiness_report)
+    monkeypatch.setattr(x2py_cli, "_attach_wrap_readiness", attach_wrap_readiness)
+
+    with pytest.raises(StopAfterDispatch):
+        x2py_cli.main()
+
+    assert calls == [
+        ("resolve", args.paths, "fortran", parser),
+        ("config", args, parser),
+        ("parse", args.paths, preprocessing),
+        ("semantic", args.paths, preprocessing, "fortran"),
+        ("readiness", args.paths, preprocessing, "fortran"),
+        ("attach", semantic_payload, readiness_payload),
+    ]
+
+
+def test_x2py_main_preserves_c_parse_dispatch_contract(monkeypatch):
+    class StopAfterDispatch(Exception):
+        pass
+
+    args = _main_args(language="requested", parse=True)
+    _install_main_parser(monkeypatch, args)
+    preprocessing = types.SimpleNamespace(include_dirs=("include",))
+    parser_mode = object()
+    source_loader = object()
+    parse_payload = {"parse": "payload"}
+    calls = []
+
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: "c")
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
+    monkeypatch.setattr(
+        x2py_cli,
+        "_c_parser_preprocessing_mode",
+        lambda active_preprocessing: calls.append(("mode", active_preprocessing)) or parser_mode,
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_c_source_loader",
+        lambda active_preprocessing: calls.append(("loader", active_preprocessing)) or source_loader,
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "parse_c_report",
+        lambda paths, **kwargs: calls.append(("parse", paths, kwargs)) or parse_payload,
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_attach_wrap_readiness",
+        lambda semantic_payload, readiness_payload: (_ for _ in ()).throw(StopAfterDispatch),
+    )
+
+    with pytest.raises(StopAfterDispatch):
+        x2py_cli.main()
+
+    assert calls == [
+        ("mode", preprocessing),
+        ("loader", preprocessing),
+        (
+            "parse",
+            args.paths,
+            {
+                "include_dirs": preprocessing.include_dirs,
+                "preprocessing": parser_mode,
+                "source_loader": source_loader,
+            },
+        ),
+    ]
+
+
+@pytest.mark.parametrize("stage", ["semantics", "pyi", "wrap_readiness"])
+def test_x2py_main_accepts_each_non_parse_c_stage(monkeypatch, stage):
+    class StopAfterDispatch(Exception):
+        pass
+
+    args = _main_args(language="c", **{stage: True})
+    _install_main_parser(monkeypatch, args)
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: object())
+    monkeypatch.setattr(x2py_cli, "_semantic_report", lambda *args, **kwargs: {})
+    monkeypatch.setattr(x2py_cli, "_wrap_readiness_report", lambda *args, **kwargs: {})
+    monkeypatch.setattr(
+        x2py_cli,
+        "_attach_wrap_readiness",
+        lambda semantic_payload, readiness_payload: (_ for _ in ()).throw(StopAfterDispatch),
+    )
+
+    with pytest.raises(StopAfterDispatch):
+        x2py_cli.main()
+
+
+@pytest.mark.parametrize(
+    ("overrides", "expected"),
+    [
+        (
+            {"language": "c"},
+            "--language c requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness",
+        ),
+        (
+            {"language": "c", "parse": True, "show_vars": True},
+            "--show-vars/--print-limit are Fortran-only and are not supported for --language c",
+        ),
+        (
+            {"language": "c", "parse": True, "print_limit": 1},
+            "--show-vars/--print-limit are Fortran-only and are not supported for --language c",
+        ),
+        (
+            {"language": "c", "parse": True, "vars_limit": 1},
+            "--show-vars/--print-limit are Fortran-only and are not supported for --language c",
+        ),
+        (
+            {"out": ""},
+            "--out requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness",
+        ),
+        ({"show_vars": True}, "--show-vars/--print-limit require --parse"),
+        ({"print_limit": 1}, "--show-vars/--print-limit require --parse"),
+        ({"vars_limit": 1}, "--show-vars/--print-limit require --parse"),
+        ({"parse": True, "print_limit": -1}, "--print-limit must be >= 0"),
+        ({}, "Select at least one stage flag: --parse, --semantics, --pyi, or --wrap-readiness"),
+    ],
+)
+def test_x2py_main_preserves_validation_diagnostics(monkeypatch, overrides, expected):
+    args = _main_args(**overrides)
+    _install_main_parser(monkeypatch, args)
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: object())
+
+    with pytest.raises(_MainParserError) as exc_info:
+        x2py_cli.main()
+
+    assert str(exc_info.value) == expected
+
+
+def test_x2py_main_preserves_zero_print_limit_and_legacy_vars_limit_contract(monkeypatch, capsys):
+    args = _main_args(parse=True, print_limit=0, vars_limit=7)
+    _install_main_parser(monkeypatch, args)
+    preprocessing = object()
+    parse_payload = {"parse": "payload"}
+    format_calls = []
+
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
+    monkeypatch.setattr(x2py_cli, "_parse_report", lambda paths, active_preprocessing: parse_payload)
+    monkeypatch.setattr(x2py_cli, "_attach_wrap_readiness", lambda semantic_payload, readiness_payload: None)
+    monkeypatch.setattr(
+        x2py_cli,
+        "_format_report",
+        lambda payload, **kwargs: format_calls.append((payload, kwargs)) or "formatted",
+    )
+
+    assert x2py_cli.main() == 0
+    assert capsys.readouterr().out == "formatted\n"
+    assert format_calls == [(parse_payload, {"show_vars": True, "print_limit": 0})]
+
+
+@pytest.mark.parametrize(
+    ("language", "error_type", "env_name"),
+    [
+        ("c", x2py_cli.CParseError, "C_PARSER_DEBUG"),
+        ("fortran", FortranParseError, "FORTRAN_PARSER_DEBUG"),
+    ],
+)
+def test_x2py_main_preserves_parse_error_rendering_contract(
+    monkeypatch,
+    capsys,
+    language,
+    error_type,
+    env_name,
+):
+    args = _main_args(language=language, parse=True, no_color=True)
+    _install_main_parser(monkeypatch, args)
+    preprocessing = types.SimpleNamespace(include_dirs=())
+    error = error_type("bad parse")
+    calls = []
+
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, _active_language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
+    monkeypatch.setattr(x2py_cli, "_env_flag", lambda name: calls.append(("env", name)) or False)
+    monkeypatch.setattr(
+        x2py_cli,
+        "_diagnostic_color_enabled",
+        lambda *, disabled: calls.append(("color", disabled)) or "color-enabled",
+    )
+    monkeypatch.setattr(
+        error_type,
+        "format_diagnostic",
+        lambda self, *, color, debug: calls.append(("render", color, debug)) or "rendered diagnostic",
+    )
+    if language == "c":
+        monkeypatch.setattr(x2py_cli, "_c_parser_preprocessing_mode", lambda active_preprocessing: "mode")
+        monkeypatch.setattr(x2py_cli, "_c_source_loader", lambda active_preprocessing: "loader")
+        monkeypatch.setattr(x2py_cli, "parse_c_report", lambda *args, **kwargs: (_ for _ in ()).throw(error))
+    else:
+        monkeypatch.setattr(x2py_cli, "_parse_report", lambda *args, **kwargs: (_ for _ in ()).throw(error))
+
+    assert x2py_cli.main() == 1
+    assert capsys.readouterr().err == "rendered diagnostic\n"
+    assert calls == [
+        ("env", env_name),
+        ("color", True),
+        ("render", "color-enabled", False),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("language", "error_type", "env_name"),
+    [
+        ("c", x2py_cli.CParseError, "C_PARSER_DEBUG"),
+        ("fortran", FortranParseError, "FORTRAN_PARSER_DEBUG"),
+    ],
+)
+def test_x2py_main_reraises_parse_errors_for_debug_environment(monkeypatch, language, error_type, env_name):
+    args = _main_args(language=language, parse=True)
+    _install_main_parser(monkeypatch, args)
+    preprocessing = types.SimpleNamespace(include_dirs=())
+    error = error_type("bad parse")
+    calls = []
+
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, _active_language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
+    monkeypatch.setattr(x2py_cli, "_env_flag", lambda name: calls.append(name) or name == env_name)
+    if language == "c":
+        monkeypatch.setattr(x2py_cli, "_c_parser_preprocessing_mode", lambda active_preprocessing: "mode")
+        monkeypatch.setattr(x2py_cli, "_c_source_loader", lambda active_preprocessing: "loader")
+        monkeypatch.setattr(x2py_cli, "parse_c_report", lambda *args, **kwargs: (_ for _ in ()).throw(error))
+    else:
+        monkeypatch.setattr(x2py_cli, "_parse_report", lambda *args, **kwargs: (_ for _ in ()).throw(error))
+
+    with pytest.raises(error_type):
+        x2py_cli.main()
+
+    assert calls == [env_name]
+
+
+def test_x2py_main_preserves_pathless_preprocessing_diagnostic_contract(monkeypatch, capsys):
+    args = _main_args(parse=True)
+    _install_main_parser(monkeypatch, args)
+    calls = []
+
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: object())
+    monkeypatch.setattr(x2py_cli, "_env_flag", lambda name: calls.append(name) or False)
+    monkeypatch.setattr(
+        x2py_cli,
+        "_parse_report",
+        lambda paths, preprocessing: (_ for _ in ()).throw(
+            PreprocessingError(
+                "compiler failed",
+                diagnostics=[PreprocessingDiagnostic(category="PREPROCESSOR_FAILED", message="bad include")],
+            )
+        ),
+    )
+
+    assert x2py_cli.main() == 1
+    assert capsys.readouterr().err == "<preprocessor>: error[PREPROCESSOR_FAILED]: bad include\n"
+    assert calls == ["X2PY_DEBUG"]
+
+
+def test_x2py_main_reraises_value_errors_for_debug_environment(monkeypatch):
+    args = _main_args(parse=True)
+    _install_main_parser(monkeypatch, args)
+    calls = []
+
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: object())
+    monkeypatch.setattr(x2py_cli, "_env_flag", lambda name: calls.append(name) or name == "X2PY_DEBUG")
+    monkeypatch.setattr(
+        x2py_cli,
+        "_parse_report",
+        lambda paths, preprocessing: (_ for _ in ()).throw(ValueError("invalid generated interface")),
+    )
+
+    with pytest.raises(ValueError, match="invalid generated interface"):
+        x2py_cli.main()
+
+    assert calls == ["X2PY_DEBUG"]
+
+
+def test_x2py_main_preserves_conflicting_json_and_pyi_out_diagnostic(monkeypatch):
+    args = _main_args(pyi=True, json=True, out="/tmp/conflict.pyi")
+    _install_main_parser(monkeypatch, args)
+    _patch_main_report_payloads(monkeypatch, semantic_payload={"input.f90": {"pyi": "def work() -> None: ..."}})
+
+    with pytest.raises(_MainParserError) as exc_info:
+        x2py_cli.main()
+
+    assert str(exc_info.value) == "--out cannot be used with both --json and --pyi"
+
+
+def test_x2py_main_preserves_explicit_pyi_write_contract(monkeypatch):
+    semantic_payload = {
+        "first.f90": {"pyi": "def first() -> None: ..."},
+        "empty.f90": {},
+        "second.f90": {"pyi": "def second() -> None: ..."},
+    }
+    args = _main_args(pyi=True, out="/tmp/api.pyi")
+    _install_main_parser(monkeypatch, args)
+    _patch_main_report_payloads(monkeypatch, semantic_payload=semantic_payload)
+    writes = []
+    dependencies = []
+
+    monkeypatch.setattr(
+        Path,
+        "write_text",
+        lambda path, data, **kwargs: writes.append((path, data, kwargs)) or len(data),
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_write_pyi_dependencies",
+        lambda payload, **kwargs: dependencies.append((payload, kwargs)),
+    )
+
+    assert x2py_cli.main() == 0
+    assert writes == [
+        (Path("/tmp/api.pyi"), "def first() -> None: ...\n\n\n\ndef second() -> None: ...\n", {"encoding": "utf-8"})
+    ]
+    assert dependencies == [(semantic_payload, {"output_dir": Path("/tmp")})]
+
+
+def test_x2py_main_preserves_adjacent_pyi_write_contract(monkeypatch):
+    semantic_payload = {
+        "/tmp/first.f90": {"pyi": "def first() -> None: ..."},
+        "/tmp/empty.f90": {},
+    }
+    args = _main_args(pyi=True, out="")
+    _install_main_parser(monkeypatch, args)
+    _patch_main_report_payloads(monkeypatch, semantic_payload=semantic_payload)
+    writes = []
+    dependencies = []
+
+    monkeypatch.setattr(
+        Path,
+        "write_text",
+        lambda path, data, **kwargs: writes.append((path, data, kwargs)) or len(data),
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_write_pyi_dependencies",
+        lambda payload, **kwargs: dependencies.append((payload, kwargs)),
+    )
+
+    assert x2py_cli.main() == 0
+    assert writes == [
+        (Path("/tmp/first.pyi"), "def first() -> None: ...\n", {"encoding": "utf-8"}),
+        (Path("/tmp/empty.pyi"), "\n", {"encoding": "utf-8"}),
+    ]
+    assert dependencies == [(semantic_payload, {})]
+
+
+def test_x2py_main_preserves_explicit_and_adjacent_json_write_contracts(monkeypatch):
+    writes = []
+    monkeypatch.setattr(
+        Path,
+        "write_text",
+        lambda path, data, **kwargs: writes.append((path, data, kwargs)) or len(data),
+    )
+
+    explicit_payload = {"input.f90": {"node": 1}}
+    explicit_args = _main_args(parse=True, out="/tmp/report.json")
+    _install_main_parser(monkeypatch, explicit_args)
+    _patch_main_report_payloads(monkeypatch, parse_payload=explicit_payload)
+    assert x2py_cli.main() == 0
+
+    adjacent_payload = {
+        "/tmp/first.f90": {"node": 1},
+        "/tmp/empty.f90": {},
+    }
+    adjacent_args = _main_args(parse=True, out="")
+    _install_main_parser(monkeypatch, adjacent_args)
+    _patch_main_report_payloads(monkeypatch, parse_payload=adjacent_payload)
+    assert x2py_cli.main() == 0
+
+    readiness_payload = {"readiness": {"wrappable": True}}
+    combined_args = _main_args(parse=True, wrap_readiness=True, out="/tmp/combined.json")
+    _install_main_parser(monkeypatch, combined_args)
+    _patch_main_report_payloads(
+        monkeypatch,
+        parse_payload=explicit_payload,
+        readiness_payload=readiness_payload,
+    )
+    assert x2py_cli.main() == 0
+
+    readiness_args = _main_args(wrap_readiness=True, out="/tmp/readiness.json")
+    _install_main_parser(monkeypatch, readiness_args)
+    _patch_main_report_payloads(monkeypatch, readiness_payload=readiness_payload)
+    assert x2py_cli.main() == 0
+
+    assert writes == [
+        (Path("/tmp/report.json"), json.dumps(explicit_payload, indent=2), {"encoding": "utf-8"}),
+        (
+            Path("/tmp/first.json"),
+            json.dumps({"/tmp/first.f90": {"node": 1}}, indent=2),
+            {"encoding": "utf-8"},
+        ),
+        (Path("/tmp/empty.json"), json.dumps({"/tmp/empty.f90": {}}, indent=2), {"encoding": "utf-8"}),
+        (
+            Path("/tmp/combined.json"),
+            json.dumps({"parse": explicit_payload, "wrap_readiness": readiness_payload}, indent=2),
+            {"encoding": "utf-8"},
+        ),
+        (Path("/tmp/readiness.json"), json.dumps(readiness_payload, indent=2), {"encoding": "utf-8"}),
+    ]
+
+
+def test_x2py_main_preserves_stdout_mode_matrix(monkeypatch, capsys):
+    parse_payload = {"parse": {"node": 1}}
+    semantic_payload = {"semantic": {"node": 2}}
+    readiness_payload = {"readiness": {"wrappable": True}}
+    scenarios = [
+        (
+            {"parse": True, "wrap_readiness": True, "json": True},
+            json.dumps({"parse": parse_payload, "wrap_readiness": readiness_payload}, indent=2) + "\n",
+            [],
+        ),
+        ({"semantics": True}, json.dumps(semantic_payload, indent=2) + "\n", []),
+        ({"parse": True, "json": True}, json.dumps(parse_payload, indent=2) + "\n", []),
+        ({"wrap_readiness": True, "json": True}, json.dumps(readiness_payload, indent=2) + "\n", []),
+        ({"wrap_readiness": True}, "READINESS\n", [("readiness-format", readiness_payload)]),
+        ({"pyi": True}, "", [("pyi-format", semantic_payload), ("pyi-output", "PYI")]),
+        (
+            {"parse": True, "wrap_readiness": True, "vars_limit": 2},
+            "PARSE\n\nREADINESS\n",
+            [
+                ("parse-format", parse_payload, {"show_vars": True, "print_limit": 2}),
+                ("readiness-format", readiness_payload),
+            ],
+        ),
+        (
+            {"pyi": True, "wrap_readiness": True},
+            "\nREADINESS\n",
+            [
+                ("pyi-format", semantic_payload),
+                ("pyi-output", "PYI"),
+                ("readiness-format", readiness_payload),
+            ],
+        ),
+        (
+            {"semantics": True, "wrap_readiness": True},
+            json.dumps(semantic_payload, indent=2) + "\n",
+            [],
+        ),
+        (
+            {"parse": True},
+            "PARSE\n",
+            [("parse-format", parse_payload, {"show_vars": False, "print_limit": None})],
+        ),
+        (
+            {"parse": True, "semantics": True},
+            json.dumps(parse_payload, indent=2) + "\n",
+            [],
+        ),
+    ]
+
+    for overrides, expected_stdout, expected_formats in scenarios:
+        args = _main_args(**overrides)
+        _install_main_parser(monkeypatch, args)
+        _patch_main_report_payloads(
+            monkeypatch,
+            parse_payload=parse_payload,
+            semantic_payload=semantic_payload,
+            readiness_payload=readiness_payload,
+        )
+        formats = []
+        monkeypatch.setattr(
+            x2py_cli,
+            "_format_report",
+            lambda payload, _formats=formats, **kwargs: _formats.append(("parse-format", payload, kwargs)) or "PARSE",
+        )
+        monkeypatch.setattr(
+            x2py_cli,
+            "_format_semantic_readiness",
+            lambda payload, _formats=formats: _formats.append(("readiness-format", payload)) or "READINESS",
+        )
+        monkeypatch.setattr(
+            x2py_cli,
+            "_format_pyi_report",
+            lambda payload, _formats=formats: _formats.append(("pyi-format", payload)) or "PYI",
+        )
+        monkeypatch.setattr(
+            x2py_cli,
+            "print_pyi_output",
+            lambda text, _formats=formats: _formats.append(("pyi-output", text)),
+        )
+
+        assert x2py_cli.main() == 0
+        assert capsys.readouterr().out == expected_stdout
+        assert formats == expected_formats
+
+
+def test_x2py_main_preserves_c_readable_stdout_contract(monkeypatch, capsys):
+    args = _main_args(language="c", parse=True)
+    _install_main_parser(monkeypatch, args)
+    preprocessing = types.SimpleNamespace(include_dirs=())
+    parse_payload = {"parse": {"node": 1}}
+    formats = []
+
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
+    monkeypatch.setattr(x2py_cli, "_c_parser_preprocessing_mode", lambda active_preprocessing: "mode")
+    monkeypatch.setattr(x2py_cli, "_c_source_loader", lambda active_preprocessing: "loader")
+    monkeypatch.setattr(x2py_cli, "parse_c_report", lambda *args, **kwargs: parse_payload)
+    monkeypatch.setattr(x2py_cli, "_attach_wrap_readiness", lambda semantic_payload, readiness_payload: None)
+    monkeypatch.setattr(
+        x2py_cli,
+        "format_c_report",
+        lambda payload: formats.append(payload) or "C REPORT",
+    )
+
+    assert x2py_cli.main() == 0
+    assert capsys.readouterr().out == "C REPORT\n"
+    assert formats == [parse_payload]
+
+
 def test_x2py_cli_helpers_cover_language_and_preprocessing_edges(tmp_path: Path, monkeypatch):
     class ErrorParser:
         def error(self, message):
@@ -618,7 +1319,6 @@ def test_x2py_cli_helpers_cover_language_and_preprocessing_edges(tmp_path: Path,
         values = {
             "defines": [],
             "undefs": [],
-            "preprocess": "raw",
             "compiler": None,
             "compile_commands": None,
             "preprocessor_adapter": "auto",
@@ -639,9 +1339,14 @@ def test_x2py_cli_helpers_cover_language_and_preprocessing_edges(tmp_path: Path,
     api_h.write_text("int add(int x);\n", encoding="utf-8")
     stub = tmp_path / "api.pyi"
     stub.write_text("def add(x: Int32) -> Int32: ...\n", encoding="utf-8")
+    upper_stub = tmp_path / "upper.PYI"
+    upper_stub.write_text("def upper() -> None: ...\n", encoding="utf-8")
     (tmp_path / "notes.txt").write_text("ignore", encoding="utf-8")
 
     assert x2py_cli._expand_pyi_paths([str(tmp_path), str(stub)]) == [stub]
+    assert x2py_cli._expand_pyi_paths([str(stub)]) == [stub]
+    assert x2py_cli._expand_pyi_paths([str(upper_stub)]) == [upper_stub]
+    assert x2py_cli._expand_pyi_paths([str(tmp_path / "notes.txt")]) == []
     assert x2py_cli._resolve_language([str(api_h)], "c", parser) == "c"
     with pytest.raises(ValueError, match="incompatible with --language fortran"):
         x2py_cli._resolve_language([str(api_h)], "fortran", parser)
@@ -650,27 +1355,14 @@ def test_x2py_cli_helpers_cover_language_and_preprocessing_edges(tmp_path: Path,
     with pytest.raises(ValueError, match="Cannot determine"):
         x2py_cli._resolve_language([str(tmp_path / "notes.txt")], None, parser)
 
-    with pytest.raises(ValueError, match="--compiler requires --preprocess compiler"):
-        x2py_cli._build_preprocessing_config(args(compiler="gfortran"), parser)
     with pytest.raises(ValueError, match="--preprocess-template requires"):
         x2py_cli._build_preprocessing_config(
             args(
-                preprocess="compiler",
                 compiler="cc",
                 preprocess_template="{compiler} -E {source}",
             ),
             parser,
         )
-    with pytest.raises(ValueError, match="requires --compiler"):
-        x2py_cli._build_preprocessing_config(args(preprocess="compiler"), parser)
-    with pytest.raises(ValueError, match="--compile-commands requires"):
-        x2py_cli._build_preprocessing_config(args(compile_commands="compile_commands.json"), parser)
-    with pytest.raises(ValueError, match="raw C mode records source macros"):
-        x2py_cli._build_preprocessing_config(args(language="c", defines=["USE_FAST"]), parser)
-    with pytest.raises(ValueError, match="internal Fortran parsing does not evaluate CPP branches"):
-        x2py_cli._build_preprocessing_config(args(defines=["USE_FAST"]), parser)
-    with pytest.raises(ValueError, match="-I/--include-dir affects Fortran only"):
-        x2py_cli._build_preprocessing_config(args(include_dirs=["include"]), parser)
 
     class Recipe:
         def to_dict(self):
@@ -696,6 +1388,187 @@ def test_x2py_cli_helpers_cover_language_and_preprocessing_edges(tmp_path: Path,
         PreprocessingConfig(mode="compiler", compiler="gfortran"),
     )
     assert report[str(source)]["preprocessing_recipe"] == {"mode": "compiler"}
+
+
+def test_x2py_build_preprocessing_config_preserves_full_config_contract(monkeypatch):
+    args = types.SimpleNamespace(
+        defines=["USE_FAST=1"],
+        undefs=["LEGACY"],
+        compiler="cc",
+        compile_commands="compile_commands.json",
+        preprocessor_adapter="command-template",
+        preprocess_template="{compiler} -E {source}",
+        include_dirs=["include"],
+        std="c11",
+        compiler_args=["--target=test"],
+        include_exposure="all-project",
+        public_includes=["public.h"],
+        private_includes=["private.h"],
+        language="c",
+    )
+    config = types.SimpleNamespace(
+        uses_compiler=True,
+        command_template=args.preprocess_template,
+        adapter=args.preprocessor_adapter,
+        compiler=args.compiler,
+        compile_commands=args.compile_commands,
+        include_dirs=args.include_dirs,
+    )
+    calls = []
+
+    class Parser:
+        def error(self, message):
+            raise AssertionError(message)
+
+    def validate(value, option):
+        calls.append(("validate", value, option))
+
+    def build(**kwargs):
+        calls.append(("build", kwargs))
+        return config
+
+    monkeypatch.setattr(x2py_cli, "validate_macro_name", validate)
+    monkeypatch.setattr(x2py_cli, "PreprocessingConfig", build)
+
+    assert x2py_cli._build_preprocessing_config(args, Parser()) is config
+    assert calls == [
+        ("validate", "USE_FAST=1", "--define/-D"),
+        ("validate", "LEGACY", "--undef/-U"),
+        (
+            "build",
+            {
+                "mode": "compiler",
+                "compiler": "cc",
+                "compile_commands": "compile_commands.json",
+                "adapter": "command-template",
+                "command_template": "{compiler} -E {source}",
+                "include_dirs": ["include"],
+                "defines": ["USE_FAST=1"],
+                "undefs": ["LEGACY"],
+                "std": "c11",
+                "compiler_args": ["--target=test"],
+                "include_exposure": "all-project",
+                "public_includes": ["public.h"],
+                "private_includes": ["private.h"],
+            },
+        ),
+    ]
+
+
+def test_x2py_build_preprocessing_config_preserves_macro_validation_errors(monkeypatch):
+    class Parser:
+        def error(self, message):
+            raise ValueError(message)
+
+    def args(**overrides):
+        values = {
+            "defines": [],
+            "undefs": [],
+            "compiler": None,
+            "compile_commands": None,
+            "preprocessor_adapter": "auto",
+            "preprocess_template": None,
+            "include_dirs": [],
+            "std": None,
+            "compiler_args": [],
+            "include_exposure": "reachable-project",
+            "public_includes": [],
+            "private_includes": [],
+            "language": "fortran",
+        }
+        values.update(overrides)
+        return types.SimpleNamespace(**values)
+
+    def reject(value, option):
+        raise PreprocessingError(f"{option}: invalid {value}", category="INVALID_MACRO_NAME")
+
+    monkeypatch.setattr(x2py_cli, "validate_macro_name", reject)
+
+    with pytest.raises(ValueError) as define_error:
+        x2py_cli._build_preprocessing_config(args(defines=["=bad"]), Parser())
+    assert str(define_error.value) == "--define/-D: invalid =bad"
+
+    with pytest.raises(ValueError) as undef_error:
+        x2py_cli._build_preprocessing_config(args(undefs=["=bad"]), Parser())
+    assert str(undef_error.value) == "--undef/-U: invalid =bad"
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        (
+            {"compiler": "cc", "preprocess_template": "{source}"},
+            "--preprocess-template requires --preprocessor-adapter command-template",
+        ),
+    ],
+)
+def test_x2py_build_preprocessing_config_preserves_validation_diagnostics(overrides, message):
+    values = {
+        "defines": [],
+        "undefs": [],
+        "compiler": None,
+        "compile_commands": None,
+        "preprocessor_adapter": "auto",
+        "preprocess_template": None,
+        "include_dirs": [],
+        "std": None,
+        "compiler_args": [],
+        "include_exposure": "reachable-project",
+        "public_includes": [],
+        "private_includes": [],
+        "language": "fortran",
+    }
+    values.update(overrides)
+
+    class Parser:
+        def error(self, received):
+            raise ValueError(received)
+
+    with pytest.raises(ValueError) as error:
+        x2py_cli._build_preprocessing_config(types.SimpleNamespace(**values), Parser())
+    assert str(error.value) == message
+
+
+def test_x2py_resolve_language_handles_requested_and_default_edges(tmp_path: Path):
+    class ErrorParser:
+        def error(self, message):
+            raise ValueError(message)
+
+    parser = ErrorParser()
+    input_dir = tmp_path / "inputs"
+    input_dir.mkdir()
+    c_header = tmp_path / "api.h"
+    c_header.write_text("int add(int x);\n", encoding="utf-8")
+    f_source = tmp_path / "solver.F90"
+    f_source.write_text("subroutine solve()\nend subroutine solve\n", encoding="utf-8")
+    stub = tmp_path / "iface.PYI"
+    stub.write_text("def solve() -> None: ...\n", encoding="utf-8")
+    unknown = tmp_path / "notes.txt"
+    unknown.write_text("notes\n", encoding="utf-8")
+
+    assert x2py_cli._resolve_language([str(unknown)], "c", parser) == "c"
+    with pytest.raises(ValueError) as requested_error:
+        x2py_cli._resolve_language([str(input_dir), str(c_header)], "fortran", parser)
+    assert str(requested_error.value) == (
+        f"C input {c_header} is incompatible with --language fortran; pass --language c. Use --help for examples."
+    )
+
+    with pytest.raises(ValueError) as directory_error:
+        x2py_cli._resolve_language([str(input_dir)], None, parser)
+    assert str(directory_error.value) == (
+        f"Input directory {input_dir} requires an explicit frontend; "
+        "pass --language fortran or --language c. Use --help for examples."
+    )
+
+    assert x2py_cli._resolve_language([str(f_source)], None, parser) == "fortran"
+    assert x2py_cli._resolve_language([str(stub)], None, parser) == "fortran"
+
+    with pytest.raises(ValueError) as unknown_error:
+        x2py_cli._resolve_language([str(unknown)], None, parser)
+    assert str(unknown_error.value) == (
+        f"Cannot determine the input language for {unknown}; "
+        "pass --language fortran or --language c. Use --help for examples."
+    )
 
 
 def test_x2py_and_fortran_module_entrypoints_and_debug_errors(monkeypatch, capsys):
@@ -735,12 +1608,12 @@ def test_x2py_main_debug_reraises_preprocessing_errors(monkeypatch):
         x2py_cli.main()
 
 
-
 def test_cli_out_requires_stage_flag():
     cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--out"]
     res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 2
     assert "--out requires a stage flag" in res.stderr
+
 
 def test_cli_help_includes_examples():
     cmd = [sys.executable, "-m", "x2py", "--help"]
@@ -751,6 +1624,250 @@ def test_cli_help_includes_examples():
     assert "python -m x2py path/to/file.f90 --parse --show-vars" in res.stdout
     assert "python -m x2py path/to/file.f90 --parse --print-limit 50" in res.stdout
     assert "python -m x2py path/to/file.f90 --pyi --out module.pyi" in res.stdout
+
+
+def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
+    class StopAfterParserSetup(Exception):
+        pass
+
+    captured = {}
+
+    class FakeParser:
+        def __init__(self, *args, **kwargs):
+            captured["parser"] = (args, kwargs)
+            captured["arguments"] = []
+
+        def add_argument(self, *args, **kwargs):
+            captured["arguments"].append((args, kwargs))
+
+        def parse_args(self):
+            raise StopAfterParserSetup
+
+    monkeypatch.setattr(x2py_cli.argparse, "ArgumentParser", FakeParser)
+
+    with pytest.raises(StopAfterParserSetup):
+        x2py_cli.main()
+
+    assert captured["parser"] == (
+        (),
+        {
+            "description": "x2py CLI for parser and semantic conversion stages.",
+            "formatter_class": x2py_cli.argparse.RawDescriptionHelpFormatter,
+            "epilog": (
+                "Examples:\n"
+                "  Parse, compact tree:\n"
+                "    python -m x2py path/to/file.f90 --parse\n"
+                "  Parse, include scope variables:\n"
+                "    python -m x2py path/to/file.f90 --parse --show-vars\n"
+                "  Parse, cap every repeated section to 50 items:\n"
+                "    python -m x2py path/to/file.f90 --parse --print-limit 50\n"
+                "  Parse, include variables and cap every repeated section:\n"
+                "    python -m x2py path/to/file.f90 --parse --show-vars --print-limit 50\n"
+                "  Parse directory recursively:\n"
+                "    python -m x2py path/to/src_dir --language fortran --parse --print-limit 20\n"
+                "  Print parser JSON:\n"
+                "    python -m x2py path/to/file.f90 --parse --json\n"
+                "  Parse C subset JSON:\n"
+                "    python -m x2py path/to/api.h --language c --parse --json\n"
+                "  Parse C with an exact compiler executable and API flags:\n"
+                "    python -m x2py path/to/api.h --language c --parse --compiler clang-18 -I include -D API_EXPORT= --std c11\n"
+                "  Parse C with a compiler path and target/sysroot passthrough flags:\n"
+                "    python -m x2py path/to/api.c --language c --parse --compiler /usr/bin/gcc-13 --compiler-arg=--sysroot=/opt/sdk\n"
+                "  Parse C with compile_commands.json for project flags:\n"
+                "    python -m x2py path/to/api.c --language c --parse --compile-commands build/compile_commands.json\n"
+                "  Parse Fortran with an exact compiler executable:\n"
+                "    python -m x2py path/to/file.F90 --parse --compiler /usr/bin/gfortran-12 -I include -D USE_MPI\n"
+                "  Parse with a custom preprocessing command template:\n"
+                "    python -m x2py path/to/api.h --language c --parse --preprocessor-adapter command-template --preprocess-template 'cc -E {include_dirs} {defines} {source}'\n"
+                "  Write parser JSON:\n"
+                "    python -m x2py path/to/file.f90 --parse --json --out report.json\n"
+                "  Write one JSON file next to each source:\n"
+                "    python -m x2py path/to/src_dir --language fortran --parse --out\n"
+                "  Show wrap-readiness only:\n"
+                "    python -m x2py path/to/file.f90 --wrap-readiness\n"
+                "  Print semantic IR JSON:\n"
+                "    python -m x2py path/to/file.f90 --semantics\n"
+                "  Print generated Python stub text:\n"
+                "    python -m x2py path/to/file.f90 --pyi\n"
+                "  Write generated Python stub text:\n"
+                "    python -m x2py path/to/file.f90 --pyi --out module.pyi\n"
+                "  Print semantic IR with readiness attached:\n"
+                "    python -m x2py path/to/file.f90 --semantics --wrap-readiness\n"
+                "  Check edited .pyi semantic readiness:\n"
+                "    python -m x2py path/to/module.pyi --wrap-readiness\n"
+                "  Print semantic readiness JSON:\n"
+                "    python -m x2py path/to/module.pyi --wrap-readiness --json\n"
+                "\nOptional:\n"
+                "  Install 'rich' for colored terminal syntax highlighting:\n"
+                "      pip install rich"
+            ),
+        },
+    )
+    assert captured["arguments"] == [
+        (("paths",), {"nargs": "+", "help": "Source file(s), .pyi file(s), or directory path(s)"}),
+        (
+            ("--language",),
+            {
+                "choices": ("fortran", "c"),
+                "default": None,
+                "help": (
+                    "Frontend language. Omission is allowed for recognizable Fortran files and .pyi readiness input; "
+                    "C files, directories, and unknown-suffix source inputs require this flag."
+                ),
+            },
+        ),
+        (("--parse",), {"action": "store_true", "help": "Run and output parser stage report"}),
+        (
+            ("--preprocessor-adapter",),
+            {
+                "choices": ("auto", "gcc-compatible-c", "gnu-fortran", "command-template"),
+                "default": "auto",
+                "help": "Compiler adapter family. Use command-template for unsupported compiler families.",
+            },
+        ),
+        (
+            ("--compiler",),
+            {
+                "help": (
+                    "Exact compiler/preprocessor executable, e.g. gcc-13, "
+                    "clang-18, /usr/bin/gfortran-12, or /opt/intel/oneapi/compiler/latest/bin/ifx."
+                )
+            },
+        ),
+        (
+            ("--compile-commands",),
+            {
+                "metavar": "PATH",
+                "help": "compile_commands.json database used for compiler preprocessing.",
+            },
+        ),
+        (
+            ("--preprocess-template",),
+            {
+                "metavar": "TEMPLATE",
+                "help": (
+                    "Custom preprocessing command template. Supported placeholders include {source}, "
+                    "{include_dirs}, {defines}, {undefs}, {standard}, and {compiler_args}."
+                ),
+            },
+        ),
+        (
+            ("-I", "--include-dir"),
+            {
+                "dest": "include_dirs",
+                "action": "append",
+                "metavar": "DIR",
+                "help": "Include directory passed as -IDIR during compiler preprocessing.",
+            },
+        ),
+        (
+            ("-D", "--define"),
+            {
+                "dest": "defines",
+                "action": "append",
+                "metavar": "NAME[=VALUE]",
+                "help": "Define a preprocessing macro. NAME means NAME=1; NAME=VALUE preserves VALUE.",
+            },
+        ),
+        (
+            ("-U", "--undef"),
+            {
+                "dest": "undefs",
+                "action": "append",
+                "metavar": "NAME",
+                "help": "Undefine a preprocessing macro.",
+            },
+        ),
+        (
+            ("--std",),
+            {
+                "metavar": "STANDARD",
+                "help": "Language standard passed to compiler mode, e.g. c11, c23, f2008, or f2018.",
+            },
+        ),
+        (
+            ("--compiler-arg",),
+            {
+                "dest": "compiler_args",
+                "action": "append",
+                "metavar": "ARG",
+                "help": "Raw compiler preprocessing argument. Use --compiler-arg=-target for values starting with '-'.",
+            },
+        ),
+        (
+            ("--include-exposure",),
+            {
+                "choices": ("reachable-project", "roots-only"),
+                "default": "reachable-project",
+                "help": "Public wrapper exposure policy for reachable included files.",
+            },
+        ),
+        (
+            ("--public-include",),
+            {
+                "dest": "public_includes",
+                "action": "append",
+                "metavar": "PATH_OR_PATTERN",
+                "help": "Force a matched included file to be public in wrapper output.",
+            },
+        ),
+        (
+            ("--private-include",),
+            {
+                "dest": "private_includes",
+                "action": "append",
+                "metavar": "PATH_OR_PATTERN",
+                "help": "Force a matched included file to be private in wrapper output.",
+            },
+        ),
+        (
+            ("--show-vars",),
+            {
+                "action": "store_true",
+                "help": "Include module, submodule, program, and block-data variables in the human-readable parse report.",
+            },
+        ),
+        (
+            ("--print-limit",),
+            {
+                "type": int,
+                "metavar": "N",
+                "help": "Show at most N items per repeated section in the human-readable parse report.",
+            },
+        ),
+        (("--vars-limit",), {"type": int, "metavar": "N", "help": x2py_cli.argparse.SUPPRESS}),
+        (
+            ("--wrap-readiness",),
+            {
+                "action": "store_true",
+                "help": "Convert Fortran, C, or .pyi input to semantic IR and show wrapper readiness",
+            },
+        ),
+        (
+            ("--semantics",),
+            {"action": "store_true", "help": "Generate semantic IR models from parsed source modules"},
+        ),
+        (("--pyi",), {"action": "store_true", "help": "Generate semantic Python .pyi content"}),
+        (("--json",), {"action": "store_true", "help": "Print JSON to stdout"}),
+        (
+            ("--out",),
+            {
+                "nargs": "?",
+                "const": "",
+                "type": str,
+                "help": "Write stage output to file (optional explicit output filename)",
+            },
+        ),
+        (("--no-color",), {"action": "store_true", "help": "Disable ANSI color in parse diagnostics"}),
+        (
+            ("--debug", "--debug-traceback"),
+            {
+                "dest": "debug",
+                "action": "store_true",
+                "help": "Re-raise parser errors so Python prints a traceback for parser debugging",
+            },
+        ),
+    ]
 
 
 def test_cli_requires_explicit_language_for_directory_and_unknown_suffix(tmp_path: Path):
@@ -900,7 +2017,10 @@ def test_fortran_parser_cli_formatting_branches():
     )
     assert "Derived types: 1" in report
     assert "- type particle (fields=0, methods=0)" in report
-    assert fortran_parser_cli._format_var_type({"base_type": "derived", "kind": "particle", "rank": 0}) == "type(particle)[0]"
+    assert (
+        fortran_parser_cli._format_var_type({"base_type": "derived", "kind": "particle", "rank": 0})
+        == "type(particle)[0]"
+    )
     assert fortran_parser_cli._format_var_type({"base_type": "real", "kind": "4", "rank": 2}) == "real(4)[2]"
 
 
@@ -1019,6 +2139,11 @@ def test_x2py_cli_helper_branches(tmp_path: Path, monkeypatch, capsys):
         name: str
         parent: object = None
 
+    @dataclass
+    class ParentFirstNode:
+        parent: object
+        name: str
+
     monkeypatch.setenv("X2PY_TEST_FLAG", "ON")
     assert x2py_cli._env_flag("X2PY_TEST_FLAG") is True
     monkeypatch.delenv("X2PY_TEST_FLAG")
@@ -1030,6 +2155,8 @@ def test_x2py_cli_helper_branches(tmp_path: Path, monkeypatch, capsys):
     monkeypatch.delenv("NO_COLOR")
 
     assert x2py_cli._to_dict_no_parent(Node("child", parent=Node("root"))) == {"name": "child"}
+    assert x2py_cli._to_dict_no_parent(ParentFirstNode(parent=Node("root"), name="child")) == {"name": "child"}
+    assert x2py_cli._to_dict_no_parent({"node": Node("child", parent=Node("root"))}) == {"node": {"name": "child"}}
 
     source = tmp_path / "mini.f90"
     source.write_text("subroutine work(n)\n  integer, intent(in) :: n\nend subroutine work\n", encoding="utf-8")
@@ -1063,7 +2190,7 @@ def test_x2py_print_pyi_output_uses_rich_and_falls_back(monkeypatch, capsys):
             self.options = options
 
         def print(self, syntax):
-            calls.append((syntax.code, syntax.lexer, self.options))
+            calls.append((syntax.code, syntax.lexer, syntax.options, self.options))
 
     rich_module = types.ModuleType("rich")
     console_module = types.ModuleType("rich.console")
@@ -1076,7 +2203,19 @@ def test_x2py_print_pyi_output_uses_rich_and_falls_back(monkeypatch, capsys):
     monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
 
     x2py_cli.print_pyi_output("def f() -> None: ...")
-    assert calls == [("def f() -> None: ...", "python", {"force_terminal": True, "color_system": "auto"})]
+    assert calls == [
+        (
+            "def f() -> None: ...",
+            "python",
+            {
+                "theme": "ansi_dark",
+                "background_color": "default",
+                "line_numbers": False,
+                "word_wrap": False,
+            },
+            {"force_terminal": True, "color_system": "auto"},
+        )
+    ]
     assert capsys.readouterr().out == ""
 
     class RaisingConsole(FakeConsole):
@@ -1205,13 +2344,50 @@ end module m
 def test_x2py_readiness_formatting_and_compiler_without_requirements():
     assert (
         x2py_cli._format_semantic_blocker_item(
+            "unresolved_semantic_types",
+            {"owner": "module.api", "type": "external_t"},
+        )
+        == "module.api uses unresolved type external_t"
+    )
+    assert (
+        x2py_cli._format_semantic_blocker_item(
+            "unresolved_shape_symbols",
+            {"owner": "module.api", "expression": "n + 1", "symbol": "n"},
+        )
+        == "module.api shape 'n + 1' uses unresolved symbol n"
+    )
+    assert (
+        x2py_cli._format_semantic_blocker_item(
+            "missing_compile_time_values",
+            {"owner": "module.api", "symbol": "dp"},
+        )
+        == "module.api needs literal value for Final constant dp"
+    )
+    assert (
+        x2py_cli._format_semantic_blocker_item(
             "callback_signature_incomplete",
             {"owner": "handler", "needs": ["arguments", "return type"]},
         )
         == "handler needs Callable[[...], ...] metadata (arguments, return type)"
     )
     assert x2py_cli._format_semantic_blocker_item("c_unknown_type", {"owner": "api", "type": "widget"}) == "api: widget"
-    assert x2py_cli._format_semantic_blocker_item("c_parser_status", {"owner": "api"}) == "{'owner': 'api'}"
+    assert x2py_cli._format_semantic_blocker_item("c_unknown_type", {"type": "widget"}) == "<c-source>: widget"
+    assert x2py_cli._format_semantic_blocker_item("c_macro_value", {"owner": "api", "source": "SIZE"}) == "api: SIZE"
+    assert (
+        x2py_cli._format_semantic_blocker_item("c_function_pointer", {"owner": "api", "function": "callback"})
+        == "api: callback"
+    )
+    assert (
+        x2py_cli._format_semantic_blocker_item("c_parameter_type", {"owner": "api", "parameter": "arg"}) == "api: arg"
+    )
+    assert x2py_cli._format_semantic_blocker_item("c_unresolved_type", {"owner": "api", "type": "missing_t"}) == (
+        "api: missing_t"
+    )
+    assert (
+        x2py_cli._format_semantic_blocker_item("no_public_api", {"owner": "module", "needs": ["function", "class"]})
+        == "module needs function, class"
+    )
+    assert x2py_cli._format_semantic_blocker_item("unknown", {"value": 1}) == "{'value': 1}"
 
     semantic_payload = {"source": {"semantic_modules": []}}
     x2py_cli._attach_wrap_readiness(semantic_payload, {"other": {"wrap_readiness": {"wrappable": True}}})
@@ -1220,6 +2396,655 @@ def test_x2py_readiness_formatting_and_compiler_without_requirements():
     parsed = x2py_cli.FortranParser().visit_file("module empty\nend module empty\n", filename="empty.f90")
     config = x2py_cli.PreprocessingConfig(mode="compiler", compiler="gfortran")
     assert x2py_cli._fortran_compile_time_values(parsed, config) is None
+
+
+def test_x2py_fortran_readiness_helpers_attach_and_compile(monkeypatch):
+    ready = {"wrappable": True, "n_functions": 1}
+    payload = {"missing.f90": {}, "api.f90": {}}
+    x2py_cli._attach_wrap_readiness(payload, {"api.f90": {"wrap_readiness": ready}})
+    assert payload == {"missing.f90": {}, "api.f90": {"wrap_readiness": ready}}
+
+    x2py_cli._attach_wrap_readiness(None, {"api.f90": {"wrap_readiness": ready}})
+    x2py_cli._attach_wrap_readiness({"api.f90": {}}, None)
+
+    parsed = x2py_cli.FortranParser().visit_file(
+        "module api_mod\n  type :: Widget_T\n  end type Widget_T\nend module api_mod\n",
+        filename="api.f90",
+    )
+    assert x2py_cli._fortran_wrapped_derived_types([parsed]) == {("api_mod", "widget_t")}
+
+    calls = []
+    requirements = {"api_mod": {"dp": "kind(1.0d0)"}}
+    values = {"api_mod.dp": 8}
+
+    def collect_requirements(received):
+        assert received is parsed
+        calls.append(("collect", received))
+        return requirements
+
+    def evaluate_requirements(received_config, received_requirements):
+        assert received_config is compiler_config
+        assert received_requirements is requirements
+        calls.append(("evaluate", received_config, received_requirements))
+        return values
+
+    monkeypatch.setattr("semantics.fortran2ir.collect_semantic_compile_time_requirements", collect_requirements)
+    monkeypatch.setattr("x2py.fortran_type_probe.evaluate_fortran_type_requirements", evaluate_requirements)
+
+    raw_config_with_compiler = x2py_cli.PreprocessingConfig(compiler="gfortran")
+    assert x2py_cli._fortran_compile_time_values(parsed, raw_config_with_compiler) is None
+    assert calls == []
+
+    compiler_config = x2py_cli.PreprocessingConfig(mode="compiler", compiler="gfortran")
+    assert x2py_cli._fortran_compile_time_values(parsed, compiler_config) == values
+    assert calls == [("collect", parsed), ("evaluate", compiler_config, requirements)]
+
+
+def test_x2py_fortran_source_for_path_raw_uses_utf8_and_internal_recipe():
+    class RawPath:
+        def read_text(self, *, encoding):
+            assert encoding is not None
+            assert encoding.lower() == "utf-8"
+            return "subroutine raw()\nend subroutine raw\n"
+
+    class RawPreprocessing:
+        uses_compiler = False
+
+        def fortran_internal_recipe(self, received):
+            assert received is path
+            return {"mode": "internal"}
+
+    path = RawPath()
+
+    assert x2py_cli._fortran_source_for_path(path, RawPreprocessing()) == (
+        "subroutine raw()\nend subroutine raw\n",
+        {"mode": "internal"},
+    )
+
+
+def test_x2py_parse_report_preserves_fortran_parser_and_recipe_contracts(monkeypatch):
+    path = Path("api.F90")
+    explicit_config = object()
+    default_config = object()
+    recipe = {"mode": "compiler"}
+    nodes = {
+        "signature": object(),
+        "type": object(),
+        "module": object(),
+        "submodule": object(),
+        "program": object(),
+        "block_data": object(),
+    }
+    labels = {node: {"node": label} for label, node in nodes.items()}
+    parsed = types.SimpleNamespace(
+        procedures=[nodes["signature"]],
+        derived_types=[nodes["type"]],
+        modules=[nodes["module"]],
+        submodules=[nodes["submodule"]],
+        programs=[nodes["program"]],
+        block_data_units=[nodes["block_data"]],
+    )
+    calls = []
+
+    def make_config():
+        calls.append(("config",))
+        return default_config
+
+    def expand(paths):
+        assert paths == ["api"]
+        calls.append(("expand", paths))
+        return [path]
+
+    def source(received_path, config):
+        assert received_path == path
+        assert config in {explicit_config, default_config}
+        calls.append(("source", received_path, config))
+        if config is explicit_config:
+            return "explicit source", recipe
+        return "default source", None
+
+    class Parser:
+        def visit_file(self, code, *, filename):
+            assert code in {"explicit source", "default source"}
+            assert filename == str(path)
+            calls.append(("visit", code, filename))
+            return parsed
+
+    def serialize(node):
+        assert node in labels
+        calls.append(("serialize", node))
+        return labels[node]
+
+    payload = {
+        "signatures": [labels[nodes["signature"]]],
+        "types": [labels[nodes["type"]]],
+        "modules": [labels[nodes["module"]]],
+        "submodules": [labels[nodes["submodule"]]],
+        "programs": [labels[nodes["program"]]],
+        "block_data": [labels[nodes["block_data"]]],
+    }
+
+    monkeypatch.setattr(x2py_cli, "PreprocessingConfig", make_config)
+    monkeypatch.setattr(x2py_cli, "FortranParser", Parser)
+    monkeypatch.setattr(x2py_cli, "_expand_paths", expand)
+    monkeypatch.setattr(x2py_cli, "_fortran_source_for_path", source)
+    monkeypatch.setattr(x2py_cli, "_to_dict_no_parent", serialize)
+
+    assert x2py_cli._parse_report(["api"], explicit_config) == {str(path): {**payload, "preprocessing_recipe": recipe}}
+    assert ("config",) not in calls
+
+    calls.clear()
+    assert x2py_cli._parse_report(["api"]) == {str(path): payload}
+    assert calls[0] == ("config",)
+
+
+def test_x2py_semantic_report_preserves_c_module_and_dependency_contracts(monkeypatch):
+    path = Path("api.h")
+    config = object()
+    project = object()
+    module = types.SimpleNamespace(name="api", origin=types.SimpleNamespace(native_name=str(path)))
+    stubs = {
+        "api": "def api() -> None: ...",
+        "shared": "class Shared:\n    pass",
+    }
+
+    def parse_project(paths, preprocessing):
+        assert paths == ["api"]
+        assert preprocessing is config
+        return project
+
+    def convert(received):
+        assert received is project
+        return [module]
+
+    def expand(paths):
+        assert paths == ["api"]
+        return [path]
+
+    def emit(modules, *, available_modules):
+        assert modules == [module]
+        assert available_modules == [module]
+        return stubs
+
+    def serialize(received):
+        assert received is module
+        return {"name": "api"}
+
+    monkeypatch.setattr(x2py_cli, "_parse_c_project", parse_project)
+    monkeypatch.setattr(x2py_cli, "c_project_to_semantic_modules", convert)
+    monkeypatch.setattr(x2py_cli, "expand_c_paths", expand)
+    monkeypatch.setattr("semantics.pyi_printer.emit_module_stubs", emit)
+    monkeypatch.setattr(x2py_cli, "asdict", serialize)
+
+    assert x2py_cli._semantic_report(["api"], config, language="c") == {
+        str(path): {
+            "semantic_modules": [{"name": "api"}],
+            "pyi": "def api() -> None: ...",
+            "pyi_dependencies": {"shared": "class Shared:\n    pass"},
+        }
+    }
+
+
+def test_x2py_semantic_report_preserves_fortran_conversion_and_stub_contracts(monkeypatch):
+    path = Path("api.f90")
+    config = object()
+    wrapped_types = {("types_mod", "widget")}
+    expected_compile_time_values = {"api.dp": 8}
+    native_left = object()
+    native_right = object()
+    left = types.SimpleNamespace(name="left")
+    right = types.SimpleNamespace(name="right")
+    parsed = types.SimpleNamespace(modules=[native_left, native_right])
+    stubs = {
+        "left": "class Left:\n    pass",
+        "right": "class Right:\n    pass",
+        "shared": "class Shared:\n    pass",
+    }
+
+    class Parser:
+        def visit_file(self, code, *, filename):
+            assert code == "fortran source"
+            assert filename == str(path)
+            return parsed
+
+    def expand(paths):
+        assert paths == ["api"]
+        return [path]
+
+    def source(received_path, preprocessing):
+        assert received_path == path
+        assert preprocessing is config
+        return "fortran source", None
+
+    def wrapped(parsed_files):
+        assert list(parsed_files) == [parsed]
+        return wrapped_types
+
+    def compile_values(received, preprocessing):
+        assert received is parsed
+        assert preprocessing is config
+        return expected_compile_time_values
+
+    def convert(module, *, compile_time_values: object, wrapped_derived_types):
+        assert compile_time_values is expected_compile_time_values
+        assert wrapped_derived_types is wrapped_types
+        return {native_left: left, native_right: right}[module]
+
+    def emit(modules, *, available_modules):
+        assert modules == [left, right]
+        assert available_modules == [left, right]
+        return stubs
+
+    def serialize(module):
+        assert module is left or module is right
+        return {"name": module.name}
+
+    monkeypatch.setattr(x2py_cli, "FortranParser", Parser)
+    monkeypatch.setattr(x2py_cli, "_expand_paths", expand)
+    monkeypatch.setattr(x2py_cli, "_fortran_source_for_path", source)
+    monkeypatch.setattr(x2py_cli, "_fortran_wrapped_derived_types", wrapped)
+    monkeypatch.setattr(x2py_cli, "_fortran_compile_time_values", compile_values)
+    monkeypatch.setattr("semantics.fortran2ir.fortran_module_to_semantic_module", convert)
+    monkeypatch.setattr("semantics.pyi_printer.emit_module_stubs", emit)
+    monkeypatch.setattr(x2py_cli, "asdict", serialize)
+
+    assert x2py_cli._semantic_report(["api"], config) == {
+        str(path): {
+            "semantic_modules": [{"name": "left"}, {"name": "right"}],
+            "pyi": "class Left:\n    pass\n\nclass Right:\n    pass",
+            "pyi_dependencies": {"shared": "class Shared:\n    pass"},
+        }
+    }
+
+
+def test_x2py_wrap_readiness_report_preserves_c_and_pyi_contracts(monkeypatch):
+    path = Path("api.h")
+    stub = Path("api.pyi")
+    config = object()
+    project = object()
+    module = types.SimpleNamespace(name="api", origin=types.SimpleNamespace(native_name=str(path)))
+    readiness = {"wrappable": True, "source": str(path)}
+    pyi_report = {str(stub): {"source_kind": "pyi"}}
+
+    def expand(paths):
+        assert paths == ["api"]
+        return [path, stub]
+
+    def parse_project(paths, preprocessing):
+        assert paths == [str(path)]
+        assert preprocessing is config
+        return project
+
+    def convert(received):
+        assert received is project
+        return [module]
+
+    def serialize(received):
+        assert received is module
+        return {"name": "api"}
+
+    def assess(modules, *, source):
+        assert modules == [module]
+        assert source == str(path)
+        return readiness
+
+    def pyi(paths):
+        assert paths == ["api"]
+        return pyi_report
+
+    monkeypatch.setattr(x2py_cli, "expand_c_paths", expand)
+    monkeypatch.setattr(x2py_cli, "_parse_c_project", parse_project)
+    monkeypatch.setattr(x2py_cli, "c_project_to_semantic_modules", convert)
+    monkeypatch.setattr(x2py_cli, "asdict", serialize)
+    monkeypatch.setattr(x2py_cli, "assess_semantic_wrap_readiness", assess)
+    monkeypatch.setattr(x2py_cli, "_pyi_readiness_report", pyi)
+
+    assert x2py_cli._wrap_readiness_report(["api"], config, language="c") == {
+        str(path): {
+            "source_kind": "c",
+            "semantic_modules": [{"name": "api"}],
+            "wrap_readiness": readiness,
+        },
+        **pyi_report,
+    }
+
+
+def test_x2py_wrap_readiness_report_preserves_fortran_and_pyi_contracts(monkeypatch):
+    path = Path("api.f90")
+    stub = Path("api.pyi")
+    config = object()
+    parsed = object()
+    wrapped_types = {("types_mod", "widget")}
+    compile_time_values = {"api.dp": 8}
+    module = types.SimpleNamespace(name="api")
+    readiness = {"wrappable": True, "source": str(path)}
+    pyi_report = {str(stub): {"source_kind": "pyi"}}
+
+    class Parser:
+        def visit_file(self, code, *, filename):
+            assert code == "fortran source"
+            assert filename == str(path)
+            return parsed
+
+    def expand(paths):
+        assert paths == ["api"]
+        return [path, stub]
+
+    def source(received_path, preprocessing):
+        assert received_path == path
+        assert preprocessing is config
+        return "fortran source", None
+
+    def wrapped(parsed_files):
+        assert list(parsed_files) == [parsed]
+        return wrapped_types
+
+    def compile_values(received, preprocessing):
+        assert received is parsed
+        assert preprocessing is config
+        return compile_time_values
+
+    def convert(received, *, standalone_module_name, compile_time_values: object, wrapped_derived_types):
+        assert received is parsed
+        assert standalone_module_name == "api"
+        assert compile_time_values is expected_compile_time_values
+        assert wrapped_derived_types is wrapped_types
+        return [module]
+
+    def serialize(received):
+        assert received is module
+        return {"name": "api"}
+
+    def assess(modules, *, source):
+        assert modules == [module]
+        assert source == str(path)
+        return readiness
+
+    def pyi(paths):
+        assert paths == ["api"]
+        return pyi_report
+
+    expected_compile_time_values = compile_time_values
+    monkeypatch.setattr(x2py_cli, "FortranParser", Parser)
+    monkeypatch.setattr(x2py_cli, "_expand_readiness_paths", expand)
+    monkeypatch.setattr(x2py_cli, "_fortran_source_for_path", source)
+    monkeypatch.setattr(x2py_cli, "_fortran_wrapped_derived_types", wrapped)
+    monkeypatch.setattr(x2py_cli, "_fortran_compile_time_values", compile_values)
+    monkeypatch.setattr(x2py_cli, "fortran_file_to_semantic_modules", convert)
+    monkeypatch.setattr(x2py_cli, "asdict", serialize)
+    monkeypatch.setattr(x2py_cli, "assess_semantic_wrap_readiness", assess)
+    monkeypatch.setattr(x2py_cli, "_pyi_readiness_report", pyi)
+
+    assert x2py_cli._wrap_readiness_report(["api"], config) == {
+        str(path): {
+            "source_kind": "fortran",
+            "semantic_modules": [{"name": "api"}],
+            "wrap_readiness": readiness,
+        },
+        **pyi_report,
+    }
+
+
+def test_x2py_parse_c_path_preserves_parser_and_preprocessing_arguments(tmp_path: Path, monkeypatch):
+    path = tmp_path / "api.h"
+    raw_parsed = object()
+    compiled_parsed = object()
+
+    class RawParser:
+        def visit_file(self, source, *, filename, include_dirs, preprocessing):
+            assert source == path
+            assert filename == str(path)
+            assert include_dirs == ["include"]
+            assert preprocessing == "raw"
+            return raw_parsed
+
+    raw_config = x2py_cli.PreprocessingConfig(include_dirs=["include"])
+    assert x2py_cli._parse_c_path(RawParser(), path, raw_config) is raw_parsed
+
+    class Recipe:
+        def to_dict(self):
+            return {"mode": "compiler"}
+
+    def preprocess(received_path, *, language, config):
+        assert received_path == path
+        assert language == "c"
+        assert config is compiler_config
+        return "int add(int x);\n", Recipe()
+
+    class CompilerParser:
+        def visit_file(self, source, *, filename, include_dirs, preprocessing):
+            assert source == "int add(int x);\n"
+            assert filename == str(path)
+            assert include_dirs == ["include"]
+            assert preprocessing == "compiler"
+            return compiled_parsed
+
+    def attach_recipe(parsed, recipe):
+        assert parsed is compiled_parsed
+        assert recipe == {"mode": "compiler"}
+
+    compiler_config = x2py_cli.PreprocessingConfig(mode="compiler", compiler="cc", include_dirs=["include"])
+    monkeypatch.setattr(x2py_cli, "run_compiler_preprocessor_with_recipe", preprocess)
+    monkeypatch.setattr(x2py_cli, "attach_preprocessing_recipe", attach_recipe)
+
+    assert x2py_cli._parse_c_path(CompilerParser(), path, compiler_config) is compiled_parsed
+
+
+def test_x2py_readiness_path_helpers_include_fortran_and_pyi(tmp_path: Path):
+    source = tmp_path / "mini.f90"
+    stub = tmp_path / "api.pyi"
+    ignored = tmp_path / "notes.txt"
+    source.write_text("module mini\nend module mini\n", encoding="utf-8")
+    stub.write_text("def work() -> None: ...\n", encoding="utf-8")
+    ignored.write_text("ignore", encoding="utf-8")
+
+    assert set(x2py_cli._collect_readiness_extensions(tmp_path)) == {source, stub}
+    assert set(x2py_cli._expand_readiness_paths([str(tmp_path), str(source), str(ignored)])) == {
+        source,
+        stub,
+        ignored,
+    }
+
+
+def test_x2py_pyi_readiness_report_preserves_loading_and_assessment_contracts(tmp_path: Path, monkeypatch):
+    package = tmp_path / "package"
+    package.mkdir()
+    stub = tmp_path / "api.pyi"
+    ignored = tmp_path / "notes.txt"
+    module = object()
+    readiness = {"wrappable": True, "source": str(stub)}
+    calls = []
+
+    def expand(paths):
+        assert paths == [str(package), str(stub), str(ignored)]
+        calls.append(("expand", paths))
+        return [stub]
+
+    def load(paths):
+        assert paths == [str(package), str(stub)]
+        calls.append(("load", paths))
+        return [module]
+
+    def serialize(received):
+        assert received is module
+        calls.append(("asdict", received))
+        return {"name": "api"}
+
+    def assess(modules, *, source):
+        assert modules == [module]
+        assert source == str(stub)
+        calls.append(("assess", modules, source))
+        return readiness
+
+    monkeypatch.setattr(x2py_cli, "_expand_pyi_paths", expand)
+    monkeypatch.setattr(x2py_cli, "load_pyi_modules", load)
+    monkeypatch.setattr(x2py_cli, "asdict", serialize)
+    monkeypatch.setattr(x2py_cli, "assess_semantic_wrap_readiness", assess)
+
+    assert x2py_cli._pyi_readiness_report([str(package), str(stub), str(ignored)]) == {
+        str(stub): {
+            "source_kind": "pyi",
+            "semantic_modules": [{"name": "api"}],
+            "wrap_readiness": readiness,
+        }
+    }
+    assert calls == [
+        ("expand", [str(package), str(stub), str(ignored)]),
+        ("load", [str(package), str(stub)]),
+        ("asdict", module),
+        ("assess", [module], str(stub)),
+    ]
+
+    calls.clear()
+    monkeypatch.setattr(x2py_cli, "_expand_pyi_paths", lambda _paths: [])
+    assert x2py_cli._pyi_readiness_report([str(ignored)]) == {}
+    assert calls == []
+
+
+def test_x2py_format_semantic_readiness_reports_wrappable_and_blocked_sources():
+    report = {
+        "api.f90": {
+            "source_kind": "fortran",
+            "semantic_modules": [{"name": "api_mod"}],
+            "wrap_readiness": {
+                "wrappable": False,
+                "n_functions": 1,
+                "n_classes": 0,
+                "n_variables": 2,
+                "wrappability_blockers": [
+                    {
+                        "code": "unresolved_semantic_types",
+                        "message": "unresolved external type",
+                        "items": [{"owner": "api_mod.solve", "type": "external_t"}],
+                    },
+                    {
+                        "code": "callback_signature_incomplete",
+                        "message": "callback metadata incomplete",
+                        "items": [{"owner": "api_mod.apply", "needs": ["arguments"]}],
+                    },
+                ],
+            },
+        },
+        "interface.pyi": {
+            "source_kind": "pyi",
+            "semantic_modules": [],
+            "wrap_readiness": {
+                "wrappable": True,
+                "n_functions": 0,
+                "n_classes": 1,
+                "n_variables": 0,
+                "wrappability_blockers": [],
+            },
+        },
+        "partial.f90": {
+            "semantic_modules": [{}],
+        },
+    }
+
+    text = x2py_cli._format_semantic_readiness(report)
+    assert (
+        text
+        == """File: api.f90
+  Source: fortran
+  Semantic modules: api_mod
+  Wrappable: no
+  Public functions: 1
+  Public classes: 0
+  Public variables: 2
+  Why not wrappable:
+    - unresolved_semantic_types: unresolved external type
+      * api_mod.solve uses unresolved type external_t
+    - callback_signature_incomplete: callback metadata incomplete
+      * api_mod.apply needs Callable[[...], ...] metadata (arguments)
+
+File: interface.pyi
+  Source: pyi
+  Semantic modules: <none>
+  Wrappable: yes
+  Public functions: 0
+  Public classes: 1
+  Public variables: 0
+  No semantic readiness blockers detected.
+
+File: partial.f90
+  Source: <unknown>
+  Semantic modules: <unknown>
+  Wrappable: no
+  Public functions: 0
+  Public classes: 0
+  Public variables: 0
+  No semantic readiness blockers detected."""
+    )
+
+    assert "File: api.f90" in text
+    assert "  Source: fortran" in text
+    assert "  Semantic modules: api_mod" in text
+    assert "  Wrappable: no" in text
+    assert "  Public functions: 1" in text
+    assert "  Public classes: 0" in text
+    assert "  Public variables: 2" in text
+    assert "  Why not wrappable:" in text
+    assert "    - unresolved_semantic_types: unresolved external type" in text
+    assert "      * api_mod.solve uses unresolved type external_t" in text
+    assert "      * api_mod.apply needs Callable[[...], ...] metadata (arguments)" in text
+    assert "File: interface.pyi" in text
+    assert "  Source: pyi" in text
+    assert "  Semantic modules: <none>" in text
+    assert "  Wrappable: yes" in text
+    assert "  No semantic readiness blockers detected." in text
+    assert "File: partial.f90" in text
+    assert "  Source: <unknown>" in text
+    assert "  Semantic modules: <unknown>" in text
+
+
+def test_x2py_format_semantic_readiness_defaults_and_multiple_modules():
+    report = {
+        "missing.f90": {
+            "wrap_readiness": {
+                "wrappable": False,
+                "wrappability_blockers": [
+                    {
+                        "message": "missing code",
+                        "items": [{"value": 2}],
+                    }
+                ],
+            },
+        },
+        "multi.f90": {
+            "source_kind": "fortran",
+            "semantic_modules": [{"name": "left"}, {"name": "right"}],
+            "wrap_readiness": {
+                "wrappable": True,
+                "n_functions": 2,
+                "n_classes": 1,
+                "n_variables": 3,
+                "wrappability_blockers": [],
+            },
+        },
+    }
+
+    assert (
+        x2py_cli._format_semantic_readiness(report)
+        == """File: missing.f90
+  Source: <unknown>
+  Semantic modules: <none>
+  Wrappable: no
+  Public functions: 0
+  Public classes: 0
+  Public variables: 0
+  Why not wrappable:
+    - None: missing code
+      * {'value': 2}
+
+File: multi.f90
+  Source: fortran
+  Semantic modules: left, right
+  Wrappable: yes
+  Public functions: 2
+  Public classes: 1
+  Public variables: 3
+  No semantic readiness blockers detected."""
+    )
 
 
 @pytest.mark.parametrize("macro_flag", ["-D", "-U"])

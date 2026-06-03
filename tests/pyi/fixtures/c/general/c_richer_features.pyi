@@ -17,9 +17,14 @@ X2PY_STATUS_RETRY: Final[Int32]
 
 X2PY_STATUS_ERROR: Final[Int32]
 
-def x2py_fast_path() -> Int32: ...
-
 def x2py_slow_path() -> Int32: ...
+
+def x2py_sort(
+    items: Ptr(Any),
+    count: SizeT,
+    item_size: SizeT,
+    compare: CFunctionPointer
+) -> Int32: ...
 
 def x2py_register_callback(
     context: Ptr(x2py_context),

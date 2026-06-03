@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """C declaration-specifier and composed-type parser tests."""
 
 import pytest
@@ -278,6 +277,23 @@ def test_conflicting_file_scope_variable_declarations_report_diagnostic():
     assert any(diag.code == "C_CONFLICTING_VARIABLE_DECLARATION" for diag in parsed.diagnostics)
 
 
+def test_type_key_preserves_seen_state_for_recursive_composed_types():
+    from c_parser import CComposedType, CParser, CPointer, CTypedef
+
+    typedef = CTypedef(name="node")
+    recursive = CComposedType(components=[CPointer(), typedef])
+    typedef.type = recursive
+
+    assert CParser()._type_key(recursive) == (
+        "CComposedType",
+        (
+            ("CPointer", ()),
+            ("CTypedef", ("cycle", "CComposedType", None), ()),
+        ),
+        (),
+    )
+
+
 def test_compatible_repeated_typedefs_merge_but_conflicting_typedefs_diagnose():
     from c_parser import parse_c_file
 
@@ -291,7 +307,7 @@ def test_compatible_repeated_typedefs_merge_but_conflicting_typedefs_diagnose():
 
 
 def test_variables_preserve_initializer_text_arrays_and_concrete_tag_types():
-    from c_parser import CArray, CComposedType, CEnum, CInt, CStruct, CUnion, parse_c_file
+    from c_parser import CArray, CEnum, CInt, CStruct, CUnion, parse_c_file
 
     parsed = parse_c_file(
         """
@@ -412,6 +428,23 @@ _Atomic(int) *pointer_to_atomic;
     assert parsed.diagnostics == []
 
 
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        ("_Atomic(int) long value;\n", "Invalid type specifier sequence"),
+        ("_Atomic() value;\n", "Invalid _Atomic type-name"),
+        ("_Atomic(int named) value;\n", "Invalid _Atomic type-name"),
+    ],
+)
+def test_invalid_atomic_type_specifiers_raise_focused_errors(source, message):
+    from c_parser import CParseError, parse_c_file
+
+    with pytest.raises(CParseError, match=message) as exc_info:
+        parse_c_file(source, filename="invalid_atomic.h")
+
+    assert exc_info.value.code == "CPARSE_INVALID_SPECIFIER_SEQUENCE"
+
+
 def test_function_bodies_do_not_contribute_local_variables():
     from c_parser import parse_c_file
 
@@ -504,16 +537,14 @@ def test_conflicting_function_pointer_typedefs_report_diagnostic():
     from c_parser import parse_c_file
 
     parsed = parse_c_file(
-        "typedef int (*callback_fn)(int);\n"
-        "typedef double (*callback_fn)(double);\n",
+        "typedef int (*callback_fn)(int);\ntypedef double (*callback_fn)(double);\n",
         filename="callback_typedef_conflict.h",
     )
 
     assert [typedef.name for typedef in parsed.typedefs] == ["callback_fn"]
-    assert [
-        (diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name)
-        for diagnostic in parsed.diagnostics
-    ] == [("C_CONFLICTING_TYPEDEF", "typedef", "callback_fn")]
+    assert [(diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name) for diagnostic in parsed.diagnostics] == [
+        ("C_CONFLICTING_TYPEDEF", "typedef", "callback_fn")
+    ]
 
 
 def test_recursive_compositions_cover_tables_callback_arrays_and_function_results():
@@ -561,12 +592,82 @@ _Alignas(16) int aligned_value;
     )
 
     assert [variable.name for variable in parsed.variables] == ["visible", "outdated", "aligned_value"]
-    assert [
-        (diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name)
-        for diagnostic in parsed.diagnostics
-    ] == [
+    assert [(diagnostic.code, diagnostic.unit_kind, diagnostic.unit_name) for diagnostic in parsed.diagnostics] == [
         ("C_UNMODELED_COMPILER_EXTENSION", "alignment_specifier", "_Alignas"),
     ]
+
+
+def test_unsupported_top_level_declarator_is_reported_with_source_location():
+    from c_parser import parse_c_file
+
+    parsed = parse_c_file("int value @@;\nint kept;\n", filename="bad_declarator.h")
+
+    assert [variable.name for variable in parsed.variables] == ["kept"]
+    assert len(parsed.diagnostics) == 1
+    diagnostic = parsed.diagnostics[0]
+    assert diagnostic.code == "C_UNSUPPORTED_DECLARATOR"
+    assert diagnostic.severity == "warning"
+    assert diagnostic.unit_kind == "declarator"
+    assert diagnostic.unit_name is None
+    assert diagnostic.message == "Unsupported declarator syntax after parsed type layers: '@@'."
+    assert diagnostic.location is not None
+    assert diagnostic.location.filename == "bad_declarator.h"
+    assert diagnostic.location.line == 1
+    assert diagnostic.location.column == 1
+    assert diagnostic.location.source_line == "int value @@;"
+
+
+@pytest.mark.parametrize(
+    ("text", "unit_kind", "message"),
+    [
+        ("struct pending { int value; }", "struct_definition", "Struct definitions are not supported yet."),
+        ("union pending { int value; }", "union_definition", "Union definitions are not supported yet."),
+        ("enum pending { value }", "enum_definition", "Enum definitions are not supported yet."),
+        ("_Static_assert(sizeof(int) == 4)", "static_assert", "Static assertions are recorded but not evaluated."),
+        ("int value __attribute__((used))", "attribute_declaration", "Compiler-specific declaration attributes"),
+        ("int value __declspec(dllexport)", "attribute_declaration", "Compiler-specific declaration attributes"),
+        ("int value [[deprecated]]", "attribute_declaration", "Compiler-specific declaration attributes"),
+        ("_Alignas(16) int value", "alignment_declaration", "Declaration alignment specifiers"),
+        ("alignas(16) int value", "alignment_declaration", "Declaration alignment specifiers"),
+        ("int values[] = {1, 2, 3}", "brace_declaration", "Unsupported declaration containing braces."),
+    ],
+)
+def test_unsupported_declaration_diagnostic_classifies_known_shapes(text, unit_kind, message):
+    from c_parser import CParser
+    from c_parser.lexer import CTopLevelSegment
+
+    segment = CTopLevelSegment(
+        text=text,
+        terminator=";",
+        filename="unsupported.h",
+        original_start_line=7,
+        original_start_column=3,
+        original_source_line=f"  {text};",
+    )
+
+    diagnostic = CParser()._unsupported_declaration_diagnostic(segment)
+
+    assert diagnostic is not None
+    assert diagnostic.code == "C_UNSUPPORTED_DECLARATION"
+    assert diagnostic.severity == "warning"
+    assert diagnostic.unit_kind == unit_kind
+    assert diagnostic.unit_name is None
+    assert message in diagnostic.message
+    assert diagnostic.location is not None
+    assert diagnostic.location.filename == "unsupported.h"
+    assert diagnostic.location.line == 7
+    assert diagnostic.location.column == 3
+    assert diagnostic.location.source_line == f"  {text};"
+
+
+def test_unsupported_declaration_diagnostic_ignores_empty_and_plain_declarations():
+    from c_parser import CParser
+    from c_parser.lexer import CTopLevelSegment
+
+    parser = CParser()
+
+    assert parser._unsupported_declaration_diagnostic(CTopLevelSegment(text="", terminator=";")) is None
+    assert parser._unsupported_declaration_diagnostic(CTopLevelSegment(text="int value", terminator=";")) is None
 
 
 @pytest.mark.parametrize(
@@ -607,10 +708,7 @@ def test_braced_and_designated_initializer_declarations_preserve_source_text():
     from c_parser import CArray, CComposedType, parse_c_file
 
     parsed = parse_c_file(
-        "struct config;\n"
-        "int values[3] = {1, 2, 3};\n"
-        "struct config cfg = {.enabled = 1};\n"
-        "int scalar = 1;\n",
+        "struct config;\nint values[3] = {1, 2, 3};\nstruct config cfg = {.enabled = 1};\nint scalar = 1;\n",
         filename="braced_initializers.h",
     )
 
@@ -635,10 +733,7 @@ def test_asm_declarator_suffixes_are_tolerated_with_symbol_identity_diagnostics(
 
     assert [variable.name for variable in parsed.variables] == ["retained", "pinned"]
     assert [function.name for function in parsed.functions] == ["run"]
-    assert [
-        (diagnostic.code, diagnostic.unit_kind)
-        for diagnostic in parsed.diagnostics
-    ] == [
+    assert [(diagnostic.code, diagnostic.unit_kind) for diagnostic in parsed.diagnostics] == [
         ("C_UNMODELED_COMPILER_EXTENSION", "asm_label"),
         ("C_UNMODELED_COMPILER_EXTENSION", "asm_label"),
     ]

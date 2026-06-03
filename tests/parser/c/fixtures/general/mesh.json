@@ -3,8 +3,10 @@
     "general/mesh.h": {
       "filename": "general/mesh.h",
       "language": "c",
-      "parser_status": "partial",
-      "preprocessing": "raw",
+      "preprocessing": "compiler",
+      "original_source_paths": [
+        "general/mesh.h"
+      ],
       "functions": [
         {
           "name": "node_move",
@@ -213,13 +215,7 @@
                       {
                         "name": "nnodes",
                         "type": {
-                          "model": "CTypedef",
-                          "qualifiers": [],
-                          "source_text": "size_t nnodes",
-                          "name": "size_t",
-                          "type": null,
-                          "source_location": null,
-                          "declaration_locations": []
+                          "reference": "size_t"
                         },
                         "storage": [],
                         "initializer": null,
@@ -295,13 +291,7 @@
             {
               "name": "nnodes",
               "type": {
-                "model": "CTypedef",
-                "qualifiers": [],
-                "source_text": "size_t nnodes",
-                "name": "size_t",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
+                "reference": "size_t"
               },
               "declared_type": {
                 "reference": "size_t"
@@ -450,13 +440,7 @@
             {
               "name": "index",
               "type": {
-                "model": "CTypedef",
-                "qualifiers": [],
-                "source_text": "size_t index",
-                "name": "size_t",
-                "type": null,
-                "source_location": null,
-                "declaration_locations": []
+                "reference": "size_t"
               },
               "declared_type": {
                 "reference": "size_t"
@@ -486,14 +470,7 @@
           "declaration_locations": []
         }
       ],
-      "structs": [
-        {
-          "reference": "struct node"
-        },
-        {
-          "reference": "struct mesh"
-        }
-      ],
+      "structs": [],
       "unions": [],
       "enums": [],
       "typedefs": [
@@ -531,55 +508,9 @@
         }
       ],
       "variables": [],
-      "macros": [
-        {
-          "name": "X2PY_GENERAL_MESH_H",
-          "value": null,
-          "function_like": false,
-          "directive": "define",
-          "source_location": {
-            "filename": "general/mesh.h",
-            "line": 2,
-            "column": 1,
-            "source_line": "#define X2PY_GENERAL_MESH_H"
-          }
-        }
-      ],
-      "includes": [
-        {
-          "target": "stddef.h",
-          "kind": "system",
-          "resolved_path": null,
-          "source_location": {
-            "filename": "general/mesh.h",
-            "line": 4,
-            "column": 1,
-            "source_line": "#include <stddef.h>"
-          }
-        }
-      ],
-      "raw_directives": [
-        {
-          "directive": "ifndef",
-          "argument": "X2PY_GENERAL_MESH_H",
-          "source_location": {
-            "filename": "general/mesh.h",
-            "line": 1,
-            "column": 1,
-            "source_line": "#ifndef X2PY_GENERAL_MESH_H"
-          }
-        },
-        {
-          "directive": "endif",
-          "argument": null,
-          "source_location": {
-            "filename": "general/mesh.h",
-            "line": 24,
-            "column": 1,
-            "source_line": "#endif"
-          }
-        }
-      ],
+      "macros": [],
+      "includes": [],
+      "raw_directives": [],
       "macro_dependencies": [],
       "diagnostics": []
     }
@@ -921,14 +852,7 @@
       "declaration_locations": []
     }
   },
-  "structs": {
-    "node": {
-      "reference": "struct node"
-    },
-    "mesh": {
-      "reference": "struct mesh"
-    }
-  },
+  "structs": {},
   "unions": {},
   "enums": {},
   "typedefs": {
@@ -940,33 +864,8 @@
     }
   },
   "variables": {},
-  "macros": {
-    "X2PY_GENERAL_MESH_H": {
-      "name": "X2PY_GENERAL_MESH_H",
-      "value": null,
-      "function_like": false,
-      "directive": "define",
-      "source_location": {
-        "filename": "general/mesh.h",
-        "line": 2,
-        "column": 1,
-        "source_line": "#define X2PY_GENERAL_MESH_H"
-      }
-    }
-  },
-  "includes": {
-    "general/mesh.h:stddef.h": {
-      "target": "stddef.h",
-      "kind": "system",
-      "resolved_path": null,
-      "source_location": {
-        "filename": "general/mesh.h",
-        "line": 4,
-        "column": 1,
-        "source_line": "#include <stddef.h>"
-      }
-    }
-  },
+  "macros": {},
+  "includes": {},
   "functions_by_file": {
     "general/mesh.h": [
       "node_move",
@@ -980,9 +879,7 @@
     "general/mesh.h": []
   },
   "system_includes": {
-    "general/mesh.h": [
-      "stddef.h"
-    ]
+    "general/mesh.h": []
   },
   "unresolved_includes": {
     "general/mesh.h": []

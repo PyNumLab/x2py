@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
@@ -55,7 +55,7 @@ def assess_pyi_wrap_readiness(
     encoding: str = "utf-8",
 ) -> dict:
     """Load one or more edited .pyi files and assess semantic wrap-readiness."""
-    raw_paths = [paths] if isinstance(paths, (str, Path)) else list(paths)
+    raw_paths = [paths] if isinstance(paths, str | Path) else list(paths)
     expanded = _expand_pyi_paths(raw_paths)
     modules = load_pyi_modules(raw_paths, encoding=encoding)
     return assess_semantic_wrap_readiness(modules, source=[str(path) for path in expanded])
@@ -77,7 +77,7 @@ def assess_semantic_wrap_readiness(
 
 
 def _expand_pyi_paths(paths: str | Path | Iterable[str | Path]) -> list[Path]:
-    raw_paths = [paths] if isinstance(paths, (str, Path)) else list(paths)
+    raw_paths = [paths] if isinstance(paths, str | Path) else list(paths)
     expanded: list[Path] = []
     for raw in raw_paths:
         path = Path(raw)
@@ -458,10 +458,7 @@ class _SemanticReadinessChecker:
             blocker_unit = str(blocker.get("unit") or unit)
             blocker_unit_kind = str(blocker.get("unit_kind") or unit_kind)
             for raw_item in raw_items:
-                if isinstance(raw_item, dict):
-                    payload = dict(raw_item)
-                else:
-                    payload = {"detail": raw_item}
+                payload = dict(raw_item) if isinstance(raw_item, dict) else {"detail": raw_item}
                 payload.setdefault("owner", owner)
                 payload.setdefault("item", item)
                 self._add_blocker(
@@ -614,17 +611,13 @@ def _iter_expression_values(value) -> Iterable[str]:
     elif isinstance(value, dict):
         for item in value.values():
             yield from _iter_expression_values(item)
-    elif isinstance(value, (list, tuple)):
+    elif isinstance(value, list | tuple):
         for item in value:
             yield from _iter_expression_values(item)
 
 
 def _shape_symbols(expression: str) -> set[str]:
-    return {
-        match.group(0)
-        for match in _IDENTIFIER_RE.finditer(expression)
-        if not match.group(0).isdigit()
-    }
+    return {match.group(0) for match in _IDENTIFIER_RE.finditer(expression) if not match.group(0).isdigit()}
 
 
 def _is_public(node) -> bool:
