@@ -53,6 +53,14 @@ arguments, infer ownership, or invent callback lifetime policy.
 
 ## Main CLI Workflows
 
+x2py uses the same stage flags for Fortran and C:
+
+- `--parse` prints parser facts.
+- `--semantics` prints language-neutral semantic IR.
+- `--pyi` prints editable `.pyi` interface text.
+- `--wrap-readiness` checks whether the semantic contract is complete enough
+  for wrapping.
+
 Parse Fortran:
 
 ```bash
@@ -96,6 +104,200 @@ python -m x2py path/to/interface.pyi --wrap-readiness
 When a generated `.pyi` file needs policy that the parser cannot infer, edit
 the stub and run readiness on the edited file. The edited `.pyi` is the
 user-visible semantic contract.
+
+## Compiler-Backed CLI Examples
+
+The CLI path uses compiler preprocessing for source parsing. C defaults to
+`cc`, and Fortran defaults to `gfortran`, but wrapper work should pass the
+same compiler and target flags used by the native project.
+
+### C With Include Paths, Macros, And Standard
+
+```bash
+python -m x2py tests/data/c/general/math_api.h --language c --parse --json \
+  --compiler cc \
+  -I tests/data/c/general \
+  -D API_EXPORT= \
+  --std c11
+```
+
+The output is parser JSON. The important top-level fields show that the file
+was compiler-preprocessed and which recipe was used:
+
+```json
+{
+  "tests/data/c/general/math_api.h": {
+    "filename": "tests/data/c/general/math_api.h",
+    "language": "c",
+    "preprocessing": "compiler",
+    "preprocessing_recipe": {
+      "compiler": "cc",
+      "adapter": "gcc-compatible-c",
+      "argv": ["cc", "-E", "-x", "c", "-Itests/data/c/general", "-DAPI_EXPORT=", "-std=c11", "..."],
+      "include_dirs": ["tests/data/c/general"],
+      "defines": ["API_EXPORT="],
+      "standard": "c11",
+      "included_files": [{"path": "tests/data/c/general/math_api.h", "exposure": "public"}]
+    },
+    "functions": [{"name": "norm2"}, {"name": "scale"}, {"name": "dot"}, {"name": "fill_identity3"}],
+    "diagnostics": []
+  }
+}
+```
+
+The same compiler flags flow through semantic, `.pyi`, and readiness stages:
+
+```bash
+python -m x2py tests/data/c/general/math_api.h --language c --pyi \
+  --compiler cc \
+  -I tests/data/c/general \
+  -D API_EXPORT= \
+  --std c11
+```
+
+Expected `.pyi` shape:
+
+```python
+File: tests/data/c/general/math_api.h
+def norm2(
+    n: Int32,
+    x: Const(Float64[1])
+) -> Float64: ...
+
+def scale(
+    n: Int32,
+    alpha: Float64,
+    x: Float64[1]
+) -> None: ...
+```
+
+Readiness for the same fixture:
+
+```bash
+python -m x2py tests/data/c/general/math_api.h --language c --wrap-readiness \
+  --compiler cc \
+  -I tests/data/c/general \
+  -D API_EXPORT= \
+  --std c11
+```
+
+```text
+File: tests/data/c/general/math_api.h
+  Source: c
+  Semantic modules: math_api
+  Wrappable: yes
+  Public functions: 4
+  Public classes: 0
+  Public variables: 0
+  No semantic readiness blockers detected.
+```
+
+### C With Project Flags From `compile_commands.json`
+
+When a C project already has a compile database, use it so x2py sees the same
+include paths, macros, target flags, and source language mode as the project:
+
+```bash
+python -m x2py src/api.c --language c --parse \
+  --compile-commands build/compile_commands.json
+```
+
+If the database entry needs extra wrapper-specific flags, add them explicitly:
+
+```bash
+python -m x2py src/api.c --language c --semantics \
+  --compile-commands build/compile_commands.json \
+  --compiler-arg=--sysroot=/opt/sdk
+```
+
+### Fortran With Compiler Flags
+
+Use explicit Fortran compiler mode when source depends on CPP macros,
+predefined compiler behavior, include paths, or target kind flags:
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 \
+  --language fortran \
+  --parse --json \
+  --compiler /usr/bin/gfortran \
+  -I tests/data/fortran/general \
+  -D USE_MPI \
+  --std f2008 \
+  --compiler-arg=-fdefault-real-8
+```
+
+The JSON includes the same recipe shape:
+
+```json
+{
+  "tests/data/fortran/general/basic_subroutine.f90": {
+    "modules": [{"name": "m1"}],
+    "preprocessing_recipe": {
+      "language": "fortran",
+      "compiler": "/usr/bin/gfortran",
+      "adapter": "gnu-fortran",
+      "argv": ["/usr/bin/gfortran", "-E", "-cpp", "-Itests/data/fortran/general", "-DUSE_MPI", "-std=f2008", "-fdefault-real-8", "..."],
+      "include_dirs": ["tests/data/fortran/general"],
+      "defines": ["USE_MPI"],
+      "standard": "f2008",
+      "compiler_args": ["-fdefault-real-8"]
+    }
+  }
+}
+```
+
+The same flags can generate `.pyi`:
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 \
+  --language fortran \
+  --pyi \
+  --compiler /usr/bin/gfortran \
+  -I tests/data/fortran/general \
+  -D USE_MPI \
+  --std f2008 \
+  --compiler-arg=-fdefault-real-8
+```
+
+```python
+File: tests/data/fortran/general/basic_subroutine.f90
+def add1(
+    n: Ptr(Const(Int32)),
+    x: Float64[n]
+) -> None: ...
+```
+
+### Include Exposure
+
+For C projects, included declarations can be public or private in the
+wrapper-facing interface. By default, reachable project includes are public and
+system headers are private. Use exposure flags when the public wrapper surface
+should be narrower:
+
+```bash
+python -m x2py include/api.h --language c --pyi \
+  --include-exposure roots-only \
+  --public-include 'include/public/*' \
+  --private-include 'vendor/*'
+```
+
+Private declarations remain available internally for type resolution. Public
+signatures that refer to private handle types can still use opaque dependency
+stubs rather than exposing private data members.
+
+### Custom Preprocessor Adapter
+
+For unsupported compiler families, provide a command template. Placeholders
+are expanded by x2py:
+
+```bash
+python -m x2py path/to/api.h --language c --parse \
+  --preprocessor-adapter command-template \
+  --preprocess-template 'cc -E {include_dirs} {defines} {undefs} {standard} {compiler_args} {source}'
+```
+
+Supported placeholders include `{source}`, `{include_dirs}`, `{defines}`,
+`{undefs}`, `{standard}`, and `{compiler_args}`.
 
 ## End-To-End Tutorial
 
@@ -187,6 +389,73 @@ After editing, run readiness on the `.pyi` file:
 python -m x2py path/to/interface.pyi --wrap-readiness
 ```
 
+## C End-To-End Tutorial
+
+Use explicit C mode for C headers and sources:
+
+```bash
+python -m x2py tests/data/c/general/math_api.h --language c --parse
+```
+
+Expected parse output:
+
+```text
+File: tests/data/c/general/math_api.h
+  Language: c
+  Functions: 4
+  Structs: 0
+  Unions: 0
+  Enums: 0
+  Typedefs: 0
+  Variables: 0
+  Macros: 0
+  Includes: 0
+  Diagnostics: 0
+```
+
+Generate semantic IR JSON:
+
+```bash
+python -m x2py tests/data/c/general/math_api.h --language c --semantics
+```
+
+The semantic payload contains `semantic_modules` and a generated `pyi` string.
+The module metadata includes `source_language: c` and `preprocessing:
+compiler`.
+
+Generate `.pyi` directly:
+
+```bash
+python -m x2py tests/data/c/general/math_api.h --language c --pyi
+```
+
+The output preserves exact native contracts for the supported subset:
+
+```python
+def dot(
+    n: Int32,
+    x: Ptr(Const(Float64)),
+    y: Ptr(Const(Float64))
+) -> Float64: ...
+```
+
+Check readiness:
+
+```bash
+python -m x2py tests/data/c/general/math_api.h --language c --wrap-readiness
+```
+
+```text
+File: tests/data/c/general/math_api.h
+  Source: c
+  Semantic modules: math_api
+  Wrappable: yes
+  Public functions: 4
+  Public classes: 0
+  Public variables: 0
+  No semantic readiness blockers detected.
+```
+
 ## Python API Workflows
 
 Parse one Fortran file:
@@ -239,6 +508,16 @@ contracts by default: they do not hide pointer arguments, reorder arguments, or
 turn output arguments into Python return values unless the `.pyi` explicitly
 does that.
 
+The loader accepts ordinary imports used by the semantic file:
+
+```python
+from typing import Annotated, Callable, Final
+from other_module import particle
+```
+
+Imports matter when generated stubs refer to owner-module dependency stubs or
+when an edited file supplies callback types.
+
 ### Scalars
 
 Bare scalar types are direct values:
@@ -257,6 +536,27 @@ def update(value: Ptr(Float64)) -> None: ...
 
 `Ptr(Const(T))` means the native side receives a pointer/reference to read-only
 storage. `Ptr(T)` means writable storage.
+
+### Function Returns
+
+A plain return type is a direct native return:
+
+```python
+def norm2(n: Int32, x: Const(Float64[1])) -> Float64: ...
+```
+
+Functions that return multiple Python values can use tuple syntax:
+
+```python
+def stats(x: Const(Float64[:])) -> tuple[Float64, Float64]: ...
+```
+
+For an exact native output argument, keep the native writable argument visible
+unless a projection is explicitly supplied:
+
+```python
+def get_count(out: Annotated[Ptr(Int32), Intent("out")]) -> None: ...
+```
 
 ### Arrays
 
@@ -285,6 +585,20 @@ def update_matrix(a: Annotated[Float64[::Strided, ::Strided], ORDER_F]) -> None:
 Rank-one arrays do not need an order marker. Multidimensional arrays default to
 C order unless `ORDER_F` or `ORDER_ANY` is written.
 
+Shape expressions can reference earlier arguments or literal bounds:
+
+```python
+def resize(n: Int32, values: Float64[1:n]) -> None: ...
+def copy3(src: Const(Float64[3]), dst: Float64[3]) -> None: ...
+```
+
+For exact C pointer storage that does not carry a proven shape, use `Ptr(T)` or
+`Ptr(Const(T))` instead of inventing a NumPy shape:
+
+```python
+def dot(n: Int32, x: Ptr(Const(Float64)), y: Ptr(Const(Float64))) -> Float64: ...
+```
+
 ### Constants And Globals
 
 Constants use `Final[...]`:
@@ -299,6 +613,15 @@ Module variables and global variables use normal annotations:
 ```python
 counter: Int32
 weights: Float64[16]
+```
+
+Visibility can be narrowed with `private[...]` or `@private`:
+
+```python
+hidden_scale: private[Float64]
+
+@private
+def helper(x: Ptr(Const(Int32))) -> None: ...
 ```
 
 ### Classes And Opaque Handles
@@ -321,6 +644,19 @@ class context(Opaque):
 def context_destroy(ctx: Ptr(context)) -> None: ...
 ```
 
+Class fields use the same scalar, array, pointer, and `Annotated[...]` syntax
+as function arguments:
+
+```python
+class vector3:
+    values: Float64[3]
+
+class particle:
+    id: Int32
+    mass: Float64
+    position: Float64[3]
+```
+
 ### Intent, Allocatable, And Pointer Metadata
 
 Use `Annotated[...]` for non-dimensional metadata:
@@ -334,6 +670,16 @@ view: Annotated[Float64[:], ORDER_F, Pointer]
 `Intent("out")` is emitted when the exact native argument is an output
 argument. For `intent(inout)`, the writable type itself normally carries the
 contract.
+
+Generic constraints also use `Annotated[...]`:
+
+```python
+value: Annotated[Int32, Bounded(1, 8), Finite]
+alias: Annotated[Float64[:], Name("native_alias")]
+```
+
+`Name("...")` changes the native symbol name represented by the semantic
+entry; the Python identifier can remain a valid Python spelling.
 
 ### Callback Policy
 
@@ -353,6 +699,18 @@ def walk_items(
 The signature tells x2py the callable argument and return contract. Ownership,
 lifetime, threading, and registration/unregistration policy still need to be
 explicit when wrapper generation reaches those cases.
+
+Use the fully specified `Callable[[...], Return]` form when readiness reports a
+callback blocker:
+
+```python
+from typing import Callable
+
+def integrate(objective: Callable[[Float64], Float64], x0: Float64) -> Float64: ...
+```
+
+`Callable[..., Float64]` is accepted syntax, but it intentionally leaves
+argument types unknown and may still be too weak for wrapper generation.
 
 ### Pythonic Projections With `@native_call`
 
@@ -379,6 +737,62 @@ from Python argument 1, and native argument 2 is represented as Python return
 value 0. Use projections only when you are intentionally changing the
 Python-visible contract. Without explicit projection metadata, x2py keeps the
 native contract.
+
+The supported projection entries today are:
+
+| Entry | Meaning |
+| --- | --- |
+| `Arg(i)` | Native argument comes from visible Python argument `i`. |
+| `Return(i)` | Native argument is represented by Python return value `i`. |
+| `Const(value)` | Hidden native argument is a literal value. |
+| `Len(Arg(i))` | Hidden native argument is the length of argument `i`. |
+| `Len(Return(i))` | Hidden native argument is the length of return value `i`. |
+| `Arg(i).shape[d]` | Hidden native argument is dimension `d` of argument `i`. |
+| `Work("name")` | Hidden native argument is named temporary workspace. |
+| `Work("name").shape[d]` | Hidden native argument is a workspace dimension. |
+| `IsPresent(Arg(i))` | Hidden native argument records whether optional argument `i` was supplied. |
+
+The list order is the native argument order. Positions are zero-based.
+
+Hidden literal and derived native arguments:
+
+```python
+@native_call([
+    Arg(0),
+    Const(1),
+    Len(Arg(0)),
+    Arg(0).shape[0],
+    IsPresent(Arg(1)),
+    Work("tmp"),
+])
+def wrapper(
+    x: Float64[:],
+    b: Vector | None = None
+) -> None: ...
+```
+
+Projection metadata can also reference return values or workspace dimensions:
+
+```python
+@native_call([Len(Return(0)), Work("tmp").shape[1]])
+def produce_values() -> Float64[:]: ...
+```
+
+Method projections work the same way:
+
+```python
+class particle:
+    @private
+    @native_call([Arg(0)])
+    def reset(self: particle) -> Int32: ...
+```
+
+The `.pyi` loader and printer preserve this projection metadata. Wrapper
+generation that actually hides pointer references, allocates workspace,
+translates status returns, or applies coercions is still a later wrapper-stage
+policy. Syntax such as `Ptr(Arg(...))`, `As[...]`, status checking, and
+ownership helpers belongs to that future projection design; do not write it as
+current accepted user syntax unless the implementation has added it.
 
 ## Datatype Mapping
 
@@ -490,6 +904,33 @@ class context(Opaque):
 def context_create() -> Ptr(context): ...
 def context_destroy(ctx: Ptr(context)) -> None: ...
 ```
+
+### External Owner Stub
+
+When an imported Fortran derived type or external C opaque struct remains
+outside the direct wrapping target, generated `.pyi` output can include an
+owner-module dependency stub.
+
+Wrapping only `physics.f90` may produce:
+
+```python
+# physics.pyi
+from types_mod import particle
+
+def move(p: Ptr(particle)) -> None: ...
+```
+
+and a companion owner stub:
+
+```python
+# types_mod.pyi
+class particle(Opaque):
+    pass
+```
+
+The direct API keeps the correct import, and the owner stub gives readiness a
+concrete semantic type. If the owner module is later part of the wrapping
+target, replace the opaque placeholder with the edited concrete class.
 
 ## Readiness Reports
 

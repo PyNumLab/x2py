@@ -126,6 +126,194 @@ Wrappers and semantic readiness decide:
 - ABI shim requirements;
 - Python-visible signature adaptation.
 
+## Pipeline Internals
+
+The user-facing stages all start in `x2py/cli.py`, but each stage owns a
+different layer of the pipeline.
+
+```text
+CLI args
+  -> language resolution
+  -> preprocessing config and source loading
+  -> parser models
+  -> semantic IR
+  -> .pyi printing / .pyi loading
+  -> readiness report
+```
+
+### CLI And Language Resolution
+
+`x2py/cli.py` is the shared command-line entrypoint. It is responsible for:
+
+- choosing Fortran or C from `--language` and file suffixes;
+- rejecting ambiguous directories and unknown suffixes without `--language`;
+- building `PreprocessingConfig`;
+- dispatching the requested stage flags;
+- routing text, JSON, and `--out` output.
+
+Recognizable Fortran files and `.pyi` readiness inputs can omit `--language`.
+C files and directories require explicit language selection. Keep this behavior
+tested in `tests/parser/test_cli.py` whenever stage selection changes.
+
+The package-specific `fortran_parser/cli.py` remains for the Fortran parser
+package entrypoint. New cross-language user behavior normally belongs in
+`x2py/cli.py`.
+
+### Preprocessing Internals
+
+`x2py/preprocessing.py` owns compiler-backed preprocessing and provenance. The
+main value object is `PreprocessingConfig`; the main execution path is
+`run_compiler_preprocessor_with_recipe(...)`.
+
+Important contracts:
+
+- CLI source parsing uses compiler mode. C defaults to `cc`; Fortran defaults
+  to `gfortran` unless the user passes a compiler, compile database, or custom
+  template.
+- C direct parser entrypoints can still be used on raw strings or already
+  controlled source in Python tests.
+- The preprocessing recipe is part of the parser payload when preprocessing
+  happened. It records compiler, adapter, argv, include directories, defines,
+  undefs, standard, extra compiler args, included files, source mappings, and
+  diagnostics.
+- C preprocessing uses GCC/Clang-style `-E -x c` for direct compiler mode.
+  Fortran direct compiler mode uses `-E -cpp` plus source-form hints where
+  needed.
+- Native Fortran `include "..."` is expanded after compiler CPP output because
+  it is Fortran textual inclusion, not C/CPP include semantics.
+
+When changing preprocessing behavior, update
+`tests/parser/test_preprocessing_cli.py`, source-boundary tests in
+`tests/parser/test_preprocessor_and_execution_boundaries.py`, and C raw
+directive tests in `tests/parser/c/test_c_lexer_preprocessor.py`.
+
+### Parser Model Internals
+
+Parser models are source facts. They should answer "what did the source say?"
+rather than "what Python wrapper should be generated?"
+
+Fortran:
+
+- `fortran_parser/parser.py` slices the file into grammar units, then parses
+  each unit's specification region.
+- `fortran_parser/models.py` stores `FortranFile`, modules, procedures,
+  variables, derived types, interfaces, programs, submodules, and diagnostics.
+- Execution bodies are intentionally skipped after the parser has enough
+  signature/source facts.
+
+C:
+
+- `c_parser/lexer.py` handles comments, directives, top-level splitting, and
+  token source locations.
+- `c_parser/parser.py` visits declarations and declarators, records typed
+  source facts, and reports unsupported parser-owned syntax.
+- `c_parser/models.py` stores functions, variables, typedefs, structs, unions,
+  enums, includes, raw directives, preprocessing facts, and diagnostics.
+
+Adding parser fields is a schema decision. Add fields only when downstream
+semantic conversion, fixtures, diagnostics, or user-visible behavior need a
+new fact.
+
+### Semantic IR Internals
+
+The semantic layer normalizes C and Fortran facts into language-neutral models
+from `semantics/models.py`.
+
+- `semantics/fortran2ir.py` maps Fortran procedures, derived types, module
+  variables, kinds, shapes, storage contracts, visibility, imported references,
+  and compile-time values.
+- `semantics/c2ir.py` maps C functions, variables, structs/opaque structs,
+  enums, typedef chains, standard-type probe facts, macros, pointer/array
+  storage, and C-specific readiness blockers.
+- `semantics/pyi_printer.py` emits editable user contracts.
+- `semantics/pyi_parser.py` loads edited contracts back into semantic IR.
+- `semantics/readiness.py` decides whether that IR is complete enough for
+  wrapping.
+
+Keep semantic IR stable where possible. If a parser change does not affect the
+semantic contract, avoid changing semantic fixtures.
+
+### `.pyi` Projection Internals
+
+`@native_call` is stored as projection metadata on `SemanticFunction`. The
+loader and printer currently support `Arg`, `Return`, `Const`, `Len`,
+`IsPresent`, `Work`, and `.shape[...]` value references. They do not currently
+implement future wrapper projection helpers such as `Ptr(Arg(...))`, `As[...]`,
+status-return policy, ownership conversion, or coercion execution.
+
+The test ownership is:
+
+- loader syntax and error behavior: `tests/pyi/test_pyi_to_ir.py`;
+- printer round-trip shape: `tests/semantics/test_pyi_printer.py`;
+- readiness interpretation: `tests/semantics/test_semantic_wrap_readiness.py`
+  and `tests/semantics/test_c_semantic_readiness.py`.
+
+When adding projection syntax, first add loader tests that prove the accepted
+syntax and rejected syntax. Then add printer tests and readiness tests only if
+the new metadata affects those layers.
+
+## Testing Strategy
+
+Use the smallest test layer that proves the behavior, then add broader
+coverage only when the public contract changes.
+
+### Test Layers
+
+| Layer | Purpose | Typical files |
+| --- | --- | --- |
+| Focused parser tests | One construct, diagnostic, or model field | `tests/parser/test_*.py`, `tests/parser/c/test_*.py` |
+| Parser fixture goldens | Serialized parser contract over curated files | `tests/parser/test_fortran_fixture_suite.py`, `tests/parser/c/test_c_fixture_suite.py` |
+| Semantic tests | Parser facts converted to wrapper-neutral IR | `tests/semantics/test_fortran2ir.py`, `tests/semantics/test_c2ir.py` |
+| `.pyi` tests | Editable contract loader/printer behavior | `tests/pyi/test_pyi_to_ir.py`, `tests/semantics/test_pyi_printer.py` |
+| Readiness tests | User-facing blocker and wrappability decisions | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_c_semantic_readiness.py` |
+| CLI tests | User commands, output routing, diagnostics | `tests/parser/test_cli.py`, `tests/parser/test_preprocessing_cli.py` |
+| Property/fuzz tests | Broad parser robustness invariants | `tests/property/test_parser_properties.py`, `tests/property/test_semantic_properties.py` |
+
+### Choosing Tests For A Change
+
+- Parser-only source fact: focused parser test first; fixture golden only if
+  serialized output changes intentionally.
+- CLI flag or output change: CLI test first; update README/user docs if the
+  visible command changes.
+- New datatype mapping: semantic conversion test plus `.pyi` printer/loader
+  tests if emitted syntax changes.
+- New `.pyi` syntax: loader test, printer test, readiness test if it resolves
+  or creates a blocker.
+- New readiness blocker: semantic readiness test and fixture refresh only when
+  user-facing messages change.
+- Preprocessing behavior: preprocessing CLI tests and at least one parser path
+  that consumes the recipe.
+
+### Golden Fixture Rules
+
+Do not regenerate broad fixture sets to hide uncertainty. First write or run a
+focused test that explains the intended behavior. Then regenerate only the
+affected fixture group when the serialized contract really changed.
+
+Useful commands:
+
+```bash
+python tests/parser/c/generate_c_parser_goldens.py tests/data/c/general/math_api.h
+python tests/parser/fortran/generate_fortran_parser_goldens.py tests/data/fortran/general/basic_subroutine.f90
+python tests/semantics/generate_semantic_fixtures.py
+python tests/semantics/generate_wrap_readiness_fixtures.py
+python tests/pyi/generate_pyi_fixtures.py
+```
+
+### Coverage And CI Parity
+
+When investigating coverage failures, mirror the GitHub Actions coverage flow
+instead of relying on a plain local run:
+
+```bash
+COVERAGE_PROCESS_START=pyproject.toml PYTHONPATH=. coverage run -m pytest
+python -m coverage combine
+python -m coverage report
+```
+
+The `COVERAGE_PROCESS_START` environment variable matters because subprocess
+CLI tests need the same coverage configuration as CI.
+
 ## Feature Change Walkthroughs
 
 Use these walkthroughs when adding behavior. They are deliberately procedural:
