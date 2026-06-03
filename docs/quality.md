@@ -1,22 +1,21 @@
 # Quality Assurance
 
 This project uses a staged Python QA stack: fast bug-focused checks are suitable
-for every pull request, while heavier dead-code, complexity, fuzz, and mutation
-workflows are run manually or on a schedule.
+for every pull request, while heavier dead-code, complexity, and fuzz workflows
+are run manually or on a schedule.
 
 Track the remaining rollout work, the current effort-weighted completion
 estimate, and completed QA passes in the
 [`quality adoption checklist`](quality_adoption_checklist.md). As of
-2026-06-03, with full-project mutation parked as advisory, the documented
-estimate is about `96%` adopted by effort, with about `4%` of the active
-non-mutation rollout still remaining. The
+2026-06-03, with mutation testing removed from the active stack, the documented
+estimate is about `98-99%` adopted by effort, with about `1-2%` of the active
+rollout still remaining. The
 [`quality tool retention report`](quality_tool_retention_report.md) records the
 recommended steady-state cadence and the evidence for keeping each tool.
 
 Full adoption means the fast gates are blocking, the deeper scheduled/manual
-jobs are in place, mutation campaigns have reviewed survivors for every listed
-subsystem, Ruff/Radon ratchets have stable policies, and the
-checklist records any scheduled failures until they are fixed.
+jobs are in place, Ruff/Radon ratchets have stable policies, and the checklist
+records any scheduled failures until they are fixed.
 
 ## Tool Roles
 
@@ -26,8 +25,6 @@ checklist records any scheduled failures until they are fixed.
 - `hypothesis`: property-based testing. It generates edge cases and shrinks
   failures to small examples, which is useful for parsers, AST transforms, and
   code generators.
-- `mutmut`: mutation testing. It changes small pieces of implementation code
-  and checks whether tests fail, exposing weak assertions and missing cases.
 - `vulture`: dead-code detection. It finds likely unused functions, classes,
   variables, and unreachable definitions.
 - `radon`: complexity and maintainability metrics. It identifies functions
@@ -52,12 +49,6 @@ If your shell only exposes `python3`, use:
 
 ```bash
 python3 -m pip install -e ".[qa]"
-```
-
-Install pre-commit hooks after the QA extra is available:
-
-```bash
-pre-commit install
 ```
 
 ## Test Organization
@@ -148,26 +139,6 @@ average from rising above `19.01` and, when a Git base ref is supplied, rejects
 changed production-code blocks above complexity `20`. The full Radon reports
 remain useful for hotspot planning and threshold ratchets.
 
-Run mutation testing:
-
-```bash
-python tools/run_mutmut.py run
-mutmut results
-mutmut show <mutant-id>
-mutmut tests-for-mutant <mutant-id>
-```
-
-The repository wrapper joins mutmut's mutant-generation workers and waits
-specifically for its mutation workers. This avoids a process-reaping failure
-seen with mutmut 3.5.0. It also keeps mutmut's process-local stats
-instrumentation out of fresh CLI subprocesses. Focused workspaces copy the
-local package directories so imports resolve consistently when only one module
-is mutated.
-
-For a focused local mutation pass, temporarily narrow `tool.mutmut.paths_to_mutate`
-in `pyproject.toml` to the subsystem you are improving, then restore it before
-committing.
-
 ## Hypothesis Patterns
 
 Prefer generated valid subsets before generating arbitrary invalid text. Valid
@@ -202,56 +173,15 @@ Good invariants for this codebase:
 - malformed input raises parser-owned diagnostic exceptions, not arbitrary
   exceptions.
 
-## Mutation Workflow
+## Historical Mutation Findings
 
-Use mutation testing after adding or changing behavior, not on every edit:
-
-1. Run the focused normal tests first.
-2. Keep `tool.mutmut.paths_to_mutate` focused on the subsystem under review.
-3. Run `python tools/run_mutmut.py run`. For large local parser campaigns, keep
-   the run serialized with `--max-children 1` and use an outer timeout.
-4. Inspect survivors with `mutmut results` and `mutmut show <id>`.
-5. Add assertions that fail for real behavioral changes.
-6. Avoid tests that only assert implementation details or removed behavior.
-
-The reviewed `c_parser/lexer.py` baseline is `794/1171` killed mutants,
-`10` equivalent or mutmut-wrapper survivors, `367` bounded-run timeout
-detections recorded by function cluster, and `0` mutants without covering
-tests. The checklist records the survivor IDs and timeout-cluster inventory.
-The reviewed `c_parser/preprocessor.py` baseline is `105/108` killed mutants
-with `3` equivalent boundary or default-value survivors.
-The reviewed `fortran_parser/type_resolver.py` baseline is `34/34` killed
-mutants.
-The reviewed `fortran_parser/lexer.py` baseline is `150/185` killed mutants
-with `35` equivalent normalization, state, or boundary survivors.
-The reviewed `c_parser/models.py` baseline is `304/310` killed mutants with
-`6` equivalent or mutmut-wrapper survivors.
-The reviewed `semantics/readiness.py` baseline is `804/827` killed mutants with
-`23` equivalent or mutmut-wrapper survivors.
-The reviewed `x2py/preprocessing.py` baseline is `1496/1564` killed mutants,
-`52` equivalent or mutmut-wrapper survivors, `16` bounded-run timeout
-detections, and `0` mutants without covering tests.
-The reviewed `semantics/c2ir.py` baseline is `1785/1821` killed mutants,
-`34` equivalent or mutmut-wrapper survivors, `2` bounded-run timeout
-detections, and `0` mutants without covering tests.
-The reviewed `semantics/fortran2ir.py` baseline is `1225/1339` killed mutants
-with `114` equivalent, default-value, or mutmut-wrapper survivors and `0`
-timeouts or mutants without covering tests.
-The reviewed `semantics/pyi_parser.py` baseline is `1266/1288` killed mutants,
-with `21` equivalent, default-value, or mutmut-wrapper survivors, `1` manually
-verified equivalent timeout, and `0` mutants without covering tests.
-The initial `fortran_parser/parser.py` campaign recorded `3233/5278` killed
-mutants, `745` survivors, and `1300` bounded-run timeouts. Its survivor review
-is still in progress, so this is not yet a reviewed subsystem baseline.
-
-For parser/compiler changes, high-value mutants are usually around:
-
-- branch conditions in grammar-unit slicing;
-- type/kind normalization;
-- source-location arithmetic;
-- AST or IR field mapping;
-- diagnostic code selection;
-- codegen escaping and stable ordering.
+Mutation testing is no longer part of the active QA stack. Earlier focused
+campaigns still produced useful regression tests and fixes, including duplicate
+typedef-cycle diagnostics, cycle-safe union-by-value diagnostics, and a Fortran
+project namespace-collection encoding bug. Keep those ordinary regression tests
+in the suite. A future mutation review can be run as an occasional external
+audit, such as annually, without keeping `mutmut` in the normal dependency set
+or CI workflow.
 
 ## Strictness Defaults
 
@@ -261,25 +191,21 @@ Current defaults are intentionally staged for an existing parser codebase:
   Bandit, pip-audit, Vulture, and the staged Radon complexity policy.
 - Advisory: Radon full reports, because complexity reduction needs focused
   tests and gradual refactoring.
-- Manual: focused mutmut subsystem runs. Full-project mutation is parked as
-  advisory after the 2026-06-02 remote run exceeded the `3h` GitHub Actions
-  limit.
 - Scheduled or manual: long Hypothesis fuzz profiles and changing random-order
   runs.
 
-The remaining rollout is dominated by mutation testing, not by tool
-installation. Most fast gates are already wired; the expensive work is reviewing
-mutation survivors subsystem by subsystem, then tightening complexity where the
+Most fast gates are already wired. The remaining rollout is small and centered
+on scheduled workflow review plus future complexity tightening where the
 reports are stable enough to make good blocking checks. Ruff's historical
 baseline-ignore list is empty. Line-length diagnostics remain intentionally
 unselected because wrapping parser diagnostics and embedded test sources would
 add noise without improving correctness.
 
 When updating the estimate, separate one-time adoption from recurring
-maintenance. A new completed mutation campaign, a CI gate becoming blocking, or
-a scheduled workflow review that records actionable results should change the
-percentage. A routine clean run of an already-adopted check should update the
-baseline date or progress log only when it provides new evidence.
+maintenance. A CI gate becoming blocking or a scheduled workflow review that
+records actionable results should change the percentage. A routine clean run of
+an already-adopted check should update the baseline date or progress log only
+when it provides new evidence.
 
 After the first cleanup pass, ratchet strictness in this order:
 
@@ -304,10 +230,8 @@ After the first cleanup pass, ratchet strictness in this order:
   Hypothesis CI profile, and coverage combine/report.
 - `.github/workflows/quality.yml` runs Ruff, Bandit, pip-audit, blocking
   Vulture, the staged Radon policy, and advisory full Radon reports. Manual
-  dispatch runs mutmut. Scheduled/manual jobs run bounded parser fuzzing and a
-  changing pytest-randomly seed.
-- `.pre-commit-config.yaml` runs Ruff, Bandit, and the staged Radon policy on
-  commit, with Vulture and full Radon reports available manually.
+  dispatch and scheduled jobs run bounded parser fuzzing and a changing
+  pytest-randomly seed.
 
 ## Scheduled Workflow Triage
 
@@ -330,7 +254,6 @@ manual dispatch. Review the latest scheduled run after each execution:
 - Pytest configuration: https://docs.pytest.org/en/latest/reference/customize.html
 - Coverage subprocess behavior: https://coverage.readthedocs.io/en/latest/config.html
 - Hypothesis settings profiles: https://hypothesis.readthedocs.io/en/latest/tutorial/settings.html
-- Mutmut configuration: https://mutmut.readthedocs.io/en/latest/
 - Vulture configuration: https://pypi.org/project/vulture/
 - Radon command line: https://radon.readthedocs.io/en/stable/commandline.html
 - Bandit configuration: https://bandit.readthedocs.io/en/latest/config.html

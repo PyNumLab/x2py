@@ -1,4 +1,4 @@
-"""Focused contracts discovered during the Fortran parser mutation review."""
+"""Focused regression contracts for the Fortran parser."""
 
 from __future__ import annotations
 
