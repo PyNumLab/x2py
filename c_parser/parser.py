@@ -414,7 +414,7 @@ class CParser:
 
         The current implementation supports raw preprocessing metadata,
         compiler-fed preprocessed text, and the partial grammar subset
-        documented in `docs/c_parser`.
+        documented in `docs/c_parser.md`.
         """
         source_path: Path | None = None
         if _looks_like_existing_source_path(source_or_path):

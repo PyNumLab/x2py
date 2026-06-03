@@ -132,7 +132,7 @@ Parser-related pull requests should update this file when the documented
 feature inventory, public API, diagnostics, project behavior, semantic handoff,
 or maintenance workflow changes. The parser-reference guard watches
 `fortran_parser/`, `tests/parser/fortran/`, and `tests/data/fortran/` changes and
-expects `docs/fortran/fortran_parser.md` to change unless the PR is explicitly
+expects `docs/fortran_parser.md` to change unless the PR is explicitly
 labeled to skip the guard.
 
 `visit_file` is the central orchestration path. It first slices the source into
@@ -224,6 +224,74 @@ argument shapes are kept symbolic in the signature (`x(n)` remains `["n"]`)
 and are treated as valid scope references for readiness checks. Module/program
 variable shapes and parameter values can be resolved through the compile-time
 resolver when enough information is available.
+
+## Reimplementation Guide For Another Parser
+
+Use the Fortran parser as the reference for any source language with nested
+program units, scoped declarations, and a later semantic handoff. The details
+are Fortran-specific, but the parser architecture is reusable.
+
+Recommended frontend responsibilities:
+
+- Keep one typed model layer for parse-only facts.
+- Keep one parser orchestration class with thin public wrappers.
+- Slice source into grammar units before parsing declarations.
+- Pass scope explicitly into shared helpers rather than using global mutable
+  parser state for symbol resolution.
+- Parse only wrapper-relevant specification facts; skip executable bodies once
+  they are outside the parser contract.
+- Preserve source locations and original line numbers through preprocessing and
+  recursive slicing.
+- Emit parser diagnostics for malformed source, but leave wrappability policy
+  to semantic readiness.
+
+The Fortran data flow is:
+
+```text
+source path or source text
+  -> compiler/native include preprocessing
+  -> FortranParser.visit_file(...)
+  -> source-unit slices with original line numbers
+  -> scoped specification parsing
+  -> FortranFile parser facts
+  -> parse_fortran_project(...) dependency ordering and namespace resolution
+  -> semantics.fortran2ir conversion
+  -> readiness, `.pyi`, and later wrapper stages
+```
+
+The recursive parsing pattern is:
+
+1. Identify direct child units at the current grammar level.
+2. Split each child into header, specification part, execution part, and
+   `contains` part where that language construct allows them.
+3. Parse declarations only from the specification part.
+4. Recurse only into direct children that are legal for the current unit kind.
+5. Validate sibling names and scope-local duplicate declarations.
+6. Finalize procedure arguments/results after local declarations and
+   parameters are known.
+7. Resolve cross-file or imported compile-time facts only at project or
+   semantic-conversion boundaries.
+
+When adding another parser, keep these test layers separate:
+
+- parser unit tests for grammar slicing and declarations;
+- parser fixture tests for stable JSON/model output;
+- parser error fixture tests for fatal diagnostic contracts;
+- project tests for dependency ordering and cross-file resolution;
+- CLI tests for frontend selection, stage dispatch, output files, and debug
+  behavior;
+- semantic conversion tests for parser-to-IR mapping;
+- `.pyi` tests for generated and edited interface round trips.
+
+Executable references:
+
+- Fortran parser walkthrough: `tests/parser/test_parser_developer_tutorial.py`
+- Procedure/type parsing: `tests/parser/test_procedure_and_type_parsing.py`
+- Scope and project behavior: `tests/parser/test_scope_handling.py` and
+  `tests/parser/test_project_scope_models.py`
+- Fortran fixture workflow: `tests/parser/test_fortran_fixture_suite.py`
+- Shared CLI behavior: `tests/parser/test_cli.py`
+- Fortran semantic handoff: `tests/semantics/test_fortran2ir.py`
 
 ## 3) Terminal usage and expected outputs
 
@@ -624,10 +692,46 @@ PYTHONPATH=. pytest -q
 Run parser-focused tests:
 
 ```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --language fortran --parse --json
 PYTHONPATH=. pytest -q tests/parser/test_procedure_and_type_parsing.py
 PYTHONPATH=. pytest -q tests/parser/test_fortran_fixture_suite.py
 PYTHONPATH=. pytest -q tests/parser/test_cli.py
 ```
+
+Focused test files by implementation area:
+
+- Parser walkthrough and expected maintainer flow:
+  `tests/parser/test_parser_developer_tutorial.py`
+- Procedure headers, declarations, derived types, interfaces, and type-bound
+  procedures:
+  `tests/parser/test_procedure_and_type_parsing.py`
+- Function header edge cases:
+  `tests/parser/test_function_header_parsing.py`
+- Scope handling and project namespace behavior:
+  `tests/parser/test_scope_handling.py` and
+  `tests/parser/test_project_scope_models.py`
+- Preprocessing, native includes, and execution-boundary skipping:
+  `tests/parser/test_preprocessor_and_execution_boundaries.py`
+- Parser diagnostics and fatal error contracts:
+  `tests/parser/test_error_handling.py`
+- Regression contracts:
+  `tests/parser/test_fortran_parser_regression_contracts.py`
+- Public entrypoints:
+  `tests/parser/test_parser_public_entrypoints.py`
+- Parser fixture goldens:
+  `tests/parser/test_fortran_fixture_suite.py`
+- Parser error fixture goldens:
+  `tests/parser/test_fortran_error_fixture_suite.py`
+- Parser JSON shape:
+  `tests/parser/test_fortran_json_sanity.py`
+- Fortran compiler/type probing:
+  `tests/parser/test_fortran_type_probe.py`
+- Shared CLI behavior:
+  `tests/parser/test_cli.py`
+
+When adding or changing a Fortran parser feature, add a focused parser test
+near the implementation concern first, then update fixture goldens only when
+the serialized parser contract intentionally changes.
 
 Update golden JSON fixtures:
 
@@ -669,7 +773,7 @@ exception keeps structured metadata for consumers:
 
 Diagnostic codes are for programmatic matching in tests, tools, and
 documentation. The category name states the failure class directly. The shared
-registry is [`docs/diagnostic_codes.md`](../diagnostic_codes.md).
+registry is [`diagnostic_codes.md`](diagnostic_codes.md).
 
 `str(error)` and `error.format_diagnostic(color=False)` render a
 compiler-style diagnostic:

@@ -610,7 +610,7 @@ declaration extensions are diagnosed rather than partially modeled; additional
 syntax diagnostics should be added only with focused tests.
 Generic grammar rejection uses `CPARSE_INVALID_SYNTAX`. Diagnostic codes are
 stable, explicit category identifiers for tests, tools, and documentation. The
-shared registry is [`docs/diagnostic_codes.md`](../diagnostic_codes.md).
+shared registry is [`diagnostic_codes.md`](diagnostic_codes.md).
 
 ## Testing Workflow
 
@@ -653,9 +653,45 @@ activate only the tests for the capability they implement.
 Useful local checks for the parse-only frontend:
 
 ```bash
+python -m x2py tests/data/c/general/math_api.h --language c --parse --json
+python tests/parser/c/generate_c_parser_goldens.py tests/data/c/general/math_api.h
+pytest -q tests/parser/c/test_c_declarations_and_declarators.py
+pytest -q tests/parser/c/test_c_fixture_suite.py
 pytest -q tests/parser/c tests/parser/test_c_standard_type_probe.py tests/parser/test_preprocessing_cli.py tests/parser/test_cli.py tests/parser/test_fortran_type_probe.py tests/semantics tests/pyi
 pytest -q
 ```
+
+Focused test files by implementation area:
+
+- Lexer, comments, continuations, raw directive handling:
+  `tests/parser/c/test_c_lexer_preprocessor.py`
+- Declaration specifiers, qualifiers, declarators, arrays, pointers,
+  callbacks, and variables:
+  `tests/parser/c/test_c_declarations_and_declarators.py`
+- Function prototypes and definitions:
+  `tests/parser/c/test_c_functions.py`
+- Structs, unions, enums, typedefs, and aggregate members:
+  `tests/parser/c/test_c_structs_unions_enums_typedefs.py`
+- Project assembly, include graph facts, typedef/tag resolution, and
+  redeclarations:
+  `tests/parser/c/test_c_project_resolution.py`
+- Compiler extension tolerance and diagnostics:
+  `tests/parser/c/test_c_compiler_extensions.py`
+- Corpus/third-party-style fixtures:
+  `tests/parser/c/test_c_corpus.py`
+- Project golden fixtures:
+  `tests/parser/c/test_c_fixture_suite.py`
+- Parser JSON shape:
+  `tests/parser/c/test_c_json_sanity.py`
+- Fatal parser diagnostic goldens:
+  `tests/parser/c/test_c_error_fixture_suite.py`
+- Public API and developer tutorial:
+  `tests/parser/c/test_c_public_api_skeleton.py` and
+  `tests/parser/c/test_c_parser_developer_tutorial.py`
+
+When adding or changing a C parser feature, add the smallest focused test first
+and only update project goldens when the serialized project contract
+intentionally changes.
 
 ### Declaration Coverage Boundary
 
@@ -754,6 +790,104 @@ C parsing must remain opt-in so Fortran directory parsing keeps its historical
 behavior. Include resolution records graph facts and header/source pairing, but
 does not recursively parse arbitrary include trees as new inputs.
 
+## Implementation Guide For New Frontends
+
+Use the C parser as the model for adding another C-family frontend, such as a
+future C++ parser, but copy the architecture rather than the exact grammar.
+
+Recommended package shape:
+
+```text
+new_parser/
+  __init__.py
+  __main__.py
+  cli.py
+  lexer.py
+  models.py
+  parser.py
+```
+
+The frontend should expose thin public functions from both its parser package
+and `x2py`, then keep implementation details inside the parser package:
+
+- `models.py`: source locations, diagnostics, typed declarations, typed native
+  types, per-file reports, and project reports.
+- `lexer.py`: comment stripping, continuation handling, token/source-location
+  helpers, and any frontend-local raw directive collection.
+- `parser.py`: grammar-style source slicing, recursive declaration parsing,
+  project assembly, and public `parse_*` wrappers.
+- `cli.py`: only frontend-specific formatting or package entrypoint behavior.
+  The shared `x2py` CLI should own cross-language stage dispatch.
+
+The C data flow is:
+
+```text
+source path or source text
+  -> optional compiler preprocessing and source mapping
+  -> CParser.visit_file(...)
+  -> CFile parser facts
+  -> CParser.visit_parsed_project(...) or parse_c_project(...)
+  -> CProject indexes and cross-file resolution facts
+  -> semantics.c2ir conversion
+  -> readiness, `.pyi`, and later wrapper stages
+```
+
+Keep these boundaries:
+
+- The parser records source facts. It does not decide Python ownership,
+  callback lifetime, ABI-safe calling shims, or projected wrapper signatures.
+- Preprocessing belongs to the compiler/toolchain adapter. The parser consumes
+  expanded source and uses linemarkers/source maps to report original
+  locations.
+- Project parsing is explicit-input based. Includes become dependency facts;
+  they are not recursive parse roots unless supplied by the user.
+- Semantic conversion is the first place where parser-native facts become the
+  shared language-neutral model.
+
+The parser algorithm should remain grammar-style:
+
+1. Normalize only source mechanics that are independent of the language
+   semantics, such as comments and continuations.
+2. Collect raw directives that can be represented safely, such as includes and
+   pragmas.
+3. Reject unresolved preprocessing constructs in raw mode instead of guessing.
+4. Split the translation unit while tracking nesting and literals.
+5. Parse declaration specifiers into typed primitive/tag/typedef facts.
+6. Parse declarators recursively from the declared identifier outward.
+7. Dispatch aggregate, enum, typedef, variable, function prototype, and
+   function-definition forms through shared helpers.
+8. Preserve unsupported or unmodeled facts as diagnostics or explicit unknown
+   references.
+9. Assemble project indexes and run bounded cross-file resolution only after
+   every explicit input has been parsed.
+
+For a future C++ parser, keep the same stage boundaries but expect different
+models and grammar: namespaces, classes, templates, overload sets, references,
+constructors/destructors, methods, access control, and name mangling cannot be
+treated as small extensions to the C declaration parser. The reusable lesson is
+the pipeline and test structure, not C declarator syntax.
+
+Testing should grow in this order:
+
+1. lexer/source-location tests;
+2. declaration/type parser tests;
+3. model serialization tests;
+4. one-file parse tests;
+5. project/index tests;
+6. fatal diagnostic fixture tests;
+7. compiler-preprocessed fixture tests;
+8. semantic conversion tests;
+9. `.pyi` round-trip tests;
+10. CLI stage-dispatch tests.
+
+Executable references:
+
+- C parser walkthrough: `tests/parser/c/test_c_parser_developer_tutorial.py`
+- C declaration coverage: `tests/parser/c/test_c_declarations_and_declarators.py`
+- C project/golden workflow: `tests/parser/c/test_c_fixture_suite.py`
+- Shared CLI behavior: `tests/parser/test_cli.py`
+- C semantic handoff: `tests/semantics/test_c2ir.py`
+
 Fixture layout should be separate from Fortran:
 
 ```text
@@ -776,11 +910,13 @@ tests/parser/c/
   errors/generate_c_parser_error_goldens.py
 ```
 
-Checked-in project JSON files are legacy schema snapshots. They are not active
-parser output goldens because macro-heavy raw inputs now fail before parsing.
-The fixture suite still checks same-stem grouping order and representative raw
-preprocessing failures. Reproducible compiler-preprocessed project snapshots
-remain future curated corpus work.
+Checked-in project JSON files under `tests/parser/c/fixtures/` are active
+compiler-preprocessed project goldens. They are generated by
+`python tests/parser/c/generate_c_parser_goldens.py`, filter system-header
+declaration spillover, and normalize source-text whitespace so compiler/libc
+formatting differences do not make CI flaky.
+The fixture suite also checks same-stem grouping order and representative raw
+preprocessing failures.
 Fatal diagnostic goldens are regenerated with
 `C_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser/c/test_c_error_fixture_suite.py`.
 The standalone error generator remains available for targeted refreshes.
@@ -803,17 +939,10 @@ are met.
 
 ## Documentation Set
 
-The C parser documentation lives under:
-
-```text
-docs/c_parser/
-```
-
-Current C parser documents:
-
-- `c_parser_reference.md`
-
-Shared project backlog lives in [`../x2py_checklist.md`](../x2py_checklist.md).
+The C parser documentation now lives in this top-level file:
+`docs/c_parser.md`. Shared semantic behavior is documented in
+[`semantics.md`](semantics.md), and wrapper-generation policy notes live in
+[`wrapper_design_notes.md`](wrapper_design_notes.md).
 
 Documentation update rule: every C parser implementation change must update
 this reference in the same change when behavior, public API, models, CLI

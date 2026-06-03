@@ -100,9 +100,16 @@ under `tests/data/c` and C parser tests live under `tests/parser/c`.
 Stage-specific tests and expected fixtures live under `tests/parser`,
 `tests/semantics`, and `tests/pyi`.
 
-Technical documentation is indexed in [`docs/README.md`](docs/README.md). The
-editable wrapper `.pyi` format is documented in
-[`docs/semantics/pyi_format.md`](docs/semantics/pyi_format.md).
+## Documentation
+
+The documentation has two explicit entrypoints:
+
+- [`docs/user.md`](docs/user.md): user-facing CLI/API usage, parser output,
+  diagnostics, generated `.pyi` files, semantic contracts, and readiness.
+- [`docs/developer.md`](docs/developer.md): maintainer references, focused test
+  files, fixture generators, CLI test commands, and implementation workflows.
+
+The full documentation index is [`docs/README.md`](docs/README.md).
 
 ## Terminal usage
 
@@ -697,9 +704,9 @@ print("header/source pairs:", project.header_source_pairs)
 
 The same C entrypoints remain available from `c_parser`. Includes are recorded
 as project facts and are not recursively parsed; supply every header that
-should contribute declarations (or supply its containing directory). C
-semantic conversion will be added through the semantic layer in a future
-phase.
+should contribute declarations (or supply its containing directory). The
+supported C subset can also be converted through semantic IR, `.pyi`, and
+wrap-readiness stages.
 
 ## Running tests
 
@@ -709,141 +716,6 @@ From repository root:
 PYTHONPATH=. pytest -q
 ```
 
-## Merging policy (soft enforcement)
-
-This repository uses CI checks to validate parser behavior. As a project policy,
-**do not merge pull requests unless all checks are green**.
-
-Run key suites individually:
-
-```bash
-PYTHONPATH=. pytest -q tests/parser
-PYTHONPATH=. pytest -q tests/semantics
-PYTHONPATH=. pytest -q tests/pyi
-```
-
-### Refresh golden fixture JSON files
-
-```bash
-python tests/parser/fortran/generate_fortran_parser_goldens.py
-```
-
-Or update only specific fixture files:
-
-```bash
-python tests/parser/fortran/generate_fortran_parser_goldens.py tests/data/fortran/general/basic_subroutine.f90
-```
-
-During fixture test runs, you can also auto-update expected JSON in-place:
-
-```bash
-FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser --confcutdir=tests/
-```
-
-When parser model output changes, include the regenerated parser goldens and a
-short explanation in the PR. For `.pyi` or semantic IR behavior changes, update
-the corresponding fixtures under `tests/pyi/fixtures` or
-`tests/semantics/fixtures`.
-
-Semantic wrap-readiness corpus messages for the general, BLAS, LAPACK, and
-SciFortran fixtures are regenerated separately:
-
-```bash
-python tests/semantics/generate_wrap_readiness_fixtures.py
-```
-
-This writes `tests/semantics/fixtures/wrap_readiness_messages.json`. The file is
-a semantic readiness fixture, not a parser golden, even though Fortran fixtures
-are used as input.
-
-## Semantic parser structure
-
-The parser exposes stable file/project entrypoints:
-
-- `parse_fortran_file(...)` for one source (string or path) returning `FortranFile`.
-- `parse_fortran_project(...)` for many sources returning `FortranProject`.
-
-Wrap-readiness is intentionally outside the parser model. Use
-`fortran_file_to_semantic_modules(...)` or `.pyi` parsing to produce semantic IR,
-then call `assess_semantic_wrap_readiness(...)` on that semantic interface.
-
-Internally, `FortranParser.visit_file` uses a recursive grammar-style
-source-unit parser. The file is first sliced into direct
-modules/submodules/programs/procedures/block-data/interfaces/types. Each unit
-visitor then parses only its own substring, splits it into header,
-specification, optional execution, and optional `contains` regions, and recurses
-into direct child units where that grammar allows children. Shared declaration
-helpers parse variables, procedure arguments/results, and type fields, then
-push them into the active scope. Nested unit boundaries and placement outside
-execution regions are checked even when they do not produce wrapper metadata.
-Internal procedures inside a host procedure's `contains` block are
-structurally sliced, then their declarations and bodies are skipped. After an
-execution boundary is detected, procedure bodies and standalone included
-execution fragments are intentionally skipped. Procedure-local interfaces are
-retained for callback typing.
-Parameter variables keep both `value` and serialized `symbolic_value` when the
-parser has that information. `value` is literal/evaluated only; if an
-initializer cannot be evaluated safely, `value` is `None` and
-`symbolic_value` keeps the original expression.
-Module-level parameters used in procedure argument shapes remain symbolic in
-the signature while still being valid scoped references for readiness checks.
-
-The semantics layer consumes `FortranFile`/`FortranModule` objects and projects them into language-independent semantic IR (`SemanticModule`, `SemanticFunction`, `SemanticClass`, `SemanticType`). This keeps the semantic API model independent from parser internals, matching the project goal that parser output is a helper and the semantic interface/IR is the source of truth.
-For compiler-specific constants, use
-`collect_semantic_compile_time_requirements(parsed)` to extract unresolved
-values. With a configured Fortran compiler, pass those requirements to
-`evaluate_fortran_type_requirements(config, requirements)` and provide the
-returned dictionary to semantic conversion via `compile_time_values`. The CLI
-does this automatically for Fortran semantic stages when compiler preprocessing
-is active.
-
-For Fortran `use` imports, the parser stores each explicit imported symbol as a
-source/target mapping. A non-renamed `use iso_c_binding, only: c_int` maps
-`source="c_int"` and `target=None`; a renamed
-`use list_input, delete_input => delete_input_list` maps
-`source="delete_input_list"` and `target="delete_input"`. The semantic layer
-uses that information to emit Python stub imports such as
-`from list_input import delete_input_list as delete_input`.
-
-Fortran `use` dependencies are not parsed or wrapped recursively. If a
-procedure refers to an imported derived type, semantic IR records its defining
-module and represents the reference as an opaque handle unless the defining
-module is explicitly part of the wrapping target. Explicitly supplied modules
-share one wrapped-type registry, so the imported reference resolves to the
-single class emitted by its owner module without being re-exported by the
-importing module. Reachable include exposure is already handled separately by
-the preprocessing include policy; a future dependency-expansion option would
-apply specifically to recursive Fortran `use` traversal.
-
-When an imported derived type remains external, `.pyi` generation emits an
-owner-module dependency stub. For example, wrapping only `physics.f90` may
-produce:
-
-```python
-# physics.pyi
-from types_mod import particle
-
-def move(p: Ptr(particle)) -> None: ...
-```
-
-```python
-# types_mod.pyi
-class particle(Opaque):
-    pass
-```
-
-`python -m x2py physics.f90 --pyi --out` writes both files beside the source.
-`load_pyi_modules(...)` loads a file set or directory, preserves opaque classes,
-and reconciles imported references against edited owner stubs. Replacing the
-opaque placeholder with a concrete edited class changes the semantic reference
-from `representation="opaque"` to `representation="wrapped"`. Existing
-`Annotated[...]` constraints also round-trip through this editable interface;
-richer coercion syntax can be added to the same `.pyi` format later.
-
-The same opaque-handle file-set model applies to C. A local forward declaration
-such as `struct context;` emits `class context(Opaque): pass`. When a public C
-header uses a struct from another explicitly supplied header, its generated
-stub imports the class from that header's stub. A private included struct used
-through a public pointer boundary emits an opaque owner-module dependency stub.
-An unresolved C typedef is left unresolved rather than guessed to be opaque,
-because its ABI may not be pointer-shaped.
+Focused developer test commands, per-area test files, fixture generator
+commands, and merge policy are documented in
+[`docs/developer.md`](docs/developer.md).

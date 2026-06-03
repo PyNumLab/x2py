@@ -8,7 +8,7 @@
 
 ### Parser reference guard
 
-This repo includes a CI guard that may require updating `docs/fortran/fortran_parser.md` when parser-related files change.
+This repo includes a CI guard that may require updating `docs/fortran_parser.md` when parser-related files change.
 
-- **Default behavior**: if you change `fortran_parser/` or `tests/data/fortran/`, update `docs/fortran/fortran_parser.md` when the change affects the documented feature inventory or behavior.
+- **Default behavior**: if you change `fortran_parser/` or `tests/data/fortran/`, update `docs/fortran_parser.md` when the change affects the documented feature inventory or behavior.
 - **Bypass (use sparingly)**: add the PR label `ignore-parser-reference-guard` to skip that guard for changes that do not meaningfully affect the reference.

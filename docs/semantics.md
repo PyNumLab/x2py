@@ -1,4 +1,620 @@
-# Self-Contained C Semantic `.pyi` Implementation Specification
+# Semantic IR And `.pyi` Reference
+
+This file is the single reference for semantic type names, C-to-IR conversion,
+editable `.pyi` contracts, and the exact native C semantic stub rules. It is
+kept together because parser frontends should converge on one semantic model
+before wrapper generation makes language-specific lowering decisions.
+
+## Datatype Mapping
+
+This document records the shared scalar datatype policy used when C and Fortran
+parser facts are converted to semantic IR. The semantic names are the stable
+bridge between parser-native type spellings, `.pyi` output, readiness checks,
+and eventual NumPy-oriented wrapper code.
+
+### Semantic Names
+
+| Semantic dtype | NumPy equivalent | Notes |
+| --- | --- | --- |
+| `Bool` | `numpy.bool_` | Boolean scalar. |
+| `Int8`, `Int16`, `Int32`, `Int64` | `numpy.int8`, `numpy.int16`, `numpy.int32`, `numpy.int64` | Signed integers. |
+| `UInt8`, `UInt16`, `UInt32`, `UInt64` | `numpy.uint8`, `numpy.uint16`, `numpy.uint32`, `numpy.uint64` | Unsigned integers. |
+| `Float32`, `Float64` | `numpy.float32`, `numpy.float64` | Binary floating-point scalars. |
+| `Float128` | `numpy.longdouble` | Platform precision varies; `numpy.float128` is not portable. |
+| `Complex64`, `Complex128` | `numpy.complex64`, `numpy.complex128` | Complex scalars. |
+| `Complex256` | `numpy.clongdouble` | Platform precision varies. |
+| `String` | `numpy.str_` or byte storage at ABI boundary | Character policy depends on wrapper ABI. |
+| `SizeT` | `numpy.uintp` | Target width is compiler-probed when available. |
+| `Any` | `object` | Used for void pointer pointees and intentionally opaque values. |
+
+### Fortran Intrinsics
+
+| Fortran spelling or kind | Semantic dtype | NumPy equivalent |
+| --- | --- | --- |
+| `integer`, `integer(kind=4)`, `integer(int32)`, `integer(c_int)`, `integer(c_int32_t)` | `Int32` | `numpy.int32` |
+| `integer(kind=1)`, `integer(int8)`, `integer(c_signed_char)`, `integer(c_int8_t)` | `Int8` | `numpy.int8` |
+| `integer(kind=2)`, `integer(int16)`, `integer(c_short)`, `integer(c_int16_t)` | `Int16` | `numpy.int16` |
+| `integer(kind=8)`, `integer(int64)`, `integer(c_long_long)`, `integer(c_int64_t)` | `Int64` | `numpy.int64` |
+| `real`, `real(kind=8)`, `real(real64)`, `real(c_double)`, `real(kind(1.0d0))` | `Float64` | `numpy.float64` |
+| `real(kind=4)`, `real(real32)`, `real(c_float)`, `real(kind(1.0e0))` | `Float32` | `numpy.float32` |
+| `real(kind=16)`, `real(real128)`, `real(kind(1.0q0))` | `Float128` | `numpy.longdouble` |
+| `complex`, `complex(kind=8)`, `complex(real64)`, `complex(c_double_complex)` | `Complex128` | `numpy.complex128` |
+| `complex(kind=4)`, `complex(real32)`, `complex(c_float_complex)` | `Complex64` | `numpy.complex64` |
+| `complex(kind=16)`, `complex(real128)` | `Complex256` | `numpy.clongdouble` |
+| `logical`, `logical(kind=1/2/4/8)`, `logical(c_bool)` | `Bool` | `numpy.bool_` |
+| `character`, `character(kind=1)`, `character(kind=c_char)` | `String` | `numpy.str_` or ABI byte storage |
+| `procedure(...)` | `Procedure` | Callback/interface policy |
+
+### C Types
+
+| C spelling or parser type | Semantic dtype | NumPy equivalent |
+| --- | --- | --- |
+| `_Bool` / `CBool` | `Bool` | `numpy.bool_` |
+| `char`, `signed char` | `Int8` | `numpy.int8` |
+| `unsigned char` | `UInt8` | `numpy.uint8` |
+| `short`, `unsigned short` | `Int16`, `UInt16` | `numpy.int16`, `numpy.uint16` |
+| `int`, `unsigned int` | `Int32`, `UInt32` | `numpy.int32`, `numpy.uint32` |
+| `long`, `long long` | `Int64` | `numpy.int64` |
+| `unsigned long`, `unsigned long long` | `UInt64` | `numpy.uint64` |
+| `float`, `double`, `long double` | `Float32`, `Float64`, `Float128` | `numpy.float32`, `numpy.float64`, `numpy.longdouble` |
+| `float _Complex`, `double _Complex`, `long double _Complex` | `Complex64`, `Complex128`, `Complex256` | `numpy.complex64`, `numpy.complex128`, `numpy.clongdouble` |
+| `int8_t`, `int16_t`, `int32_t`, `int64_t` | `Int8`, `Int16`, `Int32`, `Int64` | Matching signed NumPy integer |
+| `uint8_t`, `uint16_t`, `uint32_t`, `uint64_t` | `UInt8`, `UInt16`, `UInt32`, `UInt64` | Matching unsigned NumPy integer |
+| `size_t` | `SizeT` or probed unsigned width | `numpy.uintp` or matching `numpy.uint*` |
+
+C integer spellings such as `long` are ABI-dependent in general C, but the
+current semantic policy maps parsed primitive `long` and `long long` to 64-bit
+semantic dtypes. Standard-library typedefs are refined through the compiler
+standard-type probe when facts are supplied.
+
+## C To Semantic IR Mapping
+
+Status: first C semantic conversion subset implemented in `semantics/c2ir.py`.
+The converter consumes `c_parser` models and emits the same language-neutral
+semantic IR used by Fortran and edited `.pyi` files. Shared primitive dtype
+policy is documented in the datatype mapping section above.
+
+### Supported Identity Subset
+
+- C translation unit -> one `SemanticModule` named from the source file stem.
+- C function -> `SemanticFunction`, preserving native name and parameter order.
+- C parameter -> `SemanticArgument`.
+- `void` return -> `None`.
+- `_Bool` -> `Bool`.
+- `char` -> `Int8` with `c_char_policy` metadata; `signed char` -> `Int8`;
+  `unsigned char` -> `UInt8`.
+- `short`, `int`, `long`, and `long long` map to fixed signed integer names
+  using the current Linux-oriented defaults: `Int16`, `Int32`, `Int64`,
+  `Int64`.
+- Unsigned integer spellings map to `UInt16`, `UInt32`, `UInt64`, and
+  `UInt64`; fixed-width typedef spellings such as `uint32_t` map to the
+  matching `UInt*` fallback.
+- `float` -> `Float32`; `double` -> `Float64`; `long double` -> `Float128`.
+- `float _Complex` -> `Complex64`; `double _Complex` -> `Complex128`;
+  `long double _Complex` -> `Complex256`.
+- Local typedef chains are resolved when their parser model definitions are
+  available.
+- `size_t` maps to `SizeT` without a target probe; supplied
+  `x2py.c_type_probe` facts override standard typedefs with width-specific
+  `Int*`, `UInt*`, or `Float*` semantic names.
+- Opaque standard-type probe facts such as `FILE` create named opaque semantic
+  classes when referenced by converted declarations.
+- Object-like numeric macros and enum constants become `Final`-style semantic
+  variables through the `Constant` constraint.
+- Struct definitions become `SemanticClass` entries. Incomplete structs become
+  opaque classes and may be used through direct `Ptr(...)` identity contracts.
+- Explicit multi-header conversion resolves a struct to the header that defines
+  it. Other generated stubs import that owner class instead of emitting
+  duplicate definitions.
+- Structs originating from private included headers remain usable through
+  generated owner-module `class Name(Opaque): pass` dependency stubs.
+- Declared C arrays, including adjusted array parameters, become semantic array
+  storage contracts with C order for rank greater than one.
+- Pointers become explicit `SemanticStorageContract` pointer/reference
+  metadata. `const` on the pointee makes the storage read-only, and `restrict`
+  is preserved as aliasing metadata.
+
+### Conservative Blockers
+
+The converter does not silently invent wrapper policy. It attaches
+`readiness_blockers` metadata that the semantic readiness checker reports:
+
+- unresolved typedef or unknown type references;
+- legacy parser reports carrying macro-dependent declarations;
+- variadic functions;
+- function pointer/callback signatures without edited `.pyi` `Callable`
+  policy;
+- mutable numeric or `void *` pointer parameters without ownership,
+  scalar-reference, or array policy;
+- arrays with unknown extents;
+- incomplete or external opaque structs used by value;
+- unions used in semantic signatures;
+- `volatile`, `_Atomic`, bitfields, and unsupported declarator compositions.
+
+The current C semantic path supports `--language c --semantics`,
+`--language c --wrap-readiness`, and starter exact-contract
+`--language c --pyi` output for this supported subset. Generated stubs remain
+conservative: ambiguous ownership, callback, ABI-extension, and Pythonic
+projection policy stays out of the generated `.pyi` until supplied by the
+semantic model or an edited interface. In particular, an unresolved typedef is
+not assumed to be opaque because its ABI representation is unknown.
+
+## Wrapper `.pyi` Format
+
+The semantic `.pyi` format is a Python-valid view of x2py semantic IR. It is
+language-neutral: Fortran and future C inputs use the same type, storage,
+pointer, array, layout and metadata notation. Source language differences are
+represented by contracts and metadata, not by separate syntax families.
+
+This document describes the behavior implemented for the current Fortran and C
+semantic conversion paths.
+
+### Canonical Type And Storage Contract
+
+Bare scalar types represent direct semantic values:
+
+```python
+def dot_value(a: Float64, b: Float64) -> Float64: ...
+```
+
+Native reference and pointer-backed storage is explicit:
+
+```python
+def inspect(value: Ptr(Const(Int32))) -> None: ...
+def update(value: Ptr(Float64)) -> None: ...
+```
+
+Array storage uses NumPy-style subscriptions. The dimensions inside `T[...]`
+are the storage contract:
+
+```python
+def scale(n: Ptr(Const(Int32)), x: Float64[n]) -> None: ...
+def matrix(a: Annotated[Const(Float64[n, m]), ORDER_F]) -> None: ...
+def assumed(x: Annotated[Float64[::Strided, ::Strided], ORDER_F]) -> None: ...
+```
+
+There is no separate dimension helper in canonical type syntax. A dimension
+entry without colons is an extent (`Float64[n]`, `Float64[n, m]`). Slice-like
+entries express range or stride contracts (`Float64[1:n]`,
+`Float64[::Strided]`, `Float64[:, 0:n:m]`). `Strided` means the runtime stride
+is part of the accepted storage contract.
+
+Generic semantic constraints are not represented as type subscriptions.
+Constants use `Final[T]`; other constraints and non-dimensional array metadata
+use `Annotated[T[...], Constraint, ...]`.
+
+`Annotated[...]` carries non-dimensional metadata:
+
+- `ORDER_F` for a Fortran-oriented multidimensional contract.
+- `ORDER_ANY` for an orientation-independent multidimensional strided
+  contract chosen explicitly by an edited interface or later projection.
+- `Allocatable` for a Fortran allocatable array.
+- `Pointer` for a Fortran pointer array.
+- `Intent("out")` when a visible exact-native argument has source intent
+  `out`; `intent(inout)` is the default writable reference/array spelling and
+  does not need metadata.
+
+Plain multidimensional array notation is C-oriented (`ORDER_C`) by default.
+Under the current Fortran generation policy, every multidimensional Fortran
+array contract emits `ORDER_F`, including stride-aware assumed-shape arrays.
+Rank-one storage has no C-versus-Fortran order distinction, so no order marker
+is emitted for vectors.
+
+`ArrayCategory(...)`, `SourceDims(...)`, `LowerBounds(...)` and `Contiguous`
+are not part of newly generated canonical array annotations. They described
+native declaration provenance rather than additional requirements on the
+Python-visible array. The loader continues to accept existing edited stubs
+that contain these metadata forms. Fortran source category, original bounds
+and declaration dimensions may remain available as internal source provenance
+when converting source; they are not required for the public storage contract
+or for ordinary Python-to-Fortran array argument association.
+
+### Implemented Fortran Exact Form
+
+Generated Fortran `.pyi` currently represents the exact native dummy-argument
+interface. It does not synthesize, reorder or hide arguments and it does not
+turn `intent(out)` or `intent(inout)` dummy arguments into Python return
+values.
+
+Fortran scalar dummy arguments are represented as follows:
+
+- Scalar dummy without `value`, `intent(in)`: `Ptr(Const(T))`.
+- Scalar dummy without `value`, `intent(out)` or `intent(inout)`: `Ptr(T)`.
+- Scalar dummy with `value`: direct `T`.
+- Function result: direct return annotation.
+
+Example:
+
+```fortran
+subroutine update(scale, value, result)
+  real(8), value, intent(in) :: scale
+  real(8), intent(inout) :: value
+  real(8), intent(out) :: result
+end subroutine
+```
+
+```python
+def update(
+    scale: Float64,
+    value: Ptr(Float64),
+    result: Annotated[Ptr(Float64), Intent("out")]
+) -> None: ...
+```
+
+Fortran module variables and derived-type fields are data declarations, not
+procedure dummy arguments. Scalar fields and variables therefore remain direct
+types:
+
+```python
+answer: Final[Int32]
+
+class particle:
+    id: Int32
+    position: Float64[3]
+```
+
+### Implemented Fortran Arrays
+
+Explicit-shape and adjustable arrays use shaped storage. Multidimensional
+Fortran-contiguous storage carries `ORDER_F`; vectors omit order metadata:
+
+```python
+def scale(n: Ptr(Const(Int32)), x: Float64[n]) -> None: ...
+
+def apply(
+    n: Ptr(Const(Int32)),
+    m: Ptr(Const(Int32)),
+    a: Annotated[Const(Float64[n, m]), ORDER_F],
+) -> None: ...
+```
+
+Assumed-size arrays preserve their fixed rank and any dimensions constrained by
+the visible storage contract. A rank-one `x(*)` is emitted as `T[:]`; for
+`x(n, *)`, the second dimension has an unconstrained runtime extent, not an
+unknown rank:
+
+```python
+def legacy(values: Float64[:]) -> None: ...
+
+def legacy_matrix(
+    n: Ptr(Const(Int32)),
+    a: Annotated[Float64[n, :], ORDER_F]
+) -> None: ...
+```
+
+Assumed-shape arrays are stride-aware. A rank-one assumed-shape dummy is
+emitted as a strided vector. Under the current generated-wrapper policy, a
+rank-two or higher assumed-shape dummy retains Fortran orientation while
+permitting strides:
+
+```python
+def vector(x: Float64[::Strided]) -> None: ...
+
+def matrix(
+    a: Annotated[
+        Const(Float64[::Strided, ::Strided]),
+        ORDER_F,
+    ]
+) -> None: ...
+```
+
+The Fortran declaration itself may permit an actual argument with another
+orientation. The generated semantic interface deliberately chooses
+Fortran-oriented storage by default. An edited interface or future projection
+may choose `ORDER_ANY` only with corresponding backend and validation policy.
+`contiguous` assumed-shape arrays use dense dimensions instead of
+`::Strided`; their multidimensional forms also carry `ORDER_F`.
+
+Explicit bounds are expressed through storage extents, not source-dimension
+metadata. For example, `x(1:n)` has storage extent `n`; `x(0:n-1)` also has
+extent `n` (the implementation currently retains the equivalent arithmetic
+expression when it is not simplified). Python arrays present zero-based
+storage; the compiled Fortran call associates that storage with the dummy
+argument and supplies the lower and upper bounds declared by the procedure.
+Those Fortran bounds affect indexing within the procedure, not what bound
+metadata Python must pass. The public contract therefore needs the required
+extent, layout and mutability, not `LowerBounds(...)`.
+
+Allocatable and pointer arrays preserve their source storage property:
+
+```python
+class workspace:
+    values: Annotated[Float64[:], Allocatable]
+
+def section(
+    x: Annotated[Float64[:], Pointer]
+) -> None: ...
+```
+
+Allocation or association replacement policy is not implemented. The semantic
+IR preserves the facts needed for readiness and lowering decisions; a backend
+must not silently treat replacement-capable allocatable or pointer dummies as
+ordinary borrowed arrays.
+
+### Preserved Metadata
+
+The shared semantic model separates:
+
+- value type (`Float64`, `Int32`, derived type names);
+- storage/calling contract (`value`, `reference`, `pointer`, `array`);
+- public array contract (rank, required extents or admitted strides, order,
+  contiguity, allocatable and pointer semantics);
+- source origin metadata (source language, native name, native scope,
+  source-level type/category information and lowering-relevant facts).
+
+The Fortran converter currently preserves public storage dimensions, order,
+`intent`, optionality, `value`, constants, `allocatable` and `pointer` in the
+visible semantic contract. It retains source declaration dimensions, bounds,
+dummy category and `contiguous` provenance internally where the parser
+supplies those facts for diagnostics or native-interface provenance; those
+facts do not add visible array requirements.
+
+### Loading And Round Trips
+
+`parse_pyi_text`, `load_pyi_file` and `convert_pyi_to_ir` load canonical
+array subscriptions and `Annotated[...]` metadata into the same public
+storage contracts emitted by the Fortran semantic pipeline. Native
+source-provenance details not emitted into the public type are intentionally
+excluded from public contract equality. Focused round-trip tests cover:
+
+```text
+Fortran parser model -> semantic IR -> .pyi -> semantic IR
+```
+
+The loader rejects removed dimension helper syntax in type annotations. Use
+array subscriptions such as `Float64[n]`, `Float64[:, :]` or
+`Float64[::Strided]` instead.
+
+### Pythonic Projection (Later)
+
+The implemented Fortran generator emits the exact form described above. A
+later optional generation or editing mode, for example `--pythonic`, may
+expose a friendlier Python API whose arguments or results differ from that
+native contract. Such a projected interface must retain a mapping back to the
+exact semantic/native interface; it must not discard source origin, storage,
+intent, shape, ownership or lowering facts needed to issue the call.
+
+A projection is allowed to be more restrictive or more expressive than the
+exact native interface, according to the Python API the user wants to expose.
+It may add accepted-input coercions, local constraints, cross-argument checks,
+result checks, mutation policy or ownership policy. It need not expose every
+use that the native routine could technically accept. At the native-call
+boundary, however, the mapped native values must still satisfy the
+requirements encoded by the exact native contract.
+
+The Fortran converter does not automatically generate a projected interface.
+The loader and printer retain explicit projection mappings for edited semantic
+stubs, including `@native_call` entries formed from `Arg`, `Return`, `Const`,
+`Len`, `IsPresent`, `Work` and `.shape[...]`, plus `Returns[...]`. The
+pointer/reference adaptation examples below (`Ptr(Arg(...))` and
+`Ptr(Return(...))`), `As[...]`, `.strides[...]`, coercion policy and
+validation contracts describe extensions required for the fuller Pythonic
+projection; they are not currently accepted or emitted by this path.
+
+#### Native Argument Projection
+
+Only a projected interface uses `@native_call`. The decorator records how
+visible Python arguments and projected results supply the exact native
+arguments.
+
+For a mutable scalar reference, the implemented exact Fortran form keeps
+caller-supplied storage:
+
+```python
+# Implemented exact form.
+def advance(value: Ptr(Float64)) -> None: ...
+```
+
+A future Pythonic form may create writable temporary storage, perform the
+native call and read the updated value back as a Python result:
+
+```python
+# Projected form, not currently implemented.
+@native_call([Ptr(Arg(0))])
+def advance(value: Float64) -> Returns["value", Float64]: ...
+```
+
+Similarly, an `intent(out)` scalar currently remains an explicit writable
+reference with its preserved source intent:
+
+```python
+# Implemented exact form.
+def get_count(result: Annotated[Ptr(Int32), Intent("out")]) -> None: ...
+
+# Projected form, not currently implemented.
+@native_call([Ptr(Return(0))])
+def get_count() -> Int32: ...
+```
+
+A projection may derive hidden native metadata from a visible array. For a
+future native interface with a by-value length parameter, for example:
+
+```python
+# Exact contract for a future supported native frontend.
+def sum_values(n: SizeT, values: Const(Float64[n])) -> Float64: ...
+
+# Projected form, not currently implemented.
+@native_call([As[SizeT](Arg(0).shape[0]), Arg(0)])
+def sum_values(values: Const(Float64[:])) -> Float64: ...
+```
+
+`Arg(i).shape[dim]` denotes a zero-based array extent.
+`Arg(i).strides[dim]` denotes a NumPy byte stride:
+
+```python
+@native_call([Arg(0), Arg(0).shape[1], Arg(0).strides[1]])
+def process_columns(values: Const(Float64[:, ::Strided])) -> None: ...
+```
+
+Dimension steps such as `::m` are expressed in elements; deriving a native
+element stride from a byte stride must include the item-size conversion in
+the native mapping.
+
+#### Coercions And Constraints
+
+A Pythonic projection may accept values that are not already in the exact
+storage form, but only through explicit allowed coercions. For example, a
+projected API could allow a NumPy C-order matrix to be copied into an
+`ORDER_F` value required by a Fortran-oriented exact contract. It may instead
+reject that input when no copying coercion is declared.
+
+Coercions and constraints serve different purposes:
+
+- A coercion states how an accepted Python object becomes the required
+  semantic runtime value, potentially allocating storage or changing layout.
+- A constraint states what must be true of the adapted value before native
+  lowering, such as dtype, rank, shape, stride capability, `ORDER_F`,
+  mutability, device residence, alignment or ownership.
+
+The exact notation already records native-facing local constraints, including
+`Ptr(Const(T))`, `Const(T[...])`, dimensions, `ORDER_F`, `ORDER_ANY`,
+`Allocatable` and `Pointer`. A projected API may add allowed conversion
+policy, for example a future `From(np.ndarray, copy=True)` spelling, but it
+cannot silently weaken the exact native contract.
+
+The exact native contract is therefore a minimum obligation for a projection.
+A projected API may require additional properties, such as finite values,
+non-aliasing arguments, a square matrix or a no-copy policy. A declared
+coercion may convert a projected input so that it satisfies a native
+requirement, such as packing C-oriented input into `ORDER_F` storage. But the
+mapped value sent to native lowering must satisfy the encoded native element
+type, reference/read-write contract, rank, extent, layout, stride,
+allocation/association and other calling-relevant requirements.
+
+This document does not currently define a hard-versus-soft classification for
+exact-contract constraints. Until such a classification and override policy
+exist, constraints encoded in the exact native interface are mandatory at the
+native-call boundary. A later design may classify advisory requirements, such
+as a preferred layout or zero-copy preference, as relaxable by an explicit
+projection policy. ABI, memory-safety and semantic-correctness requirements
+cannot be treated as advisory.
+
+In particular, conversion and copy-back policies are required before a
+projection can:
+
+- accept C-order or non-contiguous storage for a target requiring dense
+  Fortran-oriented storage;
+- expose mutable scalar references as ordinary scalar inputs and returns;
+- return changes to output arrays through allocated temporary storage;
+- expose replacement-capable `Allocatable` or `Pointer` dummies; or
+- preserve ownership, lifetime and aliasing behavior through a temporary.
+
+#### Validation Contracts
+
+Local constraints are not sufficient for relationships between multiple
+arguments or for promises about projected results. A future projected
+interface may add a validation contract, whether or not the exact native
+interface already contains local constraints, for:
+
+- preconditions, such as matching extents or non-aliasing inputs;
+- postconditions, such as the returned shape or dtype;
+- invariants on projected objects after mutation;
+- mutation and aliasing rules; and
+- ownership and lifetime rules for borrowed, owned, viewed or temporary
+  storage.
+
+For example, this is an illustrative later projected interface, not currently
+accepted projection syntax:
+
+```python
+@contract(
+    pre=[
+        lambda ctx: ctx.args.a.shape[0] == ctx.args.a.shape[1],
+        lambda ctx: ctx.args.b.shape == (ctx.args.a.shape[0],),
+    ],
+    post=[lambda ctx: ctx.result.shape == ctx.args.b.shape],
+    invariants=[lambda ctx: not ctx.result.aliases(ctx.args.a)],
+)
+def solve(
+    a: Annotated[Float64[:, :], ORDER_F],
+    b: Float64[:],
+) -> Float64[:]: ...
+```
+
+A constraint can require that `a` is `ORDER_F`; a contract can require that
+`a` is square, that `b` agrees with its extent and that the result does not
+alias mutable input storage. These checks occur at distinct levels and must
+remain distinct in a later semantic model. Projection-level checks supplement
+the exact native contract; they do not replace its mandatory native-call
+checks.
+
+A projected call therefore has the following conceptual sequence:
+
+```text
+visible Python values
+  -> projected allowed coercions
+  -> projected local constraints and contract preconditions
+  -> exact native argument mapping
+  -> mandatory exact-native constraint validation
+  -> backend lowering
+  -> native call
+  -> contract postconditions and invariants
+  -> projected Python results
+```
+
+The projection mechanism is language-neutral. It can later adapt exact
+Fortran or C contracts through the same notation and runtime concepts, but
+this milestone does not implement automatic Pythonic generation, current
+exact-reference adaptation, coercion/contract execution or C wrapper lowering.
+The C frontend can generate starter exact-contract `.pyi` output for the
+implemented semantic subset.
+
+### External Opaque Type Stubs
+
+An external source-language type whose owner module is not part of the explicit
+wrapping target is emitted as an owner-module opaque dependency stub. This
+applies to imported Fortran derived types and to C opaque structs from external
+header surfaces:
+
+```python
+# types_mod.pyi
+class particle(Opaque):
+    pass
+```
+
+The importing module references that owner rather than re-exporting the type:
+
+```python
+# physics.pyi
+from types_mod import particle
+
+def move(p: Ptr(particle)) -> None: ...
+```
+
+`emit_module_stubs(...)` produces the complete stub mapping. `load_pyi_modules`
+loads one or more files or directories and reconciles those imports back into
+semantic `external_type_ref` metadata. If the user replaces the opaque owner
+stub with a concrete class body, the imported semantic reference becomes
+`representation="wrapped"` without changing the importing stub.
+
+This file-set round-trip is the editing boundary for future wrapper policy.
+Existing type constraints encoded with `Annotated[...]` are preserved now.
+Additional coercion and executable contract syntax remains deferred.
+
+For C, an unresolved typedef is not automatically opaque: its ABI could be an
+integer, pointer, struct, or another representation. The C frontend emits an
+opaque class when declarations establish that contract, such as a forward
+struct declaration or a private included struct used through pointers. An
+edited `.pyi` file may also state the policy explicitly with `class
+Name(Opaque): pass`.
+
+### Deferred C Work
+
+The shared model represents the current C semantic conversion subset for
+functions, variables,
+fields, constants, scalar references, pointers, arrays with known contracts,
+origin metadata, mutability and ownership facts. The C frontend can generate
+starter exact-contract stubs from that model. Remaining C work includes:
+
+- C wrapper lowering;
+- C ownership, callback or pointer policy inference beyond facts already
+  present in exact contracts.
+
+Future C conversion should use the same notation: by-value scalars as bare
+types, unrefined pointers as `Ptr(T)` or `Ptr(Const(T))`, and array notation
+only when a real array storage contract is known.
+
+## Self-Contained C Semantic `.pyi` Contract
 
 **Status:** Phase 1 implementation baseline
 **Target:** Python wrappers for C libraries on a selected Linux ABI
@@ -6,7 +622,7 @@
 sufficient to generate a wrapper. C header parsing is optional input
 generation, not a wrapper-generation dependency.
 
-## 1. Phase 1 Boundary
+### 1. Phase 1 Boundary
 
 Phase 1 implements the exact callable interface first. Python is intentionally
 C-like at this stage:
@@ -27,7 +643,7 @@ Therefore, Phase 1 does **not** implement or emit `@native_call`.
 The purpose of this ordering is to prove that x2py can describe, parse, lower
 and execute direct C signatures reliably before adding Pythonic adaptations.
 
-## 2. Non-Negotiable Rules
+### 2. Non-Negotiable Rules
 
 1. The semantic `.pyi` must be sufficient to call every supported wrapped
    symbol without reading C source at build time.
@@ -78,7 +694,7 @@ and execute direct C signatures reliably before adding Pythonic adaptations.
 12. The current target is a selected Linux ABI. Cross-platform variation and
     non-default calling conventions are deferred.
 
-## 3. Current Artifact
+### 3. Current Artifact
 
 The current compiler-facing artifact is:
 
@@ -91,7 +707,7 @@ functions in Phase 1.
 
 A clean `.pyi` for standard type checkers is not part of Phase 1.
 
-## 4. Scalar Types Passed By Value
+### 4. Scalar Types Passed By Value
 
 Bare scalar types represent native by-value parameters and direct native
 returns.
@@ -121,9 +737,9 @@ def multiply(a: Float64, b: Float64) -> Float64: ...
 
 No decorator is needed or accepted for these identity calls.
 
-## 5. Numeric Pointer Storage
+### 5. Numeric Pointer Storage
 
-### 5.1 Canonical Reference And Array Notation
+#### 5.1 Canonical Reference And Array Notation
 
 A numeric NumPy storage annotation means the caller supplies memory whose data
 address is passed directly to C. C ordinary pointer parameters contain no
@@ -188,16 +804,15 @@ runnable C Phase 1 wrapper requires the corresponding native routine to
 accept that storage layout directly. For a rank-one array, `ORDER_C` and
 `ORDER_F` do not distinguish storage, contiguous or strided, so no order
 constraint is written.
-   For a multidimensional strided annotation, `ORDER_F` is orientation metadata,
-   not a requirement that NumPy report `F_CONTIGUOUS`; non-unit strides remain
-   part of the contract.
-   Source frontends may retain original declaration dimensions, source bounds
-   or native dummy categories as internal provenance. Those source facts are
-   not part of the canonical public array annotation unless they produce an
-   actual storage constraint. In particular, Fortran dummy bounds are
-   established by native association rather than supplied as Python array
-   metadata. The implemented C conversion subset is described in
-   [C to semantic IR mapping](c2ir_mapping.md).
+For a multidimensional strided annotation, `ORDER_F` is orientation metadata,
+not a requirement that NumPy report `F_CONTIGUOUS`; non-unit strides remain
+part of the contract.
+Source frontends may retain original declaration dimensions, source bounds or
+native dummy categories as internal provenance. Those source facts are not part
+of the canonical public array annotation unless they produce an actual storage
+constraint. In particular, Fortran dummy bounds are established by native
+association rather than supplied as Python array metadata. The implemented C
+conversion subset is described in the C-to-semantic IR mapping section above.
 
 Stride-aware dimensions use a slice step marker:
 
@@ -230,7 +845,7 @@ can be added later without requiring a new dimension notation. Annotation
 steps use NumPy element units, while `Arg(0).strides[1]` has NumPy's byte
 units; converting between them is an explicit later mapping decision.
 
-### 5.2 Pointer Depth And Opaque Pointers
+#### 5.2 Pointer Depth And Opaque Pointers
 
 `Ptr(...)` expresses native pointer depth directly. For a one-level pointer,
 it preserves the native address form without inventing rank or shape. A known
@@ -261,7 +876,7 @@ second native function under matching `Ptr(...)` annotations. Pointer-object
 construction/allocation helpers are runtime API work, not additional
 information required in a semantic function signature.
 
-### 5.3 Pointer To Scalar
+#### 5.3 Pointer To Scalar
 
 ```c
 void increment(int *value);
@@ -287,7 +902,7 @@ updated = value.item()
 The wrapper passes `value`'s data address. It does not construct temporary
 scalar storage and does not return the mutation.
 
-### 5.4 Pointer To Array
+#### 5.4 Pointer To Array
 
 ```c
 void negate(int n, double *values);
@@ -304,7 +919,7 @@ def sum_values(n: SizeT, values: Const(Float64[n])) -> Float64: ...
 The caller supplies `n` explicitly because it is an actual C parameter. The
 wrapper must not derive it from `len(values)` in Phase 1.
 
-### 5.5 Output Pointer Remains An Argument
+#### 5.5 Output Pointer Remains An Argument
 
 ```c
 void get_count(int *out);
@@ -333,9 +948,9 @@ Returning `Int` from `get_count()` or allocating and returning
 `Float64[n]` from `get_values(n)` is a later Pythonic adaptation, not an
 identity call.
 
-## 6. Array Constraints
+### 6. Array Constraints
 
-### 6.1 Rank, Accepted Ranks And Fixed Dimensions
+#### 6.1 Rank, Accepted Ranks And Fixed Dimensions
 
 Dimensions refine valid NumPy storage while the native argument remains one
 data pointer. They are semantic/API contracts rather than metadata transported
@@ -381,7 +996,7 @@ For function parameters on the selected ABI, `int (*)[4]` is represented as
 one pointer plus its fixed row-width contract. It is not represented as
 `int **`.
 
-### 6.2 Strided Direct Interfaces Keep Native Metadata Visible
+#### 6.2 Strided Direct Interfaces Keep Native Metadata Visible
 
 The semantic notation can distinguish a stride-aware view from a contiguous
 matrix while retaining the exact native parameter list:
@@ -411,7 +1026,7 @@ contract; leaving it unannotated retains `ORDER_C`. A later Pythonic view may
 hide that argument with
 `Arg(0).strides[1]`, or request `Pack` / `CopyBack`.
 
-### 6.3 Pointer Graphs Are Different
+#### 6.3 Pointer Graphs Are Different
 
 ```c
 void use_rows(int **rows);
@@ -433,7 +1048,7 @@ topology. The wrapper passes it unchanged. Constructing pointer rows from
 nested Python sequences and exposing `update_value(value: Int) -> Int` are
 later Pythonic adaptations.
 
-### 6.4 Contiguity
+#### 6.4 Contiguity
 
 Without an explicit layout or stride form, array annotations such as `T[:]`,
 `T[:, :]`, `T[n]`, and `T[...]` require C-contiguous numeric storage; a
@@ -449,9 +1064,9 @@ derivation of native metadata is a later Pythonic transformation.
 For rank one, `T[:]` and `T[n]` are also the canonical Fortran-contiguous
 spelling; write `T[::Strided]` when contiguity is not required.
 
-## 7. Direct Native Returns
+### 7. Direct Native Returns
 
-### 7.1 Scalars And `void`
+#### 7.1 Scalars And `void`
 
 Direct scalar returns and native `void` are identity behavior:
 
@@ -468,7 +1083,7 @@ def reset() -> None: ...
 An integer return remains an integer return in Phase 1. It is not
 automatically converted to an exception.
 
-### 7.2 Pointer Returns
+#### 7.2 Pointer Returns
 
 A direct returned native pointer can be exposed as a low-level pointer object
 without changing the C return topology:
@@ -509,7 +1124,7 @@ lifetime handling are implemented, return it as the corresponding direct
 low-level pointer object or reject the higher-level NumPy view rather than
 guessing.
 
-## 8. Symbol Names
+### 8. Symbol Names
 
 Argument and return identity is independent of symbol naming. Phase 1
 supports `@bind` without introducing `@native_call`:
@@ -530,7 +1145,7 @@ def increment(value: Ptr(Int)) -> None: ...
 `@bind` changes only which exported symbol is loaded. It does not synthesize
 arguments, change pointers or alter results.
 
-## 9. Structures, Enums And Non-Numeric Pointers
+### 9. Structures, Enums And Non-Numeric Pointers
 
 By-value enums and by-value structures can be Phase 1 identity interfaces once
 their native representation and layout are complete in the semantic `.pyi`:
@@ -582,7 +1197,7 @@ native representations are implemented explicitly:
 - variadic functions;
 - `void *` beyond an explicitly selected raw/byte-storage representation.
 
-## 10. Phase 1 Unsupported Transformations
+### 10. Phase 1 Unsupported Transformations
 
 Phase 1 must reject, or leave unresolved during optional C import generation,
 any interface that requires the wrapper to change the native function shape.
@@ -603,7 +1218,7 @@ Unsupported now:
 The later syntax is retained as design direction only. It is not required by
 the Phase 1 parser, IR, printer or wrapper generator.
 
-## 11. Required Phase 1 Readiness Errors
+### 11. Required Phase 1 Readiness Errors
 
 The wrapper generator or optional importer must report unsupported behavior
 instead of silently changing the interface.
@@ -625,7 +1240,7 @@ instead of silently changing the interface.
 | `c_variadic_function_unsupported` | A variadic native function is requested. |
 | `c_calling_convention_unsupported` | A non-default calling convention is required. |
 
-## 12. Phase 1 Parser And Wrapper Requirements
+### 12. Phase 1 Parser And Wrapper Requirements
 
 The Phase 1 implementation must:
 
@@ -660,9 +1275,9 @@ The Phase 1 implementation must:
     later Pythonic mapping.
 13. Never consult C source after a supported semantic `.pyi` has been parsed.
 
-## 13. Phase 1 Tests
+### 13. Phase 1 Tests
 
-### 13.1 By-Value Scalar Identity
+#### 13.1 By-Value Scalar Identity
 
 ```c
 int add(int a, int b);
@@ -674,7 +1289,7 @@ def add(a: Int, b: Int) -> Int: ...
 
 The wrapper passes two native `int` values and returns one native `int`.
 
-### 13.2 Mutable Scalar Pointer Storage
+#### 13.2 Mutable Scalar Pointer Storage
 
 ```c
 void increment(int *value);
@@ -688,7 +1303,7 @@ Tests must verify that a writable zero-dimensional NumPy array is passed by
 data address and that native mutation is observed after the call. A plain
 Python `int` must be rejected for this signature.
 
-### 13.3 Read-Only Scalar Pointer Storage
+#### 13.3 Read-Only Scalar Pointer Storage
 
 ```c
 void read_count(const int *value);
@@ -701,7 +1316,7 @@ def read_count(value: Ptr(Const(Int))) -> None: ...
 Tests must verify matching scalar storage/input acceptance and exact native
 pointer lowering without writable requirements.
 
-### 13.4 Array Pointer With Explicit Count
+#### 13.4 Array Pointer With Explicit Count
 
 ```c
 double sum_values(size_t n, const double *values);
@@ -714,7 +1329,7 @@ def sum_values(n: SizeT, values: Const(Float64[n])) -> Float64: ...
 Tests must verify that the caller passes `n`, that the wrapper passes it
 unchanged, and that no hidden `len(values)` argument is generated.
 
-### 13.5 Explicit Output Storage
+#### 13.5 Explicit Output Storage
 
 ```c
 void get_count(int *out);
@@ -729,7 +1344,7 @@ def get_values(n: Int, out: Float64[n]) -> None: ...
 Tests must verify mutation of caller-allocated output storage and that the
 functions return `None`.
 
-### 13.6 Matrices And Pointer-To-Fixed-Array
+#### 13.6 Matrices And Pointer-To-Fixed-Array
 
 ```c
 void matrix_data(double *matrix);
@@ -747,7 +1362,7 @@ Tests must verify one native pointer argument for each function, rank/shape
 validation, and rejection of a representation treating either argument as
 `T **`.
 
-### 13.7 Direct Pointer Graph Identity
+#### 13.7 Direct Pointer Graph Identity
 
 ```c
 void use_rows(int **rows);
@@ -763,7 +1378,7 @@ Tests must verify exact pointer depth in the parsed ABI contract and that
 these arguments accept only matching direct low-level pointer objects. They
 must not accept `Int[:, :]` or add any `@native_call` transformation.
 
-### 13.8 Raw Opaque Pointer Identity
+#### 13.8 Raw Opaque Pointer Identity
 
 ```c
 struct context;
@@ -783,7 +1398,7 @@ Tests must verify that the returned raw native pointer object is accepted by
 `context_destroy` without handle wrapping, ownership inference or
 `@native_call`.
 
-### 13.9 Symbol Binding Without Transformation
+#### 13.9 Symbol Binding Without Transformation
 
 ```c
 int library_add(int a, int b);
@@ -797,7 +1412,7 @@ def add(a: Int, b: Int) -> Int: ...
 Tests must verify that `@bind` changes symbol lookup only and leaves
 argument/return lowering unchanged.
 
-### 13.10 Transformation Is Not Phase 1
+#### 13.10 Transformation Is Not Phase 1
 
 The Phase 1 parser or readiness checker must reject a runnable interface using
 later transformation syntax such as:
@@ -813,7 +1428,7 @@ The supported Phase 1 spelling for the same C function is:
 def increment(value: Ptr(Int)) -> None: ...
 ```
 
-## 14. Phase 2: Pythonic Adaptations After Identity Works
+### 14. Phase 2: Pythonic Adaptations After Identity Works
 
 After Phase 1 can call direct signatures reliably, an optional Pythonic
 generation mode can use `@native_call` to expose APIs that differ from their
@@ -860,7 +1475,7 @@ Phase 2 also introduces policies and coercions such as:
 
 None of these transformations is necessary to complete Phase 1.
 
-## 15. Decisions Deferred Beyond Phase 1
+### 15. Decisions Deferred Beyond Phase 1
 
 The following decisions do not block the identity-call implementation:
 
