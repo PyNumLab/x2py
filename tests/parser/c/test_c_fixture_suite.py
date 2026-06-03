@@ -80,6 +80,9 @@ def _stable_golden_payload(value):
     if isinstance(value, dict):
         stable = {}
         for key, nested in value.items():
+            if key == "source_text" and isinstance(nested, str):
+                stable[key] = " ".join(nested.split())
+                continue
             if key == "diagnostics" and isinstance(nested, list):
                 stable[key] = [_stable_golden_payload(item) for item in nested if _is_project_diagnostic(item)]
                 continue

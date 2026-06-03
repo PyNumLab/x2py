@@ -77,7 +77,10 @@ def _normalize_resolved_paths(value):
             with suppress(ValueError):
                 value["resolved_path"] = Path(resolved_path).relative_to(_C_DATA_DIR).as_posix()
         for key, nested in value.items():
-            value[key] = _normalize_resolved_paths(nested)
+            if key == "source_text" and isinstance(nested, str):
+                value[key] = " ".join(nested.split())
+            else:
+                value[key] = _normalize_resolved_paths(nested)
     elif isinstance(value, list):
         return [_normalize_resolved_paths(nested) for nested in value]
     elif isinstance(value, str):
