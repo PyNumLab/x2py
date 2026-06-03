@@ -7,7 +7,9 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from x2py import parse_fortran_file
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 _TESTS_DIR = Path(__file__).resolve().parents[2]
 _FORTRAN_DIR = _TESTS_DIR / "data" / "fortran"
@@ -24,12 +26,16 @@ def _strip_parent_fields(value):
 
 def _parser_filename_for_fixture(fixture: Path) -> str:
     relpath = fixture.relative_to(_FORTRAN_DIR).as_posix()
+    if relpath.startswith("general/"):
+        return fixture.name
     if relpath.startswith("scifortran/"):
         return relpath.replace("scifortran/", "SciFortran/", 1)
     return relpath
 
 
 def _serialize_fixture(fixture: Path) -> dict:
+    from x2py import parse_fortran_file
+
     source = fixture.read_text(encoding="utf-8")
     parsed = parse_fortran_file(source, filename=_parser_filename_for_fixture(fixture))
     return _strip_parent_fields(asdict(parsed))

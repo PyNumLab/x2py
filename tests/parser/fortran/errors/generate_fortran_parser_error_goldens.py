@@ -6,19 +6,21 @@ import json
 import sys
 from pathlib import Path
 
-from x2py import FortranParseError, parse_fortran_file
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 
 def parse_fortran_procedures(source, filename=None):
-    return parse_fortran_file(source, filename=filename).procedures
+    return _parse_fortran_file(source, filename=filename).procedures
 
 
 def parse_fortran_types(source, filename=None):
-    return parse_fortran_file(source, filename=filename).derived_types
+    return _parse_fortran_file(source, filename=filename).derived_types
 
 
 def parse_fortran_modules(source, filename=None):
-    return parse_fortran_file(source, filename=filename).modules
+    return _parse_fortran_file(source, filename=filename).modules
 
 
 _TESTS_DIR = Path(__file__).resolve().parents[3]
@@ -30,6 +32,12 @@ _PARSER_MAP = {
     "parse_fortran_modules": parse_fortran_modules,
 }
 _DEFAULT_PARSER = "parse_fortran_procedures"
+
+
+def _parse_fortran_file(source, filename=None):
+    from x2py import parse_fortran_file
+
+    return parse_fortran_file(source, filename=filename)
 
 
 def _get_parser_for_fixture(fixture: Path) -> str:
@@ -44,6 +52,8 @@ def _get_parser_for_fixture(fixture: Path) -> str:
 
 
 def _serialize_error_fixture(fixture: Path) -> dict:
+    from x2py import FortranParseError
+
     source = fixture.read_text(encoding="utf-8")
     parser_name = _get_parser_for_fixture(fixture)
     parser_fn = _PARSER_MAP[parser_name]
