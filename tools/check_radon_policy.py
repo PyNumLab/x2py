@@ -169,18 +169,18 @@ def check_policy(
     hotspot_blocks = [block for block in all_blocks if block.complexity >= hotspot_min_complexity]
     hotspot_average = sum(block.complexity for block in hotspot_blocks) / len(hotspot_blocks) if hotspot_blocks else 0.0
 
-    changed_blocks = changed_complexity_blocks(
+    changed_blocks_checked, changed_violations = changed_complexity_blocks(
         source_paths=source_paths,
         base_ref=base_ref,
         head_ref=head_ref,
+        max_changed_complexity=max_changed_complexity,
     )
-    changed_violations = tuple(block for block in changed_blocks if block.complexity > max_changed_complexity)
 
     return PolicyResult(
         hotspot_average=hotspot_average,
         hotspot_count=len(hotspot_blocks),
-        changed_blocks_checked=len(changed_blocks),
-        changed_violations=changed_violations,
+        changed_blocks_checked=changed_blocks_checked,
+        changed_violations=tuple(changed_violations),
     )
 
 
@@ -203,6 +203,10 @@ def iter_python_files(source_paths: tuple[Path, ...]) -> list[Path]:
 
 def complexity_blocks_for_file(path: Path) -> list[ComplexityBlock]:
     source = path.read_text(encoding="utf-8")
+    return complexity_blocks_for_source(source, path=path)
+
+
+def complexity_blocks_for_source(source: str, *, path: Path) -> list[ComplexityBlock]:
     blocks: list[ComplexityBlock] = []
     for block in cc_visit(source):
         classname = getattr(block, "classname", None)
@@ -225,11 +229,13 @@ def changed_complexity_blocks(
     source_paths: tuple[Path, ...],
     base_ref: str | None,
     head_ref: str,
-) -> list[ComplexityBlock]:
+    max_changed_complexity: int,
+) -> tuple[int, list[ComplexityBlock]]:
     if base_ref is None:
-        return []
+        return 0, []
 
-    changed_blocks: list[ComplexityBlock] = []
+    changed_blocks_checked = 0
+    changed_violations: list[ComplexityBlock] = []
     source_roots = tuple(path.as_posix().rstrip("/") for path in source_paths)
     for changed_file in changed_python_files(base_ref, head_ref):
         if not is_under_source_roots(changed_file, source_roots):
@@ -240,10 +246,44 @@ def changed_complexity_blocks(
         changed_lines = changed_line_numbers(base_ref, head_ref, changed_file)
         if not changed_lines:
             continue
+        base_complexities = base_complexity_by_key(base_ref, changed_file)
         for block in complexity_blocks_for_file(path):
-            if block_changed(block, changed_lines):
-                changed_blocks.append(block)
-    return changed_blocks
+            if not block_changed(block, changed_lines):
+                continue
+            changed_blocks_checked += 1
+            base_complexity = base_complexities.get(block_key(block))
+            if changed_block_violates_policy(block, base_complexity, max_changed_complexity):
+                changed_violations.append(block)
+    return changed_blocks_checked, changed_violations
+
+
+def changed_block_violates_policy(
+    block: ComplexityBlock,
+    base_complexity: int | None,
+    max_changed_complexity: int,
+) -> bool:
+    if block.complexity <= max_changed_complexity:
+        return False
+    return base_complexity is None or block.complexity > base_complexity
+
+
+def base_complexity_by_key(base_ref: str, changed_file: str) -> dict[tuple[str, str], int]:
+    completed = subprocess.run(
+        ["git", "show", f"{base_ref}:{changed_file}"],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        return {}
+    return {
+        block_key(block): block.complexity
+        for block in complexity_blocks_for_source(completed.stdout, path=Path(changed_file))
+    }
+
+
+def block_key(block: ComplexityBlock) -> tuple[str, str]:
+    return block.kind, block.name
 
 
 def changed_python_files(base_ref: str, head_ref: str) -> list[str]:

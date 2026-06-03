@@ -3,9 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from tools.check_radon_policy import (
+    ComplexityBlock,
     ZERO_SHA,
     block_changed,
     check_policy,
+    changed_block_violates_policy,
     complexity_blocks_for_file,
     is_under_source_roots,
     resolve_base_ref,
@@ -57,6 +59,19 @@ def test_source_root_filter_uses_path_boundaries():
     assert is_under_source_roots("c_parser/parser.py", ("c_parser",))
     assert is_under_source_roots("c_parser", ("c_parser",))
     assert not is_under_source_roots("c_parser_extra/parser.py", ("c_parser",))
+
+
+def test_changed_block_policy_allows_existing_hotspots_unless_worsened():
+    block = ComplexityBlock(Path("pkg/mod.py"), "function", "legacy", 1, 10, 25)
+
+    assert not changed_block_violates_policy(block, base_complexity=25, max_changed_complexity=20)
+    assert changed_block_violates_policy(block, base_complexity=24, max_changed_complexity=20)
+    assert changed_block_violates_policy(block, base_complexity=None, max_changed_complexity=20)
+    assert not changed_block_violates_policy(
+        ComplexityBlock(Path("pkg/mod.py"), "function", "small", 1, 10, 20),
+        base_complexity=None,
+        max_changed_complexity=20,
+    )
 
 
 def test_resolve_base_ref_auto_ignores_empty_and_zero_values(monkeypatch):
