@@ -82,13 +82,27 @@ pass `--compiler`, `--compile-commands`, or a custom preprocessing template.
 
 ## Fortran Quick Start
 
-Parse a Fortran source:
+Parse a Fortran source. The command below uses this complete input file:
+
+`tests/data/fortran/general/basic_subroutine.f90`
+
+```fortran
+module m1
+contains
+subroutine add1(n, x)
+  integer, intent(in) :: n
+  real(kind=8), intent(inout), dimension(n) :: x
+end subroutine add1
+end module m1
+```
+
+Command:
 
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
 ```
 
-Typical output:
+Expected output:
 
 ```text
 File: tests/data/fortran/general/basic_subroutine.f90
@@ -98,7 +112,7 @@ File: tests/data/fortran/general/basic_subroutine.f90
         - subroutine add1(n:integer[0], x:real(8)[1])
 ```
 
-Generate exact native `.pyi` stubs:
+Generate exact native `.pyi` stubs from the same Fortran file:
 
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
@@ -112,7 +126,7 @@ def add1(
 ) -> None: ...
 ```
 
-Check readiness:
+Check readiness for the same Fortran file:
 
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
@@ -131,7 +145,23 @@ File: tests/data/fortran/general/basic_subroutine.f90
 
 ## C Quick Start
 
-Parse C explicitly:
+Parse C explicitly. The command below uses this complete input header:
+
+`tests/data/c/general/math_api.h`
+
+```c
+#ifndef X2PY_GENERAL_MATH_API_H
+#define X2PY_GENERAL_MATH_API_H
+
+double norm2(int n, const double x[static 1]);
+void scale(int n, double alpha, double x[static 1]);
+double dot(int n, const double *restrict x, const double *restrict y);
+void fill_identity3(double a[static 3][3]);
+
+#endif
+```
+
+Command:
 
 ```bash
 python -m x2py tests/data/c/general/math_api.h --language c --parse
@@ -151,7 +181,7 @@ File: tests/data/c/general/math_api.h
   Diagnostics: 0
 ```
 
-Generate C `.pyi` stubs:
+Generate C `.pyi` stubs from the same header:
 
 ```bash
 python -m x2py tests/data/c/general/math_api.h --language c --pyi
@@ -175,9 +205,13 @@ def dot(
     x: Ptr(Const(Float64)),
     y: Ptr(Const(Float64))
 ) -> Float64: ...
+
+def fill_identity3(
+    a: Float64[3, 3]
+) -> None: ...
 ```
 
-Check C readiness:
+Check C readiness for the same header:
 
 ```bash
 python -m x2py tests/data/c/general/math_api.h --language c --wrap-readiness
@@ -218,6 +252,87 @@ Fortran human-readable parse output keeps scope variables summarized as
 and C, use `--print-limit N` to cap repeated sections in the human-readable
 parse report:
 
+The Fortran truncation example uses this complete input file:
+
+`tests/data/fortran/general/modern_pyi_example.f90`
+
+```fortran
+module modern_math_physics
+  implicit none
+  private
+  public :: particle, vector3, counter, init_particle, kinetic_energy, scale_vector, dot3, fill_identity3, normalize_particle
+
+  integer :: counter
+  real(8) :: hidden_scale
+
+  type :: particle
+     integer :: id
+     real(8) :: mass
+     real(8), dimension(3) :: position
+  end type particle
+
+  type :: vector3
+     real(8), dimension(3) :: values
+  end type vector3
+
+  type :: hidden_state
+     integer :: code
+  end type hidden_state
+
+contains
+
+  subroutine init_particle(p, pid, mass, x, y, z)
+    type(particle), intent(out) :: p
+    integer, intent(in) :: pid
+    real(8), intent(in) :: mass, x, y, z
+    p%id = pid
+    p%mass = mass
+    p%position = [x, y, z]
+  end subroutine init_particle
+
+  function kinetic_energy(p, vx, vy, vz) result(e)
+    type(particle), intent(in) :: p
+    real(8), intent(in) :: vx, vy, vz
+    real(8) :: e
+    e = 0.5d0 * p%mass * (vx*vx + vy*vy + vz*vz)
+  end function kinetic_energy
+
+  subroutine scale_vector(v, alpha)
+    real(8), dimension(:), intent(inout) :: v
+    real(8), intent(in) :: alpha
+    v = alpha * v
+  end subroutine scale_vector
+
+  function dot3(a, b) result(s)
+    real(8), dimension(3), intent(in) :: a, b
+    real(8) :: s
+    s = a(1)*b(1) + a(2)*b(2) + a(3)*b(3)
+  end function dot3
+
+  subroutine fill_identity3(a)
+    real(8), dimension(3,3), intent(out) :: a
+    a = 0.0d0
+    a(1,1) = 1.0d0
+    a(2,2) = 1.0d0
+    a(3,3) = 1.0d0
+  end subroutine fill_identity3
+
+  subroutine normalize_particle(p)
+    type(particle), intent(inout) :: p
+    real(8) :: n
+    n = sqrt(dot3(p%position, p%position))
+    if (n > 0.0d0) p%position = p%position / n
+  end subroutine normalize_particle
+
+  subroutine hidden_proc(x)
+    integer, intent(in) :: x
+  end subroutine hidden_proc
+
+end module modern_math_physics
+```
+
+Command:
+
 ```bash
 python -m x2py tests/data/fortran/general/modern_pyi_example.f90 \
   --parse \
@@ -251,7 +366,8 @@ File: tests/data/fortran/general/modern_pyi_example.f90
 ```
 
 For C, `--print-limit` expands the compact counts into a bounded list of
-declarations per section:
+declarations per section. This command uses the `math_api.h` header shown in
+the C Quick Start:
 
 ```bash
 python -m x2py tests/data/c/general/math_api.h --language c --parse --print-limit 2

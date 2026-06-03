@@ -327,14 +327,11 @@ Input Fortran (`tests/data/fortran/general/basic_subroutine.f90`):
 
 ```fortran
 module m1
-  implicit none
-  integer :: n
-  real, dimension(10) :: x
 contains
-  subroutine add1(n, x)
-    integer, intent(in) :: n
-    real, dimension(n), intent(inout) :: x
-  end subroutine add1
+subroutine add1(n, x)
+  integer, intent(in) :: n
+  real(kind=8), intent(inout), dimension(n) :: x
+end subroutine add1
 end module m1
 ```
 
@@ -344,7 +341,7 @@ Command:
 python -m x2py tests/data/fortran/general/basic_subroutine.f90
 ```
 
-Expected output shape:
+Expected output:
 
 ```text
 File: tests/data/fortran/general/basic_subroutine.f90

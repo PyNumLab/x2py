@@ -105,6 +105,38 @@ When a generated `.pyi` file needs policy that the parser cannot infer, edit
 the stub and run readiness on the edited file. The edited `.pyi` is the
 user-visible semantic contract.
 
+## Example Input Files
+
+The command examples below use these checked repository fixtures. Reading the
+source, command, and output together should make each parser result
+reproducible from the project root.
+
+`tests/data/fortran/general/basic_subroutine.f90`
+
+```fortran
+module m1
+contains
+subroutine add1(n, x)
+  integer, intent(in) :: n
+  real(kind=8), intent(inout), dimension(n) :: x
+end subroutine add1
+end module m1
+```
+
+`tests/data/c/general/math_api.h`
+
+```c
+#ifndef X2PY_GENERAL_MATH_API_H
+#define X2PY_GENERAL_MATH_API_H
+
+double norm2(int n, const double x[static 1]);
+void scale(int n, double alpha, double x[static 1]);
+double dot(int n, const double *restrict x, const double *restrict y);
+void fill_identity3(double a[static 3][3]);
+
+#endif
+```
+
 ## Compiler-Backed CLI Examples
 
 The CLI path uses compiler preprocessing for source parsing. C defaults to
@@ -112,6 +144,9 @@ The CLI path uses compiler preprocessing for source parsing. C defaults to
 same compiler and target flags used by the native project.
 
 ### C With Include Paths, Macros, And Standard
+
+This command parses the `math_api.h` header shown in
+[Example Input Files](#example-input-files):
 
 ```bash
 python -m x2py tests/data/c/general/math_api.h --language c --parse --json \
@@ -121,8 +156,9 @@ python -m x2py tests/data/c/general/math_api.h --language c --parse --json \
   --std c11
 ```
 
-The output is parser JSON. The important top-level fields show that the file
-was compiler-preprocessed and which recipe was used:
+The output is full parser JSON. The abbreviated excerpt below shows the
+top-level fields that prove the file was compiler-preprocessed and which
+recipe was used:
 
 ```json
 {
@@ -155,7 +191,7 @@ python -m x2py tests/data/c/general/math_api.h --language c --pyi \
   --std c11
 ```
 
-Expected `.pyi` shape:
+Expected `.pyi` output:
 
 ```python
 File: tests/data/c/general/math_api.h
@@ -168,6 +204,16 @@ def scale(
     n: Int32,
     alpha: Float64,
     x: Float64[1]
+) -> None: ...
+
+def dot(
+    n: Int32,
+    x: Ptr(Const(Float64)),
+    y: Ptr(Const(Float64))
+) -> Float64: ...
+
+def fill_identity3(
+    a: Float64[3, 3]
 ) -> None: ...
 ```
 
@@ -215,6 +261,9 @@ python -m x2py src/api.c --language c --semantics \
 Use explicit Fortran compiler mode when source depends on CPP macros,
 predefined compiler behavior, include paths, or target kind flags:
 
+This command parses the `basic_subroutine.f90` file shown in
+[Example Input Files](#example-input-files):
+
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 \
   --language fortran \
@@ -226,7 +275,8 @@ python -m x2py tests/data/fortran/general/basic_subroutine.f90 \
   --compiler-arg=-fdefault-real-8
 ```
 
-The JSON includes the same recipe shape:
+The output is full parser JSON. The abbreviated excerpt below shows the same
+recipe shape:
 
 ```json
 {
@@ -302,7 +352,9 @@ Supported placeholders include `{source}`, `{include_dirs}`, `{defines}`,
 ## End-To-End Tutorial
 
 This tutorial uses checked repository fixtures so the commands are easy to
-reproduce from the project root.
+reproduce from the project root. The Fortran steps use
+`tests/data/fortran/general/basic_subroutine.f90`, shown in
+[Example Input Files](#example-input-files).
 
 ### 1. Parse A Fortran Source
 
@@ -310,7 +362,7 @@ reproduce from the project root.
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
 ```
 
-Expected output shape:
+Expected output:
 
 ```text
 File: tests/data/fortran/general/basic_subroutine.f90
@@ -344,6 +396,7 @@ Fortran dummy arguments without `value` appear as `Ptr(...)`, and arrays appear
 with their storage contract:
 
 ```python
+File: tests/data/fortran/general/basic_subroutine.f90
 def add1(
     n: Ptr(Const(Int32)),
     x: Float64[n]
@@ -391,7 +444,9 @@ python -m x2py path/to/interface.pyi --wrap-readiness
 
 ## C End-To-End Tutorial
 
-Use explicit C mode for C headers and sources:
+Use explicit C mode for C headers and sources. These commands use
+`tests/data/c/general/math_api.h`, shown in
+[Example Input Files](#example-input-files):
 
 ```bash
 python -m x2py tests/data/c/general/math_api.h --language c --parse
@@ -432,11 +487,27 @@ python -m x2py tests/data/c/general/math_api.h --language c --pyi
 The output preserves exact native contracts for the supported subset:
 
 ```python
+File: tests/data/c/general/math_api.h
+def norm2(
+    n: Int32,
+    x: Const(Float64[1])
+) -> Float64: ...
+
+def scale(
+    n: Int32,
+    alpha: Float64,
+    x: Float64[1]
+) -> None: ...
+
 def dot(
     n: Int32,
     x: Ptr(Const(Float64)),
     y: Ptr(Const(Float64))
 ) -> Float64: ...
+
+def fill_identity3(
+    a: Float64[3, 3]
+) -> None: ...
 ```
 
 Check readiness:
