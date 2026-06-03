@@ -80,7 +80,7 @@ For C and Fortran source that depends on preprocessing, the CLI uses compiler
 preprocessing. C defaults to `cc` and Fortran defaults to `gfortran` unless you
 pass `--compiler`, `--compile-commands`, or a custom preprocessing template.
 
-## CLI Quick Start
+## Fortran Quick Start
 
 Parse a Fortran source:
 
@@ -129,6 +129,8 @@ File: tests/data/fortran/general/basic_subroutine.f90
   No semantic readiness blockers detected.
 ```
 
+## C Quick Start
+
 Parse C explicitly:
 
 ```bash
@@ -167,16 +169,115 @@ def scale(
     alpha: Float64,
     x: Float64[1]
 ) -> None: ...
+
+def dot(
+    n: Int32,
+    x: Ptr(Const(Float64)),
+    y: Ptr(Const(Float64))
+) -> Float64: ...
 ```
 
-Use `--json` with any stage that supports structured output:
+Check C readiness:
+
+```bash
+python -m x2py tests/data/c/general/math_api.h --language c --wrap-readiness
+```
+
+```text
+File: tests/data/c/general/math_api.h
+  Source: c
+  Semantic modules: math_api
+  Wrappable: yes
+  Public functions: 4
+  Public classes: 0
+  Public variables: 0
+  No semantic readiness blockers detected.
+```
+
+Generate C semantic IR:
+
+```bash
+python -m x2py tests/data/c/general/math_api.h --language c --semantics
+```
+
+The semantic output contains `semantic_modules` plus the generated `pyi` text
+for the supported C subset.
+
+## Output Modes And Print Size
+
+By default, `--parse` prints a compact human-readable report. For full
+machine-readable parser facts, use `--json`:
 
 ```bash
 python -m x2py tests/data/c/general/math_api.h --language c --parse --json
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness --json
 ```
 
-Write output to a file or beside each source:
+Fortran human-readable parse output keeps scope variables summarized as
+`vars=N` by default. Use `--show-vars` to expand variables. For both Fortran
+and C, use `--print-limit N` to cap repeated sections in the human-readable
+parse report:
+
+```bash
+python -m x2py tests/data/fortran/general/modern_pyi_example.f90 \
+  --parse \
+  --show-vars \
+  --print-limit 2
+```
+
+Example truncated output:
+
+```text
+File: tests/data/fortran/general/modern_pyi_example.f90
+  Modules: 1
+    - module modern_math_physics (vars=2, uses=0)
+      Variables: 2
+        - counter:integer[0]
+        - hidden_scale:real(8)[0]
+      Derived types: 3
+        - type particle (fields=3, methods=0)
+          Fields: 3
+            - id:integer[0]
+            - mass:real(8)[0]
+            ... 1 more fields
+        - type vector3 (fields=1, methods=0)
+          Fields: 1
+            - values:real(8)[1]
+        ... 1 more derived types
+      Procedures: 7
+        - subroutine init_particle(p:type(particle)[0], pid:integer[0], mass:real(8)[0], x:real(8)[0], y:real(8)[0], z:real(8)[0])
+        - function kinetic_energy(p:type(particle)[0], vx:real(8)[0], vy:real(8)[0], vz:real(8)[0]) -> real(8)[0]
+        ... 5 more procedures
+```
+
+For C, `--print-limit` expands the compact counts into a bounded list of
+declarations per section:
+
+```bash
+python -m x2py tests/data/c/general/math_api.h --language c --parse --print-limit 2
+```
+
+```text
+File: tests/data/c/general/math_api.h
+  Language: c
+  Functions: 4
+    - norm2
+    - scale
+    ... 2 more functions
+  Structs: 0
+  Unions: 0
+  Enums: 0
+  Typedefs: 0
+  Variables: 0
+  Macros: 0
+  Includes: 0
+  Diagnostics: 0
+```
+
+Use `--json` when you need complete function, type, source-location,
+preprocessing, and diagnostic facts.
+
+Write output to a file or beside each source with `--out`:
 
 ```bash
 python -m x2py path/to/file.f90 --parse --json --out report.json
@@ -198,12 +299,16 @@ python -m x2py path/to/c_src --language c --parse
 Fortran directories scan `.f`, `.for`, `.ftn`, `.f90`, `.f95`, `.f03`, and
 `.f08`. C directories scan `.c`, `.h`, and `.i`.
 
-Fortran-only display helpers:
+Display helpers:
 
 ```bash
 python -m x2py path/to/file.f90 --parse --show-vars
 python -m x2py path/to/file.f90 --parse --print-limit 50
+python -m x2py path/to/api.h --language c --parse --print-limit 50
 ```
+
+`--show-vars` is Fortran-only. `--print-limit` applies to both Fortran and C
+human-readable parse reports.
 
 ## Compiler Flags And Preprocessing
 

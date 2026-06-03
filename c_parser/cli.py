@@ -109,20 +109,75 @@ def parse_c_report(
     return out
 
 
-def format_c_report(report: dict[str, dict]) -> str:
+def _label_items(items: list[object], *, keys: tuple[str, ...], fallback: str) -> list[str]:
+    names: list[str] = []
+    for index, item in enumerate(items, start=1):
+        label = None
+        if isinstance(item, dict):
+            for key in keys:
+                value = item.get(key)
+                if isinstance(value, str) and value:
+                    label = value
+                    break
+        names.append(label or f"{fallback} {index}")
+    return names
+
+
+def _named_items(items: list[object], *, fallback: str) -> list[str]:
+    return _label_items(items, keys=("name", "reference", "anonymous_id"), fallback=fallback)
+
+
+def _include_items(items: list[object]) -> list[str]:
+    return _label_items(items, keys=("path", "name", "source", "filename"), fallback="include")
+
+
+def _diagnostic_items(items: list[object]) -> list[str]:
+    names: list[str] = []
+    for index, item in enumerate(items, start=1):
+        if not isinstance(item, dict):
+            names.append(f"diagnostic {index}")
+            continue
+        code = item.get("code")
+        severity = item.get("severity")
+        message = item.get("message")
+        parts = [part for part in (severity, code, message) if isinstance(part, str) and part]
+        names.append(": ".join(parts) if parts else f"diagnostic {index}")
+    return names
+
+
+def _append_limited_items(lines: list[str], title: str, names: list[str], print_limit: int | None) -> None:
+    lines.append(f"  {title}: {len(names)}")
+    if print_limit is None:
+        return
+    for name in names[:print_limit]:
+        lines.append(f"    - {name}")
+    remaining = len(names) - min(len(names), print_limit)
+    if remaining:
+        lines.append(f"    ... {remaining} more {title.lower()}")
+
+
+def format_c_report(report: dict[str, dict], *, print_limit: int | None = None) -> str:
     lines: list[str] = []
     for fname, parsed in report.items():
         lines.append(f"File: {fname}")
         lines.append(f"  Language: {parsed.get('language', 'c')}")
-        lines.append(f"  Functions: {len(parsed.get('functions') or [])}")
-        lines.append(f"  Structs: {len(parsed.get('structs') or [])}")
-        lines.append(f"  Unions: {len(parsed.get('unions') or [])}")
-        lines.append(f"  Enums: {len(parsed.get('enums') or [])}")
-        lines.append(f"  Typedefs: {len(parsed.get('typedefs') or [])}")
-        lines.append(f"  Variables: {len(parsed.get('variables') or [])}")
-        lines.append(f"  Macros: {len(parsed.get('macros') or [])}")
-        lines.append(f"  Includes: {len(parsed.get('includes') or [])}")
-        lines.append(f"  Diagnostics: {len(parsed.get('diagnostics') or [])}")
+        _append_limited_items(
+            lines, "Functions", _named_items(parsed.get("functions") or [], fallback="function"), print_limit
+        )
+        _append_limited_items(
+            lines, "Structs", _named_items(parsed.get("structs") or [], fallback="struct"), print_limit
+        )
+        _append_limited_items(lines, "Unions", _named_items(parsed.get("unions") or [], fallback="union"), print_limit)
+        _append_limited_items(lines, "Enums", _named_items(parsed.get("enums") or [], fallback="enum"), print_limit)
+        _append_limited_items(
+            lines, "Typedefs", _named_items(parsed.get("typedefs") or [], fallback="typedef"), print_limit
+        )
+        _append_limited_items(
+            lines, "Variables", _named_items(parsed.get("variables") or [], fallback="variable"), print_limit
+        )
+        _append_limited_items(lines, "Macros", _named_items(parsed.get("macros") or [], fallback="macro"), print_limit)
+        _append_limited_items(lines, "Includes", _include_items(parsed.get("includes") or []), print_limit)
+        _append_limited_items(lines, "Diagnostics", _diagnostic_items(parsed.get("diagnostics") or []), print_limit)
         lines.append("")
     return "\n".join(lines).rstrip()
 
@@ -132,6 +187,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("paths", nargs="+", help="C source/header file(s) or directory path(s)")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout")
     parser.add_argument("--out", type=str, help="Write parser JSON to a file")
+    parser.add_argument(
+        "--print-limit",
+        type=int,
+        metavar="N",
+        help="Show at most N items per repeated section in the human-readable parse report.",
+    )
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI color in parse diagnostics")
     parser.add_argument(
         "--debug",
@@ -141,6 +202,8 @@ def main(argv: list[str] | None = None) -> int:
         help="Re-raise parser errors so Python prints a traceback for parser debugging.",
     )
     args = parser.parse_args(argv)
+    if args.print_limit is not None and args.print_limit < 0:
+        parser.error("--print-limit must be >= 0")
 
     try:
         payload = parse_c_report(args.paths)
@@ -158,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         print(json.dumps(payload, indent=2))
     else:
-        print(format_c_report(payload))
+        print(format_c_report(payload, print_limit=args.print_limit))
     return 0
 
 

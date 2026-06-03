@@ -575,6 +575,8 @@ def main() -> int:
             "    python -m x2py path/to/file.f90 --parse --json\n"
             "  Parse C subset JSON:\n"
             "    python -m x2py path/to/api.h --language c --parse --json\n"
+            "  Parse C readable report with capped repeated sections:\n"
+            "    python -m x2py path/to/api.h --language c --parse --print-limit 50\n"
             "  Parse C with an exact compiler executable and API flags:\n"
             "    python -m x2py path/to/api.h --language c --parse --compiler clang-18 -I include -D API_EXPORT= --std c11\n"
             "  Parse C with a compiler path and target/sysroot passthrough flags:\n"
@@ -745,8 +747,8 @@ def main() -> int:
             parser.error(
                 "--language c requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness"
             )
-        if args.show_vars or args.print_limit is not None or args.vars_limit is not None:
-            parser.error("--show-vars/--print-limit are Fortran-only and are not supported for --language c")
+        if args.show_vars:
+            parser.error("--show-vars is Fortran-only and is not supported for --language c")
 
     if args.out is not None and not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
         parser.error("--out requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness")
@@ -857,13 +859,16 @@ def main() -> int:
 
     if args.wrap_readiness:
         if args.parse and not args.json:
-            print(
-                _format_report(
-                    parse_payload or {},
-                    show_vars=args.show_vars or args.vars_limit is not None,
-                    print_limit=print_limit,
+            if args.language == "c":
+                print(format_c_report(parse_payload or {}, print_limit=print_limit))
+            else:
+                print(
+                    _format_report(
+                        parse_payload or {},
+                        show_vars=args.show_vars or args.vars_limit is not None,
+                        print_limit=print_limit,
+                    )
                 )
-            )
             print()
             print(_format_semantic_readiness(readiness_payload or {}))
         elif args.pyi and not args.json:
@@ -880,7 +885,7 @@ def main() -> int:
         print_pyi_output(_format_pyi_report(semantic_payload or {}))
     elif args.parse and not (args.semantics or args.json or args.pyi):
         if args.language == "c":
-            print(format_c_report(parse_payload or {}))
+            print(format_c_report(parse_payload or {}, print_limit=print_limit))
         else:
             print(
                 _format_report(

@@ -897,15 +897,7 @@ def test_x2py_main_accepts_each_non_parse_c_stage(monkeypatch, stage):
         ),
         (
             {"language": "c", "parse": True, "show_vars": True},
-            "--show-vars/--print-limit are Fortran-only and are not supported for --language c",
-        ),
-        (
-            {"language": "c", "parse": True, "print_limit": 1},
-            "--show-vars/--print-limit are Fortran-only and are not supported for --language c",
-        ),
-        (
-            {"language": "c", "parse": True, "vars_limit": 1},
-            "--show-vars/--print-limit are Fortran-only and are not supported for --language c",
+            "--show-vars is Fortran-only and is not supported for --language c",
         ),
         (
             {"out": ""},
@@ -1287,7 +1279,7 @@ def test_x2py_main_preserves_stdout_mode_matrix(monkeypatch, capsys):
 
 
 def test_x2py_main_preserves_c_readable_stdout_contract(monkeypatch, capsys):
-    args = _main_args(language="c", parse=True)
+    args = _main_args(language="c", parse=True, print_limit=2)
     _install_main_parser(monkeypatch, args)
     preprocessing = types.SimpleNamespace(include_dirs=())
     parse_payload = {"parse": {"node": 1}}
@@ -1302,12 +1294,46 @@ def test_x2py_main_preserves_c_readable_stdout_contract(monkeypatch, capsys):
     monkeypatch.setattr(
         x2py_cli,
         "format_c_report",
-        lambda payload: formats.append(payload) or "C REPORT",
+        lambda payload, **kwargs: formats.append((payload, kwargs)) or "C REPORT",
     )
 
     assert x2py_cli.main() == 0
     assert capsys.readouterr().out == "C REPORT\n"
-    assert formats == [parse_payload]
+    assert formats == [(parse_payload, {"print_limit": 2})]
+
+
+def test_x2py_main_uses_c_formatter_for_parse_wrap_readiness(monkeypatch, capsys):
+    args = _main_args(language="c", parse=True, wrap_readiness=True, print_limit=1)
+    _install_main_parser(monkeypatch, args)
+    preprocessing = types.SimpleNamespace(include_dirs=())
+    parse_payload = {"parse": {"node": 1}}
+    readiness_payload = {"readiness": {"wrappable": True}}
+    formats = []
+
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
+    monkeypatch.setattr(x2py_cli, "_c_parser_preprocessing_mode", lambda active_preprocessing: "mode")
+    monkeypatch.setattr(x2py_cli, "_c_source_loader", lambda active_preprocessing: "loader")
+    monkeypatch.setattr(x2py_cli, "parse_c_report", lambda *args, **kwargs: parse_payload)
+    monkeypatch.setattr(x2py_cli, "_wrap_readiness_report", lambda *args, **kwargs: readiness_payload)
+    monkeypatch.setattr(x2py_cli, "_attach_wrap_readiness", lambda semantic_payload, readiness_payload: None)
+    monkeypatch.setattr(
+        x2py_cli,
+        "format_c_report",
+        lambda payload, **kwargs: formats.append(("c-format", payload, kwargs)) or "C REPORT",
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_format_semantic_readiness",
+        lambda payload: formats.append(("readiness-format", payload)) or "READINESS",
+    )
+
+    assert x2py_cli.main() == 0
+    assert capsys.readouterr().out == "C REPORT\n\nREADINESS\n"
+    assert formats == [
+        ("c-format", parse_payload, {"print_limit": 1}),
+        ("readiness-format", readiness_payload),
+    ]
 
 
 def test_x2py_cli_helpers_cover_language_and_preprocessing_edges(tmp_path: Path, monkeypatch):
@@ -1623,6 +1649,7 @@ def test_cli_help_includes_examples():
     assert "python -m x2py path/to/file.f90 --parse" in res.stdout
     assert "python -m x2py path/to/file.f90 --parse --show-vars" in res.stdout
     assert "python -m x2py path/to/file.f90 --parse --print-limit 50" in res.stdout
+    assert "python -m x2py path/to/api.h --language c --parse --print-limit 50" in res.stdout
     assert "python -m x2py path/to/file.f90 --pyi --out module.pyi" in res.stdout
 
 
@@ -1669,6 +1696,8 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
                 "    python -m x2py path/to/file.f90 --parse --json\n"
                 "  Parse C subset JSON:\n"
                 "    python -m x2py path/to/api.h --language c --parse --json\n"
+                "  Parse C readable report with capped repeated sections:\n"
+                "    python -m x2py path/to/api.h --language c --parse --print-limit 50\n"
                 "  Parse C with an exact compiler executable and API flags:\n"
                 "    python -m x2py path/to/api.h --language c --parse --compiler clang-18 -I include -D API_EXPORT= --std c11\n"
                 "  Parse C with a compiler path and target/sysroot passthrough flags:\n"

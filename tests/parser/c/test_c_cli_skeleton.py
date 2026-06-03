@@ -38,6 +38,44 @@ def test_cli_c_parse_human_tree_output_for_header(tmp_path: Path):
     assert "Parser status" not in res.stdout
 
 
+def test_format_c_report_print_limit_expands_repeated_sections():
+    report = {
+        "api.h": {
+            "language": "c",
+            "functions": [{"name": "add"}, {"name": "scale"}],
+            "structs": [{"reference": "struct context"}],
+            "unions": [],
+            "enums": [{"anonymous_id": "enum@api.h:1:1"}],
+            "typedefs": [],
+            "variables": [],
+            "macros": [],
+            "includes": [{"path": "api_types.h"}, {}],
+            "diagnostics": [
+                {
+                    "severity": "warning",
+                    "code": "C_UNMODELED_COMPILER_EXTENSION",
+                    "message": "attribute ignored",
+                }
+            ],
+        }
+    }
+
+    output = c_parser_cli.format_c_report(report, print_limit=1)
+
+    assert "  Functions: 2" in output
+    assert "    - add" in output
+    assert "    - scale" not in output
+    assert "    ... 1 more functions" in output
+    assert "  Structs: 1" in output
+    assert "    - struct context" in output
+    assert "  Enums: 1" in output
+    assert "    - enum@api.h:1:1" in output
+    assert "  Includes: 2" in output
+    assert "    - api_types.h" in output
+    assert "    ... 1 more includes" in output
+    assert "warning: C_UNMODELED_COMPILER_EXTENSION: attribute ignored" in output
+
+
 def test_cli_c_parse_json_stdout_for_header(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
