@@ -2330,7 +2330,7 @@ def test_cli_c_compiler_mode_runs_exact_compiler_and_parses_preprocessed_stdout(
 
     assert payload["preprocessing"] == "compiler"
     assert [fn["name"] for fn in payload["functions"]] == ["expanded"]
-    assert payload["functions"][0]["origin"] == "preprocessed"
+    assert "origin" not in payload["functions"][0]
     assert payload["functions"][0]["source_location"]["filename"] == "include/api.h"
     assert payload["functions"][0]["source_location"]["line"] == 44
     assert compiler_args == [

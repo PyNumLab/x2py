@@ -315,8 +315,6 @@ end module solver_mod
             "x2py",
             str(source),
             "--semantics",
-            "--preprocess",
-            "compiler",
             "--compiler",
             compiler,
             "--json",
