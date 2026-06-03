@@ -347,12 +347,14 @@ Expected output shape:
 ```text
 File: tests/data/fortran/general/basic_subroutine.f90
   Modules: 1
-    - module m1 (vars=2, uses=0)
+    - module m1 (vars=0, uses=0)
       Procedures: 1
-        - subroutine add1(n:integer[0], x:real[1])
+        - subroutine add1(n:integer[0], x:real(8)[1])
 ```
 
-With variables expanded:
+The same command with `--show-vars` uses the variable-expanded report path.
+This fixture currently has no module variables to print, so the output remains
+compact:
 
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --show-vars
@@ -361,12 +363,9 @@ python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --show-va
 ```text
 File: tests/data/fortran/general/basic_subroutine.f90
   Modules: 1
-    - module m1 (vars=2, uses=0)
-      Variables: 2
-        - n:integer[0]
-        - x:real[1]
+    - module m1 (vars=0, uses=0)
       Procedures: 1
-        - subroutine add1(n:integer[0], x:real[1])
+        - subroutine add1(n:integer[0], x:real(8)[1])
 ```
 
 For large files:

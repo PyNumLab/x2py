@@ -126,6 +126,177 @@ Wrappers and semantic readiness decide:
 - ABI shim requirements;
 - Python-visible signature adaptation.
 
+## Feature Change Walkthroughs
+
+Use these walkthroughs when adding behavior. They are deliberately procedural:
+change the smallest owned layer first, test that layer, then update downstream
+contracts only when the public behavior actually changes.
+
+### Add A C Declaration Feature
+
+Example target: support a new declaration spelling or compiler extension in
+the C parser.
+
+1. Add the smallest source example to a focused C parser test:
+   `tests/parser/c/test_c_declarations_and_declarators.py`,
+   `tests/parser/c/test_c_compiler_extensions.py`, or
+   `tests/parser/c/test_c_structs_unions_enums_typedefs.py`.
+2. Implement the parser change in `c_parser/parser.py`. Add or update model
+   fields in `c_parser/models.py` only if the serialized parser contract needs
+   new facts.
+3. If source splitting or raw directive handling changes, update
+   `c_parser/lexer.py` and `tests/parser/c/test_c_lexer_preprocessor.py`.
+4. If project-level resolution changes, update
+   `tests/parser/c/test_c_project_resolution.py`.
+5. If parser JSON changes intentionally, regenerate the relevant project
+   golden:
+
+   ```bash
+   python tests/parser/c/generate_c_parser_goldens.py tests/data/c/general/math_api.h
+   ```
+
+6. If the new parser fact affects semantic conversion, update
+   `semantics/c2ir.py` and add coverage in `tests/semantics/test_c2ir.py`.
+7. If the generated `.pyi` changes, update `tests/semantics/test_pyi_printer.py`
+   or `tests/pyi/test_pyi_fixture_suite.py`.
+8. Update [c_parser.md](c_parser.md), [user.md](user.md), or
+   [semantics.md](semantics.md) if users or maintainers need to know the new
+   behavior.
+
+Focused verification:
+
+```bash
+PYTHONPATH=. pytest -q tests/parser/c/test_c_declarations_and_declarators.py
+PYTHONPATH=. pytest -q tests/parser/c/test_c_project_resolution.py
+PYTHONPATH=. pytest -q tests/semantics/test_c2ir.py
+```
+
+### Add A Fortran Parser Feature
+
+Example target: preserve a new declaration attribute, source fact, or argument
+metadata item.
+
+1. Add a focused parser test in the file that owns the behavior:
+   `tests/parser/test_procedure_and_type_parsing.py`,
+   `tests/parser/test_scope_handling.py`, or
+   `tests/parser/test_preprocessor_and_execution_boundaries.py`.
+2. Implement parsing in `fortran_parser/parser.py`. Add model fields in
+   `fortran_parser/models.py` only if the parser output needs to expose the
+   new fact.
+3. Add parser diagnostic coverage in `tests/parser/test_error_handling.py` if
+   malformed source should now fail differently.
+4. If project ordering, imports, or compile-time values change, update
+   `tests/parser/test_project_scope_models.py` or
+   `tests/parser/test_fortran_type_probe.py`.
+5. If serialized parser JSON changes intentionally, regenerate the selected
+   fixture:
+
+   ```bash
+   python tests/parser/fortran/generate_fortran_parser_goldens.py tests/data/fortran/general/basic_subroutine.f90
+   ```
+
+6. If the new fact affects semantic output, update `semantics/fortran2ir.py`
+   and `tests/semantics/test_fortran2ir.py`.
+7. If generated `.pyi` changes, update `tests/semantics/test_pyi_printer.py`
+   and the relevant fixture tests.
+8. Update [fortran_parser.md](fortran_parser.md), [user.md](user.md), or
+   [semantics.md](semantics.md) as needed.
+
+Focused verification:
+
+```bash
+PYTHONPATH=. pytest -q tests/parser/test_procedure_and_type_parsing.py
+PYTHONPATH=. pytest -q tests/parser/test_fortran_fixture_suite.py
+PYTHONPATH=. pytest -q tests/semantics/test_fortran2ir.py
+```
+
+### Add Or Change Datatype Mapping
+
+Example target: map a new Fortran kind, C typedef, or target-probed C type.
+
+1. Add conversion coverage in `tests/semantics/test_fortran2ir.py` or
+   `tests/semantics/test_c2ir.py`.
+2. Implement the mapping in `semantics/fortran2ir.py` or `semantics/c2ir.py`.
+3. Keep the public semantic dtype names in `semantics/models.py` stable unless
+   there is a deliberate schema decision.
+4. If the emitted `.pyi` annotation changes, update
+   `tests/semantics/test_pyi_printer.py` and `tests/pyi/test_pyi_to_ir.py`.
+5. Update the datatype tables in [user.md](user.md) and [semantics.md](semantics.md).
+
+Focused verification:
+
+```bash
+PYTHONPATH=. pytest -q tests/semantics/test_fortran2ir.py tests/semantics/test_c2ir.py
+PYTHONPATH=. pytest -q tests/semantics/test_pyi_printer.py tests/pyi/test_pyi_to_ir.py
+```
+
+### Add `.pyi` Syntax Or Projection Behavior
+
+Example target: add a new `Annotated[...]` metadata item or projection helper.
+
+1. Add loader tests in `tests/pyi/test_pyi_to_ir.py`.
+2. Update `semantics/pyi_parser.py`.
+3. Add printer tests in `tests/semantics/test_pyi_printer.py`.
+4. Update `semantics/pyi_printer.py`.
+5. Update semantic models in `semantics/models.py` only if the IR needs a new
+   field or constraint.
+6. Update readiness behavior if the new syntax resolves a blocker.
+7. Update [user.md](user.md) and [semantics.md](semantics.md).
+
+Focused verification:
+
+```bash
+PYTHONPATH=. pytest -q tests/pyi/test_pyi_to_ir.py
+PYTHONPATH=. pytest -q tests/semantics/test_pyi_printer.py
+PYTHONPATH=. pytest -q tests/semantics/test_semantic_wrap_readiness.py
+```
+
+### Add A Readiness Blocker
+
+Example target: report a new unsupported C/Fortran semantic contract clearly.
+
+1. Preserve the source fact in the parser if it is not already present.
+2. Attach semantic blocker metadata in `semantics/c2ir.py` or
+   `semantics/fortran2ir.py`.
+3. Normalize and format the blocker in `semantics/readiness.py`.
+4. Add focused readiness tests in
+   `tests/semantics/test_semantic_wrap_readiness.py` or
+   `tests/semantics/test_c_semantic_readiness.py`.
+5. Regenerate readiness message fixtures only when the public message changes:
+
+   ```bash
+   python tests/semantics/generate_wrap_readiness_fixtures.py
+   ```
+
+6. Update [user.md](user.md) if users can fix the blocker by editing `.pyi`.
+
+Focused verification:
+
+```bash
+PYTHONPATH=. pytest -q tests/semantics/test_semantic_wrap_readiness.py
+PYTHONPATH=. pytest -q tests/semantics/test_c_semantic_readiness.py
+```
+
+### Add Or Change CLI Behavior
+
+Example target: add a stage option, change output routing, or improve
+diagnostic formatting.
+
+1. Add CLI tests in `tests/parser/test_cli.py` first.
+2. Implement shared dispatch and output behavior in `x2py/cli.py`.
+3. Keep Fortran package-specific CLI behavior in `fortran_parser/cli.py`.
+4. If compiler preprocessing behavior changes, update `x2py/preprocessing.py`
+   and preprocessing tests.
+5. Update [user.md](user.md) for user-facing commands and
+   [developer.md](developer.md) for maintainer command maps.
+
+Focused verification:
+
+```bash
+PYTHONPATH=. pytest -q tests/parser/test_cli.py
+PYTHONPATH=. pytest -q tests/parser/test_preprocessing_cli.py
+```
+
 ## Testing Map
 
 Use this map when changing one part of the project. Each section shows how to

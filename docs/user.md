@@ -19,6 +19,38 @@ signatures, types, array and pointer facts, source locations, and diagnostics.
 It does not infer ownership, callback lifetime, ABI shims, or Pythonic
 projections unless the user supplies that policy in `.pyi`.
 
+## Mental Model
+
+Think of x2py as a staged pipeline:
+
+```text
+native source
+  -> parser facts
+  -> semantic IR
+  -> editable `.pyi`
+  -> readiness report
+  -> future wrapper generation
+```
+
+Each stage has a different job:
+
+- **Parser facts** are source-faithful. They preserve declarations,
+  signatures, source locations, includes/imports, diagnostics, and native type
+  facts.
+- **Semantic IR** is language-neutral. C and Fortran declarations become the
+  same semantic concepts: modules, functions, classes, variables, scalar
+  types, arrays, pointers, constants, and blockers.
+- **`.pyi`** is the editable user contract. It is where users can add missing
+  policy that source code alone cannot prove.
+- **Readiness** checks whether the semantic contract is complete enough to
+  wrap. It reports blockers rather than guessing.
+- **Wrapper generation** is the later stage that will consume a ready semantic
+  contract.
+
+The main rule is: generated `.pyi` files describe exact native contracts unless
+you explicitly edit them. x2py should not silently hide native pointer/size
+arguments, infer ownership, or invent callback lifetime policy.
+
 ## Main CLI Workflows
 
 Parse Fortran:
@@ -64,6 +96,96 @@ python -m x2py path/to/interface.pyi --wrap-readiness
 When a generated `.pyi` file needs policy that the parser cannot infer, edit
 the stub and run readiness on the edited file. The edited `.pyi` is the
 user-visible semantic contract.
+
+## End-To-End Tutorial
+
+This tutorial uses checked repository fixtures so the commands are easy to
+reproduce from the project root.
+
+### 1. Parse A Fortran Source
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
+```
+
+Expected output shape:
+
+```text
+File: tests/data/fortran/general/basic_subroutine.f90
+  Modules: 1
+    - module m1 (vars=0, uses=0)
+      Procedures: 1
+        - subroutine add1(n:integer[0], x:real(8)[1])
+```
+
+The parser is reporting native source facts only: modules, variables, procedure
+signatures, argument types, ranks, and source diagnostics.
+
+### 2. Convert To Semantic IR
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
+```
+
+Semantic output is the language-neutral view consumed by readiness and `.pyi`
+generation. Use this when you need machine-readable contract data rather than
+a human parse tree.
+
+### 3. Generate An Editable `.pyi`
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
+```
+
+Generated stubs preserve the exact native interface. For example, scalar
+Fortran dummy arguments without `value` appear as `Ptr(...)`, and arrays appear
+with their storage contract:
+
+```python
+def add1(
+    n: Ptr(Const(Int32)),
+    x: Float64[n]
+) -> None: ...
+```
+
+If the generated file is complete, you can use it as-is. If readiness reports
+missing policy, edit the `.pyi` and make the contract explicit.
+
+### 4. Check Readiness
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
+```
+
+For scripting, use JSON:
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness --json
+```
+
+Look at `wrappable`, `wrappability_blockers`, `unit_blockers`, and
+`why_not_wrappable`.
+
+### 5. Edit `.pyi` When Source Is Not Enough
+
+Some native APIs need user policy. For example, a C callback API may parse
+successfully, but readiness may require a `Callable[...]` contract:
+
+```python
+from typing import Callable
+
+def walk_items(
+    items: Ptr(Any),
+    visit: Callable[[Ptr(Any), Ptr(Any)], None],
+    userdata: Ptr(Any),
+) -> None: ...
+```
+
+After editing, run readiness on the `.pyi` file:
+
+```bash
+python -m x2py path/to/interface.pyi --wrap-readiness
+```
 
 ## Python API Workflows
 
@@ -335,14 +457,14 @@ def fill_identity3(
 C header:
 
 ```c
-int scale_values(double *values, size_t n);
+int scale_values(size_t n, double values[n]);
 double dot3(const double a[3], const double b[3]);
 ```
 
 Generated `.pyi` shape for the supported exact subset:
 
 ```python
-def scale_values(values: Float64[n], n: SizeT) -> Int32: ...
+def scale_values(n: SizeT, values: Float64[n]) -> Int32: ...
 def dot3(a: Const(Float64[3]), b: Const(Float64[3])) -> Float64: ...
 ```
 
@@ -398,6 +520,46 @@ Common blockers:
 
 When a blocker is policy-related, edit the `.pyi` to provide the missing
 contract and rerun readiness.
+
+## User Responsibilities And Limits
+
+x2py deliberately avoids guessing policy that can change memory safety or API
+meaning. Users should expect to provide policy for:
+
+- **Pointer ownership:** whether `T *` is borrowed, owned, nullable, mutable,
+  a scalar reference, or array storage.
+- **Pointer/size relationships:** which `n`, `len`, `capacity`, or shape
+  argument describes which pointer.
+- **Output buffers:** whether an output pointer remains a native argument or
+  becomes a Python return value through `@native_call`.
+- **Callbacks:** callable signature, lifetime, context/userdata pairing,
+  registration/unregistration, threading, and exception policy.
+- **ABI-sensitive structs/unions/bitfields:** whether direct passing is safe,
+  blocked, or needs a generated shim.
+- **Compiler-dependent typedefs:** target-specific widths for types such as
+  `size_t`, `time_t`, and library handles.
+- **Macro configurations:** parse each compiler-selected configuration after
+  preprocessing; do not expect raw macro expansion inside the parser.
+
+These limits are intentional. A readiness blocker is a request for a clearer
+semantic contract, not just a parser failure.
+
+## Verified Example Sources
+
+These repository files and tests are useful examples to run or inspect:
+
+- Fortran user flow:
+  `tests/data/fortran/general/basic_subroutine.f90`
+- Rich generated `.pyi` snapshot:
+  `tests/data/fortran/general/modern_pyi_example.f90` and
+  `tests/semantics/test_pyi_printer_modern_example.py`
+- Edited `.pyi` syntax and `@native_call` examples:
+  `tests/pyi/test_pyi_to_ir.py`
+- C parser and semantic examples:
+  `tests/data/c/general/math_api.h` and `tests/semantics/test_c2ir.py`
+- Readiness examples:
+  `tests/semantics/test_semantic_wrap_readiness.py` and
+  `tests/semantics/test_c_semantic_readiness.py`
 
 ## More Detail
 
