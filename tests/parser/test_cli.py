@@ -92,18 +92,16 @@ def _patch_main_report_payloads(
     monkeypatch.setattr(
         x2py_cli,
         "_semantic_report",
-        lambda paths, active_preprocessing, *, language: calls.append(
-            ("semantic", paths, active_preprocessing, language)
-        )
-        or semantic_payload,
+        lambda paths, active_preprocessing, *, language: (
+            calls.append(("semantic", paths, active_preprocessing, language)) or semantic_payload
+        ),
     )
     monkeypatch.setattr(
         x2py_cli,
         "_wrap_readiness_report",
-        lambda paths, active_preprocessing, *, language: calls.append(
-            ("readiness", paths, active_preprocessing, language)
-        )
-        or readiness_payload,
+        lambda paths, active_preprocessing, *, language: (
+            calls.append(("readiness", paths, active_preprocessing, language)) or readiness_payload
+        ),
     )
     monkeypatch.setattr(
         x2py_cli,
