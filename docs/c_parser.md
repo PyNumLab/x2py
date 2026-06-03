@@ -12,6 +12,14 @@ standalone architecture and CLI workflow notes; keep parser behavior, public
 API, command output, fixtures, semantic conversion, readiness, and `.pyi`
 changes documented here.
 
+Parser-related pull requests should update this file when the documented
+feature inventory, public API, diagnostics, project behavior, semantic handoff,
+or maintenance workflow changes. The parser-reference guard checks C and
+Fortran references independently. It watches `c_parser/`, `tests/parser/c/`,
+`tests/data/c/`, and C standard-type probe tests and expects
+`docs/c_parser.md` to change unless the PR is explicitly labeled to skip the
+guard.
+
 ## Purpose
 
 The C parser frontend will be a wrapper-oriented source extraction system for

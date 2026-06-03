@@ -8,7 +8,21 @@
 
 ### Parser reference guard
 
-This repo includes a CI guard that may require updating `docs/fortran_parser.md` when parser-related files change.
+This repo includes a CI guard that may require updating parser reference docs
+when parser-related files change.
 
-- **Default behavior**: if you change `fortran_parser/` or `tests/data/fortran/`, update `docs/fortran_parser.md` when the change affects the documented feature inventory or behavior.
+- **C parser changes**: if you change `c_parser/`, `tests/parser/c/`, or
+  `tests/data/c/`, update `docs/c_parser.md` when the change affects the
+  documented feature inventory, public API, diagnostics, fixtures, semantic
+  handoff, or maintenance workflow. The guard also treats
+  `tests/parser/test_c_standard_type_probe.py` as C parser related.
+- **Fortran parser changes**: if you change `fortran_parser/`,
+  `tests/parser/fortran/`, or `tests/data/fortran/`, update
+  `docs/fortran_parser.md` when the change affects the documented feature
+  inventory, public API, diagnostics, fixtures, semantic handoff, or
+  maintenance workflow. The guard also tracks focused Fortran parser tests
+  directly under `tests/parser/`.
+- **Shared parser workflow changes**: if you change shared parser CLI or
+  preprocessing behavior, update `docs/c_parser.md` or
+  `docs/fortran_parser.md`, whichever parser behavior changed.
 - **Bypass (use sparingly)**: add the PR label `ignore-parser-reference-guard` to skip that guard for changes that do not meaningfully affect the reference.

@@ -131,9 +131,11 @@ The implementation inventory is maintained across these surfaces:
 Parser-related pull requests should update this file when the documented
 feature inventory, public API, diagnostics, project behavior, semantic handoff,
 or maintenance workflow changes. The parser-reference guard watches
-`fortran_parser/`, `tests/parser/fortran/`, and `tests/data/fortran/` changes and
-expects `docs/fortran_parser.md` to change unless the PR is explicitly
-labeled to skip the guard.
+Fortran and C references independently. For Fortran, it watches
+`fortran_parser/`, `tests/parser/fortran/`, `tests/data/fortran/`, and focused
+Fortran parser tests directly under `tests/parser/`. It expects
+`docs/fortran_parser.md` to change unless the PR is explicitly labeled to skip
+the guard.
 
 `visit_file` is the central orchestration path. It first slices the source into
 direct file-level units, then each unit visitor parses only its own substring
