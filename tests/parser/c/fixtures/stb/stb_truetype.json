@@ -5,8 +5,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "stb/stb_truetype.h",
-        "/usr/include/stdc-predef.h"
+        "stb/stb_truetype.h"
       ],
       "functions": [
         {
@@ -346,7 +345,7 @@
                           "declaration_locations": []
                         }
                       ],
-                      "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:527:1",
+                      "anonymous_id": "struct@<system-header>:0:0",
                       "is_incomplete": false,
                       "source_location": {
                         "filename": "stb/stb_truetype.h",
@@ -748,7 +747,7 @@
                           "declaration_locations": []
                         }
                       ],
-                      "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:543:1",
+                      "anonymous_id": "struct@<system-header>:0:0",
                       "is_incomplete": false,
                       "source_location": {
                         "filename": "stb/stb_truetype.h",
@@ -1938,7 +1937,7 @@
                           "declaration_locations": []
                         }
                       ],
-                      "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:575:1",
+                      "anonymous_id": "struct@<system-header>:0:0",
                       "is_incomplete": false,
                       "source_location": {
                         "filename": "stb/stb_truetype.h",
@@ -2278,7 +2277,7 @@
                           "declaration_locations": []
                         }
                       ],
-                      "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:619:1",
+                      "anonymous_id": "struct@<system-header>:0:0",
                       "is_incomplete": false,
                       "source_location": {
                         "filename": "stb/stb_truetype.h",
@@ -3208,7 +3207,7 @@
                                   "declaration_locations": []
                                 }
                               ],
-                              "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:513:1",
+                              "anonymous_id": "struct@<system-header>:0:0",
                               "is_incomplete": false,
                               "source_location": {
                                 "filename": "stb/stb_truetype.h",
@@ -6477,7 +6476,7 @@
                           "declaration_locations": []
                         }
                       ],
-                      "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:835:4",
+                      "anonymous_id": "struct@<system-header>:0:0",
                       "is_incomplete": false,
                       "source_location": {
                         "filename": "stb/stb_truetype.h",
@@ -11169,7 +11168,7 @@
                           "declaration_locations": []
                         }
                       ],
-                      "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:924:1",
+                      "anonymous_id": "struct@<system-header>:0:0",
                       "is_incomplete": false,
                       "source_location": {
                         "filename": "stb/stb_truetype.h",
@@ -12624,38 +12623,7 @@
           "declaration_locations": []
         }
       ],
-      "structs": [
-        {
-          "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:513:1"
-        },
-        {
-          "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:527:1"
-        },
-        {
-          "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:543:1"
-        },
-        {
-          "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:575:1"
-        },
-        {
-          "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:619:1"
-        },
-        {
-          "reference": "struct stbtt_pack_context"
-        },
-        {
-          "reference": "struct stbtt_fontinfo"
-        },
-        {
-          "reference": "struct stbtt_kerningentry"
-        },
-        {
-          "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:835:4"
-        },
-        {
-          "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:924:1"
-        }
-      ],
+      "structs": [],
       "unions": [],
       "enums": [
         {
@@ -12705,7 +12673,7 @@
               }
             }
           ],
-          "anonymous_id": "enum@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:824:4",
+          "anonymous_id": "enum@<system-header>:0:0",
           "source_location": {
             "filename": "stb/stb_truetype.h",
             "line": 824,
@@ -12760,7 +12728,7 @@
               }
             }
           ],
-          "anonymous_id": "enum@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:1044:1",
+          "anonymous_id": "enum@<system-header>:0:0",
           "source_location": {
             "filename": "stb/stb_truetype.h",
             "line": 1044,
@@ -12825,7 +12793,7 @@
               }
             }
           ],
-          "anonymous_id": "enum@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:1051:1",
+          "anonymous_id": "enum@<system-header>:0:0",
           "source_location": {
             "filename": "stb/stb_truetype.h",
             "line": 1051,
@@ -12880,7 +12848,7 @@
               }
             }
           ],
-          "anonymous_id": "enum@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:1059:1",
+          "anonymous_id": "enum@<system-header>:0:0",
           "source_location": {
             "filename": "stb/stb_truetype.h",
             "line": 1059,
@@ -12975,7 +12943,7 @@
               }
             }
           ],
-          "anonymous_id": "enum@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:1066:1",
+          "anonymous_id": "enum@<system-header>:0:0",
           "source_location": {
             "filename": "stb/stb_truetype.h",
             "line": 1066,
@@ -13110,7 +13078,7 @@
               }
             }
           ],
-          "anonymous_id": "enum@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:1073:1",
+          "anonymous_id": "enum@<system-header>:0:0",
           "source_location": {
             "filename": "stb/stb_truetype.h",
             "line": 1073,
@@ -13265,7 +13233,7 @@
               }
             }
           ],
-          "anonymous_id": "enum@/home/said/phd/x2py/tests/data/c/stb/stb_truetype.h:1083:1",
+          "anonymous_id": "enum@<system-header>:0:0",
           "source_location": {
             "filename": "stb/stb_truetype.h",
             "line": 1083,
@@ -13274,41 +13242,7 @@
           }
         }
       ],
-      "typedefs": [
-        {
-          "reference": "stbtt__buf"
-        },
-        {
-          "reference": "stbtt_bakedchar"
-        },
-        {
-          "reference": "stbtt_aligned_quad"
-        },
-        {
-          "reference": "stbtt_packedchar"
-        },
-        {
-          "reference": "stbtt_pack_context"
-        },
-        {
-          "reference": "stbtt_fontinfo"
-        },
-        {
-          "reference": "stbrp_rect"
-        },
-        {
-          "reference": "stbtt_pack_range"
-        },
-        {
-          "reference": "stbtt_kerningentry"
-        },
-        {
-          "reference": "stbtt_vertex"
-        },
-        {
-          "reference": "stbtt__bitmap"
-        }
-      ],
+      "typedefs": [],
       "variables": [],
       "macros": [],
       "includes": [],
@@ -24027,54 +23961,10 @@
       "declaration_locations": []
     }
   },
-  "structs": {
-    "stbtt_pack_context": {
-      "reference": "struct stbtt_pack_context"
-    },
-    "stbtt_fontinfo": {
-      "reference": "struct stbtt_fontinfo"
-    },
-    "stbtt_kerningentry": {
-      "reference": "struct stbtt_kerningentry"
-    }
-  },
+  "structs": {},
   "unions": {},
   "enums": {},
-  "typedefs": {
-    "stbtt__buf": {
-      "reference": "stbtt__buf"
-    },
-    "stbtt_bakedchar": {
-      "reference": "stbtt_bakedchar"
-    },
-    "stbtt_aligned_quad": {
-      "reference": "stbtt_aligned_quad"
-    },
-    "stbtt_packedchar": {
-      "reference": "stbtt_packedchar"
-    },
-    "stbtt_pack_context": {
-      "reference": "stbtt_pack_context"
-    },
-    "stbtt_fontinfo": {
-      "reference": "stbtt_fontinfo"
-    },
-    "stbrp_rect": {
-      "reference": "stbrp_rect"
-    },
-    "stbtt_pack_range": {
-      "reference": "stbtt_pack_range"
-    },
-    "stbtt_kerningentry": {
-      "reference": "stbtt_kerningentry"
-    },
-    "stbtt_vertex": {
-      "reference": "stbtt_vertex"
-    },
-    "stbtt__bitmap": {
-      "reference": "stbtt__bitmap"
-    }
-  },
+  "typedefs": {},
   "variables": {},
   "macros": {},
   "includes": {},

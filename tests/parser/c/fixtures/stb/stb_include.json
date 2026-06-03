@@ -5,8 +5,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "stb/stb_include.h",
-        "/usr/include/stdc-predef.h"
+        "stb/stb_include.h"
       ],
       "functions": [
         {

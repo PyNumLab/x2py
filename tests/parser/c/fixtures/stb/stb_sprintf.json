@@ -5,10 +5,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "stb/stb_sprintf.h",
-        "/usr/include/stdc-predef.h",
-        "/usr/lib/gcc/x86_64-linux-gnu/11/include/stdarg.h",
-        "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h"
+        "stb/stb_sprintf.h"
       ],
       "functions": [
         {
@@ -104,39 +101,7 @@
             {
               "name": "va",
               "type": {
-                "model": "CTypedef",
-                "qualifiers": [],
-                "source_text": "va_list",
-                "name": "va_list",
-                "type": {
-                  "model": "CTypedef",
-                  "qualifiers": [],
-                  "source_text": "__gnuc_va_list",
-                  "name": "__gnuc_va_list",
-                  "type": {
-                    "model": "CTypedef",
-                    "qualifiers": [],
-                    "source_text": "typedef __builtin_va_list __gnuc_va_list",
-                    "name": "__builtin_va_list",
-                    "type": null,
-                    "source_location": null,
-                    "declaration_locations": []
-                  },
-                  "source_location": {
-                    "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stdarg.h",
-                    "line": 40,
-                    "column": 1,
-                    "source_line": "typedef __builtin_va_list __gnuc_va_list;"
-                  },
-                  "declaration_locations": []
-                },
-                "source_location": {
-                  "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stdarg.h",
-                  "line": 99,
-                  "column": 1,
-                  "source_line": "typedef __gnuc_va_list va_list;"
-                },
-                "declaration_locations": []
+                "reference": "va_list"
               },
               "declared_type": {
                 "reference": "va_list"
@@ -884,178 +849,16 @@
           "declaration_locations": []
         }
       ],
-      "structs": [
-        {
-          "model": "CStruct",
-          "qualifiers": [],
-          "source_text": "",
-          "name": null,
-          "members": [
-            {
-              "name": "__max_align_ll",
-              "type": {
-                "model": "CLongLong",
-                "qualifiers": [],
-                "source_text": "long long __max_align_ll"
-              },
-              "storage": [],
-              "initializer": null,
-              "bit_width": null,
-              "source_location": {
-                "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-                "line": 416,
-                "column": 3,
-                "source_line": "  long long __max_align_ll __attribute__((__aligned__(__alignof__(long long))));"
-              },
-              "callback_policy": null,
-              "declaration_locations": []
-            },
-            {
-              "name": "__max_align_ld",
-              "type": {
-                "model": "CLongDouble",
-                "qualifiers": [],
-                "source_text": "long double __max_align_ld"
-              },
-              "storage": [],
-              "initializer": null,
-              "bit_width": null,
-              "source_location": {
-                "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-                "line": 417,
-                "column": 3,
-                "source_line": "  long double __max_align_ld __attribute__((__aligned__(__alignof__(long double))));"
-              },
-              "callback_policy": null,
-              "declaration_locations": []
-            }
-          ],
-          "anonymous_id": "struct@/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h:415:1",
-          "is_incomplete": false,
-          "source_location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 415,
-            "column": 1,
-            "source_line": "typedef struct {"
-          }
-        }
-      ],
+      "structs": [],
       "unions": [],
       "enums": [],
-      "typedefs": [
-        {
-          "reference": "__gnuc_va_list"
-        },
-        {
-          "reference": "va_list"
-        },
-        {
-          "model": "CTypedef",
-          "qualifiers": [],
-          "source_text": "ptrdiff_t",
-          "name": "ptrdiff_t",
-          "type": {
-            "model": "CLong",
-            "qualifiers": [],
-            "source_text": "typedef long int ptrdiff_t"
-          },
-          "source_location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 143,
-            "column": 1,
-            "source_line": "typedef long int ptrdiff_t;"
-          },
-          "declaration_locations": []
-        },
-        {
-          "model": "CTypedef",
-          "qualifiers": [],
-          "source_text": "size_t",
-          "name": "size_t",
-          "type": {
-            "model": "CUnsignedLong",
-            "qualifiers": [],
-            "source_text": "typedef long unsigned int size_t"
-          },
-          "source_location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 209,
-            "column": 1,
-            "source_line": "typedef long unsigned int size_t;"
-          },
-          "declaration_locations": []
-        },
-        {
-          "model": "CTypedef",
-          "qualifiers": [],
-          "source_text": "wchar_t",
-          "name": "wchar_t",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "typedef int wchar_t"
-          },
-          "source_location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 321,
-            "column": 1,
-            "source_line": "typedef int wchar_t;"
-          },
-          "declaration_locations": []
-        },
-        {
-          "model": "CTypedef",
-          "qualifiers": [],
-          "source_text": "max_align_t",
-          "name": "max_align_t",
-          "type": {
-            "reference": "struct@/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h:415:1"
-          },
-          "source_location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 415,
-            "column": 1,
-            "source_line": "typedef struct {"
-          },
-          "declaration_locations": []
-        },
-        {
-          "reference": "STBSP_SPRINTFCB"
-        }
-      ],
+      "typedefs": [],
       "variables": [],
       "macros": [],
       "includes": [],
       "raw_directives": [],
       "macro_dependencies": [],
-      "diagnostics": [
-        {
-          "code": "C_UNMODELED_COMPILER_EXTENSION",
-          "message": "Compiler attribute 'aligned' was accepted for parsing but its ABI or linkage semantics are not modeled.",
-          "severity": "warning",
-          "location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 416,
-            "column": 28,
-            "source_line": "  long long __max_align_ll __attribute__((__aligned__(__alignof__(long long))));"
-          },
-          "unit_kind": "compiler_attribute",
-          "unit_name": "aligned"
-        },
-        {
-          "code": "C_UNMODELED_COMPILER_EXTENSION",
-          "message": "Compiler attribute 'aligned' was accepted for parsing but its ABI or linkage semantics are not modeled.",
-          "severity": "warning",
-          "location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 417,
-            "column": 30,
-            "source_line": "  long double __max_align_ld __attribute__((__aligned__(__alignof__(long double))));"
-          },
-          "unit_kind": "compiler_attribute",
-          "unit_name": "aligned"
-        }
-      ]
+      "diagnostics": []
     }
   },
   "functions": {
@@ -1826,29 +1629,7 @@
   "structs": {},
   "unions": {},
   "enums": {},
-  "typedefs": {
-    "__gnuc_va_list": {
-      "reference": "__gnuc_va_list"
-    },
-    "va_list": {
-      "reference": "va_list"
-    },
-    "ptrdiff_t": {
-      "reference": "ptrdiff_t"
-    },
-    "size_t": {
-      "reference": "size_t"
-    },
-    "wchar_t": {
-      "reference": "wchar_t"
-    },
-    "max_align_t": {
-      "reference": "max_align_t"
-    },
-    "STBSP_SPRINTFCB": {
-      "reference": "STBSP_SPRINTFCB"
-    }
-  },
+  "typedefs": {},
   "variables": {},
   "macros": {},
   "includes": {},
@@ -1875,32 +1656,5 @@
   "header_source_pairs": {
     "stb/stb_sprintf.h": []
   },
-  "diagnostics": [
-    {
-      "code": "C_UNMODELED_COMPILER_EXTENSION",
-      "message": "Compiler attribute 'aligned' was accepted for parsing but its ABI or linkage semantics are not modeled.",
-      "severity": "warning",
-      "location": {
-        "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-        "line": 416,
-        "column": 28,
-        "source_line": "  long long __max_align_ll __attribute__((__aligned__(__alignof__(long long))));"
-      },
-      "unit_kind": "compiler_attribute",
-      "unit_name": "aligned"
-    },
-    {
-      "code": "C_UNMODELED_COMPILER_EXTENSION",
-      "message": "Compiler attribute 'aligned' was accepted for parsing but its ABI or linkage semantics are not modeled.",
-      "severity": "warning",
-      "location": {
-        "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-        "line": 417,
-        "column": 30,
-        "source_line": "  long double __max_align_ld __attribute__((__aligned__(__alignof__(long double))));"
-      },
-      "unit_kind": "compiler_attribute",
-      "unit_name": "aligned"
-    }
-  ]
+  "diagnostics": []
 }

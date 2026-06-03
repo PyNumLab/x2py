@@ -2,7 +2,6 @@
 
 import importlib.util
 import json
-import re
 import shutil
 from pathlib import Path
 
@@ -57,58 +56,6 @@ def _project_groups(root: Path) -> list[tuple[Path, list[Path]]]:
             fixtures = sorted(fixtures, key=_fixture_sort_key)
         projects.append((project_key, fixtures))
     return projects
-
-
-def _is_project_filename(filename: object) -> bool:
-    return isinstance(filename, str) and not Path(filename).is_absolute()
-
-
-def _is_project_diagnostic(diagnostic: object) -> bool:
-    if not isinstance(diagnostic, dict):
-        return True
-    location = diagnostic.get("location")
-    if not isinstance(location, dict):
-        return True
-    filename = location.get("filename")
-    return filename is None or _is_project_filename(filename)
-
-
-_SYSTEM_ANONYMOUS_ID = re.compile(r"@/[^:]+:\d+:\d+")
-
-
-def _stable_golden_payload(value):
-    if isinstance(value, dict):
-        stable = {}
-        for key, nested in value.items():
-            if key == "source_text" and isinstance(nested, str):
-                stable[key] = " ".join(nested.split())
-                continue
-            if key == "diagnostics" and isinstance(nested, list):
-                stable[key] = [_stable_golden_payload(item) for item in nested if _is_project_diagnostic(item)]
-                continue
-            if key == "original_source_paths" and isinstance(nested, list):
-                stable[key] = [_stable_golden_payload(item) for item in nested if _is_project_filename(item)]
-                continue
-            if key in {"location", "source_location", "start", "end"} and isinstance(nested, dict):
-                filename = nested.get("filename")
-                if filename is not None and not _is_project_filename(filename):
-                    stable[key] = {
-                        **nested,
-                        "filename": "<system-header>",
-                        "line": 0,
-                        "column": 0,
-                        "source_line": None,
-                    }
-                    continue
-            stable[key] = _stable_golden_payload(nested)
-        return stable
-    if isinstance(value, list):
-        return [_stable_golden_payload(item) for item in value]
-    if isinstance(value, str):
-        if Path(value).is_absolute():
-            return "<system-header>"
-        return _SYSTEM_ANONYMOUS_ID.sub("@<system-header>:0:0", value)
-    return value
 
 
 @pytest.mark.parametrize("data_subdir", _FIXTURE_GROUPS)
@@ -216,6 +163,6 @@ def test_c_project_goldens_match_generated_payloads():
 
         generated = generator._serialize_project(fixtures)
 
-        assert _stable_golden_payload(generated) == _stable_golden_payload(
-            expected
-        ), f"C parser golden is stale: {expected_path}"
+        assert generator._stable_project_payload(generated) == generator._stable_project_payload(expected), (
+            f"C parser golden is stale: {expected_path}"
+        )

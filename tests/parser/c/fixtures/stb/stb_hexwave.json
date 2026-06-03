@@ -5,8 +5,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "stb/stb_hexwave.h",
-        "/usr/include/stdc-predef.h"
+        "stb/stb_hexwave.h"
       ],
       "functions": [
         {
@@ -338,7 +337,7 @@
                                   "declaration_locations": []
                                 }
                               ],
-                              "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_hexwave.h:259:1",
+                              "anonymous_id": "struct@<system-header>:0:0",
                               "is_incomplete": false,
                               "source_location": {
                                 "filename": "stb/stb_hexwave.h",
@@ -821,24 +820,10 @@
           "declaration_locations": []
         }
       ],
-      "structs": [
-        {
-          "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_hexwave.h:259:1"
-        },
-        {
-          "reference": "struct HexWave"
-        }
-      ],
+      "structs": [],
       "unions": [],
       "enums": [],
-      "typedefs": [
-        {
-          "reference": "HexWave"
-        },
-        {
-          "reference": "HexWaveParameters"
-        }
-      ],
+      "typedefs": [],
       "variables": [],
       "macros": [],
       "includes": [],
@@ -1406,21 +1391,10 @@
       "declaration_locations": []
     }
   },
-  "structs": {
-    "HexWave": {
-      "reference": "struct HexWave"
-    }
-  },
+  "structs": {},
   "unions": {},
   "enums": {},
-  "typedefs": {
-    "HexWave": {
-      "reference": "HexWave"
-    },
-    "HexWaveParameters": {
-      "reference": "HexWaveParameters"
-    }
-  },
+  "typedefs": {},
   "variables": {},
   "macros": {},
   "includes": {},

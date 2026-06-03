@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 from contextlib import suppress
@@ -32,6 +33,10 @@ _DEFINE_OVERRIDES = {
     "stb_image.h": ("STB_IMAGE_IMPLEMENTATION",),
     "stb_rect_pack.h": ("STB_RECT_PACK_IMPLEMENTATION",),
 }
+_DECLARATION_SECTIONS = ("functions", "structs", "unions", "enums", "typedefs", "variables", "enum_constants")
+_FILE_DECLARATION_SECTIONS = ("functions", "structs", "unions", "enums", "typedefs", "variables")
+_TAG_PREFIXES = {"structs": "struct", "unions": "union", "enums": "enum"}
+_SYSTEM_ANONYMOUS_ID = re.compile(r"@/[^:]+:\d+:\d+")
 
 
 def _parser_filename_for_fixture(fixture: Path) -> str:
@@ -93,6 +98,173 @@ def _normalize_resolved_paths(value):
     return value
 
 
+def _is_project_filename(filename: object) -> bool:
+    return isinstance(filename, str) and not Path(filename).is_absolute()
+
+
+def _is_project_location(location: object) -> bool:
+    return isinstance(location, dict) and _is_project_filename(location.get("filename"))
+
+
+def _has_project_source_location(declaration: object) -> bool:
+    return isinstance(declaration, dict) and _is_project_location(declaration.get("source_location"))
+
+
+def _declaration_identifiers(section: str, declaration: object, fallback: str | None = None) -> set[str]:
+    if not isinstance(declaration, dict):
+        return {fallback} if fallback is not None else set()
+
+    identifiers = {fallback} if fallback is not None else set()
+    for key in ("name", "reference", "anonymous_id"):
+        value = declaration.get(key)
+        if isinstance(value, str):
+            identifiers.add(value)
+
+    prefix = _TAG_PREFIXES.get(section)
+    name = declaration.get("name")
+    reference = declaration.get("reference")
+    if prefix is not None:
+        if isinstance(name, str):
+            identifiers.add(f"{prefix} {name}")
+        if isinstance(reference, str) and reference.startswith(f"{prefix} "):
+            identifiers.add(reference.removeprefix(f"{prefix} "))
+
+    return {identifier for identifier in identifiers if identifier}
+
+
+def _collect_project_symbols(payload: dict) -> dict[str, set[str]]:
+    symbols = {section: set() for section in _DECLARATION_SECTIONS}
+
+    def collect(section: str, declaration: object, fallback: str | None = None) -> None:
+        if _has_project_source_location(declaration):
+            symbols[section].update(_declaration_identifiers(section, declaration, fallback))
+
+    for file_payload in payload.get("files", {}).values():
+        if not isinstance(file_payload, dict):
+            continue
+        for section in _FILE_DECLARATION_SECTIONS:
+            for declaration in file_payload.get(section, []):
+                collect(section, declaration)
+        for enum_declaration in file_payload.get("enums", []):
+            if isinstance(enum_declaration, dict) and _has_project_source_location(enum_declaration):
+                for constant in enum_declaration.get("constants", []):
+                    collect("enum_constants", constant)
+
+    for section in _DECLARATION_SECTIONS:
+        declarations = payload.get(section, {})
+        if not isinstance(declarations, dict):
+            continue
+        for name, declaration in declarations.items():
+            collect(section, declaration, name)
+
+    return symbols
+
+
+def _is_project_declaration(
+    section: str,
+    declaration: object,
+    symbols: dict[str, set[str]],
+    fallback: str | None = None,
+) -> bool:
+    if _has_project_source_location(declaration):
+        return True
+    return bool(_declaration_identifiers(section, declaration, fallback) & symbols[section])
+
+
+def _is_project_diagnostic(diagnostic: object) -> bool:
+    if not isinstance(diagnostic, dict):
+        return True
+    location = diagnostic.get("location")
+    if not isinstance(location, dict):
+        return True
+    filename = location.get("filename")
+    return filename is None or _is_project_filename(filename)
+
+
+def _system_declaration_reference(declaration: dict) -> str | None:
+    source_location = declaration.get("source_location")
+    if _is_project_location(source_location):
+        return None
+    if not isinstance(source_location, dict) or _is_project_filename(source_location.get("filename")):
+        return None
+
+    model = declaration.get("model")
+    name = declaration.get("name")
+    anonymous_id = declaration.get("anonymous_id")
+    if model == "CTypedef" and isinstance(name, str):
+        return name
+    if model == "CStruct":
+        return f"struct {name}" if isinstance(name, str) else str(anonymous_id or "<system-header>")
+    if model == "CUnion":
+        return f"union {name}" if isinstance(name, str) else str(anonymous_id or "<system-header>")
+    if model == "CEnum":
+        return f"enum {name}" if isinstance(name, str) else str(anonymous_id or "<system-header>")
+    return None
+
+
+def _stable_payload_value(value, symbols: dict[str, set[str]]):
+    if isinstance(value, dict):
+        reference = _system_declaration_reference(value)
+        if reference is not None:
+            return {"reference": _stable_payload_value(reference, symbols)}
+
+        stable = {}
+        for key, nested in value.items():
+            if key == "source_text" and isinstance(nested, str):
+                stable[key] = " ".join(nested.split())
+                continue
+            if key in _DECLARATION_SECTIONS and isinstance(nested, dict):
+                stable[key] = {
+                    name: _stable_payload_value(item, symbols)
+                    for name, item in nested.items()
+                    if _is_project_declaration(key, item, symbols, name)
+                }
+                continue
+            if key in _FILE_DECLARATION_SECTIONS and isinstance(nested, list):
+                stable[key] = [
+                    _stable_payload_value(item, symbols)
+                    for item in nested
+                    if _is_project_declaration(key, item, symbols)
+                ]
+                continue
+            if key == "functions_by_file" and isinstance(nested, dict):
+                stable[key] = {
+                    filename: [name for name in names if name in symbols["functions"]]
+                    for filename, names in nested.items()
+                }
+                continue
+            if key == "diagnostics" and isinstance(nested, list):
+                stable[key] = [_stable_payload_value(item, symbols) for item in nested if _is_project_diagnostic(item)]
+                continue
+            if key == "original_source_paths" and isinstance(nested, list):
+                stable[key] = [_stable_payload_value(item, symbols) for item in nested if _is_project_filename(item)]
+                continue
+            if key in {"location", "source_location", "start", "end"} and isinstance(nested, dict):
+                filename = nested.get("filename")
+                if filename is not None and not _is_project_filename(filename):
+                    stable[key] = {
+                        **nested,
+                        "filename": "<system-header>",
+                        "line": 0,
+                        "column": 0,
+                        "source_line": None,
+                    }
+                    continue
+            stable[key] = _stable_payload_value(nested, symbols)
+        return stable
+    if isinstance(value, list):
+        return [_stable_payload_value(item, symbols) for item in value]
+    if isinstance(value, str):
+        if Path(value).is_absolute():
+            return "<system-header>"
+        return _SYSTEM_ANONYMOUS_ID.sub("@<system-header>:0:0", value)
+    return value
+
+
+def _stable_project_payload(payload: dict) -> dict:
+    return _stable_payload_value(payload, _collect_project_symbols(payload))
+
+
 def _serialize_project(fixtures: list[Path]) -> dict:
     from c_parser import CParser
 
@@ -103,7 +275,7 @@ def _serialize_project(fixtures: list[Path]) -> dict:
         filename = _parser_filename_for_fixture(fixture)
         parsed_files[filename] = _parse_fixture(parser, fixture, filename=filename, include_dirs=include_dirs)
     project = parser.visit_parsed_project(parsed_files)
-    return _normalize_resolved_paths(project.to_dict())
+    return _stable_project_payload(_normalize_resolved_paths(project.to_dict()))
 
 
 def _parse_fixture(parser, fixture: Path, *, filename: str, include_dirs: list[Path]):

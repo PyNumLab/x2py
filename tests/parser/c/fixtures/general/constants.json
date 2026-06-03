@@ -5,9 +5,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "general/constants.h",
-        "/usr/include/stdc-predef.h",
-        "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h"
+        "general/constants.h"
       ],
       "functions": [
         {
@@ -111,22 +109,7 @@
         {
           "name": "coordinate_axis_count",
           "result_type": {
-            "model": "CTypedef",
-            "qualifiers": [],
-            "source_text": "size_t",
-            "name": "size_t",
-            "type": {
-              "model": "CUnsignedLong",
-              "qualifiers": [],
-              "source_text": "typedef long unsigned int size_t"
-            },
-            "source_location": {
-              "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-              "line": 209,
-              "column": 1,
-              "source_line": "typedef long unsigned int size_t;"
-            },
-            "declaration_locations": []
+            "reference": "size_t"
           },
           "parameters": [],
           "storage": [],
@@ -150,124 +133,10 @@
           "declaration_locations": []
         }
       ],
-      "structs": [
-        {
-          "model": "CStruct",
-          "qualifiers": [],
-          "source_text": "",
-          "name": null,
-          "members": [
-            {
-              "name": "__max_align_ll",
-              "type": {
-                "model": "CLongLong",
-                "qualifiers": [],
-                "source_text": "long long __max_align_ll"
-              },
-              "storage": [],
-              "initializer": null,
-              "bit_width": null,
-              "source_location": {
-                "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-                "line": 416,
-                "column": 3,
-                "source_line": "  long long __max_align_ll __attribute__((__aligned__(__alignof__(long long))));"
-              },
-              "callback_policy": null,
-              "declaration_locations": []
-            },
-            {
-              "name": "__max_align_ld",
-              "type": {
-                "model": "CLongDouble",
-                "qualifiers": [],
-                "source_text": "long double __max_align_ld"
-              },
-              "storage": [],
-              "initializer": null,
-              "bit_width": null,
-              "source_location": {
-                "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-                "line": 417,
-                "column": 3,
-                "source_line": "  long double __max_align_ld __attribute__((__aligned__(__alignof__(long double))));"
-              },
-              "callback_policy": null,
-              "declaration_locations": []
-            }
-          ],
-          "anonymous_id": "struct@/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h:415:1",
-          "is_incomplete": false,
-          "source_location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 415,
-            "column": 1,
-            "source_line": "typedef struct {"
-          }
-        }
-      ],
+      "structs": [],
       "unions": [],
-      "enums": [
-        {
-          "reference": "enum coordinate_axis"
-        }
-      ],
+      "enums": [],
       "typedefs": [
-        {
-          "model": "CTypedef",
-          "qualifiers": [],
-          "source_text": "ptrdiff_t",
-          "name": "ptrdiff_t",
-          "type": {
-            "model": "CLong",
-            "qualifiers": [],
-            "source_text": "typedef long int ptrdiff_t"
-          },
-          "source_location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 143,
-            "column": 1,
-            "source_line": "typedef long int ptrdiff_t;"
-          },
-          "declaration_locations": []
-        },
-        {
-          "reference": "size_t"
-        },
-        {
-          "model": "CTypedef",
-          "qualifiers": [],
-          "source_text": "wchar_t",
-          "name": "wchar_t",
-          "type": {
-            "model": "CInt",
-            "qualifiers": [],
-            "source_text": "typedef int wchar_t"
-          },
-          "source_location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 321,
-            "column": 1,
-            "source_line": "typedef int wchar_t;"
-          },
-          "declaration_locations": []
-        },
-        {
-          "model": "CTypedef",
-          "qualifiers": [],
-          "source_text": "max_align_t",
-          "name": "max_align_t",
-          "type": {
-            "reference": "struct@/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h:415:1"
-          },
-          "source_location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 415,
-            "column": 1,
-            "source_line": "typedef struct {"
-          },
-          "declaration_locations": []
-        },
         {
           "model": "CTypedef",
           "qualifiers": [],
@@ -365,34 +234,7 @@
       "includes": [],
       "raw_directives": [],
       "macro_dependencies": [],
-      "diagnostics": [
-        {
-          "code": "C_UNMODELED_COMPILER_EXTENSION",
-          "message": "Compiler attribute 'aligned' was accepted for parsing but its ABI or linkage semantics are not modeled.",
-          "severity": "warning",
-          "location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 416,
-            "column": 28,
-            "source_line": "  long long __max_align_ll __attribute__((__aligned__(__alignof__(long long))));"
-          },
-          "unit_kind": "compiler_attribute",
-          "unit_name": "aligned"
-        },
-        {
-          "code": "C_UNMODELED_COMPILER_EXTENSION",
-          "message": "Compiler attribute 'aligned' was accepted for parsing but its ABI or linkage semantics are not modeled.",
-          "severity": "warning",
-          "location": {
-            "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-            "line": 417,
-            "column": 30,
-            "source_line": "  long double __max_align_ld __attribute__((__aligned__(__alignof__(long double))));"
-          },
-          "unit_kind": "compiler_attribute",
-          "unit_name": "aligned"
-        }
-      ]
+      "diagnostics": []
     }
   },
   "functions": {
@@ -481,24 +323,8 @@
   },
   "structs": {},
   "unions": {},
-  "enums": {
-    "coordinate_axis": {
-      "reference": "enum coordinate_axis"
-    }
-  },
+  "enums": {},
   "typedefs": {
-    "ptrdiff_t": {
-      "reference": "ptrdiff_t"
-    },
-    "size_t": {
-      "reference": "size_t"
-    },
-    "wchar_t": {
-      "reference": "wchar_t"
-    },
-    "max_align_t": {
-      "reference": "max_align_t"
-    },
     "c_int_like": {
       "reference": "c_int_like"
     },
@@ -614,32 +440,5 @@
   "header_source_pairs": {
     "general/constants.h": []
   },
-  "diagnostics": [
-    {
-      "code": "C_UNMODELED_COMPILER_EXTENSION",
-      "message": "Compiler attribute 'aligned' was accepted for parsing but its ABI or linkage semantics are not modeled.",
-      "severity": "warning",
-      "location": {
-        "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-        "line": 416,
-        "column": 28,
-        "source_line": "  long long __max_align_ll __attribute__((__aligned__(__alignof__(long long))));"
-      },
-      "unit_kind": "compiler_attribute",
-      "unit_name": "aligned"
-    },
-    {
-      "code": "C_UNMODELED_COMPILER_EXTENSION",
-      "message": "Compiler attribute 'aligned' was accepted for parsing but its ABI or linkage semantics are not modeled.",
-      "severity": "warning",
-      "location": {
-        "filename": "/usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h",
-        "line": 417,
-        "column": 30,
-        "source_line": "  long double __max_align_ld __attribute__((__aligned__(__alignof__(long double))));"
-      },
-      "unit_kind": "compiler_attribute",
-      "unit_name": "aligned"
-    }
-  ]
+  "diagnostics": []
 }

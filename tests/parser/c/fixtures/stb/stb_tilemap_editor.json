@@ -5,8 +5,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "stb/stb_tilemap_editor.h",
-        "/usr/include/stdc-predef.h"
+        "stb/stb_tilemap_editor.h"
       ],
       "functions": [
         {
@@ -2865,23 +2864,16 @@
               }
             }
           ],
-          "anonymous_id": "enum@/home/said/phd/x2py/tests/data/c/stb/stb_tilemap_editor.h:348:1",
+          "anonymous_id": "enum@<system-header>:0:0",
           "source_location": {
             "filename": "stb/stb_tilemap_editor.h",
             "line": 348,
             "column": 1,
             "source_line": "enum"
           }
-        },
-        {
-          "reference": "enum stbte_action"
         }
       ],
-      "typedefs": [
-        {
-          "reference": "stbte_tilemap"
-        }
-      ],
+      "typedefs": [],
       "variables": [],
       "macros": [],
       "includes": [],
@@ -5507,16 +5499,8 @@
   },
   "structs": {},
   "unions": {},
-  "enums": {
-    "stbte_action": {
-      "reference": "enum stbte_action"
-    }
-  },
-  "typedefs": {
-    "stbte_tilemap": {
-      "reference": "stbte_tilemap"
-    }
-  },
+  "enums": {},
+  "typedefs": {},
   "variables": {},
   "macros": {},
   "includes": {},

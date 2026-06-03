@@ -6,7 +6,6 @@
       "preprocessing": "compiler",
       "original_source_paths": [
         "general/basic_array_update.c",
-        "/usr/include/stdc-predef.h",
         "general/basic_array_update.h"
       ],
       "functions": [
@@ -240,8 +239,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "general/basic_array_update.h",
-        "/usr/include/stdc-predef.h"
+        "general/basic_array_update.h"
       ],
       "functions": [
         {

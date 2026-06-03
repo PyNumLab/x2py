@@ -5,8 +5,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "stb/stb_divide.h",
-        "/usr/include/stdc-predef.h"
+        "stb/stb_divide.h"
       ],
       "functions": [
         {

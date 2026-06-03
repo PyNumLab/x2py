@@ -5,8 +5,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "stb/stb_c_lexer.h",
-        "/usr/include/stdc-predef.h"
+        "stb/stb_c_lexer.h"
       ],
       "functions": [
         {
@@ -353,7 +352,7 @@
                           "declaration_locations": []
                         }
                       ],
-                      "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_c_lexer.h:113:1",
+                      "anonymous_id": "struct@<system-header>:0:0",
                       "is_incomplete": false,
                       "source_location": {
                         "filename": "stb/stb_c_lexer.h",
@@ -767,7 +766,7 @@
                           "declaration_locations": []
                         }
                       ],
-                      "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_c_lexer.h:134:1",
+                      "anonymous_id": "struct@<system-header>:0:0",
                       "is_incomplete": false,
                       "source_location": {
                         "filename": "stb/stb_c_lexer.h",
@@ -828,14 +827,7 @@
           "declaration_locations": []
         }
       ],
-      "structs": [
-        {
-          "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_c_lexer.h:113:1"
-        },
-        {
-          "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_c_lexer.h:134:1"
-        }
-      ],
+      "structs": [],
       "unions": [],
       "enums": [
         {
@@ -1155,7 +1147,7 @@
               }
             }
           ],
-          "anonymous_id": "enum@/home/said/phd/x2py/tests/data/c/stb/stb_c_lexer.h:177:1",
+          "anonymous_id": "enum@<system-header>:0:0",
           "source_location": {
             "filename": "stb/stb_c_lexer.h",
             "line": 177,
@@ -1164,14 +1156,7 @@
           }
         }
       ],
-      "typedefs": [
-        {
-          "reference": "stb_lexer"
-        },
-        {
-          "reference": "stb_lex_location"
-        }
-      ],
+      "typedefs": [],
       "variables": [],
       "macros": [],
       "includes": [],
@@ -1601,14 +1586,7 @@
   "structs": {},
   "unions": {},
   "enums": {},
-  "typedefs": {
-    "stb_lexer": {
-      "reference": "stb_lexer"
-    },
-    "stb_lex_location": {
-      "reference": "stb_lex_location"
-    }
-  },
+  "typedefs": {},
   "variables": {},
   "macros": {},
   "includes": {},

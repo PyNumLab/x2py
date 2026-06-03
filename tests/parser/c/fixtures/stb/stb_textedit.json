@@ -5,8 +5,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "stb/stb_textedit.h",
-        "/usr/include/stdc-predef.h"
+        "stb/stb_textedit.h"
       ],
       "functions": [],
       "structs": [
@@ -93,7 +92,7 @@
               "declaration_locations": []
             }
           ],
-          "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_textedit.h:295:1",
+          "anonymous_id": "struct@<system-header>:0:0",
           "is_incomplete": false,
           "source_location": {
             "filename": "stb/stb_textedit.h",
@@ -130,7 +129,7 @@
                     "source_text": "StbUndoRecord",
                     "name": "StbUndoRecord",
                     "type": {
-                      "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_textedit.h:295:1"
+                      "reference": "struct@<system-header>:0:0"
                     },
                     "source_location": {
                       "filename": "stb/stb_textedit.h",
@@ -266,7 +265,7 @@
               "declaration_locations": []
             }
           ],
-          "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_textedit.h:304:1",
+          "anonymous_id": "struct@<system-header>:0:0",
           "is_incomplete": false,
           "source_location": {
             "filename": "stb/stb_textedit.h",
@@ -536,7 +535,7 @@
                 "source_text": "StbUndoState",
                 "name": "StbUndoState",
                 "type": {
-                  "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_textedit.h:304:1"
+                  "reference": "struct@<system-header>:0:0"
                 },
                 "source_location": {
                   "filename": "stb/stb_textedit.h",
@@ -559,7 +558,7 @@
               "declaration_locations": []
             }
           ],
-          "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_textedit.h:313:1",
+          "anonymous_id": "struct@<system-header>:0:0",
           "is_incomplete": false,
           "source_location": {
             "filename": "stb/stb_textedit.h",
@@ -689,7 +688,7 @@
               "declaration_locations": []
             }
           ],
-          "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_textedit.h:360:1",
+          "anonymous_id": "struct@<system-header>:0:0",
           "is_incomplete": false,
           "source_location": {
             "filename": "stb/stb_textedit.h",
@@ -703,18 +702,12 @@
       "enums": [],
       "typedefs": [
         {
-          "reference": "StbUndoRecord"
-        },
-        {
-          "reference": "StbUndoState"
-        },
-        {
           "model": "CTypedef",
           "qualifiers": [],
           "source_text": "STB_TexteditState",
           "name": "STB_TexteditState",
           "type": {
-            "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_textedit.h:313:1"
+            "reference": "struct@<system-header>:0:0"
           },
           "source_location": {
             "filename": "stb/stb_textedit.h",
@@ -730,7 +723,7 @@
           "source_text": "StbTexteditRow",
           "name": "StbTexteditRow",
           "type": {
-            "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_textedit.h:360:1"
+            "reference": "struct@<system-header>:0:0"
           },
           "source_location": {
             "filename": "stb/stb_textedit.h",
@@ -754,12 +747,6 @@
   "unions": {},
   "enums": {},
   "typedefs": {
-    "StbUndoRecord": {
-      "reference": "StbUndoRecord"
-    },
-    "StbUndoState": {
-      "reference": "StbUndoState"
-    },
     "STB_TexteditState": {
       "reference": "STB_TexteditState"
     },

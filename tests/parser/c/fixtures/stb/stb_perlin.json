@@ -5,8 +5,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "stb/stb_perlin.h",
-        "/usr/include/stdc-predef.h"
+        "stb/stb_perlin.h"
       ],
       "functions": [
         {

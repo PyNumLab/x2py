@@ -5,9 +5,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "general/name_reuse.h",
-        "/usr/include/stdc-predef.h",
-        "/usr/lib/gcc/x86_64-linux-gnu/11/include/stdbool.h"
+        "general/name_reuse.h"
       ],
       "functions": [
         {
@@ -437,11 +435,7 @@
           "declaration_locations": []
         }
       ],
-      "structs": [
-        {
-          "reference": "struct same_name"
-        }
-      ],
+      "structs": [],
       "unions": [],
       "enums": [],
       "typedefs": [],
@@ -493,7 +487,7 @@
           "type": {
             "model": "CBool",
             "qualifiers": [],
-            "source_text": "extern \n                                                                \n      _Bool same_name_l"
+            "source_text": "extern _Bool same_name_l"
           },
           "storage": [
             "extern"
@@ -971,11 +965,7 @@
       "declaration_locations": []
     }
   },
-  "structs": {
-    "same_name": {
-      "reference": "struct same_name"
-    }
-  },
+  "structs": {},
   "unions": {},
   "enums": {},
   "typedefs": {},
@@ -1027,7 +1017,7 @@
       "type": {
         "model": "CBool",
         "qualifiers": [],
-        "source_text": "extern \n                                                                \n      _Bool same_name_l"
+        "source_text": "extern _Bool same_name_l"
       },
       "storage": [
         "extern"

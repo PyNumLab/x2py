@@ -5,8 +5,7 @@
       "language": "c",
       "preprocessing": "compiler",
       "original_source_paths": [
-        "stb/stb_herringbone_wang_tile.h",
-        "/usr/include/stdc-predef.h"
+        "stb/stb_herringbone_wang_tile.h"
       ],
       "functions": [
         {
@@ -335,7 +334,7 @@
                                       "declaration_locations": []
                                     }
                                   ],
-                                  "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_herringbone_wang_tile.h:198:1",
+                                  "anonymous_id": "struct@<system-header>:0:0",
                                   "is_incomplete": false,
                                   "source_location": {
                                     "filename": "stb/stb_herringbone_wang_tile.h",
@@ -1073,7 +1072,7 @@
                           "declaration_locations": []
                         }
                       ],
-                      "anonymous_id": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_herringbone_wang_tile.h:224:1",
+                      "anonymous_id": "struct@<system-header>:0:0",
                       "is_incomplete": false,
                       "source_location": {
                         "filename": "stb/stb_herringbone_wang_tile.h",
@@ -1362,30 +1361,10 @@
           "declaration_locations": []
         }
       ],
-      "structs": [
-        {
-          "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_herringbone_wang_tile.h:198:1"
-        },
-        {
-          "reference": "struct stbhw_tileset"
-        },
-        {
-          "reference": "struct@/home/said/phd/x2py/tests/data/c/stb/stb_herringbone_wang_tile.h:224:1"
-        }
-      ],
+      "structs": [],
       "unions": [],
       "enums": [],
-      "typedefs": [
-        {
-          "reference": "stbhw_tileset"
-        },
-        {
-          "reference": "stbhw_tile"
-        },
-        {
-          "reference": "stbhw_config"
-        }
-      ],
+      "typedefs": [],
       "variables": [],
       "macros": [],
       "includes": [],
@@ -2149,24 +2128,10 @@
       "declaration_locations": []
     }
   },
-  "structs": {
-    "stbhw_tileset": {
-      "reference": "struct stbhw_tileset"
-    }
-  },
+  "structs": {},
   "unions": {},
   "enums": {},
-  "typedefs": {
-    "stbhw_tileset": {
-      "reference": "stbhw_tileset"
-    },
-    "stbhw_tile": {
-      "reference": "stbhw_tile"
-    },
-    "stbhw_config": {
-      "reference": "stbhw_config"
-    }
-  },
+  "typedefs": {},
   "variables": {},
   "macros": {},
   "includes": {},
