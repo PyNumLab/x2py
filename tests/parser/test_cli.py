@@ -82,7 +82,7 @@ def _patch_main_report_payloads(
 ):
     preprocessing = object()
     calls = []
-    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, active_language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, _active_language, parser: language)
     monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda args, parser: preprocessing)
     monkeypatch.setattr(
         x2py_cli,
@@ -971,7 +971,7 @@ def test_x2py_main_preserves_parse_error_rendering_contract(
     error = error_type("bad parse")
     calls = []
 
-    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, active_language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, _active_language, parser: language)
     monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
     monkeypatch.setattr(x2py_cli, "_env_flag", lambda name: calls.append(("env", name)) or False)
     monkeypatch.setattr(
@@ -1014,7 +1014,7 @@ def test_x2py_main_reraises_parse_errors_for_debug_environment(monkeypatch, lang
     error = error_type("bad parse")
     calls = []
 
-    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, active_language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, _active_language, parser: language)
     monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
     monkeypatch.setattr(x2py_cli, "_env_flag", lambda name: calls.append(name) or name == env_name)
     if language == "c":
