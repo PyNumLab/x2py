@@ -51,28 +51,31 @@ jobs:
         continue-on-error: true
         run: radon mi c_parser fortran_parser semantics x2py -s
 
-  mutation:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install QA dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[qa]"
-      - name: Run mutation tests
-        env:
-          PYTHONPATH: .
-          HYPOTHESIS_PROFILE: ci
-        run: python tools/run_mutmut.py run
+  # Full-project mutation is intentionally parked for later bounded splitting.
+  # The 2026-06-02 manual run exceeded the 3h GitHub Actions limit, so focused
+  # subsystem campaigns remain the active mutation workflow for now.
+  # mutation:
+  #   if: github.event_name == 'workflow_dispatch'
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 180
+  #   permissions:
+  #     contents: read
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.12"
+  #     - name: Install QA dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         python -m pip install -e ".[qa]"
+  #     - name: Run mutation tests
+  #       env:
+  #         PYTHONPATH: .
+  #         HYPOTHESIS_PROFILE: ci
+  #       run: python tools/run_mutmut.py run
 
   fuzz:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'

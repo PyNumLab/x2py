@@ -405,7 +405,7 @@ def hidden() -> None: ...
 
 
 def test_pyi_parser_reports_unsupported_lines_and_invalid_helpers():
-    with pytest.raises(ValueError, match="Unsupported .pyi node"):
+    with pytest.raises(ValueError, match=r"Unsupported .pyi node"):
         parse_pyi_text("bare_name\n", module_name="edited")
 
     with pytest.raises(ValueError, match="Unsupported class body node"):

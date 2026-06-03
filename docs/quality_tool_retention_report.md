@@ -24,9 +24,9 @@ the same frequency:
 
 Mutmut should not run on every commit or pull request. Use focused campaigns
 before merging risky parser, semantic, preprocessing, or code-generation
-changes. Run broader subsystem refreshes periodically and a full-project manual
-GitHub Actions campaign after subsystem baselines are stable. A yearly
-full-project deep audit is reasonable after that baseline exists.
+changes. Broader subsystem refreshes remain useful periodically. The
+full-project manual GitHub Actions campaign is parked as advisory after the
+2026-06-02 remote run exceeded the `3h` limit.
 
 ## Evidence Summary
 
@@ -253,7 +253,9 @@ evidence that code is correct.
 ## Remaining Before Full Adoption
 
 1. Complete `fortran_parser/parser.py` survivor classification.
-2. Run the full-project manual mutation campaign after subsystem baselines are
-   stable.
-3. Verify scheduled workflow results regularly and record actionable failures.
-4. Continue deliberate Radon threshold reductions as hotspots are refactored.
+2. Verify scheduled workflow results regularly and record actionable failures.
+3. Continue deliberate Radon threshold reductions as hotspots are refactored.
+
+Parked advisory item: revisit full-project mutation later only if the workflow
+can be split into bounded subsystem jobs; do not block the current rollout on a
+single `3h` full-project mutation run.

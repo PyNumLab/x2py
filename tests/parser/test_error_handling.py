@@ -450,7 +450,7 @@ function f(x) result(res)
   real :: x
 end function f
 """
-    with pytest.raises(FortranParseError, match="has no type declaration|Unknown datatype for function result"):
+    with pytest.raises(FortranParseError, match=r"has no type declaration|Unknown datatype for function result"):
         parse_fortran_file(code, filename="bad.f90")
 
 
@@ -539,7 +539,7 @@ function f(x)
   integer, intent(in) :: x
 end function f
 """
-    with pytest.raises(FortranParseError, match="has no type declaration|Unknown datatype for function result"):
+    with pytest.raises(FortranParseError, match=r"has no type declaration|Unknown datatype for function result"):
         parse_fortran_file(code, filename="implicit_none_func.f90")
 
 
@@ -641,7 +641,7 @@ program main
   real n
 end program main
 """
-    with pytest.raises(FortranParseError, match="Duplicate variable.*program"):
+    with pytest.raises(FortranParseError, match=r"Duplicate variable.*program"):
         parse_fortran_file(code, filename="dup_program_var.f90")
 
 
@@ -652,7 +652,7 @@ def test_duplicate_variable_in_block_data_raises_parse_error():
       real n
       end
 """
-    with pytest.raises(FortranParseError, match="Duplicate variable.*block data"):
+    with pytest.raises(FortranParseError, match=r"Duplicate variable.*block data"):
         parse_fortran_file(code, filename="dup_block_data_var.f")
 
 

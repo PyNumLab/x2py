@@ -7,8 +7,9 @@ workflows are run manually or on a schedule.
 Track the remaining rollout work, the current effort-weighted completion
 estimate, and completed QA passes in the
 [`quality adoption checklist`](quality_adoption_checklist.md). As of
-2026-06-02, the documented estimate is about `92%` adopted by effort, with
-about `8%` of the active rollout still remaining. The
+2026-06-03, with full-project mutation parked as advisory, the documented
+estimate is about `96%` adopted by effort, with about `4%` of the active
+non-mutation rollout still remaining. The
 [`quality tool retention report`](quality_tool_retention_report.md) records the
 recommended steady-state cadence and the evidence for keeping each tool.
 
@@ -206,7 +207,7 @@ Good invariants for this codebase:
 Use mutation testing after adding or changing behavior, not on every edit:
 
 1. Run the focused normal tests first.
-2. Narrow `tool.mutmut.paths_to_mutate` if the full mutation pass is too broad.
+2. Keep `tool.mutmut.paths_to_mutate` focused on the subsystem under review.
 3. Run `python tools/run_mutmut.py run`. For large local parser campaigns, keep
    the run serialized with `--max-children 1` and use an outer timeout.
 4. Inspect survivors with `mutmut results` and `mutmut show <id>`.
@@ -260,7 +261,9 @@ Current defaults are intentionally staged for an existing parser codebase:
   Bandit, pip-audit, Vulture, and the staged Radon complexity policy.
 - Advisory: Radon full reports, because complexity reduction needs focused
   tests and gradual refactoring.
-- Manual: mutmut full-project runs.
+- Manual: focused mutmut subsystem runs. Full-project mutation is parked as
+  advisory after the 2026-06-02 remote run exceeded the `3h` GitHub Actions
+  limit.
 - Scheduled or manual: long Hypothesis fuzz profiles and changing random-order
   runs.
 
