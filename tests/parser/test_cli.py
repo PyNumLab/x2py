@@ -37,6 +37,14 @@ def _main_args(**overrides):
         "undefs": [],
         "std": None,
         "compiler_args": [],
+        "c_type_report": None,
+        "c_type_probe_runner": [],
+        "c_type_probe_cache_dir": None,
+        "refresh_c_type_probe": False,
+        "fortran_type_report": None,
+        "fortran_type_probe_runner": [],
+        "fortran_type_probe_cache_dir": None,
+        "refresh_fortran_type_probe": False,
         "include_exposure": "reachable-project",
         "public_includes": [],
         "private_includes": [],
@@ -888,6 +896,111 @@ def test_x2py_main_accepts_each_non_parse_c_stage(monkeypatch, stage):
         x2py_cli.main()
 
 
+def test_x2py_main_reuses_one_c_type_report_across_semantic_and_readiness_stages(monkeypatch):
+    class StopAfterDispatch(Exception):
+        pass
+
+    args = _main_args(
+        language="c",
+        semantics=True,
+        wrap_readiness=True,
+        c_type_probe_runner=["qemu"],
+        c_type_probe_cache_dir="cache",
+        refresh_c_type_probe=True,
+    )
+    _install_main_parser(monkeypatch, args)
+    preprocessing = object()
+    report = {"types": {"long": {"kind": "integer", "signed": True, "bits": 32}}}
+    calls = []
+
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
+    monkeypatch.setattr(
+        x2py_cli,
+        "_c_standard_type_report",
+        lambda active_preprocessing, **kwargs: calls.append(("probe", active_preprocessing, kwargs)) or report,
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_semantic_report",
+        lambda paths, active_preprocessing, **kwargs: calls.append(("semantic", kwargs)) or {},
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_wrap_readiness_report",
+        lambda paths, active_preprocessing, **kwargs: calls.append(("readiness", kwargs)) or {},
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_attach_wrap_readiness",
+        lambda semantic_payload, readiness_payload: (_ for _ in ()).throw(StopAfterDispatch),
+    )
+
+    with pytest.raises(StopAfterDispatch):
+        x2py_cli.main()
+
+    assert calls == [
+        (
+            "probe",
+            preprocessing,
+            {
+                "report_path": None,
+                "runner": ["qemu"],
+                "cache_dir": "cache",
+                "refresh": True,
+            },
+        ),
+        ("semantic", {"language": "c", "c_standard_type_report": report}),
+        ("readiness", {"language": "c", "c_standard_type_report": report}),
+    ]
+
+
+def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(monkeypatch):
+    class StopAfterDispatch(Exception):
+        pass
+
+    args = _main_args(
+        semantics=True,
+        wrap_readiness=True,
+        fortran_type_probe_runner=["qemu"],
+        fortran_type_probe_cache_dir="cache",
+        refresh_fortran_type_probe=True,
+    )
+    _install_main_parser(monkeypatch, args)
+    preprocessing = object()
+    calls = []
+
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: language)
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
+    monkeypatch.setattr(
+        x2py_cli,
+        "_semantic_report",
+        lambda paths, active_preprocessing, **kwargs: calls.append(("semantic", kwargs)) or {},
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_wrap_readiness_report",
+        lambda paths, active_preprocessing, **kwargs: calls.append(("readiness", kwargs)) or {},
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_attach_wrap_readiness",
+        lambda semantic_payload, readiness_payload: (_ for _ in ()).throw(StopAfterDispatch),
+    )
+
+    with pytest.raises(StopAfterDispatch):
+        x2py_cli.main()
+
+    expected = {
+        "language": "fortran",
+        "fortran_type_report": None,
+        "fortran_type_probe_runner": ["qemu"],
+        "fortran_type_probe_cache_dir": "cache",
+        "refresh_fortran_type_probe": True,
+    }
+    assert calls == [("semantic", expected), ("readiness", expected)]
+
+
 @pytest.mark.parametrize(
     ("overrides", "expected"),
     [
@@ -907,6 +1020,27 @@ def test_x2py_main_accepts_each_non_parse_c_stage(monkeypatch, stage):
         ({"print_limit": 1}, "--show-vars/--print-limit require --parse"),
         ({"vars_limit": 1}, "--show-vars/--print-limit require --parse"),
         ({"parse": True, "print_limit": -1}, "--print-limit must be >= 0"),
+        ({"parse": True, "c_type_report": "types.json"}, "C type probe options require --language c"),
+        (
+            {"language": "c", "parse": True, "refresh_c_type_probe": True},
+            "C type probe options require --semantics, --pyi, or --wrap-readiness",
+        ),
+        (
+            {"language": "c", "semantics": True, "c_type_report": "types.json", "refresh_c_type_probe": True},
+            "--c-type-report cannot be combined with automatic C type probe options",
+        ),
+        (
+            {"language": "c", "semantics": True, "fortran_type_report": "types.json"},
+            "Fortran type probe options require --language fortran",
+        ),
+        (
+            {"parse": True, "refresh_fortran_type_probe": True},
+            "Fortran type probe options require --semantics, --pyi, or --wrap-readiness",
+        ),
+        (
+            {"semantics": True, "fortran_type_report": "types.json", "refresh_fortran_type_probe": True},
+            "--fortran-type-report cannot be combined with automatic Fortran type probe options",
+        ),
         ({}, "Select at least one stage flag: --parse, --semantics, --pyi, or --wrap-readiness"),
     ],
 )
@@ -1824,6 +1958,66 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
             },
         ),
         (
+            ("--c-type-report",),
+            {
+                "metavar": "PATH",
+                "help": "Reuse a C ABI report generated by `python -m x2py.c_type_probe`.",
+            },
+        ),
+        (
+            ("--c-type-probe-runner",),
+            {
+                "dest": "c_type_probe_runner",
+                "action": "append",
+                "metavar": "ARG",
+                "help": "Runner command item for a cross-compiled C ABI probe; repeat for arguments.",
+            },
+        ),
+        (
+            ("--c-type-probe-cache-dir",),
+            {
+                "metavar": "PATH",
+                "help": "Directory for reusable automatic C ABI probe results.",
+            },
+        ),
+        (
+            ("--refresh-c-type-probe",),
+            {
+                "action": "store_true",
+                "help": "Ignore a reusable C ABI result and probe the selected compiler target again.",
+            },
+        ),
+        (
+            ("--fortran-type-report",),
+            {
+                "metavar": "PATH",
+                "help": "Reuse a Fortran type report generated by `python -m x2py.fortran_type_probe`.",
+            },
+        ),
+        (
+            ("--fortran-type-probe-runner",),
+            {
+                "dest": "fortran_type_probe_runner",
+                "action": "append",
+                "metavar": "ARG",
+                "help": "Runner command item for a cross-compiled Fortran type probe; repeat for arguments.",
+            },
+        ),
+        (
+            ("--fortran-type-probe-cache-dir",),
+            {
+                "metavar": "PATH",
+                "help": "Directory for reusable automatic Fortran type probe results.",
+            },
+        ),
+        (
+            ("--refresh-fortran-type-probe",),
+            {
+                "action": "store_true",
+                "help": "Ignore reusable Fortran type results and probe the selected compiler target again.",
+            },
+        ),
+        (
             ("--include-exposure",),
             {
                 "choices": ("reachable-project", "roots-only"),
@@ -2445,6 +2639,8 @@ def test_x2py_fortran_readiness_helpers_attach_and_compile(monkeypatch):
     calls = []
     requirements = {"api_mod": {"dp": "kind(1.0d0)"}}
     values = {"api_mod.dp": 8}
+    storage_requirements = [{"base_type": "real", "kind": "8", "expression": "storage_size(real(0.0,kind=8))"}]
+    facts = {("real", "8"): {"base_type": "real", "kind": "8", "bits": 64}}
 
     def collect_requirements(received):
         assert received is parsed
@@ -2457,8 +2653,22 @@ def test_x2py_fortran_readiness_helpers_attach_and_compile(monkeypatch):
         calls.append(("evaluate", received_config, received_requirements))
         return values
 
+    def collect_storage(received, *, compile_time_values):
+        assert received is parsed
+        assert compile_time_values is values
+        calls.append(("collect_storage", received))
+        return storage_requirements
+
+    def evaluate_facts(received_config, received_requirements):
+        assert received_config is compiler_config
+        assert received_requirements is storage_requirements
+        calls.append(("evaluate_facts", received_config, received_requirements))
+        return facts
+
     monkeypatch.setattr("semantics.fortran2ir.collect_semantic_compile_time_requirements", collect_requirements)
+    monkeypatch.setattr("semantics.fortran2ir.collect_fortran_type_storage_requirements", collect_storage)
     monkeypatch.setattr("x2py.fortran_type_probe.evaluate_fortran_type_requirements", evaluate_requirements)
+    monkeypatch.setattr("x2py.fortran_type_probe.evaluate_fortran_type_facts", evaluate_facts)
 
     raw_config_with_compiler = x2py_cli.PreprocessingConfig(compiler="gfortran")
     assert x2py_cli._fortran_compile_time_values(parsed, raw_config_with_compiler) is None
@@ -2467,6 +2677,8 @@ def test_x2py_fortran_readiness_helpers_attach_and_compile(monkeypatch):
     compiler_config = x2py_cli.PreprocessingConfig(mode="compiler", compiler="gfortran")
     assert x2py_cli._fortran_compile_time_values(parsed, compiler_config) == values
     assert calls == [("collect", parsed), ("evaluate", compiler_config, requirements)]
+    assert x2py_cli._fortran_type_facts(parsed, compiler_config, compile_time_values=values) == facts
+    assert calls[-2:] == [("collect_storage", parsed), ("evaluate_facts", compiler_config, storage_requirements)]
 
 
 def test_x2py_fortran_source_for_path_raw_uses_utf8_and_internal_recipe():
@@ -2571,6 +2783,7 @@ def test_x2py_semantic_report_preserves_c_module_and_dependency_contracts(monkey
     path = Path("api.h")
     config = object()
     project = object()
+    standard_type_report = {"types": {"long": {"kind": "integer", "signed": True, "bits": 32}}}
     module = types.SimpleNamespace(name="api", origin=types.SimpleNamespace(native_name=str(path)))
     stubs = {
         "api": "def api() -> None: ...",
@@ -2582,8 +2795,9 @@ def test_x2py_semantic_report_preserves_c_module_and_dependency_contracts(monkey
         assert preprocessing is config
         return project
 
-    def convert(received):
+    def convert(received, *, standard_type_report: object):
         assert received is project
+        assert standard_type_report == {"types": {"long": {"kind": "integer", "signed": True, "bits": 32}}}
         return [module]
 
     def expand(paths):
@@ -2605,13 +2819,50 @@ def test_x2py_semantic_report_preserves_c_module_and_dependency_contracts(monkey
     monkeypatch.setattr("semantics.pyi_printer.emit_module_stubs", emit)
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
 
-    assert x2py_cli._semantic_report(["api"], config, language="c") == {
+    assert x2py_cli._semantic_report(
+        ["api"],
+        config,
+        language="c",
+        c_standard_type_report=standard_type_report,
+    ) == {
         str(path): {
             "semantic_modules": [{"name": "api"}],
             "pyi": "def api() -> None: ...",
             "pyi_dependencies": {"shared": "class Shared:\n    pass"},
         }
     }
+
+
+def test_x2py_c_standard_type_report_uses_cached_direct_probe_and_rejects_ambiguous_recipe(monkeypatch):
+    config = PreprocessingConfig(mode="compiler", compiler="cc", compiler_args=["-m32"])
+    expected = {"types": {"long": {"kind": "integer", "signed": True, "bits": 32}}}
+    calls = []
+
+    class Report:
+        def to_dict(self):
+            return expected
+
+    def probe(received, *, runner, cache_dir, refresh):
+        calls.append((received, runner, cache_dir, refresh))
+        return Report()
+
+    monkeypatch.setattr(x2py_cli, "probe_c_standard_types_cached", probe)
+
+    assert (
+        x2py_cli._c_standard_type_report(
+            config,
+            runner=["qemu"],
+            cache_dir="cache",
+            refresh=True,
+        )
+        == expected
+    )
+    assert calls == [(config, ["qemu"], "cache", True)]
+
+    with pytest.raises(ValueError, match="--c-type-report"):
+        x2py_cli._c_standard_type_report(
+            PreprocessingConfig(mode="compiler", compiler="cc", compile_commands="compile_commands.json")
+        )
 
 
 def test_x2py_semantic_report_preserves_fortran_conversion_and_stub_contracts(monkeypatch):

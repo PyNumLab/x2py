@@ -17,6 +17,15 @@ from semantics.c2ir import c_project_to_semantic_modules
 from semantics.fortran2ir import fortran_file_to_semantic_modules
 from semantics.pyi_parser import load_pyi_modules
 from semantics.readiness import assess_semantic_wrap_readiness
+from x2py.c_type_probe import (
+    CStandardTypeProbeError,
+    load_c_standard_type_probe_report,
+    probe_c_standard_types_cached,
+)
+from x2py.fortran_type_probe import (
+    FortranTypeProbeReport,
+    load_fortran_type_probe_report,
+)
 from x2py.preprocessing import (
     PreprocessingConfig,
     PreprocessingError,
@@ -239,11 +248,67 @@ def _parse_report(paths: list[str], preprocessing: PreprocessingConfig | None = 
     return out
 
 
+def _convert_c_project(project, *, c_standard_type_report: dict[str, object] | None):
+    if c_standard_type_report is None:
+        return c_project_to_semantic_modules(project)
+    return c_project_to_semantic_modules(project, standard_type_report=c_standard_type_report)
+
+
+def _c_standard_type_report(
+    preprocessing: PreprocessingConfig,
+    *,
+    report_path: str | None = None,
+    runner: list[str] | None = None,
+    cache_dir: str | None = None,
+    refresh: bool = False,
+) -> dict[str, object] | None:
+    """Load or probe target C ABI facts used by semantic conversion."""
+    if report_path is not None:
+        return load_c_standard_type_probe_report(report_path).to_dict()
+    if not isinstance(preprocessing, PreprocessingConfig) or not preprocessing.compiler:
+        return None
+    if preprocessing.compile_commands or preprocessing.command_template:
+        raise CStandardTypeProbeError(
+            "automatic C ABI probing requires a direct compiler configuration; "
+            "generate a reusable report with `python -m x2py.c_type_probe` and pass it with --c-type-report"
+        )
+    return probe_c_standard_types_cached(
+        preprocessing,
+        runner=runner,
+        cache_dir=cache_dir,
+        refresh=refresh,
+    ).to_dict()
+
+
+def _fortran_probe_options(
+    *,
+    report: FortranTypeProbeReport | None,
+    runner: list[str] | None,
+    cache_dir: str | None,
+    refresh: bool,
+) -> dict[str, object]:
+    options: dict[str, object] = {}
+    if report is not None:
+        options["report"] = report
+    if runner is not None:
+        options["runner"] = runner
+    if cache_dir is not None:
+        options["cache_dir"] = cache_dir
+    if refresh:
+        options["refresh"] = True
+    return options
+
+
 def _semantic_report(
     paths: list[str],
     preprocessing: PreprocessingConfig | None = None,
     *,
     language: str = "fortran",
+    c_standard_type_report: dict[str, object] | None = None,
+    fortran_type_report: FortranTypeProbeReport | None = None,
+    fortran_type_probe_runner: list[str] | None = None,
+    fortran_type_probe_cache_dir: str | None = None,
+    refresh_fortran_type_probe: bool = False,
 ) -> dict[str, dict]:
     from semantics.fortran2ir import fortran_module_to_semantic_module
     from semantics.pyi_printer import emit_module_stubs
@@ -251,8 +316,13 @@ def _semantic_report(
     preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
     if language == "c":
+        if c_standard_type_report is None:
+            c_standard_type_report = _c_standard_type_report(preprocessing)
         project = _parse_c_project(paths, preprocessing)
-        converted_files = {module.origin.native_name: [module] for module in c_project_to_semantic_modules(project)}
+        converted_files = {
+            module.origin.native_name: [module]
+            for module in _convert_c_project(project, c_standard_type_report=c_standard_type_report)
+        }
         available_modules = [module for modules in converted_files.values() for module in modules]
         for p in expand_c_paths(paths):
             modules = converted_files[str(p)]
@@ -277,13 +347,26 @@ def _semantic_report(
         parsed_files.append((p, fobj))
     wrapped_derived_types = _fortran_wrapped_derived_types(fobj for _p, fobj in parsed_files)
     converted_files = []
+    probe_options = _fortran_probe_options(
+        report=fortran_type_report,
+        runner=fortran_type_probe_runner,
+        cache_dir=fortran_type_probe_cache_dir,
+        refresh=refresh_fortran_type_probe,
+    )
     for p, fobj in parsed_files:
-        compile_time_values = _fortran_compile_time_values(fobj, preprocessing)
+        compile_time_values = _fortran_compile_time_values(fobj, preprocessing, **probe_options)
+        type_facts = _fortran_type_facts(
+            fobj,
+            preprocessing,
+            compile_time_values=compile_time_values,
+            **probe_options,
+        )
         modules = [
             fortran_module_to_semantic_module(
                 m,
                 compile_time_values=compile_time_values,
                 wrapped_derived_types=wrapped_derived_types,
+                **({"type_facts": type_facts} if type_facts is not None else {}),
             )
             for m in fobj.modules
         ]
@@ -343,14 +426,24 @@ def _wrap_readiness_report(
     preprocessing: PreprocessingConfig | None = None,
     *,
     language: str = "fortran",
+    c_standard_type_report: dict[str, object] | None = None,
+    fortran_type_report: FortranTypeProbeReport | None = None,
+    fortran_type_probe_runner: list[str] | None = None,
+    fortran_type_probe_cache_dir: str | None = None,
+    refresh_fortran_type_probe: bool = False,
 ) -> dict[str, dict]:
     preprocessing = preprocessing or PreprocessingConfig()
     out: dict[str, dict] = {}
     if language == "c":
         c_paths = [path for path in expand_c_paths(paths) if path.suffix.lower() != ".pyi"]
         if c_paths:
+            if c_standard_type_report is None:
+                c_standard_type_report = _c_standard_type_report(preprocessing)
             project = _parse_c_project([str(path) for path in c_paths], preprocessing)
-            converted_files = {module.origin.native_name: [module] for module in c_project_to_semantic_modules(project)}
+            converted_files = {
+                module.origin.native_name: [module]
+                for module in _convert_c_project(project, c_standard_type_report=c_standard_type_report)
+            }
             for p in c_paths:
                 modules = converted_files[str(p)]
                 out[str(p)] = {
@@ -369,14 +462,27 @@ def _wrap_readiness_report(
         parsed_files[p] = parser.visit_file(code, filename=str(p))
     wrapped_derived_types = _fortran_wrapped_derived_types(parsed_files.values())
 
+    probe_options = _fortran_probe_options(
+        report=fortran_type_report,
+        runner=fortran_type_probe_runner,
+        cache_dir=fortran_type_probe_cache_dir,
+        refresh=refresh_fortran_type_probe,
+    )
     for p in expanded_paths:
         parsed = parsed_files[p]
-        compile_time_values = _fortran_compile_time_values(parsed, preprocessing)
+        compile_time_values = _fortran_compile_time_values(parsed, preprocessing, **probe_options)
+        type_facts = _fortran_type_facts(
+            parsed,
+            preprocessing,
+            compile_time_values=compile_time_values,
+            **probe_options,
+        )
         modules = fortran_file_to_semantic_modules(
             parsed,
             standalone_module_name=p.stem,
             compile_time_values=compile_time_values,
             wrapped_derived_types=wrapped_derived_types,
+            **({"type_facts": type_facts} if type_facts is not None else {}),
         )
 
         out[str(p)] = {
@@ -418,9 +524,18 @@ def _fortran_wrapped_derived_types(parsed_files) -> set[tuple[str, str]]:
 def _fortran_compile_time_values(
     parsed,
     preprocessing: PreprocessingConfig,
+    *,
+    report: FortranTypeProbeReport | None = None,
+    runner: list[str] | None = None,
+    cache_dir: str | None = None,
+    refresh: bool = False,
 ) -> dict[str, int] | None:
     """Evaluate compiler-dependent Fortran values when a compiler is configured."""
-    if not preprocessing.uses_compiler or not preprocessing.compiler:
+    if report is None and (
+        not isinstance(preprocessing, PreprocessingConfig)
+        or not preprocessing.uses_compiler
+        or not preprocessing.compiler
+    ):
         return None
 
     from semantics.fortran2ir import collect_semantic_compile_time_requirements
@@ -429,7 +544,36 @@ def _fortran_compile_time_values(
     requirements = collect_semantic_compile_time_requirements(parsed)
     if not requirements:
         return None
-    return evaluate_fortran_type_requirements(preprocessing, requirements)
+    probe_options = _fortran_probe_options(report=report, runner=runner, cache_dir=cache_dir, refresh=refresh)
+    return evaluate_fortran_type_requirements(preprocessing, requirements, **probe_options)
+
+
+def _fortran_type_facts(
+    parsed,
+    preprocessing: PreprocessingConfig,
+    *,
+    compile_time_values: dict[str, int] | None = None,
+    report: FortranTypeProbeReport | None = None,
+    runner: list[str] | None = None,
+    cache_dir: str | None = None,
+    refresh: bool = False,
+) -> dict[tuple[str, str | None], dict[str, object]] | None:
+    """Measure compiler-dependent storage for intrinsic types used by one source."""
+    if report is None and (
+        not isinstance(preprocessing, PreprocessingConfig)
+        or not preprocessing.uses_compiler
+        or not preprocessing.compiler
+    ):
+        return None
+
+    from semantics.fortran2ir import collect_fortran_type_storage_requirements
+    from x2py.fortran_type_probe import evaluate_fortran_type_facts
+
+    requirements = collect_fortran_type_storage_requirements(parsed, compile_time_values=compile_time_values)
+    if not requirements:
+        return None
+    probe_options = _fortran_probe_options(report=report, runner=runner, cache_dir=cache_dir, refresh=refresh)
+    return evaluate_fortran_type_facts(preprocessing, requirements, **probe_options)
 
 
 def _attach_wrap_readiness(payload: dict[str, dict] | None, readiness_report: dict[str, dict] | None) -> None:
@@ -524,6 +668,25 @@ def _build_preprocessing_config(args: argparse.Namespace, parser: argparse.Argum
     if config.uses_compiler and config.command_template and config.adapter != "command-template":
         parser.error("--preprocess-template requires --preprocessor-adapter command-template")
     return config
+
+
+def _validate_fortran_type_probe_options(
+    *,
+    language: str,
+    has_semantic_stage: bool,
+    report_path: str | None,
+    automatic_options: tuple[object, ...],
+    parser: argparse.ArgumentParser,
+) -> None:
+    options_used = bool(report_path or any(automatic_options))
+    if language != "fortran":
+        if options_used:
+            parser.error("Fortran type probe options require --language fortran")
+        return
+    if options_used and not has_semantic_stage:
+        parser.error("Fortran type probe options require --semantics, --pyi, or --wrap-readiness")
+    if report_path and any(automatic_options):
+        parser.error("--fortran-type-report cannot be combined with automatic Fortran type probe options")
 
 
 def print_pyi_output(code: str) -> None:
@@ -681,6 +844,50 @@ def main() -> int:
         help="Raw compiler preprocessing argument. Use --compiler-arg=-target for values starting with '-'.",
     )
     parser.add_argument(
+        "--c-type-report",
+        metavar="PATH",
+        help="Reuse a C ABI report generated by `python -m x2py.c_type_probe`.",
+    )
+    parser.add_argument(
+        "--c-type-probe-runner",
+        dest="c_type_probe_runner",
+        action="append",
+        metavar="ARG",
+        help="Runner command item for a cross-compiled C ABI probe; repeat for arguments.",
+    )
+    parser.add_argument(
+        "--c-type-probe-cache-dir",
+        metavar="PATH",
+        help="Directory for reusable automatic C ABI probe results.",
+    )
+    parser.add_argument(
+        "--refresh-c-type-probe",
+        action="store_true",
+        help="Ignore a reusable C ABI result and probe the selected compiler target again.",
+    )
+    parser.add_argument(
+        "--fortran-type-report",
+        metavar="PATH",
+        help="Reuse a Fortran type report generated by `python -m x2py.fortran_type_probe`.",
+    )
+    parser.add_argument(
+        "--fortran-type-probe-runner",
+        dest="fortran_type_probe_runner",
+        action="append",
+        metavar="ARG",
+        help="Runner command item for a cross-compiled Fortran type probe; repeat for arguments.",
+    )
+    parser.add_argument(
+        "--fortran-type-probe-cache-dir",
+        metavar="PATH",
+        help="Directory for reusable automatic Fortran type probe results.",
+    )
+    parser.add_argument(
+        "--refresh-fortran-type-probe",
+        action="store_true",
+        help="Ignore reusable Fortran type results and probe the selected compiler target again.",
+    )
+    parser.add_argument(
         "--include-exposure",
         choices=("reachable-project", "roots-only"),
         default="reachable-project",
@@ -741,6 +948,22 @@ def main() -> int:
     args = parser.parse_args()
     args.language = _resolve_language(args.paths, args.language, parser)
     preprocessing = _build_preprocessing_config(args, parser)
+    c_type_report_path = getattr(args, "c_type_report", None)
+    c_type_probe_runner = getattr(args, "c_type_probe_runner", None)
+    c_type_probe_cache_dir = getattr(args, "c_type_probe_cache_dir", None)
+    refresh_c_type_probe = getattr(args, "refresh_c_type_probe", False)
+    automatic_c_type_probe_options = (c_type_probe_runner, c_type_probe_cache_dir, refresh_c_type_probe)
+    c_type_probe_options_used = bool(c_type_report_path or any(automatic_c_type_probe_options))
+    fortran_type_report_path = getattr(args, "fortran_type_report", None)
+    fortran_type_probe_runner = getattr(args, "fortran_type_probe_runner", None)
+    fortran_type_probe_cache_dir = getattr(args, "fortran_type_probe_cache_dir", None)
+    refresh_fortran_type_probe = getattr(args, "refresh_fortran_type_probe", False)
+    automatic_fortran_type_probe_options = (
+        fortran_type_probe_runner,
+        fortran_type_probe_cache_dir,
+        refresh_fortran_type_probe,
+    )
+    fortran_type_probe_options_used = bool(fortran_type_report_path or any(automatic_fortran_type_probe_options))
 
     if args.language == "c":
         if not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
@@ -749,6 +972,20 @@ def main() -> int:
             )
         if args.show_vars:
             parser.error("--show-vars is Fortran-only and is not supported for --language c")
+        if c_type_probe_options_used and not (args.semantics or args.pyi or args.wrap_readiness):
+            parser.error("C type probe options require --semantics, --pyi, or --wrap-readiness")
+        if c_type_report_path and any(automatic_c_type_probe_options):
+            parser.error("--c-type-report cannot be combined with automatic C type probe options")
+    elif c_type_probe_options_used:
+        parser.error("C type probe options require --language c")
+
+    _validate_fortran_type_probe_options(
+        language=args.language,
+        has_semantic_stage=args.semantics or args.pyi or args.wrap_readiness,
+        report_path=fortran_type_report_path,
+        automatic_options=automatic_fortran_type_probe_options,
+        parser=parser,
+    )
 
     if args.out is not None and not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
         parser.error("--out requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness")
@@ -764,6 +1001,20 @@ def main() -> int:
         parser.error("Select at least one stage flag: --parse, --semantics, --pyi, or --wrap-readiness")
 
     try:
+        c_standard_type_report = (
+            _c_standard_type_report(
+                preprocessing,
+                report_path=c_type_report_path,
+                runner=c_type_probe_runner,
+                cache_dir=c_type_probe_cache_dir,
+                refresh=refresh_c_type_probe,
+            )
+            if args.language == "c" and (args.semantics or args.pyi or args.wrap_readiness)
+            else None
+        )
+        fortran_type_report = (
+            load_fortran_type_probe_report(fortran_type_report_path) if fortran_type_report_path is not None else None
+        )
         parse_payload = (
             parse_c_report(
                 args.paths,
@@ -777,12 +1028,44 @@ def main() -> int:
             else None
         )
         semantic_payload = (
-            _semantic_report(args.paths, preprocessing, language=args.language)
+            _semantic_report(
+                args.paths,
+                preprocessing,
+                language=args.language,
+                **({"c_standard_type_report": c_standard_type_report} if c_standard_type_report is not None else {}),
+                **(
+                    {
+                        "fortran_type_report": fortran_type_report,
+                        "fortran_type_probe_runner": fortran_type_probe_runner,
+                        "fortran_type_probe_cache_dir": fortran_type_probe_cache_dir,
+                        "refresh_fortran_type_probe": refresh_fortran_type_probe,
+                    }
+                    if fortran_type_probe_options_used
+                    else {}
+                ),
+            )
             if (args.semantics or args.pyi)
             else None
         )
         readiness_payload = (
-            _wrap_readiness_report(args.paths, preprocessing, language=args.language) if args.wrap_readiness else None
+            _wrap_readiness_report(
+                args.paths,
+                preprocessing,
+                language=args.language,
+                **({"c_standard_type_report": c_standard_type_report} if c_standard_type_report is not None else {}),
+                **(
+                    {
+                        "fortran_type_report": fortran_type_report,
+                        "fortran_type_probe_runner": fortran_type_probe_runner,
+                        "fortran_type_probe_cache_dir": fortran_type_probe_cache_dir,
+                        "refresh_fortran_type_probe": refresh_fortran_type_probe,
+                    }
+                    if fortran_type_probe_options_used
+                    else {}
+                ),
+            )
+            if args.wrap_readiness
+            else None
         )
         _attach_wrap_readiness(semantic_payload, readiness_payload)
     except CParseError as exc:

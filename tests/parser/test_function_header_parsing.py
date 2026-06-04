@@ -26,6 +26,9 @@ contains
 
   double precision function norm2()
   end function norm2
+
+  double complex function complex_norm2()
+  end function complex_norm2
 end module typed_result_mod
 """
 
@@ -40,6 +43,9 @@ end module typed_result_mod
     assert procedures["weighted_value"].result.base_type == "real"
     assert procedures["weighted_value"].result.kind == "8"
     assert procedures["norm2"].result.base_type == "real"
+    assert procedures["norm2"].result.target_kind_expression == "kind(1.0d0)"
+    assert procedures["complex_norm2"].result.base_type == "complex"
+    assert procedures["complex_norm2"].result.target_kind_expression == "kind(1.0d0)"
 
 
 def test_legacy_star_kind_function_headers_are_parsed_from_inline_fixed_form():
@@ -64,10 +70,13 @@ def test_legacy_star_kind_function_headers_are_parsed_from_inline_fixed_form():
 
     assert procedures["zdotc"].result.base_type == "complex"
     assert procedures["zdotc"].result.kind == "16"
+    assert procedures["zdotc"].result.declared_storage_bits == 128
     assert procedures["trans_name"].result.base_type == "character"
     assert procedures["trans_name"].result.kind == "1"
+    assert procedures["trans_name"].result.character_length_syntax is True
     assert procedures["any_name"].result.base_type == "character"
     assert procedures["any_name"].result.kind == "*"
+    assert procedures["any_name"].result.character_length_syntax is True
 
 
 def test_no_argument_headers_without_parentheses_are_parsed():

@@ -325,6 +325,7 @@ print only the first `N` items in each repeated section.
 
 Input Fortran (`tests/data/fortran/general/basic_subroutine.f90`):
 
+<!-- x2py-doc-source: tests/data/fortran/general/basic_subroutine.f90 -->
 ```fortran
 module m1
 contains
@@ -726,7 +727,7 @@ Focused test files by implementation area:
   `tests/parser/test_fortran_error_fixture_suite.py`
 - Parser JSON shape:
   `tests/parser/test_fortran_json_sanity.py`
-- Fortran compiler/type probing:
+- Cached Fortran compiler/type and intrinsic-storage probing:
   `tests/parser/test_fortran_type_probe.py`
 - Shared CLI behavior:
   `tests/parser/test_cli.py`
@@ -961,13 +962,23 @@ dup_arg.f90:1:1: error[PARSE_DUPLICATE_ARGUMENT]: Duplicate argument name 'x' in
 ### 6.5 Star-kind declarations
 
 Legacy `type*N` declarations, such as `real*8`, are accepted in both fixed-form
-and modern-extension files. The parser preserves the kind metadata:
+and modern-extension files. Numeric star declarations preserve their fixed
+total storage width for semantic conversion. This matters most for complex
+types: `complex*8` is an 8-byte `Complex64`, while modern `complex(kind=8)` is
+a compiler kind and is 16 bytes on the documented `gfortran` target.
+`DOUBLE PRECISION` and `DOUBLE COMPLEX` retain a compiler-dependent double-kind
+expression and use the cached Fortran type probe. For `CHARACTER*N` and
+`CHARACTER*(*)`, the star value is a length, not a kind or element storage
+width.
 
 ```fortran
 subroutine accepted(x)
   real*8 :: x
 end subroutine accepted
 ```
+
+See the [generated modern and legacy datatype mapping](semantics.md#generated-linux-x86_64-mapping-example)
+for the exact GitHub Actions target results.
 
 ### 6.6 Source-form metadata
 
@@ -1149,6 +1160,37 @@ Lower-level unit parsers are internal `FortranParser` methods.
 Semantic conversion lives in `semantics/fortran2ir.py`. It accepts parsed `FortranFile`
 (or selected `FortranModule`) structures and converts metadata into semantic IR
 consumed by the `.pyi` printer and later wrapper/runtime stages.
+Compiler-backed shared-CLI semantic stages resolve compiler-dependent kind
+expressions, measure intrinsic storage with `storage_size`, attach those facts
+to semantic types, and reuse memory and persistent caches. For the maintained
+GitHub Actions `gfortran` profile, unqualified `integer`, `real`, and `complex`
+map to `Int32`, `Float32`, and `Complex64`; target-changing flags can change
+those mappings. The
+[generated target datatype mapping](semantics.md#generated-linux-x86_64-mapping-example)
+measures and verifies those storage facts.
+
+The Fortran probe cache key includes the generated expression source, resolved
+compiler binary identity, target flags, includes, macros, requested standard,
+working directory, target-related environment, and runner. The persistent
+location is `$XDG_CACHE_HOME/x2py/fortran_type_probe` or
+`~/.cache/x2py/fortran_type_probe`; `X2PY_CACHE_DIR`,
+`--fortran-type-probe-cache-dir`, and standalone `--cache-dir` override it.
+Use `--refresh-fortran-type-probe` or standalone `--refresh` after an external
+compiler/sysroot change that does not alter the cache key.
+
+The standalone probe can create a reusable report containing the exact
+compile-time and storage expressions needed by a source:
+
+```bash
+python3 -m x2py.fortran_type_probe --compiler gfortran \
+  --expr='selected_real_kind(12)' \
+  --expr='storage_size(real(0.0,kind=8))' \
+  > build/fortran-types.json
+```
+
+Pass that report with `--fortran-type-report` when automatic direct-compiler
+probing is not appropriate. A missing required expression is reported
+explicitly instead of falling back to an unrelated target mapping.
 
 The semantic converter also supports compile-time specialization for values the
 parser intentionally leaves symbolic. Use

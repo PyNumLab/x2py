@@ -218,19 +218,30 @@ end subroutine star_kinds
 
     assert args["i1"].base_type == "integer"
     assert args["i1"].kind == "4"
+    assert args["i1"].declared_storage_bits == 32
     assert args["i2"].kind == "8"
+    assert args["i2"].declared_storage_bits == 64
     assert args["r1"].base_type == "real"
     assert args["r1"].kind == "4"
+    assert args["r1"].declared_storage_bits == 32
     assert args["r2"].kind == "8"
+    assert args["r2"].declared_storage_bits == 64
     assert args["c1"].base_type == "complex"
     assert args["c1"].kind == "8"
+    assert args["c1"].declared_storage_bits == 64
     assert args["c2"].kind == "16"
+    assert args["c2"].declared_storage_bits == 128
     assert args["l1"].base_type == "logical"
     assert args["l1"].kind == "1"
+    assert args["l1"].declared_storage_bits == 8
     assert args["l2"].kind == "4"
+    assert args["l2"].declared_storage_bits == 32
     assert args["ch1"].base_type == "character"
     assert args["ch1"].kind == "8"
+    assert args["ch1"].character_length_syntax is True
+    assert args["ch1"].declared_storage_bits is None
     assert args["ch2"].kind == "*"
+    assert args["ch2"].character_length_syntax is True
 
 
 def test_fixed_form_and_interface_detection():

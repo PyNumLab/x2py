@@ -11,14 +11,18 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Iterable, Mapping, Sequence
+from contextlib import suppress
 from dataclasses import asdict, dataclass
+import hashlib
 import json
 import os
 from pathlib import Path
 import re
 import shlex
+import shutil
 import subprocess
 import tempfile
+from typing import Any
 
 from .preprocessing import PreprocessingConfig, PreprocessingError, validate_macro_name
 
@@ -77,6 +81,23 @@ class FortranTypeProbeReport:
             if value is not None:
                 values[symbol] = value
         return values
+
+
+_PROBE_CACHE_SCHEMA_VERSION = 1
+_PROBE_ENVIRONMENT_VARIABLES = (
+    "COMPILER_PATH",
+    "CPATH",
+    "GFORTRAN_UNBUFFERED_ALL",
+    "GFORTRAN_UNBUFFERED_PRECONNECTED",
+    "GFORTRAN_CONVERT_UNIT",
+    "GCC_EXEC_PREFIX",
+    "LIB",
+    "LIBRARY_PATH",
+    "QEMU_LD_PREFIX",
+    "SDKROOT",
+    "SYSROOT",
+)
+_MEMORY_CACHE: dict[str, FortranTypeProbeReport] = {}
 
 
 _SAFE_EXPRESSION_RE = re.compile(r"^[A-Za-z0-9_+\-*/().,= :]+$")
@@ -173,13 +194,7 @@ def probe_fortran_type_expressions(
     current native-target assumption.  Cross targets can pass an emulator/runner
     command; the command is recorded in the result.
     """
-    if not config.compiler:
-        raise FortranTypeProbeError("Fortran type probing requires an exact compiler executable")
-    if config.compile_commands:
-        raise FortranTypeProbeError(
-            "Fortran type probing does not consume compile_commands directly; "
-            "pass the selected target/include/compiler flags explicitly"
-        )
+    _validate_probe_config(config)
 
     unique_expressions = _normalize_expressions(expressions)
     source_text = build_fortran_type_probe_source(unique_expressions)
@@ -262,23 +277,253 @@ def probe_fortran_type_expressions(
     )
 
 
+def _validate_probe_config(config: PreprocessingConfig) -> None:
+    if not config.compiler:
+        raise FortranTypeProbeError("Fortran type probing requires an exact compiler executable")
+    if config.compile_commands:
+        raise FortranTypeProbeError(
+            "Fortran type probing does not consume compile_commands directly; "
+            "pass the selected target/include/compiler flags explicitly"
+        )
+    if config.command_template:
+        raise FortranTypeProbeError(
+            "Fortran type probing does not consume custom preprocessing templates; "
+            "pass the selected compiler and target flags explicitly"
+        )
+
+
+def load_fortran_type_probe_report(path: str | Path) -> FortranTypeProbeReport:
+    """Load and validate a reusable compiler-derived Fortran type report."""
+    report_path = Path(path)
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise FortranTypeProbeError(f"failed to read Fortran type probe report {report_path}: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise FortranTypeProbeError(f"Fortran type probe report {report_path} contains invalid JSON: {exc}") from exc
+    return _report_from_payload(payload, source=str(report_path))
+
+
+def fortran_type_probe_cache_key(
+    config: PreprocessingConfig,
+    expressions: Sequence[str],
+    *,
+    runner: Sequence[str] | None = None,
+) -> str:
+    """Return the cache key for one exact compiler target and expression set."""
+    normalized = _normalize_expressions(expressions)
+    source_digest = hashlib.sha256(build_fortran_type_probe_source(normalized).encode()).hexdigest()
+    payload = {
+        "schema_version": _PROBE_CACHE_SCHEMA_VERSION,
+        "source_digest": source_digest,
+        "compiler": _compiler_identity(config.compiler),
+        "cwd": str(Path.cwd().resolve()),
+        "requested_standard": config.std,
+        "include_dirs": list(config.include_dirs),
+        "defines": list(config.defines),
+        "undefs": list(config.undefs),
+        "compiler_args": list(config.compiler_args),
+        "runner": {
+            "argv": list(runner or ()),
+            "executable": _compiler_identity(runner[0]) if runner else None,
+        },
+        "environment": {name: os.environ.get(name) for name in _PROBE_ENVIRONMENT_VARIABLES},
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def probe_fortran_type_expressions_cached(
+    config: PreprocessingConfig,
+    expressions: Sequence[str],
+    *,
+    runner: Sequence[str] | None = None,
+    cache_dir: str | Path | None = None,
+    refresh: bool = False,
+) -> FortranTypeProbeReport:
+    """Return compiler facts, reusing memory and persistent cache entries."""
+    _validate_probe_config(config)
+    cache_key = fortran_type_probe_cache_key(config, expressions, runner=runner)
+    if not refresh and cache_key in _MEMORY_CACHE:
+        return _MEMORY_CACHE[cache_key]
+
+    cache_path = _probe_cache_dir(cache_dir) / f"{cache_key}.json"
+    if not refresh:
+        try:
+            report = load_fortran_type_probe_report(cache_path)
+        except FortranTypeProbeError:
+            pass
+        else:
+            _MEMORY_CACHE[cache_key] = report
+            return report
+
+    report = probe_fortran_type_expressions(config, expressions, runner=runner)
+    _MEMORY_CACHE[cache_key] = report
+    _write_cached_report(cache_path, report)
+    return report
+
+
+def _report_for_expressions(
+    config: PreprocessingConfig,
+    expressions: Sequence[str],
+    *,
+    report: FortranTypeProbeReport | None = None,
+    runner: Sequence[str] | None = None,
+    cache_dir: str | Path | None = None,
+    refresh: bool = False,
+) -> FortranTypeProbeReport:
+    normalized = _normalize_expressions(expressions)
+    if report is not None:
+        missing = [expression for expression in normalized if _value_for_expression(report.values, expression) is None]
+        if missing:
+            raise FortranTypeProbeError(
+                "Fortran type probe report is missing required expressions: "
+                + ", ".join(repr(item) for item in missing)
+            )
+        return report
+    return probe_fortran_type_expressions_cached(
+        config,
+        normalized,
+        runner=runner,
+        cache_dir=cache_dir,
+        refresh=refresh,
+    )
+
+
 def evaluate_fortran_type_requirements(
     config: PreprocessingConfig,
     requirements: Iterable[Mapping[str, object]],
     *,
+    report: FortranTypeProbeReport | None = None,
     runner: Sequence[str] | None = None,
+    cache_dir: str | Path | None = None,
+    refresh: bool = False,
 ) -> dict[str, int]:
     """Evaluate collected semantic requirements into compile-time values."""
     requirement_list = list(requirements)
     expressions = fortran_type_probe_expressions(requirement_list)
     if not expressions:
         return {}
-    report = probe_fortran_type_expressions(
+    active_report = _report_for_expressions(
         config,
         expressions,
+        report=report,
         runner=runner,
+        cache_dir=cache_dir,
+        refresh=refresh,
     )
-    return report.to_compile_time_values(requirement_list)
+    return active_report.to_compile_time_values(requirement_list)
+
+
+def evaluate_fortran_type_facts(
+    config: PreprocessingConfig,
+    requirements: Iterable[Mapping[str, object]],
+    *,
+    report: FortranTypeProbeReport | None = None,
+    runner: Sequence[str] | None = None,
+    cache_dir: str | Path | None = None,
+    refresh: bool = False,
+) -> dict[tuple[str, str | None], dict[str, object]]:
+    """Measure storage facts for collected intrinsic Fortran type requirements."""
+    requirement_list = list(requirements)
+    expressions = [str(item.get("expression") or "").strip() for item in requirement_list]
+    expressions = [expression for expression in expressions if expression]
+    if not expressions:
+        return {}
+    active_report = _report_for_expressions(
+        config,
+        expressions,
+        report=report,
+        runner=runner,
+        cache_dir=cache_dir,
+        refresh=refresh,
+    )
+    facts: dict[tuple[str, str | None], dict[str, object]] = {}
+    for item in requirement_list:
+        expression = str(item.get("expression") or "").strip()
+        if not expression:
+            continue
+        value = _value_for_expression(active_report.values, expression)
+        if value is None:  # pragma: no cover - guarded by _report_for_expressions.
+            raise FortranTypeProbeError(f"Fortran type probe report is missing required expression {expression!r}")
+        base_type = str(item.get("base_type") or "").lower()
+        raw_kind = item.get("kind")
+        kind = None if raw_kind is None else str(raw_kind).lower()
+        facts[(base_type, kind)] = {
+            "base_type": base_type,
+            "kind": kind,
+            "bits": value,
+            "expression": expression,
+        }
+    return facts
+
+
+def _report_from_payload(payload: Any, *, source: str) -> FortranTypeProbeReport:
+    if not isinstance(payload, dict):
+        raise FortranTypeProbeError(f"Fortran type probe report {source} must contain a JSON object")
+    values = payload.get("values")
+    recipe = payload.get("recipe")
+    source_text = payload.get("source_text")
+    if not isinstance(values, dict) or not all(
+        isinstance(key, str) and isinstance(value, int) for key, value in values.items()
+    ):
+        raise FortranTypeProbeError(f"Fortran type probe report {source} is missing valid 'values'")
+    if not isinstance(recipe, dict) or not isinstance(recipe.get("compiler"), str):
+        raise FortranTypeProbeError(f"Fortran type probe report {source} is missing a valid 'recipe'")
+    if not isinstance(source_text, str):
+        raise FortranTypeProbeError(f"Fortran type probe report {source} is missing valid 'source_text'")
+    return FortranTypeProbeReport(
+        values=values,
+        recipe=FortranTypeProbeRecipe(
+            compiler=recipe["compiler"],
+            compile_argv=list(recipe.get("compile_argv") or []),
+            run_argv=list(recipe.get("run_argv") or []),
+            expressions=list(recipe.get("expressions") or []),
+            requested_standard=recipe.get("requested_standard"),
+            include_dirs=list(recipe.get("include_dirs") or []),
+            defines=list(recipe.get("defines") or []),
+            undefs=list(recipe.get("undefs") or []),
+            compiler_args=list(recipe.get("compiler_args") or []),
+        ),
+        source_text=source_text,
+    )
+
+
+def _compiler_identity(compiler: str | None) -> dict[str, object]:
+    if compiler is None:
+        return {"command": None}
+    resolved = shutil.which(compiler) or compiler
+    path = Path(resolved).expanduser().resolve()
+    identity: dict[str, object] = {"command": compiler, "path": str(path)}
+    try:
+        stat = path.stat()
+    except OSError:
+        return identity
+    identity.update({"size": stat.st_size, "mtime_ns": stat.st_mtime_ns})
+    return identity
+
+
+def _probe_cache_dir(cache_dir: str | Path | None) -> Path:
+    if cache_dir is not None:
+        return Path(cache_dir)
+    if root := os.getenv("X2PY_CACHE_DIR"):
+        return Path(root) / "fortran_type_probe"
+    if root := os.getenv("XDG_CACHE_HOME"):
+        return Path(root) / "x2py" / "fortran_type_probe"
+    return Path.home() / ".cache" / "x2py" / "fortran_type_probe"
+
+
+def _write_cached_report(path: Path, report: FortranTypeProbeReport) -> None:
+    temporary_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_path.write_text(json.dumps(report.to_dict(), indent=2), encoding="utf-8")
+        os.replace(temporary_path, path)
+    except OSError:
+        # A read-only home/cache directory must not make semantic conversion fail.
+        pass
+    finally:
+        with suppress(OSError):
+            temporary_path.unlink(missing_ok=True)
 
 
 def _normalize_expressions(expressions: Sequence[str]) -> list[str]:
@@ -312,9 +557,18 @@ def _probe_import_lines(expressions: Sequence[str]) -> list[str]:
     env_names = sorted(tokens & _ISO_FORTRAN_ENV_NAMES)
     c_names = sorted(tokens & _ISO_C_BINDING_NAMES)
     if env_names:
-        lines.append(f"  use, intrinsic :: iso_fortran_env, only: {', '.join(env_names)}")
+        lines.extend(_probe_import_statement("iso_fortran_env", env_names))
     if c_names:
-        lines.append(f"  use, intrinsic :: iso_c_binding, only: {', '.join(c_names)}")
+        lines.extend(_probe_import_statement("iso_c_binding", c_names))
+    return lines
+
+
+def _probe_import_statement(module: str, names: Sequence[str]) -> list[str]:
+    single_line = f"  use, intrinsic :: {module}, only: {', '.join(names)}"
+    if len(single_line) <= 120:
+        return [single_line]
+    lines = [f"  use, intrinsic :: {module}, only: &"]
+    lines.extend(f"    {name}{', &' if index < len(names) - 1 else ''}" for index, name in enumerate(names))
     return lines
 
 
@@ -367,13 +621,15 @@ def main(argv: list[str] | None = None) -> int:
         default=[],
         help="Runner command item for cross targets; repeat for arguments.",
     )
+    parser.add_argument("--cache-dir", help="Directory for reusable compiler-derived Fortran type results.")
+    parser.add_argument("--refresh", action="store_true", help="Ignore a reusable Fortran type result and probe again.")
     args = parser.parse_args(argv)
     try:
         for define in args.defines:
             validate_macro_name(define, "--define/-D")
         for undef in args.undefs:
             validate_macro_name(undef, "--undef/-U")
-        report = probe_fortran_type_expressions(
+        report = probe_fortran_type_expressions_cached(
             PreprocessingConfig(
                 mode="compiler",
                 compiler=args.compiler,
@@ -385,6 +641,8 @@ def main(argv: list[str] | None = None) -> int:
             ),
             args.expressions,
             runner=args.runner or None,
+            cache_dir=args.cache_dir,
+            refresh=args.refresh,
         )
     except (PreprocessingError, ValueError) as exc:
         parser.error(str(exc))
@@ -401,7 +659,11 @@ __all__ = (
     "FortranTypeProbeRecipe",
     "FortranTypeProbeReport",
     "build_fortran_type_probe_source",
+    "evaluate_fortran_type_facts",
     "evaluate_fortran_type_requirements",
+    "fortran_type_probe_cache_key",
     "fortran_type_probe_expressions",
+    "load_fortran_type_probe_report",
     "probe_fortran_type_expressions",
+    "probe_fortran_type_expressions_cached",
 )

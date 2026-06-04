@@ -62,10 +62,17 @@ command is equivalent to `python3 -m x2py`.
 
 ## Fortran Walkthrough
 
-This walkthrough uses:
+Input (`tests/data/fortran/general/basic_subroutine.f90`):
 
-```text
-tests/data/fortran/general/basic_subroutine.f90
+<!-- x2py-doc-source: tests/data/fortran/general/basic_subroutine.f90 -->
+```fortran
+module m1
+contains
+subroutine add1(n, x)
+  integer, intent(in) :: n
+  real(kind=8), intent(inout), dimension(n) :: x
+end subroutine add1
+end module m1
 ```
 
 ### 1. Parse The Source
@@ -170,10 +177,19 @@ Readiness treats the edited `.pyi` contract as the source of truth.
 
 ## C Walkthrough
 
-This walkthrough uses:
+Input (`tests/data/c/general/math_api.h`):
 
-```text
-tests/data/c/general/math_api.h
+<!-- x2py-doc-source: tests/data/c/general/math_api.h -->
+```c
+#ifndef X2PY_GENERAL_MATH_API_H
+#define X2PY_GENERAL_MATH_API_H
+
+double norm2(int n, const double x[static 1]);
+void scale(int n, double alpha, double x[static 1]);
+double dot(int n, const double *restrict x, const double *restrict y);
+void fill_identity3(double a[static 3][3]);
+
+#endif
 ```
 
 C inputs require explicit C mode:
@@ -328,9 +344,28 @@ python3 -m x2py include/api.h --language c --parse \
 Use a C compilation database when one is available:
 
 ```bash
+python3 -m x2py.c_type_probe --compiler clang \
+  --compiler-arg=--target=aarch64-linux-gnu \
+  --runner=qemu-aarch64 \
+  > build/aarch64-c-types.json
+
 python3 -m x2py src/api.c --language c --semantics \
-  --compile-commands build/compile_commands.json
+  --compile-commands build/compile_commands.json \
+  --c-type-report build/aarch64-c-types.json
 ```
+
+For normal direct-compiler C semantic, `.pyi`, and readiness stages, x2py
+automatically probes primitive widths and plain `char` signedness using the
+selected compiler and target flags. It caches the result by compiler identity
+and target configuration, so repeated runs do not recompile the probe. Use
+`--refresh-c-type-probe` when a sysroot changes in place. For cross compilers,
+repeat `--c-type-probe-runner=...` for the runner command and arguments.
+
+NumPy types are used as the Python-side dtype mapping, not as the ABI probe:
+NumPy describes the interpreter host and can disagree with a cross compiler or
+selected sysroot. Compilation databases and custom preprocessing templates
+need an explicit reusable `--c-type-report` because they can contain multiple
+target recipes.
 
 For Fortran:
 
@@ -343,10 +378,44 @@ python3 -m x2py src/api.f90 --language fortran --pyi \
   --compiler-arg=-fdefault-real-8
 ```
 
+For direct-compiler Fortran semantic, `.pyi`, and readiness stages, x2py
+resolves compiler-dependent kind expressions and measures the storage of every
+intrinsic type used by the source. This matters for processor-dependent
+numeric kinds and flags such as `-fdefault-real-8` or
+`-fdefault-integer-8`. Expression and storage probes are cached by compiler
+identity and target configuration. Use `--refresh-fortran-type-probe` after a
+sysroot or compiler installation changes in place, and repeat
+`--fortran-type-probe-runner=...` for a cross-target runner.
+
+Compilation databases and custom preprocessing templates need an explicit
+reusable `--fortran-type-report`, for the same reason as C: one project recipe
+can describe multiple target profiles.
+
 Compiler preprocessing preserves a recipe in machine-readable parser output,
 including the selected compiler, arguments, includes, source mappings, and
 diagnostics. See the [examples cookbook](examples.md#compiler-preprocessing)
 for more supported preprocessing modes.
+
+## Inspect Target Datatype Mappings
+
+Generate the native-to-semantic-to-NumPy scalar mapping for the selected
+compiler target:
+
+```bash
+python3 -m x2py.type_mapping_report --language c
+python3 -m x2py.type_mapping_report --language fortran
+```
+
+Pass `--compiler` and repeated `--compiler-arg` options to inspect a different
+compiler target or target-changing flags. Both mapping commands use persistent
+probe caches; `--cache-dir`, `--refresh`, and repeated `--runner` options
+control reuse and cross-target execution. The generated
+[Linux x86_64 C and Fortran examples](semantics.md#generated-linux-x86_64-mapping-example)
+show the complete input facts and resulting NumPy dtype names used by the
+GitHub Actions profile. The Fortran table includes modern kinds and legacy
+spellings. It also shows the important distinction between fixed-width
+`complex*8` and compiler-kind `complex(kind=8)`, and identifies
+`character*N` as length syntax.
 
 ## Edit A Semantic `.pyi`
 

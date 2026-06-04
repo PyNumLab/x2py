@@ -20,6 +20,120 @@ The most useful small, checked examples are:
 | Generated Fortran semantic interface | `tests/pyi/fixtures/general/modern_pyi_example.pyi` |
 | Generated C semantic interface | `tests/pyi/fixtures/c/general/math_api.pyi` |
 
+The core native inputs are included here so the command examples are
+self-contained.
+
+### Basic Fortran Input
+
+<!-- x2py-doc-source: tests/data/fortran/general/basic_subroutine.f90 -->
+```fortran
+module m1
+contains
+subroutine add1(n, x)
+  integer, intent(in) :: n
+  real(kind=8), intent(inout), dimension(n) :: x
+end subroutine add1
+end module m1
+```
+
+### Basic C Input
+
+<!-- x2py-doc-source: tests/data/c/general/math_api.h -->
+```c
+#ifndef X2PY_GENERAL_MATH_API_H
+#define X2PY_GENERAL_MATH_API_H
+
+double norm2(int n, const double x[static 1]);
+void scale(int n, double alpha, double x[static 1]);
+double dot(int n, const double *restrict x, const double *restrict y);
+void fill_identity3(double a[static 3][3]);
+
+#endif
+```
+
+### Rich Fortran Input
+
+<details>
+<summary>Show <code>tests/data/fortran/general/modern_pyi_example.f90</code></summary>
+
+<!-- x2py-doc-source: tests/data/fortran/general/modern_pyi_example.f90 -->
+```fortran
+module modern_math_physics
+  implicit none
+  private
+  public :: particle, vector3, counter, init_particle, kinetic_energy, scale_vector, dot3, fill_identity3, normalize_particle
+
+  integer :: counter
+  real(8) :: hidden_scale
+
+  type :: particle
+     integer :: id
+     real(8) :: mass
+     real(8), dimension(3) :: position
+  end type particle
+
+  type :: vector3
+     real(8), dimension(3) :: values
+  end type vector3
+
+  type :: hidden_state
+     integer :: code
+  end type hidden_state
+
+contains
+
+  subroutine init_particle(p, pid, mass, x, y, z)
+    type(particle), intent(out) :: p
+    integer, intent(in) :: pid
+    real(8), intent(in) :: mass, x, y, z
+    p%id = pid
+    p%mass = mass
+    p%position = [x, y, z]
+  end subroutine init_particle
+
+  function kinetic_energy(p, vx, vy, vz) result(e)
+    type(particle), intent(in) :: p
+    real(8), intent(in) :: vx, vy, vz
+    real(8) :: e
+    e = 0.5d0 * p%mass * (vx*vx + vy*vy + vz*vz)
+  end function kinetic_energy
+
+  subroutine scale_vector(v, alpha)
+    real(8), dimension(:), intent(inout) :: v
+    real(8), intent(in) :: alpha
+    v = alpha * v
+  end subroutine scale_vector
+
+  function dot3(a, b) result(s)
+    real(8), dimension(3), intent(in) :: a, b
+    real(8) :: s
+    s = a(1)*b(1) + a(2)*b(2) + a(3)*b(3)
+  end function dot3
+
+  subroutine fill_identity3(a)
+    real(8), dimension(3,3), intent(out) :: a
+    a = 0.0d0
+    a(1,1) = 1.0d0
+    a(2,2) = 1.0d0
+    a(3,3) = 1.0d0
+  end subroutine fill_identity3
+
+  subroutine normalize_particle(p)
+    type(particle), intent(inout) :: p
+    real(8) :: n
+    n = sqrt(dot3(p%position, p%position))
+    if (n > 0.0d0) p%position = p%position / n
+  end subroutine normalize_particle
+
+  subroutine hidden_proc(x)
+    integer, intent(in) :: x
+  end subroutine hidden_proc
+
+end module modern_math_physics
+```
+
+</details>
+
 ## CLI Stage Examples
 
 ### Parse

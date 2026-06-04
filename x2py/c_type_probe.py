@@ -1,21 +1,25 @@
-"""Compiler-derived ABI facts for common C standard-library types.
+"""Compiler-derived ABI facts for modeled C arithmetic primitives and standard types.
 
 This module deliberately runs a generated C executable instead of hard-coding
-typedef spellings. Names such as ``size_t`` and ``time_t`` are target/compiler
-facts, while ``FILE`` is an opaque library handle for wrapper purposes.
+primitive widths or typedef spellings. Those are target/compiler facts, while
+``FILE`` is an opaque library handle for wrapper purposes.
 """
 
 from __future__ import annotations
 
 import argparse
 from dataclasses import asdict, dataclass
+import hashlib
 import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import tempfile
 from collections.abc import Sequence
+from contextlib import suppress
+from typing import Any
 
 from .preprocessing import PreprocessingConfig, PreprocessingError, validate_macro_name
 
@@ -67,17 +71,37 @@ _UNSIGNED_INTEGER_TYPES = {
     "unsigned long long",
 }
 _REAL_TYPES = {"float", "double", "long double"}
+_COMPLEX_TYPES = {"float _Complex", "double _Complex", "long double _Complex"}
+# Increment when report classification changes without changing the generated C source.
+_PROBE_CACHE_SCHEMA_VERSION = 1
+_PROBE_ENVIRONMENT_VARIABLES = (
+    "COMPILER_PATH",
+    "CPATH",
+    "C_INCLUDE_PATH",
+    "GCC_EXEC_PREFIX",
+    "INCLUDE",
+    "LIB",
+    "LIBRARY_PATH",
+    "MACOSX_DEPLOYMENT_TARGET",
+    "QEMU_LD_PREFIX",
+    "SDKROOT",
+    "SYSROOT",
+)
+_MEMORY_CACHE: dict[str, CStandardTypeProbeReport] = {}
 
 
 def build_c_standard_type_probe_source() -> str:
     """Return the C11 source compiled by :func:`probe_c_standard_types`."""
-    return r"""#include <limits.h>
+    return r"""#include <complex.h>
+#include <float.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <time.h>
 
 #define X2PY_BASE_TYPE(value) _Generic((value), \
+    _Bool: "_Bool", \
     char: "char", \
     signed char: "signed char", \
     unsigned char: "unsigned char", \
@@ -92,6 +116,9 @@ def build_c_standard_type_probe_source() -> str:
     float: "float", \
     double: "double", \
     long double: "long double", \
+    float _Complex: "float _Complex", \
+    double _Complex: "double _Complex", \
+    long double _Complex: "long double _Complex", \
     default: "other")
 
 #define X2PY_PRINT_ARITHMETIC(name, header, type) \
@@ -102,9 +129,61 @@ def build_c_standard_type_probe_source() -> str:
            sizeof(type) * (size_t)CHAR_BIT, \
            _Alignof(type) * (size_t)CHAR_BIT)
 
+#define X2PY_PRINT_CHAR() \
+    printf("\"char\":{\"header\":\"<builtin>\",\"available\":true," \
+           "\"kind\":\"arithmetic\",\"underlying_c_type\":\"char\"," \
+           "\"signed\":%s,\"bits\":%zu,\"alignment_bits\":%zu}", \
+           CHAR_MIN < 0 ? "true" : "false", \
+           sizeof(char) * (size_t)CHAR_BIT, \
+           _Alignof(char) * (size_t)CHAR_BIT)
+
+#define X2PY_PRINT_REAL(name, type, precision, max_exp) \
+    printf("\"" name "\":{\"header\":\"<builtin>\",\"available\":true," \
+           "\"kind\":\"arithmetic\",\"underlying_c_type\":\"%s\"," \
+           "\"bits\":%zu,\"alignment_bits\":%zu,\"precision_bits\":%d," \
+           "\"max_binary_exponent\":%d}", \
+           X2PY_BASE_TYPE((type)0), \
+           sizeof(type) * (size_t)CHAR_BIT, \
+           _Alignof(type) * (size_t)CHAR_BIT, \
+           precision, max_exp)
+
 int main(void) {
     printf("{\"types\":{");
+    X2PY_PRINT_ARITHMETIC("_Bool", "<builtin>", _Bool);
+    printf(",");
+    X2PY_PRINT_CHAR();
+    printf(",");
+    X2PY_PRINT_ARITHMETIC("signed char", "<builtin>", signed char);
+    printf(",");
+    X2PY_PRINT_ARITHMETIC("unsigned char", "<builtin>", unsigned char);
+    printf(",");
+    X2PY_PRINT_ARITHMETIC("short", "<builtin>", short);
+    printf(",");
+    X2PY_PRINT_ARITHMETIC("unsigned short", "<builtin>", unsigned short);
+    printf(",");
     X2PY_PRINT_ARITHMETIC("int", "<builtin>", int);
+    printf(",");
+    X2PY_PRINT_ARITHMETIC("unsigned int", "<builtin>", unsigned int);
+    printf(",");
+    X2PY_PRINT_ARITHMETIC("long", "<builtin>", long);
+    printf(",");
+    X2PY_PRINT_ARITHMETIC("unsigned long", "<builtin>", unsigned long);
+    printf(",");
+    X2PY_PRINT_ARITHMETIC("long long", "<builtin>", long long);
+    printf(",");
+    X2PY_PRINT_ARITHMETIC("unsigned long long", "<builtin>", unsigned long long);
+    printf(",");
+    X2PY_PRINT_REAL("float", float, FLT_MANT_DIG, FLT_MAX_EXP);
+    printf(",");
+    X2PY_PRINT_REAL("double", double, DBL_MANT_DIG, DBL_MAX_EXP);
+    printf(",");
+    X2PY_PRINT_REAL("long double", long double, LDBL_MANT_DIG, LDBL_MAX_EXP);
+    printf(",");
+    X2PY_PRINT_ARITHMETIC("float _Complex", "<builtin>", float _Complex);
+    printf(",");
+    X2PY_PRINT_ARITHMETIC("double _Complex", "<builtin>", double _Complex);
+    printf(",");
+    X2PY_PRINT_ARITHMETIC("long double _Complex", "<builtin>", long double _Complex);
     printf(",");
     X2PY_PRINT_ARITHMETIC("size_t", "stddef.h", size_t);
     printf(",");
@@ -153,9 +232,18 @@ def _semantic_type_facts(types: dict[str, dict[str, object]]) -> None:
         elif underlying in _REAL_TYPES:
             fact["kind"] = "real"
             fact["semantic_category"] = "real"
+        elif underlying in _COMPLEX_TYPES:
+            fact["kind"] = "complex"
+            fact["semantic_category"] = "complex"
+        elif underlying == "_Bool":
+            fact["kind"] = "bool"
+            fact["semantic_category"] = "bool"
         elif underlying == "char":
             fact["kind"] = "integer"
-            fact["semantic_category"] = "integer_implementation_signedness"
+            if isinstance(fact.get("signed"), bool):
+                fact["semantic_category"] = "signed_integer" if fact["signed"] else "unsigned_integer"
+            else:
+                fact["semantic_category"] = "integer_implementation_signedness"
         else:
             fact["semantic_category"] = "implementation_defined"
 
@@ -171,13 +259,7 @@ def probe_c_standard_types(
     appropriate for native builds. Cross-compiled targets must provide a
     runner such as an emulator; the command is recorded in the result.
     """
-    if not config.compiler:
-        raise CStandardTypeProbeError("C standard type probing requires an exact compiler executable")
-    if config.compile_commands:
-        raise CStandardTypeProbeError(
-            "C standard type probing does not consume compile_commands directly; "
-            "pass the selected target/include/compiler flags explicitly"
-        )
+    _validate_probe_config(config)
 
     with tempfile.TemporaryDirectory(prefix="x2py-c-type-probe-") as temp_dir:
         source_path = Path(temp_dir) / "c_standard_type_probe.c"
@@ -250,10 +332,161 @@ def probe_c_standard_types(
     )
 
 
+def _validate_probe_config(config: PreprocessingConfig) -> None:
+    if not config.compiler:
+        raise CStandardTypeProbeError("C standard type probing requires an exact compiler executable")
+    if config.compile_commands:
+        raise CStandardTypeProbeError(
+            "C standard type probing does not consume compile_commands directly; "
+            "pass the selected target/include/compiler flags explicitly"
+        )
+    if config.command_template:
+        raise CStandardTypeProbeError(
+            "C standard type probing does not consume custom preprocessing templates; "
+            "pass the selected compiler and target flags explicitly"
+        )
+
+
+def load_c_standard_type_probe_report(path: str | Path) -> CStandardTypeProbeReport:
+    """Load and validate a previously generated C ABI probe report."""
+    report_path = Path(path)
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise CStandardTypeProbeError(f"failed to read C type probe report {report_path}: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise CStandardTypeProbeError(f"C type probe report {report_path} contains invalid JSON: {exc}") from exc
+    return _report_from_payload(payload, source=str(report_path))
+
+
+def c_standard_type_probe_cache_key(
+    config: PreprocessingConfig,
+    *,
+    runner: Sequence[str] | None = None,
+) -> str:
+    """Return the cache key for one exact compiler target and probe schema."""
+    source_digest = hashlib.sha256(build_c_standard_type_probe_source().encode()).hexdigest()
+    payload = {
+        "schema_version": _PROBE_CACHE_SCHEMA_VERSION,
+        "source_digest": source_digest,
+        "compiler": _compiler_identity(config.compiler),
+        "cwd": str(Path.cwd().resolve()),
+        "requested_standard": config.std,
+        "include_dirs": list(config.include_dirs),
+        "defines": list(config.defines),
+        "undefs": list(config.undefs),
+        "compiler_args": list(config.compiler_args),
+        "runner": {
+            "argv": list(runner or ()),
+            "executable": _compiler_identity(runner[0]) if runner else None,
+        },
+        "environment": {name: os.environ.get(name) for name in _PROBE_ENVIRONMENT_VARIABLES},
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def probe_c_standard_types_cached(
+    config: PreprocessingConfig,
+    *,
+    runner: Sequence[str] | None = None,
+    cache_dir: str | Path | None = None,
+    refresh: bool = False,
+) -> CStandardTypeProbeReport:
+    """Return compiler ABI facts, reusing memory and persistent cache entries."""
+    _validate_probe_config(config)
+    cache_key = c_standard_type_probe_cache_key(config, runner=runner)
+    if not refresh and cache_key in _MEMORY_CACHE:
+        return _MEMORY_CACHE[cache_key]
+
+    cache_path = _probe_cache_dir(cache_dir) / f"{cache_key}.json"
+    if not refresh:
+        try:
+            report = load_c_standard_type_probe_report(cache_path)
+        except CStandardTypeProbeError:
+            pass
+        else:
+            _MEMORY_CACHE[cache_key] = report
+            return report
+
+    report = probe_c_standard_types(config, runner=runner)
+    _MEMORY_CACHE[cache_key] = report
+    _write_cached_report(cache_path, report)
+    return report
+
+
+def _report_from_payload(payload: Any, *, source: str) -> CStandardTypeProbeReport:
+    if not isinstance(payload, dict):
+        raise CStandardTypeProbeError(f"C type probe report {source} must contain a JSON object")
+    types = payload.get("types")
+    recipe = payload.get("recipe")
+    source_text = payload.get("source_text")
+    if not isinstance(types, dict) or not all(
+        isinstance(name, str) and isinstance(fact, dict) for name, fact in types.items()
+    ):
+        raise CStandardTypeProbeError(f"C type probe report {source} is missing valid 'types'")
+    if not isinstance(recipe, dict) or not isinstance(recipe.get("compiler"), str):
+        raise CStandardTypeProbeError(f"C type probe report {source} is missing a valid 'recipe'")
+    if not isinstance(source_text, str):
+        raise CStandardTypeProbeError(f"C type probe report {source} is missing valid 'source_text'")
+    return CStandardTypeProbeReport(
+        types=types,
+        recipe=CStandardTypeProbeRecipe(
+            compiler=recipe["compiler"],
+            compile_argv=list(recipe.get("compile_argv") or []),
+            run_argv=list(recipe.get("run_argv") or []),
+            probe_standard=str(recipe.get("probe_standard") or "c11"),
+            requested_standard=recipe.get("requested_standard"),
+            include_dirs=list(recipe.get("include_dirs") or []),
+            defines=list(recipe.get("defines") or []),
+            undefs=list(recipe.get("undefs") or []),
+            compiler_args=list(recipe.get("compiler_args") or []),
+        ),
+        source_text=source_text,
+    )
+
+
+def _compiler_identity(compiler: str | None) -> dict[str, object]:
+    if compiler is None:
+        return {"command": None}
+    resolved = shutil.which(compiler) or compiler
+    path = Path(resolved).expanduser().resolve()
+    identity: dict[str, object] = {"command": compiler, "path": str(path)}
+    try:
+        stat = path.stat()
+    except OSError:
+        return identity
+    identity.update({"size": stat.st_size, "mtime_ns": stat.st_mtime_ns})
+    return identity
+
+
+def _probe_cache_dir(cache_dir: str | Path | None) -> Path:
+    if cache_dir is not None:
+        return Path(cache_dir)
+    if root := os.getenv("X2PY_CACHE_DIR"):
+        return Path(root) / "c_type_probe"
+    if root := os.getenv("XDG_CACHE_HOME"):
+        return Path(root) / "x2py" / "c_type_probe"
+    return Path.home() / ".cache" / "x2py" / "c_type_probe"
+
+
+def _write_cached_report(path: Path, report: CStandardTypeProbeReport) -> None:
+    temporary_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_path.write_text(json.dumps(report.to_dict(), indent=2), encoding="utf-8")
+        os.replace(temporary_path, path)
+    except OSError:
+        # A read-only home/cache directory must not make semantic conversion fail.
+        pass
+    finally:
+        with suppress(OSError):
+            temporary_path.unlink(missing_ok=True)
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run a compiler-derived C standard type probe and write JSON."""
     parser = argparse.ArgumentParser(
-        description="Probe C standard-library typedef ABI facts through an exact compiler."
+        description="Probe modeled C arithmetic-primitive and standard-type ABI facts through an exact compiler."
     )
     parser.add_argument("--compiler", required=True, help="Exact native or cross C compiler executable.")
     parser.add_argument("-I", "--include-dir", dest="include_dirs", action="append", default=[])
@@ -268,13 +501,15 @@ def main(argv: list[str] | None = None) -> int:
         default=[],
         help="Runner command item for cross targets; repeat for arguments.",
     )
+    parser.add_argument("--cache-dir", help="Directory for reusable compiler ABI probe results.")
+    parser.add_argument("--refresh", action="store_true", help="Ignore a reusable ABI probe result and probe again.")
     args = parser.parse_args(argv)
     try:
         for define in args.defines:
             validate_macro_name(define, "--define/-D")
         for undef in args.undefs:
             validate_macro_name(undef, "--undef/-U")
-        report = probe_c_standard_types(
+        report = probe_c_standard_types_cached(
             PreprocessingConfig(
                 mode="compiler",
                 compiler=args.compiler,
@@ -285,6 +520,8 @@ def main(argv: list[str] | None = None) -> int:
                 compiler_args=args.compiler_args,
             ),
             runner=args.runner or None,
+            cache_dir=args.cache_dir,
+            refresh=args.refresh,
         )
     except (PreprocessingError, ValueError) as exc:
         parser.error(str(exc))
@@ -301,5 +538,8 @@ __all__ = (
     "CStandardTypeProbeRecipe",
     "CStandardTypeProbeReport",
     "build_c_standard_type_probe_source",
+    "c_standard_type_probe_cache_key",
+    "load_c_standard_type_probe_report",
     "probe_c_standard_types",
+    "probe_c_standard_types_cached",
 )

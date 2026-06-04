@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
+import platform
 from pathlib import Path
 import re
 import shlex
@@ -15,8 +16,9 @@ import pytest
 
 ROOT = Path(__file__).parents[2]
 DOC_PATHS = [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]
-TEST_MARKER = re.compile(r"^\s*<!--\s*x2py-doc-test:\s*(run|exact)\s*-->\s*$")
+TEST_MARKER = re.compile(r"^\s*<!--\s*x2py-doc-test:\s*(run|exact)(?:\s+([a-z0-9_-]+))?\s*-->\s*$")
 OUTPUT_MARKER = re.compile(r"^\s*<!--\s*x2py-doc-test-output\s*-->\s*$")
+SOURCE_MARKER = re.compile(r"^\s*<!--\s*x2py-doc-source:\s*(.+?)\s*-->\s*$")
 FENCE_MARKER = re.compile(r"^\s*(`{3,}|~{3,})")
 SHELL_OPERATORS = {"&&", "||", ";", "|", ">", ">>", "<", "2>", "2>>"}
 DISALLOWED_OPTIONS = {
@@ -36,10 +38,29 @@ class DocumentationExample:
     language: str
     command: str
     expected_output: str | None = None
+    platform: str | None = None
 
     @property
     def test_id(self) -> str:
         return f"{self.path.relative_to(ROOT)}:{self.line}"
+
+
+@dataclass(frozen=True)
+class DocumentedSource:
+    path: Path
+    line: int
+    source_path: Path
+    source_text: str
+
+    @property
+    def test_id(self) -> str:
+        return f"{self.path.relative_to(ROOT)}:{self.line}"
+
+
+def _platform_id() -> str:
+    machine = platform.machine().lower()
+    machine = {"amd64": "x86_64", "arm64": "aarch64"}.get(machine, machine)
+    return f"{platform.system().lower()}-{machine}"
 
 
 def _next_nonempty_line(lines: list[str], start: int) -> int:
@@ -72,12 +93,27 @@ def _logical_command(command_block: str, *, location: str) -> str:
     return command
 
 
-def _examples_from_path(path: Path) -> list[DocumentationExample]:
+def _documented_content_from_path(path: Path) -> tuple[list[DocumentationExample], list[DocumentedSource]]:
     lines = path.read_text(encoding="utf-8").splitlines()
     examples: list[DocumentationExample] = []
+    sources: list[DocumentedSource] = []
     index = 0
 
     while index < len(lines):
+        source_marker = SOURCE_MARKER.match(lines[index])
+        if source_marker is not None:
+            marker_line = index + 1
+            source_text, index, _language = _fenced_block(lines, index + 1)
+            sources.append(
+                DocumentedSource(
+                    path=path,
+                    line=marker_line,
+                    source_path=ROOT / source_marker.group(1),
+                    source_text=source_text,
+                )
+            )
+            continue
+
         marker = TEST_MARKER.match(lines[index])
         if marker is None:
             if OUTPUT_MARKER.match(lines[index]):
@@ -125,13 +161,16 @@ def _examples_from_path(path: Path) -> list[DocumentationExample]:
                 language=language,
                 command=command,
                 expected_output=expected_output,
+                platform=marker.group(2),
             )
         )
 
-    return examples
+    return examples, sources
 
 
-DOCUMENTATION_EXAMPLES = [example for path in DOC_PATHS for example in _examples_from_path(path)]
+DOCUMENTATION_CONTENT = [_documented_content_from_path(path) for path in DOC_PATHS]
+DOCUMENTATION_EXAMPLES = [example for examples, _sources in DOCUMENTATION_CONTENT for example in examples]
+DOCUMENTED_SOURCES = [source for _examples, sources in DOCUMENTATION_CONTENT for source in sources]
 
 
 def _command_argv(example: DocumentationExample) -> list[str]:
@@ -139,8 +178,10 @@ def _command_argv(example: DocumentationExample) -> list[str]:
         return [sys.executable, "-c", example.command]
 
     argv = shlex.split(example.command)
-    if not argv or argv[0] not in {"python", "python3"} or argv[1:3] != ["-m", "x2py"]:
-        raise AssertionError(f"{example.test_id}: only 'python[3] -m x2py' commands are supported")
+    allowed_modules = {("python", "-m", "x2py"), ("python", "-m", "x2py.type_mapping_report")}
+    normalized_command = ("python", *argv[1:3]) if argv and argv[0] in {"python", "python3"} else ()
+    if normalized_command not in allowed_modules:
+        raise AssertionError(f"{example.test_id}: unsupported documentation command")
     if any(argument in SHELL_OPERATORS for argument in argv):
         raise AssertionError(f"{example.test_id}: shell operators are not supported")
     if any(
@@ -154,6 +195,13 @@ def _command_argv(example: DocumentationExample) -> list[str]:
 def test_documentation_has_automatically_verified_examples():
     assert DOCUMENTATION_EXAMPLES, "mark at least one Markdown example with x2py-doc-test"
     assert any(example.mode == "exact" for example in DOCUMENTATION_EXAMPLES)
+    assert DOCUMENTED_SOURCES, "mark displayed fixture inputs with x2py-doc-source"
+
+
+@pytest.mark.parametrize("source", DOCUMENTED_SOURCES, ids=lambda source: source.test_id)
+def test_documented_source_input(source: DocumentedSource):
+    assert source.source_path.is_file(), f"{source.test_id}: documented source does not exist: {source.source_path}"
+    assert source.source_text.rstrip("\n") == source.source_path.read_text(encoding="utf-8").rstrip("\n")
 
 
 @pytest.mark.parametrize("path", DOC_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
@@ -170,6 +218,8 @@ def test_documented_expected_output_labels_are_automatically_verified(path: Path
 
 @pytest.mark.parametrize("example", DOCUMENTATION_EXAMPLES, ids=lambda example: example.test_id)
 def test_documentation_example(example: DocumentationExample):
+    if example.platform is not None and example.platform != _platform_id():
+        pytest.skip(f"example targets {example.platform}, running on {_platform_id()}")
     env = os.environ.copy()
     env["PYTHONPATH"] = os.pathsep.join(filter(None, [str(ROOT), env.get("PYTHONPATH")]))
     result = subprocess.run(

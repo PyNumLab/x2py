@@ -96,7 +96,8 @@ slicer validation.
 
 _REGEX: dict[str, re.Pattern[str]] = {
     "type": re.compile(
-        r"^(integer|real|complex|logical|character|double\s+precision)\s*(\([^)]*\))?\s*(.*)$", re.IGNORECASE
+        r"^(integer|real|complex|logical|character|double\s+(?:precision|complex))\s*(\([^)]*\))?\s*(.*)$",
+        re.IGNORECASE,
     ),
     "char_star": re.compile(r"^character\s*\*\s*(?P<len>\([^)]*\)|\*|[A-Za-z_]\w*|\d+)\s*(?P<rest>.*)$", re.IGNORECASE),
     "procedure": re.compile(
@@ -2250,6 +2251,7 @@ class FortranParser:
             )
         if parsed_prefix:
             result.base_type, result.kind = parsed_prefix
+            self._apply_type_spelling_metadata(result, type_prefix)
 
         sig = FortranProcedureSignature(
             name=m.group("name"),
@@ -2442,10 +2444,14 @@ class FortranParser:
     def _proc_scope_set_declared_local_type(self, proc_state: dict, name: str, meta: dict) -> None:
         """Store type metadata for a declared local symbol."""
         key = self._scope_key(name)
-        proc_state["declared_local_types"][key] = {
+        declared_type = {
             "base_type": meta["base_type"],
             "kind": meta["kind"],
         }
+        for metadata_key in ("target_kind_expression", "character_length_syntax", "declared_storage_bits"):
+            if metadata_key in meta:
+                declared_type[metadata_key] = meta[metadata_key]
+        proc_state["declared_local_types"][key] = declared_type
 
     def _proc_scope_add_local_parameter(
         self,
@@ -2998,23 +3004,27 @@ class FortranParser:
             if kind.startswith("(") and kind.endswith(")"):
                 kind = kind[1:-1].strip()
             trailing = (char_star.group("rest") or "").strip().lstrip(", ")
-            return self._new_decl_meta("character", kind), split_csv(trailing)
+            meta = self._new_decl_meta("character", kind)
+            meta["character_length_syntax"] = True
+            return meta, split_csv(trailing)
         if star_kind:
             base, kind = star_kind
             tail = self._strip_legacy_star_kind_prefix(left)
             attrs = split_csv(tail.lstrip(", ")) if tail.startswith(",") else []
-            return self._new_decl_meta(base.lower(), kind), attrs
+            meta = self._new_decl_meta(base.lower(), kind)
+            if base.lower() == "character":
+                meta["character_length_syntax"] = True
+            else:
+                meta["declared_storage_bits"] = int(kind) * 8
+            return meta, attrs
 
         intrinsic = self._split_intrinsic_type_spec(left)
         derived = _REGEX["type_field"].match(left)
         class_derived = _REGEX["class_field"].match(left)
         if intrinsic:
             base, type_spec, tail = intrinsic
-            if base == "double precision":
-                base = "real"
-            return self._new_decl_meta(base, extract_kind_from_type_spec(base, type_spec)), split_csv(
-                tail.strip().lstrip(", ")
-            )
+            meta = self._intrinsic_decl_meta(base, type_spec)
+            return meta, split_csv(tail.strip().lstrip(", "))
         if derived or class_derived:
             decl = derived or class_derived
             return self._new_decl_meta("derived", decl.group("dtype")), split_csv(
@@ -3158,6 +3168,44 @@ class FortranParser:
         }
 
     @staticmethod
+    def _intrinsic_decl_meta(base_type: str, type_spec: str) -> dict:
+        """Normalize one intrinsic spelling while retaining target-only facts."""
+        if base_type in {"double precision", "double complex"}:
+            normalized = "real" if base_type == "double precision" else "complex"
+            meta = FortranParser._new_decl_meta(normalized, None)
+            meta["target_kind_expression"] = "kind(1.0d0)"
+            return meta
+
+        meta = FortranParser._new_decl_meta(base_type, extract_kind_from_type_spec(base_type, type_spec))
+        if base_type == "character" and type_spec and re.search(r"\bkind\s*=", type_spec, re.IGNORECASE) is None:
+            meta["character_length_syntax"] = True
+        return meta
+
+    @staticmethod
+    def _apply_type_spelling_metadata(var: FortranVariable, spelling: str) -> None:
+        """Attach target-only facts from a standalone type prefix."""
+        star_kind = FortranParser._find_legacy_star_kind(spelling)
+        if star_kind is not None:
+            base_type, width = star_kind
+            if base_type == "character":
+                var._character_length_syntax = True
+            else:
+                var._declared_storage_bits = int(width) * 8
+            return
+        if _REGEX["char_star"].match(spelling):
+            var._character_length_syntax = True
+            return
+
+        intrinsic = FortranParser._split_intrinsic_type_spec(spelling)
+        if intrinsic is None:
+            return
+        base_type, type_spec, _tail = intrinsic
+        if base_type in {"double precision", "double complex"}:
+            var._target_kind_expression = "kind(1.0d0)"
+        elif base_type == "character" and type_spec and re.search(r"\bkind\s*=", type_spec, re.IGNORECASE) is None:
+            var._character_length_syntax = True
+
+    @staticmethod
     def _apply_decl_attrs(meta: dict, attrs: list[str], *, include_intent: bool = False) -> None:
         """Merge declaration attributes into normalized metadata."""
         for a in attrs:
@@ -3230,6 +3278,7 @@ class FortranParser:
         arg.pointer = meta["pointer"]
         arg.contiguous = meta["contiguous"]
         arg.is_parameter = meta["parameter"]
+        FortranParser._apply_internal_type_metadata(arg, meta)
         if shape:
             arg.shape = shape
             arg.rank = len(shape)
@@ -3237,6 +3286,16 @@ class FortranParser:
             arg.shape = list(meta["shape"])
             arg.rank = meta["rank"]
         arg.lbound, arg.ubound = FortranParser._extract_bounds(arg.shape)
+
+    @staticmethod
+    def _apply_internal_type_metadata(arg: FortranVariable, meta: dict) -> None:
+        """Apply compiler-relevant facts that stay outside serialized models."""
+        if meta.get("target_kind_expression"):
+            arg._target_kind_expression = meta["target_kind_expression"]
+        if meta.get("character_length_syntax"):
+            arg._character_length_syntax = True
+        if meta.get("declared_storage_bits") is not None:
+            arg._declared_storage_bits = int(meta["declared_storage_bits"])
 
     @staticmethod
     def _split_dim_bounds(dim: str) -> tuple[str | None, str | None]:
@@ -3545,6 +3604,7 @@ class FortranParser:
                 continue
             arg.base_type = inferred.get("base_type", arg.base_type)
             arg.kind = inferred.get("kind", arg.kind)
+            self._apply_internal_type_metadata(arg, inferred)
 
         if implicit_none and not sig.in_interface:
             self._validate_all_args_declared(sig, filename, explicit_result=bool(state.get("explicit_result", False)))
@@ -3564,6 +3624,7 @@ class FortranParser:
                 value_type="expression",
                 is_parameter=True,
             )
+            self._apply_internal_type_metadata(var, local_decl)
             var.symbolic_value = value
             sig.variables[name.lower()] = var
         if sig.kind == "function" and sig.result and sig.result.base_type == "unknown":
@@ -4171,7 +4232,7 @@ class FortranParser:
     def _split_intrinsic_type_spec(text: str) -> tuple[str, str, str] | None:
         """Split an intrinsic declaration prefix into base, parenthesized spec, and tail."""
         match = re.match(
-            r"^(integer|real|complex|logical|character|double\s+precision)\b(?P<rest>.*)$",
+            r"^(integer|real|complex|logical|character|double\s+(?:precision|complex))\b(?P<rest>.*)$",
             text.strip(),
             re.IGNORECASE,
         )
@@ -4273,6 +4334,8 @@ class FortranParser:
                 return None
             if base == "double precision":
                 base = "real"
+            elif base == "double complex":
+                base = "complex"
             kind = extract_kind_from_type_spec(base, type_spec)
             if kind is None and type_spec and base != "character":
                 kind = type_spec[1:-1].strip()

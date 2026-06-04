@@ -113,9 +113,9 @@
             {
               "name": "same_name",
               "semantic_type": {
-                "name": "Float64",
+                "name": "Float32",
                 "rank": 0,
-                "dtype": "Float64",
+                "dtype": "Float32",
                 "shape": [],
                 "constraints": [],
                 "coercions": [],
@@ -422,9 +422,9 @@
             {
               "name": "same_name",
               "semantic_type": {
-                "name": "Float64",
+                "name": "Float32",
                 "rank": 0,
-                "dtype": "Float64",
+                "dtype": "Float32",
                 "shape": [],
                 "constraints": [],
                 "coercions": [],
@@ -596,9 +596,9 @@
             }
           ],
           "return_type": {
-            "name": "Complex128",
+            "name": "Complex64",
             "rank": 0,
-            "dtype": "Complex128",
+            "dtype": "Complex64",
             "shape": [],
             "constraints": [],
             "coercions": [],
@@ -662,9 +662,9 @@
             {
               "name": "same_name",
               "semantic_type": {
-                "name": "Float64",
+                "name": "Float32",
                 "rank": 0,
-                "dtype": "Float64",
+                "dtype": "Float32",
                 "shape": [],
                 "constraints": [],
                 "coercions": [],
@@ -1082,9 +1082,9 @@
         {
           "name": "same_name_r",
           "semantic_type": {
-            "name": "Float64",
+            "name": "Float32",
             "rank": 0,
-            "dtype": "Float64",
+            "dtype": "Float32",
             "shape": [],
             "constraints": [],
             "coercions": [],
@@ -1208,9 +1208,9 @@
         {
           "name": "same_name_c",
           "semantic_type": {
-            "name": "Complex128",
+            "name": "Complex64",
             "rank": 0,
-            "dtype": "Complex128",
+            "dtype": "Complex64",
             "shape": [],
             "constraints": [],
             "coercions": [],

@@ -244,7 +244,7 @@ def test_cli_c_semantics_json_stdout_for_header(tmp_path: Path):
     argument_type = semantic_modules[0]["functions"][0]["arguments"][0]["semantic_type"]
     assert argument_type["name"] == "Int"
     assert argument_type["dtype"] == "Int32"
-    assert argument_type["metadata"]["c_type_fact_source"] == "fallback"
+    assert argument_type["metadata"]["c_type_fact_source"] == "compiler_probe"
 
 
 def test_cli_c_wrap_readiness_human_output_for_header(tmp_path: Path):
