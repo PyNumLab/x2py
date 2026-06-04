@@ -1,12 +1,14 @@
 # Tutorial
 
-This tutorial walks through the supported x2py pipeline from native source to
-semantic readiness. The commands use version-controlled fixtures so they can be
-run from the repository root.
+This tutorial is the main user guide for the supported x2py pipeline from
+native source to semantic readiness. The commands use version-controlled
+fixtures so they can be run from the repository root.
 
-For more task-specific commands and Python snippets, use the
-[examples cookbook](examples.md). For the complete semantic `.pyi` contract,
-use the [semantic reference](semantics.md).
+For additional copy-paste commands and Python snippets, continue to the
+[examples cookbook](examples.md). For detailed user-facing contracts, use the
+[semantic `.pyi` reference](semantics.md) and
+[diagnostic code registry](diagnostic_codes.md). Implementation and parser
+maintenance material starts in the [developer guide](developper_guide.md).
 
 ## Current Scope
 
@@ -255,8 +257,9 @@ File: tests/data/c/general/math_api.h
 ```
 
 The C frontend supports wrapper-oriented declaration and signature extraction.
-It is not a C++ frontend or a full compiler frontend. See the
-[C parser reference](c_parser.md) for the maintained supported subset.
+It is not a C++ frontend or a full compiler frontend. The
+[supported boundaries](#supported-boundaries) below summarize the user-facing
+scope.
 
 ## Choose A Stage
 
@@ -473,16 +476,14 @@ Do not assume current support for:
 - generated or compiled runtime wrappers;
 - execution of `@native_call` projections.
 
-The maintained inventories are the
-[Fortran parser reference](fortran_parser.md),
-[C parser reference](c_parser.md), and
-[semantic reference](semantics.md).
+The [semantic reference](semantics.md) is the maintained user-facing contract.
+Implementation inventories and parser-maintenance references are linked from
+the [developer guide](developper_guide.md#references).
 
 ## Continue Reading
 
 - [Verified examples cookbook](examples.md)
 - [Semantic IR and `.pyi` reference](semantics.md)
 - [Diagnostic code registry](diagnostic_codes.md)
-- [Fortran parser reference](fortran_parser.md)
-- [C parser reference](c_parser.md)
-- [Developer guide](developper_guide.md)
+- [Developer guide](developper_guide.md): implementation, parser references,
+  tests, and maintenance workflows

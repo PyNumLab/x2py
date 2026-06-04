@@ -616,7 +616,5 @@ generate a runtime wrapper for the variadic contract.
 
 - [Tutorial](tutorial.md)
 - [Semantic IR and `.pyi` reference](semantics.md)
-- [Fortran parser reference](fortran_parser.md)
-- [C parser reference](c_parser.md)
 - [Diagnostic code registry](diagnostic_codes.md)
-- [Developer guide](developper_guide.md)
+- [Developer guide](developper_guide.md): implementation and parser references

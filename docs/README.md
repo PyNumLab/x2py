@@ -7,16 +7,15 @@ Start with:
 - [Verified examples cookbook](examples.md): copy-paste CLI commands, compiler
   preprocessing recipes, Python API snippets, and blocker examples.
 - [Developer guide](developper_guide.md): implementation ownership, support
-  evidence rules, focused tests, fixture generators, and change workflows.
+  evidence rules, parser references, focused tests, fixture generators, and
+  change workflows.
 
 The repository [`README.md`](../README.md) remains the user-facing project
 overview. Contribution and pull-request requirements remain in
 [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
-## Current Contract References
+## User Contract References
 
-- [C parser reference](c_parser.md)
-- [Fortran parser reference](fortran_parser.md)
 - [Semantic IR and `.pyi` reference](semantics.md)
 - [Diagnostic code registry](diagnostic_codes.md)
 
@@ -27,7 +26,9 @@ support claims.
 
 ## Maintainer References
 
-- [Developer guide](developper_guide.md)
+- [Developer guide](developper_guide.md): maintainer entry point
+- [C parser reference](c_parser.md)
+- [Fortran parser reference](fortran_parser.md)
 - [Quality assurance](quality.md)
 
 ## Design Documents

@@ -5,8 +5,9 @@ implementation and tests, then gives focused change and verification
 workflows.
 
 Use the [tutorial](tutorial.md) and [examples cookbook](examples.md) to inspect
-the public workflows before changing them. Use the parser and semantic
-references for the detailed maintained contracts.
+the public workflows before changing them. This guide is the maintainer entry
+point for the C and Fortran parser references, implementation ownership, and
+the detailed maintained contracts.
 
 ## Start Here
 
@@ -60,8 +61,8 @@ Use these documentation roles consistently:
 | --- | --- |
 | [tutorial.md](tutorial.md) | Main supported user workflow and boundaries |
 | [examples.md](examples.md) | Copy-paste commands and Python API recipes |
-| [c_parser.md](c_parser.md) | Maintained C frontend support inventory |
-| [fortran_parser.md](fortran_parser.md) | Maintained Fortran frontend support inventory |
+| [c_parser.md](c_parser.md) | Maintainer inventory for the C frontend |
+| [fortran_parser.md](fortran_parser.md) | Maintainer inventory for the Fortran frontend |
 | [semantics.md](semantics.md) | Accepted semantic IR and `.pyi` contract |
 | [wrapper_design_notes.md](wrapper_design_notes.md) | Clearly deferred wrapper policy, not current runtime support |
 
