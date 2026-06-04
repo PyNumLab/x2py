@@ -52,6 +52,7 @@ from c_parser.models import (
 )
 from semantics.c2ir import (
     CToIRConverter,
+    c_enum_to_semantic_enum,
     c_file_to_semantic_module,
     c_file_to_semantic_modules,
     c_function_to_semantic_function,
@@ -64,11 +65,13 @@ from semantics.c2ir import (
 from semantics.models import (
     SemanticArgument,
     SemanticClass,
+    SemanticEnum,
     SemanticModule,
     SemanticOrigin,
     SemanticStorageContract,
     SemanticType,
 )
+from semantics.pyi_parser import parse_pyi_text
 from semantics.readiness import assess_semantic_wrap_readiness
 from semantics.pyi_printer import emit_module, emit_module_stubs
 
@@ -122,11 +125,13 @@ def test_c2ir_converts_scalar_function_signatures_and_preserves_native_order():
 
     assert module.name == "api"
     assert [arg.name for arg in add.arguments] == ["a", "b"]
-    assert [arg.semantic_type.name for arg in add.arguments] == ["Int32", "Int32"]
+    assert [arg.semantic_type.name for arg in add.arguments] == ["Int", "Int"]
+    assert [arg.semantic_type.dtype for arg in add.arguments] == ["Int32", "Int32"]
     assert [arg.metadata for arg in add.arguments] == [{"native_position": 0}, {"native_position": 1}]
     assert add.native_name == "add"
     assert add.visibility == "public"
-    assert add.return_type.name == "Int32"
+    assert add.return_type.name == "Int"
+    assert add.return_type.dtype == "Int32"
     assert [mapping.native_position for mapping in add.projection] == [0, 1]
     assert scale.return_type.name == "Float64"
     assert scale.arguments[0].semantic_type.metadata == {}
@@ -587,29 +592,23 @@ enum status { STATUS_OK = 0, STATUS_WARN, STATUS_ERROR = 10 };
         source_kind="macro",
     )
     status_ok = constants["STATUS_OK"]
-    assert asdict(status_ok.semantic_type) == {
-        "name": "Int32",
-        "rank": 0,
-        "dtype": "Int32",
-        "shape": [],
-        "constraints": [{"name": "Constant", "arguments": []}],
-        "coercions": [],
-        "ownership": {"ownership": "borrowed", "mutable": False, "aliasing": True},
-        "metadata": {"c_enum": "enum status"},
-        "storage": None,
-        "origin": _c_origin(
-            native_name="STATUS_OK",
-            native_scope="enum status",
-            source_kind="enum_constant",
-            source_type="enum",
-            source_location={
-                "filename": "constants.h",
-                "line": 2,
-                "column": 1,
-                "source_line": "enum status { STATUS_OK = 0, STATUS_WARN, STATUS_ERROR = 10 };",
-            },
-        ),
+    enum = module.enums[0]
+    assert isinstance(enum, SemanticEnum)
+    assert enum.name == "status"
+    assert enum.open is True
+    assert enum.metadata == {
+        "c_kind": "enum",
+        "c_open": True,
+        "c_underlying_type_assumption": "int",
     }
+    assert enum.underlying_type.name == "Int"
+    assert enum.underlying_type.dtype == "Int32"
+    assert [enumerator.name for enumerator in enum.enumerators] == ["STATUS_OK", "STATUS_WARN", "STATUS_ERROR"]
+    assert status_ok.semantic_type.name == "status"
+    assert status_ok.semantic_type.dtype == "Int32"
+    assert status_ok.semantic_type.metadata["semantic_enum"] == "status"
+    assert status_ok.semantic_type.metadata["c_underlying_type"] == "Int"
+    assert status_ok.semantic_type.coercions[0].source_type == "Int"
     assert asdict(status_ok.origin) == _c_origin(
         native_name="STATUS_OK",
         native_scope="enum status",
@@ -620,6 +619,77 @@ enum status { STATUS_OK = 0, STATUS_WARN, STATUS_ERROR = 10 };
             "column": 1,
             "source_line": "enum status { STATUS_OK = 0, STATUS_WARN, STATUS_ERROR = 10 };",
         },
+    )
+
+
+def test_c2ir_names_anonymous_typedef_enums_and_keeps_enumerators_unscoped():
+    source = "typedef enum { FLAG_NONE = 0, FLAG_READ = 1 } flag_t; flag_t get_flags(void);"
+    parsed = parse_c_file(source, filename="flags.h")
+
+    module = c_file_to_semantic_module(parsed)
+    project_module = c_project_to_semantic_module(parse_c_project({"flags.h": source}), name="flags")
+
+    assert [enum.name for enum in module.enums] == ["flag_t"]
+    assert [enum.name for enum in project_module.enums] == ["flag_t"]
+    assert [variable.name for variable in module.variables] == ["FLAG_NONE", "FLAG_READ"]
+    assert [variable.name for variable in project_module.variables] == ["FLAG_NONE", "FLAG_READ"]
+    assert [variable.semantic_type.name for variable in module.variables] == ["flag_t", "flag_t"]
+    assert _function(module, "get_flags").return_type.name == "flag_t"
+    assert _function(project_module, "get_flags").return_type.name == "flag_t"
+
+
+def test_c2ir_enum_values_emit_only_python_compatible_expressions():
+    parsed = parse_c_file(
+        "enum flags { FLAG_ONE = 1U, FLAG_OCTAL = 010, FLAG_SHIFT = FLAG_ONE << 1, FLAG_CHAR = 'A' };",
+        filename="flags.h",
+    )
+    module = c_file_to_semantic_module(parsed)
+
+    code = emit_module(module)
+
+    assert "FLAG_ONE: Final[flags] = 1" in code
+    assert "FLAG_OCTAL: Final[flags] = 8" in code
+    assert "FLAG_SHIFT: Final[flags] = FLAG_ONE << 1" in code
+    assert "FLAG_CHAR: Final[flags]\n" in code
+    assert {variable.name: variable.default_value for variable in module.variables} == {
+        "FLAG_ONE": "1U",
+        "FLAG_OCTAL": "010",
+        "FLAG_SHIFT": "FLAG_ONE << 1",
+        "FLAG_CHAR": "'A'",
+    }
+    assert parse_pyi_text(code, module_name="flags").enums[0].name == "flags"
+
+
+def test_c2ir_cross_header_enum_references_import_the_owner_enum():
+    project = parse_c_project(
+        {
+            "types.h": "enum status { STATUS_OK = 0 };",
+            "api.h": "enum status get_status(void);",
+        }
+    )
+
+    modules = {module.name: module for module in c_project_to_semantic_modules(project)}
+
+    assert modules["api"].enums == []
+    assert [enum.name for enum in modules["types"].enums] == ["status"]
+    assert _function(modules["api"], "get_status").return_type.metadata["external_type_ref"] == {
+        "name": "status",
+        "local_name": "status",
+        "origin_module": "types",
+        "wrapped": True,
+        "representation": "wrapped",
+    }
+
+    anonymous_project = parse_c_project(
+        {
+            "types.h": "typedef enum { FLAG_NONE = 0 } flag_t;",
+            "api.h": "flag_t get_flags(void);",
+        }
+    )
+    anonymous_modules = {module.name: module for module in c_project_to_semantic_modules(anonymous_project)}
+    assert (
+        _function(anonymous_modules["api"], "get_flags").return_type.metadata["external_type_ref"]["origin_module"]
+        == "types"
     )
 
 
@@ -765,6 +835,71 @@ def test_c2ir_uses_standard_type_probe_facts_when_supplied():
     assert _function(module, "count").return_type.name == "UInt32"
 
 
+def test_c2ir_preserves_c_int_identity_and_stores_compiler_probed_precision():
+    converter = CToIRConverter(
+        standard_type_report={
+            "types": {
+                "int": {
+                    "available": True,
+                    "kind": "integer",
+                    "signed": True,
+                    "bits": 16,
+                    "underlying_c_type": "int",
+                }
+            }
+        }
+    )
+
+    semantic_type = converter.visit_type(CInt())
+
+    assert semantic_type.name == "Int"
+    assert semantic_type.dtype == "Int16"
+    assert semantic_type.metadata == {
+        "c_primitive": "int",
+        "c_type_fact": {
+            "available": True,
+            "kind": "integer",
+            "signed": True,
+            "bits": 16,
+            "underlying_c_type": "int",
+        },
+        "c_type_fact_source": "compiler_probe",
+    }
+
+
+def test_c2ir_uses_enum_specific_underlying_type_facts_when_supplied():
+    parsed = parse_c_file(
+        "enum status { STATUS_OK = 0, STATUS_ERROR = 255 }; enum status get_status(void);",
+        filename="status.h",
+    )
+    module = CToIRConverter(
+        standard_type_report={
+            "types": {
+                "enum status": {
+                    "available": True,
+                    "kind": "integer",
+                    "signed": False,
+                    "bits": 8,
+                    "underlying_c_type": "unsigned char",
+                }
+            }
+        }
+    ).visit_file(parsed)
+
+    enum = module.enums[0]
+    return_type = _function(module, "get_status").return_type
+    assert enum.underlying_type.name == "UInt8"
+    assert enum.underlying_type.dtype == "UInt8"
+    assert enum.underlying_type.metadata["c_enum_type_fact_source"] == "compiler_probe"
+    assert enum.metadata == {
+        "c_kind": "enum",
+        "c_open": True,
+        "c_underlying_type_fact_source": "compiler_probe",
+    }
+    assert return_type.name == "status"
+    assert return_type.dtype == "UInt8"
+
+
 def test_c2ir_uses_standard_type_probe_opaque_handle_facts():
     parsed = parse_c_file("void close_file(FILE *stream);\n", filename="stdio_api.h")
     converter = CToIRConverter(
@@ -843,11 +978,13 @@ def test_c_compatibility_helpers_forward_standard_type_reports():
         CStruct(name="measurement", members=[CVariable(name="value", type=measured_type)]),
         standard_type_report=report,
     )
+    enum = c_enum_to_semantic_enum(CEnum(name="measurement_status"), standard_type_report=report)
 
     assert argument.semantic_type.name == "UInt32"
     assert converted_type.name == "UInt32"
     assert converted_function.return_type.name == "UInt32"
     assert cls.fields[0].semantic_type.name == "UInt32"
+    assert enum.name == "measurement_status"
     assert _function(
         c_file_to_semantic_module(parsed_file, standard_type_report=report), "measure"
     ).return_type.name == ("UInt32")
@@ -863,33 +1000,33 @@ def test_c_compatibility_helpers_forward_standard_type_reports():
 
 
 @pytest.mark.parametrize(
-    ("ctype", "expected"),
+    ("ctype", "expected_name", "expected_dtype"),
     [
-        (CBool(), "Bool"),
-        (CChar(), "Int8"),
-        (CSignedChar(), "Int8"),
-        (CUnsignedChar(), "UInt8"),
-        (CShort(), "Int16"),
-        (CUnsignedShort(), "UInt16"),
-        (CInt(), "Int32"),
-        (CUnsignedInt(), "UInt32"),
-        (CLong(), "Int64"),
-        (CUnsignedLong(), "UInt64"),
-        (CLongLong(), "Int64"),
-        (CUnsignedLongLong(), "UInt64"),
-        (CFloat(), "Float32"),
-        (CDouble(), "Float64"),
-        (CLongDouble(), "Float128"),
-        (CFloatComplex(), "Complex64"),
-        (CDoubleComplex(), "Complex128"),
-        (CLongDoubleComplex(), "Complex256"),
+        (CBool(), "Bool", "Bool"),
+        (CChar(), "Int8", "Int8"),
+        (CSignedChar(), "Int8", "Int8"),
+        (CUnsignedChar(), "UInt8", "UInt8"),
+        (CShort(), "Int16", "Int16"),
+        (CUnsignedShort(), "UInt16", "UInt16"),
+        (CInt(), "Int", "Int32"),
+        (CUnsignedInt(), "UInt32", "UInt32"),
+        (CLong(), "Int64", "Int64"),
+        (CUnsignedLong(), "UInt64", "UInt64"),
+        (CLongLong(), "Int64", "Int64"),
+        (CUnsignedLongLong(), "UInt64", "UInt64"),
+        (CFloat(), "Float32", "Float32"),
+        (CDouble(), "Float64", "Float64"),
+        (CLongDouble(), "Float128", "Float128"),
+        (CFloatComplex(), "Complex64", "Complex64"),
+        (CDoubleComplex(), "Complex128", "Complex128"),
+        (CLongDoubleComplex(), "Complex256", "Complex256"),
     ],
 )
-def test_c_primitive_precisions_map_to_semantic_types(ctype, expected):
+def test_c_primitive_precisions_map_to_semantic_types(ctype, expected_name, expected_dtype):
     semantic_type = CToIRConverter().visit_type(ctype)
 
-    assert semantic_type.name == expected
-    assert semantic_type.dtype == expected
+    assert semantic_type.name == expected_name
+    assert semantic_type.dtype == expected_dtype
 
 
 @pytest.mark.parametrize(
@@ -931,11 +1068,13 @@ def test_c2ir_visitor_and_project_compatibility_entrypoints_cover_supported_node
     assert converter.visit(first.structs[0]).name == "point"
     assert converter.visit(CUnion(name="loose_union")).name == "loose_union"
     assert converter.visit(first.variables[0]).name == "value"
-    assert converter.visit(CInt()).name == "Int32"
+    assert converter.visit(CInt()).name == "Int"
     enum_type = converter.visit(CEnum(name="status"))
-    assert enum_type.name == "Int32"
+    assert enum_type.name == "status"
     assert enum_type.dtype == "Int32"
-    assert enum_type.metadata == {"c_kind": "enum", "c_enum": "enum status"}
+    assert enum_type.metadata["c_kind"] == "enum"
+    assert enum_type.metadata["c_enum"] == "enum status"
+    assert enum_type.metadata["c_underlying_type"] == "Int"
     assert enum_type.origin.native_name == "enum status"
     assert enum_type.origin.metadata["c_type"] == "CEnum"
     with pytest.raises(TypeError) as error:
@@ -959,12 +1098,12 @@ def test_c2ir_visitor_and_project_compatibility_entrypoints_cover_supported_node
         typedefs={"contextual_t": CTypedef(name="contextual_t", type=CInt())},
         unions={"context_union": contextual_union},
     )
-    assert _function(contextual_module, "contextual").return_type.name == "Int32"
+    assert _function(contextual_module, "contextual").return_type.name == "Int"
     assert _function(contextual_module, "use_context_union").arguments[0].semantic_type.metadata["incomplete"] is False
     assert [cls.name for cls in contextual_module.classes] == ["context_union"]
 
     assert c_file_to_semantic_module(first).name == "a"
-    assert c_type_to_semantic_type(CInt()).name == "Int32"
+    assert c_type_to_semantic_type(CInt()).name == "Int"
     assert c_parameter_to_semantic_argument(CParameter(name=None, type=CInt()), position=2).name == "arg2"
     default_argument = c_parameter_to_semantic_argument(CParameter(name=None, type=CInt()))
     assert default_argument.name == "arg0"
@@ -1017,9 +1156,9 @@ def test_c2ir_visitor_and_project_compatibility_entrypoints_cover_supported_node
         typedefs={"global_count_t": CTypedef(name="global_count_t", type=CInt())},
     )
     reference_modules = converter.visit_project(reference_project)
-    assert _function(reference_modules[0], "global_count").return_type.name == "Int32"
+    assert _function(reference_modules[0], "global_count").return_type.name == "Int"
     reference_merged = converter.visit_project_module(reference_project)
-    assert _function(reference_merged, "global_count").return_type.name == "Int32"
+    assert _function(reference_merged, "global_count").return_type.name == "Int"
     record = CStruct(name="global_record", members=[CVariable(name="value", type=CInt())])
     choice = CUnion(name="global_choice", members=[CVariable(name="value", type=CInt())])
     registry_function = CFunction(
@@ -1108,15 +1247,15 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
         source_kind="function_pointer",
         source_type="void (*)(int)",
     )
-    assert field.semantic_type.metadata == {
-        "readiness_blockers": [
-            _blocker(
-                "c_bitfield_unsupported",
-                "C bitfields require explicit semantic policy before wrapping.",
-                {"owner": "bits", "field": "bits", "bit_width": "3"},
-            )
-        ]
-    }
+    assert field.semantic_type.metadata["c_primitive"] == "int"
+    assert field.semantic_type.metadata["c_type_fact"]["bits"] == 32
+    assert field.semantic_type.metadata["readiness_blockers"] == [
+        _blocker(
+            "c_bitfield_unsupported",
+            "C bitfields require explicit semantic policy before wrapping.",
+            {"owner": "bits", "field": "bits", "bit_width": "3"},
+        )
+    ]
     assert field.intent == "in"
     assert field.visibility == "public"
     assert mutable_pointer_variable.intent == "inout"
@@ -1341,7 +1480,7 @@ def test_c2ir_models_pointer_to_arrays_unknown_extents_unions_and_anonymous_alia
         "variant_t": CTypedef(name="variant_t", type=anon_union),
     }
 
-    assert direct_array.name == "Int32"
+    assert direct_array.name == "Int"
     assert direct_array.rank == 1
     assert direct_array.shape == ["2"]
     assert direct_array.storage.array.shape == ["2"]
@@ -1365,7 +1504,7 @@ def test_c2ir_models_pointer_to_arrays_unknown_extents_unions_and_anonymous_alia
             {"owner": "matrix", "type": "double (*)[]"},
         )
     ]
-    assert pointer_matrix.name == "Int32"
+    assert pointer_matrix.name == "Int"
     assert pointer_matrix.shape == ["2", "3"]
     assert union_type.name == "choice"
     assert union_type.dtype == "choice"

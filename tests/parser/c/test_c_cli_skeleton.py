@@ -241,7 +241,10 @@ def test_cli_c_semantics_json_stdout_for_header(tmp_path: Path):
 
     assert semantic_modules[0]["name"] == "api"
     assert semantic_modules[0]["functions"][0]["name"] == "add"
-    assert semantic_modules[0]["functions"][0]["arguments"][0]["semantic_type"]["name"] == "Int32"
+    argument_type = semantic_modules[0]["functions"][0]["arguments"][0]["semantic_type"]
+    assert argument_type["name"] == "Int"
+    assert argument_type["dtype"] == "Int32"
+    assert argument_type["metadata"]["c_type_fact_source"] == "fallback"
 
 
 def test_cli_c_wrap_readiness_human_output_for_header(tmp_path: Path):
@@ -309,7 +312,7 @@ def test_cli_c_pyi_human_output_for_header(tmp_path: Path):
 
     assert f"File: {header}" in res.stdout
     assert "def add(" in res.stdout
-    assert "a: Int32" in res.stdout
+    assert "a: Int" in res.stdout
 
 
 def test_cli_c_pyi_out_requires_explicit_language_and_writes_when_selected(tmp_path: Path):

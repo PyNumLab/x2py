@@ -1,7 +1,7 @@
 class same_name:
-    payload: Int32
+    payload: Int
 
-same_name_i: Int32
+same_name_i: Int
 
 same_name_r: Float32
 
@@ -12,7 +12,7 @@ same_name_c: Complex128
 same_name_s: Int8[8]
 
 def do_work_i(
-    same_name: Ptr(Int32)
+    same_name: Ptr(Int)
 ) -> None: ...
 
 def do_work_r(
@@ -25,13 +25,13 @@ def do_work_l(
 ) -> None: ...
 
 def convert_to_complex(
-    same_name: Int32
+    same_name: Int
 ) -> Complex128: ...
 
 def convert_to_string(
     same_name: Float32,
     shared: Int8[16]
-) -> Int32: ...
+) -> Int: ...
 
 def convert_to_logical(
     same_name: Ptr(Const(Int8))

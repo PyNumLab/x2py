@@ -13,6 +13,7 @@ from semantics.models import (
     SemanticImport,
     SemanticImportItem,
     SemanticModule,
+    SemanticEnum,
     SemanticType,
 )
 from semantics.pyi_parser import (
@@ -127,6 +128,35 @@ def touch(
     assert module.variables[3].name == "literal_answer"
     assert module.variables[3].default_value == "42"
     assert module.functions[0].arguments[0].intent == "inout"
+
+
+def test_parse_pyi_text_round_trips_open_enum_with_unscoped_enumerators():
+    source = """class status(Enum[Int]):
+    pass
+
+STATUS_OK: Final[status] = 0
+STATUS_NEXT: Final[status] = STATUS_OK + 1
+
+def set_status(
+    value: status
+) -> None: ...
+"""
+
+    module = parse_pyi_text(source, module_name="status_api")
+
+    assert len(module.enums) == 1
+    enum = module.enums[0]
+    assert isinstance(enum, SemanticEnum)
+    assert enum.name == "status"
+    assert enum.open is True
+    assert enum.underlying_type.name == "Int"
+    assert [item.name for item in enum.enumerators] == ["STATUS_OK", "STATUS_NEXT"]
+    assert module.variables[1].default_value == "STATUS_OK + 1"
+    assert module.functions[0].arguments[0].semantic_type.name == "status"
+    emitted = emit_module(module)
+    assert "class status(Enum[Int]):" in emitted
+    assert "STATUS_NEXT: Final[status] = STATUS_OK + 1" in emitted
+    assert parse_pyi_text(emitted, module_name="status_api") == module
 
 
 def test_parse_pyi_text_preserves_callable_signature_metadata():

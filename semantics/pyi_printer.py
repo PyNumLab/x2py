@@ -14,6 +14,7 @@ from .models import (
     SemanticArrayContract,
     SemanticClass,
     SemanticConstraint,
+    SemanticEnum,
     SemanticFunction,
     SemanticImport,
     SemanticImportItem,
@@ -36,6 +37,8 @@ class PyiPrinter:
             return self.emit_module(node)
         if isinstance(node, SemanticClass):
             return self.emit_class(node)
+        if isinstance(node, SemanticEnum):
+            return self.emit_enum(node)
         if isinstance(node, SemanticMethod):
             return self.emit_method(node)
         if isinstance(node, SemanticFunction):
@@ -181,6 +184,10 @@ class PyiPrinter:
         text = f"{name}: {type_text}"
         if arg.optional:
             text += " = ..."
+        elif self._is_enum_constant(arg):
+            enum_value = self._enum_default_value(arg)
+            if enum_value is not None:
+                text += f" = {enum_value}"
         return text
 
     @staticmethod
@@ -193,6 +200,21 @@ class PyiPrinter:
     @staticmethod
     def _is_constant(semantic_type: SemanticType) -> bool:
         return any(constraint.name == "Constant" for constraint in semantic_type.constraints)
+
+    @staticmethod
+    def _is_enum_constant(arg: SemanticArgument) -> bool:
+        return PyiPrinter._is_constant(arg.semantic_type) and bool(
+            arg.semantic_type.metadata.get("semantic_enum") or arg.semantic_type.metadata.get("c_enum")
+        )
+
+    @staticmethod
+    def _enum_default_value(arg: SemanticArgument) -> str | None:
+        pyi_value = arg.metadata.get("pyi_default_value")
+        if isinstance(pyi_value, str):
+            return pyi_value
+        if arg.origin.source_language == "c":
+            return None
+        return arg.default_value
 
     @staticmethod
     def _without_constant_constraint(semantic_type: SemanticType) -> SemanticType:
@@ -247,10 +269,15 @@ class PyiPrinter:
 {body}
 """.strip()
 
+    def emit_enum(self, enum: SemanticEnum) -> str:
+        decorator = "@private\n" if self._is_private(enum) else ""
+        underlying = self.emit_semantic_type(enum.underlying_type)
+        return f"{decorator}class {enum.name}(Enum[{underlying}]):\n    pass"
+
     def emit_module(self, module: SemanticModule) -> str:
         sections: list[str] = []
         self._append_imports(sections, module)
-        self._append_items(sections, module.classes, self.emit_class)
+        self._append_items(sections, module.classes, self.emit)
         self._append_items(sections, module.variables, self.emit_data_member)
         self._append_items(sections, module.functions, self.emit_function)
         return "\n".join(sections)
@@ -493,7 +520,9 @@ def opaque_dependency_modules(
 ) -> list[SemanticModule]:
     source_modules = _module_list(modules)
     known_modules = _module_list(available_modules) if available_modules is not None else source_modules
-    known_classes = {(module.name, cls.name) for module in known_modules for cls in module.classes}
+    known_classes = {
+        (module.name, cls.name) for module in known_modules for cls in module.classes if isinstance(cls, SemanticClass)
+    }
     dependencies: dict[str, set[str]] = {}
     for module in source_modules:
         for semantic_type in _iter_module_semantic_types(module):

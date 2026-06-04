@@ -1,18 +1,18 @@
 class modern_particle:
-    id: Int32
+    id: Int
     mass: Float64
     position: Float64[3]
 
 class vector3:
     values: Float64[3]
 
-modern_counter: Int32
+modern_counter: Int
 
 hidden_scale: private[Float64]
 
 def init_particle(
     p: Ptr(modern_particle),
-    pid: Int32,
+    pid: Int,
     mass: Float64,
     x: Float64,
     y: Float64,
@@ -27,7 +27,7 @@ def kinetic_energy(
 ) -> Float64: ...
 
 def scale_vector(
-    n: Int32,
+    n: Int,
     v: Float64[1],
     alpha: Float64
 ) -> None: ...

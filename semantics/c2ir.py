@@ -55,7 +55,9 @@ from .models import (
     SemanticArgument,
     SemanticArrayContract,
     SemanticClass,
+    SemanticCoercion,
     SemanticConstraint,
+    SemanticEnum,
     SemanticFunction,
     SemanticModule,
     SemanticOrigin,
@@ -68,6 +70,7 @@ from .models import (
 _IDENTIFIER_RE = re.compile(r"[^0-9A-Za-z_]+")
 _C_IDENTIFIER_TOKEN_RE = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
 _C_INTEGER_LITERAL_SUFFIX_RE = re.compile(r"(?<![0-9A-Za-z_.])((?:0[xX][0-9A-Fa-f]+|\d+))[uUlL]+(?![0-9A-Za-z_.])")
+_C_OCTAL_LITERAL_RE = re.compile(r"(?<![0-9A-Za-z_.])0([0-7]+)(?![0-9A-Za-z_.])")
 _INTEGER_EXPRESSION_CHARS_RE = re.compile(r"[0-9A-Za-z_+\-*/%<>&|^~()\s]+")
 _INTEGER_LITERAL_RE = re.compile(r"[-+]?(?:0[xX][0-9A-Fa-f]+|\d+)(?:[uUlL]*)\Z")
 _FLOAT_LITERAL_RE = re.compile(
@@ -98,6 +101,7 @@ _UNSIGNED_WIDTH_TYPES = {8: "UInt8", 16: "UInt16", 32: "UInt32", 64: "UInt64"}
 _NUMERIC_SEMANTIC_TYPES = frozenset(
     {
         "Bool",
+        "Int",
         "Int8",
         "Int16",
         "Int32",
@@ -125,7 +129,7 @@ _PRIMITIVE_TYPE_MAP: dict[type[CType], str | None] = {
     CUnsignedChar: "UInt8",
     CShort: "Int16",
     CUnsignedShort: "UInt16",
-    CInt: "Int32",
+    CInt: "Int",
     CUnsignedInt: "UInt32",
     CLong: "Int64",
     CUnsignedLong: "UInt64",
@@ -150,6 +154,14 @@ _STANDARD_TYPE_FALLBACKS = {
     "int16_t": "Int16",
     "int32_t": "Int32",
     "int64_t": "Int64",
+}
+
+_C_INT_FALLBACK_FACT = {
+    "available": True,
+    "kind": "integer",
+    "signed": True,
+    "bits": 32,
+    "underlying_c_type": "int",
 }
 
 
@@ -229,8 +241,9 @@ class CToIRConverter:
         self.opaque_standard_types = set()
         try:
             semantic_functions = [self.visit_function(function) for function in project.functions.values()]
+            semantic_enums = [self.visit_enum(enum) for enum in self._project_enum_declarations(project)]
             semantic_variables = [
-                *self._enum_constants(list(project.enums.values())),
+                *[enumerator for enum in semantic_enums for enumerator in enum.enumerators],
                 *self._macro_constants_from_macros(list(project.macros.values())),
                 *[self.visit_variable(variable) for variable in project.variables.values()],
             ]
@@ -242,7 +255,7 @@ class CToIRConverter:
             return SemanticModule(
                 name=self._identifier(name),
                 functions=semantic_functions,
-                classes=semantic_classes,
+                classes=[*semantic_enums, *semantic_classes],
                 variables=semantic_variables,
                 metadata=self._project_metadata(project),
                 origin=SemanticOrigin(
@@ -273,8 +286,9 @@ class CToIRConverter:
         try:
             self.opaque_standard_types = set()
             semantic_functions = [self.visit_function(function) for function in c_file.functions]
+            semantic_enums = [self.visit_enum(enum) for enum in c_file.enums]
             semantic_variables = [
-                *self._enum_constants(c_file.enums),
+                *[enumerator for enum in semantic_enums for enumerator in enum.enumerators],
                 *self._macro_constants(c_file),
                 *[self.visit_variable(variable) for variable in c_file.variables],
             ]
@@ -286,7 +300,7 @@ class CToIRConverter:
             module = SemanticModule(
                 name=self._module_name(c_file),
                 functions=semantic_functions,
-                classes=semantic_classes,
+                classes=[*semantic_enums, *semantic_classes],
                 variables=semantic_variables,
                 metadata=self._file_metadata(c_file),
                 origin=SemanticOrigin(
@@ -473,6 +487,34 @@ class CToIRConverter:
             ),
         )
 
+    def visit_enum(self, enum: CEnum) -> SemanticEnum:
+        enum = self._resolved_enum(enum)
+        name = self._enum_name(enum)
+        underlying_type = self._enum_underlying_type(enum)
+        metadata: dict[str, Any] = {
+            "c_kind": "enum",
+            "c_open": True,
+        }
+        if underlying_type.metadata.get("c_enum_type_fact_source") == "compiler_probe":
+            metadata["c_underlying_type_fact_source"] = "compiler_probe"
+        else:
+            metadata["c_underlying_type_assumption"] = "int"
+        return SemanticEnum(
+            name=name,
+            native_name=enum.reference_name,
+            underlying_type=underlying_type,
+            enumerators=self._enum_constants_for_enum(enum),
+            open=True,
+            metadata=metadata,
+            origin=SemanticOrigin(
+                source_language="c",
+                native_name=enum.reference_name,
+                source_kind="enum",
+                source_type=enum.reference_name,
+                source_location=self._location_dict(enum.source_location),
+            ),
+        )
+
     def visit_type(self, type_: CType, *, owner: str | None = None) -> SemanticType:
         if isinstance(type_, CComposedType):
             return self._composed_type(type_, owner=owner)
@@ -506,14 +548,21 @@ class CToIRConverter:
             )
 
         origin = self._type_origin(type_)
-        metadata = {}
+        metadata: dict[str, Any] = {}
         if "readiness_blockers" in origin.metadata:
             metadata["readiness_blockers"] = list(origin.metadata["readiness_blockers"])
         if isinstance(type_, CChar):
             metadata["c_char_policy"] = "implementation-defined signed 8-bit code unit"
+        dtype = semantic_name
+        if isinstance(type_, CInt) and semantic_name == "Int":
+            fact, fact_source = self._c_int_fact()
+            dtype = self._semantic_type_from_standard_fact(fact) or "Int"
+            metadata["c_primitive"] = "int"
+            metadata["c_type_fact"] = fact
+            metadata["c_type_fact_source"] = fact_source
         return SemanticType(
             name=semantic_name,
-            dtype=semantic_name,
+            dtype=dtype,
             metadata=metadata,
             origin=origin,
         )
@@ -649,12 +698,40 @@ class CToIRConverter:
         return semantic_type
 
     def _enum_type(self, enum: CEnum) -> SemanticType:
+        enum = self._resolved_enum(enum)
+        underlying_type = self._enum_underlying_type(enum)
         return SemanticType(
-            name="Int32",
-            dtype="Int32",
-            metadata={"c_kind": "enum", "c_enum": enum.reference_name},
+            name=self._enum_name(enum),
+            dtype=underlying_type.dtype,
+            coercions=[SemanticCoercion(source_type="Int")],
+            metadata={
+                "c_kind": "enum",
+                "c_enum": enum.reference_name,
+                "c_enum_open": True,
+                "c_underlying_type": underlying_type.name,
+                "c_underlying_dtype": underlying_type.dtype,
+            },
             origin=self._type_origin(enum, native_name=enum.reference_name),
         )
+
+    def _enum_underlying_type(self, enum: CEnum) -> SemanticType:
+        fact = self.standard_type_facts.get(enum.reference_name)
+        if fact is not None and fact.get("available", True):
+            dtype = self._semantic_type_from_standard_fact(fact) or "Int"
+            name = "Int" if fact.get("underlying_c_type") == "int" else dtype
+            return SemanticType(
+                name=name,
+                dtype=dtype,
+                metadata={
+                    "c_enum": enum.reference_name,
+                    "c_enum_type_fact": dict(fact),
+                    "c_enum_type_fact_source": "compiler_probe",
+                },
+            )
+        underlying_type = self.visit_type(CInt())
+        underlying_type.metadata["c_enum"] = enum.reference_name
+        underlying_type.metadata["c_enum_underlying_assumption"] = "int"
+        return underlying_type
 
     def _pointer_type(
         self,
@@ -731,43 +808,48 @@ class CToIRConverter:
             )
         return element
 
-    def _enum_constants(self, enums: list[CEnum]) -> list[SemanticArgument]:
+    def _enum_constants_for_enum(self, enum: CEnum) -> list[SemanticArgument]:
         variables: list[SemanticArgument] = []
-        for enum in enums:
-            next_value: int | None = 0
-            for enumerator in enum.constants:
-                value = enumerator.value
-                if value is None and next_value is not None:
-                    value = str(next_value)
-                literal = self._integer_literal_value(value)
-                next_value = literal + 1 if literal is not None else None
-                variables.append(
-                    SemanticArgument(
-                        name=enumerator.name,
-                        semantic_type=SemanticType(
-                            name="Int32",
-                            dtype="Int32",
-                            constraints=[SemanticConstraint("Constant")],
-                            metadata={"c_enum": enum.reference_name},
-                            origin=SemanticOrigin(
-                                source_language="c",
-                                native_name=enumerator.name,
-                                native_scope=enum.reference_name,
-                                source_kind="enum_constant",
-                                source_type="enum",
-                                source_location=self._location_dict(enumerator.source_location),
-                            ),
-                        ),
-                        default_value=value,
-                        origin=SemanticOrigin(
-                            source_language="c",
-                            native_name=enumerator.name,
-                            native_scope=enum.reference_name,
-                            source_kind="enum_constant",
-                            source_location=self._location_dict(enumerator.source_location),
-                        ),
-                    )
+        enum = self._resolved_enum(enum)
+        next_value: int | None = 0
+        for enumerator in enum.constants:
+            value = enumerator.value
+            if value is None and next_value is not None:
+                value = str(next_value)
+            literal = self._integer_literal_value(value)
+            next_value = literal + 1 if literal is not None else None
+            semantic_type = self._enum_type(enum)
+            semantic_type.constraints.append(SemanticConstraint("Constant"))
+            semantic_type.metadata["semantic_enum"] = self._enum_name(enum)
+            semantic_type.origin = SemanticOrigin(
+                source_language="c",
+                native_name=enumerator.name,
+                native_scope=enum.reference_name,
+                source_kind="enum_constant",
+                source_type="enum",
+                source_location=self._location_dict(enumerator.source_location),
+            )
+            metadata: dict[str, Any] = {}
+            if value is not None:
+                metadata["c_value_expression"] = value
+            pyi_value = self._pyi_integer_expression(value)
+            if pyi_value is not None:
+                metadata["pyi_default_value"] = pyi_value
+            variables.append(
+                SemanticArgument(
+                    name=enumerator.name,
+                    semantic_type=semantic_type,
+                    default_value=value,
+                    metadata=metadata,
+                    origin=SemanticOrigin(
+                        source_language="c",
+                        native_name=enumerator.name,
+                        native_scope=enum.reference_name,
+                        source_kind="enum_constant",
+                        source_location=self._location_dict(enumerator.source_location),
+                    ),
                 )
+            )
         return variables
 
     def _macro_constants(self, c_file: CFile) -> list[SemanticArgument]:
@@ -836,6 +918,24 @@ class CToIRConverter:
             and not (isinstance(node, ast.Constant) and not isinstance(node.value, int))
             for node in ast.walk(expression)
         )
+
+    @staticmethod
+    def _pyi_integer_expression(value: str | None) -> str | None:
+        if value is None or not _INTEGER_EXPRESSION_CHARS_RE.fullmatch(value):
+            return None
+        normalized = _C_INTEGER_LITERAL_SUFFIX_RE.sub(r"\1", value)
+        normalized = _C_OCTAL_LITERAL_RE.sub(r"0o\1", normalized)
+        try:
+            expression = ast.parse(normalized, mode="eval")
+        except SyntaxError:
+            return None
+        if not all(
+            isinstance(node, (*_INTEGER_EXPRESSION_AST_NODES, ast.Name, ast.Load))
+            and not (isinstance(node, ast.Constant) and not isinstance(node.value, int))
+            for node in ast.walk(expression)
+        ):
+            return None
+        return ast.unparse(expression.body)
 
     def _file_metadata(self, c_file: CFile) -> dict[str, Any]:
         metadata: dict[str, Any] = {
@@ -908,7 +1008,14 @@ class CToIRConverter:
         for variable in module.variables:
             if is_private_origin(variable.origin):
                 variable.visibility = "private"
+        for enum in module.enums:
+            if is_private_origin(enum.origin):
+                enum.visibility = "private"
+                for enumerator in enum.enumerators:
+                    enumerator.visibility = "private"
         for cls in module.classes:
+            if not isinstance(cls, SemanticClass):
+                continue
             if is_private_origin(cls.origin):
                 cls.visibility = "private"
                 cls.fields = []
@@ -918,6 +1025,8 @@ class CToIRConverter:
     def _externalize_private_classes(self, module: SemanticModule) -> None:
         external_classes: dict[str, str] = {}
         for cls in module.classes:
+            if not isinstance(cls, SemanticClass):
+                continue
             if cls.visibility != "private" or "Opaque" not in cls.base_classes:
                 continue
             filename = self._source_filename(cls.origin.source_location)
@@ -957,6 +1066,13 @@ class CToIRConverter:
             if owner is None:
                 continue
             owners[self._identifier(struct.name)] = (owner.name, not struct.is_incomplete)
+        for enum in self._project_enum_declarations(project):
+            if enum.source_location is None:
+                continue
+            owner = modules_by_filename.get(enum.source_location.filename)
+            if owner is None:
+                continue
+            owners[self._enum_name(enum)] = (owner.name, True)
 
         for module in modules:
             external_names = {
@@ -1009,7 +1125,7 @@ class CToIRConverter:
                 "functions": len(project.functions),
                 "structs": len(project.structs),
                 "unions": len(project.unions),
-                "enums": len(project.enums),
+                "enums": len(self._project_enum_declarations(project)),
                 "typedefs": len(project.typedefs),
                 "macros": len(project.macros),
                 "includes": len(project.includes),
@@ -1091,6 +1207,12 @@ class CToIRConverter:
             dtype=fallback,
             metadata={"c_standard_type": name, "c_standard_type_fallback": True},
         )
+
+    def _c_int_fact(self) -> tuple[dict[str, Any], str]:
+        fact = self.standard_type_facts.get("int")
+        if fact is not None and fact.get("available", True):
+            return dict(fact), "compiler_probe"
+        return dict(_C_INT_FALLBACK_FACT), "fallback"
 
     def _opaque_standard_type_classes(self) -> list[SemanticClass]:
         return [
@@ -1228,6 +1350,32 @@ class CToIRConverter:
         alias = self._typedef_alias_for_type(union)
         return self._identifier(alias or union.anonymous_id or "anonymous_union")
 
+    def _enum_name(self, enum: CEnum) -> str:
+        if enum.name:
+            return self._identifier(enum.name)
+        alias = self._typedef_alias_for_type(enum)
+        return self._identifier(alias or enum.anonymous_id or "anonymous_enum")
+
+    def _resolved_enum(self, enum: CEnum) -> CEnum:
+        if enum.name and enum.name in self.enums:
+            return self.enums[enum.name]
+        return enum
+
+    @staticmethod
+    def _project_enum_declarations(project: CProject) -> list[CEnum]:
+        declarations = list(project.enums.values())
+        anonymous_ids: set[str | int] = {enum.anonymous_id or id(enum) for enum in declarations if enum.name is None}
+        for c_file in project.files.values():
+            for enum in c_file.enums:
+                if enum.name is not None:
+                    continue
+                identity: str | int = enum.anonymous_id or id(enum)
+                if identity in anonymous_ids:
+                    continue
+                anonymous_ids.add(identity)
+                declarations.append(enum)
+        return declarations
+
     def _typedef_alias_for_type(self, target: CType) -> str | None:
         for typedef in self.typedefs.values():
             if typedef.type is target:
@@ -1283,7 +1431,7 @@ class CToIRConverter:
             return False
         if storage.read_only:
             return False
-        return semantic_type.name in _NUMERIC_SEMANTIC_TYPES
+        return semantic_type.name in _NUMERIC_SEMANTIC_TYPES or semantic_type.metadata.get("c_kind") == "enum"
 
     def _add_incomplete_by_value_blocker(self, semantic_type: SemanticType, *, owner: str) -> None:
         storage = semantic_type.storage
@@ -1406,6 +1554,14 @@ def c_struct_to_semantic_class(
     return CToIRConverter(standard_type_report=standard_type_report).visit_struct(struct)
 
 
+def c_enum_to_semantic_enum(
+    enum: CEnum,
+    *,
+    standard_type_report: Any | None = None,
+) -> SemanticEnum:
+    return CToIRConverter(standard_type_report=standard_type_report).visit_enum(enum)
+
+
 def c_file_to_semantic_module(
     parsed_file: CFile,
     *,
@@ -1444,6 +1600,7 @@ def c_project_to_semantic_module(
 
 __all__ = (
     "CToIRConverter",
+    "c_enum_to_semantic_enum",
     "c_file_to_semantic_module",
     "c_file_to_semantic_modules",
     "c_function_to_semantic_function",

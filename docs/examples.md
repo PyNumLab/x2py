@@ -435,9 +435,9 @@ Output:
 <!-- x2py-doc-test-output -->
 ```text
 def add(
-    a: Int32,
-    b: Int32
-) -> Int32: ...
+    a: Int,
+    b: Int
+) -> Int: ...
 True
 ```
 

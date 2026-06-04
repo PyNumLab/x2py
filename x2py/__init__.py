@@ -27,6 +27,7 @@ from semantics.fortran2ir import (
 )
 from semantics.c2ir import (
     CToIRConverter,
+    c_enum_to_semantic_enum,
     c_file_to_semantic_module,
     c_file_to_semantic_modules,
     c_function_to_semantic_function,
@@ -80,6 +81,7 @@ __all__ = (
     "assess_pyi_wrap_readiness",
     "assess_semantic_wrap_readiness",
     "build_fortran_type_probe_source",
+    "c_enum_to_semantic_enum",
     "c_file_to_semantic_module",
     "c_file_to_semantic_modules",
     "c_function_to_semantic_function",
