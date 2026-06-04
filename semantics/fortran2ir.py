@@ -58,7 +58,7 @@ FORTRAN_TYPE_MAP = {
     ("integer", "c_int16_t"): "Int16",
     ("integer", "c_int32_t"): "Int32",
     ("integer", "c_int64_t"): "Int64",
-    ("real", None): "Float64",
+    ("real", None): "Float32",
     ("real", "4"): "Float32",
     ("real", "8"): "Float64",
     ("real", "16"): "Float128",
@@ -67,7 +67,7 @@ FORTRAN_TYPE_MAP = {
     ("real", "real128"): "Float128",
     ("real", "c_float"): "Float32",
     ("real", "c_double"): "Float64",
-    ("complex", None): "Complex128",
+    ("complex", None): "Complex64",
     ("complex", "4"): "Complex64",
     ("complex", "8"): "Complex128",
     ("complex", "16"): "Complex256",
@@ -85,6 +85,13 @@ FORTRAN_TYPE_MAP = {
     ("character", None): "String",
     ("character", "1"): "String",
     ("character", "c_char"): "String",
+}
+
+_FORTRAN_INTRINSIC_TYPES = frozenset({"integer", "real", "complex", "logical", "character"})
+_FORTRAN_STORAGE_TYPE_MAP = {
+    "integer": {8: "Int8", 16: "Int16", 32: "Int32", 64: "Int64"},
+    "real": {32: "Float32", 64: "Float64", 80: "Float128", 96: "Float128", 128: "Float128"},
+    "complex": {64: "Complex64", 128: "Complex128", 160: "Complex256", 192: "Complex256", 256: "Complex256"},
 }
 
 
@@ -157,11 +164,16 @@ class FortranToIRConverter:
         type_map: dict[tuple[str, str | None], str] | None = None,
         compile_time_values: dict[str, int | str] | None = None,
         wrapped_derived_types: Iterable[tuple[str, str]] | None = None,
+        type_facts: dict[tuple[str, str | None], dict[str, object]] | None = None,
     ):
         self.type_map = FORTRAN_TYPE_MAP if type_map is None else type_map
         self.compile_time_values = _normalize_compile_time_values(compile_time_values)
         self.wrapped_derived_types = {
             (str(module).lower(), str(name).lower()) for module, name in (wrapped_derived_types or [])
+        }
+        self.type_facts = {
+            (str(base_type).lower(), None if kind is None else str(kind).lower()): dict(fact)
+            for (base_type, kind), fact in (type_facts or {}).items()
         }
 
     def visit(self, node, **context):
@@ -221,6 +233,10 @@ class FortranToIRConverter:
         semantic_name = self._semantic_type_name(var)
         derived_type_ref = self._derived_type_ref(var, derived_type_context)
         metadata = {}
+        type_fact = self._target_type_fact(var)
+        if type_fact is not None:
+            metadata["fortran_type_fact"] = dict(type_fact)
+            metadata["fortran_type_fact_source"] = str(type_fact.get("source") or "compiler_probe")
         if derived_type_ref is not None:
             semantic_name, ref_metadata = derived_type_ref
             metadata[EXTERNAL_TYPE_REF_METADATA] = ref_metadata
@@ -467,6 +483,7 @@ class FortranToIRConverter:
             type_map=self.type_map,
             compile_time_values=self.compile_time_values,
             wrapped_derived_types=merged,
+            type_facts=self.type_facts,
         )
 
     @staticmethod
@@ -576,6 +593,16 @@ class FortranToIRConverter:
         if base_type == "procedure":
             return "Procedure"
 
+        fact = self._target_type_fact(var)
+        if fact is not None:
+            semantic_type = self._semantic_type_from_target_fact(fact)
+            if semantic_type is None:
+                bits = int(fact.get("bits") or 0)
+                raise ValueError(
+                    f"Unsupported Fortran target storage for variable '{var.name}': {base_type} uses {bits}-bit storage"
+                )
+            return semantic_type
+
         kind = self._semantic_kind_key(var)
         semantic_type = self.type_map.get((base_type, kind))
         if semantic_type is None:
@@ -584,11 +611,12 @@ class FortranToIRConverter:
         return semantic_type
 
     def _semantic_kind_key(self, var: FortranVariable) -> str | None:
-        if not var.kind:
+        raw_kind = var.target_kind_expression or var.kind
+        if not raw_kind:
             return None
 
         base_type = var.base_type.lower()
-        kind = self._resolve_compile_time_text(str(var.kind)).strip().lower()
+        kind = self._resolve_compile_time_text(str(raw_kind)).strip().lower()
         if base_type == "character":
             return None
         if base_type == "logical":
@@ -597,6 +625,43 @@ class FortranToIRConverter:
         if literal_kind is not None:
             return literal_kind
         return kind
+
+    def _target_type_key(self, var: FortranVariable) -> tuple[str, str | None]:
+        base_type = var.base_type.lower()
+        raw_kind = var.target_kind_expression or var.kind
+        if not raw_kind:
+            return base_type, None
+
+        kind = self._resolve_compile_time_text(str(raw_kind)).strip().lower()
+        if base_type == "character":
+            if var.character_length_syntax:
+                return base_type, None
+            kind_match = re.search(r"(?:^|,)\s*kind\s*=\s*([^,]+)", kind)
+            if kind_match is not None:
+                kind = kind_match.group(1).strip()
+            elif kind.startswith("len="):
+                return base_type, None
+        return base_type, kind
+
+    def _target_type_fact(self, var: FortranVariable) -> dict[str, object] | None:
+        if var.declared_storage_bits is not None:
+            return {
+                "base_type": var.base_type.lower(),
+                "kind": var.kind or None,
+                "bits": var.declared_storage_bits,
+                "source": "legacy_star_storage",
+            }
+        return self.type_facts.get(self._target_type_key(var))
+
+    @staticmethod
+    def _semantic_type_from_target_fact(fact: dict[str, object]) -> str | None:
+        base_type = str(fact.get("base_type") or "").lower()
+        bits = int(fact.get("bits") or 0)
+        if base_type == "logical":
+            return "Bool"
+        if base_type == "character":
+            return "String"
+        return _FORTRAN_STORAGE_TYPE_MAP.get(base_type, {}).get(bits)
 
     @staticmethod
     def _literal_kind_key(kind: str) -> str | None:
@@ -1085,6 +1150,55 @@ def _compile_time_requirement_message(code: str, symbol: str, expression: str) -
     return f"Compile-time value required for '{symbol}'."
 
 
+def fortran_type_storage_expression(base_type: str, kind: str | None = None) -> str:
+    """Return the compiler expression that measures one intrinsic type."""
+    constructors = {
+        "integer": "int(0)",
+        "real": "real(0.0)",
+        "complex": "cmplx(0.0)",
+        "logical": "logical(.false.)",
+        "character": "char(65)",
+    }
+    base = str(base_type).lower()
+    constructor = constructors.get(base)
+    if constructor is None:
+        raise ValueError(f"Unsupported Fortran storage probe type: {base_type}")
+    if kind is not None:
+        constructor = constructor[:-1] + f",kind={kind})"
+    return f"storage_size({constructor})"
+
+
+def collect_fortran_type_storage_requirements(
+    parsed,
+    *,
+    compile_time_values: dict[str, int | str] | None = None,
+) -> list[dict[str, object]]:
+    """Collect unique compiler storage queries needed by semantic conversion."""
+    converter = FortranToIRConverter(compile_time_values=compile_time_values)
+    requirements: list[dict[str, object]] = []
+    seen: set[tuple[str, str | None]] = set()
+    for var, context in _iter_fortran_variable_contexts(parsed):
+        base_type = str(var.base_type or "").lower()
+        if base_type not in _FORTRAN_INTRINSIC_TYPES:
+            continue
+        if var.declared_storage_bits is not None:
+            continue
+        key = converter._target_type_key(var)
+        if key in seen:
+            continue
+        seen.add(key)
+        requirements.append(
+            {
+                "base_type": key[0],
+                "kind": key[1],
+                "expression": fortran_type_storage_expression(*key),
+                "unit": context.get("unit"),
+                "symbol": context.get("symbol"),
+            }
+        )
+    return requirements
+
+
 def collect_semantic_compile_time_requirements(
     parsed,
     *,
@@ -1273,12 +1387,14 @@ def resolve_semantic_compile_time_values(
 def _converter_for(
     compile_time_values: dict[str, int | str] | None = None,
     wrapped_derived_types: Iterable[tuple[str, str]] | None = None,
+    type_facts: dict[tuple[str, str | None], dict[str, object]] | None = None,
 ) -> FortranToIRConverter:
-    if compile_time_values is None and wrapped_derived_types is None:
+    if compile_time_values is None and wrapped_derived_types is None and type_facts is None:
         return _DEFAULT_CONVERTER
     return FortranToIRConverter(
         compile_time_values=compile_time_values,
         wrapped_derived_types=wrapped_derived_types,
+        type_facts=type_facts,
     )
 
 
@@ -1290,8 +1406,9 @@ def fortran_module_to_semantic_module(
     *,
     compile_time_values: dict[str, int | str] | None = None,
     wrapped_derived_types: Iterable[tuple[str, str]] | None = None,
+    type_facts: dict[tuple[str, str | None], dict[str, object]] | None = None,
 ) -> SemanticModule:
-    return _converter_for(compile_time_values, wrapped_derived_types).module_to_semantic_module(module)
+    return _converter_for(compile_time_values, wrapped_derived_types, type_facts).module_to_semantic_module(module)
 
 
 def fortran_file_to_semantic_modules(
@@ -1300,8 +1417,9 @@ def fortran_file_to_semantic_modules(
     standalone_module_name: str | None = None,
     compile_time_values: dict[str, int | str] | None = None,
     wrapped_derived_types: Iterable[tuple[str, str]] | None = None,
+    type_facts: dict[tuple[str, str | None], dict[str, object]] | None = None,
 ) -> list[SemanticModule]:
-    return _converter_for(compile_time_values, wrapped_derived_types).file_to_semantic_modules(
+    return _converter_for(compile_time_values, wrapped_derived_types, type_facts).file_to_semantic_modules(
         parsed_file,
         standalone_module_name=standalone_module_name,
     )
@@ -1311,8 +1429,9 @@ def fortran_project_to_semantic_modules(
     project: FortranProject,
     *,
     compile_time_values: dict[str, int | str] | None = None,
+    type_facts: dict[tuple[str, str | None], dict[str, object]] | None = None,
 ) -> list[SemanticModule]:
-    return _converter_for(compile_time_values).project_to_semantic_modules(project)
+    return _converter_for(compile_time_values, type_facts=type_facts).project_to_semantic_modules(project)
 
 
 if __name__ == "__main__":

@@ -3,11 +3,11 @@ class same_name:
 
 same_name_i: Int32
 
-same_name_r: Float64
+same_name_r: Float32
 
 same_name_l: Bool
 
-same_name_c: Complex128
+same_name_c: Complex64
 
 same_name_s: String
 
@@ -16,7 +16,7 @@ def do_work_i(
 ) -> None: ...
 
 def do_work_r(
-    same_name: Ptr(Const(Float64))
+    same_name: Ptr(Const(Float32))
 ) -> None: ...
 
 def do_work_l(
@@ -28,15 +28,15 @@ def host_one(
 ) -> None: ...
 
 def host_two(
-    same_name: Ptr(Float64)
+    same_name: Ptr(Float32)
 ) -> None: ...
 
 def convert_to_complex(
     same_name: Ptr(Const(Int32))
-) -> Complex128: ...
+) -> Complex64: ...
 
 def convert_to_char(
-    same_name: Ptr(Const(Float64))
+    same_name: Ptr(Const(Float32))
 ) -> String: ...
 
 def convert_to_logical(

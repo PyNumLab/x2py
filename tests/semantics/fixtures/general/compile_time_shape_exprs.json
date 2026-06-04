@@ -119,9 +119,9 @@
             {
               "name": "y",
               "semantic_type": {
-                "name": "Float64",
+                "name": "Float32",
                 "rank": 1,
-                "dtype": "Float64",
+                "dtype": "Float32",
                 "shape": [
                   "n0 * 2"
                 ],

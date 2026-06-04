@@ -98,6 +98,8 @@ _INTEGER_EXPRESSION_AST_NODES = (
 )
 _SIGNED_WIDTH_TYPES = {8: "Int8", 16: "Int16", 32: "Int32", 64: "Int64"}
 _UNSIGNED_WIDTH_TYPES = {8: "UInt8", 16: "UInt16", 32: "UInt32", 64: "UInt64"}
+_REAL_WIDTH_TYPES = {32: "Float32", 64: "Float64", 80: "Float128", 96: "Float128", 128: "Float128"}
+_COMPLEX_WIDTH_TYPES = {64: "Complex64", 128: "Complex128", 160: "Complex256", 192: "Complex256", 256: "Complex256"}
 _NUMERIC_SEMANTIC_TYPES = frozenset(
     {
         "Bool",
@@ -141,6 +143,27 @@ _PRIMITIVE_TYPE_MAP: dict[type[CType], str | None] = {
     CFloatComplex: "Complex64",
     CDoubleComplex: "Complex128",
     CLongDoubleComplex: "Complex256",
+}
+
+_PRIMITIVE_TYPE_FACT_NAMES: dict[type[CType], str] = {
+    CBool: "_Bool",
+    CChar: "char",
+    CSignedChar: "signed char",
+    CUnsignedChar: "unsigned char",
+    CShort: "short",
+    CUnsignedShort: "unsigned short",
+    CInt: "int",
+    CUnsignedInt: "unsigned int",
+    CLong: "long",
+    CUnsignedLong: "unsigned long",
+    CLongLong: "long long",
+    CUnsignedLongLong: "unsigned long long",
+    CFloat: "float",
+    CDouble: "double",
+    CLongDouble: "long double",
+    CFloatComplex: "float _Complex",
+    CDoubleComplex: "double _Complex",
+    CLongDoubleComplex: "long double _Complex",
 }
 
 _STANDARD_TYPE_FALLBACKS = {
@@ -516,6 +539,13 @@ class CToIRConverter:
         )
 
     def visit_type(self, type_: CType, *, owner: str | None = None) -> SemanticType:
+        structural_type = self._structural_type(type_, owner=owner)
+        if structural_type is not None:
+            return structural_type
+        return self._primitive_type(type_, owner=owner)
+
+    def _structural_type(self, type_: CType, *, owner: str | None) -> SemanticType | None:
+        """Convert non-primitive C types, leaving arithmetic types to the ABI mapper."""
         if isinstance(type_, CComposedType):
             return self._composed_type(type_, owner=owner)
         if isinstance(type_, CTypedef):
@@ -537,7 +567,10 @@ class CToIRConverter:
                 metadata={"c_void_pointer_pointee": True},
                 origin=self._type_origin(type_),
             )
+        return None
 
+    def _primitive_type(self, type_: CType, *, owner: str | None) -> SemanticType:
+        """Convert one modeled C arithmetic primitive using target ABI facts."""
         semantic_name = self.primitive_type_map.get(type(type_))
         if semantic_name is None:
             return self._unsupported_type(
@@ -554,7 +587,34 @@ class CToIRConverter:
         if isinstance(type_, CChar):
             metadata["c_char_policy"] = "implementation-defined signed 8-bit code unit"
         dtype = semantic_name
-        if isinstance(type_, CInt) and semantic_name == "Int":
+        primitive_name = _PRIMITIVE_TYPE_FACT_NAMES.get(type(type_))
+        fact = self.standard_type_facts.get(primitive_name) if primitive_name is not None else None
+        if fact is not None and fact.get("available", True):
+            probed_name = self._semantic_type_from_standard_fact(fact)
+            if probed_name is None:
+                unsupported = self._unsupported_type(
+                    "c_unsupported_primitive_abi",
+                    "The selected C target uses a primitive ABI that has no semantic dtype mapping.",
+                    owner=owner,
+                    source_type=self._type_text(type_),
+                )
+                unsupported.metadata.update(
+                    {
+                        "c_primitive": primitive_name,
+                        "c_type_fact": dict(fact),
+                        "c_type_fact_source": "compiler_probe",
+                    }
+                )
+                return unsupported
+            semantic_name = "Int" if isinstance(type_, CInt) and semantic_name == "Int" else probed_name
+            dtype = probed_name
+            metadata["c_primitive"] = primitive_name
+            metadata["c_type_fact"] = dict(fact)
+            metadata["c_type_fact_source"] = "compiler_probe"
+            if isinstance(type_, CChar):
+                signedness = "signed" if fact.get("signed") else "unsigned"
+                metadata["c_char_policy"] = f"compiler-probed {signedness} {fact.get('bits')}-bit code unit"
+        elif isinstance(type_, CInt) and semantic_name == "Int":
             fact, fact_source = self._c_int_fact()
             dtype = self._semantic_type_from_standard_fact(fact) or "Int"
             metadata["c_primitive"] = "int"
@@ -1243,8 +1303,12 @@ class CToIRConverter:
                 return _UNSIGNED_WIDTH_TYPES.get(bits)
             if fact.get("signed") is True:
                 return _SIGNED_WIDTH_TYPES.get(bits)
+        if fact.get("kind") == "bool":
+            return "Bool"
         if fact.get("kind") == "real":
-            return {32: "Float32", 64: "Float64"}.get(bits)
+            return _REAL_WIDTH_TYPES.get(bits)
+        if fact.get("kind") == "complex":
+            return _COMPLEX_WIDTH_TYPES.get(bits)
         return None
 
     @staticmethod

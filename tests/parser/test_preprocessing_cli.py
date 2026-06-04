@@ -2472,6 +2472,17 @@ def test_cli_c_compiler_mode_macro_metadata_flows_to_semantic_constants(tmp_path
         tmp_path,
         "#define API_VERSION 3\nint api(void);\n",
     )
+    type_report = tmp_path / "c-types.json"
+    type_report.write_text(
+        json.dumps(
+            {
+                "types": {"int": {"available": True, "kind": "integer", "signed": True, "bits": 32}},
+                "recipe": {"compiler": str(compiler), "compile_argv": [], "run_argv": []},
+                "source_text": "reusable test probe",
+            }
+        ),
+        encoding="utf-8",
+    )
 
     res = subprocess.run(
         [
@@ -2485,6 +2496,8 @@ def test_cli_c_compiler_mode_macro_metadata_flows_to_semantic_constants(tmp_path
             "--json",
             "--compiler",
             str(compiler),
+            "--c-type-report",
+            str(type_report),
         ],
         capture_output=True,
         text=True,

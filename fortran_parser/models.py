@@ -248,6 +248,22 @@ class FortranVariable:
     def value_expression(self) -> Any:
         return _parse_fortran_expression(self.value)
 
+    @property
+    def target_kind_expression(self) -> str:
+        """Compiler kind expression preserved without changing parser JSON."""
+        return str(getattr(self, "_target_kind_expression", ""))
+
+    @property
+    def character_length_syntax(self) -> bool:
+        """Whether the stored character ``kind`` text is actually a length."""
+        return bool(getattr(self, "_character_length_syntax", False))
+
+    @property
+    def declared_storage_bits(self) -> int | None:
+        """Fixed storage width carried by a legacy numeric ``type*N`` form."""
+        bits = getattr(self, "_declared_storage_bits", None)
+        return int(bits) if bits is not None else None
+
 
 @dataclass
 class FortranArgument(FortranVariable):

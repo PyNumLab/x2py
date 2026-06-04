@@ -25,7 +25,9 @@ from semantics.fortran2ir import (
     _iter_fortran_variable_contexts,
     _requirement_unit_name,
     _resolve_compile_time_text,
+    collect_fortran_type_storage_requirements,
     collect_semantic_compile_time_requirements,
+    fortran_type_storage_expression,
     fortran_file_to_semantic_modules,
     fortran_module_to_semantic_module,
     fortran_project_to_semantic_modules,
@@ -891,7 +893,7 @@ def test_intrinsic_builtin_kinds_map_to_semantic_types():
         ("integer", "c_int16_t", "Int16"),
         ("integer", "c_int32_t", "Int32"),
         ("integer", "c_int64_t", "Int64"),
-        ("real", None, "Float64"),
+        ("real", None, "Float32"),
         ("real", "4", "Float32"),
         ("real", "8", "Float64"),
         ("real", "16", "Float128"),
@@ -903,7 +905,7 @@ def test_intrinsic_builtin_kinds_map_to_semantic_types():
         ("real", "kind(1.0e0)", "Float32"),
         ("real", "kind(1.0d0)", "Float64"),
         ("real", "kind(1.0q0)", "Float128"),
-        ("complex", None, "Complex128"),
+        ("complex", None, "Complex64"),
         ("complex", "4", "Complex64"),
         ("complex", "8", "Complex128"),
         ("complex", "16", "Complex256"),
@@ -928,6 +930,87 @@ def test_intrinsic_builtin_kinds_map_to_semantic_types():
     for base_type, kind, expected in cases:
         variable = FortranVariable(name=f"{base_type}_{kind or 'default'}", base_type=base_type, kind=kind)
         assert converter.visit_variable(variable).name == expected
+
+
+def test_fortran2ir_uses_compiler_probed_storage_facts_and_preserves_provenance():
+    fact = {
+        "base_type": "real",
+        "kind": None,
+        "bits": 64,
+        "expression": "storage_size(real(0.0))",
+    }
+    semantic_type = FortranToIRConverter(type_facts={("real", None): fact}).visit_variable(
+        FortranVariable(name="value", base_type="real")
+    )
+
+    assert semantic_type.name == "Float64"
+    assert semantic_type.dtype == "Float64"
+    assert semantic_type.metadata["fortran_type_fact"] == fact
+    assert semantic_type.metadata["fortran_type_fact_source"] == "compiler_probe"
+
+
+def test_fortran2ir_rejects_compiler_storage_without_semantic_dtype():
+    fact = {
+        "base_type": "integer",
+        "kind": None,
+        "bits": 48,
+        "expression": "storage_size(int(0))",
+    }
+
+    with pytest.raises(ValueError, match="integer uses 48-bit storage"):
+        FortranToIRConverter(type_facts={("integer", None): fact}).visit_variable(
+            FortranVariable(name="value", base_type="integer")
+        )
+
+
+def test_fortran_storage_requirements_follow_resolved_kinds_and_actual_source_types():
+    parsed = FortranFile(
+        variables=[
+            FortranVariable(name="default_real", base_type="real"),
+            FortranVariable(name="selected", base_type="real", kind="rk"),
+            FortranVariable(name="flag", base_type="logical", kind="8"),
+            FortranVariable(name="text", base_type="character", kind="len=12, kind=c_char"),
+        ]
+    )
+
+    assert fortran_type_storage_expression("complex", "8") == "storage_size(cmplx(0.0,kind=8))"
+    requirements = collect_fortran_type_storage_requirements(parsed, compile_time_values={"rk": 8})
+    assert {(item["base_type"], item["kind"], item["expression"]) for item in requirements} == {
+        ("real", None, "storage_size(real(0.0))"),
+        ("real", "8", "storage_size(real(0.0,kind=8))"),
+        ("logical", "8", "storage_size(logical(.false.,kind=8))"),
+        ("character", "c_char", "storage_size(char(65,kind=c_char))"),
+    }
+
+
+def test_legacy_fortran_storage_uses_fixed_star_widths_and_probes_double_types():
+    parsed = parse_fortran_source(
+        """
+subroutine legacy(c8, c16, dp, dc, label, explicit_kind)
+  complex*8 c8
+  complex*16 c16
+  double precision dp
+  double complex dc
+  character*8 label
+  character(kind=1) explicit_kind
+end subroutine legacy
+""",
+        filename="legacy_types.f90",
+    )
+    args = {arg.name: arg for arg in parsed.procedures[0].arguments}
+    converter = FortranToIRConverter()
+
+    assert converter.visit_variable(args["c8"]).name == "Complex64"
+    assert converter.visit_variable(args["c16"]).name == "Complex128"
+    assert converter.visit_variable(args["c16"]).metadata["fortran_type_fact_source"] == "legacy_star_storage"
+
+    requirements = collect_fortran_type_storage_requirements(parsed)
+    assert {(item["base_type"], item["kind"], item["expression"]) for item in requirements} == {
+        ("real", "kind(1.0d0)", "storage_size(real(0.0,kind=kind(1.0d0)))"),
+        ("complex", "kind(1.0d0)", "storage_size(cmplx(0.0,kind=kind(1.0d0)))"),
+        ("character", None, "storage_size(char(65))"),
+        ("character", "1", "storage_size(char(65,kind=1))"),
+    }
 
 
 def test_semantic_model_helpers_cover_projection_and_canonical_edge_cases():

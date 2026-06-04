@@ -36,45 +36,198 @@ and eventual NumPy-oriented wrapper code.
 
 | Fortran spelling or kind | Semantic dtype | NumPy equivalent |
 | --- | --- | --- |
-| `integer`, `integer(kind=4)`, `integer(int32)`, `integer(c_int)`, `integer(c_int32_t)` | `Int32` | `numpy.int32` |
-| `integer(kind=1)`, `integer(int8)`, `integer(c_signed_char)`, `integer(c_int8_t)` | `Int8` | `numpy.int8` |
-| `integer(kind=2)`, `integer(int16)`, `integer(c_short)`, `integer(c_int16_t)` | `Int16` | `numpy.int16` |
-| `integer(kind=8)`, `integer(int64)`, `integer(c_long_long)`, `integer(c_int64_t)` | `Int64` | `numpy.int64` |
-| `real`, `real(kind=8)`, `real(real64)`, `real(c_double)`, `real(kind(1.0d0))` | `Float64` | `numpy.float64` |
-| `real(kind=4)`, `real(real32)`, `real(c_float)`, `real(kind(1.0e0))` | `Float32` | `numpy.float32` |
-| `real(kind=16)`, `real(real128)`, `real(kind(1.0q0))` | `Float128` | `numpy.longdouble` |
-| `complex`, `complex(kind=8)`, `complex(real64)`, `complex(c_double_complex)` | `Complex128` | `numpy.complex128` |
-| `complex(kind=4)`, `complex(real32)`, `complex(c_float_complex)` | `Complex64` | `numpy.complex64` |
-| `complex(kind=16)`, `complex(real128)` | `Complex256` | `numpy.clongdouble` |
+| Unqualified `integer`, `real`, `complex` | Compiler-probed default storage | Matching NumPy numeric dtype |
+| Numeric kinds such as `kind=4/8/16` and `kind(...)` expressions | Compiler-probed kind storage | Matching NumPy numeric dtype |
+| `integer(int8/int16/int32/int64)` | `Int8` / `Int16` / `Int32` / `Int64` | Matching NumPy signed integer |
+| `real(real32/real64/real128)` | `Float32` / `Float64` / `Float128` | Matching NumPy real dtype |
+| `complex(real32/real64/real128)` | `Complex64` / `Complex128` / `Complex256` | Matching NumPy complex dtype |
+| `iso_c_binding` numeric kinds | Compiler-probed interoperable storage | Matching NumPy numeric dtype |
+| `double precision`, `double complex` | Compiler-probed double-kind storage | Matching NumPy real or complex dtype |
+| Legacy numeric `type*N`, such as `integer*8`, `real*8`, `complex*16`, `logical*1` | Fixed `N`-byte total storage | Matching NumPy dtype |
 | `logical`, `logical(kind=1/2/4/8)`, `logical(c_bool)` | `Bool` | `numpy.bool_` |
-| `character`, `character(kind=1)`, `character(kind=c_char)` | `String` | `numpy.str_` or ABI byte storage |
+| `character`, `character(len=n)`, `character(kind=1)`, `character(kind=c_char)` | `String` | `numpy.str_` or ABI byte storage |
+| Legacy `character*N`, `character*(*)` | `String`; `N`/`*` is length, not kind | `numpy.str_` or ABI byte storage |
 | `procedure(...)` | `Procedure` | Callback/interface policy |
+
+Compiler-backed Fortran semantic CLI stages measure the storage of every
+intrinsic type used by the source after resolving kind expressions. This is
+required because default and numeric kind mappings are processor-dependent and
+flags such as `-fdefault-real-8` can change them. Results are cached by exact
+compiler identity, target flags, expressions, environment, and runner.
+Legacy numeric `type*N` extensions carry fixed total storage and therefore do
+not need a compiler probe. In particular, `complex*8` is an 8-byte
+`Complex64`, while modern `complex(kind=8)` is a compiler kind that is
+`Complex128` on the documented `gfortran` target. `DOUBLE PRECISION` and
+`DOUBLE COMPLEX` remain compiler-dependent and use the cached probe.
+Direct converter calls without compiler facts retain the current GitHub
+Actions `gfortran` profile as a fallback. Explicit `iso_fortran_env` kinds are
+preferred when a portable source contract needs a fixed precision.
 
 ### C Types
 
 | C spelling or parser type | Semantic dtype | NumPy equivalent |
 | --- | --- | --- |
 | `_Bool` / `CBool` | `Bool` | `numpy.bool_` |
-| `char`, `signed char` | `Int8` | `numpy.int8` |
-| `unsigned char` | `UInt8` | `numpy.uint8` |
-| `short`, `unsigned short` | `Int16`, `UInt16` | `numpy.int16`, `numpy.uint16` |
+| `char` | Target-probed `Int8` or `UInt8` | Matching NumPy integer |
+| `signed char`, `unsigned char` | Target-probed signed or unsigned width | Matching NumPy integer |
+| `short`, `unsigned short` | Target-probed signed or unsigned width | Matching NumPy integer |
 | `int` / `CInt` | `Int` with concrete probed dtype | Matching signed NumPy integer for the target |
-| `unsigned int` | `UInt32` | `numpy.uint32` |
-| `long`, `long long` | `Int64` | `numpy.int64` |
-| `unsigned long`, `unsigned long long` | `UInt64` | `numpy.uint64` |
-| `float`, `double`, `long double` | `Float32`, `Float64`, `Float128` | `numpy.float32`, `numpy.float64`, `numpy.longdouble` |
-| `float _Complex`, `double _Complex`, `long double _Complex` | `Complex64`, `Complex128`, `Complex256` | `numpy.complex64`, `numpy.complex128`, `numpy.clongdouble` |
+| `unsigned int`, `long`, `unsigned long`, `long long`, `unsigned long long` | Target-probed integer width and signedness | Matching NumPy integer |
+| `float`, `double`, `long double` | Target-probed storage width | Matching NumPy real dtype |
+| `float _Complex`, `double _Complex`, `long double _Complex` | Target-probed storage width | Matching NumPy complex dtype |
 | `int8_t`, `int16_t`, `int32_t`, `int64_t` | `Int8`, `Int16`, `Int32`, `Int64` | Matching signed NumPy integer |
 | `uint8_t`, `uint16_t`, `uint32_t`, `uint64_t` | `UInt8`, `UInt16`, `UInt32`, `UInt64` | Matching unsigned NumPy integer |
 | `size_t` | `SizeT` or probed unsigned width | `numpy.uintp` or matching `numpy.uint*` |
 
-C integer spellings are ABI-dependent. Ordinary C `int` keeps the stable
-semantic identity `Int`; its concrete dtype and the compiler fact used to
-derive it are stored on `SemanticType`. Without a supplied compiler report,
-the concrete dtype uses a clearly marked 32-bit fallback. The current semantic
-policy still maps parsed primitive `long` and `long long` to 64-bit semantic
-dtypes. Standard-library typedefs are refined through the compiler
-standard-type probe when facts are supplied.
+C primitive spellings are ABI-dependent. Compiler-backed C semantic CLI stages
+automatically probe the selected compiler target and use those facts for every
+modeled arithmetic primitive. Ordinary C `int` keeps the stable semantic
+identity `Int`; its concrete dtype and the compiler fact used to derive it are
+stored on `SemanticType`. Other primitive names and dtypes follow the measured
+target width and signedness. NumPy is the consumer-side dtype mapping, not the
+probe source: it describes the Python interpreter host and may differ from a
+selected compiler target or sysroot.
+
+Direct converter calls without a supplied report retain the documented
+fallback mappings. A supplied target fact whose width has no semantic dtype
+mapping produces `c_unsupported_primitive_abi` instead of silently using a
+different width.
+
+### Generated Linux x86_64 Mapping Example
+
+The following mapping snapshots are generated from the same compiler-backed
+code paths used by x2py. They target the `linux-x86_64` profile used by GitHub
+Actions. The executable documentation test reruns the commands and compares
+their complete output, so a compiler fact or semantic mapping change must
+update these examples.
+
+C uses `cc` to measure primitive storage, signedness, alignment, and floating
+precision:
+
+<!-- x2py-doc-test: exact linux-x86_64 -->
+```bash
+python3 -m x2py.type_mapping_report --language c
+```
+
+<!-- x2py-doc-test-output -->
+```markdown
+Target profile: `linux-x86_64`
+
+| C type | Native target fact | Semantic dtype | NumPy dtype |
+| --- | --- | --- | --- |
+| `_Bool` | 8-bit bool | `Bool` | `numpy.bool_` |
+| `char` | signed 8-bit | `Int8` | `numpy.int8` |
+| `signed char` | signed 8-bit | `Int8` | `numpy.int8` |
+| `unsigned char` | unsigned 8-bit | `UInt8` | `numpy.uint8` |
+| `short` | signed 16-bit | `Int16` | `numpy.int16` |
+| `unsigned short` | unsigned 16-bit | `UInt16` | `numpy.uint16` |
+| `int` | signed 32-bit | `Int (Int32 storage)` | `numpy.int32` |
+| `unsigned int` | unsigned 32-bit | `UInt32` | `numpy.uint32` |
+| `long` | signed 64-bit | `Int64` | `numpy.int64` |
+| `unsigned long` | unsigned 64-bit | `UInt64` | `numpy.uint64` |
+| `long long` | signed 64-bit | `Int64` | `numpy.int64` |
+| `unsigned long long` | unsigned 64-bit | `UInt64` | `numpy.uint64` |
+| `float` | 32-bit storage, 24-bit precision | `Float32` | `numpy.float32` |
+| `double` | 64-bit storage, 53-bit precision | `Float64` | `numpy.float64` |
+| `long double` | 128-bit storage, 64-bit precision | `Float128` | `numpy.longdouble` |
+| `float _Complex` | 64-bit storage | `Complex64` | `numpy.complex64` |
+| `double _Complex` | 128-bit storage | `Complex128` | `numpy.complex128` |
+| `long double _Complex` | 256-bit storage | `Complex256` | `numpy.clongdouble` |
+| `size_t` | unsigned 64-bit | `UInt64` | `numpy.uint64` |
+```
+
+Fortran uses the same cached compiler probe as normal semantic conversion and
+the standard `storage_size` intrinsic to measure compiler-dependent modern and
+double-kind forms. The generated table also lists legacy spellings; numeric
+`type*N` rows use their fixed total storage, and character-star rows show
+length syntax rather than a different character kind:
+
+<!-- x2py-doc-test: exact linux-x86_64 -->
+```bash
+python3 -m x2py.type_mapping_report --language fortran
+```
+
+<!-- x2py-doc-test-output -->
+```markdown
+Target profile: `linux-x86_64`
+
+| Fortran type | Native target fact | Semantic dtype | NumPy dtype |
+| --- | --- | --- | --- |
+| `integer` | 32-bit storage | `Int32` | `numpy.int32` |
+| `integer(kind=1)` | 8-bit storage | `Int8` | `numpy.int8` |
+| `integer(kind=2)` | 16-bit storage | `Int16` | `numpy.int16` |
+| `integer(kind=4)` | 32-bit storage | `Int32` | `numpy.int32` |
+| `integer(kind=8)` | 64-bit storage | `Int64` | `numpy.int64` |
+| `integer(int8)` | 8-bit storage | `Int8` | `numpy.int8` |
+| `integer(int16)` | 16-bit storage | `Int16` | `numpy.int16` |
+| `integer(int32)` | 32-bit storage | `Int32` | `numpy.int32` |
+| `integer(int64)` | 64-bit storage | `Int64` | `numpy.int64` |
+| `integer(c_signed_char)` | 8-bit storage | `Int8` | `numpy.int8` |
+| `integer(c_short)` | 16-bit storage | `Int16` | `numpy.int16` |
+| `integer(c_int)` | 32-bit storage | `Int32` | `numpy.int32` |
+| `integer(c_long)` | 64-bit storage | `Int64` | `numpy.int64` |
+| `integer(c_long_long)` | 64-bit storage | `Int64` | `numpy.int64` |
+| `integer(c_size_t)` | 64-bit storage | `Int64` | `numpy.int64` |
+| `integer(c_int8_t)` | 8-bit storage | `Int8` | `numpy.int8` |
+| `integer(c_int16_t)` | 16-bit storage | `Int16` | `numpy.int16` |
+| `integer(c_int32_t)` | 32-bit storage | `Int32` | `numpy.int32` |
+| `integer(c_int64_t)` | 64-bit storage | `Int64` | `numpy.int64` |
+| `real` | 32-bit storage | `Float32` | `numpy.float32` |
+| `real(kind=4)` | 32-bit storage | `Float32` | `numpy.float32` |
+| `real(kind=8)` | 64-bit storage | `Float64` | `numpy.float64` |
+| `real(kind=16)` | 128-bit storage | `Float128` | `numpy.longdouble` |
+| `real(real32)` | 32-bit storage | `Float32` | `numpy.float32` |
+| `real(real64)` | 64-bit storage | `Float64` | `numpy.float64` |
+| `real(real128)` | 128-bit storage | `Float128` | `numpy.longdouble` |
+| `real(c_float)` | 32-bit storage | `Float32` | `numpy.float32` |
+| `real(c_double)` | 64-bit storage | `Float64` | `numpy.float64` |
+| `real(c_long_double)` | 128-bit storage | `Float128` | `numpy.longdouble` |
+| `real(kind(1.0e0))` | 32-bit storage | `Float32` | `numpy.float32` |
+| `real(kind(1.0d0))` | 64-bit storage | `Float64` | `numpy.float64` |
+| `real(kind(1.0q0))` | 128-bit storage | `Float128` | `numpy.longdouble` |
+| `complex` | 64-bit storage | `Complex64` | `numpy.complex64` |
+| `complex(kind=4)` | 64-bit storage | `Complex64` | `numpy.complex64` |
+| `complex(kind=8)` | 128-bit storage | `Complex128` | `numpy.complex128` |
+| `complex(kind=16)` | 256-bit storage | `Complex256` | `numpy.clongdouble` |
+| `complex(real32)` | 64-bit storage | `Complex64` | `numpy.complex64` |
+| `complex(real64)` | 128-bit storage | `Complex128` | `numpy.complex128` |
+| `complex(real128)` | 256-bit storage | `Complex256` | `numpy.clongdouble` |
+| `complex(c_float_complex)` | 64-bit storage | `Complex64` | `numpy.complex64` |
+| `complex(c_double_complex)` | 128-bit storage | `Complex128` | `numpy.complex128` |
+| `complex(c_long_double_complex)` | 256-bit storage | `Complex256` | `numpy.clongdouble` |
+| `complex(kind=kind(1.0e0))` | 64-bit storage | `Complex64` | `numpy.complex64` |
+| `complex(kind=kind(1.0d0))` | 128-bit storage | `Complex128` | `numpy.complex128` |
+| `complex(kind=kind(1.0q0))` | 256-bit storage | `Complex256` | `numpy.clongdouble` |
+| `logical` | 32-bit storage | `Bool` | `numpy.bool_` |
+| `logical(kind=1)` | 8-bit storage | `Bool` | `numpy.bool_` |
+| `logical(kind=2)` | 16-bit storage | `Bool` | `numpy.bool_` |
+| `logical(kind=4)` | 32-bit storage | `Bool` | `numpy.bool_` |
+| `logical(kind=8)` | 64-bit storage | `Bool` | `numpy.bool_` |
+| `logical(c_bool)` | 8-bit storage | `Bool` | `numpy.bool_` |
+| `character` | 8-bit storage | `String` | `numpy.str_ / ABI bytes` |
+| `character(len=n)` | 8-bit storage | `String` | `numpy.str_ / ABI bytes` |
+| `character(kind=1)` | 8-bit storage | `String` | `numpy.str_ / ABI bytes` |
+| `character(kind=c_char)` | 8-bit storage | `String` | `numpy.str_ / ABI bytes` |
+| `integer*1` | 8-bit storage | `Int8` | `numpy.int8` |
+| `integer*2` | 16-bit storage | `Int16` | `numpy.int16` |
+| `integer*4` | 32-bit storage | `Int32` | `numpy.int32` |
+| `integer*8` | 64-bit storage | `Int64` | `numpy.int64` |
+| `real*4` | 32-bit storage | `Float32` | `numpy.float32` |
+| `real*8` | 64-bit storage | `Float64` | `numpy.float64` |
+| `real*16` | 128-bit storage | `Float128` | `numpy.longdouble` |
+| `double precision` | 64-bit storage | `Float64` | `numpy.float64` |
+| `complex*8` | 64-bit storage | `Complex64` | `numpy.complex64` |
+| `complex*16` | 128-bit storage | `Complex128` | `numpy.complex128` |
+| `complex*32` | 256-bit storage | `Complex256` | `numpy.clongdouble` |
+| `double complex` | 128-bit storage | `Complex128` | `numpy.complex128` |
+| `logical*1` | 8-bit storage | `Bool` | `numpy.bool_` |
+| `logical*2` | 16-bit storage | `Bool` | `numpy.bool_` |
+| `logical*4` | 32-bit storage | `Bool` | `numpy.bool_` |
+| `logical*8` | 64-bit storage | `Bool` | `numpy.bool_` |
+| `character*1` | 8-bit storage | `String` | `numpy.str_ / ABI bytes` |
+| `character*8` | 8-bit storage | `String` | `numpy.str_ / ABI bytes` |
+| `character*(*)` | 8-bit storage | `String` | `numpy.str_ / ABI bytes` |
+```
 
 ## C To Semantic IR Mapping
 
@@ -90,19 +243,16 @@ policy is documented in the datatype mapping section above.
 - C parameter -> `SemanticArgument`.
 - `void` return -> `None`.
 - `_Bool` -> `Bool`.
-- `char` -> `Int8` with `c_char_policy` metadata; `signed char` -> `Int8`;
-  `unsigned char` -> `UInt8`.
-- `int` maps to `Int`. Its concrete dtype is derived from a supplied
-  `x2py.c_type_probe` report and stored with the fact source; without one it
-  carries a marked `Int32` fallback.
-- `short`, `long`, and `long long` map to fixed signed integer names using the
-  current Linux-oriented defaults: `Int16`, `Int64`, `Int64`.
-- Unsigned integer spellings map to `UInt16`, `UInt32`, `UInt64`, and
-  `UInt64`; fixed-width typedef spellings such as `uint32_t` map to the
-  matching `UInt*` fallback.
-- `float` -> `Float32`; `double` -> `Float64`; `long double` -> `Float128`.
-- `float _Complex` -> `Complex64`; `double _Complex` -> `Complex128`;
-  `long double _Complex` -> `Complex256`.
+- All modeled primitive integer, real, and complex spellings consume supplied
+  `x2py.c_type_probe` facts. Plain `char` signedness, integer widths, real
+  storage widths and precision metadata, and complex storage widths come from
+  the selected compiler target.
+- `int` keeps semantic name `Int` while its concrete dtype follows the target.
+  Other primitive semantic names and dtypes become the measured width-specific
+  `Int*`, `UInt*`, `Float*`, or `Complex*` name.
+- Direct converter calls without a report retain the earlier Linux-oriented
+  primitive fallbacks; C semantic CLI stages supply a cached target report
+  automatically.
 - Local typedef chains are resolved when their parser model definitions are
   available.
 - `size_t` maps to `SizeT` without a target probe; supplied

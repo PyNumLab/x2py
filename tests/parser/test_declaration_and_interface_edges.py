@@ -198,6 +198,7 @@ end subroutine declaration_edges
     assert args["i"].kind == "4"
     assert args["x"].base_type == "real"
     assert args["y"].base_type == "real"
+    assert args["y"].target_kind_expression == "kind(1.0d0)"
 
 
 def test_nested_interface_dummy_procedure_and_generic_module_procedure_interface():

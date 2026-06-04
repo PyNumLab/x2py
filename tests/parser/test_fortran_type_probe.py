@@ -20,9 +20,13 @@ from x2py.fortran_type_probe import (
     FortranTypeProbeError,
     _value_for_expression,
     build_fortran_type_probe_source,
+    evaluate_fortran_type_facts,
     evaluate_fortran_type_requirements,
+    fortran_type_probe_cache_key,
     fortran_type_probe_expressions,
+    load_fortran_type_probe_report,
     probe_fortran_type_expressions,
+    probe_fortran_type_expressions_cached,
 )
 from x2py.preprocessing import PreprocessingConfig
 
@@ -48,6 +52,36 @@ def test_fortran_type_probe_source_evaluates_integer_initialization_expressions(
     normalized = build_fortran_type_probe_source(["", "real64", "REAL64"])
     assert "integer, parameter :: x2py_value_0 = real64" in normalized
     assert "x2py_value_1" not in normalized
+
+
+def test_fortran_type_probe_wraps_long_intrinsic_import_lists():
+    source = build_fortran_type_probe_source(
+        [
+            "c_bool",
+            "c_char",
+            "c_double",
+            "c_double_complex",
+            "c_float",
+            "c_float_complex",
+            "c_int",
+            "c_int16_t",
+            "c_int32_t",
+            "c_int64_t",
+            "c_int8_t",
+            "c_long",
+            "c_long_double",
+            "c_long_double_complex",
+            "c_long_long",
+            "c_short",
+            "c_signed_char",
+            "c_size_t",
+        ]
+    )
+
+    assert "use, intrinsic :: iso_c_binding, only: &" in source
+    assert "    c_bool, &" in source
+    assert "    c_size_t\n" in source
+    assert all(len(line) <= 120 for line in source.splitlines())
 
 
 def test_x2py_public_api_lazily_exposes_type_probe_symbols_and_rejects_unknown_names():
@@ -80,6 +114,113 @@ def test_fortran_type_probe_rejects_compile_database_and_validates_expression_fo
         )
     with pytest.raises(FortranTypeProbeError, match="unsupported characters"):
         build_fortran_type_probe_source(["selected_real_kind(12)!"])
+    with pytest.raises(FortranTypeProbeError, match="custom preprocessing templates"):
+        probe_fortran_type_expressions(
+            PreprocessingConfig(mode="compiler", compiler="gfortran", command_template="{compiler} {source}"),
+            ["selected_real_kind(12)"],
+        )
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        ([], "must contain a JSON object"),
+        ({}, "missing valid 'values'"),
+        ({"values": {}, "recipe": {}, "source_text": "probe"}, "missing a valid 'recipe'"),
+        ({"values": {}, "recipe": {"compiler": "gfortran"}}, "missing valid 'source_text'"),
+    ],
+)
+def test_fortran_type_probe_report_loader_validates_reusable_reports(tmp_path, payload, message):
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(FortranTypeProbeError, match=message):
+        load_fortran_type_probe_report(report_path)
+
+
+def test_fortran_type_probe_report_loader_reports_read_json_and_missing_expression_errors(tmp_path):
+    with pytest.raises(FortranTypeProbeError, match="failed to read"):
+        load_fortran_type_probe_report(tmp_path / "missing.json")
+
+    report_path = tmp_path / "invalid.json"
+    report_path.write_text("not json", encoding="utf-8")
+    with pytest.raises(FortranTypeProbeError, match="contains invalid JSON"):
+        load_fortran_type_probe_report(report_path)
+
+    report = FortranTypeProbeReport(
+        values={"selected_real_kind(12)": 8},
+        recipe=FortranTypeProbeRecipe(
+            compiler="gfortran",
+            compile_argv=[],
+            run_argv=[],
+            expressions=["selected_real_kind(12)"],
+        ),
+        source_text="probe",
+    )
+    with pytest.raises(FortranTypeProbeError, match="missing required expressions"):
+        evaluate_fortran_type_facts(
+            PreprocessingConfig(),
+            [{"base_type": "real", "kind": None, "expression": "storage_size(real(0.0))"}],
+            report=report,
+        )
+
+
+def test_fortran_type_probe_cache_directory_precedence(monkeypatch, tmp_path):
+    explicit = tmp_path / "explicit"
+    assert fortran_type_probe._probe_cache_dir(explicit) == explicit
+
+    monkeypatch.setenv("X2PY_CACHE_DIR", str(tmp_path / "x2py"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg"))
+    assert fortran_type_probe._probe_cache_dir(None) == tmp_path / "x2py" / "fortran_type_probe"
+
+    monkeypatch.delenv("X2PY_CACHE_DIR")
+    assert fortran_type_probe._probe_cache_dir(None) == tmp_path / "xdg" / "x2py" / "fortran_type_probe"
+
+
+def test_fortran_type_probe_cache_reuses_report_and_invalidates_for_flags(monkeypatch, tmp_path):
+    fortran_type_probe._MEMORY_CACHE.clear()
+    calls = []
+    compiler = tmp_path / "fake-gfortran"
+    compiler.write_text("first compiler identity", encoding="utf-8")
+    expression = "storage_size(real(0.0))"
+    report = FortranTypeProbeReport(
+        values={expression: 32},
+        recipe=FortranTypeProbeRecipe(
+            compiler=str(compiler),
+            compile_argv=[str(compiler)],
+            run_argv=["probe"],
+            expressions=[expression],
+        ),
+        source_text=build_fortran_type_probe_source([expression]),
+    )
+
+    def probe(config, expressions, *, runner=None):
+        calls.append((config, expressions, runner))
+        return report
+
+    monkeypatch.setattr(fortran_type_probe, "probe_fortran_type_expressions", probe)
+    config = PreprocessingConfig(mode="compiler", compiler=str(compiler), compiler_args=["-fdefault-real-8"])
+
+    first = probe_fortran_type_expressions_cached(config, [expression], cache_dir=tmp_path)
+    second = probe_fortran_type_expressions_cached(config, [expression], cache_dir=tmp_path)
+    assert first is second
+    assert len(calls) == 1
+
+    fortran_type_probe._MEMORY_CACHE.clear()
+    loaded = probe_fortran_type_expressions_cached(config, [expression], cache_dir=tmp_path)
+    assert loaded.values == report.values
+    assert len(calls) == 1
+
+    changed = PreprocessingConfig(mode="compiler", compiler=str(compiler), compiler_args=["-fdefault-real-16"])
+    assert fortran_type_probe_cache_key(changed, [expression]) != fortran_type_probe_cache_key(config, [expression])
+    assert fortran_type_probe_cache_key(config, ["storage_size(int(0))"]) != fortran_type_probe_cache_key(
+        config, [expression]
+    )
+    probe_fortran_type_expressions_cached(changed, [expression], cache_dir=tmp_path)
+    assert len(calls) == 2
+
+    probe_fortran_type_expressions_cached(config, [expression], cache_dir=tmp_path, refresh=True)
+    assert len(calls) == 3
 
 
 def test_fortran_type_probe_expressions_extracts_semantic_requirement_inputs():
@@ -241,6 +382,34 @@ def test_fortran_type_probe_carries_target_relevant_user_flags(tmp_path):
     assert report.recipe.compiler_args == ["-fno-range-check"]
 
 
+def test_fortran_type_probe_maps_compiler_storage_facts():
+    compiler = _required_fortran_compiler()
+    requirements = [
+        {
+            "base_type": "integer",
+            "kind": None,
+            "expression": "storage_size(int(0))",
+        },
+        {
+            "base_type": "real",
+            "kind": None,
+            "expression": "storage_size(real(0.0))",
+        },
+    ]
+
+    facts = evaluate_fortran_type_facts(
+        PreprocessingConfig(
+            mode="compiler",
+            compiler=compiler,
+            compiler_args=["-fdefault-integer-8", "-fdefault-real-8"],
+        ),
+        requirements,
+    )
+
+    assert facts[("integer", None)]["bits"] == 64
+    assert facts[("real", None)]["bits"] == 64
+
+
 def test_fortran_type_probe_evaluates_collected_semantic_requirements():
     compiler = _required_fortran_compiler()
     parsed = parse_fortran_source(
@@ -266,7 +435,7 @@ end module solver_mod
     assert module.functions[0].arguments[0].semantic_type.name == "Float64"
 
 
-def test_fortran_type_probe_module_cli_emits_json_for_semantic_input():
+def test_fortran_type_probe_module_cli_emits_json_for_semantic_input(tmp_path):
     compiler = _required_fortran_compiler()
     completed = subprocess.run(
         [
@@ -279,6 +448,9 @@ def test_fortran_type_probe_module_cli_emits_json_for_semantic_input():
             "selected_int_kind(9)",
             "--expr",
             "selected_real_kind(12)",
+            "--cache-dir",
+            str(tmp_path / "cache"),
+            "--refresh",
         ],
         capture_output=True,
         text=True,
@@ -327,3 +499,104 @@ end module solver_mod
     payload = json.loads(completed.stdout)
     semantic_type = payload[str(source)]["semantic_modules"][0]["functions"][0]["arguments"][0]["semantic_type"]
     assert semantic_type["name"] == "Float64"
+
+
+def test_x2py_semantics_cli_uses_compiler_dependent_default_fortran_kinds(tmp_path):
+    compiler = _required_fortran_compiler()
+    source = tmp_path / "defaults.f90"
+    source.write_text(
+        """
+module defaults
+  integer :: count
+  real :: scale
+  complex :: value
+  double precision :: double_scale
+  double complex :: double_value
+  complex*16 :: legacy_value
+end module defaults
+""",
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(source),
+            "--semantics",
+            "--compiler",
+            compiler,
+            "--compiler-arg=-fdefault-integer-8",
+            "--compiler-arg=-fdefault-real-8",
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    payload = json.loads(completed.stdout)
+    variables = payload[str(source)]["semantic_modules"][0]["variables"]
+    semantic_types = {variable["name"]: variable["semantic_type"] for variable in variables}
+    assert semantic_types["count"]["name"] == "Int64"
+    assert semantic_types["scale"]["name"] == "Float64"
+    assert semantic_types["value"]["name"] == "Complex128"
+    assert semantic_types["double_scale"]["name"] == "Float128"
+    assert semantic_types["double_value"]["name"] == "Complex256"
+    assert semantic_types["legacy_value"]["name"] == "Complex128"
+    assert semantic_types["scale"]["metadata"]["fortran_type_fact_source"] == "compiler_probe"
+    assert semantic_types["legacy_value"]["metadata"]["fortran_type_fact_source"] == "legacy_star_storage"
+
+
+def test_x2py_semantics_cli_reuses_explicit_fortran_type_report(tmp_path):
+    compiler = _required_fortran_compiler()
+    source = tmp_path / "defaults.f90"
+    source.write_text(
+        """
+module defaults
+  real :: scale
+end module defaults
+""",
+        encoding="utf-8",
+    )
+    expression = "storage_size(real(0.0))"
+    report_path = tmp_path / "fortran-types.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "values": {expression: 64},
+                "recipe": {
+                    "compiler": compiler,
+                    "compile_argv": [],
+                    "run_argv": [],
+                    "expressions": [expression],
+                },
+                "source_text": "reusable test probe",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(source),
+            "--semantics",
+            "--compiler",
+            compiler,
+            "--fortran-type-report",
+            str(report_path),
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    payload = json.loads(completed.stdout)
+    semantic_type = payload[str(source)]["semantic_modules"][0]["variables"][0]["semantic_type"]
+    assert semantic_type["name"] == "Float64"
+    assert semantic_type["metadata"]["fortran_type_fact"]["expression"] == expression

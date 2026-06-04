@@ -867,6 +867,39 @@ def test_c2ir_preserves_c_int_identity_and_stores_compiler_probed_precision():
     }
 
 
+@pytest.mark.parametrize(
+    ("ctype", "primitive", "fact", "expected"),
+    [
+        (CChar(), "char", {"kind": "integer", "signed": False, "bits": 8}, "UInt8"),
+        (CLong(), "long", {"kind": "integer", "signed": True, "bits": 32}, "Int32"),
+        (CUnsignedLong(), "unsigned long", {"kind": "integer", "signed": False, "bits": 32}, "UInt32"),
+        (CLongDouble(), "long double", {"kind": "real", "bits": 64}, "Float64"),
+        (CLongDoubleComplex(), "long double _Complex", {"kind": "complex", "bits": 128}, "Complex128"),
+        (CBool(), "_Bool", {"kind": "bool", "bits": 8}, "Bool"),
+    ],
+)
+def test_c2ir_uses_compiler_probed_primitive_abi_facts(ctype, primitive, fact, expected):
+    semantic_type = CToIRConverter(standard_type_report={"types": {primitive: fact}}).visit_type(ctype)
+
+    assert semantic_type.name == expected
+    assert semantic_type.dtype == expected
+    assert semantic_type.metadata["c_primitive"] == primitive
+    assert semantic_type.metadata["c_type_fact"] == fact
+    assert semantic_type.metadata["c_type_fact_source"] == "compiler_probe"
+    if primitive == "char":
+        assert semantic_type.metadata["c_char_policy"] == "compiler-probed unsigned 8-bit code unit"
+
+
+def test_c2ir_blocks_compiler_probed_primitive_abi_without_semantic_dtype():
+    fact = {"kind": "integer", "signed": True, "bits": 48}
+    semantic_type = CToIRConverter(standard_type_report={"types": {"long": fact}}).visit_type(CLong())
+
+    assert semantic_type.name == "CUnsupported"
+    assert semantic_type.metadata["c_primitive"] == "long"
+    assert semantic_type.metadata["c_type_fact"] == fact
+    assert semantic_type.metadata["readiness_blockers"][0]["code"] == "c_unsupported_primitive_abi"
+
+
 def test_c2ir_uses_enum_specific_underlying_type_facts_when_supplied():
     parsed = parse_c_file(
         "enum status { STATUS_OK = 0, STATUS_ERROR = 255 }; enum status get_status(void);",

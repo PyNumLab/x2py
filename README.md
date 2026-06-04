@@ -37,11 +37,26 @@ native source
 
 `Wrappable: yes` means the semantic contract has no known readiness blockers.
 x2py does not currently generate or compile a runtime wrapper.
+The [generated target datatype mapping example](docs/semantics.md#generated-linux-x86_64-mapping-example)
+shows how the GitHub Actions C and Fortran scalar types map to NumPy dtypes.
 
 ### Fortran
 
 Recognizable Fortran files do not require an explicit language. Parse the
 checked basic-subroutine fixture:
+
+Input (`tests/data/fortran/general/basic_subroutine.f90`):
+
+<!-- x2py-doc-source: tests/data/fortran/general/basic_subroutine.f90 -->
+```fortran
+module m1
+contains
+subroutine add1(n, x)
+  integer, intent(in) :: n
+  real(kind=8), intent(inout), dimension(n) :: x
+end subroutine add1
+end module m1
+```
 
 <!-- x2py-doc-test: exact -->
 ```bash
@@ -105,6 +120,21 @@ python3 -m x2py solver.pyi --wrap-readiness
 C inputs require explicit C mode. These commands parse the checked C API
 fixture, inspect semantic IR, generate its `.pyi`, and check readiness:
 
+Input (`tests/data/c/general/math_api.h`):
+
+<!-- x2py-doc-source: tests/data/c/general/math_api.h -->
+```c
+#ifndef X2PY_GENERAL_MATH_API_H
+#define X2PY_GENERAL_MATH_API_H
+
+double norm2(int n, const double x[static 1]);
+void scale(int n, double alpha, double x[static 1]);
+double dot(int n, const double *restrict x, const double *restrict y);
+void fill_identity3(double a[static 3][3]);
+
+#endif
+```
+
 <!-- x2py-doc-test: exact -->
 ```bash
 python3 -m x2py tests/data/c/general/math_api.h --language c --parse
@@ -166,6 +196,10 @@ python3 -m x2py include/api.h --language c --parse \
   --std c11 \
   --compiler-arg=--sysroot=/opt/sdk
 ```
+
+Compiler-backed semantic, `.pyi`, and readiness stages also measure and cache
+target datatype facts. C probing covers primitive ABI widths and signedness;
+Fortran probing resolves kind expressions and measures intrinsic storage.
 
 C projects can use a compilation database:
 
