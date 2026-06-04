@@ -1,11 +1,131 @@
-# Developer Documentation
+# Developer Guide
 
-This page is for changing x2py. It names the relevant implementation
-references, manual commands, focused test files, and fixture generators for each
-part of the project.
+This guide is for changing x2py. It maps user-visible behavior to its owning
+implementation and tests, then gives focused change and verification
+workflows.
+
+Use the [tutorial](tutorial.md) and [examples cookbook](examples.md) to inspect
+the public workflows before changing them. Use the parser and semantic
+references for the detailed maintained contracts.
+
+## Start Here
+
+Install the project and QA dependencies:
+
+```bash
+python3 -m pip install -e ".[qa]"
+```
+
+Run the smallest relevant test while iterating, then run the full suite:
+
+```bash
+PYTHONPATH=. python3 -m pytest -q tests/parser/test_cli.py
+PYTHONPATH=. python3 -m pytest -q
+```
+
+Before changing a public behavior, trace it through these layers:
+
+```text
+public command or Python API
+  -> owning parser or CLI entrypoint
+  -> parser model
+  -> semantic conversion, when applicable
+  -> .pyi printer/loader, when applicable
+  -> readiness, when applicable
+  -> focused tests and maintained reference docs
+```
+
+For example, a new CLI stage option normally requires:
+
+1. A focused contract test in `tests/parser/test_cli.py`.
+2. Dispatch or output routing in `x2py/cli.py`.
+3. Preprocessing tests if the option changes source loading.
+4. A copy-paste command in [examples.md](examples.md).
+5. A tutorial update only when the main user workflow changes.
+
+## Support Evidence Rule
+
+Documentation must describe implemented behavior, not intended behavior.
+Treat a support claim as established only when it is traceable to current
+implementation plus one of these forms of evidence:
+
+- a focused test that proves the contract;
+- a maintained fixture test that proves generated output;
+- a repository command that has been run against a checked fixture;
+- an explicit parser or semantic reference inventory backed by tests.
+
+Use these documentation roles consistently:
+
+| Document | Role |
+| --- | --- |
+| [tutorial.md](tutorial.md) | Main supported user workflow and boundaries |
+| [examples.md](examples.md) | Copy-paste commands and Python API recipes |
+| [c_parser.md](c_parser.md) | Maintained C frontend support inventory |
+| [fortran_parser.md](fortran_parser.md) | Maintained Fortran frontend support inventory |
+| [semantics.md](semantics.md) | Accepted semantic IR and `.pyi` contract |
+| [wrapper_design_notes.md](wrapper_design_notes.md) | Clearly deferred wrapper policy, not current runtime support |
+
+When adding a user example:
+
+1. Prefer a checked repository fixture or a short inline source string.
+2. Run the command or snippet from the repository root.
+3. Add or identify the focused test that owns the behavior.
+4. State limitations next to the example when metadata is preserved but not
+   executed, such as `@native_call` projection metadata.
+5. Do not describe future wrapper generation as implemented support.
+
+### Automatically Verify Markdown Examples
+
+`tests/tools/test_documentation_examples.py` executes explicitly marked
+`bash` CLI examples and `python` API snippets from `README.md` and Markdown
+files under `docs/`. Bash examples must be `python3 -m x2py` commands; the
+test replaces `python3` with the active test interpreter and runs them without
+a shell. It rejects shell operators, output-writing options, and options that
+select custom executables or preprocessing command templates. Python snippets
+run with the active test interpreter.
+
+Mark a command that only needs to exit successfully:
+
+````markdown
+<!-- x2py-doc-test: run -->
+```bash
+python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
+```
+````
+
+Mark a command whose stdout must match the documentation exactly:
+
+````markdown
+<!-- x2py-doc-test: exact -->
+```bash
+python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
+```
+
+<!-- x2py-doc-test-output -->
+```text
+File: tests/data/fortran/general/basic_subroutine.f90
+...
+```
+````
+
+Use exact checks for stable human-readable output. Use run checks for large
+JSON or semantic payloads whose detailed contract is already covered by
+focused tests. The same markers can precede a `python` fenced block. Do not
+mark placeholder commands, snippets that modify the checkout,
+environment-dependent compiler recipes, or intentionally failing diagnostic
+examples.
+
+Run the documentation checks directly:
+
+```bash
+PYTHONPATH=. python3 -m pytest -q tests/tools/test_documentation_examples.py
+```
 
 ## References
 
+- [Tutorial](tutorial.md): supported end-to-end user workflow and current
+  boundaries.
+- [Verified examples cookbook](examples.md): CLI and Python API recipes.
 - [C parser reference](c_parser.md): C frontend scope, preprocessing and
   project policy, parser architecture, CLI behavior, semantic handoff,
   fixtures, and tests.
@@ -23,9 +143,10 @@ part of the project.
 
 ## User-Facing Contract Internals
 
-The user documentation describes CLI stages, `.pyi` syntax, datatype names, and
-readiness reports. The developer task is to keep those user-visible contracts
-stable, tested, and traceable to implementation files.
+The tutorial, examples cookbook, and semantic reference describe CLI stages,
+`.pyi` syntax, datatype names, and readiness reports. The developer task is to
+keep those user-visible contracts stable, tested, and traceable to
+implementation files.
 
 ### Source Ownership Map
 
@@ -43,6 +164,7 @@ stable, tested, and traceable to implementation files.
 | `.pyi` loading/editing | `semantics/pyi_parser.py` | `tests/pyi/test_pyi_to_ir.py`, `tests/pyi/test_pyi_fixture_suite.py` |
 | Readiness reports | `semantics/readiness.py` | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_wrap_readiness_fixture_suite.py` |
 | Public API exports | `x2py/__init__.py` | `tests/parser/test_parser_public_entrypoints.py`, `tests/parser/c/test_c_public_api_skeleton.py` |
+| Executable Markdown examples | `README.md`, `docs/*.md` | `tests/tools/test_documentation_examples.py` |
 
 ### `.pyi` Contract Internals
 
@@ -67,7 +189,8 @@ When changing `.pyi` syntax:
 1. Add or update parser tests in `tests/pyi/test_pyi_to_ir.py`.
 2. Add or update printer tests in `tests/semantics/test_pyi_printer.py`.
 3. Update fixture tests only if the public generated contract changes.
-4. Update [user.md](user.md) if users need to write or read the new syntax.
+4. Update [tutorial.md](tutorial.md) or [examples.md](examples.md) if users
+   need to write or read the new syntax.
 5. Update [semantics.md](semantics.md) for the full reference.
 
 ### Datatype Mapping Internals
@@ -86,8 +209,9 @@ When changing datatype mapping:
 2. Add `.pyi` printer/loader coverage if the emitted syntax changes.
 3. Update semantic fixtures only when serialized semantic IR intentionally
    changes.
-4. Update [user.md](user.md) and [semantics.md](semantics.md) so the visible
-   mapping stays accurate.
+4. Update [semantics.md](semantics.md), plus
+   [tutorial.md](tutorial.md) or [examples.md](examples.md) when the visible
+   user workflow or examples change.
 
 ### Readiness Internals
 
@@ -104,8 +228,8 @@ When adding a readiness blocker:
    `tests/semantics/test_c_semantic_readiness.py`.
 4. Update readiness fixtures only if user-visible messages intentionally
    change.
-5. Update [user.md](user.md) when the blocker is something users can fix by
-   editing `.pyi`.
+5. Update [tutorial.md](tutorial.md) or [examples.md](examples.md) when the
+   blocker is something users can fix by editing `.pyi`.
 
 ### Parser To Wrapper Boundary
 
@@ -347,9 +471,9 @@ the C parser.
    `semantics/c2ir.py` and add coverage in `tests/semantics/test_c2ir.py`.
 7. If the generated `.pyi` changes, update `tests/semantics/test_pyi_printer.py`
    or `tests/pyi/test_pyi_fixture_suite.py`.
-8. Update [c_parser.md](c_parser.md), [user.md](user.md), or
-   [semantics.md](semantics.md) if users or maintainers need to know the new
-   behavior.
+8. Update [c_parser.md](c_parser.md), [tutorial.md](tutorial.md),
+   [examples.md](examples.md), or [semantics.md](semantics.md) if users or
+   maintainers need to know the new behavior.
 
 Focused verification:
 
@@ -387,8 +511,8 @@ metadata item.
    and `tests/semantics/test_fortran2ir.py`.
 7. If generated `.pyi` changes, update `tests/semantics/test_pyi_printer.py`
    and the relevant fixture tests.
-8. Update [fortran_parser.md](fortran_parser.md), [user.md](user.md), or
-   [semantics.md](semantics.md) as needed.
+8. Update [fortran_parser.md](fortran_parser.md), [tutorial.md](tutorial.md),
+   [examples.md](examples.md), or [semantics.md](semantics.md) as needed.
 
 Focused verification:
 
@@ -409,7 +533,9 @@ Example target: map a new Fortran kind, C typedef, or target-probed C type.
    there is a deliberate schema decision.
 4. If the emitted `.pyi` annotation changes, update
    `tests/semantics/test_pyi_printer.py` and `tests/pyi/test_pyi_to_ir.py`.
-5. Update the datatype tables in [user.md](user.md) and [semantics.md](semantics.md).
+5. Update the datatype tables in [semantics.md](semantics.md), and update
+   [tutorial.md](tutorial.md) or [examples.md](examples.md) when a visible
+   example changes.
 
 Focused verification:
 
@@ -429,7 +555,8 @@ Example target: add a new `Annotated[...]` metadata item or projection helper.
 5. Update semantic models in `semantics/models.py` only if the IR needs a new
    field or constraint.
 6. Update readiness behavior if the new syntax resolves a blocker.
-7. Update [user.md](user.md) and [semantics.md](semantics.md).
+7. Update [semantics.md](semantics.md), plus [tutorial.md](tutorial.md) or
+   [examples.md](examples.md) when users need the new syntax in a workflow.
 
 Focused verification:
 
@@ -456,7 +583,8 @@ Example target: report a new unsupported C/Fortran semantic contract clearly.
    python tests/semantics/generate_wrap_readiness_fixtures.py
    ```
 
-6. Update [user.md](user.md) if users can fix the blocker by editing `.pyi`.
+6. Update [tutorial.md](tutorial.md) or [examples.md](examples.md) if users
+   can fix the blocker by editing `.pyi`.
 
 Focused verification:
 
@@ -475,8 +603,8 @@ diagnostic formatting.
 3. Keep Fortran package-specific CLI behavior in `fortran_parser/cli.py`.
 4. If compiler preprocessing behavior changes, update `x2py/preprocessing.py`
    and preprocessing tests.
-5. Update [user.md](user.md) for user-facing commands and
-   [developer.md](developer.md) for maintainer command maps.
+5. Update [tutorial.md](tutorial.md) or [examples.md](examples.md) for
+   user-facing commands and this guide for maintainer command maps.
 
 Focused verification:
 

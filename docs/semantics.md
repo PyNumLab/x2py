@@ -5,6 +5,10 @@ editable `.pyi` contracts, and the exact native C semantic stub rules. It is
 kept together because parser frontends should converge on one semantic model
 before wrapper generation makes language-specific lowering decisions.
 
+Sections through [Deferred C Work](#deferred-c-work) describe current semantic
+behavior. The final self-contained C runtime-contract section is explicitly a
+design proposal and is not implemented wrapper support.
+
 ## Datatype Mapping
 
 This document records the shared scalar datatype policy used when C and Fortran
@@ -139,10 +143,10 @@ projection policy stays out of the generated `.pyi` until supplied by the
 semantic model or an edited interface. In particular, an unresolved typedef is
 not assumed to be opaque because its ABI representation is unknown.
 
-## Wrapper `.pyi` Format
+## Semantic `.pyi` Format
 
 The semantic `.pyi` format is a Python-valid view of x2py semantic IR. It is
-language-neutral: Fortran and future C inputs use the same type, storage,
+language-neutral: Fortran and C inputs use the same type, storage,
 pointer, array, layout and metadata notation. Source language differences are
 represented by contracts and metadata, not by separate syntax families.
 
@@ -283,9 +287,9 @@ def legacy_matrix(
 ```
 
 Assumed-shape arrays are stride-aware. A rank-one assumed-shape dummy is
-emitted as a strided vector. Under the current generated-wrapper policy, a
-rank-two or higher assumed-shape dummy retains Fortran orientation while
-permitting strides:
+emitted as a strided vector. Under the current generated semantic-interface
+policy, a rank-two or higher assumed-shape dummy retains Fortran orientation
+while permitting strides:
 
 ```python
 def vector(x: Float64[::Strided]) -> None: ...
@@ -614,18 +618,25 @@ Future C conversion should use the same notation: by-value scalars as bare
 types, unrefined pointers as `Ptr(T)` or `Ptr(Const(T))`, and array notation
 only when a real array storage contract is known.
 
-## Self-Contained C Semantic `.pyi` Contract
+## Design Proposal: Self-Contained C Semantic `.pyi` Runtime Contract
 
-**Status:** Phase 1 implementation baseline
-**Target:** Python wrappers for C libraries on a selected Linux ABI
-**Primary requirement:** A semantic `.pyi` file plus a compiled library is
-sufficient to generate a wrapper. C header parsing is optional input
-generation, not a wrapper-generation dependency.
+> **Status: design only, not implemented runtime support.** x2py currently
+> parses C, converts the supported subset to semantic IR, emits and loads
+> semantic `.pyi`, and reports readiness. It does not currently generate,
+> lower, compile, or execute C wrappers. Every runtime behavior, wrapper error,
+> and Phase 1/Phase 2 requirement below describes a proposed implementation
+> target unless an earlier current-contract section explicitly says otherwise.
 
-### 1. Phase 1 Boundary
+The proposed target is Python wrappers for C libraries on a selected Linux ABI.
+Its primary design requirement is that a semantic `.pyi` file plus a compiled
+library be sufficient to generate a wrapper, with C header parsing used only as
+optional input generation. Related deferred policy is tracked in
+[wrapper design notes](wrapper_design_notes.md).
 
-Phase 1 implements the exact callable interface first. Python is intentionally
-C-like at this stage:
+### 1. Proposed Phase 1 Boundary
+
+The proposed Phase 1 would implement the exact callable interface first.
+Python would intentionally remain C-like at this stage:
 
 - Every visible Python argument corresponds to one native C parameter, in the
   same order.
@@ -638,12 +649,12 @@ C-like at this stage:
 - No argument is synthesized, reordered, omitted or converted into a Python
   result by the wrapper.
 
-Therefore, Phase 1 does **not** implement or emit `@native_call`.
+Therefore, the proposed Phase 1 would not implement or emit `@native_call`.
 
 The purpose of this ordering is to prove that x2py can describe, parse, lower
 and execute direct C signatures reliably before adding Pythonic adaptations.
 
-### 2. Non-Negotiable Rules
+### 2. Proposed Rules
 
 1. The semantic `.pyi` must be sufficient to call every supported wrapped
    symbol without reading C source at build time.
@@ -694,18 +705,18 @@ and execute direct C signatures reliably before adding Pythonic adaptations.
 12. The current target is a selected Linux ABI. Cross-platform variation and
     non-default calling conventions are deferred.
 
-### 3. Current Artifact
+### 3. Proposed Artifact
 
-The current compiler-facing artifact is:
+The proposed compiler-facing artifact is:
 
 ```text
 module.x2py.pyi
 ```
 
-It may use x2py semantic types, but it contains only identity-callable
+It may use x2py semantic types, but it would contain only identity-callable
 functions in Phase 1.
 
-A clean `.pyi` for standard type checkers is not part of Phase 1.
+A clean `.pyi` for standard type checkers is not part of the proposed Phase 1.
 
 ### 4. Scalar Types Passed By Value
 
@@ -1197,12 +1208,12 @@ native representations are implemented explicitly:
 - variadic functions;
 - `void *` beyond an explicitly selected raw/byte-storage representation.
 
-### 10. Phase 1 Unsupported Transformations
+### 10. Transformations Excluded From Proposed Phase 1
 
 Phase 1 must reject, or leave unresolved during optional C import generation,
 any interface that requires the wrapper to change the native function shape.
 
-Unsupported now:
+Excluded from the proposed Phase 1:
 
 | Desired behavior | Example C shape | Later mechanism |
 | --- | --- | --- |
@@ -1218,10 +1229,10 @@ Unsupported now:
 The later syntax is retained as design direction only. It is not required by
 the Phase 1 parser, IR, printer or wrapper generator.
 
-### 11. Required Phase 1 Readiness Errors
+### 11. Proposed Phase 1 Runtime Errors
 
-The wrapper generator or optional importer must report unsupported behavior
-instead of silently changing the interface.
+A future wrapper generator or optional importer would need to report
+unsupported behavior instead of silently changing the interface.
 
 | Code | Condition |
 | --- | --- |
@@ -1240,9 +1251,9 @@ instead of silently changing the interface.
 | `c_variadic_function_unsupported` | A variadic native function is requested. |
 | `c_calling_convention_unsupported` | A non-default calling convention is required. |
 
-### 12. Phase 1 Parser And Wrapper Requirements
+### 12. Proposed Phase 1 Parser And Wrapper Requirements
 
-The Phase 1 implementation must:
+The proposed Phase 1 implementation would need to:
 
 1. Parse scalar annotations and direct `None`/scalar return annotations.
 2. Parse unrefined one-level pointer forms `Ptr(T)` and `Ptr(Const(T))`, and
@@ -1275,7 +1286,7 @@ The Phase 1 implementation must:
     later Pythonic mapping.
 13. Never consult C source after a supported semantic `.pyi` has been parsed.
 
-### 13. Phase 1 Tests
+### 13. Proposed Phase 1 Runtime Tests
 
 #### 13.1 By-Value Scalar Identity
 
@@ -1422,7 +1433,7 @@ later transformation syntax such as:
 def increment(value: Int) -> Returns["value", Int]: ...
 ```
 
-The supported Phase 1 spelling for the same C function is:
+The proposed Phase 1 spelling for the same C function is:
 
 ```python
 def increment(value: Ptr(Int)) -> None: ...

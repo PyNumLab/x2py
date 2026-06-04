@@ -22,8 +22,8 @@ guard.
 
 ## Purpose
 
-The C parser frontend will be a wrapper-oriented source extraction system for
-x2py. It should extract enough stable semantic information from C sources and
+The C parser frontend is a wrapper-oriented source extraction system for
+x2py. It extracts stable semantic information from C sources and
 headers to help create or update the semantic interface layer.
 
 The implementation must be grammar-style: lex and slice source into C grammar
