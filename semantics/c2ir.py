@@ -539,6 +539,13 @@ class CToIRConverter:
         )
 
     def visit_type(self, type_: CType, *, owner: str | None = None) -> SemanticType:
+        structural_type = self._structural_type(type_, owner=owner)
+        if structural_type is not None:
+            return structural_type
+        return self._primitive_type(type_, owner=owner)
+
+    def _structural_type(self, type_: CType, *, owner: str | None) -> SemanticType | None:
+        """Convert non-primitive C types, leaving arithmetic types to the ABI mapper."""
         if isinstance(type_, CComposedType):
             return self._composed_type(type_, owner=owner)
         if isinstance(type_, CTypedef):
@@ -560,7 +567,10 @@ class CToIRConverter:
                 metadata={"c_void_pointer_pointee": True},
                 origin=self._type_origin(type_),
             )
+        return None
 
+    def _primitive_type(self, type_: CType, *, owner: str | None) -> SemanticType:
+        """Convert one modeled C arithmetic primitive using target ABI facts."""
         semantic_name = self.primitive_type_map.get(type(type_))
         if semantic_name is None:
             return self._unsupported_type(

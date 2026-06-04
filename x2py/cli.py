@@ -310,34 +310,46 @@ def _semantic_report(
     fortran_type_probe_cache_dir: str | None = None,
     refresh_fortran_type_probe: bool = False,
 ) -> dict[str, dict]:
-    from semantics.fortran2ir import fortran_module_to_semantic_module
-    from semantics.pyi_printer import emit_module_stubs
-
     preprocessing = preprocessing or PreprocessingConfig()
-    out: dict[str, dict] = {}
     if language == "c":
-        if c_standard_type_report is None:
-            c_standard_type_report = _c_standard_type_report(preprocessing)
-        project = _parse_c_project(paths, preprocessing)
-        converted_files = {
-            module.origin.native_name: [module]
-            for module in _convert_c_project(project, c_standard_type_report=c_standard_type_report)
-        }
-        available_modules = [module for modules in converted_files.values() for module in modules]
-        for p in expand_c_paths(paths):
-            modules = converted_files[str(p)]
-            stubs = emit_module_stubs(modules, available_modules=available_modules)
-            primary_names = {module.name for module in modules}
-            out[str(p)] = {
-                "semantic_modules": [asdict(module) for module in modules],
-                "pyi": "\n\n".join(stubs[module.name] for module in modules).strip(),
-            }
-            dependencies = {
-                module_name: text for module_name, text in stubs.items() if module_name not in primary_names
-            }
-            if dependencies:
-                out[str(p)]["pyi_dependencies"] = dependencies
-        return out
+        return _c_semantic_report(paths, preprocessing, c_standard_type_report=c_standard_type_report)
+    return _fortran_semantic_report(
+        paths,
+        preprocessing,
+        fortran_type_report=fortran_type_report,
+        fortran_type_probe_runner=fortran_type_probe_runner,
+        fortran_type_probe_cache_dir=fortran_type_probe_cache_dir,
+        refresh_fortran_type_probe=refresh_fortran_type_probe,
+    )
+
+
+def _c_semantic_report(
+    paths: list[str],
+    preprocessing: PreprocessingConfig,
+    *,
+    c_standard_type_report: dict[str, object] | None,
+) -> dict[str, dict]:
+    if c_standard_type_report is None:
+        c_standard_type_report = _c_standard_type_report(preprocessing)
+    project = _parse_c_project(paths, preprocessing)
+    modules_by_source = {
+        module.origin.native_name: [module]
+        for module in _convert_c_project(project, c_standard_type_report=c_standard_type_report)
+    }
+    converted_files = [(path, modules_by_source[str(path)]) for path in expand_c_paths(paths)]
+    return _semantic_payload_for_converted_files(converted_files)
+
+
+def _fortran_semantic_report(
+    paths: list[str],
+    preprocessing: PreprocessingConfig,
+    *,
+    fortran_type_report: FortranTypeProbeReport | None,
+    fortran_type_probe_runner: list[str] | None,
+    fortran_type_probe_cache_dir: str | None,
+    refresh_fortran_type_probe: bool,
+) -> dict[str, dict]:
+    from semantics.fortran2ir import fortran_module_to_semantic_module
 
     parser = FortranParser()
     parsed_files = []
@@ -371,6 +383,13 @@ def _semantic_report(
             for m in fobj.modules
         ]
         converted_files.append((p, modules))
+    return _semantic_payload_for_converted_files(converted_files)
+
+
+def _semantic_payload_for_converted_files(converted_files) -> dict[str, dict]:
+    from semantics.pyi_printer import emit_module_stubs
+
+    out: dict[str, dict] = {}
     available_modules = [module for _p, modules in converted_files for module in modules]
     for p, modules in converted_files:
         stubs = emit_module_stubs(modules, available_modules=available_modules)
@@ -689,6 +708,298 @@ def _validate_fortran_type_probe_options(
         parser.error("--fortran-type-report cannot be combined with automatic Fortran type probe options")
 
 
+def _has_stage(args: argparse.Namespace) -> bool:
+    return bool(args.parse or args.semantics or args.pyi or args.wrap_readiness)
+
+
+def _has_semantic_stage(args: argparse.Namespace) -> bool:
+    return bool(args.semantics or args.pyi or args.wrap_readiness)
+
+
+def _automatic_c_type_probe_options(args: argparse.Namespace) -> tuple[object, ...]:
+    return (
+        getattr(args, "c_type_probe_runner", None),
+        getattr(args, "c_type_probe_cache_dir", None),
+        getattr(args, "refresh_c_type_probe", False),
+    )
+
+
+def _automatic_fortran_type_probe_options(args: argparse.Namespace) -> tuple[object, ...]:
+    return (
+        getattr(args, "fortran_type_probe_runner", None),
+        getattr(args, "fortran_type_probe_cache_dir", None),
+        getattr(args, "refresh_fortran_type_probe", False),
+    )
+
+
+def _c_type_probe_options_used(args: argparse.Namespace) -> bool:
+    return bool(getattr(args, "c_type_report", None) or any(_automatic_c_type_probe_options(args)))
+
+
+def _fortran_type_probe_options_used(args: argparse.Namespace) -> bool:
+    return bool(getattr(args, "fortran_type_report", None) or any(_automatic_fortran_type_probe_options(args)))
+
+
+def _validate_c_type_probe_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    report_path = getattr(args, "c_type_report", None)
+    automatic_options = _automatic_c_type_probe_options(args)
+    options_used = bool(report_path or any(automatic_options))
+    if args.language != "c":
+        if options_used:
+            parser.error("C type probe options require --language c")
+        return
+    if options_used and not _has_semantic_stage(args):
+        parser.error("C type probe options require --semantics, --pyi, or --wrap-readiness")
+    if report_path and any(automatic_options):
+        parser.error("--c-type-report cannot be combined with automatic C type probe options")
+
+
+def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int | None:
+    if args.language == "c":
+        if not _has_stage(args):
+            parser.error(
+                "--language c requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness"
+            )
+        if args.show_vars:
+            parser.error("--show-vars is Fortran-only and is not supported for --language c")
+
+    _validate_c_type_probe_options(args, parser)
+    _validate_fortran_type_probe_options(
+        language=args.language,
+        has_semantic_stage=_has_semantic_stage(args),
+        report_path=getattr(args, "fortran_type_report", None),
+        automatic_options=_automatic_fortran_type_probe_options(args),
+        parser=parser,
+    )
+    if args.out is not None and not _has_stage(args):
+        parser.error("--out requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness")
+    if (args.show_vars or args.print_limit is not None or args.vars_limit is not None) and not args.parse:
+        parser.error("--show-vars/--print-limit require --parse")
+
+    print_limit = args.print_limit if args.print_limit is not None else args.vars_limit
+    if print_limit is not None and print_limit < 0:
+        parser.error("--print-limit must be >= 0")
+    if not _has_stage(args):
+        parser.error("Select at least one stage flag: --parse, --semantics, --pyi, or --wrap-readiness")
+    return print_limit
+
+
+def _load_c_type_report_for_stages(args: argparse.Namespace, preprocessing: PreprocessingConfig):
+    if args.language != "c" or not _has_semantic_stage(args):
+        return None
+    return _c_standard_type_report(
+        preprocessing,
+        report_path=getattr(args, "c_type_report", None),
+        runner=getattr(args, "c_type_probe_runner", None),
+        cache_dir=getattr(args, "c_type_probe_cache_dir", None),
+        refresh=getattr(args, "refresh_c_type_probe", False),
+    )
+
+
+def _load_fortran_type_report_for_stages(args: argparse.Namespace) -> FortranTypeProbeReport | None:
+    report_path = getattr(args, "fortran_type_report", None)
+    return load_fortran_type_probe_report(report_path) if report_path is not None else None
+
+
+def _semantic_stage_options(
+    args: argparse.Namespace,
+    *,
+    c_standard_type_report: dict[str, object] | None,
+    fortran_type_report: FortranTypeProbeReport | None,
+) -> dict[str, object]:
+    options: dict[str, object] = {"language": args.language}
+    if c_standard_type_report is not None:
+        options["c_standard_type_report"] = c_standard_type_report
+    if _fortran_type_probe_options_used(args):
+        options.update(
+            {
+                "fortran_type_report": fortran_type_report,
+                "fortran_type_probe_runner": getattr(args, "fortran_type_probe_runner", None),
+                "fortran_type_probe_cache_dir": getattr(args, "fortran_type_probe_cache_dir", None),
+                "refresh_fortran_type_probe": getattr(args, "refresh_fortran_type_probe", False),
+            }
+        )
+    return options
+
+
+def _parse_stage_report(args: argparse.Namespace, preprocessing: PreprocessingConfig):
+    if not args.parse:
+        return None
+    if args.language == "c":
+        return parse_c_report(
+            args.paths,
+            include_dirs=preprocessing.include_dirs,
+            preprocessing=_c_parser_preprocessing_mode(preprocessing),
+            source_loader=_c_source_loader(preprocessing),
+        )
+    return _parse_report(args.paths, preprocessing)
+
+
+def _run_stage_reports(args: argparse.Namespace, preprocessing: PreprocessingConfig):
+    c_standard_type_report = _load_c_type_report_for_stages(args, preprocessing)
+    fortran_type_report = _load_fortran_type_report_for_stages(args)
+    semantic_options = _semantic_stage_options(
+        args,
+        c_standard_type_report=c_standard_type_report,
+        fortran_type_report=fortran_type_report,
+    )
+    parse_payload = _parse_stage_report(args, preprocessing)
+    semantic_payload = (
+        _semantic_report(args.paths, preprocessing, **semantic_options) if (args.semantics or args.pyi) else None
+    )
+    readiness_payload = (
+        _wrap_readiness_report(args.paths, preprocessing, **semantic_options) if args.wrap_readiness else None
+    )
+    _attach_wrap_readiness(semantic_payload, readiness_payload)
+    return parse_payload, semantic_payload, readiness_payload
+
+
+def _run_stage_reports_with_diagnostics(args: argparse.Namespace, preprocessing: PreprocessingConfig):
+    try:
+        return _run_stage_reports(args, preprocessing)
+    except CParseError as exc:
+        if args.debug or _env_flag("C_PARSER_DEBUG"):
+            raise
+        print(
+            exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr
+        )
+    except FortranParseError as exc:
+        if args.debug or _env_flag("FORTRAN_PARSER_DEBUG"):
+            raise
+        print(
+            exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr
+        )
+    except PreprocessingError as exc:
+        if args.debug or _env_flag("X2PY_DEBUG"):
+            raise
+        if exc.diagnostics:
+            for diagnostic in exc.diagnostics:
+                location = diagnostic.path or "<preprocessor>"
+                if diagnostic.line is not None:
+                    location = f"{location}:{diagnostic.line}"
+                print(f"{location}: error[{diagnostic.category}]: {diagnostic.message}", file=sys.stderr)
+        else:
+            print(f"x2py: error[{exc.category}]: {exc}", file=sys.stderr)
+    except (SyntaxError, ValueError) as exc:
+        if args.debug or _env_flag("X2PY_DEBUG"):
+            raise
+        print(f"x2py: error: {exc}", file=sys.stderr)
+    return None
+
+
+def _select_main_payload(args: argparse.Namespace, parse_payload, semantic_payload, readiness_payload):
+    if args.parse and args.wrap_readiness and (args.json or args.out is not None):
+        return {
+            "parse": parse_payload or {},
+            "wrap_readiness": readiness_payload or {},
+        }
+    if args.parse:
+        return parse_payload or {}
+    if args.semantics or args.pyi:
+        return semantic_payload or {}
+    return readiness_payload or {}
+
+
+def _write_pyi_output(args: argparse.Namespace, semantic_payload: dict[str, dict]) -> None:
+    if args.out:
+        pyi_text = "\n\n".join((report.get("pyi") or "") for report in semantic_payload.values()).strip()
+        Path(args.out).write_text(pyi_text + "\n", encoding="utf-8")
+        _write_pyi_dependencies(semantic_payload, output_dir=Path(args.out).parent)
+        return
+    for fname, report in semantic_payload.items():
+        Path(fname).with_suffix(".pyi").write_text((report.get("pyi") or "") + "\n", encoding="utf-8")
+    _write_pyi_dependencies(semantic_payload)
+
+
+def _write_json_output(args: argparse.Namespace, payload: dict) -> None:
+    if args.out:
+        Path(args.out).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        return
+    for fname, report in payload.items():
+        Path(fname).with_suffix(".json").write_text(json.dumps({fname: report}, indent=2), encoding="utf-8")
+
+
+def _write_main_output(
+    args: argparse.Namespace,
+    parser: argparse.ArgumentParser,
+    payload: dict,
+    semantic_payload: dict[str, dict] | None,
+) -> bool:
+    if args.out is None:
+        return False
+    if args.json and args.pyi:
+        parser.error("--out cannot be used with both --json and --pyi")
+    if args.pyi:
+        _write_pyi_output(args, semantic_payload or {})
+    else:
+        _write_json_output(args, payload)
+    return True
+
+
+def _print_parse_output(args: argparse.Namespace, parse_payload: dict, print_limit: int | None) -> None:
+    if args.language == "c":
+        print(format_c_report(parse_payload, print_limit=print_limit))
+        return
+    print(
+        _format_report(
+            parse_payload,
+            show_vars=args.show_vars or args.vars_limit is not None,
+            print_limit=print_limit,
+        )
+    )
+
+
+def _print_main_output(
+    args: argparse.Namespace,
+    payload: dict,
+    parse_payload: dict[str, dict] | None,
+    semantic_payload: dict[str, dict] | None,
+    readiness_payload: dict[str, dict] | None,
+    print_limit: int | None,
+) -> None:
+    if args.wrap_readiness:
+        _print_wrap_readiness_output(
+            args,
+            payload,
+            parse_payload=parse_payload,
+            semantic_payload=semantic_payload,
+            readiness_payload=readiness_payload,
+            print_limit=print_limit,
+        )
+        return
+    if args.pyi and not args.json:
+        print_pyi_output(_format_pyi_report(semantic_payload or {}))
+    elif args.parse and not (args.semantics or args.json or args.pyi):
+        _print_parse_output(args, parse_payload or {}, print_limit)
+    else:
+        print(json.dumps(payload, indent=2))
+
+
+def _print_wrap_readiness_output(
+    args: argparse.Namespace,
+    payload: dict,
+    *,
+    parse_payload: dict[str, dict] | None,
+    semantic_payload: dict[str, dict] | None,
+    readiness_payload: dict[str, dict] | None,
+    print_limit: int | None,
+) -> None:
+    if args.parse and not args.json:
+        _print_parse_output(args, parse_payload or {}, print_limit)
+        print()
+        print(_format_semantic_readiness(readiness_payload or {}))
+    elif args.pyi and not args.json:
+        print_pyi_output(_format_pyi_report(semantic_payload or {}))
+        print()
+        print(_format_semantic_readiness(readiness_payload or {}))
+    elif args.parse or args.semantics or args.pyi:
+        print(json.dumps(payload, indent=2))
+    elif args.json:
+        print(json.dumps(readiness_payload or {}, indent=2))
+    else:
+        print(_format_semantic_readiness(readiness_payload or {}))
+
+
 def print_pyi_output(code: str) -> None:
     # Safe fallback for files, pipes, CI, unsupported terminals, etc.
     if not sys.stdout.isatty():
@@ -948,236 +1259,13 @@ def main() -> int:
     args = parser.parse_args()
     args.language = _resolve_language(args.paths, args.language, parser)
     preprocessing = _build_preprocessing_config(args, parser)
-    c_type_report_path = getattr(args, "c_type_report", None)
-    c_type_probe_runner = getattr(args, "c_type_probe_runner", None)
-    c_type_probe_cache_dir = getattr(args, "c_type_probe_cache_dir", None)
-    refresh_c_type_probe = getattr(args, "refresh_c_type_probe", False)
-    automatic_c_type_probe_options = (c_type_probe_runner, c_type_probe_cache_dir, refresh_c_type_probe)
-    c_type_probe_options_used = bool(c_type_report_path or any(automatic_c_type_probe_options))
-    fortran_type_report_path = getattr(args, "fortran_type_report", None)
-    fortran_type_probe_runner = getattr(args, "fortran_type_probe_runner", None)
-    fortran_type_probe_cache_dir = getattr(args, "fortran_type_probe_cache_dir", None)
-    refresh_fortran_type_probe = getattr(args, "refresh_fortran_type_probe", False)
-    automatic_fortran_type_probe_options = (
-        fortran_type_probe_runner,
-        fortran_type_probe_cache_dir,
-        refresh_fortran_type_probe,
-    )
-    fortran_type_probe_options_used = bool(fortran_type_report_path or any(automatic_fortran_type_probe_options))
-
-    if args.language == "c":
-        if not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
-            parser.error(
-                "--language c requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness"
-            )
-        if args.show_vars:
-            parser.error("--show-vars is Fortran-only and is not supported for --language c")
-        if c_type_probe_options_used and not (args.semantics or args.pyi or args.wrap_readiness):
-            parser.error("C type probe options require --semantics, --pyi, or --wrap-readiness")
-        if c_type_report_path and any(automatic_c_type_probe_options):
-            parser.error("--c-type-report cannot be combined with automatic C type probe options")
-    elif c_type_probe_options_used:
-        parser.error("C type probe options require --language c")
-
-    _validate_fortran_type_probe_options(
-        language=args.language,
-        has_semantic_stage=args.semantics or args.pyi or args.wrap_readiness,
-        report_path=fortran_type_report_path,
-        automatic_options=automatic_fortran_type_probe_options,
-        parser=parser,
-    )
-
-    if args.out is not None and not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
-        parser.error("--out requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness")
-
-    if (args.show_vars or args.print_limit is not None or args.vars_limit is not None) and not args.parse:
-        parser.error("--show-vars/--print-limit require --parse")
-
-    print_limit = args.print_limit if args.print_limit is not None else args.vars_limit
-    if print_limit is not None and print_limit < 0:
-        parser.error("--print-limit must be >= 0")
-
-    if not (args.parse or args.semantics or args.pyi or args.wrap_readiness):
-        parser.error("Select at least one stage flag: --parse, --semantics, --pyi, or --wrap-readiness")
-
-    try:
-        c_standard_type_report = (
-            _c_standard_type_report(
-                preprocessing,
-                report_path=c_type_report_path,
-                runner=c_type_probe_runner,
-                cache_dir=c_type_probe_cache_dir,
-                refresh=refresh_c_type_probe,
-            )
-            if args.language == "c" and (args.semantics or args.pyi or args.wrap_readiness)
-            else None
-        )
-        fortran_type_report = (
-            load_fortran_type_probe_report(fortran_type_report_path) if fortran_type_report_path is not None else None
-        )
-        parse_payload = (
-            parse_c_report(
-                args.paths,
-                include_dirs=preprocessing.include_dirs,
-                preprocessing=_c_parser_preprocessing_mode(preprocessing),
-                source_loader=_c_source_loader(preprocessing),
-            )
-            if args.parse and args.language == "c"
-            else _parse_report(args.paths, preprocessing)
-            if args.parse
-            else None
-        )
-        semantic_payload = (
-            _semantic_report(
-                args.paths,
-                preprocessing,
-                language=args.language,
-                **({"c_standard_type_report": c_standard_type_report} if c_standard_type_report is not None else {}),
-                **(
-                    {
-                        "fortran_type_report": fortran_type_report,
-                        "fortran_type_probe_runner": fortran_type_probe_runner,
-                        "fortran_type_probe_cache_dir": fortran_type_probe_cache_dir,
-                        "refresh_fortran_type_probe": refresh_fortran_type_probe,
-                    }
-                    if fortran_type_probe_options_used
-                    else {}
-                ),
-            )
-            if (args.semantics or args.pyi)
-            else None
-        )
-        readiness_payload = (
-            _wrap_readiness_report(
-                args.paths,
-                preprocessing,
-                language=args.language,
-                **({"c_standard_type_report": c_standard_type_report} if c_standard_type_report is not None else {}),
-                **(
-                    {
-                        "fortran_type_report": fortran_type_report,
-                        "fortran_type_probe_runner": fortran_type_probe_runner,
-                        "fortran_type_probe_cache_dir": fortran_type_probe_cache_dir,
-                        "refresh_fortran_type_probe": refresh_fortran_type_probe,
-                    }
-                    if fortran_type_probe_options_used
-                    else {}
-                ),
-            )
-            if args.wrap_readiness
-            else None
-        )
-        _attach_wrap_readiness(semantic_payload, readiness_payload)
-    except CParseError as exc:
-        if args.debug or _env_flag("C_PARSER_DEBUG"):
-            raise
-        print(
-            exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr
-        )
+    print_limit = _validate_main_options(args, parser)
+    reports = _run_stage_reports_with_diagnostics(args, preprocessing)
+    if reports is None:
         return 1
-    except FortranParseError as exc:
-        if args.debug or _env_flag("FORTRAN_PARSER_DEBUG"):
-            raise
-        print(
-            exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr
-        )
-        return 1
-    except PreprocessingError as exc:
-        if args.debug or _env_flag("X2PY_DEBUG"):
-            raise
-        if exc.diagnostics:
-            for diagnostic in exc.diagnostics:
-                location = diagnostic.path or "<preprocessor>"
-                if diagnostic.line is not None:
-                    location = f"{location}:{diagnostic.line}"
-                print(
-                    f"{location}: error[{diagnostic.category}]: {diagnostic.message}",
-                    file=sys.stderr,
-                )
-        else:
-            print(f"x2py: error[{exc.category}]: {exc}", file=sys.stderr)
-        return 1
-    except (SyntaxError, ValueError) as exc:
-        if args.debug or _env_flag("X2PY_DEBUG"):
-            raise
-        print(f"x2py: error: {exc}", file=sys.stderr)
-        return 1
-
-    if args.parse and args.wrap_readiness and (args.json or args.out is not None):
-        payload = {
-            "parse": parse_payload or {},
-            "wrap_readiness": readiness_payload or {},
-        }
-    elif args.parse:
-        payload = parse_payload or {}
-    elif args.semantics or args.pyi:
-        payload = semantic_payload or {}
-    else:
-        payload = readiness_payload or {}
-
-    if args.out is not None:
-        if args.json and args.pyi:
-            parser.error("--out cannot be used with both --json and --pyi")
-
-        if args.pyi:
-            if args.out:
-                pyi_text = "\n\n".join(
-                    (report.get("pyi") or "") for report in (semantic_payload or {}).values()
-                ).strip()
-                Path(args.out).write_text(pyi_text + "\n", encoding="utf-8")
-                _write_pyi_dependencies(semantic_payload or {}, output_dir=Path(args.out).parent)
-            else:
-                for fname, report in (semantic_payload or {}).items():
-                    Path(fname).with_suffix(".pyi").write_text((report.get("pyi") or "") + "\n", encoding="utf-8")
-                _write_pyi_dependencies(semantic_payload or {})
-        else:
-            if args.out:
-                Path(args.out).write_text(json.dumps(payload, indent=2), encoding="utf-8")
-            else:
-                for fname, report in payload.items():
-                    Path(fname).with_suffix(".json").write_text(json.dumps({fname: report}, indent=2), encoding="utf-8")
-
-    if args.out is not None:
+    parse_payload, semantic_payload, readiness_payload = reports
+    payload = _select_main_payload(args, parse_payload, semantic_payload, readiness_payload)
+    if _write_main_output(args, parser, payload, semantic_payload):
         return 0
-
-    if args.wrap_readiness:
-        if args.parse and not args.json:
-            if args.language == "c":
-                print(format_c_report(parse_payload or {}, print_limit=print_limit))
-            else:
-                print(
-                    _format_report(
-                        parse_payload or {},
-                        show_vars=args.show_vars or args.vars_limit is not None,
-                        print_limit=print_limit,
-                    )
-                )
-            print()
-            print(_format_semantic_readiness(readiness_payload or {}))
-        elif args.pyi and not args.json:
-            print_pyi_output(_format_pyi_report(semantic_payload or {}))
-            print()
-            print(_format_semantic_readiness(readiness_payload or {}))
-        elif args.parse or args.semantics or args.pyi:
-            print(json.dumps(payload, indent=2))
-        elif args.json:
-            print(json.dumps(readiness_payload or {}, indent=2))
-        else:
-            print(_format_semantic_readiness(readiness_payload or {}))
-    elif args.pyi and not args.json:
-        print_pyi_output(_format_pyi_report(semantic_payload or {}))
-    elif args.parse and not (args.semantics or args.json or args.pyi):
-        if args.language == "c":
-            print(format_c_report(parse_payload or {}, print_limit=print_limit))
-        else:
-            print(
-                _format_report(
-                    parse_payload or {},
-                    show_vars=args.show_vars or args.vars_limit is not None,
-                    print_limit=print_limit,
-                )
-            )
-    else:
-        print(json.dumps(payload, indent=2))
-
+    _print_main_output(args, payload, parse_payload, semantic_payload, readiness_payload, print_limit)
     return 0
