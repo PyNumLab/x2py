@@ -8,6 +8,7 @@ from .models import (
     EXTERNAL_TYPE_REF_METADATA,
     SemanticArgument,
     SemanticClass,
+    SemanticEnum,
     SemanticFunction,
     SemanticImport,
     SemanticMethod,
@@ -29,6 +30,7 @@ _BUILTIN_TYPES = frozenset(
         "Complex128",
         "Float32",
         "Float64",
+        "Int",
         "Int8",
         "Int16",
         "Int32",
@@ -129,6 +131,8 @@ class _SemanticReadinessChecker:
             n_functions += sum(1 for func in module.functions if _is_public(func))
             n_variables += sum(1 for var in module.variables if _is_public(var))
             for cls in module.classes:
+                if not isinstance(cls, SemanticClass):
+                    continue
                 if not _is_public(cls):
                     continue
                 n_classes += 1
@@ -164,7 +168,19 @@ class _SemanticReadinessChecker:
                 unit_kind="variable",
             )
 
+        for enum in module.enums:
+            if not _is_public(enum):
+                continue
+            self._check_enum(
+                enum,
+                module=module,
+                known_shape_symbols=set(module_constants),
+                constant_names=module_constant_names,
+            )
+
         for cls in module.classes:
+            if not isinstance(cls, SemanticClass):
+                continue
             if not _is_public(cls):
                 continue
             self._check_class(
@@ -186,6 +202,33 @@ class _SemanticReadinessChecker:
                 unit=f"{module.name}.{func.name}",
                 unit_kind="function",
             )
+
+    def _check_enum(
+        self,
+        enum: SemanticEnum,
+        *,
+        module: SemanticModule,
+        known_shape_symbols: set[str],
+        constant_names: set[str],
+    ) -> None:
+        owner = f"{module.name}.{enum.name}"
+        self._check_metadata_blockers(
+            enum.metadata,
+            owner=owner,
+            item=enum.name,
+            unit=owner,
+            unit_kind="enum",
+        )
+        self._check_type(
+            enum.underlying_type,
+            owner=owner,
+            item=enum.name,
+            module=module,
+            known_shape_symbols=known_shape_symbols,
+            constant_names=constant_names,
+            unit=owner,
+            unit_kind="enum",
+        )
 
     def _check_class(
         self,
@@ -526,8 +569,8 @@ class _SemanticTypeIndex:
         self.import_aliases_by_module: dict[str, set[str]] = {}
 
         for module in modules:
-            self.known_types.update(cls.name for cls in module.classes)
-            self.known_types.update(f"{module.name}.{cls.name}" for cls in module.classes)
+            self.known_types.update(declaration.name for declaration in module.classes)
+            self.known_types.update(f"{module.name}.{declaration.name}" for declaration in module.classes)
             imported_modules, import_aliases, imported_types = _import_index(module.imports)
             self.imported_modules_by_module[module.name] = imported_modules
             self.import_aliases_by_module[module.name] = import_aliases

@@ -12,6 +12,7 @@ from .models import (
     SemanticArrayContract,
     SemanticClass,
     SemanticConstraint,
+    SemanticEnum,
     SemanticFunction,
     SemanticImport,
     SemanticImportItem,
@@ -86,6 +87,7 @@ class _PyiAstParser:
 
     def parse(self, tree: ast.Module) -> SemanticModule:
         _ModuleVisitor(self).visit(tree)
+        self._link_enum_constants()
         return self.module
 
     def import_from(self, node: ast.ImportFrom) -> SemanticImport:
@@ -112,6 +114,33 @@ class _PyiAstParser:
             metadata={"representation": "opaque"} if "Opaque" in base_classes else {},
             visibility=visibility,
         )
+
+    def enum_def(self, node: ast.ClassDef, *, visibility: str) -> SemanticEnum:
+        if len(node.bases) != 1 or not self.is_subscript_of(node.bases[0], "Enum"):
+            raise ValueError(f"Enum declaration expects exactly one underlying type: {_node_text(node)!r}")
+        if len(node.body) != 1 or not isinstance(node.body[0], ast.Pass):
+            raise ValueError(f"Enum declarations keep enumerators at module scope: {_node_text(node)!r}")
+        items = self.subscript_items(node.bases[0])
+        if len(items) != 1:
+            raise ValueError(f"Enum declaration expects exactly one underlying type: {_node_text(node)!r}")
+        return SemanticEnum(
+            name=node.name,
+            native_name=node.name,
+            underlying_type=self.semantic_type(items[0]),
+            open=True,
+            visibility=visibility,
+        )
+
+    def _link_enum_constants(self) -> None:
+        by_name = {enum.name: enum for enum in self.module.enums}
+        for variable in self.module.variables:
+            enum = by_name.get(variable.semantic_type.name)
+            if enum is None or not any(
+                constraint.name == "Constant" for constraint in variable.semantic_type.constraints
+            ):
+                continue
+            variable.semantic_type.metadata["semantic_enum"] = enum.name
+            enum.enumerators.append(variable)
 
     def function_def(
         self,
@@ -166,7 +195,7 @@ class _PyiAstParser:
             intent=intent,
             optional=self.default_marks_optional(node.value),
             visibility=visibility,
-            default_value=self.literal_default_value(node.value),
+            default_value=self.assignment_default_value(node.value, semantic_type),
         )
 
     def decorators(self, nodes: list[ast.expr], *, context: str) -> _Decorators:
@@ -684,6 +713,14 @@ class _PyiAstParser:
         return str(ast.literal_eval(node))
 
     @staticmethod
+    def assignment_default_value(node: ast.expr | None, semantic_type: SemanticType) -> str | None:
+        if node is None or _PyiAstParser.default_marks_optional(node):
+            return None
+        if any(constraint.name == "Constant" for constraint in semantic_type.constraints):
+            return ast.unparse(node)
+        return _PyiAstParser.literal_default_value(node)
+
+    @staticmethod
     def qualified_name(node: ast.AST) -> tuple[str, ...] | None:
         if isinstance(node, ast.Name):
             return (node.id,)
@@ -913,7 +950,10 @@ class _ModuleVisitor(ast.NodeVisitor):
         decorators = self.parser.decorators(node.decorator_list, context="class")
         if decorators.has_native_call:
             raise ValueError(f"Unsupported class decorator: {ast.unparse(node.decorator_list[-1])!r}")
-        self.parser.module.classes.append(self.parser.class_def(node, visibility=decorators.visibility))
+        if len(node.bases) == 1 and self.parser.is_subscript_of(node.bases[0], "Enum"):
+            self.parser.module.classes.append(self.parser.enum_def(node, visibility=decorators.visibility))
+        else:
+            self.parser.module.classes.append(self.parser.class_def(node, visibility=decorators.visibility))
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context=".pyi")
@@ -978,14 +1018,16 @@ def _imported_type_refs(module: SemanticModule) -> dict[str, tuple[str, str, str
 
 
 def _reconcile_external_type_refs(modules: list[SemanticModule]) -> list[SemanticModule]:
-    definitions = {(module.name, cls.name): cls for module in modules for cls in module.classes}
+    definitions = {(module.name, declaration.name): declaration for module in modules for declaration in module.classes}
     for module in modules:
         for semantic_type in _iter_module_semantic_types(module):
             ref = semantic_type.metadata.get(EXTERNAL_TYPE_REF_METADATA)
             if not isinstance(ref, dict):
                 continue
-            cls = definitions.get((ref.get("origin_module"), ref.get("name")))
-            wrapped = cls is not None and "Opaque" not in cls.base_classes
+            declaration = definitions.get((ref.get("origin_module"), ref.get("name")))
+            wrapped = declaration is not None and (
+                not isinstance(declaration, SemanticClass) or "Opaque" not in declaration.base_classes
+            )
             ref["wrapped"] = wrapped
             ref["representation"] = "wrapped" if wrapped else "opaque"
     return modules

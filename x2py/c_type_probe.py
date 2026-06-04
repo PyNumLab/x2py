@@ -104,6 +104,8 @@ def build_c_standard_type_probe_source() -> str:
 
 int main(void) {
     printf("{\"types\":{");
+    X2PY_PRINT_ARITHMETIC("int", "<builtin>", int);
+    printf(",");
     X2PY_PRINT_ARITHMETIC("size_t", "stddef.h", size_t);
     printf(",");
 #ifdef UINT32_MAX

@@ -1,5 +1,5 @@
 class particle:
-    id: Int32
+    id: Int
     x: Float64[3]
 
 current_particle: private[particle]

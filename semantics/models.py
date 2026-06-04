@@ -432,7 +432,7 @@ def _canonical_expression_text(text: str, name_map: dict[str, str]) -> str:
 
 
 # ============================================================
-# Semantic Classes
+# Semantic Classes And Enums
 # ============================================================
 
 
@@ -449,6 +449,23 @@ class SemanticClass:
     base_classes: list[str] = field(default_factory=list)
 
     contracts: list[SemanticContract] = field(default_factory=list)
+
+    metadata: dict[str, Any] = field(default_factory=dict)
+    visibility: str = "public"
+    origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
+
+
+@dataclass
+class SemanticEnum:
+    name: str
+
+    native_name: str | None = None
+
+    underlying_type: SemanticType = field(default_factory=lambda: SemanticType("Int"))
+
+    enumerators: list[SemanticArgument] = field(default_factory=list)
+
+    open: bool = True
 
     metadata: dict[str, Any] = field(default_factory=dict)
     visibility: str = "public"
@@ -478,7 +495,7 @@ class SemanticModule:
 
     functions: list[SemanticFunction] = field(default_factory=list)
 
-    classes: list[SemanticClass] = field(default_factory=list)
+    classes: list[SemanticClass | SemanticEnum] = field(default_factory=list)
     variables: list[SemanticArgument] = field(default_factory=list)
 
     imports: list[str | SemanticImport] = field(default_factory=list)
@@ -486,6 +503,10 @@ class SemanticModule:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
+
+    @property
+    def enums(self) -> list[SemanticEnum]:
+        return [declaration for declaration in self.classes if isinstance(declaration, SemanticEnum)]
 
 
 def _iter_semantic_type_tree(semantic_type: SemanticType | None):
@@ -503,10 +524,15 @@ def _iter_semantic_type_tree(semantic_type: SemanticType | None):
 def _iter_module_semantic_types(module: SemanticModule):
     for variable in module.variables:
         yield from _iter_semantic_type_tree(variable.semantic_type)
-    for cls in module.classes:
-        for semantic_field in cls.fields:
+    for declaration in module.classes:
+        if isinstance(declaration, SemanticEnum):
+            yield from _iter_semantic_type_tree(declaration.underlying_type)
+            for enumerator in declaration.enumerators:
+                yield from _iter_semantic_type_tree(enumerator.semantic_type)
+            continue
+        for semantic_field in declaration.fields:
             yield from _iter_semantic_type_tree(semantic_field.semantic_type)
-        for method in cls.methods:
+        for method in declaration.methods:
             for argument in method.arguments:
                 yield from _iter_semantic_type_tree(argument.semantic_type)
             yield from _iter_semantic_type_tree(method.return_type)

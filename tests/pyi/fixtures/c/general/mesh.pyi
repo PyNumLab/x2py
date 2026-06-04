@@ -1,5 +1,5 @@
 class node:
-    id: Int32
+    id: Int
     xyz: Float64[3]
 
 class mesh:
@@ -14,7 +14,7 @@ def node_move(
 def mesh_init(
     mesh: Ptr(mesh),
     nnodes: SizeT
-) -> Int32: ...
+) -> Int: ...
 
 def mesh_clear(
     mesh: Ptr(mesh)

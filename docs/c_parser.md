@@ -281,9 +281,11 @@ python -m x2py.c_type_probe --compiler /usr/bin/gcc-13 --std c11
 ```
 
 The report records arithmetic category, underlying C spelling, bit width, and
-alignment for `size_t`, available `uint32_t`, and `time_t`; it records opaque
-handle and pointer ABI facts for `FILE`. It also retains the generated C source
-and exact compile/run commands.
+alignment for builtin C `int`, `size_t`, available `uint32_t`, and `time_t`; it
+records opaque handle and pointer ABI facts for `FILE`. It also retains the
+generated C source and exact compile/run commands. Semantic conversion keeps
+the name `Int` for builtin C `int` and stores the measured concrete dtype and
+probe fact separately.
 
 The probe must be run with the same target profile as the source being parsed.
 It carries `-I`, `-D`, `-U`, and `--compiler-arg` options into the compile

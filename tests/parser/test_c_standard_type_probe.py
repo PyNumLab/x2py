@@ -33,6 +33,7 @@ def test_c_standard_type_probe_source_queries_standard_headers_without_layout_cl
     assert "#include <stdint.h>" in source
     assert "#include <time.h>" in source
     assert "#include <stdio.h>" in source
+    assert 'X2PY_PRINT_ARITHMETIC("int"' in source
     assert 'X2PY_PRINT_ARITHMETIC("size_t"' in source
     assert 'X2PY_PRINT_ARITHMETIC("uint32_t"' in source
     assert 'X2PY_PRINT_ARITHMETIC("time_t"' in source
@@ -120,6 +121,13 @@ def test_c_standard_type_probe_accepts_explicit_runner_and_cli_validates_macros(
 def test_c_standard_type_probe_reports_semantic_facts_from_native_compiler():
     compiler = _required_c_compiler()
     report = probe_c_standard_types(PreprocessingConfig(mode="compiler", compiler=compiler, std="c11"))
+
+    c_int = report.types["int"]
+    assert c_int["available"] is True
+    assert c_int["kind"] == "integer"
+    assert c_int["signed"] is True
+    assert c_int["underlying_c_type"] == "int"
+    assert c_int["bits"] >= 16
 
     size_t = report.types["size_t"]
     assert size_t["available"] is True

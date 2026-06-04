@@ -21,6 +21,7 @@ and eventual NumPy-oriented wrapper code.
 | Semantic dtype | NumPy equivalent | Notes |
 | --- | --- | --- |
 | `Bool` | `numpy.bool_` | Boolean scalar. |
+| `Int` | Target-dependent signed NumPy integer | Ordinary C `int`; the concrete `Int16`/`Int32`/`Int64` dtype and compiler fact are stored separately. |
 | `Int8`, `Int16`, `Int32`, `Int64` | `numpy.int8`, `numpy.int16`, `numpy.int32`, `numpy.int64` | Signed integers. |
 | `UInt8`, `UInt16`, `UInt32`, `UInt64` | `numpy.uint8`, `numpy.uint16`, `numpy.uint32`, `numpy.uint64` | Unsigned integers. |
 | `Float32`, `Float64` | `numpy.float32`, `numpy.float64` | Binary floating-point scalars. |
@@ -57,7 +58,8 @@ and eventual NumPy-oriented wrapper code.
 | `char`, `signed char` | `Int8` | `numpy.int8` |
 | `unsigned char` | `UInt8` | `numpy.uint8` |
 | `short`, `unsigned short` | `Int16`, `UInt16` | `numpy.int16`, `numpy.uint16` |
-| `int`, `unsigned int` | `Int32`, `UInt32` | `numpy.int32`, `numpy.uint32` |
+| `int` / `CInt` | `Int` with concrete probed dtype | Matching signed NumPy integer for the target |
+| `unsigned int` | `UInt32` | `numpy.uint32` |
 | `long`, `long long` | `Int64` | `numpy.int64` |
 | `unsigned long`, `unsigned long long` | `UInt64` | `numpy.uint64` |
 | `float`, `double`, `long double` | `Float32`, `Float64`, `Float128` | `numpy.float32`, `numpy.float64`, `numpy.longdouble` |
@@ -66,9 +68,12 @@ and eventual NumPy-oriented wrapper code.
 | `uint8_t`, `uint16_t`, `uint32_t`, `uint64_t` | `UInt8`, `UInt16`, `UInt32`, `UInt64` | Matching unsigned NumPy integer |
 | `size_t` | `SizeT` or probed unsigned width | `numpy.uintp` or matching `numpy.uint*` |
 
-C integer spellings such as `long` are ABI-dependent in general C, but the
-current semantic policy maps parsed primitive `long` and `long long` to 64-bit
-semantic dtypes. Standard-library typedefs are refined through the compiler
+C integer spellings are ABI-dependent. Ordinary C `int` keeps the stable
+semantic identity `Int`; its concrete dtype and the compiler fact used to
+derive it are stored on `SemanticType`. Without a supplied compiler report,
+the concrete dtype uses a clearly marked 32-bit fallback. The current semantic
+policy still maps parsed primitive `long` and `long long` to 64-bit semantic
+dtypes. Standard-library typedefs are refined through the compiler
 standard-type probe when facts are supplied.
 
 ## C To Semantic IR Mapping
@@ -87,9 +92,11 @@ policy is documented in the datatype mapping section above.
 - `_Bool` -> `Bool`.
 - `char` -> `Int8` with `c_char_policy` metadata; `signed char` -> `Int8`;
   `unsigned char` -> `UInt8`.
-- `short`, `int`, `long`, and `long long` map to fixed signed integer names
-  using the current Linux-oriented defaults: `Int16`, `Int32`, `Int64`,
-  `Int64`.
+- `int` maps to `Int`. Its concrete dtype is derived from a supplied
+  `x2py.c_type_probe` report and stored with the fact source; without one it
+  carries a marked `Int32` fallback.
+- `short`, `long`, and `long long` map to fixed signed integer names using the
+  current Linux-oriented defaults: `Int16`, `Int64`, `Int64`.
 - Unsigned integer spellings map to `UInt16`, `UInt32`, `UInt64`, and
   `UInt64`; fixed-width typedef spellings such as `uint32_t` map to the
   matching `UInt*` fallback.
@@ -103,8 +110,20 @@ policy is documented in the datatype mapping section above.
   `Int*`, `UInt*`, or `Float*` semantic names.
 - Opaque standard-type probe facts such as `FILE` create named opaque semantic
   classes when referenced by converted declarations.
-- Object-like numeric macros and enum constants become `Final`-style semantic
-  variables through the `Constant` constraint.
+- Enum definitions become open `SemanticEnum` declarations. Named enum
+  arguments and returns keep the enum datatype instead of flattening to an
+  integer.
+- C enumerators remain unscoped module-level `Final[enum_name]` variables with
+  their known values. An open enum may still carry any value representable by
+  its underlying integer type; the listed enumerators are named constants, not
+  closed validation choices.
+- Native enumerator expressions remain stored in semantic IR. The `.pyi`
+  initializer is emitted only when it can be represented as valid Python
+  expression syntax.
+- Enum underlying storage currently assumes C `int` and records that
+  assumption unless an enum-specific compiler fact is supplied.
+- Object-like numeric macros become `Final`-style semantic variables through
+  the `Constant` constraint.
 - Struct definitions become `SemanticClass` entries. Incomplete structs become
   opaque classes and may be used through direct `Ptr(...)` identity contracts.
 - Explicit multi-header conversion resolves a struct to the header that defines
@@ -117,6 +136,25 @@ policy is documented in the datatype mapping section above.
 - Pointers become explicit `SemanticStorageContract` pointer/reference
   metadata. `const` on the pointee makes the storage read-only, and `restrict`
   is preserved as aliasing metadata.
+
+For example:
+
+```c
+enum status { STATUS_OK = 0, STATUS_ERROR = 10 };
+void set_status(enum status value);
+```
+
+becomes:
+
+```python
+class status(Enum[Int]):
+    pass
+
+STATUS_OK: Final[status] = 0
+STATUS_ERROR: Final[status] = 10
+
+def set_status(value: status) -> None: ...
+```
 
 ### Conservative Blockers
 

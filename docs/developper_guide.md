@@ -349,6 +349,9 @@ from `semantics/models.py`.
 - `semantics/c2ir.py` maps C functions, variables, structs/opaque structs,
   enums, typedef chains, standard-type probe facts, macros, pointer/array
   storage, and C-specific readiness blockers.
+- C `int` keeps the semantic name `Int` while its compiler-probed concrete
+  precision is stored on the semantic type. C enums are open named semantic
+  declarations with unscoped module-level enumerator constants.
 - `semantics/pyi_printer.py` emits editable user contracts.
 - `semantics/pyi_parser.py` loads edited contracts back into semantic IR.
 - `semantics/readiness.py` decides whether that IR is complete enough for

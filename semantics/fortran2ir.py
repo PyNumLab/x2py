@@ -27,6 +27,7 @@ from .models import (
     SemanticArrayContract,
     SemanticClass,
     SemanticConstraint,
+    SemanticEnum,
     SemanticFunction,
     SemanticImport,
     SemanticImportItem,
@@ -1232,12 +1233,18 @@ def _resolve_semantic_module_compile_time_values(
         _resolve_semantic_argument_compile_time_values(var, compile_time_values)
     for func in module.functions:
         _resolve_semantic_function_compile_time_values(func, compile_time_values)
-    for cls in module.classes:
-        for field in cls.fields:
+    for declaration in module.classes:
+        if isinstance(declaration, SemanticEnum):
+            _resolve_semantic_type_compile_time_values(declaration.underlying_type, compile_time_values)
+            for enumerator in declaration.enumerators:
+                _resolve_semantic_argument_compile_time_values(enumerator, compile_time_values)
+            declaration.metadata = _resolve_semantic_value(declaration.metadata, compile_time_values)
+            continue
+        for field in declaration.fields:
             _resolve_semantic_argument_compile_time_values(field, compile_time_values)
-        for method in cls.methods:
+        for method in declaration.methods:
             _resolve_semantic_function_compile_time_values(method, compile_time_values)
-        cls.metadata = _resolve_semantic_value(cls.metadata, compile_time_values)
+        declaration.metadata = _resolve_semantic_value(declaration.metadata, compile_time_values)
     module.metadata = _resolve_semantic_value(module.metadata, compile_time_values)
 
 

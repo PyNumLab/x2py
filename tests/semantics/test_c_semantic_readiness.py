@@ -102,6 +102,28 @@ def test_c_semantic_readiness_reports_pointer_ownership_ambiguity():
     assert any(blocker["code"] == "c_pointer_ownership_ambiguous" for blocker in report["wrappability_blockers"])
 
 
+def test_c_semantic_readiness_accepts_enum_values_and_blocks_mutable_enum_pointers():
+    from c_parser import parse_c_file
+    from semantics.c2ir import c_file_to_semantic_modules
+    from semantics.readiness import assess_semantic_wrap_readiness
+
+    parsed = parse_c_file(
+        """
+enum status { STATUS_OK = 0 };
+enum status get_status(void);
+void update_status(enum status *status);
+""",
+        filename="status.h",
+    )
+    modules = c_file_to_semantic_modules(parsed)
+    report = assess_semantic_wrap_readiness(modules, source="status.h")
+
+    assert report["wrappable"] is False
+    blockers = {blocker["code"]: blocker for blocker in report["wrappability_blockers"]}
+    assert "unresolved_semantic_types" not in blockers
+    assert blockers["c_pointer_ownership_ambiguous"]["items"][0]["owner"] == "update_status.status"
+
+
 def test_c_semantic_readiness_aggregates_file_and_function_blockers():
     from c_parser import parse_c_file
     from semantics.c2ir import c_file_to_semantic_modules

@@ -1,3 +1,6 @@
+class x2py_status(Enum[Int]):
+    pass
+
 class x2py_flags:
     ready: UInt32
     mode: UInt32
@@ -7,33 +10,33 @@ class x2py_context(Opaque):
     pass
 
 class x2py_scalar:
-    i32: Int32
+    i32: Int
     u64: UInt64
     f64: Float64
 
-X2PY_STATUS_OK: Final[Int32]
+X2PY_STATUS_OK: Final[x2py_status] = 0
 
-X2PY_STATUS_RETRY: Final[Int32]
+X2PY_STATUS_RETRY: Final[x2py_status] = 1
 
-X2PY_STATUS_ERROR: Final[Int32]
+X2PY_STATUS_ERROR: Final[x2py_status] = -1
 
-def x2py_slow_path() -> Int32: ...
+def x2py_slow_path() -> Int: ...
 
 def x2py_sort(
     items: Ptr(Any),
     count: SizeT,
     item_size: SizeT,
     compare: CFunctionPointer
-) -> Int32: ...
+) -> Int: ...
 
 def x2py_register_callback(
     context: Ptr(x2py_context),
     callback: CFunctionPointer,
     userdata: Ptr(Any)
-) -> Int32: ...
+) -> Int: ...
 
 def x2py_status_message(
-    status: Int32
+    status: x2py_status
 ) -> Ptr(Const(Int8)): ...
 
 def x2py_fill_matrix(

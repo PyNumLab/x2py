@@ -731,6 +731,30 @@ def test_resolve_semantic_compile_time_values_rewrites_shapes_and_constraints():
     assert resolved.variables[0].semantic_type.storage.array.shape == ["1:8"]
 
 
+def test_resolve_semantic_compile_time_values_handles_enum_declarations():
+    enumerator = SemanticArgument(
+        name="STATUS_LIMIT",
+        semantic_type=SemanticType("status"),
+        default_value="n",
+    )
+    module = SemanticModule(
+        name="status_mod",
+        classes=[
+            semantic_models.SemanticEnum(
+                name="status",
+                underlying_type=SemanticType("Int", metadata={"bits": "n"}),
+                enumerators=[enumerator],
+            )
+        ],
+        variables=[enumerator],
+    )
+
+    resolved = resolve_semantic_compile_time_values(module, {"n": 16})
+
+    assert resolved.enums[0].underlying_type.metadata == {"bits": "16"}
+    assert resolved.enums[0].enumerators[0].default_value == "16"
+
+
 def test_resolve_semantic_compile_time_values_handles_nested_modules():
     module = SemanticModule(
         name="nested_mod",

@@ -34,7 +34,7 @@ _C_SCALAR_TYPES = st.sampled_from(
         ("_Bool", "Bool"),
         ("double", "Float64"),
         ("float", "Float32"),
-        ("int", "Int32"),
+        ("int", "Int"),
     ]
 )
 _FORTRAN_SCALAR_TYPES = st.sampled_from(
@@ -50,7 +50,6 @@ _SHARED_VALUE_TYPES = st.sampled_from(
         ("_Bool", "logical", "Bool"),
         ("double", "real", "Float64"),
         ("float", "real(4)", "Float32"),
-        ("int", "integer", "Int32"),
     ]
 )
 _SEMANTIC_SCALAR_TYPES = st.sampled_from(["Bool", "Float32", "Float64", "Int32"])

@@ -1,16 +1,16 @@
 def norm2(
-    n: Int32,
+    n: Int,
     x: Const(Float64[1])
 ) -> Float64: ...
 
 def scale(
-    n: Int32,
+    n: Int,
     alpha: Float64,
     x: Float64[1]
 ) -> None: ...
 
 def dot(
-    n: Int32,
+    n: Int,
     x: Ptr(Const(Float64)),
     y: Ptr(Const(Float64))
 ) -> Float64: ...
