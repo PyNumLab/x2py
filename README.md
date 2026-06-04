@@ -8,17 +8,16 @@ enough information for future wrapper generation.
 [![Tests](https://github.com/PyNumLab/x2py/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/PyNumLab/x2py/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/PyNumLab/x2py/graph/badge.svg?token=QZRRCS5YO6)](https://codecov.io/gh/PyNumLab/x2py)
 
-## Documentation Levels
+## Documentation
 
-Use the README for orientation and common commands. Then use the audience
-specific docs when you need detail:
+Use the README for orientation and common commands. Then continue with:
 
-- [User documentation](docs/user.md): more CLI cases, Python API workflows,
-  `.pyi` format, datatype mappings, readiness reports, and user policy
-  responsibilities.
-- [Developer documentation](docs/developer.md): project internals, source
-  ownership, parser/semantic contracts, fixture maintenance, and focused test
-  commands.
+- [Tutorial](docs/tutorial.md): supported end-to-end Fortran and C workflows,
+  semantic `.pyi` editing, readiness, and current limitations.
+- [Verified examples cookbook](docs/examples.md): more CLI commands, compiler
+  preprocessing recipes, Python API examples, and readiness blocker examples.
+- [Developer guide](docs/developper_guide.md): project internals, support
+  evidence rules, source ownership, fixture maintenance, and focused tests.
 - [C parser reference](docs/c_parser.md) and
   [Fortran parser reference](docs/fortran_parser.md): parser-specific coverage,
   behavior, diagnostics, and maintenance notes.
@@ -98,12 +97,14 @@ end module m1
 
 Command:
 
+<!-- x2py-doc-test: exact -->
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
 ```
 
 Expected output:
 
+<!-- x2py-doc-test-output -->
 ```text
 File: tests/data/fortran/general/basic_subroutine.f90
   Modules: 1
@@ -114,10 +115,12 @@ File: tests/data/fortran/general/basic_subroutine.f90
 
 Generate exact native `.pyi` stubs from the same Fortran file:
 
+<!-- x2py-doc-test: exact -->
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
 ```
 
+<!-- x2py-doc-test-output -->
 ```python
 File: tests/data/fortran/general/basic_subroutine.f90
 def add1(
@@ -128,10 +131,12 @@ def add1(
 
 Check readiness for the same Fortran file:
 
+<!-- x2py-doc-test: exact -->
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
 ```
 
+<!-- x2py-doc-test-output -->
 ```text
 File: tests/data/fortran/general/basic_subroutine.f90
   Source: fortran
@@ -163,10 +168,12 @@ void fill_identity3(double a[static 3][3]);
 
 Command:
 
+<!-- x2py-doc-test: exact -->
 ```bash
 python -m x2py tests/data/c/general/math_api.h --language c --parse
 ```
 
+<!-- x2py-doc-test-output -->
 ```text
 File: tests/data/c/general/math_api.h
   Language: c
@@ -183,10 +190,12 @@ File: tests/data/c/general/math_api.h
 
 Generate C `.pyi` stubs from the same header:
 
+<!-- x2py-doc-test: exact -->
 ```bash
 python -m x2py tests/data/c/general/math_api.h --language c --pyi
 ```
 
+<!-- x2py-doc-test-output -->
 ```python
 File: tests/data/c/general/math_api.h
 def norm2(
@@ -213,10 +222,12 @@ def fill_identity3(
 
 Check C readiness for the same header:
 
+<!-- x2py-doc-test: exact -->
 ```bash
 python -m x2py tests/data/c/general/math_api.h --language c --wrap-readiness
 ```
 
+<!-- x2py-doc-test-output -->
 ```text
 File: tests/data/c/general/math_api.h
   Source: c
@@ -230,6 +241,7 @@ File: tests/data/c/general/math_api.h
 
 Generate C semantic IR:
 
+<!-- x2py-doc-test: run -->
 ```bash
 python -m x2py tests/data/c/general/math_api.h --language c --semantics
 ```
@@ -601,7 +613,8 @@ compiler-preprocessed path or build an equivalent preprocessing configuration.
   mapping, and wrap-readiness checks.
 - `x2py/`: package entrypoints, preprocessing, and CLI integration.
 - `tests/`: parser, semantic, CLI, fixture, and property tests.
-- `docs/`: user, developer, parser, semantic, quality, and design references.
+- `docs/`: tutorial, examples, developer, parser, semantic, quality, and
+  design references.
 
 ## Running Tests
 
@@ -612,5 +625,5 @@ PYTHONPATH=. pytest -q
 ```
 
 Focused commands for parser changes, semantic changes, CLI changes, fixture
-regeneration, linting, and coverage are in
-[Developer Documentation](docs/developer.md#testing-map).
+regeneration, linting, and coverage are in the
+[Developer Guide](docs/developper_guide.md#testing-map).

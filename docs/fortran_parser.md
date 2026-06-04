@@ -337,12 +337,14 @@ end module m1
 
 Command:
 
+<!-- x2py-doc-test: exact -->
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
 ```
 
 Expected output:
 
+<!-- x2py-doc-test-output -->
 ```text
 File: tests/data/fortran/general/basic_subroutine.f90
   Modules: 1
@@ -355,10 +357,12 @@ The same command with `--show-vars` uses the variable-expanded report path.
 This fixture currently has no module variables to print, so the output remains
 compact:
 
+<!-- x2py-doc-test: exact -->
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --show-vars
 ```
 
+<!-- x2py-doc-test-output -->
 ```text
 File: tests/data/fortran/general/basic_subroutine.f90
   Modules: 1
