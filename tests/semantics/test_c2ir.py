@@ -378,12 +378,12 @@ void context_destroy(struct context *ctx);
     assert point.origin.native_name == "struct point"
     assert point.origin.source_kind == "struct"
     assert point.origin.source_type == "struct point"
-    assert context.base_classes == ["Opaque"]
+    assert context.base_classes == ["CStruct", "Opaque"]
     assert context.metadata == {"c_kind": "struct", "incomplete": True}
     assert scale_point.arguments[0].semantic_type.name == "point"
     assert context_create.return_type.name == "context"
     assert context_create.return_type.storage.kind == "reference"
-    assert "class context(Opaque):" in emit_module(module)
+    assert "class context(CStruct, Opaque):" in emit_module(module)
 
     report = assess_semantic_wrap_readiness(module, source="structs.h")
     assert report["wrappable"] is True
@@ -428,8 +428,50 @@ void use_context(struct private_context *ctx);
         "representation": "opaque",
     }
     assert "from private import private_context" in stubs["api"]
-    assert stubs["private"] == "class private_context(Opaque):\n    pass"
+    assert stubs["private"] == "class private_context(CStruct, Opaque):\n    pass"
     assert assess_semantic_wrap_readiness(module, source="api.h")["wrappable"] is True
+
+
+def test_c2ir_preserves_anonymous_aggregate_members_as_nested_c_classes():
+    parsed = parse_c_file(
+        "struct flags { union { int integer; float real; }; struct { int code; } meta; int tag; };\n",
+        filename="flags.h",
+    )
+
+    module = c_file_to_semantic_module(parsed)
+    flags = module.classes[0]
+    anonymous_union, meta = flags.classes
+    anonymous_field, meta_field, tag = flags.fields
+    code = emit_module(module)
+    reparsed = parse_pyi_text(code, module_name="flags")
+    reparsed_flags = reparsed.classes[0]
+
+    assert flags.base_classes == ["CStruct"]
+    assert flags.metadata == {"c_kind": "struct", "incomplete": False}
+    assert anonymous_union.base_classes == ["CUnion", "CAnonymous"]
+    assert anonymous_union.metadata == {"c_kind": "union", "incomplete": False, "c_anonymous": True}
+    assert [field.name for field in anonymous_union.fields] == ["integer", "real"]
+    assert meta.base_classes == ["CStruct", "CAnonymous"]
+    assert [field.name for field in meta.fields] == ["code"]
+    assert anonymous_field.name == "_anonymous_union_0"
+    assert anonymous_field.semantic_type.name == "anonymous_union_0_type"
+    assert [constraint.name for constraint in anonymous_field.semantic_type.constraints] == ["CAnonymousMember"]
+    assert anonymous_field.semantic_type.metadata["c_kind"] == "union"
+    assert meta_field.name == "meta"
+    assert meta_field.semantic_type.name == "meta_type"
+    assert tag.name == "tag"
+    assert "class flags(CStruct):" in code
+    assert "class anonymous_union_0_type(CUnion, CAnonymous):" in code
+    assert "_anonymous_union_0: Annotated[anonymous_union_0_type, CAnonymousMember]" in code
+    assert [(cls.name, cls.base_classes) for cls in reparsed_flags.classes] == [
+        ("anonymous_union_0_type", ["CUnion", "CAnonymous"]),
+        ("meta_type", ["CStruct", "CAnonymous"]),
+    ]
+    assert reparsed_flags.metadata == {"c_kind": "struct"}
+    assert reparsed_flags.classes[0].metadata == {"c_kind": "union", "c_anonymous": True}
+    assert [constraint.name for constraint in reparsed_flags.fields[0].semantic_type.constraints] == [
+        "CAnonymousMember"
+    ]
 
 
 def test_c2ir_explicit_project_headers_import_types_from_their_owner_module():

@@ -1,8 +1,8 @@
-class node:
+class node(CStruct):
     id: Int
     xyz: Float64[3]
 
-class mesh:
+class mesh(CStruct):
     nnodes: SizeT
     nodes: Ptr(node)
 

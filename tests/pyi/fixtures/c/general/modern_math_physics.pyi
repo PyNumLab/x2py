@@ -1,9 +1,9 @@
-class modern_particle:
+class modern_particle(CStruct):
     id: Int
     mass: Float64
     position: Float64[3]
 
-class vector3:
+class vector3(CStruct):
     values: Float64[3]
 
 modern_counter: Int

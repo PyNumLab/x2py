@@ -1,4 +1,4 @@
-class same_name:
+class same_name(CStruct):
     payload: Int
 
 same_name_i: Int
