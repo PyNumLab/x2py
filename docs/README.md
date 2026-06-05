@@ -16,7 +16,8 @@ overview. Contribution and pull-request requirements remain in
 
 ## User Contract References
 
-- [Semantic IR and `.pyi` reference](semantics.md)
+- [Semantic IR reference](semantics.md)
+- [Semantic `.pyi` format](pyi_format.md)
 - [Diagnostic code registry](diagnostic_codes.md)
 
 These files identify implemented, maintained contracts. Any design-only

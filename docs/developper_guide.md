@@ -63,7 +63,8 @@ Use these documentation roles consistently:
 | [examples.md](examples.md) | Copy-paste commands and Python API recipes |
 | [c_parser.md](c_parser.md) | Maintainer inventory for the C frontend |
 | [fortran_parser.md](fortran_parser.md) | Maintainer inventory for the Fortran frontend |
-| [semantics.md](semantics.md) | Accepted semantic IR and `.pyi` contract |
+| [semantics.md](semantics.md) | Accepted semantic IR and datatype contract |
+| [pyi_format.md](pyi_format.md) | User-visible semantic `.pyi` syntax and roadmap |
 | [wrapper_design_notes.md](wrapper_design_notes.md) | Clearly deferred wrapper policy, not current runtime support |
 
 When adding a user example:
@@ -156,8 +157,10 @@ PYTHONPATH=. python3 -m pytest -q tests/tools/test_documentation_examples.py
 - [Fortran parser reference](fortran_parser.md): Fortran frontend scope,
   recursive parser organization, API/CLI behavior, diagnostics, fixture
   workflow, semantic handoff, and tests.
-- [Semantic IR and `.pyi` reference](semantics.md): shared semantic model,
-  datatype policy, `.pyi` loader/printer contract, and C conversion blockers.
+- [Semantic IR reference](semantics.md): shared semantic model, datatype
+  policy, and C conversion blockers.
+- [Semantic `.pyi` format](pyi_format.md): user-visible `.pyi`
+  loader/printer contract and roadmap.
 - [Wrapper design notes](wrapper_design_notes.md): wrapper-generation policy
   questions intentionally deferred until wrapper implementation.
 - [Semantic multilanguage wrapper runtime architecture](architecture/semantic_multilanguage_wrapper_runtime_architecture.md):
@@ -167,9 +170,9 @@ PYTHONPATH=. python3 -m pytest -q tests/tools/test_documentation_examples.py
 
 ## User-Facing Contract Internals
 
-The tutorial, examples cookbook, and semantic reference describe CLI stages,
-`.pyi` syntax, datatype names, and readiness reports. The developer task is to
-keep those user-visible contracts stable, tested, and traceable to
+The tutorial, examples cookbook, `.pyi` format, and semantic reference describe
+CLI stages, `.pyi` syntax, datatype names, and readiness reports. The developer
+task is to keep those user-visible contracts stable, tested, and traceable to
 implementation files.
 
 ### Source Ownership Map
@@ -216,7 +219,9 @@ When changing `.pyi` syntax:
 3. Update fixture tests only if the public generated contract changes.
 4. Update [tutorial.md](tutorial.md) or [examples.md](examples.md) if users
    need to write or read the new syntax.
-5. Update [semantics.md](semantics.md) for the full reference.
+5. Update [pyi_format.md](pyi_format.md) for the full user-facing reference.
+6. Update [semantics.md](semantics.md) if the underlying semantic IR contract
+   changes.
 
 ### Datatype Mapping Internals
 

@@ -1,9 +1,9 @@
-# Semantic IR And `.pyi` Reference
+# Semantic IR Reference
 
-This file is the single reference for semantic type names, C-to-IR conversion,
-editable `.pyi` contracts, and the exact native C semantic stub rules. It is
-kept together because parser frontends should converge on one semantic model
-before wrapper generation makes language-specific lowering decisions.
+This file is the reference for semantic type names, C-to-IR conversion, and the
+exact native C semantic stub rules. The user-facing editable `.pyi` syntax and
+roadmap live in [pyi_format.md](pyi_format.md); this document keeps the
+underlying semantic model and datatype policy in one place.
 
 Sections through [Deferred C Work](#deferred-c-work) describe current semantic
 behavior. The final self-contained C runtime-contract section is explicitly a

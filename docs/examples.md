@@ -5,8 +5,8 @@ repository fixture commands and inline Python snippets are covered by the
 current test suite or can be run directly from the repository root.
 
 Start with the [tutorial](tutorial.md) if this is your first x2py workflow.
-Use the [semantic reference](semantics.md) for the full accepted `.pyi`
-contract.
+Use the [semantic `.pyi` format](pyi_format.md) for the full accepted `.pyi`
+contract and the [semantic IR reference](semantics.md) for datatype details.
 
 ## Fixture Inputs
 
@@ -674,7 +674,7 @@ def add(a: Float64, b: Float64) -> Float64: ...
 
 The current loader and printer preserve supported `@native_call` metadata.
 x2py does not currently execute the projection or generate runtime wrapper
-code. Use the [semantic reference](semantics.md) for the accepted projection
+code. Use the [semantic `.pyi` format](pyi_format.md) for the accepted projection
 entries and limitations.
 
 ## Readiness Blocker Examples
@@ -729,6 +729,7 @@ generate a runtime wrapper for the variadic contract.
 ## More References
 
 - [Tutorial](tutorial.md)
-- [Semantic IR and `.pyi` reference](semantics.md)
+- [Semantic `.pyi` format](pyi_format.md)
+- [Semantic IR reference](semantics.md)
 - [Diagnostic code registry](diagnostic_codes.md)
 - [Developer guide](developper_guide.md): implementation and parser references

@@ -6,7 +6,8 @@ fixtures so they can be run from the repository root.
 
 For additional copy-paste commands and Python snippets, continue to the
 [examples cookbook](examples.md). For detailed user-facing contracts, use the
-[semantic `.pyi` reference](semantics.md) and
+[semantic `.pyi` format](pyi_format.md), [semantic IR reference](semantics.md),
+and
 [diagnostic code registry](diagnostic_codes.md). Implementation and parser
 maintenance material starts in the [developer guide](developper_guide.md).
 
@@ -446,8 +447,8 @@ readiness blocker. A placeholder such as `Procedure` or
 
 Supported projection metadata such as `@native_call(...)` is parsed and
 preserved, but x2py does not yet execute projections or generate runtime
-wrapper code. See the [semantic reference](semantics.md) before writing custom
-semantic annotations.
+wrapper code. See the [semantic `.pyi` format](pyi_format.md) before writing
+custom semantic annotations.
 
 ## Use The Python API
 
@@ -545,14 +546,17 @@ Do not assume current support for:
 - generated or compiled runtime wrappers;
 - execution of `@native_call` projections.
 
-The [semantic reference](semantics.md) is the maintained user-facing contract.
+The [semantic `.pyi` format](pyi_format.md) is the maintained user-facing
+contract for editable stubs. The [semantic IR reference](semantics.md) owns
+datatype mapping and IR details.
 Implementation inventories and parser-maintenance references are linked from
 the [developer guide](developper_guide.md#references).
 
 ## Continue Reading
 
 - [Verified examples cookbook](examples.md)
-- [Semantic IR and `.pyi` reference](semantics.md)
+- [Semantic `.pyi` format](pyi_format.md)
+- [Semantic IR reference](semantics.md)
 - [Diagnostic code registry](diagnostic_codes.md)
 - [Developer guide](developper_guide.md): implementation, parser references,
   tests, and maintenance workflows
