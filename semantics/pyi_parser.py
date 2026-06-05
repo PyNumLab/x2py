@@ -110,10 +110,24 @@ class _PyiAstParser:
             native_name=node.name,
             fields=body.fields,
             methods=body.methods,
+            classes=body.classes,
             base_classes=base_classes,
-            metadata={"representation": "opaque"} if "Opaque" in base_classes else {},
+            metadata=self._class_metadata(base_classes),
             visibility=visibility,
         )
+
+    @staticmethod
+    def _class_metadata(base_classes: list[str]) -> dict[str, object]:
+        metadata: dict[str, object] = {}
+        if "CStruct" in base_classes:
+            metadata["c_kind"] = "struct"
+        if "CUnion" in base_classes:
+            metadata["c_kind"] = "union"
+        if "CAnonymous" in base_classes:
+            metadata["c_anonymous"] = True
+        if "Opaque" in base_classes:
+            metadata["representation"] = "opaque"
+        return metadata
 
     def enum_def(self, node: ast.ClassDef, *, visibility: str) -> SemanticEnum:
         if len(node.bases) != 1 or not self.is_subscript_of(node.bases[0], "Enum"):
@@ -904,6 +918,7 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         self.parser = parser
         self.fields: list[SemanticArgument] = []
         self.methods: list[SemanticMethod] = []
+        self.classes: list[SemanticClass] = []
 
     def visit_body(self, nodes: list[ast.stmt]) -> None:
         for node in nodes:
@@ -924,6 +939,14 @@ class _ClassBodyVisitor(ast.NodeVisitor):
                 projection=decorators.projection,
             )
         )
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        decorators = self.parser.decorators(node.decorator_list, context="class body")
+        if decorators.has_native_call:
+            raise ValueError(f"Unsupported class body decorator: {ast.unparse(node.decorator_list[-1])!r}")
+        if len(node.bases) == 1 and self.parser.is_subscript_of(node.bases[0], "Enum"):
+            raise ValueError(f"Nested enum declarations are not supported: {_node_text(node)!r}")
+        self.classes.append(self.parser.class_def(node, visibility=decorators.visibility))
 
     def generic_visit(self, node: ast.AST) -> None:
         raise ValueError(f"Unsupported class body node: {_node_text(node)!r}")

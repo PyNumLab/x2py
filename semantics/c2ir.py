@@ -479,12 +479,17 @@ class CToIRConverter:
     def visit_struct(self, struct: CStruct) -> SemanticClass:
         name = self._struct_name(struct)
         metadata: dict[str, Any] = {"c_kind": "struct", "incomplete": struct.is_incomplete}
-        base_classes = ["Opaque"] if struct.is_incomplete else []
+        if struct.name is None:
+            metadata["c_anonymous"] = True
+        fields, nested_classes = self._aggregate_fields(struct.members)
         return SemanticClass(
             name=name,
             native_name=struct.reference_name,
-            fields=[self.visit_variable(member) for member in struct.members if member.name is not None],
-            base_classes=base_classes,
+            fields=fields,
+            classes=nested_classes,
+            base_classes=self._aggregate_base_classes(
+                "struct", anonymous=struct.name is None, opaque=struct.is_incomplete
+            ),
             metadata=metadata,
             origin=SemanticOrigin(
                 source_language="c",
@@ -496,17 +501,171 @@ class CToIRConverter:
         )
 
     def visit_union(self, union: CUnion) -> SemanticClass:
+        metadata: dict[str, Any] = {"c_kind": "union", "incomplete": union.is_incomplete}
+        if union.name is None:
+            metadata["c_anonymous"] = True
+        fields, nested_classes = self._aggregate_fields(union.members)
         return SemanticClass(
             name=self._union_name(union),
             native_name=union.reference_name,
-            fields=[self.visit_variable(member) for member in union.members if member.name is not None],
-            metadata={"c_kind": "union", "incomplete": union.is_incomplete},
+            fields=fields,
+            classes=nested_classes,
+            base_classes=self._aggregate_base_classes(
+                "union", anonymous=union.name is None, opaque=union.is_incomplete
+            ),
+            metadata=metadata,
             origin=SemanticOrigin(
                 source_language="c",
                 native_name=union.reference_name,
                 source_kind="union",
                 source_type=union.reference_name,
                 source_location=self._location_dict(union.source_location),
+            ),
+        )
+
+    def _aggregate_fields(
+        self,
+        members: list[CVariable],
+    ) -> tuple[list[SemanticArgument], list[SemanticClass]]:
+        fields: list[SemanticArgument] = []
+        nested_classes: list[SemanticClass] = []
+        anonymous_member_counts: dict[str, int] = {"struct": 0, "union": 0}
+        used_nested_names: set[str] = set()
+
+        for member in members:
+            if isinstance(member.type, CStruct | CUnion) and member.type.name is None:
+                kind = "struct" if isinstance(member.type, CStruct) else "union"
+                field_name = member.name
+                anonymous_member = field_name is None
+                if field_name is None:
+                    index = anonymous_member_counts[kind]
+                    anonymous_member_counts[kind] += 1
+                    field_name = f"_anonymous_{kind}_{index}"
+                nested_name = self._nested_aggregate_name(field_name, used_nested_names)
+                used_nested_names.add(nested_name)
+                nested_classes.append(self._nested_aggregate_class(member.type, name=nested_name))
+                fields.append(
+                    self._aggregate_member_argument(
+                        member,
+                        name=field_name,
+                        semantic_type=self._aggregate_reference_type(member.type, name=nested_name),
+                        anonymous_member=anonymous_member,
+                    )
+                )
+                continue
+
+            if member.name is None:
+                continue
+            fields.append(self.visit_variable(member))
+
+        return fields, nested_classes
+
+    def _nested_aggregate_class(self, aggregate: CStruct | CUnion, *, name: str) -> SemanticClass:
+        if isinstance(aggregate, CStruct):
+            fields, nested_classes = self._aggregate_fields(aggregate.members)
+            return SemanticClass(
+                name=name,
+                native_name=aggregate.reference_name,
+                fields=fields,
+                classes=nested_classes,
+                base_classes=self._aggregate_base_classes(
+                    "struct",
+                    anonymous=True,
+                    opaque=aggregate.is_incomplete,
+                ),
+                metadata={
+                    "c_kind": "struct",
+                    "incomplete": aggregate.is_incomplete,
+                    "c_anonymous": True,
+                },
+                origin=SemanticOrigin(
+                    source_language="c",
+                    native_name=aggregate.reference_name,
+                    source_kind="struct",
+                    source_type=aggregate.reference_name,
+                    source_location=self._location_dict(aggregate.source_location),
+                ),
+            )
+
+        fields, nested_classes = self._aggregate_fields(aggregate.members)
+        return SemanticClass(
+            name=name,
+            native_name=aggregate.reference_name,
+            fields=fields,
+            classes=nested_classes,
+            base_classes=self._aggregate_base_classes(
+                "union",
+                anonymous=True,
+                opaque=aggregate.is_incomplete,
+            ),
+            metadata={
+                "c_kind": "union",
+                "incomplete": aggregate.is_incomplete,
+                "c_anonymous": True,
+            },
+            origin=SemanticOrigin(
+                source_language="c",
+                native_name=aggregate.reference_name,
+                source_kind="union",
+                source_type=aggregate.reference_name,
+                source_location=self._location_dict(aggregate.source_location),
+            ),
+        )
+
+    @staticmethod
+    def _aggregate_base_classes(kind: str, *, anonymous: bool, opaque: bool) -> list[str]:
+        base_classes = ["CStruct" if kind == "struct" else "CUnion"]
+        if anonymous:
+            base_classes.append("CAnonymous")
+        if opaque:
+            base_classes.append("Opaque")
+        return base_classes
+
+    def _aggregate_reference_type(self, aggregate: CStruct | CUnion, *, name: str) -> SemanticType:
+        kind = "struct" if isinstance(aggregate, CStruct) else "union"
+        semantic_type = SemanticType(
+            name=name,
+            dtype=name,
+            metadata={
+                "c_kind": kind,
+                "incomplete": getattr(aggregate, "is_incomplete", False),
+                "c_anonymous": True,
+            },
+            origin=self._type_origin(aggregate, native_name=aggregate.reference_name),
+        )
+        if isinstance(aggregate, CUnion):
+            semantic_type.metadata.setdefault("readiness_blockers", []).append(
+                self._blocker(
+                    "c_union_unsupported",
+                    "C union arguments and returns require explicit semantic policy before wrapping.",
+                    {"owner": name, "type": aggregate.reference_name},
+                )
+            )
+        return semantic_type
+
+    def _aggregate_member_argument(
+        self,
+        member: CVariable,
+        *,
+        name: str,
+        semantic_type: SemanticType,
+        anonymous_member: bool,
+    ) -> SemanticArgument:
+        if anonymous_member:
+            semantic_type.constraints.append(SemanticConstraint("CAnonymousMember"))
+        return SemanticArgument(
+            name=name,
+            semantic_type=semantic_type,
+            intent=self._inferred_intent(semantic_type),
+            visibility="private" if "static" in member.storage else "public",
+            default_value=member.initializer.source_text if member.initializer is not None else None,
+            origin=SemanticOrigin(
+                source_language="c",
+                native_name=member.name,
+                source_kind="variable",
+                source_type=self._type_text(member.type),
+                source_location=self._location_dict(member.source_location),
+                metadata={"storage": list(member.storage), "bit_width": member.bit_width},
             ),
         )
 
@@ -1419,6 +1578,15 @@ class CToIRConverter:
             return self._identifier(enum.name)
         alias = self._typedef_alias_for_type(enum)
         return self._identifier(alias or enum.anonymous_id or "anonymous_enum")
+
+    def _nested_aggregate_name(self, field_name: str, used_names: set[str]) -> str:
+        base = self._identifier(field_name)
+        candidate = self._identifier(f"{base}_type")
+        index = 1
+        while candidate in used_names:
+            candidate = self._identifier(f"{base}_type_{index}")
+            index += 1
+        return candidate
 
     def _resolved_enum(self, enum: CEnum) -> CEnum:
         if enum.name and enum.name in self.enums:

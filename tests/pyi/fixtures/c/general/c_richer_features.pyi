@@ -1,15 +1,15 @@
 class x2py_status(Enum[Int]):
     pass
 
-class x2py_flags:
+class x2py_flags(CStruct):
     ready: UInt32
     mode: UInt32
     reserved: UInt32
 
-class x2py_context(Opaque):
+class x2py_context(CStruct, Opaque):
     pass
 
-class x2py_scalar:
+class x2py_scalar(CUnion):
     i32: Int
     u64: UInt64
     f64: Float64

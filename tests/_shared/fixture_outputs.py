@@ -83,8 +83,26 @@ def semantic_modules_for_fixture(path: Path):
     return [fortran_module_to_semantic_module(module) for module in parsed.modules]
 
 
+def _prune_empty_nested_class_lists(value):
+    if isinstance(value, list):
+        return [_prune_empty_nested_class_lists(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+
+    is_class_payload = {"fields", "methods", "base_classes"}.issubset(value)
+    return {
+        key: _prune_empty_nested_class_lists(item)
+        for key, item in value.items()
+        if not (is_class_payload and key == "classes" and item == [])
+    }
+
+
 def semantic_payload_for_fixture(path: Path) -> dict:
-    return {"semantic_modules": [asdict(module) for module in semantic_modules_for_fixture(path)]}
+    return {
+        "semantic_modules": [
+            _prune_empty_nested_class_lists(asdict(module)) for module in semantic_modules_for_fixture(path)
+        ]
+    }
 
 
 def wrap_readiness_message_payload_for_fixture(path: Path) -> dict:

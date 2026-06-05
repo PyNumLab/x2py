@@ -135,8 +135,11 @@ class _SemanticReadinessChecker:
                     continue
                 if not _is_public(cls):
                     continue
-                n_classes += 1
-                n_functions += sum(1 for method in cls.methods if _is_public(method))
+                public_classes = [cls, *_iter_public_classes(cls)]
+                n_classes += len(public_classes)
+                n_functions += sum(
+                    1 for public_class in public_classes for method in public_class.methods if _is_public(method)
+                )
 
         return {
             "n_functions": n_functions,
@@ -248,6 +251,16 @@ class _SemanticReadinessChecker:
         class_symbols = {field.name for field in cls.fields}
         known_shape_symbols = set(module_constants) | class_symbols
         constant_names = module_constant_names | _constant_names(cls.fields)
+
+        for nested in cls.classes:
+            if not _is_public(nested):
+                continue
+            self._check_class(
+                nested,
+                module=module,
+                module_constants=module_constants,
+                module_constant_names=module_constant_names,
+            )
 
         for field in cls.fields:
             self._check_argument(
@@ -569,8 +582,12 @@ class _SemanticTypeIndex:
         self.import_aliases_by_module: dict[str, set[str]] = {}
 
         for module in modules:
-            self.known_types.update(declaration.name for declaration in module.classes)
-            self.known_types.update(f"{module.name}.{declaration.name}" for declaration in module.classes)
+            for declaration in module.classes:
+                if isinstance(declaration, SemanticClass):
+                    self.known_types.update(_class_type_names(declaration, module_name=module.name))
+                else:
+                    self.known_types.add(declaration.name)
+                    self.known_types.add(f"{module.name}.{declaration.name}")
             imported_modules, import_aliases, imported_types = _import_index(module.imports)
             self.imported_modules_by_module[module.name] = imported_modules
             self.import_aliases_by_module[module.name] = import_aliases
@@ -610,6 +627,21 @@ def _import_index(imports: list[str | SemanticImport]) -> tuple[set[str], set[st
                 imported_types.add(f"{imp.module}.{item.target}")
 
     return imported_modules, import_aliases, imported_types
+
+
+def _iter_public_classes(cls: SemanticClass):
+    for nested in cls.classes:
+        if _is_public(nested):
+            yield nested
+            yield from _iter_public_classes(nested)
+
+
+def _class_type_names(cls: SemanticClass, *, module_name: str, prefix: str = "") -> set[str]:
+    qualified = f"{prefix}.{cls.name}" if prefix else cls.name
+    names = {cls.name, qualified, f"{module_name}.{qualified}"}
+    for nested in cls.classes:
+        names.update(_class_type_names(nested, module_name=module_name, prefix=qualified))
+    return names
 
 
 def _constant_values(arguments: list[SemanticArgument]) -> dict[str, str]:

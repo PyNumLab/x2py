@@ -303,6 +303,10 @@ class PyiPrinter:
     def _class_body(self, cls: SemanticClass) -> str:
         body_parts = []
 
+        nested_classes = "\n\n".join(self._indent_block(self.emit_class(nested), "    ") for nested in cls.classes)
+        if nested_classes:
+            body_parts.append(nested_classes)
+
         fields = "\n".join(f"    {self.emit_data_member(field)}" for field in cls.fields)
         if fields:
             body_parts.append(fields)
@@ -314,6 +318,10 @@ class PyiPrinter:
         if not body_parts:
             return "    pass"
         return "\n\n".join(body_parts)
+
+    @staticmethod
+    def _indent_block(text: str, indent: str) -> str:
+        return "\n".join(f"{indent}{line}" if line else line for line in text.splitlines())
 
     def _append_imports(self, sections: list[str], module: SemanticModule) -> None:
         imports = self._effective_imports(module)
@@ -523,7 +531,7 @@ def opaque_dependency_modules(
     known_classes = {
         (module.name, cls.name) for module in known_modules for cls in module.classes if isinstance(cls, SemanticClass)
     }
-    dependencies: dict[str, set[str]] = {}
+    dependencies: dict[str, dict[str, str | None]] = {}
     for module in source_modules:
         for semantic_type in _iter_module_semantic_types(module):
             ref = semantic_type.metadata.get(EXTERNAL_TYPE_REF_METADATA)
@@ -535,22 +543,36 @@ def opaque_dependency_modules(
                 continue
             if (origin_module, type_name) in known_classes:
                 continue
-            dependencies.setdefault(origin_module, set()).add(type_name)
+            c_kind = semantic_type.metadata.get("c_kind")
+            dependencies.setdefault(origin_module, {}).setdefault(
+                type_name,
+                c_kind if c_kind in {"struct", "union"} else None,
+            )
     return [
         SemanticModule(
             name=module_name,
-            classes=[
-                SemanticClass(
-                    name=type_name,
-                    native_name=type_name,
-                    base_classes=["Opaque"],
-                    metadata={"representation": "opaque"},
-                )
-                for type_name in sorted(type_names)
-            ],
+            classes=[_opaque_dependency_class(type_name, c_kind) for type_name, c_kind in sorted(type_kinds.items())],
         )
-        for module_name, type_names in sorted(dependencies.items())
+        for module_name, type_kinds in sorted(dependencies.items())
     ]
+
+
+def _opaque_dependency_class(type_name: str, c_kind: str | None) -> SemanticClass:
+    base_classes: list[str] = []
+    metadata: dict[str, object] = {"representation": "opaque"}
+    if c_kind == "struct":
+        base_classes.append("CStruct")
+        metadata["c_kind"] = "struct"
+    elif c_kind == "union":
+        base_classes.append("CUnion")
+        metadata["c_kind"] = "union"
+    base_classes.append("Opaque")
+    return SemanticClass(
+        name=type_name,
+        native_name=type_name,
+        base_classes=base_classes,
+        metadata=metadata,
+    )
 
 
 def emit_module_stubs(

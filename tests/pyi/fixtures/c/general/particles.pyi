@@ -1,4 +1,4 @@
-class particle:
+class particle(CStruct):
     id: Int
     x: Float64[3]
 
