@@ -28,6 +28,7 @@ from .models import (
     SemanticClass,
     SemanticConstraint,
     SemanticEnum,
+    SemanticField,
     SemanticFunction,
     SemanticImport,
     SemanticImportItem,
@@ -36,6 +37,7 @@ from .models import (
     SemanticOrigin,
     SemanticStorageContract,
     SemanticType,
+    SemanticVariable,
     ProjectionMapping,
 )
 
@@ -287,19 +289,22 @@ class FortranToIRConverter:
         *,
         intent: str = "in",
         derived_type_context: _DerivedTypeContext | None = None,
-    ) -> SemanticArgument:
+        binding_cls: type[SemanticVariable] = SemanticVariable,
+        source_kind: str = "variable",
+    ) -> SemanticVariable:
         semantic_type = self.visit_variable(var, derived_type_context=derived_type_context)
         if semantic_type.storage is not None and semantic_type.storage.array is not None:
             semantic_type.storage.array.allocatable = getattr(var, "allocatable", False)
             semantic_type.storage.array.pointer = getattr(var, "pointer", False)
-        return SemanticArgument(
+        binding = binding_cls(
             name=var.name,
             semantic_type=semantic_type,
-            intent=intent,
-            optional=getattr(var, "optional", False),
             visibility=getattr(var, "visibility", "public"),
-            origin=self._argument_origin(var),
+            origin=self._data_origin(var, source_kind=source_kind),
         )
+        binding.intent = intent
+        binding.optional = getattr(var, "optional", False)
+        return binding
 
     def visit_procedure(
         self,
@@ -340,7 +345,16 @@ class FortranToIRConverter:
         return SemanticClass(
             name=dtype.name,
             native_name=dtype.name,
-            fields=[self.visit_data_member(field, intent="in", derived_type_context=context) for field in dtype.fields],
+            fields=[
+                self.visit_data_member(
+                    field,
+                    intent="in",
+                    derived_type_context=context,
+                    binding_cls=SemanticField,
+                    source_kind="field",
+                )
+                for field in dtype.fields
+            ],
             methods=self._bound_methods(dtype, lookup),
             base_classes=self._base_classes(dtype),
             visibility=getattr(dtype, "visibility", "public"),
@@ -699,6 +713,17 @@ class FortranToIRConverter:
             source_kind="argument" if isinstance(arg, FortranArgument) else "variable",
             source_type=FortranToIRConverter._fortran_source_type(arg),
             metadata=FortranToIRConverter._fortran_variable_metadata(arg),
+        )
+
+    @staticmethod
+    def _data_origin(var: FortranArgument | FortranVariable, *, source_kind: str) -> SemanticOrigin:
+        return SemanticOrigin(
+            source_language="fortran",
+            native_name=var.name,
+            native_scope=getattr(var, "module", None),
+            source_kind=source_kind,
+            source_type=FortranToIRConverter._fortran_source_type(var),
+            metadata=FortranToIRConverter._fortran_variable_metadata(var),
         )
 
     @staticmethod
@@ -1319,7 +1344,7 @@ def _resolve_semantic_type_compile_time_values(
 
 
 def _resolve_semantic_argument_compile_time_values(
-    arg: SemanticArgument,
+    arg: SemanticArgument | SemanticVariable,
     compile_time_values: dict[str, str],
 ) -> None:
     _resolve_semantic_type_compile_time_values(arg.semantic_type, compile_time_values)
@@ -1333,6 +1358,8 @@ def _resolve_semantic_function_compile_time_values(
 ) -> None:
     for arg in func.arguments:
         _resolve_semantic_argument_compile_time_values(arg, compile_time_values)
+    for local in func.locals:
+        _resolve_semantic_argument_compile_time_values(local, compile_time_values)
     _resolve_semantic_type_compile_time_values(func.return_type, compile_time_values)
     for mapping in func.projection:
         mapping.value = _resolve_semantic_value(mapping.value, compile_time_values)
@@ -1372,7 +1399,7 @@ def resolve_semantic_compile_time_values(
     specialized without mutating the original IR object.
 
     Example:
-        >>> mod = SemanticModule(name="m", variables=[SemanticArgument("x", SemanticType("Float64", rank=1, shape=["1:n"]))])
+        >>> mod = SemanticModule(name="m", variables=[SemanticVariable("x", SemanticType("Float64", rank=1, shape=["1:n"]))])
         >>> resolve_semantic_compile_time_values(mod, {"n": 4}).variables[0].semantic_type.shape
         ['1:4']
     """

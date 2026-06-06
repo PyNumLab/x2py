@@ -13,6 +13,8 @@ from .models import (
     SemanticClass,
     SemanticConstraint,
     SemanticEnum,
+    SemanticEnumerator,
+    SemanticField,
     SemanticFunction,
     SemanticImport,
     SemanticImportItem,
@@ -20,6 +22,7 @@ from .models import (
     SemanticModule,
     SemanticStorageContract,
     SemanticType,
+    SemanticVariable,
     _iter_module_semantic_types,
 )
 
@@ -147,14 +150,27 @@ class _PyiAstParser:
 
     def _link_enum_constants(self) -> None:
         by_name = {enum.name: enum for enum in self.module.enums}
-        for variable in self.module.variables:
+        for index, variable in enumerate(list(self.module.variables)):
             enum = by_name.get(variable.semantic_type.name)
             if enum is None or not any(
                 constraint.name == "Constant" for constraint in variable.semantic_type.constraints
             ):
                 continue
             variable.semantic_type.metadata["semantic_enum"] = enum.name
-            enum.enumerators.append(variable)
+            enumerator = (
+                variable
+                if isinstance(variable, SemanticEnumerator)
+                else SemanticEnumerator(
+                    name=variable.name,
+                    semantic_type=variable.semantic_type,
+                    visibility=variable.visibility,
+                    default_value=variable.default_value,
+                    metadata=variable.metadata,
+                    origin=variable.origin,
+                )
+            )
+            enum.enumerators.append(enumerator)
+            self.module.variables[index] = enumerator
 
     def function_def(
         self,
@@ -194,7 +210,13 @@ class _PyiAstParser:
             visibility=visibility,
         )
 
-    def ann_assign(self, node: ast.AnnAssign, *, default_intent: str) -> SemanticArgument:
+    def ann_assign(
+        self,
+        node: ast.AnnAssign,
+        *,
+        default_intent: str,
+        binding_cls: type[SemanticVariable] = SemanticVariable,
+    ) -> SemanticVariable:
         name = self.annotation_target(node.target)
         visibility, semantic_type, original_name = self.visible_type(node.annotation)
         if original_name is not None:
@@ -203,14 +225,15 @@ class _PyiAstParser:
         semantic_type.ownership.mutable = intent.lower() != "in"
         if semantic_type.storage is not None:
             semantic_type.storage.mutable = intent.lower() != "in"
-        return SemanticArgument(
+        binding = binding_cls(
             name=name,
             semantic_type=semantic_type,
-            intent=intent,
-            optional=self.default_marks_optional(node.value),
             visibility=visibility,
             default_value=self.assignment_default_value(node.value, semantic_type),
         )
+        binding.intent = intent
+        binding.optional = self.default_marks_optional(node.value)
+        return binding
 
     def decorators(self, nodes: list[ast.expr], *, context: str) -> _Decorators:
         parsed = _Decorators()
@@ -916,7 +939,7 @@ class _PyiAstParser:
 class _ClassBodyVisitor(ast.NodeVisitor):
     def __init__(self, parser: _PyiAstParser):
         self.parser = parser
-        self.fields: list[SemanticArgument] = []
+        self.fields: list[SemanticField] = []
         self.methods: list[SemanticMethod] = []
         self.classes: list[SemanticClass] = []
 
@@ -928,7 +951,7 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         return None
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
-        self.fields.append(self.parser.ann_assign(node, default_intent="in"))
+        self.fields.append(self.parser.ann_assign(node, default_intent="in", binding_cls=SemanticField))
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context="class body")

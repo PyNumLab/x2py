@@ -58,11 +58,14 @@ from .models import (
     SemanticCoercion,
     SemanticConstraint,
     SemanticEnum,
+    SemanticEnumerator,
+    SemanticField,
     SemanticFunction,
     SemanticModule,
     SemanticOrigin,
     SemanticStorageContract,
     SemanticType,
+    SemanticVariable,
     _iter_module_semantic_types,
 )
 
@@ -446,7 +449,13 @@ class CToIRConverter:
             ),
         )
 
-    def visit_variable(self, variable: CVariable) -> SemanticArgument:
+    def visit_variable(
+        self,
+        variable: CVariable,
+        *,
+        binding_cls: type[SemanticVariable] = SemanticVariable,
+        source_kind: str = "variable",
+    ) -> SemanticVariable:
         name = variable.name or "<anonymous>"
         semantic_type = self.visit_type(variable.type, owner=name)
         self._add_incomplete_by_value_blocker(semantic_type, owner=name)
@@ -460,21 +469,22 @@ class CToIRConverter:
             )
         if variable.callback_candidate:
             semantic_type = self._callback_placeholder(variable.type)
-        return SemanticArgument(
+        binding = binding_cls(
             name=name,
             semantic_type=semantic_type,
-            intent=self._inferred_intent(semantic_type),
             visibility="private" if "static" in variable.storage else "public",
             default_value=variable.initializer.source_text if variable.initializer is not None else None,
             origin=SemanticOrigin(
                 source_language="c",
                 native_name=variable.name,
-                source_kind="variable",
+                source_kind=source_kind,
                 source_type=self._type_text(variable.type),
                 source_location=self._location_dict(variable.source_location),
                 metadata={"storage": list(variable.storage), "bit_width": variable.bit_width},
             ),
         )
+        binding.intent = self._inferred_intent(semantic_type)
+        return binding
 
     def visit_struct(self, struct: CStruct) -> SemanticClass:
         name = self._struct_name(struct)
@@ -526,8 +536,8 @@ class CToIRConverter:
     def _aggregate_fields(
         self,
         members: list[CVariable],
-    ) -> tuple[list[SemanticArgument], list[SemanticClass]]:
-        fields: list[SemanticArgument] = []
+    ) -> tuple[list[SemanticField], list[SemanticClass]]:
+        fields: list[SemanticField] = []
         nested_classes: list[SemanticClass] = []
         anonymous_member_counts: dict[str, int] = {"struct": 0, "union": 0}
         used_nested_names: set[str] = set()
@@ -556,7 +566,7 @@ class CToIRConverter:
 
             if member.name is None:
                 continue
-            fields.append(self.visit_variable(member))
+            fields.append(self.visit_variable(member, binding_cls=SemanticField, source_kind="field"))
 
         return fields, nested_classes
 
@@ -650,24 +660,25 @@ class CToIRConverter:
         name: str,
         semantic_type: SemanticType,
         anonymous_member: bool,
-    ) -> SemanticArgument:
+    ) -> SemanticField:
         if anonymous_member:
             semantic_type.constraints.append(SemanticConstraint("CAnonymousMember"))
-        return SemanticArgument(
+        binding = SemanticField(
             name=name,
             semantic_type=semantic_type,
-            intent=self._inferred_intent(semantic_type),
             visibility="private" if "static" in member.storage else "public",
             default_value=member.initializer.source_text if member.initializer is not None else None,
             origin=SemanticOrigin(
                 source_language="c",
                 native_name=member.name,
-                source_kind="variable",
+                source_kind="field",
                 source_type=self._type_text(member.type),
                 source_location=self._location_dict(member.source_location),
                 metadata={"storage": list(member.storage), "bit_width": member.bit_width},
             ),
         )
+        binding.intent = self._inferred_intent(semantic_type)
+        return binding
 
     def visit_enum(self, enum: CEnum) -> SemanticEnum:
         enum = self._resolved_enum(enum)
@@ -1027,8 +1038,8 @@ class CToIRConverter:
             )
         return element
 
-    def _enum_constants_for_enum(self, enum: CEnum) -> list[SemanticArgument]:
-        variables: list[SemanticArgument] = []
+    def _enum_constants_for_enum(self, enum: CEnum) -> list[SemanticEnumerator]:
+        variables: list[SemanticEnumerator] = []
         enum = self._resolved_enum(enum)
         next_value: int | None = 0
         for enumerator in enum.constants:
@@ -1055,7 +1066,7 @@ class CToIRConverter:
             if pyi_value is not None:
                 metadata["pyi_default_value"] = pyi_value
             variables.append(
-                SemanticArgument(
+                SemanticEnumerator(
                     name=enumerator.name,
                     semantic_type=semantic_type,
                     default_value=value,
@@ -1071,10 +1082,10 @@ class CToIRConverter:
             )
         return variables
 
-    def _macro_constants(self, c_file: CFile) -> list[SemanticArgument]:
+    def _macro_constants(self, c_file: CFile) -> list[SemanticVariable]:
         return self._macro_constants_from_macros(c_file.macros)
 
-    def _macro_constants_from_macros(self, macros: list[CMacro]) -> list[SemanticArgument]:
+    def _macro_constants_from_macros(self, macros: list[CMacro]) -> list[SemanticVariable]:
         macro_types: dict[str, str] = {}
         pending = [macro for macro in macros if not macro.function_like and macro.value is not None]
         changed = True
@@ -1094,14 +1105,14 @@ class CToIRConverter:
                     macro_types[macro.name] = "Int32"
                     changed = True
 
-        variables: list[SemanticArgument] = []
+        variables: list[SemanticVariable] = []
         for macro in macros:
             semantic_name = macro_types.get(macro.name)
             if semantic_name is None or macro.value is None:
                 continue
             value = macro.value.strip()
             variables.append(
-                SemanticArgument(
+                SemanticVariable(
                     name=macro.name,
                     semantic_type=SemanticType(
                         name=semantic_name,

@@ -48,8 +48,6 @@
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -57,7 +55,7 @@
             "source_language": "fortran",
             "native_name": "nmax",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "integer(kind=c_int)",
             "source_location": {},
             "metadata": {
@@ -148,8 +146,6 @@
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -157,7 +153,7 @@
             "source_language": "fortran",
             "native_name": "origin",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "real(kind=c_double)",
             "source_location": {},
             "metadata": {

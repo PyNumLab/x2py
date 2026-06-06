@@ -80,8 +80,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -110,7 +108,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": {
@@ -148,6 +148,7 @@
               }
             }
           },
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -223,8 +224,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -247,7 +246,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             },
             {
               "name": "x",
@@ -322,8 +323,6 @@
                   }
                 }
               },
-              "intent": "inout",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -352,10 +351,13 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "inout",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {

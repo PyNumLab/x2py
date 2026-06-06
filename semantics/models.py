@@ -121,21 +121,17 @@ class SemanticType:
             return False
         return _semantic_type_key(self, {}) == _semantic_type_key(other, {})
 
-
 # ============================================================
-# Semantic Arguments
+# Semantic Variables And Bindings
 # ============================================================
 
 
 @dataclass
-class SemanticArgument:
+class SemanticVariable:
     name: str
 
     semantic_type: SemanticType
 
-    intent: str = "in"
-
-    optional: bool = False
     visibility: str = "public"
 
     default_value: str | None = None
@@ -143,6 +139,69 @@ class SemanticArgument:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
+
+    @property
+    def intent(self) -> str:
+        """Compatibility view for data declarations carrying .pyi Intent metadata."""
+        value = self.metadata.get("intent", "in")
+        return str(value)
+
+    @intent.setter
+    def intent(self, value: str) -> None:
+        text = str(value)
+        if text == "in":
+            self.metadata.pop("intent", None)
+        else:
+            self.metadata["intent"] = text
+
+    @property
+    def optional(self) -> bool:
+        """Compatibility view for data declarations parsed from ``= ...``."""
+        return bool(self.metadata.get("optional", False))
+
+    @optional.setter
+    def optional(self, value: bool) -> None:
+        if value:
+            self.metadata["optional"] = True
+        else:
+            self.metadata.pop("optional", None)
+
+
+@dataclass(init=False)
+class SemanticArgument(SemanticVariable):
+    intent: str = "in"
+
+    optional: bool = False
+
+    def __init__(
+        self,
+        name: str,
+        semantic_type: SemanticType,
+        intent: str = "in",
+        optional: bool = False,
+        visibility: str = "public",
+        default_value: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        origin: SemanticOrigin | None = None,
+    ) -> None:
+        self.name = name
+        self.semantic_type = semantic_type
+        self.intent = intent
+        self.optional = optional
+        self.visibility = visibility
+        self.default_value = default_value
+        self.metadata = {} if metadata is None else metadata
+        self.origin = SemanticOrigin() if origin is None else origin
+
+
+@dataclass
+class SemanticField(SemanticVariable):
+    pass
+
+
+@dataclass
+class SemanticEnumerator(SemanticVariable):
+    pass
 
 
 # ============================================================
@@ -192,6 +251,7 @@ class SemanticFunction:
     arguments: list[SemanticArgument] = field(default_factory=list)
 
     return_type: SemanticType | None = None
+    locals: list[SemanticVariable] = field(default_factory=list)
 
     contracts: list[SemanticContract] = field(default_factory=list)
 
@@ -215,6 +275,7 @@ class SemanticFunction:
             self.name,
             self.native_name,
             _function_arguments_key(self_call_args, self_name_map),
+            self.locals,
             _return_projection_key(self, self_name_map),
             self.contracts,
             _projection_key(self.projection, self_name_map),
@@ -225,6 +286,7 @@ class SemanticFunction:
             other.name,
             other.native_name,
             _function_arguments_key(other_call_args, other_name_map),
+            other.locals,
             _return_projection_key(other, other_name_map),
             other.contracts,
             _projection_key(other.projection, other_name_map),
@@ -442,7 +504,7 @@ class SemanticClass:
 
     native_name: str | None = None
 
-    fields: list[SemanticArgument] = field(default_factory=list)
+    fields: list[SemanticField] = field(default_factory=list)
 
     methods: list[SemanticMethod] = field(default_factory=list)
 
@@ -465,7 +527,7 @@ class SemanticEnum:
 
     underlying_type: SemanticType = field(default_factory=lambda: SemanticType("Int"))
 
-    enumerators: list[SemanticArgument] = field(default_factory=list)
+    enumerators: list[SemanticEnumerator] = field(default_factory=list)
 
     open: bool = True
 
@@ -498,7 +560,7 @@ class SemanticModule:
     functions: list[SemanticFunction] = field(default_factory=list)
 
     classes: list[SemanticClass | SemanticEnum] = field(default_factory=list)
-    variables: list[SemanticArgument] = field(default_factory=list)
+    variables: list[SemanticVariable] = field(default_factory=list)
 
     imports: list[str | SemanticImport] = field(default_factory=list)
 

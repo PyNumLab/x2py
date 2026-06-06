@@ -45,8 +45,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -54,7 +52,7 @@
                 "source_language": "fortran",
                 "native_name": "id",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "integer",
                 "source_location": {},
                 "metadata": {
@@ -144,8 +142,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -153,7 +149,7 @@
                 "source_language": "fortran",
                 "native_name": "xyz",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "real(kind=8)",
                 "source_location": {},
                 "metadata": {
@@ -233,8 +229,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -242,7 +236,7 @@
                 "source_language": "fortran",
                 "native_name": "nnodes",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "integer",
                 "source_location": {},
                 "metadata": {
@@ -332,8 +326,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -341,7 +333,7 @@
                 "source_language": "fortran",
                 "native_name": "nodes",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "derived(kind=node)",
                 "source_location": {},
                 "metadata": {

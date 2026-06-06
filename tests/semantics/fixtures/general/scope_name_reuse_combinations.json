@@ -53,8 +53,6 @@
                   }
                 }
               },
-              "intent": "inout",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -77,10 +75,13 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "inout",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -156,8 +157,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -180,10 +179,13 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -259,8 +261,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -283,10 +283,13 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -362,8 +365,6 @@
                   }
                 }
               },
-              "intent": "inout",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -386,10 +387,13 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "inout",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -465,8 +469,6 @@
                   }
                 }
               },
-              "intent": "inout",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -489,10 +491,13 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "inout",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -568,8 +573,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -592,7 +595,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": {
@@ -630,6 +635,7 @@
               }
             }
           },
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -705,8 +711,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -729,7 +733,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": {
@@ -767,6 +773,7 @@
               }
             }
           },
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -842,8 +849,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -866,7 +871,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": {
@@ -904,6 +911,7 @@
               }
             }
           },
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -972,8 +980,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -981,7 +987,7 @@
                 "source_language": "fortran",
                 "native_name": "payload",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "integer",
                 "source_location": {},
                 "metadata": {
@@ -1053,8 +1059,6 @@
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -1062,7 +1066,7 @@
             "source_language": "fortran",
             "native_name": "same_name_i",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
             "metadata": {
@@ -1116,8 +1120,6 @@
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -1125,7 +1127,7 @@
             "source_language": "fortran",
             "native_name": "same_name_r",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "real",
             "source_location": {},
             "metadata": {
@@ -1179,8 +1181,6 @@
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -1188,7 +1188,7 @@
             "source_language": "fortran",
             "native_name": "same_name_l",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "logical",
             "source_location": {},
             "metadata": {
@@ -1242,8 +1242,6 @@
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -1251,7 +1249,7 @@
             "source_language": "fortran",
             "native_name": "same_name_c",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "complex",
             "source_location": {},
             "metadata": {
@@ -1305,8 +1303,6 @@
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -1314,7 +1310,7 @@
             "source_language": "fortran",
             "native_name": "same_name_s",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "character(kind=len=8)",
             "source_location": {},
             "metadata": {

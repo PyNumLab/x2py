@@ -53,8 +53,6 @@
                   }
                 }
               },
-              "intent": "inout",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -77,10 +75,13 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "inout",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -149,8 +150,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -158,7 +157,7 @@
                 "source_language": "fortran",
                 "native_name": "id",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "integer",
                 "source_location": {},
                 "metadata": {
@@ -248,8 +247,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -257,7 +254,7 @@
                 "source_language": "fortran",
                 "native_name": "x",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "real(kind=8)",
                 "source_location": {},
                 "metadata": {

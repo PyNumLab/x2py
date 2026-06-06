@@ -675,6 +675,14 @@ from `semantics/models.py`.
 - C `int` keeps the semantic name `Int` while its compiler-probed concrete
   precision is stored on the semantic type. C enums are open named semantic
   declarations with unscoped module-level enumerator constants.
+- Named data bindings share a common base but keep role-specific types:
+  `SemanticVariable` for module/global variables and macro constants,
+  `SemanticArgument` for callable parameters, `SemanticField` for struct,
+  union, and Fortran derived-type fields, and `SemanticEnumerator` for enum
+  values. `SemanticFunction.locals` is the reserved home for local variables
+  or local constants if a frontend later promotes them into semantic IR; local
+  bindings are not emitted into `.pyi` or treated as wrapper interface items by
+  default.
 - `semantics/pyi_printer.py` emits editable user contracts.
 - `semantics/pyi_parser.py` loads edited contracts back into semantic IR.
 - `semantics/readiness.py` decides whether that IR is complete enough for

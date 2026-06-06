@@ -241,6 +241,8 @@ policy is documented in the datatype mapping section above.
 - C translation unit -> one `SemanticModule` named from the source file stem.
 - C function -> `SemanticFunction`, preserving native name and parameter order.
 - C parameter -> `SemanticArgument`.
+- C global variable -> `SemanticVariable`.
+- C struct/union field -> `SemanticField`.
 - `void` return -> `None`.
 - `_Bool` -> `Bool`.
 - All modeled primitive integer, real, and complex spellings consume supplied
@@ -263,16 +265,17 @@ policy is documented in the datatype mapping section above.
 - Enum definitions become open `SemanticEnum` declarations. Named enum
   arguments and returns keep the enum datatype instead of flattening to an
   integer.
-- C enumerators remain unscoped module-level `Final[enum_name]` variables with
-  their known values. An open enum may still carry any value representable by
-  its underlying integer type; the listed enumerators are named constants, not
+- C enumerators are `SemanticEnumerator` entries on the open enum and also
+  remain unscoped module-level `Final[enum_name]` variables with their known
+  values. An open enum may still carry any value representable by its
+  underlying integer type; the listed enumerators are named constants, not
   closed validation choices.
 - Native enumerator expressions remain stored in semantic IR. The `.pyi`
   initializer is emitted only when it can be represented as valid Python
   expression syntax.
 - Enum underlying storage currently assumes C `int` and records that
   assumption unless an enum-specific compiler fact is supplied.
-- Object-like numeric macros become `Final`-style semantic variables through
+- Object-like numeric macros become `Final`-style `SemanticVariable` entries through
   the `Constant` constraint.
 - Struct definitions become `SemanticClass` entries. Incomplete structs become
   opaque classes and may be used through direct `Ptr(...)` identity contracts.

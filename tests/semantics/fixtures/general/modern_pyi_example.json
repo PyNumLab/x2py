@@ -53,8 +53,6 @@
                   }
                 }
               },
-              "intent": "out",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -77,7 +75,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "out",
+              "optional": false
             },
             {
               "name": "pid",
@@ -125,8 +125,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -149,7 +147,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             },
             {
               "name": "mass",
@@ -197,8 +197,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -221,7 +219,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             },
             {
               "name": "x",
@@ -269,8 +269,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -293,7 +291,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             },
             {
               "name": "y",
@@ -341,8 +341,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -365,7 +363,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             },
             {
               "name": "z",
@@ -413,8 +413,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -437,10 +435,13 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -566,8 +567,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -590,7 +589,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             },
             {
               "name": "vx",
@@ -638,8 +639,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -662,7 +661,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             },
             {
               "name": "vy",
@@ -710,8 +711,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -734,7 +733,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             },
             {
               "name": "vz",
@@ -782,8 +783,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -806,7 +805,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": {
@@ -844,6 +845,7 @@
               }
             }
           },
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -976,8 +978,6 @@
                   }
                 }
               },
-              "intent": "inout",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -1006,7 +1006,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "inout",
+              "optional": false
             },
             {
               "name": "alpha",
@@ -1054,8 +1056,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -1078,10 +1078,13 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -1194,8 +1197,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -1224,7 +1225,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             },
             {
               "name": "b",
@@ -1299,8 +1302,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -1329,7 +1330,9 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": {
@@ -1367,6 +1370,7 @@
               }
             }
           },
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -1486,8 +1490,6 @@
                   }
                 }
               },
-              "intent": "out",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -1519,10 +1521,13 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "out",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -1598,8 +1603,6 @@
                   }
                 }
               },
-              "intent": "inout",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -1622,10 +1625,13 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "inout",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -1701,8 +1707,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -1725,10 +1729,13 @@
                   "pointer": false,
                   "contiguous": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -1797,8 +1804,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -1806,7 +1811,7 @@
                 "source_language": "fortran",
                 "native_name": "id",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "integer",
                 "source_location": {},
                 "metadata": {
@@ -1860,8 +1865,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -1869,7 +1872,7 @@
                 "source_language": "fortran",
                 "native_name": "mass",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "real(kind=8)",
                 "source_location": {},
                 "metadata": {
@@ -1959,8 +1962,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -1968,7 +1969,7 @@
                 "source_language": "fortran",
                 "native_name": "position",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "real(kind=8)",
                 "source_location": {},
                 "metadata": {
@@ -2084,8 +2085,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -2093,7 +2092,7 @@
                 "source_language": "fortran",
                 "native_name": "values",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "real(kind=8)",
                 "source_location": {},
                 "metadata": {
@@ -2173,8 +2172,6 @@
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -2182,7 +2179,7 @@
                 "source_language": "fortran",
                 "native_name": "code",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "integer",
                 "source_location": {},
                 "metadata": {
@@ -2254,8 +2251,6 @@
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -2263,7 +2258,7 @@
             "source_language": "fortran",
             "native_name": "counter",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
             "metadata": {
@@ -2317,8 +2312,6 @@
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "private",
           "default_value": null,
           "metadata": {},
@@ -2326,7 +2319,7 @@
             "source_language": "fortran",
             "native_name": "hidden_scale",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "real(kind=8)",
             "source_location": {},
             "metadata": {

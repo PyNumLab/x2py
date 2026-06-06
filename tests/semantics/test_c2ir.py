@@ -66,10 +66,13 @@ from semantics.models import (
     SemanticArgument,
     SemanticClass,
     SemanticEnum,
+    SemanticEnumerator,
+    SemanticField,
     SemanticModule,
     SemanticOrigin,
     SemanticStorageContract,
     SemanticType,
+    SemanticVariable,
 )
 from semantics.pyi_parser import parse_pyi_text
 from semantics.readiness import assess_semantic_wrap_readiness
@@ -371,6 +374,7 @@ void context_destroy(struct context *ctx);
     context_create = _function(module, "context_create")
 
     assert [field.name for field in point.fields] == ["x", "y"]
+    assert all(isinstance(field, SemanticField) for field in point.fields)
     assert [field.semantic_type.name for field in point.fields] == ["Float64", "Float64"]
     assert point.native_name == "struct point"
     assert point.metadata == {"c_kind": "struct", "incomplete": False}
@@ -624,6 +628,7 @@ enum status { STATUS_OK = 0, STATUS_WARN, STATUS_ERROR = 10 };
     assert constants["STATUS_WARN"].default_value == "1"
     assert constants["STATUS_ERROR"].default_value == "10"
     api_version = constants["API_VERSION"]
+    assert isinstance(api_version, SemanticVariable)
     assert api_version.semantic_type.name == "Int32"
     assert api_version.semantic_type.dtype == "Int32"
     assert [asdict(constraint) for constraint in api_version.semantic_type.constraints] == [
@@ -636,6 +641,7 @@ enum status { STATUS_OK = 0, STATUS_WARN, STATUS_ERROR = 10 };
     status_ok = constants["STATUS_OK"]
     enum = module.enums[0]
     assert isinstance(enum, SemanticEnum)
+    assert all(isinstance(enumerator, SemanticEnumerator) for enumerator in enum.enumerators)
     assert enum.name == "status"
     assert enum.open is True
     assert enum.metadata == {

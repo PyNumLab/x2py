@@ -21,6 +21,7 @@ from .models import (
     SemanticMethod,
     SemanticModule,
     SemanticType,
+    SemanticVariable,
     _iter_module_semantic_types,
 )
 
@@ -45,6 +46,8 @@ class PyiPrinter:
             return self.emit_function(node)
         if isinstance(node, SemanticArgument):
             return self.emit_argument(node)
+        if isinstance(node, SemanticVariable):
+            return self.emit_data_member(node)
         if isinstance(node, SemanticType):
             return self.emit_semantic_type(node)
         if isinstance(node, SemanticConstraint):
@@ -157,13 +160,13 @@ class PyiPrinter:
             original_name=arg.name if name != arg.name else None,
         )
 
-    def emit_data_member(self, arg: SemanticArgument) -> str:
+    def emit_data_member(self, arg: SemanticVariable) -> str:
         return self._emit_typed_name(self._annotation_target(arg.name), arg)
 
     def _emit_typed_name(
         self,
         name: str,
-        arg: SemanticArgument,
+        arg: SemanticVariable,
         *,
         original_name: str | None = None,
     ) -> str:
@@ -202,13 +205,13 @@ class PyiPrinter:
         return any(constraint.name == "Constant" for constraint in semantic_type.constraints)
 
     @staticmethod
-    def _is_enum_constant(arg: SemanticArgument) -> bool:
+    def _is_enum_constant(arg: SemanticVariable) -> bool:
         return PyiPrinter._is_constant(arg.semantic_type) and bool(
             arg.semantic_type.metadata.get("semantic_enum") or arg.semantic_type.metadata.get("c_enum")
         )
 
     @staticmethod
-    def _enum_default_value(arg: SemanticArgument) -> str | None:
+    def _enum_default_value(arg: SemanticVariable) -> str | None:
         pyi_value = arg.metadata.get("pyi_default_value")
         if isinstance(pyi_value, str):
             return pyi_value
@@ -480,7 +483,7 @@ class PyiPrinter:
         return list(func.arguments)
 
     @staticmethod
-    def _requires_intent_metadata(arg: SemanticArgument) -> bool:
+    def _requires_intent_metadata(arg: SemanticVariable) -> bool:
         return getattr(arg, "intent", "in") == "out"
 
     @classmethod

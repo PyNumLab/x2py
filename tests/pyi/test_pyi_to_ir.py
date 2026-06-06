@@ -9,12 +9,15 @@ from semantics.models import (
     ProjectionMapping,
     SemanticArgument,
     SemanticConstraint,
+    SemanticEnumerator,
+    SemanticField,
     SemanticFunction,
     SemanticImport,
     SemanticImportItem,
     SemanticModule,
     SemanticEnum,
     SemanticType,
+    SemanticVariable,
 )
 from semantics.pyi_parser import (
     _PyiAstParser,
@@ -86,6 +89,7 @@ read_only_pointer: Ptr(Const(Float64))
     )
 
     public_value, bounded, callback, pointer, read_only_pointer = module.variables
+    assert isinstance(public_value, SemanticVariable)
     assert public_value.visibility == "public"
     assert bounded.semantic_type.constraints == [
         SemanticConstraint("Bounded", [1, 8]),
@@ -118,6 +122,7 @@ def touch(
     assert module.name == "edited"
     assert module.imports == ["iso_c_binding"]
     assert module.classes[0].name == "particle"
+    assert isinstance(module.classes[0].fields[0], SemanticField)
     assert module.variables[0].name == "scale"
     assert module.variables[0].visibility == "private"
     assert module.variables[1].name == "answer"
@@ -150,6 +155,7 @@ def set_status(
     assert enum.name == "status"
     assert enum.open is True
     assert enum.underlying_type.name == "Int"
+    assert all(isinstance(item, SemanticEnumerator) for item in enum.enumerators)
     assert [item.name for item in enum.enumerators] == ["STATUS_OK", "STATUS_NEXT"]
     assert module.variables[1].default_value == "STATUS_OK + 1"
     assert module.functions[0].arguments[0].semantic_type.name == "status"

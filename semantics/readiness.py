@@ -14,6 +14,7 @@ from .models import (
     SemanticMethod,
     SemanticModule,
     SemanticType,
+    SemanticVariable,
 )
 from .pyi_parser import load_pyi_modules
 
@@ -328,7 +329,7 @@ class _SemanticReadinessChecker:
 
     def _check_argument(
         self,
-        arg: SemanticArgument,
+        arg: SemanticArgument | SemanticVariable,
         *,
         owner: str,
         module: SemanticModule,
@@ -644,7 +645,7 @@ def _class_type_names(cls: SemanticClass, *, module_name: str, prefix: str = "")
     return names
 
 
-def _constant_values(arguments: list[SemanticArgument]) -> dict[str, str]:
+def _constant_values(arguments: list[SemanticVariable]) -> dict[str, str]:
     return {
         arg.name: str(arg.default_value)
         for arg in arguments
@@ -652,7 +653,7 @@ def _constant_values(arguments: list[SemanticArgument]) -> dict[str, str]:
     }
 
 
-def _constant_names(arguments: list[SemanticArgument]) -> set[str]:
+def _constant_names(arguments: list[SemanticVariable]) -> set[str]:
     return {arg.name for arg in arguments if _is_constant(arg.semantic_type)}
 
 

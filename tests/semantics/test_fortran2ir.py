@@ -38,12 +38,14 @@ from semantics import models as semantic_models
 from semantics.models import (
     ProjectionMapping,
     SemanticArgument,
+    SemanticField,
     SemanticMethod,
     SemanticModule,
     SemanticClass,
     SemanticFunction,
     SemanticConstraint,
     SemanticType,
+    SemanticVariable,
 )
 
 
@@ -193,6 +195,7 @@ def test_converter_preserves_imported_derived_contexts_through_dispatch_paths():
     assert semantic_module.classes[0].fields[0].semantic_type.metadata["external_type_ref"] == external_ref
     assert "external_type_ref" not in semantic_module.classes[0].fields[1].semantic_type.metadata
     assert semantic_class.fields[0].semantic_type.metadata["external_type_ref"] == external_ref
+    assert isinstance(semantic_class.fields[0], SemanticField)
     assert [field.intent for field in semantic_class.fields] == ["in", "in"]
     assert semantic_class.visibility == "private"
     assert asdict(semantic_class.origin) == {
@@ -206,8 +209,10 @@ def test_converter_preserves_imported_derived_contexts_through_dispatch_paths():
     }
     semantic_proc = semantic_module.functions[0]
     assert semantic_proc.native_name == "step"
+    assert semantic_proc.locals == []
     assert semantic_proc.arguments[0].semantic_type.metadata["external_type_ref"] == external_ref
     assert semantic_module.variables[0].semantic_type.metadata["external_type_ref"] == external_ref
+    assert isinstance(semantic_module.variables[0], SemanticVariable)
     assert semantic_module.variables[0].intent == "in"
     assert [method.name for method in semantic_module.classes[0].methods] == ["step"]
     assert semantic_module.classes[0].methods[0].projection == semantic_proc.projection
