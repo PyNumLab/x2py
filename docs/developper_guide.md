@@ -356,6 +356,284 @@ When changing preprocessing behavior, update
 `tests/parser/test_preprocessor_and_execution_boundaries.py`, and C raw
 directive tests in `tests/parser/c/test_c_lexer_preprocessor.py`.
 
+### Source Loading To Semantic IR Paths
+
+Keep source loading, parser models, and semantic conversion separate. Semantic
+converters accept parsed models; they must not hide compiler preprocessing or
+source loading inside conversion helpers.
+
+Fortran direct Python API, no CPP/FPP macros:
+
+```python
+from x2py import parse_fortran_file
+from semantics.fortran2ir import fortran_module_to_semantic_module
+
+parsed = parse_fortran_file(source, filename="visibility_mod.f90")
+semantic = fortran_module_to_semantic_module(parsed.modules[0])
+```
+
+`parse_fortran_file(...)` runs the parser's internal line preparation:
+source-form detection, comment stripping, and continuation folding. It does
+not expand `#define`, `#ifdef`, or other CPP/FPP directives. Raw CPP/FPP
+directives are rejected with `PARSE_PREPROCESSING_REQUIRED`.
+
+Fortran with macros or textual configuration must be compiler-preprocessed
+before parsing:
+
+```python
+from pathlib import Path
+
+from x2py import parse_fortran_file
+from semantics.fortran2ir import fortran_file_to_semantic_modules
+from x2py.preprocessing import PreprocessingConfig, preprocess_source
+
+path = Path("configured.F90")
+preprocessed = preprocess_source(
+    path,
+    language="fortran",
+    config=PreprocessingConfig(
+        mode="compiler",
+        compiler="gfortran",
+        defines=["USE_MPI", "N=32"],
+        include_dirs=["include"],
+    ),
+)
+
+parsed = parse_fortran_file(preprocessed.source, filename=str(path))
+modules = fortran_file_to_semantic_modules(parsed)
+```
+
+Choose the Fortran semantic helper from the parser model shape:
+
+- `fortran_module_to_semantic_module(parsed.modules[0])` for one selected
+  module.
+- `[fortran_module_to_semantic_module(m) for m in parsed.modules]` when a file
+  contains multiple modules and no top-level standalone procedures matter.
+- `fortran_file_to_semantic_modules(parsed, standalone_module_name=...)` when
+  top-level procedures should become a synthetic semantic module too.
+- `fortran_project_to_semantic_modules(project)` when project-level module and
+  derived-type context matters.
+
+Fortran `parameter` values and kind expressions are not CPP macros. If the
+parser leaves a Fortran compile-time expression symbolic, collect missing
+values with `collect_semantic_compile_time_requirements(parsed)`, evaluate
+them with the target compiler or a reusable type report, and pass
+`compile_time_values=...` to the semantic converter. The shared CLI semantic
+stage performs this target probing when a Fortran compiler or report is
+configured; direct API callers must do it explicitly.
+
+C direct Python API, no macro expansion needed:
+
+```python
+from x2py import parse_c_file
+from semantics.c2ir import c_file_to_semantic_modules
+
+parsed = parse_c_file("int add(int a, int b);", filename="api.h")
+modules = c_file_to_semantic_modules(parsed)
+```
+
+C raw mode records include and pragma metadata and accepts simple include
+guards. Macro-shaped directives such as `#if`, `#ifdef`, `#define` outside a
+trivial include guard, and `#error` require compiler preprocessing and are
+rejected with `CPARSE_PREPROCESSING_REQUIRED`.
+
+C with macros follows the compiler-preprocessed path, then parses the expanded
+translation unit in `compiler` or `preprocessed` mode:
+
+```python
+from pathlib import Path
+
+from c_parser.cli import attach_preprocessing_recipe
+from x2py import parse_c_file
+from semantics.c2ir import c_file_to_semantic_modules
+from x2py.preprocessing import PreprocessingConfig, preprocess_source
+
+path = Path("api.h")
+preprocessed = preprocess_source(
+    path,
+    language="c",
+    config=PreprocessingConfig(
+        mode="compiler",
+        compiler="cc",
+        defines=["API_EXPORT="],
+        include_dirs=["include"],
+    ),
+)
+
+parsed = parse_c_file(
+    preprocessed.source,
+    filename=str(path),
+    preprocessing="compiler",
+)
+attach_preprocessing_recipe(parsed, preprocessed.recipe)
+modules = c_file_to_semantic_modules(parsed)
+```
+
+The C semantic converter can turn recorded object-like numeric macros into
+semantic constant variables. Function-like macros and untyped macro bodies are
+not wrapper-callable declarations. Declarations that depend on macros which
+were recorded but not expanded are surfaced as semantic readiness blockers
+rather than treated as complete wrapper contracts.
+
+For CLI code, do not reimplement these paths manually. `x2py/cli.py` builds
+the `PreprocessingConfig`, loads or preprocesses source, attaches C
+preprocessing recipes, parses, runs target type probes when configured, and
+then dispatches to the semantic helpers.
+
+### Semantic, `.pyi`, Readiness, And Type-Probe Paths
+
+The semantic stages share one rule: source inputs become semantic IR before
+anything emits `.pyi` or reports readiness. Edited `.pyi` inputs are already a
+semantic contract and do not go back through C or Fortran parsing.
+
+Input shapes are part of the contract:
+
+- `parse_fortran_file(source_or_path, filename=...)` accepts inline source
+  text. It reads from disk only when `source_or_path` names an existing file
+  and `filename` is omitted. Pass `filename` with inline text for diagnostic
+  provenance.
+- `parse_c_file(source_or_path, filename=...)` accepts inline source text or
+  an existing file path. Existing paths are read from disk; `filename` can
+  still override the diagnostic/source name.
+- `parse_fortran_project(...)` and `parse_c_project(...)` accept an in-memory
+  mapping of `filename -> source`, an explicit file/path list, or a directory.
+  Fortran directory parsing discovers supported Fortran files and orders them
+  by module dependencies. C directory parsing discovers supported C files and
+  records include graph facts; include directives do not recursively open more
+  files.
+- `preprocess_source(path, language=..., config=...)` is path-based because it
+  shells out to a compiler. Feed `preprocessed.source` to the parser afterward.
+- `parse_pyi_text(...)` and `convert_pyi_to_ir(...)` accept inline `.pyi`
+  source text. `load_pyi_file(...)` reads one `.pyi` file, and
+  `load_pyi_modules(...)` reads a file set or directory.
+- The CLI accepts source, `.pyi`, and directory paths. It does not accept
+  inline source text on the command line.
+
+CLI source stages:
+
+```text
+source path(s)
+  -> x2py/cli.py language resolution
+  -> PreprocessingConfig
+  -> raw source or compiler-preprocessed source
+  -> CFile / FortranFile parser model
+  -> C or Fortran semantic IR
+  -> optional .pyi emission
+  -> optional semantic readiness report
+```
+
+CLI `.pyi` readiness:
+
+```text
+.pyi path(s) or directory
+  -> load_pyi_modules(...)
+  -> SemanticModule list
+  -> assess_semantic_wrap_readiness(...)
+```
+
+Generating `.pyi` from source is semantic conversion plus printing. In Python
+API code, keep those calls visible:
+
+```python
+from x2py import emit_module_stubs, parse_fortran_file
+from semantics.fortran2ir import fortran_file_to_semantic_modules
+
+parsed = parse_fortran_file(source, filename="api.f90")
+modules = fortran_file_to_semantic_modules(parsed)
+stubs = emit_module_stubs(modules)
+```
+
+For C, the same shape uses `parse_c_file(...)` or `parse_c_project(...)`,
+then `c_file_to_semantic_modules(...)` or
+`c_project_to_semantic_modules(...)`, then `emit_module_stubs(...)`.
+
+Loading or editing `.pyi` is the opposite direction:
+
+```python
+from x2py import assess_semantic_wrap_readiness, load_pyi_modules
+
+modules = load_pyi_modules("interfaces")
+report = assess_semantic_wrap_readiness(modules, source="interfaces")
+```
+
+Use the `.pyi` helpers by input shape:
+
+- `parse_pyi_text(source, module_name=...)` for inline text.
+- `convert_pyi_to_ir(source, module_name=...)` as the compatibility alias for
+  inline text.
+- `load_pyi_file(path, module_name=...)` for one file.
+- `load_pyi_modules(paths_or_directory)` for a set of interfaces that may
+  reference each other.
+
+Do not run compiler preprocessing, C ABI probes, or Fortran type probes for an
+edited `.pyi` readiness check. Once `.pyi` has been loaded, the edited semantic
+IR is the source of truth.
+
+Compiler preprocessing flags all flow through `PreprocessingConfig`:
+
+| CLI flag | `PreprocessingConfig` field | Notes |
+| --- | --- | --- |
+| `--compiler` | `compiler` | Exact executable for direct preprocessing and automatic type probes. |
+| `--compile-commands` | `compile_commands` | Project compile database; automatic C ABI probing is not allowed from this mixed recipe. |
+| `--preprocessor-adapter` | `adapter` | Adapter family, including `command-template`. |
+| `--preprocess-template` | `command_template` | Custom command; requires `--preprocessor-adapter command-template`. |
+| `-I` / `--include-dir` | `include_dirs` | Passed to compiler preprocessing and native Fortran include expansion. |
+| `-D` / `--define` | `defines` | Macro definitions for compiler preprocessing. |
+| `-U` / `--undef` | `undefs` | Macro undefinitions for compiler preprocessing. |
+| `--std` | `std` | Passed as `-std=...`. |
+| `--compiler-arg` | `compiler_args` | Raw target/sysroot/compiler options. |
+| `--public-include`, `--private-include`, `--include-exposure` | include exposure fields | Controls provenance exposure, not parser grammar. |
+
+`preprocess_source(...)` returns expanded source and a recipe. The C parser
+needs `preprocessing="compiler"` or `"preprocessed"` for that expanded source,
+and CLI code attaches the recipe with `attach_preprocessing_recipe(...)` so
+macro metadata can reach semantic conversion. Fortran consumes the expanded
+source with `parse_fortran_file(...)`; the parse-stage CLI payload records the
+recipe separately.
+
+C target datatype mapping path:
+
+```text
+C source
+  -> parse_c_project(...)
+  -> optional C standard type report
+  -> c_project_to_semantic_modules(..., standard_type_report=...)
+```
+
+For direct-compiler C semantic, `.pyi`, and readiness stages, `x2py/cli.py`
+loads `--c-type-report` when supplied. Otherwise, when a direct compiler is
+configured, it runs `probe_c_standard_types_cached(...)` and passes the report
+to `semantics/c2ir.py`. Compile databases and custom preprocessing templates
+must use an explicit reusable `--c-type-report` because a single automatic ABI
+probe cannot represent every per-file recipe in those modes. Probe runner,
+cache directory, and refresh flags belong to `x2py/c_type_probe.py`.
+
+Fortran target datatype mapping and compile-time path:
+
+```text
+Fortran source
+  -> parse_fortran_file(...)
+  -> collect_semantic_compile_time_requirements(...)
+  -> evaluate_fortran_type_requirements(...)
+  -> collect_fortran_type_storage_requirements(...)
+  -> evaluate_fortran_type_facts(...)
+  -> fortran_module_to_semantic_module(..., compile_time_values=..., type_facts=...)
+```
+
+The CLI performs those probe steps for Fortran semantic, `.pyi`, and readiness
+stages when a direct Fortran compiler or `--fortran-type-report` is configured.
+`compile_time_values` resolve symbolic parameters and kind expressions.
+`type_facts` measure compiler-dependent intrinsic storage, such as default
+integer width or target-changing flags. Compile databases and custom
+preprocessing templates should use an explicit reusable
+`--fortran-type-report` for the same reason as C.
+
+Generated datatype mapping reports are documentation and verification outputs,
+not a separate parse path. `x2py/type_mapping_report.py` uses the C and Fortran
+converter/probe machinery to print target-specific mapping examples for
+`docs/semantics.md`; changes there need both semantic conversion tests and
+documentation-example verification.
+
 ### Parser Model Internals
 
 Parser models are source facts. They should answer "what did the source say?"
