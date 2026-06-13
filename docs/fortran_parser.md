@@ -84,7 +84,7 @@ Supported public API:
 
 ## Parser organization notes
 
-`fortran_parser/parser.py` is now intentionally organized into clearly labeled
+`x2py/fortran_parser/parser.py` is now intentionally organized into clearly labeled
 sections and carries an embedded maintainer guide. Start with the thin public
 wrappers at the bottom, then read the class from top to bottom:
 
@@ -115,12 +115,12 @@ testing workflow, and maintenance guard policy live here.
 
 The implementation inventory is maintained across these surfaces:
 
-- `fortran_parser/parser.py` owns source slicing, declaration extraction,
+- `x2py/fortran_parser/parser.py` owns source slicing, declaration extraction,
   diagnostics, project ordering, dependency resolution, and compile-time
   expression resolution.
-- `fortran_parser/models.py` owns parse-only dataclasses and JSON-compatible
+- `x2py/fortran_parser/models.py` owns parse-only dataclasses and JSON-compatible
   parser facts.
-- `semantics/fortran2ir.py` owns conversion from parser facts to semantic IR,
+- `x2py/semantics/fortran2ir.py` owns conversion from parser facts to semantic IR,
   including kind mapping, compile-time specialization, storage contracts,
   projection metadata, and readiness inputs.
 - `tests/parser/` covers parser contracts, source-unit slicing, diagnostics,
@@ -132,7 +132,7 @@ Parser-related pull requests should update this file when the documented
 feature inventory, public API, diagnostics, project behavior, semantic handoff,
 or maintenance workflow changes. The parser-reference guard watches
 Fortran and C references independently. For Fortran, it watches
-`fortran_parser/`, `tests/parser/fortran/`, `tests/data/fortran/`, and focused
+`x2py/fortran_parser/`, `tests/parser/fortran/`, `tests/data/fortran/`, and focused
 Fortran parser tests directly under `tests/parser/`. It expects
 `docs/fortran_parser.md` to change unless the PR is explicitly labeled to skip
 the guard.
@@ -1157,7 +1157,7 @@ Use the stable top-level API:
 
 Lower-level unit parsers are internal `FortranParser` methods.
 
-Semantic conversion lives in `semantics/fortran2ir.py`. It accepts parsed `FortranFile`
+Semantic conversion lives in `x2py/semantics/fortran2ir.py`. It accepts parsed `FortranFile`
 (or selected `FortranModule`) structures and converts metadata into semantic IR
 consumed by the `.pyi` printer and later wrapper/runtime stages.
 Compiler-backed shared-CLI semantic stages resolve compiler-dependent kind

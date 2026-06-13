@@ -1,6 +1,6 @@
 import pytest
 
-from fortran_parser.models import FortranFunctionCall, FortranSlice, FortranUseMapping, FortranVariable
+from x2py.fortran_parser.models import FortranFunctionCall, FortranSlice, FortranUseMapping, FortranVariable
 from x2py import FortranParseError, parse_fortran_file, parse_fortran_project
 
 
@@ -919,7 +919,7 @@ def test_fortran_variable_spec_expressions_parse_function_calls():
 
 
 def test_structured_shape_handles_empty_dimensions_and_use_mapping_equality():
-    from fortran_parser.type_resolver import extract_kind_from_type_spec
+    from x2py.fortran_parser.type_resolver import extract_kind_from_type_spec
 
     var = FortranVariable(name="empty", shape=[""])
     assert var.shape_info == [{"raw": "", "lower": None, "upper": None}]
@@ -950,7 +950,7 @@ def test_structured_shape_handles_empty_dimensions_and_use_mapping_equality():
     ],
 )
 def test_extract_kind_from_type_spec_contract(base_type, type_spec, expected):
-    from fortran_parser.type_resolver import extract_kind_from_type_spec
+    from x2py.fortran_parser.type_resolver import extract_kind_from_type_spec
 
     assert extract_kind_from_type_spec(base_type, type_spec) == expected
 

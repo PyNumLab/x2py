@@ -6,7 +6,7 @@ import argparse
 from collections.abc import Sequence
 import platform
 
-from c_parser.models import (
+from x2py.c_parser.models import (
     CBool,
     CChar,
     CDouble,
@@ -27,9 +27,9 @@ from c_parser.models import (
     CUnsignedLongLong,
     CUnsignedShort,
 )
-from fortran_parser.models import FortranVariable
-from semantics.c2ir import CToIRConverter
-from semantics.fortran2ir import FortranToIRConverter, fortran_type_storage_expression
+from x2py.fortran_parser.models import FortranVariable
+from x2py.semantics.c2ir import CToIRConverter
+from x2py.semantics.fortran2ir import FortranToIRConverter, fortran_type_storage_expression
 
 from .c_type_probe import probe_c_standard_types_cached
 from .fortran_type_probe import evaluate_fortran_type_facts, probe_fortran_type_expressions_cached

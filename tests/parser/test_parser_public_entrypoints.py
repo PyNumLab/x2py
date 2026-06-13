@@ -2,8 +2,11 @@
 
 import pytest
 
-from fortran_parser.parser import FortranParser
+from x2py.fortran_parser.parser import FortranParser
 from x2py import FortranParseError, parse_fortran_file, parse_fortran_project
+from x2py.c_parser.parser import parse_c_file
+from x2py.fortran_parser.parser import FortranParser as PackageFortranParser
+from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 
 
 def test_parser_public_entrypoint_aliases_and_singular_contracts_use_inline_sources():
@@ -57,6 +60,20 @@ module second_mod
 end module second_mod
 """
         )
+
+
+def test_x2py_package_contains_parser_and_semantics_subpackages():
+    parsed_c = parse_c_file("int add(int a, int b);\n")
+    parsed_fortran = PackageFortranParser().visit_file(
+        """
+subroutine work(n)
+  integer, intent(in) :: n
+end subroutine work
+"""
+    )
+
+    assert parsed_c.functions[0].name == "add"
+    assert fortran_file_to_semantic_modules(parsed_fortran)[0].functions[0].name == "work"
 
 
 def test_file_path_and_unknown_filename_public_parse_paths(tmp_path):

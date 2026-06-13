@@ -5,7 +5,7 @@ import importlib
 import inspect
 from types import SimpleNamespace
 
-import c_parser.models as models
+import x2py.c_parser.models as models
 
 
 def _type_payload(model: str, **extra):

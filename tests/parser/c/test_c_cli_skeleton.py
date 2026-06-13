@@ -10,8 +10,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from c_parser import CParseError
-from c_parser import cli as c_parser_cli
+from x2py.c_parser import CParseError
+from x2py.c_parser import cli as c_parser_cli
 from x2py import cli as x2py_cli
 from x2py.preprocessing import PreprocessingConfig
 
@@ -178,7 +178,7 @@ def test_c_parser_cli_helpers_errors_and_module_entrypoint(monkeypatch, capsys):
 
     monkeypatch.setattr(c_parser_cli, "main", lambda _argv=None: 0)
     with pytest.raises(SystemExit) as exc_info:
-        runpy.run_module("c_parser.__main__", run_name="__main__")
+        runpy.run_module("x2py.c_parser.__main__", run_name="__main__")
     assert exc_info.value.code == 0
 
 
@@ -555,15 +555,14 @@ def test_c_parser_cli_module_handles_directory_loader_and_output_modes(tmp_path:
     assert "parser_status" not in json.loads(output.read_text(encoding="utf-8"))[str(header)]
 
 
-def test_c_parser_module_entrypoint_and_compatibility_exports(tmp_path: Path):
-    import c_parser.__main__ as c_module_entrypoint
-    from c_parser.parser import parse_c_project
-    from c_parser.project import parse_c_project as compatibility_parse_c_project
+def test_c_parser_module_entrypoint_and_exports(tmp_path: Path):
+    import x2py.c_parser.__main__ as c_module_entrypoint
+    from x2py.c_parser.parser import parse_c_project
 
     header = tmp_path / "api.h"
     header.write_text("int run(void);\n", encoding="utf-8")
     result = subprocess.run(
-        [sys.executable, "-m", "c_parser", str(header), "--json"],
+        [sys.executable, "-m", "x2py.c_parser", str(header), "--json"],
         capture_output=True,
         text=True,
         check=True,
@@ -571,7 +570,7 @@ def test_c_parser_module_entrypoint_and_compatibility_exports(tmp_path: Path):
 
     assert json.loads(result.stdout)[str(header)]["functions"][0]["name"] == "run"
     assert c_module_entrypoint.main is c_parser_cli.main
-    assert compatibility_parse_c_project is parse_c_project
+    assert parse_c_project({"api.h": "int run(void);\n"}).functions["run"].name == "run"
 
 
 def test_c_parser_module_formats_parse_errors_without_traceback(tmp_path: Path):
@@ -579,7 +578,7 @@ def test_c_parser_module_formats_parse_errors_without_traceback(tmp_path: Path):
     header.write_text("@@@;\n", encoding="utf-8")
 
     result = subprocess.run(
-        [sys.executable, "-m", "c_parser", str(header), "--no-color"],
+        [sys.executable, "-m", "x2py.c_parser", str(header), "--no-color"],
         capture_output=True,
         text=True,
     )
@@ -594,7 +593,7 @@ def test_c_parser_module_debug_reraises_parse_errors(tmp_path: Path):
     header.write_text("@@@;\n", encoding="utf-8")
 
     result = subprocess.run(
-        [sys.executable, "-m", "c_parser", str(header), "--debug"],
+        [sys.executable, "-m", "x2py.c_parser", str(header), "--debug"],
         capture_output=True,
         text=True,
     )

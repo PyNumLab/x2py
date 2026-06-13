@@ -2,9 +2,9 @@
 
 from importlib import import_module
 
-from c_parser.models import CFile, CParseError, CProject
-from c_parser.parser import parse_c_file, parse_c_project
-from fortran_parser.models import (
+from x2py.c_parser.models import CFile, CParseError, CProject
+from x2py.c_parser.parser import parse_c_file, parse_c_project
+from x2py.fortran_parser.models import (
     FortranArgument,
     FortranBlockData,
     FortranDerivedType,
@@ -17,15 +17,15 @@ from fortran_parser.models import (
     FortranProject,
     FortranSubmodule,
 )
-from fortran_parser.parser import parse_fortran_file, parse_fortran_project
-from semantics.fortran2ir import (
+from x2py.fortran_parser.parser import parse_fortran_file, parse_fortran_project
+from x2py.semantics.fortran2ir import (
     collect_semantic_compile_time_requirements,
     fortran_file_to_semantic_modules,
     fortran_module_to_semantic_module,
     fortran_project_to_semantic_modules,
     resolve_semantic_compile_time_values,
 )
-from semantics.c2ir import (
+from x2py.semantics.c2ir import (
     CToIRConverter,
     c_enum_to_semantic_enum,
     c_file_to_semantic_module,
@@ -37,9 +37,9 @@ from semantics.c2ir import (
     c_struct_to_semantic_class,
     c_type_to_semantic_type,
 )
-from semantics.pyi_parser import convert_pyi_to_ir, load_pyi_file, load_pyi_modules, parse_pyi_text
-from semantics.pyi_printer import emit_module_stubs, opaque_dependency_modules
-from semantics.readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
+from x2py.semantics.pyi_parser import convert_pyi_to_ir, load_pyi_file, load_pyi_modules, parse_pyi_text
+from x2py.semantics.pyi_printer import emit_module_stubs, opaque_dependency_modules
+from x2py.semantics.readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
 
 from .cli import main
 
@@ -58,6 +58,10 @@ _NUMPY_TYPE_EXPORTS = {
     "semantic_dtype_to_numpy_dtype_map",
     "semantic_type_to_numpy_dtype",
 }
+_WRAPPING_EXPORTS = {
+    "WrapperBuildResult",
+    "build_fortran_extension",
+}
 
 
 def __getattr__(name: str):
@@ -66,6 +70,9 @@ def __getattr__(name: str):
         return getattr(module, name)
     if name in _NUMPY_TYPE_EXPORTS:
         module = import_module("x2py.numpy_types")
+        return getattr(module, name)
+    if name in _WRAPPING_EXPORTS:
+        module = import_module("x2py.wrapping")
         return getattr(module, name)
     raise AttributeError(f"module 'x2py' has no attribute {name!r}")
 
@@ -89,9 +96,11 @@ __all__ = (
     "FortranSubmodule",
     "FortranTypeProbeError",
     "FortranTypeProbeReport",
+    "WrapperBuildResult",
     "assess_pyi_wrap_readiness",
     "assess_semantic_wrap_readiness",
     "build_fortran_type_probe_source",
+    "build_fortran_extension",
     "c_enum_to_semantic_enum",
     "c_file_to_semantic_module",
     "c_file_to_semantic_modules",

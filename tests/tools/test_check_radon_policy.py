@@ -56,9 +56,9 @@ def test_policy_tracks_hotspot_average_without_changed_base(tmp_path: Path):
 
 
 def test_source_root_filter_uses_path_boundaries():
-    assert is_under_source_roots("c_parser/parser.py", ("c_parser",))
-    assert is_under_source_roots("c_parser", ("c_parser",))
-    assert not is_under_source_roots("c_parser_extra/parser.py", ("c_parser",))
+    assert is_under_source_roots("x2py/c_parser/parser.py", ("x2py",))
+    assert is_under_source_roots("x2py", ("x2py",))
+    assert not is_under_source_roots("x2py_extra/parser.py", ("x2py",))
 
 
 def test_changed_block_policy_allows_existing_hotspots_unless_worsened():

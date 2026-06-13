@@ -15,7 +15,7 @@ changes documented here.
 Parser-related pull requests should update this file when the documented
 feature inventory, public API, diagnostics, project behavior, semantic handoff,
 or maintenance workflow changes. The parser-reference guard checks C and
-Fortran references independently. It watches `c_parser/`, `tests/parser/c/`,
+Fortran references independently. It watches `x2py/c_parser/`, `tests/parser/c/`,
 `tests/data/c/`, and C standard-type probe tests and expects
 `docs/c_parser.md` to change unless the PR is explicitly labeled to skip the
 guard.
@@ -336,7 +336,7 @@ model remains source-faithful and does not embed host ABI assumptions.
 
 ## Parser Organization Notes
 
-`c_parser/parser.py` is intentionally ordered for maintainers. Read it from
+`x2py/c_parser/parser.py` is intentionally ordered for maintainers. Read it from
 top to bottom in these sections:
 
 1. Parser constants, private grammar dataclasses, and small path helpers.

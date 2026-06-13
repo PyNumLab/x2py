@@ -2,7 +2,7 @@
 
 import pytest
 
-from semantics.models import SemanticType
+from x2py.semantics.models import SemanticType
 from x2py.numpy_types import (
     SEMANTIC_DTYPE_TO_NUMPY_DTYPE,
     numpy_dtype_expression,

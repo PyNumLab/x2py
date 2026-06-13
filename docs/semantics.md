@@ -231,7 +231,7 @@ Target profile: `linux-x86_64`
 
 ## C To Semantic IR Mapping
 
-Status: first C semantic conversion subset implemented in `semantics/c2ir.py`.
+Status: first C semantic conversion subset implemented in `x2py/semantics/c2ir.py`.
 The converter consumes `c_parser` models and emits the same language-neutral
 semantic IR used by Fortran and edited `.pyi` files. Shared primitive dtype
 policy is documented in the datatype mapping section above.

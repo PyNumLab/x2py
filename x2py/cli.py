@@ -7,16 +7,16 @@ import sys
 from dataclasses import asdict, fields, is_dataclass
 from pathlib import Path
 
-from c_parser.cli import attach_preprocessing_recipe, expand_c_paths, format_c_report, parse_c_report
-from c_parser.models import CParseError
-from c_parser.parser import CParser
-from fortran_parser.models import FortranParseError
-from fortran_parser.parser import FortranParser
-from fortran_parser.cli import _format_report
-from semantics.c2ir import c_project_to_semantic_modules
-from semantics.fortran2ir import fortran_file_to_semantic_modules
-from semantics.pyi_parser import load_pyi_modules
-from semantics.readiness import assess_semantic_wrap_readiness
+from x2py.c_parser.cli import attach_preprocessing_recipe, expand_c_paths, format_c_report, parse_c_report
+from x2py.c_parser.models import CParseError
+from x2py.c_parser.parser import CParser
+from x2py.fortran_parser.cli import _format_report
+from x2py.fortran_parser.models import FortranParseError
+from x2py.fortran_parser.parser import FortranParser
+from x2py.semantics.c2ir import c_project_to_semantic_modules
+from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
+from x2py.semantics.pyi_parser import load_pyi_modules
+from x2py.semantics.readiness import assess_semantic_wrap_readiness
 from x2py.c_type_probe import (
     CStandardTypeProbeError,
     load_c_standard_type_probe_report,
@@ -40,6 +40,7 @@ _SOURCE_SUFFIXES_BY_LANGUAGE = {
     "fortran": _FORTRAN_SOURCE_SUFFIXES,
     "c": _C_SOURCE_SUFFIXES,
 }
+_STAGE_FLAGS_DESCRIPTION = "--parse, --semantics, --pyi, --wrap-readiness, or --wrap"
 
 
 def _env_flag(name: str) -> bool:
@@ -349,7 +350,7 @@ def _fortran_semantic_report(
     fortran_type_probe_cache_dir: str | None,
     refresh_fortran_type_probe: bool,
 ) -> dict[str, dict]:
-    from semantics.fortran2ir import fortran_module_to_semantic_module
+    from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 
     parser = FortranParser()
     parsed_files = []
@@ -387,7 +388,7 @@ def _fortran_semantic_report(
 
 
 def _semantic_payload_for_converted_files(converted_files) -> dict[str, dict]:
-    from semantics.pyi_printer import emit_module_stubs
+    from x2py.semantics.pyi_printer import emit_module_stubs
 
     out: dict[str, dict] = {}
     available_modules = [module for _p, modules in converted_files for module in modules]
@@ -557,7 +558,7 @@ def _fortran_compile_time_values(
     ):
         return None
 
-    from semantics.fortran2ir import collect_semantic_compile_time_requirements
+    from x2py.semantics.fortran2ir import collect_semantic_compile_time_requirements
     from x2py.fortran_type_probe import evaluate_fortran_type_requirements
 
     requirements = collect_semantic_compile_time_requirements(parsed)
@@ -585,7 +586,7 @@ def _fortran_type_facts(
     ):
         return None
 
-    from semantics.fortran2ir import collect_fortran_type_storage_requirements
+    from x2py.semantics.fortran2ir import collect_fortran_type_storage_requirements
     from x2py.fortran_type_probe import evaluate_fortran_type_facts
 
     requirements = collect_fortran_type_storage_requirements(parsed, compile_time_values=compile_time_values)
@@ -709,7 +710,7 @@ def _validate_fortran_type_probe_options(
 
 
 def _has_stage(args: argparse.Namespace) -> bool:
-    return bool(args.parse or args.semantics or args.pyi or args.wrap_readiness)
+    return bool(args.parse or args.semantics or args.pyi or args.wrap_readiness or getattr(args, "wrap", False))
 
 
 def _has_semantic_stage(args: argparse.Namespace) -> bool:
@@ -755,10 +756,22 @@ def _validate_c_type_probe_options(args: argparse.Namespace, parser: argparse.Ar
 
 
 def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int | None:
+    if getattr(args, "wrap", False):
+        if args.language != "fortran":
+            parser.error("--wrap currently requires --language fortran")
+        if len(args.paths) != 1:
+            parser.error("--wrap expects exactly one Fortran source file")
+        if Path(args.paths[0]).is_dir():
+            parser.error("--wrap expects a Fortran source file, not a directory")
+        if args.parse or args.semantics or args.pyi or args.wrap_readiness:
+            parser.error("--wrap cannot be combined with --parse, --semantics, --pyi, or --wrap-readiness")
+        if args.out is not None:
+            parser.error("--wrap writes build artifacts; use --out-dir instead of --out")
+
     if args.language == "c":
         if not _has_stage(args):
             parser.error(
-                "--language c requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness"
+                f"--language c requires a stage flag: choose one of {_STAGE_FLAGS_DESCRIPTION}"
             )
         if args.show_vars:
             parser.error("--show-vars is Fortran-only and is not supported for --language c")
@@ -772,7 +785,7 @@ def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentPa
         parser=parser,
     )
     if args.out is not None and not _has_stage(args):
-        parser.error("--out requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness")
+        parser.error(f"--out requires a stage flag: choose one of {_STAGE_FLAGS_DESCRIPTION}")
     if (args.show_vars or args.print_limit is not None or args.vars_limit is not None) and not args.parse:
         parser.error("--show-vars/--print-limit require --parse")
 
@@ -780,7 +793,7 @@ def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentPa
     if print_limit is not None and print_limit < 0:
         parser.error("--print-limit must be >= 0")
     if not _has_stage(args):
-        parser.error("Select at least one stage flag: --parse, --semantics, --pyi, or --wrap-readiness")
+        parser.error(f"Select at least one stage flag: {_STAGE_FLAGS_DESCRIPTION}")
     return print_limit
 
 
@@ -881,6 +894,44 @@ def _run_stage_reports_with_diagnostics(args: argparse.Namespace, preprocessing:
         else:
             print(f"x2py: error[{exc.category}]: {exc}", file=sys.stderr)
     except (SyntaxError, ValueError) as exc:
+        if args.debug or _env_flag("X2PY_DEBUG"):
+            raise
+        print(f"x2py: error: {exc}", file=sys.stderr)
+    return None
+
+
+def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig):
+    from x2py.wrapping import build_fortran_extension
+
+    return build_fortran_extension(
+        args.paths[0],
+        output_dir=getattr(args, "out_dir", None),
+        preprocessing=preprocessing,
+        verbose=1 if getattr(args, "verbose", False) else 0,
+    )
+
+
+def _run_wrap_build_with_diagnostics(args: argparse.Namespace, preprocessing: PreprocessingConfig):
+    try:
+        return _run_wrap_build(args, preprocessing)
+    except FortranParseError as exc:
+        if args.debug or _env_flag("FORTRAN_PARSER_DEBUG"):
+            raise
+        print(
+            exc.format_diagnostic(color=_diagnostic_color_enabled(disabled=args.no_color), debug=False), file=sys.stderr
+        )
+    except PreprocessingError as exc:
+        if args.debug or _env_flag("X2PY_DEBUG"):
+            raise
+        if exc.diagnostics:
+            for diagnostic in exc.diagnostics:
+                location = diagnostic.path or "<preprocessor>"
+                if diagnostic.line is not None:
+                    location = f"{location}:{diagnostic.line}"
+                print(f"{location}: error[{diagnostic.category}]: {diagnostic.message}", file=sys.stderr)
+        else:
+            print(f"x2py: error[{exc.category}]: {exc}", file=sys.stderr)
+    except (FileNotFoundError, RuntimeError, SyntaxError, ValueError) as exc:
         if args.debug or _env_flag("X2PY_DEBUG"):
             raise
         print(f"x2py: error: {exc}", file=sys.stderr)
@@ -1000,6 +1051,20 @@ def _print_wrap_readiness_output(
         print(_format_semantic_readiness(readiness_payload or {}))
 
 
+def _print_wrap_build_output(args: argparse.Namespace, result) -> None:
+    payload = result.to_dict()
+    if args.json:
+        print(json.dumps(payload, indent=2))
+        return
+
+    print(f"Built extension: {payload['shared_library']}")
+    generated_sources = payload.get("generated_sources") or []
+    if generated_sources:
+        print("Generated sources:")
+        for path in generated_sources:
+            print(f"  - {path}")
+
+
 def print_pyi_output(code: str) -> None:
     # Safe fallback for files, pipes, CI, unsupported terminals, etc.
     if not sys.stdout.isatty():
@@ -1079,6 +1144,8 @@ def main() -> int:
             "    python -m x2py path/to/module.pyi --wrap-readiness\n"
             "  Print semantic readiness JSON:\n"
             "    python -m x2py path/to/module.pyi --wrap-readiness --json\n"
+            "  Build a Python extension from a Fortran source:\n"
+            "    python -m x2py path/to/file.f --wrap\n"
             "\nOptional:\n"
             "  Install 'rich' for colored terminal syntax highlighting:\n"
             "      pip install rich"
@@ -1241,6 +1308,11 @@ def main() -> int:
         help="Convert Fortran, C, or .pyi input to semantic IR and show wrapper readiness",
     )
     parser.add_argument(
+        "--wrap",
+        action="store_true",
+        help="Build a Python extension module from one Fortran source file",
+    )
+    parser.add_argument(
         "--semantics", action="store_true", help="Generate semantic IR models from parsed source modules"
     )
     parser.add_argument("--pyi", action="store_true", help="Generate semantic Python .pyi content")
@@ -1248,6 +1320,15 @@ def main() -> int:
     parser.add_argument(
         "--out", nargs="?", const="", type=str, help="Write stage output to file (optional explicit output filename)"
     )
+    parser.add_argument(
+        "--out-dir",
+        metavar="DIR",
+        help=(
+            "Directory for --wrap generated sources, objects, and extension module; "
+            "by default build files go in __x2py__ and the extension is written beside the source"
+        ),
+    )
+    parser.add_argument("--verbose", action="store_true", help="Print wrapper compiler commands and build steps")
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI color in parse diagnostics")
     parser.add_argument(
         "--debug",
@@ -1260,6 +1341,12 @@ def main() -> int:
     args.language = _resolve_language(args.paths, args.language, parser)
     preprocessing = _build_preprocessing_config(args, parser)
     print_limit = _validate_main_options(args, parser)
+    if getattr(args, "wrap", False):
+        result = _run_wrap_build_with_diagnostics(args, preprocessing)
+        if result is None:
+            return 1
+        _print_wrap_build_output(args, result)
+        return 0
     reports = _run_stage_reports_with_diagnostics(args, preprocessing)
     if reports is None:
         return 1

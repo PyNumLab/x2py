@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Final
 
 if TYPE_CHECKING:
-    from semantics.models import SemanticType
+    from x2py.semantics.models import SemanticType
 
 
 SEMANTIC_DTYPE_TO_NUMPY_DTYPE: Final[dict[str, str]] = {

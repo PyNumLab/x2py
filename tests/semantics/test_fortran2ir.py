@@ -3,7 +3,7 @@ from dataclasses import asdict
 
 import pytest
 
-from fortran_parser.models import (
+from x2py.fortran_parser.models import (
     FortranArgument,
     FortranBlockData,
     FortranDerivedType,
@@ -19,7 +19,7 @@ from fortran_parser.models import (
 from x2py import parse_fortran_file as parse_fortran_source
 from x2py import parse_fortran_project
 
-from semantics.fortran2ir import (
+from x2py.semantics.fortran2ir import (
     FortranToIRConverter,
     _compile_time_requirement_message,
     _iter_fortran_variable_contexts,
@@ -33,9 +33,9 @@ from semantics.fortran2ir import (
     fortran_project_to_semantic_modules,
     resolve_semantic_compile_time_values,
 )
-from semantics import models as semantic_models
+from x2py.semantics import models as semantic_models
 
-from semantics.models import (
+from x2py.semantics.models import (
     ProjectionMapping,
     SemanticArgument,
     SemanticField,

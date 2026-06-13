@@ -27,7 +27,10 @@ qa = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["c_parser*", "fortran_parser*", "semantics*", "x2py*", "compiling*", "codegen*"]
+include = ["x2py*"]
+
+[tool.setuptools.package-data]
+"x2py.stdlib" = ["cwrapper/*"]
 
 [project.scripts]
 x2py = "x2py.cli:main"
@@ -47,7 +50,7 @@ markers = [
 xfail_strict = true
 
 [tool.coverage.run]
-source = ["c_parser", "fortran_parser", "semantics", "x2py"]
+source = ["x2py"]
 branch = true
 parallel = true
 relative_files = true
@@ -86,7 +89,7 @@ fixable = ["ALL"]
 unfixable = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["c_parser", "fortran_parser", "semantics", "x2py"]
+known-first-party = ["x2py"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 45
@@ -100,7 +103,7 @@ line-ending = "lf"
 exclude_dirs = ["tests", "docs", "x2py.egg-info"]
 
 [tool.vulture]
-paths = ["c_parser", "fortran_parser", "semantics", "x2py", "tests"]
+paths = ["x2py", "tests"]
 exclude = ["tests/data/", "tests/pyi/fixtures/", "x2py.egg-info/"]
 min_confidence = 80
 sort_by_size = true

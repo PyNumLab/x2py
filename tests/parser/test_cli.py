@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from fortran_parser import cli as fortran_parser_cli
+from x2py.fortran_parser import cli as fortran_parser_cli
 from x2py import FortranParseError
 from x2py import cli as x2py_cli
 from x2py.preprocessing import PreprocessingConfig, PreprocessingDiagnostic, PreprocessingError
@@ -52,10 +52,13 @@ def _main_args(**overrides):
         "print_limit": None,
         "vars_limit": None,
         "wrap_readiness": False,
+        "wrap": False,
         "semantics": False,
         "pyi": False,
         "json": False,
         "out": None,
+        "out_dir": None,
+        "verbose": False,
         "no_color": False,
         "debug": False,
     }
@@ -383,7 +386,7 @@ end subroutine bad
 
 
 def test_cli_semantics_out_writes_json_without_stdout(tmp_path: Path):
-    out = tmp_path / "semantics.json"
+    out = tmp_path / "x2py.semantics.json"
     cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--semantics", "--out", str(out)]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
@@ -520,7 +523,7 @@ end block data init_block
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "fortran_parser", str(f90)]
+    cmd = [sys.executable, "-m", "x2py.fortran_parser", str(f90)]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     assert f"File: {f90}" in res.stdout
@@ -539,7 +542,7 @@ end block data init_block
 
 
 def test_fortran_parser_cli_semantics_pyi_and_empty_module_report_from_inline_code(tmp_path: Path):
-    module_source = tmp_path / "semantics.f90"
+    module_source = tmp_path / "x2py.semantics.f90"
     module_source.write_text(
         """
 module solver_mod
@@ -562,12 +565,12 @@ end program driver
 """,
         encoding="utf-8",
     )
-    json_out = tmp_path / "semantics.json"
+    json_out = tmp_path / "x2py.semantics.json"
 
     semantics_cmd = [
         sys.executable,
         "-m",
-        "fortran_parser",
+        "x2py.fortran_parser",
         str(module_source),
         "--semantics",
         "--json-out",
@@ -580,13 +583,13 @@ end program driver
     assert str(module_source) in payload
     assert payload[str(module_source)]["semantic_modules"][0]["functions"][0]["name"] == "solve"
 
-    pyi_cmd = [sys.executable, "-m", "fortran_parser", str(module_source), "--pyi"]
+    pyi_cmd = [sys.executable, "-m", "x2py.fortran_parser", str(module_source), "--pyi"]
     pyi_res = subprocess.run(pyi_cmd, capture_output=True, text=True, check=True)
     assert "@native_call" not in pyi_res.stdout
     assert "x: Annotated[Ptr(Float64), Intent('out')]" in pyi_res.stdout
     assert "def solve(" in pyi_res.stdout
 
-    empty_pyi_cmd = [sys.executable, "-m", "fortran_parser", str(program_source), "--pyi"]
+    empty_pyi_cmd = [sys.executable, "-m", "x2py.fortran_parser", str(program_source), "--pyi"]
     empty_pyi_res = subprocess.run(empty_pyi_cmd, capture_output=True, text=True, check=True)
     assert "<no module declarations found>" in empty_pyi_res.stdout
 
@@ -1006,7 +1009,7 @@ def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(monkey
     [
         (
             {"language": "c"},
-            "--language c requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness",
+            "--language c requires a stage flag: choose one of --parse, --semantics, --pyi, --wrap-readiness, or --wrap",
         ),
         (
             {"language": "c", "parse": True, "show_vars": True},
@@ -1014,7 +1017,7 @@ def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(monkey
         ),
         (
             {"out": ""},
-            "--out requires a stage flag: choose one of --parse, --semantics, --pyi, or --wrap-readiness",
+            "--out requires a stage flag: choose one of --parse, --semantics, --pyi, --wrap-readiness, or --wrap",
         ),
         ({"show_vars": True}, "--show-vars/--print-limit require --parse"),
         ({"print_limit": 1}, "--show-vars/--print-limit require --parse"),
@@ -1041,7 +1044,7 @@ def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(monkey
             {"semantics": True, "fortran_type_report": "types.json", "refresh_fortran_type_probe": True},
             "--fortran-type-report cannot be combined with automatic Fortran type probe options",
         ),
-        ({}, "Select at least one stage flag: --parse, --semantics, --pyi, or --wrap-readiness"),
+        ({}, "Select at least one stage flag: --parse, --semantics, --pyi, --wrap-readiness, or --wrap"),
     ],
 )
 def test_x2py_main_preserves_validation_diagnostics(monkeypatch, overrides, expected):
@@ -1076,6 +1079,37 @@ def test_x2py_main_preserves_zero_print_limit_and_legacy_vars_limit_contract(mon
     assert x2py_cli.main() == 0
     assert capsys.readouterr().out == "formatted\n"
     assert format_calls == [(parse_payload, {"show_vars": True, "print_limit": 0})]
+
+
+def test_x2py_main_runs_wrap_stage(monkeypatch, tmp_path: Path, capsys):
+    source = tmp_path / "fmath.f"
+    source.write_text("      real function square(x)\n      real x\n      square = x*x\n      end\n", encoding="utf-8")
+    args = _main_args(paths=[str(source)], wrap=True, out_dir=str(tmp_path), json=True)
+    _install_main_parser(monkeypatch, args)
+    preprocessing = object()
+    calls = []
+    result = types.SimpleNamespace(
+        to_dict=lambda: {
+            "source": str(source),
+            "module_name": "fmath",
+            "shared_library": str(tmp_path / "fmath.so"),
+            "generated_sources": [str(tmp_path / "fmath_wrapper.c")],
+        }
+    )
+
+    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: "fortran")
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
+    monkeypatch.setattr(
+        x2py_cli,
+        "_run_wrap_build_with_diagnostics",
+        lambda active_args, active_preprocessing: calls.append((active_args, active_preprocessing)) or result,
+    )
+
+    assert x2py_cli.main() == 0
+
+    assert calls == [(args, preprocessing)]
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["module_name"] == "fmath"
 
 
 @pytest.mark.parametrize(
@@ -1740,7 +1774,7 @@ def test_x2py_and_fortran_module_entrypoints_and_debug_errors(monkeypatch, capsy
 
     monkeypatch.setattr(fortran_parser_cli, "main", lambda: 0)
     with pytest.raises(SystemExit) as fortran_exit:
-        runpy.run_module("fortran_parser.__main__", run_name="__main__")
+        runpy.run_module("x2py.fortran_parser.__main__", run_name="__main__")
     assert fortran_exit.value.code == 0
     monkeypatch.setattr(fortran_parser_cli, "main", original_fortran_main)
 
@@ -1748,7 +1782,7 @@ def test_x2py_and_fortran_module_entrypoints_and_debug_errors(monkeypatch, capsy
         raise FortranParseError("bad", filename="bad.f90", line_number=1, source_line="bad")
 
     monkeypatch.setattr(fortran_parser_cli, "_parse_paths", fail_parse)
-    monkeypatch.setattr(sys, "argv", ["fortran_parser", "bad.f90", "--no-color"])
+    monkeypatch.setattr(sys, "argv", ["x2py.fortran_parser", "bad.f90", "--no-color"])
     assert fortran_parser_cli.main() == 1
     assert "bad.f90:1:1: error[PARSE_ERROR]: bad" in capsys.readouterr().err
     monkeypatch.setenv("FORTRAN_PARSER_DEBUG", "1")
@@ -1785,6 +1819,7 @@ def test_cli_help_includes_examples():
     assert "python -m x2py path/to/file.f90 --parse --print-limit 50" in res.stdout
     assert "python -m x2py path/to/api.h --language c --parse --print-limit 50" in res.stdout
     assert "python -m x2py path/to/file.f90 --pyi --out module.pyi" in res.stdout
+    assert "python -m x2py path/to/file.f --wrap" in res.stdout
 
 
 def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
@@ -1860,6 +1895,8 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
                 "    python -m x2py path/to/module.pyi --wrap-readiness\n"
                 "  Print semantic readiness JSON:\n"
                 "    python -m x2py path/to/module.pyi --wrap-readiness --json\n"
+                "  Build a Python extension from a Fortran source:\n"
+                "    python -m x2py path/to/file.f --wrap\n"
                 "\nOptional:\n"
                 "  Install 'rich' for colored terminal syntax highlighting:\n"
                 "      pip install rich"
@@ -2067,6 +2104,13 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
             },
         ),
         (
+            ("--wrap",),
+            {
+                "action": "store_true",
+                "help": "Build a Python extension module from one Fortran source file",
+            },
+        ),
+        (
             ("--semantics",),
             {"action": "store_true", "help": "Generate semantic IR models from parsed source modules"},
         ),
@@ -2081,6 +2125,17 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
                 "help": "Write stage output to file (optional explicit output filename)",
             },
         ),
+        (
+            ("--out-dir",),
+            {
+                "metavar": "DIR",
+                "help": (
+                    "Directory for --wrap generated sources, objects, and extension module; "
+                    "by default build files go in __x2py__ and the extension is written beside the source"
+                ),
+            },
+        ),
+        (("--verbose",), {"action": "store_true", "help": "Print wrapper compiler commands and build steps"}),
         (("--no-color",), {"action": "store_true", "help": "Disable ANSI color in parse diagnostics"}),
         (
             ("--debug", "--debug-traceback"),
@@ -2342,13 +2397,13 @@ def test_fortran_parser_cli_json_and_parse_errors(tmp_path: Path):
     good = tmp_path / "good.f90"
     good.write_text("subroutine work(n)\n  integer, intent(in) :: n\nend subroutine work\n", encoding="utf-8")
 
-    json_cmd = [sys.executable, "-m", "fortran_parser", str(good), "--json"]
+    json_cmd = [sys.executable, "-m", "x2py.fortran_parser", str(good), "--json"]
     json_res = subprocess.run(json_cmd, capture_output=True, text=True, check=True)
     assert str(good) in json.loads(json_res.stdout)
 
     bad = tmp_path / "bad.f90"
     bad.write_text("subroutine bad(x)\n  weirdtype :: x\nend subroutine bad\n", encoding="utf-8")
-    bad_cmd = [sys.executable, "-m", "fortran_parser", str(bad), "--no-color"]
+    bad_cmd = [sys.executable, "-m", "x2py.fortran_parser", str(bad), "--no-color"]
     bad_res = subprocess.run(bad_cmd, capture_output=True, text=True)
     assert bad_res.returncode == 1
     assert bad_res.stdout == ""
@@ -2473,7 +2528,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "fortran_parser", str(f90), "--debug"]
+    cmd = [sys.executable, "-m", "x2py.fortran_parser", str(f90), "--debug"]
     res = subprocess.run(cmd, capture_output=True, text=True)
 
     assert res.returncode == 1
@@ -2491,7 +2546,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "fortran_parser", str(f90)]
+    cmd = [sys.executable, "-m", "x2py.fortran_parser", str(f90)]
     res = subprocess.run(
         cmd,
         capture_output=True,
@@ -2518,19 +2573,19 @@ end module m
     )
     json_out = tmp_path / "report.json"
 
-    monkeypatch.setattr(sys, "argv", ["fortran_parser", str(f90), "--json-out", str(json_out), "--json"])
+    monkeypatch.setattr(sys, "argv", ["x2py.fortran_parser", str(f90), "--json-out", str(json_out), "--json"])
     assert fortran_parser_cli.main() == 0
     stdout_payload = json.loads(capsys.readouterr().out)
     assert str(f90) in stdout_payload
     assert json_out.exists()
 
-    monkeypatch.setattr(sys, "argv", ["fortran_parser", str(f90), "--pyi"])
+    monkeypatch.setattr(sys, "argv", ["x2py.fortran_parser", str(f90), "--pyi"])
     assert fortran_parser_cli.main() == 0
     pyi_out = capsys.readouterr().out
     assert "File:" in pyi_out
     assert "def work(" in pyi_out
 
-    monkeypatch.setattr(sys, "argv", ["fortran_parser", str(f90)])
+    monkeypatch.setattr(sys, "argv", ["x2py.fortran_parser", str(f90)])
     assert fortran_parser_cli.main() == 0
     readable = capsys.readouterr().out
     assert "module m" in readable
@@ -2665,8 +2720,8 @@ def test_x2py_fortran_readiness_helpers_attach_and_compile(monkeypatch):
         calls.append(("evaluate_facts", received_config, received_requirements))
         return facts
 
-    monkeypatch.setattr("semantics.fortran2ir.collect_semantic_compile_time_requirements", collect_requirements)
-    monkeypatch.setattr("semantics.fortran2ir.collect_fortran_type_storage_requirements", collect_storage)
+    monkeypatch.setattr("x2py.semantics.fortran2ir.collect_semantic_compile_time_requirements", collect_requirements)
+    monkeypatch.setattr("x2py.semantics.fortran2ir.collect_fortran_type_storage_requirements", collect_storage)
     monkeypatch.setattr("x2py.fortran_type_probe.evaluate_fortran_type_requirements", evaluate_requirements)
     monkeypatch.setattr("x2py.fortran_type_probe.evaluate_fortran_type_facts", evaluate_facts)
 
@@ -2816,7 +2871,7 @@ def test_x2py_semantic_report_preserves_c_module_and_dependency_contracts(monkey
     monkeypatch.setattr(x2py_cli, "_parse_c_project", parse_project)
     monkeypatch.setattr(x2py_cli, "c_project_to_semantic_modules", convert)
     monkeypatch.setattr(x2py_cli, "expand_c_paths", expand)
-    monkeypatch.setattr("semantics.pyi_printer.emit_module_stubs", emit)
+    monkeypatch.setattr("x2py.semantics.pyi_printer.emit_module_stubs", emit)
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
 
     assert x2py_cli._semantic_report(
@@ -2924,8 +2979,8 @@ def test_x2py_semantic_report_preserves_fortran_conversion_and_stub_contracts(mo
     monkeypatch.setattr(x2py_cli, "_fortran_source_for_path", source)
     monkeypatch.setattr(x2py_cli, "_fortran_wrapped_derived_types", wrapped)
     monkeypatch.setattr(x2py_cli, "_fortran_compile_time_values", compile_values)
-    monkeypatch.setattr("semantics.fortran2ir.fortran_module_to_semantic_module", convert)
-    monkeypatch.setattr("semantics.pyi_printer.emit_module_stubs", emit)
+    monkeypatch.setattr("x2py.semantics.fortran2ir.fortran_module_to_semantic_module", convert)
+    monkeypatch.setattr("x2py.semantics.pyi_printer.emit_module_stubs", emit)
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
 
     assert x2py_cli._semantic_report(["api"], config) == {

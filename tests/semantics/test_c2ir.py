@@ -5,8 +5,8 @@ from typing import ClassVar
 
 import pytest
 
-from c_parser import parse_c_file, parse_c_project
-from c_parser.models import (
+from x2py.c_parser import parse_c_file, parse_c_project
+from x2py.c_parser.models import (
     CArray,
     CAtomic,
     CBool,
@@ -50,7 +50,7 @@ from c_parser.models import (
     CVolatile,
     CVoid,
 )
-from semantics.c2ir import (
+from x2py.semantics.c2ir import (
     CToIRConverter,
     c_enum_to_semantic_enum,
     c_file_to_semantic_module,
@@ -62,7 +62,7 @@ from semantics.c2ir import (
     c_struct_to_semantic_class,
     c_type_to_semantic_type,
 )
-from semantics.models import (
+from x2py.semantics.models import (
     SemanticArgument,
     SemanticClass,
     SemanticEnum,
@@ -74,9 +74,9 @@ from semantics.models import (
     SemanticType,
     SemanticVariable,
 )
-from semantics.pyi_parser import parse_pyi_text
-from semantics.readiness import assess_semantic_wrap_readiness
-from semantics.pyi_printer import emit_module, emit_module_stubs
+from x2py.semantics.pyi_parser import parse_pyi_text
+from x2py.semantics.readiness import assess_semantic_wrap_readiness
+from x2py.semantics.pyi_printer import emit_module, emit_module_stubs
 
 
 def _function(module, name):

@@ -13,8 +13,8 @@ from tests._shared.fixture_outputs import (
     pyi_fixture_path,
     pyi_text_for_fixture,
 )
-from semantics.pyi_parser import parse_pyi_text
-from semantics.pyi_printer import emit_module
+from x2py.semantics.pyi_parser import parse_pyi_text
+from x2py.semantics.pyi_printer import emit_module
 
 
 FORTRAN_FIXTURES = iter_general_fortran_fixtures()

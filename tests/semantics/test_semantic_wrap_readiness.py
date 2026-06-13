@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from semantics.pyi_parser import parse_pyi_text
-from semantics.models import (
+from x2py.semantics.pyi_parser import parse_pyi_text
+from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     SemanticArrayContract,
     SemanticArgument,
@@ -20,7 +20,7 @@ from semantics.models import (
     SemanticStorageContract,
     SemanticType,
 )
-from semantics.readiness import (
+from x2py.semantics.readiness import (
     _SemanticTypeIndex,
     _constant_names,
     _constant_values,

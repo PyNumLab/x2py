@@ -3,19 +3,19 @@ import pytest
 import x2py
 from x2py import parse_fortran_file as parse_fortran_source
 
-from semantics.fortran2ir import (
+from x2py.semantics.fortran2ir import (
     fortran_module_to_semantic_module,
 )
 
-from semantics.pyi_parser import parse_pyi_text
-from semantics.pyi_printer import (
+from x2py.semantics.pyi_parser import parse_pyi_text
+from x2py.semantics.pyi_printer import (
     emit_module,
     emit_module_stubs,
     opaque_dependency_modules,
     PyiPrinter,
     _module_list,
 )
-from semantics.models import (
+from x2py.semantics.models import (
     ProjectionMapping,
     SemanticArgument,
     SemanticArrayContract,

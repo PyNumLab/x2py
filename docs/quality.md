@@ -72,7 +72,7 @@ HYPOTHESIS_PROFILE=fuzz pytest -q -m fuzz --hypothesis-show-statistics
 Run security and dependency checks:
 
 ```bash
-bandit -c pyproject.toml -r c_parser fortran_parser semantics x2py --severity-level medium --confidence-level medium
+bandit -c pyproject.toml -r x2py --severity-level medium --confidence-level medium
 pip-audit . --cache-dir /tmp/pip-audit-cache
 ```
 
@@ -81,8 +81,8 @@ Run dead-code and complexity checks:
 ```bash
 vulture
 python tools/check_radon_policy.py
-radon cc c_parser fortran_parser semantics x2py -n C -s --total-average
-radon mi c_parser fortran_parser semantics x2py -s
+radon cc x2py -n C -s --total-average
+radon mi x2py -s
 ```
 
 The Radon policy check is blocking. It prevents the reviewed C-or-worse hotspot

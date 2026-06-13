@@ -4,14 +4,14 @@ from dataclasses import asdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from c_parser import CParser
-from c_parser.cli import attach_preprocessing_recipe
+from x2py.c_parser import CParser
+from x2py.c_parser.cli import attach_preprocessing_recipe
 from x2py import parse_fortran_file
 from x2py.preprocessing import PreprocessingConfig, preprocess_source
-from semantics.c2ir import c_project_to_semantic_module
-from semantics.fortran2ir import fortran_file_to_semantic_modules, fortran_module_to_semantic_module
-from semantics.pyi_printer import emit_module
-from semantics.readiness import assess_semantic_wrap_readiness
+from x2py.semantics.c2ir import c_project_to_semantic_module
+from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules, fortran_module_to_semantic_module
+from x2py.semantics.pyi_printer import emit_module
+from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
 
 TESTS_DIR = Path(__file__).resolve().parents[1]

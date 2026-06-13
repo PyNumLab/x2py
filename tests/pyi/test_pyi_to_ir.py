@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from semantics.fortran2ir import fortran_file_to_semantic_modules
-from semantics.models import (
+from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
+from x2py.semantics.models import (
     ProjectionMapping,
     SemanticArgument,
     SemanticConstraint,
@@ -19,7 +19,7 @@ from semantics.models import (
     SemanticType,
     SemanticVariable,
 )
-from semantics.pyi_parser import (
+from x2py.semantics.pyi_parser import (
     _PyiAstParser,
     _node_text,
     convert_pyi_to_ir,
@@ -27,7 +27,7 @@ from semantics.pyi_parser import (
     load_pyi_modules,
     parse_pyi_text,
 )
-from semantics.pyi_printer import emit_module
+from x2py.semantics.pyi_printer import emit_module
 from tests._shared.fixture_outputs import FORTRAN_DATA_DIR, FORTRAN_SUFFIXES
 from x2py import parse_fortran_file
 
