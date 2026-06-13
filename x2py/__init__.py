@@ -51,16 +51,27 @@ _FORTRAN_TYPE_PROBE_EXPORTS = {
     "fortran_type_probe_expressions",
     "probe_fortran_type_expressions",
 }
+_NUMPY_TYPE_EXPORTS = {
+    "SEMANTIC_DTYPE_TO_NUMPY_DTYPE",
+    "numpy_dtype_expression",
+    "semantic_dtype_to_numpy_dtype",
+    "semantic_dtype_to_numpy_dtype_map",
+    "semantic_type_to_numpy_dtype",
+}
 
 
 def __getattr__(name: str):
     if name in _FORTRAN_TYPE_PROBE_EXPORTS:
         module = import_module("x2py.fortran_type_probe")
         return getattr(module, name)
+    if name in _NUMPY_TYPE_EXPORTS:
+        module = import_module("x2py.numpy_types")
+        return getattr(module, name)
     raise AttributeError(f"module 'x2py' has no attribute {name!r}")
 
 
 __all__ = (
+    "SEMANTIC_DTYPE_TO_NUMPY_DTYPE",
     "CFile",
     "CParseError",
     "CProject",
@@ -101,6 +112,7 @@ __all__ = (
     "load_pyi_file",
     "load_pyi_modules",
     "main",
+    "numpy_dtype_expression",
     "opaque_dependency_modules",
     "parse_c_file",
     "parse_c_project",
@@ -109,4 +121,7 @@ __all__ = (
     "parse_pyi_text",
     "probe_fortran_type_expressions",
     "resolve_semantic_compile_time_values",
+    "semantic_dtype_to_numpy_dtype",
+    "semantic_dtype_to_numpy_dtype_map",
+    "semantic_type_to_numpy_dtype",
 )
