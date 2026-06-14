@@ -11,7 +11,8 @@ import subprocess
 import sys
 import sysconfig
 
-import pybind11
+# pybind11 support is disabled until C++ wrappers are enabled.
+# import pybind11
 from numpy import get_include as get_numpy_include
 
 # ------------------------------------------------------------
@@ -409,11 +410,11 @@ available_compilers = {
     "LLVM": {"c": clang_info, "c++": clangpp_info, "fortran": flang_info},
 }
 
-for config in available_compilers.values():
-    cpp_config = config.get("c++", None)
-    if cpp_config:
-        cpp_config.setdefault("python", {}).setdefault("include", []).append(
-            pybind11.get_include()
-        )
+# for config in available_compilers.values():
+#     cpp_config = config.get("c++", None)
+#     if cpp_config:
+#         cpp_config.setdefault("python", {}).setdefault("include", []).append(
+#             pybind11.get_include()
+#         )
 
 vendors = ("GNU", "intel", "PGI", "nvidia", "LLVM")
