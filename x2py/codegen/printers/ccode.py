@@ -194,14 +194,15 @@ class CCodePrinter(CodePrinter):
         stc_imports = [i for i in imports if str(i.source) in import_header_guard_prefix]
         split_stc_imports = [Import(i.source, t) for i in stc_imports for t in i.target]
         split_stc_imports.sort(
-            key=lambda i:
-            # Sort by rank to avoid elements printed after classes
-            (
-                next(iter(i.target)).object.class_type.rank,
-                # Additionally sort by the source file
-                str(i.source),
-                # Finally sort by type name for reproducibility
-                next(iter(i.target)).local_alias,
+            key=lambda i: (
+                # Sort by rank to avoid elements printed after classes
+                (
+                    next(iter(i.target)).object.class_type.rank,
+                    # Additionally sort by the source file
+                    str(i.source),
+                    # Finally sort by type name for reproducibility
+                    next(iter(i.target)).local_alias,
+                )
             )
         )
 
