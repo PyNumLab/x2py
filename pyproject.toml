@@ -11,6 +11,7 @@ requires-python = ">=3.10"
 dependencies = [
     "colorama>=0.4.6; platform_system == 'Windows'",
     "numpy >= 2.1",
+    "immutabledict >= 4.0.0",
 ]
 
 [project.optional-dependencies]
