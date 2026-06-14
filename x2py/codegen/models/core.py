@@ -2935,7 +2935,7 @@ class FunctionDef:
         kwargs.update(new_kwargs)
         cls = type(self)
 
-        args = (newname,) + args[1:]
+        args = (newname, *args[1:])
         return cls(*args, **kwargs)
 
     def __getnewargs_ex__(self):
