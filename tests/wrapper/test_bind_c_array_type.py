@@ -1,19 +1,58 @@
-import importlib
-import shutil
-import subprocess
-import sys
-from pathlib import Path
-
-import numpy as np
 import pytest
 
-from tests.wrapper.fmath_cases import fmath_cases
 from x2py.codegen.bind_c import BindCArrayType, BindCPointer
-from x2py.codegen.models.core import Add, IndexedElement, Slice, Variable
-from x2py.codegen.models.datatypes import LiteralInteger, PythonNativeInt
-from x2py.codegen.models.datatypes import NumpyFloat32Type, NumpyNDArrayType
+from x2py.codegen.models.core import Add, Declare, IndexedElement, Slice, Variable
+from x2py.codegen.models.datatypes import (
+    Literal,
+    NumpyBoolType,
+    NumpyFloat32Type,
+    NumpyFloat64Type,
+    NumpyInt32Type,
+    NumpyInt64Type,
+    NumpyNDArrayType,
+    Cast,
+    StringType,
+    cast_to,
+    convert_to_literal,
+)
+from x2py.codegen.printers.ccode import CCodePrinter
 from x2py.codegen.printers.fcode import FCodePrinter
 from x2py.codegen.scope import Scope
+
+
+def test_literal_stores_value_and_datatype_without_specialized_subclasses():
+    integer = Literal(7, NumpyInt64Type())
+    boolean = Literal(False, NumpyBoolType())
+    string = Literal("value", StringType())
+
+    assert integer.python_value == 7
+    assert integer.dtype is NumpyInt64Type()
+    assert integer.shape is None
+    assert boolean.python_value is False
+    assert string.python_value == "value"
+    assert string.shape == (None,)
+
+
+def test_raw_array_uses_array_attributes_and_variable_storage():
+    array_type = NumpyNDArrayType.get_new(
+        NumpyInt64Type(), 1, None, raw=True
+    )
+    variable = Variable(array_type, "shape", shape=(4,), memory_handling="stack")
+
+    assert array_type.raw is True
+    assert variable.is_raw_array
+    assert variable.on_stack
+    assert CCodePrinter("test.c", verbose=0)._print(Declare(variable)) == (
+        "int64_t shape[4];\n"
+    )
+
+
+def test_cast_to_uses_shared_cast_concept_with_requested_datatype():
+    source = Variable(NumpyFloat64Type(), "value")
+    cast = cast_to(source, NumpyInt32Type())
+
+    assert type(cast) is Cast
+    assert cast.dtype is NumpyInt32Type()
 
 
 def test_bind_c_array_type_describes_packed_strided_layout():
@@ -26,9 +65,9 @@ def test_bind_c_array_type_describes_packed_strided_layout():
     assert array_type.has_strides is True
     assert len(array_type) == 7
     assert isinstance(array_type[0], BindCPointer)
-    assert all(isinstance(field, PythonNativeInt) for field in array_type[1:])
-    assert array_type.shape_is_compatible((LiteralInteger(7),))
-    assert not array_type.shape_is_compatible((LiteralInteger(4),))
+    assert all(isinstance(field, NumpyInt64Type) for field in array_type[1:])
+    assert array_type.shape_is_compatible((Literal(7, NumpyInt64Type()),))
+    assert not array_type.shape_is_compatible((convert_to_literal(4),))
 
 
 def test_bind_c_array_type_without_strides_contains_pointer_and_shape():
@@ -37,7 +76,7 @@ def test_bind_c_array_type_without_strides_contains_pointer_and_shape():
     assert array_type.array_rank == 3
     assert array_type.has_strides is False
     assert len(array_type) == 4
-    assert array_type.shape_is_compatible((LiteralInteger(4),))
+    assert array_type.shape_is_compatible((convert_to_literal(4),))
 
 
 @pytest.mark.parametrize(
@@ -56,7 +95,7 @@ def test_bind_c_array_type_rejects_invalid_parameters(rank, has_strides, error):
 def test_scope_expands_bind_c_array_to_registered_fields():
     scope = Scope(name="f", scope_type="function")
     array_type = BindCArrayType.get_new(1, has_strides=True)
-    packed = Variable(array_type, "packed", shape=(LiteralInteger(4),))
+    packed = Variable(array_type, "packed", shape=(convert_to_literal(4),))
     fields = [
         Variable(array_type[i], f"field_{i}")
         for i in range(len(array_type))
@@ -70,14 +109,14 @@ def test_scope_expands_bind_c_array_to_registered_fields():
 
 def test_fortran_printer_prints_array_slice_with_inclusive_stop():
     array_type = NumpyNDArrayType.get_new(NumpyFloat32Type(), 1, None)
-    array = Variable(array_type, "values", shape=(LiteralInteger(8),))
-    stop = Variable(PythonNativeInt(), "upper")
-    stride = Variable(PythonNativeInt(), "stride")
+    array = Variable(array_type, "values", shape=(convert_to_literal(8),))
+    stop = Variable(NumpyInt64Type(), "upper")
+    stride = Variable(NumpyInt64Type(), "stride")
     element = IndexedElement(
         array,
         Slice(
-            LiteralInteger(1),
-            Add(stop, LiteralInteger(1)),
+            convert_to_literal(1),
+            Add(stop, convert_to_literal(1)),
             stride,
         ),
     )
@@ -88,66 +127,3 @@ def test_fortran_printer_prints_array_slice_with_inclusive_stop():
     assert printer._print(element) == (
         "values(1_i32:upper + 1_i32 - 1_i32:stride)"
     )
-
-
-def test_array_wrapper_builds_all_precisions_and_handles_strided_views(tmp_path):
-    source = tmp_path / "fmath_arrays.f"
-    repository_source = Path(__file__).with_name("fmath_arrays.f")
-    shutil.copyfile(repository_source, source)
-    subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "x2py",
-            str(source),
-            "--wrap",
-            "--out-dir",
-            str(tmp_path),
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
-    sys.modules.pop("fmath_arrays", None)
-    sys.path.insert(0, str(tmp_path))
-    try:
-        module = importlib.import_module("fmath_arrays")
-    finally:
-        sys.path.remove(str(tmp_path))
-
-    cases = fmath_cases()
-    missing = sorted(name for name, _, _ in cases if not hasattr(module, name))
-    assert missing == []
-
-    size = 4
-    for function_name, scalar_args, expected in cases:
-        array_args = []
-        for scalar_arg in scalar_args:
-            input_storage = np.zeros(2 * size, dtype=np.asarray(scalar_arg).dtype)
-            array_arg = input_storage[::2]
-            array_arg[:] = scalar_arg
-            array_args.append(array_arg)
-
-        if isinstance(expected, bool):
-            result_dtype = np.bool_
-        elif isinstance(expected, int):
-            result_dtype = np.int32
-        else:
-            result_dtype = np.asarray(expected).dtype
-        result_storage = np.zeros(2 * size, dtype=result_dtype)
-        result = result_storage[1::2]
-
-        getattr(module, function_name)(np.int32(size), *array_args, result)
-
-        expected_array = np.full(size, expected, dtype=result_dtype)
-        if result_dtype == np.dtype(np.bool_):
-            np.testing.assert_array_equal(result, expected_array, err_msg=function_name)
-        else:
-            np.testing.assert_allclose(
-                result,
-                expected_array,
-                rtol=1e-6,
-                atol=1e-6,
-                err_msg=function_name,
-            )

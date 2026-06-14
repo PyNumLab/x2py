@@ -613,12 +613,7 @@ class Scope:
         assert python_symbol not in self._used_symbols
 
         if self.name_clash_checker.has_clash(low_level_symbol, self.all_used_symbols):
-            raise
-            errors.report(
-                "Low-level name conflicts with name already in use.",
-                severity="error",
-                symbol=python_symbol,
-            )
+            raise ValueError("Low-level name conflicts with name already in use.")
 
         self._used_symbols[python_symbol] = low_level_symbol
         self._original_symbol[low_level_symbol] = python_symbol
@@ -658,12 +653,7 @@ class Scope:
         else:
             symbolic_aliases = self._locals["symbolic_aliases"]
             if symbol in symbolic_aliases:
-                raise
-                errors.report(
-                    f"{symbol} cannot represent multiple static concepts",
-                    symbol=symbol,
-                    severity="error",
-                )
+                raise ValueError(f"{symbol} cannot represent multiple static concepts")
 
             symbolic_aliases[symbol] = alias
 

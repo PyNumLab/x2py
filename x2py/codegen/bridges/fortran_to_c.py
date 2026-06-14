@@ -23,16 +23,18 @@ from ..bind_c import (
     C_F_Pointer,
     CLocFunc,
     DeallocatePointer,
+    FortranTransfer,
     c_malloc,
 )
-from ..models.core import PythonRange
 from ..models.core import (
     AliasAssign,
     Allocate,
+    ArrayAllocated,
+    ArrayShapeElement,
+    ArraySize,
     AsName,
     Assign,
     EmptyNode,
-    For,
     FunctionAddress,
     FunctionCallArgument,
     FunctionDef,
@@ -51,12 +53,13 @@ from ..models.datatypes import (
     CustomDataType,
     FinalType,
     FixedSizeNumericType,
-    PythonNativeInt,
+    NumpyInt64Type,
     TupleType,
+    NIL,
+    cast_to,
+    convert_to_literal,
 )
 from ..models.core import Slice
-from ..models.datatypes import LiteralInteger, LiteralString, LiteralTrue, Nil
-from ..models.datatypes import NumpyInt32
 from ..models.datatypes import NumpyInt32Type, NumpyNDArrayType, numpy_precision_map
 from ..models.core import Add, IsNot, Mul
 from ..models.core import DottedVariable, IndexedElement, Variable
@@ -133,17 +136,17 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             class_type = optional_var.class_type
             if isinstance(class_type, BindCArrayType):
                 optional_var = self.scope.collect_tuple_element(
-                    IndexedElement(optional_var, LiteralInteger(0))
+                    IndexedElement(optional_var, convert_to_literal(0))
                 )
 
             handled += (next_optional_arg,)
             true_section = IfSection(
-                IsNot(optional_var, Nil()),
+                IsNot(optional_var, NIL),
                 self._get_function_def_body(func, args, results, handled),
             )
             args.remove(next_optional_arg)
             false_section = IfSection(
-                LiteralTrue(), self._get_function_def_body(func, args, results, handled)
+                convert_to_literal(True), self._get_function_def_body(func, args, results, handled)
             )
             return [If(true_section, false_section)]
         else:
@@ -295,8 +298,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         call_arguments = [a["f_arg"] for a in generated_args]
         func_to_call = {fa: ca for ca, fa in zip(call_arguments, func_arguments)}
 
-        if expr.results.var is Nil():
-            func_results = Nil()
+        if expr.results.var is NIL:
+            func_results = NIL
             func_call_results = []
         else:
             result = self._extract_FunctionDefResult(expr.results.var, expr.scope)
@@ -327,7 +330,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self.exit_scope()
 
         imports = []
-        if expr.is_external:
+        if expr.is_external and expr.scope.get_python_name(expr.name) != "__del__":
             imports.append(Import(expr.name, target = (), mod=expr))
 
         func = BindCFunctionDef(
@@ -415,7 +418,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                     is_kwarg=expr.is_kwarg,
                 )
 
-                if func.is_external:
+                if getattr(func, "is_external", False):
                     func_def_argument_dict["f_arg"] = FunctionCallArgument(
                         func_def_argument_dict["f_arg"])
                 else:
@@ -425,12 +428,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 return func_def_argument_dict
 
         # Unknown object, we raise an error.
-        raise
-        return errors.report(
-            f"Wrapping function arguments is not implemented for type {class_type}. "
-            + X2PY_RESTRICTION_TODO,
-            symbol=var,
-            severity="fatal",
+        raise NotImplementedError(
+            f"Wrapping function arguments is not implemented for type {class_type}."
         )
 
     def _extract_FixedSizeNumericType_FunctionDefArgument(self, var, func):
@@ -489,6 +488,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         collisionless_name = scope.get_expected_name(name)
         rank = var.rank
         order = var.order
+        allows_strides = var.class_type.allows_strides
         bind_var = Variable(
             BindCPointer(),
             scope.get_new_name(f"bound_{name}"),
@@ -509,22 +509,22 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         base_shape = [
             scope.get_temporary_variable(
-                PythonNativeInt(), name=f"{name}_base_shape_{i+1}", is_argument=True
+                NumpyInt64Type(), name=f"{name}_base_shape_{i+1}", is_argument=True
             )
             for i in range(rank)
         ]
         stride = [
             scope.get_temporary_variable(
-                PythonNativeInt(), name=f"{name}_stride_{i+1}", is_argument=True
+                NumpyInt64Type(), name=f"{name}_stride_{i+1}", is_argument=True
             )
             for i in range(rank)
-        ]
+        ] if allows_strides else []
         ubound = [
             scope.get_temporary_variable(
-                PythonNativeInt(), name=f"{name}_ubound_{i+1}", is_argument=True
+                NumpyInt64Type(), name=f"{name}_ubound_{i+1}", is_argument=True
             )
             for i in range(rank)
-        ]
+        ] if allows_strides else []
 
         body = [
             C_F_Pointer(
@@ -533,35 +533,39 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         ]
 
         c_arg_var = Variable(
-            BindCArrayType.get_new(rank, has_strides=True),
+            BindCArrayType.get_new(rank, has_strides=allows_strides),
             scope.get_new_name(),
             is_argument=True,
-            shape=(LiteralInteger(rank * 3 + 1),),
+            shape=(
+                convert_to_literal(rank * 3 + 1 if allows_strides else rank + 1),
+            ),
         )
 
         scope.insert_symbolic_alias(
-            IndexedElement(c_arg_var, LiteralInteger(0)), bind_var
+            IndexedElement(c_arg_var, convert_to_literal(0)), bind_var
         )
         for i, s in enumerate(base_shape):
             scope.insert_symbolic_alias(
-                IndexedElement(c_arg_var, LiteralInteger(i + 1)), s
+                IndexedElement(c_arg_var, convert_to_literal(i + 1)), s
             )
-        for i, s in enumerate(ubound):
-            scope.insert_symbolic_alias(
-                IndexedElement(c_arg_var, LiteralInteger(i + rank + 1)), s
-            )
-        for i, s in enumerate(stride):
-            scope.insert_symbolic_alias(
-                IndexedElement(c_arg_var, LiteralInteger(i + 2 * rank + 1)), s
-            )
+        if allows_strides:
+            for i, s in enumerate(ubound):
+                scope.insert_symbolic_alias(
+                    IndexedElement(c_arg_var, convert_to_literal(i + rank + 1)), s
+                )
+            for i, s in enumerate(stride):
+                scope.insert_symbolic_alias(
+                    IndexedElement(c_arg_var, convert_to_literal(i + 2 * rank + 1)), s
+                )
 
-        start = LiteralInteger(1)  # C_F_Pointer leads to default Fortran lbound
-        indexes = [
-            Slice(start, Add(stop, LiteralInteger(1)), step)
-            for step, stop in zip(stride, ubound)
-        ]
-
-        f_arg = IndexedElement(arg_var, *indexes)
+            start = convert_to_literal(1)  # C_F_Pointer leads to default Fortran lbound
+            indexes = [
+                Slice(start, Add(stop, convert_to_literal(1)), step)
+                for step, stop in zip(stride, ubound)
+            ]
+            f_arg = IndexedElement(arg_var, *indexes)
+        else:
+            f_arg = arg_var
 
         return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": f_arg, "body": body}
 
@@ -590,7 +594,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         scope.insert_variable(bind_var)
 
         shape_var = scope.get_temporary_variable(
-            PythonNativeInt(), name=f"{name}_size", is_argument=True
+            NumpyInt64Type(), name=f"{name}_size", is_argument=True
         )
 
         body = [C_F_Pointer(bind_var, arg_var, (shape_var,))]
@@ -599,14 +603,14 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             BindCArrayType.get_new(rank, has_strides=False),
             scope.get_new_name(),
             is_argument=True,
-            shape=(LiteralInteger(rank + 1),),
+            shape=(convert_to_literal(rank + 1),),
         )
 
         scope.insert_symbolic_alias(
-            IndexedElement(c_arg_var, LiteralInteger(0)), bind_var
+            IndexedElement(c_arg_var, convert_to_literal(0)), bind_var
         )
         scope.insert_symbolic_alias(
-            IndexedElement(c_arg_var, LiteralInteger(1)), shape_var
+            IndexedElement(c_arg_var, convert_to_literal(1)), shape_var
         )
 
         return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": arg_var, "body": body}
@@ -624,60 +628,78 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             is_optional=False,
             memory_handling="alias",
         )
-        arg_var = var.clone(
-            collisionless_name,
-            is_argument=False,
-            is_optional=False,
-            allows_negative_indexes=False,
-            new_class=Variable,
+        shape_var = scope.get_temporary_variable(
+            NumpyInt64Type(), name=f"{name}_size", is_argument=True
         )
         array_var = Variable(
             NumpyNDArrayType.get_new(CharType(), 1, None),
             scope.get_new_name(name),
             memory_handling="alias",
         )
-        scope.insert_variable(arg_var)
         scope.insert_variable(bind_var)
         scope.insert_variable(array_var)
 
-        shape_var = scope.get_temporary_variable(
-            PythonNativeInt(), name=f"{name}_size", is_argument=True
-        )
-
-        for_scope = scope.create_new_loop_scope()
-        iterator = PythonRange(
-            LiteralInteger(1), Add(shape_var, LiteralInteger(1))
-        )
-        idx = Variable(PythonNativeInt(), self.scope.get_new_name())
-        iterator.set_loop_counter(idx)
-        self.scope.insert_variable(idx)
-
-        # Default Fortran arrays retrieved from C_F_Pointer are 1-indexed
-        # Lists are 1-indexed but X2py adds the shift during printing so they are
-        # treated as 0-indexed here
-        for_body = [Assign(arg_var, Add(arg_var, IndexedElement(array_var, idx)))]
-
-        body = [
-            C_F_Pointer(bind_var, array_var, (shape_var,)),
-            Assign(arg_var, LiteralString("")),
-            For((idx,), iterator, for_body, scope=for_scope),
-        ]
+        fixed_len = var.alloc_shape[0]
+        if fixed_len == 1:
+            fixed_var = var.clone(
+                scope.get_new_name(f"{name}_fixed"),
+                is_argument=False,
+                is_optional=False,
+                memory_handling="stack",
+                allows_negative_indexes=False,
+                new_class=Variable,
+            )
+            scope.insert_variable(fixed_var)
+            body = [
+                C_F_Pointer(bind_var, array_var, (shape_var,)),
+                Assign(fixed_var, FortranTransfer(array_var, fixed_var)),
+            ]
+            f_arg = fixed_var
+        else:
+            arg_var = var.clone(
+                collisionless_name,
+                is_argument=False,
+                is_optional=False,
+                memory_handling="stack",
+                shape=(shape_var,),
+                allows_negative_indexes=False,
+                new_class=Variable,
+            )
+            scope.insert_variable(arg_var)
+            body = [
+                C_F_Pointer(bind_var, array_var, (shape_var,)),
+                Assign(arg_var, FortranTransfer(array_var, arg_var)),
+            ]
+            if fixed_len is not None:
+                fixed_var = var.clone(
+                    scope.get_new_name(f"{name}_fixed"),
+                    is_argument=False,
+                    is_optional=False,
+                    memory_handling="stack",
+                    allows_negative_indexes=False,
+                    new_class=Variable,
+                )
+                scope.insert_variable(fixed_var)
+                body.append(Assign(fixed_var, arg_var))
+                f_arg = fixed_var
+            else:
+                f_arg = arg_var
 
         c_arg_var = Variable(
             BindCArrayType.get_new(rank, has_strides=False),
             scope.get_new_name(),
             is_argument=True,
-            shape=(LiteralInteger(2),),
+            shape=(convert_to_literal(2),),
         )
 
         scope.insert_symbolic_alias(
-            IndexedElement(c_arg_var, LiteralInteger(0)), bind_var
+            IndexedElement(c_arg_var, convert_to_literal(0)), bind_var
         )
         scope.insert_symbolic_alias(
-            IndexedElement(c_arg_var, LiteralInteger(1)), shape_var
+            IndexedElement(c_arg_var, convert_to_literal(1)), shape_var
         )
 
-        return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": arg_var, "body": body}
+        return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": f_arg, "body": body}
 
     def _visit_Variable(self, expr):
         """
@@ -780,11 +802,29 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         attrib = expr.clone(expr.name, lhs=self_obj)
         obj = self.scope.find(expr.name)
         # Cast the C variable into a Python variable
-        if expr.rank > 0 or isinstance(expr.dtype, CustomDataType):
+        if expr.rank > 0 and expr.memory_handling == "heap":
+            unallocated_body = [
+                Assign(getter_result_info["bind_var"], NIL),
+                *[
+                    Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
+                    for shape_var in getter_result_info["shape_vars"]
+                ],
+            ]
+            getter_body.append(
+                If(
+                    IfSection(
+                        ArrayAllocated(attrib),
+                        [AliasAssign(obj, attrib), *getter_result_info["body"]],
+                    ),
+                    IfSection(convert_to_literal(True), unallocated_body),
+                )
+            )
+        elif expr.rank > 0 or isinstance(expr.dtype, CustomDataType):
             getter_body.append(AliasAssign(obj, attrib))
+            getter_body.extend(getter_result_info["body"])
         else:
             getter_body.append(Assign(getter_result_info["f_result"], attrib))
-        getter_body.extend(getter_result_info["body"])
+            getter_body.extend(getter_result_info["body"])
         self._additional_exprs.clear()
         self.exit_scope()
 
@@ -916,12 +956,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             methods.append(self._visit(del_method))
 
         if any(isinstance(v.class_type, TupleType) for v in expr.attributes):
-            raise
-            errors.report(
-                "Tuples cannot yet be exposed to Python.",
-                severity="warning",
-                symbol=expr,
-            )
+            raise NotImplementedError("Tuples cannot yet be exposed to Python.")
 
         properties_getters = [
             BindCClassProperty(
@@ -1002,12 +1037,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 return getattr(self, annotation_method)(orig_var, orig_func_scope)
 
         # Unknown object, we raise an error.
-        raise
-        return errors.report(
-            f"Wrapping function results is not implemented for type {class_type}. "
-            + X2PY_RESTRICTION_TODO,
-            symbol=orig_var,
-            severity="fatal",
+        raise NotImplementedError(
+            f"Wrapping function results is not implemented for type {class_type}."
         )
 
     def _extract_FixedSizeType_FunctionDefResult(self, orig_var, orig_func_scope):
@@ -1141,26 +1172,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         scope.insert_variable(ptr_var)
         scope.insert_variable(elem_var)
 
-        for_scope = scope.create_new_loop_scope()
-        iterator = PythonRange(LiteralInteger(1), shape_var)
-        idx = Variable(PythonNativeInt(), self.scope.get_new_name())
-        iterator.set_loop_counter(idx)
-        self.scope.insert_variable(idx)
-
-        # Default Fortran arrays retrieved from C_F_Pointer are 1-indexed
-        # Lists are 1-indexed but X2py adds the shift during printing so they are
-        # treated as 0-indexed here
-        for_body = [
-            Assign(IndexedElement(ptr_var, idx), IndexedElement(local_var, idx))
-        ]
-
         # Define the additional steps necessary to define and fill ptr_var
-        # Default Fortran arrays retrieved from C_F_Pointer are 1-indexed
         body = [
-            Assign(shape_var, Add(local_var.shape[0], LiteralInteger(1))),
+            Assign(shape_var, Add(ArraySize(local_var), convert_to_literal(1))),
             Assign(bind_var, c_malloc(Mul(BindCSizeOf(elem_var), shape_var))),
             C_F_Pointer(bind_var, ptr_var, [shape_var]),
-            For((idx,), iterator, for_body, scope=for_scope),
+            Assign(ptr_var, FortranTransfer(local_var, ptr_var, shape_var)),
             Assign(IndexedElement(ptr_var, shape_var), C_NULL_CHAR()),
         ]
 
@@ -1227,10 +1244,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             for i in range(rank)
         ]
 
-        body = [Assign(s_v, NumpyInt32(s)) for s_v, s in zip(shape_vars, shape)]
-
         if pointer_target:
-            body.append(CLocFunc(orig_var, bind_var))
             f_array = orig_var
         else:
             # Create an array variable which can be passed to CLocFunc
@@ -1243,17 +1257,34 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             elem_var = Variable(dtype, scope.get_new_name(name + "_elem"))
             scope.insert_variable(ptr_var)
             scope.insert_variable(elem_var)
+            f_array = ptr_var
 
-            # Define the additional steps necessary to define and fill ptr_var
+        if shape is None:
+            shape = tuple(
+                ArrayShapeElement(f_array, convert_to_literal(i)) for i in range(rank)
+            )
+        else:
+            shape = tuple(
+                ArrayShapeElement(f_array, convert_to_literal(i)) if dim is None else dim
+                for i, dim in enumerate(shape)
+            )
+
+        body = [
+            Assign(s_v, cast_to(s, NumpyInt32Type()))
+            for s_v, s in zip(shape_vars, shape)
+        ]
+
+        if pointer_target:
+            body.append(CLocFunc(orig_var, bind_var))
+        else:
             size = reduce(Mul, [BindCSizeOf(elem_var), *shape_vars])
-            body += [
+            body = [
+                *body,
                 Assign(bind_var, c_malloc(size)),
                 C_F_Pointer(
                     bind_var, ptr_var, shape_vars if order == "F" else shape_vars[::-1]
                 ),
             ]
-
-            f_array = ptr_var
 
         result_var = Variable(
             BindCArrayType.get_new(rank, has_strides=False),
@@ -1261,15 +1292,17 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             shape=(rank + 1,),
         )
         scope.insert_symbolic_alias(
-            IndexedElement(result_var, LiteralInteger(0)), bind_var
+            IndexedElement(result_var, convert_to_literal(0)), bind_var
         )
         for i, s in enumerate(shape_vars):
             scope.insert_symbolic_alias(
-                IndexedElement(result_var, LiteralInteger(i + 1)), s
+                IndexedElement(result_var, convert_to_literal(i + 1)), s
             )
 
         return {
             "c_result": BindCVariable(result_var, orig_var),
             "body": body,
             "f_array": f_array,
+            "bind_var": bind_var,
+            "shape_vars": shape_vars,
         }

@@ -5,6 +5,9 @@
 
 const int NO_TYPE_CHECK = -1;
 const int NO_ORDER_CHECK = -1;
+const int REQUIRE_C_CONTIGUOUS = -2;
+const int REQUIRE_F_CONTIGUOUS = -3;
+const int REQUIRE_ANY_CONTIGUOUS = -4;
 
 
 
@@ -360,7 +363,16 @@ static char* _check_pyarray_order(PyArrayObject *a, int flag)
         return NULL;
 
     bool valid = true;
-    if (flag == NPY_ARRAY_C_CONTIGUOUS) {
+    if (flag == REQUIRE_C_CONTIGUOUS) {
+        valid = PyArray_CHKFLAGS(a, NPY_ARRAY_C_CONTIGUOUS);
+    }
+    else if (flag == REQUIRE_F_CONTIGUOUS) {
+        valid = PyArray_CHKFLAGS(a, NPY_ARRAY_F_CONTIGUOUS);
+    }
+    else if (flag == REQUIRE_ANY_CONTIGUOUS) {
+        valid = PyArray_CHKFLAGS(a, NPY_ARRAY_C_CONTIGUOUS) || PyArray_CHKFLAGS(a, NPY_ARRAY_F_CONTIGUOUS);
+    }
+    else if (flag == NPY_ARRAY_C_CONTIGUOUS) {
         int nd = PyArray_NDIM(a);
         npy_intp* np_strides = PyArray_STRIDES(a);
         for (int i = 1; i<nd; ++i) {
@@ -380,9 +392,18 @@ static char* _check_pyarray_order(PyArrayObject *a, int flag)
 
     if (!valid)
     {
-        char order = (flag == NPY_ARRAY_C_CONTIGUOUS ? 'C' : (flag == NPY_ARRAY_F_CONTIGUOUS ? 'F' : '?'));
         char* error = (char *)malloc(200);
-        sprintf(error, "argument does not have the expected ordering (%c)", order);
+        if (flag == REQUIRE_ANY_CONTIGUOUS) {
+            sprintf(error, "argument must be contiguous");
+        }
+        else {
+            char order = (
+                flag == NPY_ARRAY_C_CONTIGUOUS || flag == REQUIRE_C_CONTIGUOUS
+                ? 'C'
+                : (flag == NPY_ARRAY_F_CONTIGUOUS || flag == REQUIRE_F_CONTIGUOUS ? 'F' : '?')
+            );
+            sprintf(error, "argument does not have the expected ordering (%c)", order);
+        }
         return error;
     }
 
@@ -465,7 +486,7 @@ bool	pyarray_check(const char* name, PyObject *o, int dtype, int rank, int flag,
         correct_type = false;
     }
 
-    if (rank > 1) {
+    if (flag != NO_ORDER_CHECK) {
         char* array_order = _check_pyarray_order(a, flag);
         if (array_order != NULL) {
             if (!correct_type)
@@ -505,7 +526,7 @@ bool	is_numpy_array(PyObject *o, int dtype, int rank, int flag, bool allow_empty
         return false;
     }
 
-    if (rank > 1) {
+    if (flag != NO_ORDER_CHECK) {
         char* array_order = _check_pyarray_order(a, flag);
         if(array_order != NULL) {
             free(array_order);

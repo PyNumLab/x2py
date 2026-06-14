@@ -2,25 +2,23 @@
 Module representing concepts that are only applicable to C code (e.g. ObjectAddress).
 """
 
-from functools import cache
-
 from ..models.datatypes import (
     CharType,
     FixedSizeNumericType,
-    HomogeneousContainerType,
+    Literal,
+    StringType,
     attach_model_child,
     init_model_object,
     is_model_object,
     PrimitiveIntegerType,
     register_model_class,
+    convert_to_literal,
 )
 from ..models.core import Function
-from ..models.datatypes import LiteralString
 
 __all__ = (
     "CMacro",
     "CNativeInt",
-    "CStackArray",
     "CStrStr",
     "CStringExpression",
     "ObjectAddress",
@@ -44,47 +42,6 @@ class CNativeInt(FixedSizeNumericType):
 
 
 # ------------------------------------------------------------------------------
-
-
-class CStackArray(HomogeneousContainerType):
-    """
-    A data type representing an array allocated on the stack.
-
-    A data type representing an array allocated on the stack.
-    E.g. `float a[4];`
-    """
-
-    __slots__ = ("_element_type",)
-    _name = "c_stackarray"
-    _container_rank = 1
-    _order = None
-
-    @classmethod
-    @cache
-    def get_new(cls, element_type):
-        """
-        Get the parametrised stack array type.
-
-        Get the parametrised CStackArray subclass.
-
-        Parameters
-        ----------
-        element_type : FixedSizeType
-            The type of the elements inside the array.
-        """
-
-        def __init__(self):
-            self._element_type = element_type
-            HomogeneousContainerType.__init__(self)
-
-        return type(
-            f"CStackArray{type(element_type).__name__}",
-            (CStackArray,),
-            {"__init__": __init__},
-        )()
-
-
-# ------------------------------------------------------------------------------
 class ObjectAddress:
     """
     Class representing the address of an object.
@@ -101,9 +58,9 @@ class ObjectAddress:
 
     Examples
     --------
-    >>> CCodePrinter._print(ObjectAddress(Variable(PythonNativeInt(),'a')))
+    >>> CCodePrinter._print(ObjectAddress(Variable(NumpyInt64Type(),'a')))
     '&a'
-    >>> CCodePrinter._print(ObjectAddress(Variable(PythonNativeInt(),'a', memory_handling='alias')))
+    >>> CCodePrinter._print(ObjectAddress(Variable(NumpyInt64Type(),'a', memory_handling='alias')))
     'a'
     """
 
@@ -192,14 +149,18 @@ class PointerCast:
         return self._obj.is_argument
 
 
+def _is_string_literal(value):
+    return isinstance(value, Literal) and isinstance(value.dtype, StringType)
+
+
 # ------------------------------------------------------------------------------
 class CStringExpression:
     """
-    Internal class used to hold a C string that has LiteralStrings and C macros.
+    Internal class used to hold a C string that has literals and C macros.
 
     Parameters
     ----------
-    *args : str / LiteralString / CMacro / CStringExpression
+    *args : str / Literal / CMacro / CStringExpression
             any number of arguments to be added to the expression
             note: they will get added in the order provided
 
@@ -208,10 +169,10 @@ class CStringExpression:
     >>> expr = CStringExpression(
     ...     CMacro("m"),
     ...     CStringExpression(
-    ...         LiteralString("the macro is: "),
+    ...         convert_to_literal("the macro is: "),
     ...         CMacro("mc")
     ...     ),
-    ...     LiteralString("."),
+    ...     convert_to_literal("."),
     ... )
     """
 
@@ -236,19 +197,19 @@ class CStringExpression:
 
         Parameter
         ----------
-        o : str / LiteralString / CMacro / CStringExpression
+        o : str / Literal / CMacro / CStringExpression
             the expression to add
         """
         if isinstance(o, str):
-            o = LiteralString(o)
-        if not isinstance(o, (LiteralString, CMacro, CStringExpression)):
+            o = convert_to_literal(o)
+        if not (_is_string_literal(o) or isinstance(o, (CMacro, CStringExpression))):
             raise TypeError(
                 f"unsupported operand type(s) for +: '{self.__class__}' and '{type(o)}'"
             )
         return CStringExpression(*self._expression, o)
 
     def __radd__(self, o):
-        if isinstance(o, LiteralString):
+        if _is_string_literal(o):
             return CStringExpression(o, self)
         return NotImplemented
 
@@ -262,12 +223,12 @@ class CStringExpression:
 
         Parameter
         ---------
-        o : str / LiteralString / CMacro / CStringExpression
+        o : str / Literal / CMacro / CStringExpression
             the expression to append
         """
         if isinstance(o, str):
-            o = LiteralString(o)
-        if not isinstance(o, (LiteralString, CMacro, CStringExpression)):
+            o = convert_to_literal(o)
+        if not (_is_string_literal(o) or isinstance(o, (CMacro, CStringExpression))):
             raise TypeError(
                 f"unsupported operand type(s) for append: '{self.__class__}' and '{type(o)}'"
             )
@@ -287,8 +248,8 @@ class CStringExpression:
         -------
         >>> a = [
         ...     CMacro("m"),
-        ...     CStringExpression(LiteralString("the macro is: ")),
-        ...     LiteralString("."),
+        ...     CStringExpression(convert_to_literal("the macro is: ")),
+        ...     convert_to_literal("."),
         ... ]
         >>> b = CStringExpression("?").join(a)
         ...
@@ -297,9 +258,9 @@ class CStringExpression:
         >>> b = CStringExpression(
         ...     CMacro("m"),
         ...     CStringExpression("?"),
-        ...     CStringExpression(LiteralString("the macro is: ")),
+        ...     CStringExpression(convert_to_literal("the macro is: ")),
                 CStringExpression("?"),
-        ...     LiteralString("."),
+        ...     convert_to_literal("."),
         ... )
         """
         result = CStringExpression()
@@ -313,8 +274,8 @@ class CStringExpression:
 
     def get_flat_expression_list(self):
         """
-        returns a list of LiteralStrings and CMacros after merging every
-        consecutive LiteralString
+        returns a list of string literals and CMacros after merging consecutive
+        string literals
         """
         tmp_res = []
         for e in self.expression:
@@ -326,7 +287,7 @@ class CStringExpression:
             return []
         result = [tmp_res[0]]
         for e in tmp_res[1:]:
-            if isinstance(e, LiteralString) and isinstance(result[-1], LiteralString):
+            if _is_string_literal(e) and _is_string_literal(result[-1]):
                 result[-1] += e
             else:
                 result.append(e)
@@ -355,12 +316,12 @@ class CMacro:
         return str(self._macro)
 
     def __add__(self, o):
-        if isinstance(o, (LiteralString, CStringExpression)):
+        if _is_string_literal(o) or isinstance(o, CStringExpression):
             return CStringExpression(self, o)
         return NotImplemented
 
     def __radd__(self, o):
-        if isinstance(o, LiteralString):
+        if _is_string_literal(o):
             return CStringExpression(o, self)
         return NotImplemented
 

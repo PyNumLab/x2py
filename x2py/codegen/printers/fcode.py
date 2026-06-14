@@ -17,20 +17,16 @@ from ..bind_c import (
     BindCModule,
     BindCPointer,
     BindCVariable,
+    FortranTransfer,
 )
 
-from ..models.datatypes import (
-    DtypePrecisionToCastFunction,
-    PythonBool,
-    PythonInt,
-)
+from ..models.datatypes import cast_to
 from ..models.core import (
     AliasAssign,
     Assign,
     CodeBlock,
     Deallocate,
     Declare,
-    For,
     FunctionAddress,
     FunctionCall,
     FunctionCallArgument,
@@ -50,15 +46,13 @@ from ..models.datatypes import (
     FinalType,
     FixedSizeNumericType,
     FixedSizeType,
-    HomogeneousContainerType,
     PrimitiveBooleanType,
     PrimitiveCharacterType,
     PrimitiveComplexType,
     PrimitiveFloatingPointType,
     PrimitiveIntegerType,
     Type,
-    PythonNativeBool,
-    PythonNativeInt,
+    NumpyBoolType,
     StringType,
     SymbolicType,
     TupleType,
@@ -66,13 +60,7 @@ from ..models.datatypes import (
 )
 from ..models.datatypes import (
     Literal,
-    LiteralEllipsis,
-    LiteralFalse,
-    LiteralFloat,
-    LiteralInteger,
-    LiteralString,
-    LiteralTrue,
-    Nil,
+    NIL,
     convert_to_literal,
 )
 
@@ -100,7 +88,7 @@ from ..scope import Scope
 
 # TODO: add examples
 
-__all__ = ["FCodePrinter", "fcode"]
+__all__ = ["FCodePrinter"]
 
 
 # ==============================================================================
@@ -346,16 +334,10 @@ class FCodePrinter(CodePrinter):
         model object | iterable[model object]
             A model object for each argument. The new nodes will have the target type.
         """
-        try:
-            cast_func = DtypePrecisionToCastFunction[target_type]
-        except KeyError:
-            raise
-            errors.report(X2PY_RESTRICTION_TODO, severity="fatal")
-
         new_args = []
         for a in args:
             if target_type != a.class_type:
-                a = cast_func(a)
+                a = cast_to(a, target_type)
             new_args.append(a)
 
         if len(args) == 1:
@@ -524,7 +506,7 @@ class FCodePrinter(CodePrinter):
             return ""
 
         source = expr.source
-        if isinstance(source, LiteralString):
+        if isinstance(source, Literal) and isinstance(source.dtype, StringType):
             source = source.python_value
         else:
             source = self._print(source)
@@ -661,23 +643,35 @@ class FCodePrinter(CodePrinter):
     def _print_Lambda(self, expr):
         return '"{args} -> {expr}"'.format(args=expr.variables, expr=expr.expr)
 
-    def _print_PythonReal(self, expr):
-        value = self._print(expr.internal_var)
-        return f"real({value})"
+    def _print_ComplexPart(self, expr):
+        function = "real" if expr.part == "real" else "aimag"
+        return f"{function}({self._print(expr.arg)})"
 
-    def _print_PythonImag(self, expr):
-        value = self._print(expr.internal_var)
-        return f"aimag({value})"
+    def _print_Cast(self, expr):
+        value = self._print(expr.arg)
+        dtype = expr.dtype
 
-    # ========================== String Methods ===============================#
+        if isinstance(dtype, StringType):
+            return value
+        primitive_type = dtype.primitive_type
+        if isinstance(primitive_type, PrimitiveBooleanType):
+            return value if isinstance(expr.arg.dtype.primitive_type, PrimitiveBooleanType) else f"({value} /= 0)"
 
-    def _print_PythonStr(self, expr):
-        return self._print(expr.args[0])
+        kind = self.print_kind(dtype)
+        if isinstance(primitive_type, PrimitiveIntegerType):
+            return f"int({value}, kind={kind})"
+        if isinstance(primitive_type, PrimitiveFloatingPointType):
+            return f"real({value}, kind={kind})"
+        if isinstance(primitive_type, PrimitiveComplexType):
+            return f"cmplx({value}, kind={kind})"
+        raise TypeError(f"Unsupported Fortran cast datatype {dtype}")
 
     # ======================================================================= #
     def _print_ArraySize(self, expr):
         init_value = self._print(expr.arg)
         prec = self.print_kind(expr)
+        if isinstance(expr.arg.class_type, StringType):
+            return f"len({init_value}, kind={prec})"
         return f"size({init_value}, kind={prec})"
 
     def _print_ArrayShapeElement(self, expr):
@@ -690,10 +684,10 @@ class FCodePrinter(CodePrinter):
                 return f"size({arg_code}, kind={prec})"
 
             if arg.order == "C":
-                index = Minus(LiteralInteger(arg.rank), expr.index)
+                index = Minus(convert_to_literal(arg.rank), expr.index)
                 index = self._print(index)
             else:
-                index = Add(expr.index, LiteralInteger(1))
+                index = Add(expr.index, convert_to_literal(1))
                 index = self._print(index)
 
             return f"size({arg_code}, {index}, {prec})"
@@ -704,6 +698,9 @@ class FCodePrinter(CodePrinter):
             raise NotImplementedError(
                 f"Don't know how to represent shape of object of type {arg.class_type}"
             )
+
+    def _print_ArrayAllocated(self, expr):
+        return f"allocated({self._print(expr.arg)})"
 
     def _print_Declare(self, expr):
         # ... ignored declarations
@@ -762,14 +759,14 @@ class FCodePrinter(CodePrinter):
 
             if rank > 0:
                 # arrays are 0-based in x2py, to avoid ambiguity with range
-                start_val = self._print(LiteralInteger(0))
+                start_val = self._print(convert_to_literal(0))
 
                 if intent_in:
                     rankstr = ", ".join([f"{start_val}:"] * rank)
                 elif is_static or on_stack:
                     ordered_shape = shape[::-1] if var.order == "C" else shape
                     ubounds = [
-                        Minus(s, LiteralInteger(1))
+                        Minus(s, convert_to_literal(1))
                         for s in ordered_shape
                     ]
                     rankstr = ", ".join(
@@ -784,17 +781,14 @@ class FCodePrinter(CodePrinter):
         elif isinstance(dtype, StringType):
             dtype_str = self._print(dtype)
 
-            if intent_in:
+            if shape and shape[0] is not None:
+                dtype_str += f"(len = {self._print(shape[0])})"
+            elif intent_in:
                 dtype_str += "(len = *)"
             else:
                 dtype_str += "(len = :)"
         else:
-            raise
-            errors.report(
-                f"Don't know how to print type {expr_type} in Fortran",
-                symbol=expr,
-                severity="fatal",
-            )
+            raise TypeError(f"Don't know how to print type {expr_type} in Fortran")
 
         code_value = ""
         if expr.value:
@@ -956,7 +950,7 @@ class FCodePrinter(CodePrinter):
             var_code = self._print(expr.variable)
             size_code = ", ".join(self._print(i) for i in shape)
             shape_code = ", ".join(
-                "0:" + self._print(Minus(i, LiteralInteger(1)))
+                "0:" + self._print(Minus(i, convert_to_literal(1)))
                 for i in shape
             )
             if shape:
@@ -984,7 +978,7 @@ class FCodePrinter(CodePrinter):
 
             return code
 
-        elif isinstance(class_type, (HomogeneousContainerType, StringType)):
+        elif isinstance(class_type, (NumpyNDArrayType, StringType)):
             return ""
 
         else:
@@ -1012,13 +1006,7 @@ class FCodePrinter(CodePrinter):
             code = f"if (allocated({var_code})) deallocate({var_code})\n"
             return code
         else:
-            raise
-            errors.report(
-                f"Deallocate not implemented for {class_type}",
-                severity="error",
-                symbol=expr,
-            )
-            return ""
+            raise NotImplementedError(f"Deallocate not implemented for {class_type}")
 
     def _print_DeallocatePointer(self, expr):
         var_code = self._print(expr.variable)
@@ -1047,7 +1035,7 @@ class FCodePrinter(CodePrinter):
     def _print_FixedSizeNumericType(self, expr):
         return f"{self._print(expr.primitive_type)}{expr.precision}"
 
-    def _print_PythonNativeBool(self, expr):
+    def _print_NumpyBoolType(self, expr):
         return "logical"
 
     def _print_CustomDataType(self, expr):
@@ -1061,24 +1049,6 @@ class FCodePrinter(CodePrinter):
 
     def _print_DataType(self, expr):
         return self._print(expr.name)
-
-    def _print_LiteralString(self, expr):
-        if expr.python_value == "":
-            return "''"
-        sp_chars = ["\a", "\b", "\f", "\r", "\t", "\v", "'", "\n"]
-        sub_str = ""
-        formatted_str = []
-        for c in expr.python_value:
-            if c in sp_chars:
-                if sub_str != "":
-                    formatted_str.append(f"'{sub_str}'")
-                    sub_str = ""
-                formatted_str.append(f"ACHAR({ord(c)})")
-            else:
-                sub_str += c
-        if sub_str != "":
-            formatted_str.append(f"'{sub_str}'")
-        return " // ".join(formatted_str)
 
     def _print_Interface(self, expr):
         interface_funcs = expr.functions
@@ -1097,8 +1067,7 @@ class FCodePrinter(CodePrinter):
                     "if you are using the interactive interfaces ex2py or lambdify, please pass language='c'. "
                     "See https://github.com/x2py/x2py/issues/1339 to monitor the advancement of this issue."
                 )
-                raise
-                errors.report(message, severity="error", symbol=expr)
+                raise NotImplementedError(message)
 
         name = self._print(expr.name)
         if all(isinstance(f, FunctionAddress) for f in interface_funcs):
@@ -1188,7 +1157,8 @@ class FCodePrinter(CodePrinter):
 
         func_end = ""
         rec = "recursive " if expr.is_recursive else ""
-        if len(out_args) != 1 or expr.results.var.rank > 0:
+        string_result = isinstance(expr.results.var.class_type, StringType)
+        if len(out_args) != 1 or (expr.results.var.rank > 0 and not string_result):
             func_type = "subroutine"
             for result in out_args:
                 args_decs[result] = Declare(result, intent="out")
@@ -1253,14 +1223,9 @@ class FCodePrinter(CodePrinter):
             if (
                 r.rank
                 and r.memory_handling == "stack"
-                and any(not isinstance(s, LiteralInteger) for s in r.alloc_shape)
+                and any(not isinstance(s, Literal) for s in r.alloc_shape)
             ):
-                raise
-                errors.report(
-                    "Can't return a stack array of unknown size",
-                    symbol=r,
-                    severity="error",
-                )
+                raise ValueError("Can't return a stack array of unknown size")
 
         name = expr.cls_name or expr.name
 
@@ -1399,7 +1364,11 @@ class FCodePrinter(CodePrinter):
 
         for i, (c, e) in enumerate(expr.blocks):
 
-            if i == len(expr.blocks) - 1 and isinstance(c, LiteralTrue):
+            if (
+                i == len(expr.blocks) - 1
+                and isinstance(c, Literal)
+                and c.python_value is True
+            ):
                 lines.append("else\n")
             elif i == 0:
                 lines.append(f"if ({self._print(c)}) then\n")
@@ -1423,7 +1392,7 @@ class FCodePrinter(CodePrinter):
     def _print_IfTernaryOperator(self, expr):
 
         cond = (
-            PythonBool(expr.cond)
+            cast_to(expr.cond, NumpyBoolType())
             if not isinstance(expr.cond.dtype.primitive_type, PrimitiveBooleanType)
             else expr.cond
         )
@@ -1452,7 +1421,7 @@ class FCodePrinter(CodePrinter):
         else:
             args = [
                 (
-                    PythonInt(a)
+                    cast_to(a, NumpyInt64Type())
                     if isinstance(a.dtype.primitive_type, PrimitiveBooleanType)
                     else a
                 )
@@ -1463,7 +1432,7 @@ class FCodePrinter(CodePrinter):
     def _print_Minus(self, expr):
         args = [
             (
-                PythonInt(a)
+                cast_to(a, NumpyInt64Type())
                 if isinstance(a.dtype.primitive_type, PrimitiveBooleanType)
                 else a
             )
@@ -1476,7 +1445,7 @@ class FCodePrinter(CodePrinter):
     def _print_Mul(self, expr):
         args = [
             (
-                PythonInt(a)
+                cast_to(a, NumpyInt64Type())
                 if isinstance(a.dtype.primitive_type, PrimitiveBooleanType)
                 else a
             )
@@ -1492,7 +1461,7 @@ class FCodePrinter(CodePrinter):
             )
             for a in expr.args
         ):
-            args = [NumpyFloat(a) for a in expr.args]
+            args = [cast_to(a, NumpyFloat64Type()) for a in expr.args]
         else:
             args = expr.args
         return " / ".join(self._print(a) for a in args)
@@ -1502,7 +1471,7 @@ class FCodePrinter(CodePrinter):
 
         def correct_type_arg(a):
             if is_float and isinstance(a.dtype.primitive_type, PrimitiveIntegerType):
-                return NumpyFloat(a)
+                return cast_to(a, NumpyFloat64Type())
             else:
                 return a
 
@@ -1532,7 +1501,7 @@ class FCodePrinter(CodePrinter):
             (
                 a
                 if isinstance(a.dtype.primitive_type, PrimitiveBooleanType)
-                else PythonBool(a)
+                else cast_to(a, NumpyBoolType())
             )
             for a in expr.args
         ]
@@ -1543,7 +1512,7 @@ class FCodePrinter(CodePrinter):
             (
                 a
                 if isinstance(a.dtype.primitive_type, PrimitiveBooleanType)
-                else PythonBool(a)
+                else cast_to(a, NumpyBoolType())
             )
             for a in expr.args
         ]
@@ -1564,9 +1533,7 @@ class FCodePrinter(CodePrinter):
         ):
             return f"{lhs_code} == {rhs_code}"
         else:
-            raise
-            errors.report(X2PY_RESTRICTION_TODO, symbol=expr, severity="error")
-            return ""
+            raise NotImplementedError(f"Fortran equality printing is not implemented for {expr}")
 
     def _print_Ne(self, expr):
         lhs, rhs = expr.args
@@ -1583,14 +1550,12 @@ class FCodePrinter(CodePrinter):
         ):
             return f"{lhs_code} /= {rhs_code}"
         else:
-            raise
-            errors.report(X2PY_RESTRICTION_TODO, symbol=expr, severity="error")
-            return ""
+            raise NotImplementedError(f"Fortran inequality printing is not implemented for {expr}")
 
     def _print_Lt(self, expr):
         args = [
             (
-                PythonInt(a)
+                cast_to(a, NumpyInt64Type())
                 if isinstance(a.dtype.primitive_type, PrimitiveBooleanType)
                 else a
             )
@@ -1603,7 +1568,7 @@ class FCodePrinter(CodePrinter):
     def _print_Le(self, expr):
         args = [
             (
-                PythonInt(a)
+                cast_to(a, NumpyInt64Type())
                 if isinstance(a.dtype.primitive_type, PrimitiveBooleanType)
                 else a
             )
@@ -1616,7 +1581,7 @@ class FCodePrinter(CodePrinter):
     def _print_Gt(self, expr):
         args = [
             (
-                PythonInt(a)
+                cast_to(a, NumpyInt64Type())
                 if isinstance(a.dtype.primitive_type, PrimitiveBooleanType)
                 else a
             )
@@ -1629,7 +1594,7 @@ class FCodePrinter(CodePrinter):
     def _print_Ge(self, expr):
         args = [
             (
-                PythonInt(a)
+                cast_to(a, NumpyInt64Type())
                 if isinstance(a.dtype.primitive_type, PrimitiveBooleanType)
                 else a
             )
@@ -1648,32 +1613,55 @@ class FCodePrinter(CodePrinter):
     def _print_Header(self, expr):
         return ""
 
-    def _print_LiteralImaginaryUnit(self, expr):
-        """purpose: print complex numbers nicely in Fortran."""
-        return "cmplx(0,1, kind = {})".format(self.print_kind(expr))
-
     def _print_int(self, expr):
         return str(expr)
 
     def _print_Literal(self, expr):
-        printed = repr(expr.python_value)
-        return "{}_{}".format(printed, self.print_kind(expr))
+        value = expr.python_value
+        dtype = expr.dtype
 
-    def _print_LiteralTrue(self, expr):
-        return ".True._{}".format(self.print_kind(expr))
+        if expr is NIL:
+            self._constantImports[-1].setdefault("ISO_C_Binding", set()).add(
+                "c_null_ptr"
+            )
+            return "c_null_ptr"
+        if isinstance(dtype, StringType):
+            if value == "":
+                return "''"
+            special_characters = {"\a", "\b", "\f", "\r", "\t", "\v", "'", "\n"}
+            substring = ""
+            parts = []
+            for character in value:
+                if character in special_characters:
+                    if substring:
+                        parts.append(f"'{substring}'")
+                        substring = ""
+                    parts.append(f"ACHAR({ord(character)})")
+                else:
+                    substring += character
+            if substring:
+                parts.append(f"'{substring}'")
+            return " // ".join(parts)
 
-    def _print_LiteralFalse(self, expr):
-        return ".False._{}".format(self.print_kind(expr))
-
-    def _print_LiteralComplex(self, expr):
-        real_str = self._print(expr.real)
-        imag_str = self._print(expr.imag)
-        return "({}, {})".format(real_str, imag_str)
+        primitive_type = dtype.primitive_type
+        if isinstance(primitive_type, PrimitiveBooleanType):
+            value_code = ".True." if value else ".False."
+            return f"{value_code}_{self.print_kind(expr)}"
+        if isinstance(primitive_type, PrimitiveComplexType):
+            real = self._print(Literal(value.real, dtype.element_type))
+            imag = self._print(Literal(value.imag, dtype.element_type))
+            return f"({real}, {imag})"
+        return f"{value!r}_{self.print_kind(expr)}"
 
     def _print_IndexedElement(self, expr):
         base = expr.base
         if isinstance(base.class_type, TupleType):
             return self._print(self.scope.collect_tuple_element(expr))
+        if isinstance(base.class_type, StringType):
+            if len(expr.indices) != 1 or isinstance(expr.indices[0], Slice):
+                raise NotImplementedError("Fortran string indexing requires one index")
+            index = self._print(expr.indices[0])
+            return f"{self._print(base)}({index}:{index})"
         if not isinstance(base.class_type, NumpyNDArrayType):
             raise NotImplementedError(
                 f"Fortran indexing is not implemented for {base.class_type}"
@@ -1684,21 +1672,21 @@ class FCodePrinter(CodePrinter):
             indices.reverse()
 
         indices = [
-            Slice(index.start, Minus(index.stop, LiteralInteger(1)), index.step)
+            Slice(index.start, Minus(index.stop, convert_to_literal(1)), index.step)
             if isinstance(index, Slice)
             and index.stop is not None
-            and not isinstance(index.stop, Nil)
+            and index.stop is not NIL
             else index
             for index in indices
         ]
         return f"{self._print(base)}({', '.join(self._print(i) for i in indices)})"
 
     def _print_Slice(self, expr):
-        if expr.start is None or isinstance(expr.start, Nil):
+        if expr.start is None or expr.start is NIL:
             start = ""
         else:
             start = self._print(expr.start)
-        if (expr.stop is None) or isinstance(expr.stop, Nil):
+        if expr.stop is None or expr.stop is NIL:
             stop = ""
         else:
             stop = self._print(expr.stop)
@@ -1728,7 +1716,10 @@ class FCodePrinter(CodePrinter):
         )
         out_results = [v for v in func_result_variables if v and not v.is_argument]
         parent_assign = get_direct_assignment(expr)
-        is_function = len(out_results) == 1 and func.results.var.rank == 0
+        is_function = len(out_results) == 1 and (
+            func.results.var.rank == 0
+            or isinstance(func.results.var.class_type, StringType)
+        )
 
         if func.arguments and func.arguments[0].bound_argument:
             class_variable = args[0].value
@@ -1771,7 +1762,7 @@ class FCodePrinter(CodePrinter):
             results_strs = []
             results = None
 
-        args_strs = [self._print(a) for a in args if not isinstance(a.value, Nil)]
+        args_strs = [self._print(a) for a in args if a.value is not NIL]
         args_code = ", ".join(results_strs + args_strs)
         code = f"{f_name}({args_code})"
         if not is_function:
@@ -2004,6 +1995,14 @@ class FCodePrinter(CodePrinter):
         elem = self._print(expr.args[0])
         self._constantImports[-1].setdefault("ISO_C_Binding", set()).add("c_size_t")
         return f"storage_size({elem}, kind = c_size_t)"
+
+    def _print_FortranTransfer(self, expr: FortranTransfer):
+        source = self._print(expr.source)
+        mold = self._print(expr.mold)
+        if expr.size is None:
+            return f"transfer({source}, {mold})"
+        size = self._print(expr.size)
+        return f"transfer({source}, {mold}, {size})"
 
     def _print_AllDeclaration(self, expr):
         return ""

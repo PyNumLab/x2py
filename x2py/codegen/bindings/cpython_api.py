@@ -9,7 +9,6 @@ objects defined in Python.h.
 import re
 
 from ..bind_c import BindCPointer
-from ..models.datatypes import PythonInt
 from .c_concepts import CNativeInt, ObjectAddress
 from ..models.core import (
     ClassDef,
@@ -29,18 +28,19 @@ from ..models.datatypes import (
     PrimitiveComplexType,
     PrimitiveFloatingPointType,
     PrimitiveIntegerType,
-    PythonNativeBool,
-    PythonNativeComplex,
-    PythonNativeFloat,
-    PythonNativeInt,
+    NumpyBoolType,
+    NumpyComplex128Type,
+    NumpyFloat64Type,
+    NumpyInt64Type,
     attach_model_child,
     detach_model_child,
     register_model_class,
     StringType,
     VoidType,
+    NIL,
+    convert_to_literal,
 )
 from ..models.core import Function
-from ..models.datatypes import LiteralInteger, Nil
 from ..models.core import Variable
 
 __all__ = (
@@ -67,10 +67,10 @@ __all__ = (
     "PyModule_AddObject",
     "PyModule_Create",
     "PyTuple_Pack",
-    "Py_ssize_t_Cast",
     # --------- CONSTANTS ----------
     "PyAttributeError",
     "PyNotImplementedError",
+    "PyRuntimeWarning",
     "PyTypeError",
     "Py_False",
     "Py_None",
@@ -80,31 +80,18 @@ __all__ = (
     "PyDict_SetItem",
     "PyErr_Occurred",
     "PyErr_SetString",
-    "PyIter_Next",
+    "PyErr_WarnEx",
     "PyList_Append",
-    "PyList_Check",
     "PyList_GetItem",
     "PyList_New",
     "PyList_SetItem",
-    "PyList_Size",
-    "PyObject_GetIter",
     "PyObject_TypeCheck",
-    "PySet_Add",
-    "PySet_Check",
-    "PySet_Clear",
-    "PySet_New",
-    "PySet_Size",
     "PySys_GetObject",
-    "PyTuple_Check",
-    "PyTuple_GetItem",
-    "PyTuple_New",
-    "PyTuple_SetItem",
-    "PyTuple_Size",
     "PyType_Ready",
     "PyUnicode_AsUTF8",
+    "PyUnicode_AsUTF8AndSize",
     "PyUnicode_Check",
     "PyUnicode_FromString",
-    "PyUnicode_GetLength",
     "Py_DECREF",
     "Py_INCREF",
 )
@@ -268,11 +255,8 @@ class PyArg_ParseTupleNode:
             self._flags += "O"
 
         if any(a.is_vararg or a.is_kwarg for a in c_func_args):
-            raise
-            errors.report(
+            raise NotImplementedError(
                 "Variadic arguments (*args, **kwargs) are not yet supported in the wrapper.",
-                symbol=c_func_args,
-                severity="error",
             )
 
         self._pyarg = python_func_args
@@ -382,7 +366,7 @@ class PyModule_AddObject(Function):
     __slots__ = ("_mod_name", "_name", "_var")
     _attribute_nodes = ("_name", "_var")
     _shape = None
-    _class_type = PythonNativeInt()
+    _class_type = NumpyInt64Type()
 
     def __init__(self, mod_name, name, variable):
         assert isinstance(name.dtype, CharType)
@@ -867,7 +851,7 @@ class PyClassDef(ClassDef):
                 scope.get_new_name("referenced_objects"),
                 memory_handling="alias",
             ),
-            Variable(PythonNativeBool(), scope.get_new_name("is_alias")),
+            Variable(NumpyBoolType(), scope.get_new_name("is_alias")),
         ]
         scope.insert_variable(variables[0])
         scope.insert_variable(variables[1])
@@ -1004,7 +988,7 @@ class PyGetSetDefElement:
         The function which collects the value of the class attribute.
     setter : FunctionDef
         The function which modifies the value of the class attribute.
-    docstring : LiteralString
+    docstring : Literal
         The docstring of the property.
     """
 
@@ -1100,31 +1084,13 @@ class PyModInitFunc(FunctionDef):
                 v,
                 static=(v in self._static_vars),
                 value=(
-                    Nil()
+                    NIL
                     if isinstance(v.class_type, (VoidType, BindCPointer))
                     else None
                 ),
             )
             for v in self.scope.variables.values()
         ]
-
-
-class Py_ssize_t_Cast(PythonInt):
-    """
-    A class for casting integers to Python's Py_ssize_t type.
-
-    A class for casting integers to Python's Py_ssize_t type.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ()
-    _static_type = Py_ssize_t()
-    _class_type = Py_ssize_t()
-    name = "Py_ssize_t"
 
 
 class PyTuple_Pack(Function):
@@ -1256,7 +1222,7 @@ PyType_Ready = FunctionDef(
             Variable(PythonObjectType(), name="o", memory_handling="alias")
         )
     ],
-    results=FunctionDefResult(Variable(PythonNativeInt(), "_")),
+    results=FunctionDefResult(Variable(NumpyInt64Type(), "_")),
 )
 
 # https://docs.python.org/3/c-api/sys.html#PySys_GetObject
@@ -1283,9 +1249,9 @@ PyUnicode_FromString = FunctionDef(
 
 # using the documentation of PyArg_ParseTuple() and Py_BuildValue https://docs.python.org/3/c-api/arg.html
 pytype_parse_registry = {
-    PythonNativeFloat(): "d",
-    PythonNativeComplex(): "O",
-    PythonNativeBool(): "p",
+    NumpyFloat64Type(): "d",
+    NumpyComplex128Type(): "O",
+    NumpyBoolType(): "p",
     StringType(): "s",
     CharType(): "s",
     PythonObjectType(): "O",
@@ -1331,8 +1297,7 @@ def C_to_Python(c_object):
     try:
         cast_function = c_to_py_registry[c_object.dtype]
     except KeyError:
-        raise
-        errors.report(X2PY_RESTRICTION_TODO, symbol=c_object.dtype, severity="fatal")
+        raise TypeError(f"No C-to-Python cast registered for {c_object.dtype}") from None
     memory_handling = "alias"
 
     cast_func = FunctionDef(
@@ -1358,10 +1323,10 @@ def C_to_Python(c_object):
 
 # Functions definitions are defined in x2py/stdlib/cwrapper/cwrapper.c
 c_to_py_registry = {
-    PythonNativeBool(): "Bool_to_PyBool",
-    PythonNativeInt(): "Int" + str(PythonNativeInt().precision * 8) + "_to_PyLong",
-    PythonNativeFloat(): "Double_to_PyDouble",
-    PythonNativeComplex(): "Complex128_to_PyComplex",
+    NumpyBoolType(): "Bool_to_PyBool",
+    NumpyInt64Type(): "Int" + str(NumpyInt64Type().precision * 8) + "_to_PyLong",
+    NumpyFloat64Type(): "Double_to_PyDouble",
+    NumpyComplex128Type(): "Complex128_to_PyComplex",
 }
 
 
@@ -1388,9 +1353,23 @@ PyErr_SetString = FunctionDef(
     ],
 )
 
+PyErr_WarnEx = FunctionDef(
+    name="PyErr_WarnEx",
+    body=[],
+    arguments=[
+        FunctionDefArgument(Variable(PythonObjectType(), name="category")),
+        FunctionDefArgument(
+            Variable(CharType(), name="message", memory_handling="alias")
+        ),
+        FunctionDefArgument(Variable(Py_ssize_t(), name="stack_level")),
+    ],
+    results=FunctionDefResult(Variable(CNativeInt(), name="status")),
+)
+
 PyNotImplementedError = Variable(PythonObjectType(), name="PyExc_NotImplementedError")
 PyTypeError = Variable(PythonObjectType(), name="PyExc_TypeError")
 PyAttributeError = Variable(PythonObjectType(), name="PyExc_AttributeError")
+PyRuntimeWarning = Variable(PythonObjectType(), name="PyExc_RuntimeWarning")
 
 PyObject_TypeCheck = FunctionDef(
     name="PyObject_TypeCheck",
@@ -1400,7 +1379,7 @@ PyObject_TypeCheck = FunctionDef(
             Variable(PythonClassType(), "c_type", memory_handling="alias")
         ),
     ],
-    results=FunctionDefResult(Variable(PythonNativeBool(), "r")),
+    results=FunctionDefResult(Variable(NumpyBoolType(), "r")),
     body=[],
 )
 
@@ -1413,7 +1392,7 @@ PyList_New = FunctionDef(
     name="PyList_New",
     arguments=[
         FunctionDefArgument(
-            Variable(PythonNativeInt(), "size"), value=LiteralInteger(0)
+            Variable(NumpyInt64Type(), "size"), value=convert_to_literal(0)
         )
     ],
     results=FunctionDefResult(Variable(PythonObjectType(), "r", memory_handling="alias")),
@@ -1442,21 +1421,11 @@ PyList_GetItem = FunctionDef(
         FunctionDefArgument(
             Variable(PythonObjectType(), "list", memory_handling="alias")
         ),
-        FunctionDefArgument(Variable(PythonNativeInt(), "i")),
+        FunctionDefArgument(Variable(NumpyInt64Type(), "i")),
     ],
     results=FunctionDefResult(
         Variable(PythonObjectType(), "item", memory_handling="alias")
     ),
-    body=[],
-)
-
-# https://docs.python.org/3/c-api/list.html#c.PyList_Size
-PyList_Size = FunctionDef(
-    name="PyList_Size",
-    arguments=[
-        FunctionDefArgument(Variable(PythonObjectType(), "list", memory_handling="alias"))
-    ],
-    results=FunctionDefResult(Variable(PythonNativeInt(), "i")),
     body=[],
 )
 
@@ -1468,24 +1437,13 @@ PyList_SetItem = FunctionDef(
         FunctionDefArgument(
             Variable(PythonObjectType(), name="l", memory_handling="alias")
         ),
-        FunctionDefArgument(Variable(PythonNativeInt(), name="i")),
+        FunctionDefArgument(Variable(NumpyInt64Type(), name="i")),
         FunctionDefArgument(
             Variable(PythonObjectType(), name="new_item", memory_handling="alias")
         ),
     ],
     results=FunctionDefResult(Variable(CNativeInt(), "i")),
 )
-
-# https://docs.python.org/3/c-api/list.html#c.PyList_Check
-PyList_Check = FunctionDef(
-    name="PyList_Check",
-    arguments=[
-        FunctionDefArgument(Variable(PythonObjectType(), "list", memory_handling="alias"))
-    ],
-    results=FunctionDefResult(Variable(CNativeInt(), "i")),
-    body=[],
-)
-
 
 class PyList_Clear:
     """
@@ -1503,7 +1461,7 @@ class PyList_Clear:
 
     __slots__ = ("_list_obj",)
     _attribute_nodes = ("_list_obj",)
-    _class_type = PythonNativeInt()
+    _class_type = NumpyInt64Type()
     _shape = ()
 
     def __init__(self, list_obj):
@@ -1519,168 +1477,6 @@ class PyList_Clear:
         """
         return self._list_obj
 
-
-# -------------------------------------------------------------------
-#                         Tuple functions
-# -------------------------------------------------------------------
-
-# https://docs.python.org/3/c-api/tuple.html#c.PyTuple_New
-PyTuple_New = FunctionDef(
-    name="PyTuple_New",
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonNativeInt(), "size"), value=LiteralInteger(0)
-        )
-    ],
-    results=FunctionDefResult(
-        Variable(PythonObjectType(), "tuple", memory_handling="alias")
-    ),
-    body=[],
-)
-
-# https://docs.python.org/3/c-api/tuple.html#c.PyTuple_Check
-PyTuple_Check = FunctionDef(
-    name="PyTuple_Check",
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), "tuple", memory_handling="alias")
-        )
-    ],
-    results=FunctionDefResult(Variable(CNativeInt(), "i")),
-    body=[],
-)
-
-# https://docs.python.org/3/c-api/tuple.html#c.PyTuple_Size
-PyTuple_Size = FunctionDef(
-    name="PyTuple_Size",
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), "tuple", memory_handling="alias")
-        )
-    ],
-    results=FunctionDefResult(Variable(PythonNativeInt(), "i")),
-    body=[],
-)
-
-# https://docs.python.org/3/c-api/tuple.html#c.PyTuple_GetItem
-PyTuple_GetItem = FunctionDef(
-    name="PyTuple_GetItem",
-    body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), name="tuple", memory_handling="alias")
-        ),
-        FunctionDefArgument(Variable(PythonNativeInt(), name="i")),
-    ],
-    results=FunctionDefResult(
-        Variable(PythonObjectType(), name="o", memory_handling="alias")
-    ),
-)
-
-# https://docs.python.org/3/c-api/tuple.html#c.PyTuple_SetItem
-PyTuple_SetItem = FunctionDef(
-    name="PyTuple_SetItem",
-    body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), name="l", memory_handling="alias")
-        ),
-        FunctionDefArgument(Variable(PythonNativeInt(), name="i")),
-        FunctionDefArgument(
-            Variable(PythonObjectType(), name="new_item", memory_handling="alias")
-        ),
-    ],
-    results=FunctionDefResult(Variable(CNativeInt(), "i")),
-)
-
-# -------------------------------------------------------------------
-#                         Set functions
-# -------------------------------------------------------------------
-
-# https://docs.python.org/3/c-api/set.html#c.PySet_New
-PySet_New = FunctionDef(
-    name="PySet_New",
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), "iterable", memory_handling="alias"), value=Nil()
-        )
-    ],
-    results=FunctionDefResult(
-        Variable(PythonObjectType(), "set", memory_handling="alias")
-    ),
-    body=[],
-)
-
-# https://docs.python.org/3/c-api/set.html#c.PySet_Add
-PySet_Add = FunctionDef(
-    name="PySet_Add",
-    arguments=[
-        FunctionDefArgument(Variable(PythonObjectType(), "set", memory_handling="alias")),
-        FunctionDefArgument(Variable(PythonObjectType(), "key", memory_handling="alias")),
-    ],
-    results=FunctionDefResult(Variable(PythonNativeInt(), "i")),
-    body=[],
-)
-
-# https://docs.python.org/3/c-api/set.html#c.PySet_Check
-PySet_Check = FunctionDef(
-    name="PySet_Check",
-    arguments=[
-        FunctionDefArgument(Variable(PythonObjectType(), "set", memory_handling="alias"))
-    ],
-    results=FunctionDefResult(Variable(CNativeInt(), "i")),
-    body=[],
-)
-
-# https://docs.python.org/3/c-api/set.html#c.PySet_Size
-PySet_Size = FunctionDef(
-    name="PySet_Size",
-    arguments=[
-        FunctionDefArgument(Variable(PythonObjectType(), "set", memory_handling="alias"))
-    ],
-    results=FunctionDefResult(Variable(PythonNativeInt(), "i")),
-    body=[],
-)
-
-# https://docs.python.org/3/c-api/object.html#c.PyObject_GetIter
-PyObject_GetIter = FunctionDef(
-    name="PyObject_GetIter",
-    body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), name="iter", memory_handling="alias")
-        )
-    ],
-    results=FunctionDefResult(
-        Variable(PythonObjectType(), name="o", memory_handling="alias")
-    ),
-)
-
-# https://docs.python.org/3/c-api/set.html#c.PySet_Clear
-PySet_Clear = FunctionDef(
-    name="PySet_Clear",
-    body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), name="set", memory_handling="alias")
-        )
-    ],
-    results=FunctionDefResult(Variable(PythonNativeInt(), "i")),
-)
-
-# https://docs.python.org/3/c-api/iter.html#c.PyIter_Check
-PyIter_Next = FunctionDef(
-    name="PyIter_Next",
-    body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), name="iter", memory_handling="alias")
-        )
-    ],
-    results=FunctionDefResult(
-        Variable(PythonObjectType(), name="o", memory_handling="alias")
-    ),
-)
 
 # -------------------------------------------------------------------
 #                         Dict functions
@@ -1707,7 +1503,7 @@ PyDict_SetItem = FunctionDef(
         FunctionDefArgument(Variable(PythonObjectType(), "key", memory_handling="alias")),
         FunctionDefArgument(Variable(PythonObjectType(), "val", memory_handling="alias")),
     ],
-    results=FunctionDefResult(Variable(PythonNativeInt(), "i")),
+    results=FunctionDefResult(Variable(NumpyInt64Type(), "i")),
     body=[],
 )
 
@@ -1727,6 +1523,21 @@ PyUnicode_AsUTF8 = FunctionDef(
     body=[],
 )
 
+# https://docs.python.org/3/c-api/unicode.html#c.PyUnicode_AsUTF8AndSize
+PyUnicode_AsUTF8AndSize = FunctionDef(
+    name="PyUnicode_AsUTF8AndSize",
+    arguments=[
+        FunctionDefArgument(
+            Variable(PythonObjectType(), "unicode", memory_handling="alias")
+        ),
+        FunctionDefArgument(
+            Variable(Py_ssize_t(), "size", memory_handling="alias")
+        ),
+    ],
+    results=FunctionDefResult(Variable(CharType(), "str", memory_handling="alias")),
+    body=[],
+)
+
 # https://docs.python.org/3/c-api/unicode.html#c.PyUnicode_Check
 PyUnicode_Check = FunctionDef(
     name="PyUnicode_Check",
@@ -1737,22 +1548,12 @@ PyUnicode_Check = FunctionDef(
     body=[],
 )
 
-# https://docs.python.org/3/c-api/unicode.html#c.PyUnicode_GetLength
-PyUnicode_GetLength = FunctionDef(
-    name="PyUnicode_GetLength",
-    arguments=[
-        FunctionDefArgument(Variable(PythonObjectType(), "str", memory_handling="alias"))
-    ],
-    results=FunctionDefResult(Variable(PythonNativeInt(), "len")),
-    body=[],
-)
-
 # Functions definitions are defined in x2py/stdlib/cwrapper/cwrapper.c
 check_type_registry = {
-    PythonNativeBool(): "PyIs_Bool",
-    PythonNativeInt(): "PyIs_NativeInt",
-    PythonNativeFloat(): "PyIs_NativeFloat",
-    PythonNativeComplex(): "PyIs_NativeComplex",
+    NumpyBoolType(): "PyIs_Bool",
+    NumpyInt64Type(): "PyIs_NativeInt",
+    NumpyFloat64Type(): "PyIs_NativeFloat",
+    NumpyComplex128Type(): "PyIs_NativeComplex",
 }
 
 

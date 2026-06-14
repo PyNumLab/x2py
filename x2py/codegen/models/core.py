@@ -14,13 +14,12 @@ from .datatypes import (
     CustomDataType,
     FinalType,
     Type,
-    PythonNativeBool,
+    NumpyBoolType,
     SymbolicType,
     TupleType,
     PrimitiveIntegerType,
-    PythonNativeInt,
+    NumpyInt64Type,
     CharType,
-    ContainerType,
     StringType,
     _find_direct_model_parent,
     _find_model_parent,
@@ -34,22 +33,20 @@ from .datatypes import (
     iterable,
 )
 from .datatypes import (
-    LiteralInteger,
-    LiteralFalse,
-    LiteralString,
-    LiteralTrue,
-    Nil,
-    NilArgument,
-    LiteralEllipsis,
+    Literal,
+    NIL,
     NumpyNDArrayType,
+    convert_to_literal,
 )
-from .datatypes import FixedSizeType, GenericType, HomogeneousContainerType
+from .datatypes import FixedSizeType, GenericType
 
 __all__ = (
     "Add",
     "AliasAssign",
     "Allocate",
     "And",
+    "ArrayAllocated",
+    "ArrayShapeElement",
     "ArraySize",
     "ArithmeticOperator",
     "AsName",
@@ -71,7 +68,6 @@ __all__ = (
     "EmptyNode",
     "Eq",
     "FloorDiv",
-    "For",
     "Function",
     "FunctionAddress",
     "FunctionCall",
@@ -111,7 +107,6 @@ __all__ = (
     "Pass",
     "Pow",
     "Program",
-    "PythonRange",
     "PythonTuple",
     "Return",
     "SeparatorComment",
@@ -179,7 +174,7 @@ class BooleanOperator(Operator):
         super().__init__(
             *args,
             shape=None,
-            class_type=PythonNativeBool()
+            class_type=NumpyBoolType()
         )
 
     def __repr__(self):
@@ -384,14 +379,14 @@ class Variable:
 
     Examples
     --------
-    >>> from x2py.ast.datatypes import PythonNativeInt, PythonNativeFloat
+    >>> from x2py.ast.datatypes import NumpyInt64Type, NumpyFloat64Type
     >>> from x2py.ast.core import Variable
-    >>> Variable(PythonNativeInt(), 'n')
+    >>> Variable(NumpyInt64Type(), 'n')
     n
     >>> n = 4
-    >>> Variable(PythonNativeFloat(), 'x', shape=(n,2), memory_handling='heap')
+    >>> Variable(NumpyFloat64Type(), 'x', shape=(n,2), memory_handling='heap')
     x
-    >>> Variable(PythonNativeInt(), DottedName('matrix', 'n_rows'))
+    >>> Variable(NumpyInt64Type(), DottedName('matrix', 'n_rows'))
     matrix.n_rows
     """
 
@@ -500,10 +495,13 @@ class Variable:
 
         new_shape = [None]*len(shape)
         for i, s in enumerate(shape):
-            if isinstance(s, LiteralInteger):
+            if (
+                isinstance(s, Literal)
+                and isinstance(s.dtype.primitive_type, PrimitiveIntegerType)
+            ):
                 new_shape[i] = s
             elif isinstance(s, int):
-                new_shape[i] = LiteralInteger(s)
+                new_shape[i] = convert_to_literal(s)
             elif is_model_object(s):
                 new_shape[i] = s
             elif s is not None:
@@ -619,7 +617,18 @@ class Variable:
 
         User friendly method to check if the variable is an ndarray.
         """
-        return isinstance(self.class_type, NumpyNDArrayType)
+        return (
+            isinstance(self.class_type, NumpyNDArrayType)
+            and not self.class_type.raw
+        )
+
+    @property
+    def is_raw_array(self):
+        """Whether the variable is represented directly as a C array or pointer."""
+        return (
+            isinstance(self.class_type, NumpyNDArrayType)
+            and self.class_type.raw
+        )
 
     def __str__(self):
         return str(self.name)
@@ -713,10 +722,10 @@ class IndexedElement:
     Examples
     --------
     >>> from x2py.ast.core import Variable, IndexedElement
-    >>> from x2py.ast.datatypes import PythonNativeInt
-    >>> A = Variable(PythonNativeInt(), 'A', shape=(2,3), rank=2)
-    >>> i = Variable(PythonNativeInt(), 'i')
-    >>> j = Variable(PythonNativeInt(), 'j')
+    >>> from x2py.ast.datatypes import NumpyInt64Type
+    >>> A = Variable(NumpyInt64Type(), 'A', shape=(2,3), rank=2)
+    >>> i = Variable(NumpyInt64Type(), 'i')
+    >>> j = Variable(NumpyInt64Type(), 'j')
     >>> IndexedElement(A, (i, j))
     IndexedElement(A, i, j)
     >>> IndexedElement(A, i, j) == A[i, j]
@@ -735,35 +744,26 @@ class IndexedElement:
         rank = base.class_type.container_rank
         assert len(indices) <= rank
 
-        if any(
-            not isinstance(a, (int, Slice, LiteralEllipsis))
-            and not is_model_object(a)
-            for a in indices
-        ):
-            raise
-            errors.report(
-                "Index is not of valid type", symbol=indices, severity="fatal"
-            )
+        if any(not isinstance(a, (int, Slice)) and not is_model_object(a) for a in indices):
+            raise TypeError("Index is not of valid type")
 
-        if len(indices) == 1 and isinstance(indices[0], LiteralEllipsis):
-            self._indices = tuple(
-                LiteralInteger(a) if isinstance(a, int) else a for a in indices
-            )
-            indices = [Slice(None, None)] * rank
-        # Add empty slices to fully index the object
-        elif len(indices) < rank:
+        if len(indices) < rank:
             indices = indices + tuple([Slice(None, None)] * (rank - len(indices)))
             self._indices = tuple(
-                LiteralInteger(a) if isinstance(a, int) else a for a in indices
+                convert_to_literal(a) if isinstance(a, int) else a for a in indices
             )
         else:
             self._indices = tuple(
-                LiteralInteger(a) if isinstance(a, int) else a for a in indices
+                convert_to_literal(a) if isinstance(a, int) else a for a in indices
             )
 
         if isinstance(base.class_type, TupleType):
-            assert len(self._indices) == 1 and isinstance(
-                self._indices[0], LiteralInteger
+            assert (
+                len(self._indices) == 1
+                and isinstance(self._indices[0], Literal)
+                and isinstance(
+                    self._indices[0].dtype.primitive_type, PrimitiveIntegerType
+                )
             )
             self._class_type = base.class_type[self._indices[0]]
             self._is_slice = False
@@ -953,7 +953,7 @@ class Assign:
 
     Examples
     --------
-    >>> from x2py.ast.datatypes import PythonNativeInt
+    >>> from x2py.ast.datatypes import NumpyInt64Type
     >>> from x2py.ast.internals import symbols
     >>> from x2py.ast.variable import Variable
     >>> from x2py.ast.core import Assign
@@ -962,7 +962,7 @@ class Assign:
     x := y
     >>> Assign(x, 0)
     x := 0
-    >>> A = Variable(PythonNativeInt(), 'A', rank = 2)
+    >>> A = Variable(NumpyInt64Type(), 'A', rank = 2)
     >>> Assign(x, A)
     x := A
     >>> Assign(A[0,1], x)
@@ -1316,8 +1316,8 @@ class AliasAssign:
     >>> from x2py.ast.internals import Symbol
     >>> from x2py.ast.core import AliasAssign
     >>> from x2py.ast.core import Variable
-    >>> n = Variable(PythonNativeInt(), 'n')
-    >>> x = Variable(PythonNativeInt(), 'x', rank=1, shape=[n])
+    >>> n = Variable(NumpyInt64Type(), 'n')
+    >>> x = Variable(NumpyInt64Type(), 'x', rank=1, shape=[n])
     >>> y = Symbol('y')
     >>> AliasAssign(y, x)
     """
@@ -1377,8 +1377,8 @@ class AugAssign(Assign):
     --------
     >>> from x2py.ast.core import Variable
     >>> from x2py.ast.core import AugAssign
-    >>> s = Variable(PythonNativeInt(), 's')
-    >>> t = Variable(PythonNativeInt(), 't')
+    >>> s = Variable(NumpyInt64Type(), 's')
+    >>> t = Variable(NumpyInt64Type(), 't')
     >>> AugAssign(s, '+', 2 * t + 1)
     s += 1 + 2*t
     """
@@ -1486,13 +1486,13 @@ class Module:
     >>> from x2py.ast.core import FunctionDefArgument, Assign, FunctionDefResult
     >>> from x2py.ast.core import ClassDef, FunctionDef, Module
     >>> from x2py.ast.operators import Add, Minus
-    >>> from x2py.ast.literals import LiteralInteger
-    >>> x = Variable(PythonNativeFloat(), 'x')
-    >>> y = Variable(PythonNativeFloat(), 'y')
-    >>> z = Variable(PythonNativeFloat(), 'z')
-    >>> t = Variable(PythonNativeFloat(), 't')
-    >>> a = Variable(PythonNativeFloat(), 'a')
-    >>> b = Variable(PythonNativeFloat(), 'b')
+    >>> from x2py.codegen.models.datatypes import convert_to_literal
+    >>> x = Variable(NumpyFloat64Type(), 'x')
+    >>> y = Variable(NumpyFloat64Type(), 'y')
+    >>> z = Variable(NumpyFloat64Type(), 'z')
+    >>> t = Variable(NumpyFloat64Type(), 't')
+    >>> a = Variable(NumpyFloat64Type(), 'a')
+    >>> b = Variable(NumpyFloat64Type(), 'b')
     >>> body = [Assign(z,Add(x,a))]
     >>> args = [FunctionDefArgument(arg) for arg in [x,y,a,b]]
     >>> results = [FunctionDefResult(res) for res in [z,t]]
@@ -1500,8 +1500,8 @@ class Module:
     >>> attributes   = [x,y]
     >>> methods     = [translate]
     >>> Point = ClassDef('Point', attributes, methods)
-    >>> incr = FunctionDef('incr', [FunctionDefArgument(x)], [FunctionDefResult(y)], [Assign(y,Add(x,LiteralInteger(1)))])
-    >>> decr = FunctionDef('decr', [FunctionDefArgument(x)], [FunctionDefResult(y)], [Assign(y,Minus(x,LiteralInteger(1)))])
+    >>> incr = FunctionDef('incr', [FunctionDefArgument(x)], [FunctionDefResult(y)], [Assign(y,Add(x,convert_to_literal(1)))])
+    >>> decr = FunctionDef('decr', [FunctionDefArgument(x)], [FunctionDefResult(y)], [Assign(y,Minus(x,convert_to_literal(1)))])
     >>> Module('my_module', [], [incr, decr], classes = [Point])
     Module(my_module, [], [FunctionDef(), FunctionDef()], [], [ClassDef(Point, (x, y), (FunctionDef(),), [public], (), [], [])], ())
     """
@@ -1760,13 +1760,13 @@ class ModuleHeader:
     >>> from x2py.ast.core import FunctionDefArgument, Assign, FunctionDefResult
     >>> from x2py.ast.core import ClassDef, FunctionDef, Module
     >>> from x2py.ast.operators import Add, Minus
-    >>> from x2py.ast.literals import LiteralInteger
-    >>> x = Variable(PythonNativeFloat(), 'x')
-    >>> y = Variable(PythonNativeFloat(), 'y')
-    >>> z = Variable(PythonNativeFloat(), 'z')
-    >>> t = Variable(PythonNativeFloat(), 't')
-    >>> a = Variable(PythonNativeFloat(), 'a')
-    >>> b = Variable(PythonNativeFloat(), 'b')
+    >>> from x2py.codegen.models.datatypes import convert_to_literal
+    >>> x = Variable(NumpyFloat64Type(), 'x')
+    >>> y = Variable(NumpyFloat64Type(), 'y')
+    >>> z = Variable(NumpyFloat64Type(), 'z')
+    >>> t = Variable(NumpyFloat64Type(), 't')
+    >>> a = Variable(NumpyFloat64Type(), 'a')
+    >>> b = Variable(NumpyFloat64Type(), 'b')
     >>> body = [Assign(z,Add(x,a))]
     >>> args = [FunctionDefArgument(arg) for arg in [x,y,a,b]]
     >>> results = [FunctionDefResult(res) for res in [z,t]]
@@ -1774,8 +1774,8 @@ class ModuleHeader:
     >>> attributes   = [x,y]
     >>> methods     = [translate]
     >>> Point = ClassDef('Point', attributes, methods)
-    >>> incr = FunctionDef('incr', [FunctionDefArgument(x)], [FunctionDefResult(y)], [Assign(y,Add(x,LiteralInteger(1)))])
-    >>> decr = FunctionDef('decr', [FunctionDefArgument(x)], [FunctionDefResult(y)], [Assign(y,Minus(x,LiteralInteger(1)))])
+    >>> incr = FunctionDef('incr', [FunctionDefArgument(x)], [FunctionDefResult(y)], [Assign(y,Add(x,convert_to_literal(1)))])
+    >>> decr = FunctionDef('decr', [FunctionDefArgument(x)], [FunctionDefResult(y)], [Assign(y,Minus(x,convert_to_literal(1)))])
     >>> Module('my_module', [], [incr, decr], classes = [Point])
     >>> ModuleHeader(mod)
     Module(my_module, [], [FunctionDef(), FunctionDef()], [], [ClassDef(Point, (x, y), (FunctionDef(),), [public], (), [], [])], ())
@@ -1876,88 +1876,6 @@ class Program:
         of imports
         """
         self._imports = tuple(i for i in self.imports if i.source != name)
-
-
-# ==============================================================================
-
-
-class For:
-    """
-    Represents a 'for-loop' in the code.
-
-    Expressions are of the form:
-        "for target in iter:
-            body..."
-
-    Parameters
-    ----------
-    target : Variable
-        Variable representing the iterator.
-    iter_obj : Iterable
-        Iterable object. Multiple iterators are supported but these are
-        translated to a range object in the Iterable class.
-    body : list[model object]
-        List of statements representing the body of the For statement.
-    scope : Scope
-        The scope for the loop.
-
-    Examples
-    --------
-    >>> from x2py.ast.variable import Variable
-    >>> from x2py.ast.core import Assign, For
-    >>> from x2py.ast.internals import symbols
-    >>> i,b,e,s,x = symbols('i,b,e,s,x')
-    >>> A = Variable(PythonNativeInt(), 'A', rank = 2)
-    >>> For(i, (b,e,s), [Assign(x, i), Assign(A[0, 1], x)])
-    For(i, (b, e, s), (x := i, IndexedElement(A, 0, 1) := x))
-    """
-
-    __slots__ = ("_target", "_iterable", "_body", "_end_annotation")
-    _attribute_nodes = ("_target", "_iterable", "_body")
-
-    def __init__(self, target, iter_obj, body, scope=None):
-        assert iterable(iter_obj)
-        assert iterable(target)
-
-        if iterable(body):
-            body = CodeBlock(body)
-        elif not isinstance(body, CodeBlock):
-            raise TypeError("body must be an iterable or a Codeblock")
-
-        self._target = target
-        self._iterable = tuple(iter_obj)
-        self._body = body
-        self._end_annotation = None
-        init_model_object(self, scope=scope)
-
-    @property
-    def end_annotation(self):
-        return self._end_annotation
-
-    @end_annotation.setter
-    def end_annotation(self, expr):
-        self._end_annotation = expr
-
-    @property
-    def target(self):
-        return self._target
-
-    @property
-    def iterable(self):
-        return self._iterable
-
-    @property
-    def body(self):
-        return self._body
-
-    @property
-    def local_vars(self):
-        """List of variables defined in the loop"""
-        return tuple(self.scope.variables.values())
-
-    def insert2body(self, stmt):
-        attach_model_child(self, stmt)
-        self.body.insert2body(stmt)
 
 
 class FunctionCallArgument:
@@ -2320,7 +2238,7 @@ class FunctionDefResult:
         self._var = var
         self._annotation = annotation
 
-        if not isinstance(var, (Variable, Nil)):
+        if not isinstance(var, Variable) and var is not NIL:
             raise TypeError(f"Var must be a Variable not a {type(var)}")
         else:
             self._is_argument = getattr(var, "is_argument", False)
@@ -2372,7 +2290,7 @@ class FunctionDefResult:
         return str(self.var)
 
     def __bool__(self):
-        return self.var is not Nil()
+        return self.var is not NIL
 
 
 class FunctionCall:
@@ -2479,8 +2397,9 @@ class FunctionCall:
 
         if current_function == func.name:
             if len(func.results) > 0 and not is_model_object(func.results):
-                raise
-                errors.report(RECURSIVE_RESULTS_REQUIRED, symbol=func, severity="fatal")
+                raise RuntimeError(
+                    "Recursive functions with results must declare a result variable."
+                )
 
         self._funcdef = func
         self._arguments = args
@@ -2565,7 +2484,7 @@ class Return:
 
         self._n_returns = (
             0
-            if isinstance(expr, Nil)
+            if expr is NIL
             else 1 if not hasattr(expr, "__iter__") else len(expr)
         )
 
@@ -2683,12 +2602,12 @@ class FunctionDef:
     >>> from x2py.ast.core import FunctionDefArgument, FunctionDefResult
     >>> from x2py.ast.core import Assign, FunctionDef
     >>> from x2py.ast.operators import Add
-    >>> from x2py.ast.literals import LiteralInteger
-    >>> x = Variable(PythonNativeFloat(), 'x')
-    >>> y = Variable(PythonNativeFloat(), 'y')
+    >>> from x2py.codegen.models.datatypes import convert_to_literal
+    >>> x = Variable(NumpyFloat64Type(), 'x')
+    >>> y = Variable(NumpyFloat64Type(), 'y')
     >>> args        = [FunctionDefArgument(x)]
     >>> results     = [FunctionDefResult(y)]
-    >>> body        = [Assign(y,Add(x,LiteralInteger(1)))]
+    >>> body        = [Assign(y,Add(x,convert_to_literal(1)))]
     >>> FunctionDef('incr', args, results, body)
     FunctionDef(incr, (x,), (y,), [y := x + 1], [], [], None, False, function)
 
@@ -2699,8 +2618,8 @@ class FunctionDef:
     >>> from x2py.ast.core import FunctionDef
     >>> from x2py.ast.core import FunctionDefArgument
     >>> n = FunctionDefArgument('n', value=4)
-    >>> x = Variable(PythonNativeFloat(), 'x')
-    >>> y = Variable(PythonNativeFloat(), 'y')
+    >>> x = Variable(NumpyFloat64Type(), 'x')
+    >>> y = Variable(NumpyFloat64Type(), 'y')
     >>> args        = [x, n]
     >>> results     = [y]
     >>> body        = [Assign(y,x+n)]
@@ -2800,7 +2719,7 @@ class FunctionDef:
 
         # results
         if results is None:
-            results = FunctionDefResult(Nil())
+            results = FunctionDefResult(NIL)
         assert isinstance(results, FunctionDefResult)
 
         if cls_name:
@@ -3434,11 +3353,7 @@ class Interface:
                 break
 
         if not found:
-            raise
-            errors.report(
-                f"Arguments types provided to {self.name} are incompatible",
-                severity="fatal",
-            )
+            raise TypeError(f"Arguments types provided to {self.name} are incompatible")
         return self._functions[j]
 
     def __call__(self, *args, **kwargs):
@@ -3490,8 +3405,8 @@ class FunctionAddress(FunctionDef):
     Examples
     --------
     >>> from x2py.ast.core import Variable, FunctionAddress, FunctionDef
-    >>> x = Variable(PythonNativeFloat(), 'x')
-    >>> y = Variable(PythonNativeFloat(), 'y')
+    >>> x = Variable(NumpyFloat64Type(), 'x')
+    >>> y = Variable(NumpyFloat64Type(), 'y')
     >>> # a function definition can have a FunctionAddress as an argument
     >>> FunctionDef('g', [FunctionAddress('f', [x], [y])], [], [])
     """
@@ -3615,12 +3530,12 @@ class ClassDef:
     --------
     >>> from x2py.ast.core import Variable, Assign
     >>> from x2py.ast.core import ClassDef, FunctionDef
-    >>> x = Variable(PythonNativeFloat(), 'x')
-    >>> y = Variable(PythonNativeFloat(), 'y')
-    >>> z = Variable(PythonNativeFloat(), 'z')
-    >>> t = Variable(PythonNativeFloat(), 't')
-    >>> a = Variable(PythonNativeFloat(), 'a')
-    >>> b = Variable(PythonNativeFloat(), 'b')
+    >>> x = Variable(NumpyFloat64Type(), 'x')
+    >>> y = Variable(NumpyFloat64Type(), 'y')
+    >>> z = Variable(NumpyFloat64Type(), 'z')
+    >>> t = Variable(NumpyFloat64Type(), 't')
+    >>> a = Variable(NumpyFloat64Type(), 'a')
+    >>> b = Variable(NumpyFloat64Type(), 'b')
     >>> body = [Assign(y,x+a)]
     >>> translate = FunctionDef('translate', [x,y,a,b], [z,t], body)
     >>> attributes   = [x,y]
@@ -3798,7 +3713,7 @@ class ClassDef:
         Python names of the methods. The values are the methods themselves.
         """
         return {
-            self._scope.get_python_name(m.name) if m.is_semantic else m.name: m
+            self.scope.get_python_name(m.name) if m.is_semantic else m.name: m
             for m in self.methods
         }
 
@@ -3968,11 +3883,8 @@ class ClassDef:
                 name = self.scope.get_expected_name(name)
             except RuntimeError:
                 if raise_error_from:
-                    raise
-                    errors.report(
-                        f"Can't find method {name} in class {self.name}",
-                        severity="fatal",
-                        symbol=raise_error_from,
+                    raise AttributeError(
+                        f"Can't find method {name} in class {self.name}"
                     )
                 else:
                     return None
@@ -3993,12 +3905,7 @@ class ClassDef:
                 i += 1
 
         if method is None and raise_error_from:
-            raise
-            errors.report(
-                f"Can't find method {name} in class {self.name}",
-                severity="fatal",
-                symbol=raise_error_from,
-            )
+            raise AttributeError(f"Can't find method {name} in class {self.name}")
 
         return method
 
@@ -4126,7 +4033,9 @@ class Import:
         """
         if isinstance(i, str):
             return Symbol(i)
-        if isinstance(i, (AsName, Symbol, LiteralString)):
+        if isinstance(i, (AsName, Symbol)) or (
+            isinstance(i, Literal) and isinstance(i.dtype, StringType)
+        ):
             return i
         else:
             raise TypeError(
@@ -4269,9 +4178,9 @@ class Declare:
     Examples
     --------
     >>> from x2py.ast.core import Declare, Variable
-    >>> Declare(Variable(PythonNativeInt(), 'n'))
+    >>> Declare(Variable(NumpyInt64Type(), 'n'))
     Declare(n, None)
-    >>> Declare(Variable(PythonNativeFloat(), 'x'), intent='out')
+    >>> Declare(Variable(NumpyFloat64Type(), 'x'), intent='out')
     Declare(x, out)
     """
 
@@ -4507,7 +4416,7 @@ class IfSection:
 
     def __init__(self, cond, body):
 
-        assert cond.dtype is PythonNativeBool()
+        assert cond.dtype is NumpyBoolType()
 
         if isinstance(body, (list, tuple)):
             body = CodeBlock(body)
@@ -4666,7 +4575,7 @@ class ArraySize(Function):
     name = "size"
 
     _shape = None
-    _class_type = PythonNativeInt()
+    _class_type = NumpyInt64Type()
 
     def __init__(self, arg):
         super().__init__(arg)
@@ -4689,6 +4598,51 @@ class ArraySize(Function):
             return self.arg == other.arg
         else:
             return False
+
+
+class ArrayShapeElement(Function):
+    """
+    Gets the size of one array dimension.
+    """
+
+    __slots__ = ()
+    name = "shape"
+
+    _shape = None
+    _class_type = NumpyInt64Type()
+
+    def __init__(self, arg, index):
+        super().__init__(arg, index)
+
+    @property
+    def arg(self):
+        """Object whose shape is investigated."""
+        return self._args[0]
+
+    @property
+    def index(self):
+        """Zero-based dimension index."""
+        return self._args[1]
+
+
+class ArrayAllocated(Function):
+    """
+    Tests whether an allocatable array is allocated.
+    """
+
+    __slots__ = ()
+    name = "allocated"
+
+    _shape = None
+    _class_type = NumpyBoolType()
+
+    def __init__(self, arg):
+        super().__init__(arg)
+
+    @property
+    def arg(self):
+        """Object whose allocation status is investigated."""
+        return self._args[0]
 
 
 class Slice:
@@ -4808,10 +4762,10 @@ class PythonTuple:
         self._is_homogeneous = True
         if len(args) == 0:
             self._class_type = GenericType
-            self._shape = (LiteralInteger(0),)
+            self._shape = (convert_to_literal(0),)
             return
 
-        self._shape = (LiteralInteger(len(args)),)
+        self._shape = (convert_to_literal(len(args)),)
         self._class_type = args[0]._class_type
 
     def __len__(self):
@@ -4843,126 +4797,6 @@ class PythonTuple:
         The arguments that were used to initialise the tuple.
         """
         return self._args
-
-# ==============================================================================
-class PythonRange:
-    """
-    Class representing a range.
-
-    Class representing a call to the built-in Python function `range`. This function
-    is parametrised by an interval (described by a start element and a stop element)
-    and a step. The step describes the number of elements between subsequent elements
-    in the range.
-
-    Parameters
-    ----------
-    *args : tuple of model objects
-        The arguments passed to the range.
-        If one argument is passed then it represents the end of the interval.
-        If two arguments are passed then they represent the start and end of the interval.
-        If three arguments are passed then they represent the start, end and step of the interval.
-    """
-
-    __slots__ = ("_start", "_stop", "_step")
-    _attribute_nodes = ("_start", "_stop", "_step")
-    name = "range"
-
-    def __init__(self, *args):
-        # Define default values
-        n = len(args)
-
-        if n == 1:
-            self._start = LiteralInteger(0)
-            self._stop = args[0]
-            self._step = LiteralInteger(1)
-        elif n == 2:
-            self._start = args[0]
-            self._stop = args[1]
-            self._step = LiteralInteger(1)
-        elif n == 3:
-            self._start = args[0]
-            self._stop = args[1]
-            self._step = args[2]
-        else:
-            raise ValueError("Range has at most 3 arguments")
-        assert self._stop is not None
-
-        init_model_object(self)
-
-    @property
-    def start(self):
-        """
-        Get the start of the interval.
-
-        Get the start of the interval which the range iterates over.
-        """
-        return self._start
-
-    @property
-    def stop(self):
-        """
-        Get the end of the interval.
-
-        Get the end of the interval which the range iterates over. The
-        interval does not include this value.
-        """
-        return self._stop
-
-    @property
-    def step(self):
-        """
-        Get the step between subsequent elements in the range.
-
-        Get the step between subsequent elements in the range.
-        """
-        return self._step
-
-    def get_range(self):
-        """
-        Get this range.
-
-        Get this range. This method is used to allow this class to be handled
-        like other iterables which can be converted to PythonRange objects.
-
-        Returns
-        -------
-        PythonRange
-            This object.
-        """
-        return self
-
-    def get_python_iterable_item(self):
-        """
-        Get the item of the iterable that will be saved to the loop targets.
-
-        Returns an element of the range indexed with the iterators
-        previously provided via the set_loop_counters method
-        (useful to determine the dtype etc of the loop iterator).
-
-        Returns
-        -------
-        list[model object]
-            A list of objects that should be assigned to variables.
-        """
-        return self._indices
-
-    def get_assign_targets(self):
-        """
-        Get objects that should be assigned to variables to use the range.
-
-        This method is used to allow this class to be handled like other iterables
-        which can be converted to PythonRange objects.
-
-        Returns
-        -------
-        list[model object]
-            An empty list.
-        """
-        return []
-
-
-# ==============================================================================
-
 
 def get_direct_assignment(obj):
     """Return the assignment that directly consumes ``obj``, if present."""
@@ -5024,7 +4858,6 @@ for _model_cls in (
     Module,
     ModuleHeader,
     Program,
-    For,
     FunctionCallArgument,
     FunctionDefArgument,
     FunctionDefResult,
@@ -5042,9 +4875,10 @@ for _model_cls in (
     IfSection,
     If,
     Function,
+    ArrayAllocated,
+    ArrayShapeElement,
     Slice,
     PythonTuple,
-    PythonRange,
 ):
     register_model_class(_model_cls)
 

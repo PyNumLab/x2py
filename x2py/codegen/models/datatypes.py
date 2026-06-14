@@ -232,7 +232,6 @@ def register_model_class(cls):
 
 __all__ = (
     # ------------ Super classes ------------
-    "ContainerType",
     "FixedSizeType",
     "PrimitiveType",
     "Type",
@@ -248,25 +247,18 @@ __all__ = (
     "CharType",
     "FixedSizeNumericType",
     "GenericType",
-    "PythonNativeBool",
-    "PythonNativeComplex",
-    "PythonNativeFloat",
-    "PythonNativeInt",
-    "PythonNativeNumericType",
     "SymbolicType",
-    "TypeAlias",
     "VoidType",
     # ------------ Container types ------------
     "CustomDataType",
-    "DictType",
-    "HomogeneousContainerType",
-    "HomogeneousListType",
-    "HomogeneousSetType",
     "StringType",
     "TupleType",
     # ---------- Functions -------------------
+    "Cast",
+    "ComplexPart",
     "DataTypeFactory",
     #---------------numpy types --------------
+    "NumpyBoolType",
     "NumpyComplex64Type",
     "NumpyComplex128Type",
     "NumpyComplex256Type",
@@ -282,17 +274,9 @@ __all__ = (
     "NumpyNumericType",
     #-----------------literals-----------------
     "Literal",
-    "LiteralComplex",
-    "LiteralEllipsis",
-    "LiteralFalse",
-    "LiteralFloat",
-    "LiteralImaginaryUnit",
-    "LiteralInteger",
-    "LiteralString",
-    "LiteralTrue",
-    "Nil",
-    "NilArgument",
+    "NIL",
     "attach_model_child",
+    "cast_to",
     "convert_to_literal",
     "detach_model_child",
     "init_model_object",
@@ -425,9 +409,8 @@ class Type(metaclass=Singleton):
 
         Change the basic type to the new type. In the case of a FixedSizeType the
         switch will replace the type completely, directly returning the new type.
-        In the case of a homogeneous container type, a new container type will be
-        returned whose underlying elements are of the new type. This method is not
-        implemented for inhomogeneous containers.
+        Array types override this method to keep the array container and switch
+        the element type.
 
         Parameters
         ----------
@@ -628,128 +611,6 @@ class FixedSizeNumericType(FixedSizeType):
         return self._precision
 
 
-class PythonNativeNumericType(FixedSizeNumericType):
-    """
-    Base class representing a built-in scalar numeric datatype.
-
-    Base class representing a built-in scalar numeric datatype.
-    """
-
-    __slots__ = ()
-
-
-class PythonNativeBool(PythonNativeNumericType):
-    """
-    Class representing Python's native boolean type.
-
-    Class representing Python's native boolean type.
-    """
-
-    __slots__ = ()
-    _name = "bool"
-    _primitive_type = PrimitiveBooleanType()
-    _precision = -1
-
-    @lru_cache
-    def __add__(self, other):
-        if isinstance(other, PythonNativeBool):
-            return PythonNativeInt()
-        elif isinstance(other, PythonNativeNumericType):
-            return other
-        else:
-            return NotImplemented
-
-    @lru_cache
-    def __and__(self, other):
-        if isinstance(other, PythonNativeBool):
-            return PythonNativeBool()
-        elif isinstance(other, PythonNativeNumericType):
-            return other
-        else:
-            return NotImplemented
-
-
-class PythonNativeInt(PythonNativeNumericType):
-    """
-    Class representing Python's native integer type.
-
-    Class representing Python's native integer type.
-    """
-
-    __slots__ = ()
-    _name = "int"
-    _primitive_type = PrimitiveIntegerType()
-    _precision = numpy.dtype(int).alignment
-
-    @lru_cache
-    def __add__(self, other):
-        if isinstance(other, PythonNativeBool):
-            return self
-        elif isinstance(other, PythonNativeNumericType):
-            return other
-        else:
-            return NotImplemented
-
-    @lru_cache
-    def __and__(self, other):
-        if isinstance(other, PythonNativeNumericType):
-            return self
-        else:
-            return NotImplemented
-
-
-class PythonNativeFloat(PythonNativeNumericType):
-    """
-    Class representing Python's native floating point type.
-
-    Class representing Python's native floating point type.
-    """
-
-    __slots__ = ()
-    _name = "float"
-    _primitive_type = PrimitiveFloatingPointType()
-    _precision = 8
-
-    @lru_cache
-    def __add__(self, other):
-        if isinstance(other, PythonNativeComplex):
-            return other
-        elif isinstance(other, PythonNativeNumericType):
-            return self
-        else:
-            return NotImplemented
-
-
-class PythonNativeComplex(PythonNativeNumericType):
-    """
-    Class representing Python's native complex type.
-
-    Class representing Python's native complex type.
-    """
-
-    __slots__ = ("_element_type",)
-    _name = "complex"
-    _primitive_type = PrimitiveComplexType()
-    _precision = 8
-
-    @lru_cache
-    def __add__(self, other):
-        if isinstance(other, PythonNativeNumericType):
-            return self
-        else:
-            return NotImplemented
-
-    @property
-    def element_type(self):
-        """
-        The type of an element of the complex.
-
-        The type of an element of the complex. In other words, the type
-        of the floats which comprise the complex type.
-        """
-        return PythonNativeFloat()
-
-
 class VoidType(FixedSizeType):
     """
     Class representing a void datatype.
@@ -769,8 +630,7 @@ class GenericType(FixedSizeType):
     Class representing a generic datatype.
 
     Class representing a generic datatype. This datatype is
-    useful for describing the type of an empty container (list/tuple/etc)
-    or an argument which can accept any type (e.g. MPI arguments).
+    useful for describing an argument which can accept any type (e.g. MPI arguments).
     """
 
     __slots__ = ()
@@ -815,60 +675,6 @@ class CharType(FixedSizeType):
     _primitive_type = PrimitiveCharacterType()
 
 
-# ==============================================================================
-class TypeAlias(SymbolicType):
-    """
-    Class representing the type of a symbolic object describing a type descriptor.
-
-    Class representing the type of a symbolic object describing a type descriptor.
-    This type is equivalent to Python's built-in typing.TypeAlias.
-
-    See Also
-    --------
-    typing.TypeAlias :
-        See documentation of `typing.TypeAlias`: https://docs.python.org/3/library/typing.html#typing.TypeAlias .
-    """
-
-    __slots__ = ()
-    _name = "TypeAlias"
-
-
-# ==============================================================================
-
-
-class ContainerType(Type):
-    """
-    Base class representing a type which contains objects of other types.
-
-    Base class representing a type which contains objects of other types.
-    E.g. classes, arrays, etc.
-    """
-
-    __slots__ = ()
-
-    def shape_is_compatible(self, shape):
-        """
-        Check if the provided shape is compatible with the datatype.
-
-        Check if the provided shape is compatible with the format expected for
-        this datatype.
-
-        Parameters
-        ----------
-        shape : Any
-            The proposed shape.
-
-        Returns
-        -------
-        bool
-            True if the shape is acceptable, False otherwise.
-        """
-        return isinstance(shape, tuple) and len(shape) == self.container_rank
-
-
-# ==============================================================================
-
-
 class TupleType:
     """
     Base class representing tuple datatypes.
@@ -883,169 +689,7 @@ class TupleType:
 # ==============================================================================
 
 
-class HomogeneousContainerType(ContainerType):
-    """
-    Base class representing a datatype which contains multiple elements of a given type.
-
-    Base class representing a datatype which contains multiple elements of a given type.
-    This is the case for objects such as arrays, lists, etc.
-    """
-
-    __slots__ = ()
-
-    @classmethod
-    def get_new(cls, element_type):
-        """
-        Get a new homogeneous container whose elements have the specified type.
-
-        Get a new homogeneous container whose elements have the specified type.
-
-        Parameters
-        ----------
-        element_type : Type
-            The type of the elements of the homogeneous container.
-        """
-        raise NotImplementedError(
-            "Subclasses should implement a get_new method to create the parametrised sub-class."
-        )
-
-    @property
-    def datatype(self):
-        """
-        The datatype of the object.
-
-        The datatype of the object.
-        """
-        return self.element_type.datatype
-
-    @property
-    def primitive_type(self):
-        """
-        The datatype category of elements of the object.
-
-        The datatype category of elements of the object (e.g. integer, floating point).
-        """
-        return self.element_type.primitive_type
-
-    @property
-    def precision(self):
-        """
-        Precision of the datatype of the object.
-
-        The precision of the datatype of the object. This number is related to the
-        number of bytes that the datatype takes up in memory. For basic types the
-        number is equivalent to the number of bytes in memory (e.g. `float64` has
-        precision = 8 as it takes up 8 bytes), however for less simple types the
-        connection is less trivial. For example `complex128` has precision = 8 as
-        it is comprised of two `float64` objects (which have precision=8).
-        It should be noted that this is not the convention chosen by NumPy (in NumPy
-        a `complex128` is so named because `16*8=precision*bits_in_a_byte=128`).
-
-        The precision in X2py is equivalent to the `kind` parameter in Fortran.
-        """
-        return self.element_type.precision
-
-    @property
-    def element_type(self):
-        """
-        The type of elements of the object.
-
-        The Type describing an element of the container.
-        """
-        return self._element_type
-
-    def __str__(self):
-        return f"{self._name}[{self._element_type}]"
-
-    def switch_basic_type(self, new_type):
-        """
-        Change the basic type to the new type.
-
-        Change the basic type to the new type. In the case of a FixedSizeType the
-        switch will replace the type completely, directly returning the new type.
-        In the case of a homogeneous container type, a new container type will be
-        returned whose underlying elements are of the new type. This method is not
-        implemented for inhomogeneous containers.
-
-        Parameters
-        ----------
-        new_type : FixedSizeType
-            The new basic type.
-
-        Returns
-        -------
-        Type
-            The new type.
-        """
-        assert isinstance(new_type, FixedSizeType)
-        cls = type(self)
-        return cls.get_new(self.element_type.switch_basic_type(new_type))
-
-    def switch_rank(self, new_rank, new_order=None):
-        """
-        Get a type which is identical to this type in all aspects except the rank.
-
-        Get a type which is identical to this type in all aspects except the rank.
-        The order must be provided if the rank is increased from 1. This is never
-        the case for 1D containers.
-
-        Parameters
-        ----------
-        new_rank : int
-            The rank of the new type.
-
-        new_order : str, optional
-            The order of the new type. For 1D containers this should not be provided.
-
-        Returns
-        -------
-        Type
-            The new type.
-        """
-        assert new_order is None
-        rank = self.rank
-        assert new_rank < rank
-
-        if new_rank == rank:
-            return self
-        elif rank - new_rank == self.container_rank:
-            return self.element_type
-        else:
-            return self.element_type.switch_rank(new_rank - self.container_rank)
-
-    @property
-    def container_rank(self):
-        """
-        Number of dimensions of the container.
-
-        Number of dimensions of the object described by the container. This is
-        equal to the number of values required to index an element of this container.
-        """
-        return self._container_rank
-
-    @property
-    def rank(self):
-        """
-        Number of dimensions of the object.
-
-        Number of dimensions of the object. If the object is a scalar then
-        this is equal to 0.
-        """
-        return self.container_rank + self.element_type.rank
-
-    @property
-    def order(self):
-        """
-        The data layout ordering in memory.
-
-        Indicates whether the data is stored in row-major ('C') or column-major
-        ('F') format. This is only relevant if rank > 1. When it is not relevant
-        this function returns None.
-        """
-        return self._order
-
-
-class StringType(ContainerType):
+class StringType(Type):
     """
     Class representing Python's native string type.
 
@@ -1095,6 +739,10 @@ class StringType(ContainerType):
         equal to the number of values required to index an element of this container.
         """
         return 1
+
+    def shape_is_compatible(self, shape):
+        """Check if the provided shape is compatible with a string."""
+        return isinstance(shape, tuple) and len(shape) == self.container_rank
 
     @property
     def order(self):
@@ -1243,18 +891,6 @@ def DataTypeFactory(ll_name, python_name, argnames=(), *, BaseClass=CustomDataTy
     return newclass
 
 
-# ==============================================================================
-
-x2py_type_to_original_type = {
-    PythonNativeBool(): bool,
-    PythonNativeInt(): int,
-    PythonNativeFloat(): float,
-    PythonNativeComplex(): complex,
-}
-
-original_type_to_x2py_type = {v: k for k, v in x2py_type_to_original_type.items()}
-
-
 #========================================================================================
 primitive_type_precedence = [
     PrimitiveBooleanType(),
@@ -1262,18 +898,6 @@ primitive_type_precedence = [
     PrimitiveFloatingPointType(),
     PrimitiveComplexType(),
 ]
-
-typenames_to_dtypes = {
-    "float": PythonNativeFloat(),
-    "double": PythonNativeFloat(),
-    "complex": PythonNativeComplex(),
-    "int": PythonNativeInt(),
-    "bool": PythonNativeBool(),
-    "b1": PythonNativeBool(),
-    "void": VoidType(),
-    "*": GenericType(),
-    "str": StringType(),
-}
 
 # ==============================================================================
 
@@ -1323,6 +947,44 @@ class NumpyNumericType(FixedSizeNumericType):
 # ==============================================================================
 
 
+class NumpyBoolType(NumpyNumericType):
+    """
+    Class representing NumPy's bool_ type.
+
+    Class representing NumPy's bool_ type.
+    """
+
+    __slots__ = ()
+    _name = "numpy.bool_"
+    _primitive_type = PrimitiveBooleanType()
+    _precision = -1
+
+    @lru_cache
+    def __add__(self, other):
+        if isinstance(other, NumpyBoolType):
+            return NumpyInt64Type()
+        elif isinstance(other, NumpyNumericType):
+            return other
+        else:
+            return NotImplemented
+
+    @lru_cache
+    def __and__(self, other):
+        if isinstance(other, NumpyBoolType):
+            return self
+        elif isinstance(other, NumpyNumericType):
+            return other
+        else:
+            return NotImplemented
+
+    @lru_cache
+    def __rand__(self, other):
+        return self.__and__(other)
+
+
+# ==============================================================================
+
+
 class NumpyIntType(NumpyNumericType):
     """
     Super class representing NumPy's integer types.
@@ -1335,7 +997,7 @@ class NumpyIntType(NumpyNumericType):
 
     @lru_cache
     def __and__(self, other):
-        if isinstance(other, PythonNativeBool):
+        if isinstance(other, NumpyBoolType):
             return self
         elif isinstance(other, FixedSizeNumericType):
             precision = max(self.precision, other.precision)
@@ -1345,7 +1007,7 @@ class NumpyIntType(NumpyNumericType):
 
     @lru_cache
     def __rand__(self, other):
-        if isinstance(other, PythonNativeBool):
+        if isinstance(other, NumpyBoolType):
             return self
         elif isinstance(other, FixedSizeNumericType):
             precision = max(self.precision, other.precision)
@@ -1519,19 +1181,25 @@ class NumpyComplex256Type(NumpyNumericType):
 # ==============================================================================
 
 
-class NumpyNDArrayType(HomogeneousContainerType):
+class NumpyNDArrayType(Type):
     """
     Class representing the NumPy ND array type.
 
     Class representing the NumPy ND array type.
     """
 
-    __slots__ = ("_element_type", "_container_rank", "_order")
+    __slots__ = (
+        "_element_type",
+        "_container_rank",
+        "_order",
+        "_allows_strides",
+        "_raw",
+    )
     _name = "numpy.ndarray"
 
     @classmethod
     @lru_cache
-    def get_new(cls, dtype, rank, order):
+    def get_new(cls, dtype, rank, order, allows_strides=True, *, raw=False):
         """
         Get the parametrised NumPy ND array type.
 
@@ -1539,20 +1207,28 @@ class NumpyNDArrayType(HomogeneousContainerType):
 
         Parameters
         ----------
-        dtype : NumpyNumericType | PythonNativeBool | GenericType
+        dtype : NumpyNumericType | GenericType
             The internal datatype of the object (GenericType is allowed for external
             libraries, e.g. MPI).
         rank : int
             The rank of the new NumPy array.
         order : str
             The order of the memory layout for the new NumPy array.
+        allows_strides : bool
+            Whether non-contiguous strided views are valid for this array contract.
+        raw : bool
+            Whether the array is represented directly as a C array/pointer instead
+            of the generated ndarray wrapper structure.
         """
         assert isinstance(rank, int)
         assert order in (None, "C", "F")
         assert rank < 2 or order is not None
-        assert isinstance(
-            dtype, (NumpyNumericType, PythonNativeBool, GenericType, CharType)
-        )
+        assert isinstance(allows_strides, bool)
+        assert isinstance(raw, bool)
+        if raw:
+            assert isinstance(dtype, FixedSizeType)
+        else:
+            assert isinstance(dtype, (NumpyNumericType, GenericType, CharType))
 
         if rank == 0:
             return dtype
@@ -1561,10 +1237,50 @@ class NumpyNDArrayType(HomogeneousContainerType):
             self._element_type = dtype
             self._container_rank = rank
             self._order = order
+            self._allows_strides = allows_strides
+            self._raw = raw
             super().__init__()
 
-        name = f"Numpy{rank}DArrayType_{order}_{type(dtype).__name__}"
+        representation = "Raw" if raw else "Numpy"
+        stride_suffix = "strided" if allows_strides else "contiguous"
+        name = (
+            f"{representation}{rank}DArrayType_{order}_{stride_suffix}_"
+            f"{type(dtype).__name__}"
+        )
         return type(name, (NumpyNDArrayType,), {"__init__": __init__})()
+
+    @property
+    def datatype(self):
+        """The scalar datatype stored in this ndarray."""
+        return self.element_type.datatype
+
+    @property
+    def primitive_type(self):
+        """The datatype category of elements in this ndarray."""
+        return self.element_type.primitive_type
+
+    @property
+    def precision(self):
+        """The precision of elements in this ndarray."""
+        return self.element_type.precision
+
+    @property
+    def element_type(self):
+        """The scalar type of elements in this ndarray."""
+        return self._element_type
+
+    @property
+    def container_rank(self):
+        """Number of indices required to select an ndarray element."""
+        return self._container_rank
+
+    def __str__(self):
+        name = "raw_array" if self.raw else self._name
+        return f"{name}[{self._element_type}]"
+
+    def shape_is_compatible(self, shape):
+        """Check if the provided shape is compatible with this ndarray."""
+        return isinstance(shape, tuple) and len(shape) == self.container_rank
 
     @lru_cache
     def __add__(self, other):
@@ -1587,7 +1303,10 @@ class NumpyNDArrayType(HomogeneousContainerType):
             other_f_contiguous = other.order in (None, "F")
             self_f_contiguous = self.order in (None, "F")
             order = "F" if other_f_contiguous and self_f_contiguous else "C"
-        return NumpyNDArrayType.get_new(result_type, rank, order)
+        allows_strides = getattr(self, "allows_strides", True) or getattr(
+            other, "allows_strides", True
+        )
+        return NumpyNDArrayType.get_new(result_type, rank, order, allows_strides)
 
     @lru_cache
     def __radd__(self, other):
@@ -1613,8 +1332,7 @@ class NumpyNDArrayType(HomogeneousContainerType):
 
         Change the basic type to the new type. A new NumpyNDArrayType will be
         returned whose underlying elements are of the NumPy type which is
-        equivalent to the new type (e.g. PythonNativeFloat may be replaced by
-        numpy.float64).
+        equivalent to the new type.
 
         Parameters
         ----------
@@ -1633,6 +1351,8 @@ class NumpyNDArrayType(HomogeneousContainerType):
             self.element_type.switch_basic_type(new_type),
             self._container_rank,
             self._order,
+            self._allows_strides,
+            raw=self.raw,
         )
 
     def switch_rank(self, new_rank, new_order=None):
@@ -1660,7 +1380,13 @@ class NumpyNDArrayType(HomogeneousContainerType):
             return self.element_type
         else:
             new_order = (new_order or self._order) if new_rank > 1 else None
-            return NumpyNDArrayType.get_new(self.element_type, new_rank, new_order)
+            return NumpyNDArrayType.get_new(
+                self.element_type,
+                new_rank,
+                new_order,
+                self._allows_strides,
+                raw=self.raw,
+            )
 
     def swap_order(self):
         """
@@ -1677,7 +1403,13 @@ class NumpyNDArrayType(HomogeneousContainerType):
             The new type.
         """
         order = None if self._order is None else ("C" if self._order == "F" else "F")
-        return NumpyNDArrayType.get_new(self.element_type, self._container_rank, order)
+        return NumpyNDArrayType.get_new(
+            self.element_type,
+            self._container_rank,
+            order,
+            self._allows_strides,
+            raw=self.raw,
+        )
 
     @property
     def rank(self):
@@ -1700,13 +1432,24 @@ class NumpyNDArrayType(HomogeneousContainerType):
         """
         return self._order
 
+    @property
+    def allows_strides(self):
+        """Whether non-contiguous strided NumPy views are accepted."""
+        return self._allows_strides
+
+    @property
+    def raw(self):
+        """Whether this array uses a direct C array/pointer representation."""
+        return self._raw
+
     def __repr__(self):
         dims = ",".join(":" * self._container_rank)
         order_str = f"(order={self._order})" if self._order else ""
-        return f"{self.element_type}[{dims}]{order_str}"
+        stride_str = "" if self._allows_strides else "(contiguous)"
+        return f"{self.element_type}[{dims}]{order_str}{stride_str}"
 
     def __hash__(self):
-        return hash((self.element_type, self.rank, self.order))
+        return hash((self.element_type, self.rank, self.order, self.allows_strides))
 
     def __eq__(self, other):
         return (
@@ -1714,13 +1457,14 @@ class NumpyNDArrayType(HomogeneousContainerType):
             and self.element_type == other.element_type
             and self.rank == other.rank
             and self.order == other.order
+            and self.allows_strides == other.allows_strides
         )
 
 
 # ==============================================================================
 
 numpy_precision_map = {
-    (PrimitiveBooleanType(), -1): PythonNativeBool(),
+    (PrimitiveBooleanType(), -1): NumpyBoolType(),
     (PrimitiveIntegerType(), 1): NumpyInt8Type(),
     (PrimitiveIntegerType(), 2): NumpyInt16Type(),
     (PrimitiveIntegerType(), 4): NumpyInt32Type(),
@@ -1734,6 +1478,7 @@ numpy_precision_map = {
 }
 
 numpy_type_to_original_type = {
+    NumpyBoolType(): numpy.bool_,
     NumpyInt8Type(): numpy.int8,
     NumpyInt16Type(): numpy.int16,
     NumpyInt32Type(): numpy.int32,
@@ -1742,6 +1487,20 @@ numpy_type_to_original_type = {
     NumpyFloat64Type(): numpy.float64,
     NumpyComplex64Type(): numpy.complex64,
     NumpyComplex128Type(): numpy.complex128,
+}
+
+x2py_type_to_original_type = {
+    NumpyBoolType(): numpy.bool_,
+    NumpyInt64Type(): numpy.int64,
+    NumpyFloat64Type(): numpy.float64,
+    NumpyComplex128Type(): numpy.complex128,
+}
+
+original_type_to_x2py_type = {
+    bool: NumpyBoolType(),
+    int: NumpyInt64Type(),
+    float: NumpyFloat64Type(),
+    complex: NumpyComplex128Type(),
 }
 
 # Large types don't exist on all systems
@@ -1757,37 +1516,74 @@ x2py_type_to_original_type.update(numpy_type_to_original_type)
 original_type_to_x2py_type.update(
     {v: k for k, v in numpy_type_to_original_type.items()}
 )
-original_type_to_x2py_type[numpy.bool_] = PythonNativeBool()
+
+typenames_to_dtypes = {
+    "float": NumpyFloat64Type(),
+    "double": NumpyFloat64Type(),
+    "complex": NumpyComplex128Type(),
+    "int": NumpyInt64Type(),
+    "bool": NumpyBoolType(),
+    "b1": NumpyBoolType(),
+    "void": VoidType(),
+    "*": GenericType(),
+    "str": StringType(),
+}
 
 #======================================================================
 class Literal:
-    """
-    Class representing a literal value.
+    """A value expressed directly in generated code."""
 
-    Class representing a literal value. A literal is a value that is expressed
-    as itself rather than as a variable or an expression, e.g. the number 3
-    or the string "Hello".
-
-    This class is abstract and should be implemented for each dtype
-    """
-
-    __slots__ = ()
+    __slots__ = ("_value", "_class_type", "_shape")
     _attribute_nodes = ()
-    _shape = None
 
-    def __init__(self):
+    def __init__(self, value, datatype):
+        if not isinstance(datatype, Type):
+            raise TypeError("datatype must be a codegen Type")
+
+        if isinstance(datatype, StringType):
+            if not isinstance(value, str):
+                raise TypeError("string literals require a str value")
+            self._value = value
+            self._shape = (None,)
+        elif isinstance(datatype, VoidType):
+            if value is not None:
+                raise TypeError("void literals require a None value")
+            self._value = None
+            self._shape = None
+        elif isinstance(datatype, FixedSizeNumericType):
+            primitive_type = datatype.primitive_type
+            if isinstance(primitive_type, PrimitiveBooleanType):
+                if not isinstance(value, (bool, numpy.bool_)):
+                    raise TypeError("boolean literals require a bool value")
+                self._value = bool(value)
+            elif isinstance(primitive_type, PrimitiveIntegerType):
+                if not isinstance(value, (int, numpy.integer)):
+                    raise TypeError("integer literals require an integer value")
+                self._value = int(value)
+            elif isinstance(primitive_type, PrimitiveFloatingPointType):
+                if not isinstance(value, (int, float, numpy.integer, numpy.floating)):
+                    raise TypeError("floating-point literals require a real value")
+                self._value = float(value)
+            elif isinstance(primitive_type, PrimitiveComplexType):
+                if not isinstance(value, (int, float, complex, numpy.number)):
+                    raise TypeError("complex literals require a numeric value")
+                self._value = complex(value)
+            else:
+                raise TypeError(f"Unsupported literal datatype {datatype}")
+            self._shape = None
+        else:
+            raise TypeError(f"Unsupported literal datatype {datatype}")
+
+        self._class_type = datatype
         init_model_object(self)
 
     @property
     def python_value(self):
-        """
-        Get the Python literal represented by this instance.
-
-        Get the Python literal represented by this instance.
-        """
+        """Return the Python value represented by this literal."""
+        return self._value
 
     def __repr__(self):
-        return f"Literal({repr(self.python_value)})"
+        return f"Literal({self.python_value!r}, {self.class_type!r})"
 
     def __str__(self):
         return str(self.python_value)
@@ -1795,405 +1591,34 @@ class Literal:
     def __eq__(self, other):
         if is_model_object(other):
             return (
-                isinstance(other, type(self))
+                isinstance(other, Literal)
+                and self.class_type == other.class_type
                 and self.python_value == other.python_value
             )
-        else:
-            return self.python_value == other
+        return self.python_value == other
 
     def __hash__(self):
-        return hash(self.python_value)
-
-
-# ------------------------------------------------------------------------------
-class LiteralTrue(Literal):
-    """
-    Class representing the Python value True.
-
-    Class representing the Python value True.
-
-    Parameters
-    ----------
-    dtype : FixedSizeType
-        The exact type of the literal.
-    """
-
-    __slots__ = ("_class_type",)
-
-    def __init__(self, dtype=PythonNativeBool()):
-        self._class_type = dtype
-        super().__init__()
-
-    @property
-    def python_value(self):
-        """
-        Get the Python literal represented by this instance.
-
-        Get the Python literal represented by this instance.
-        """
-        return True
-
-
-# ------------------------------------------------------------------------------
-class LiteralFalse(Literal):
-    """
-    Class representing the Python value False.
-
-    Class representing the Python value False.
-
-    Parameters
-    ----------
-    dtype : FixedSizeType
-        The exact type of the literal.
-    """
-
-    __slots__ = ("_class_type",)
-
-    def __init__(self, dtype=PythonNativeBool()):
-        self._class_type = dtype
-        super().__init__()
-
-    @property
-    def python_value(self):
-        """
-        Get the Python literal represented by this instance.
-
-        Get the Python literal represented by this instance.
-        """
-        return False
-
-
-# ------------------------------------------------------------------------------
-class LiteralInteger(Literal):
-    """
-    Class representing an integer literal in Python.
-
-    Class representing an integer literal, such as 3, in Python.
-
-    Parameters
-    ----------
-    value : int
-        The Python literal.
-
-    dtype : FixedSizeType
-        The exact type of the literal.
-    """
-
-    __slots__ = ("_value", "_class_type")
-
-    def __init__(self, value, dtype=PythonNativeInt()):
-        if not isinstance(value, (int, numpy.integer)):
-            raise TypeError("A LiteralInteger can only be created with an integer")
-        self._value = int(value)
-        self._class_type = dtype
-        super().__init__()
-
-    @property
-    def python_value(self):
-        """
-        Get the Python literal represented by this instance.
-
-        Get the Python literal represented by this instance.
-        """
-        return self._value
+        return hash((self.python_value, self.class_type))
 
     def __index__(self):
+        if not isinstance(self.class_type.primitive_type, PrimitiveIntegerType):
+            raise TypeError("only integer literals can be used as indices")
         return self.python_value
 
-
-# ------------------------------------------------------------------------------
-class LiteralFloat(Literal):
-    """
-    Class representing a float literal in Python.
-
-    Class representing a float literal, such as 3.5, in Python.
-
-    Parameters
-    ----------
-    value : float
-        The Python literal.
-
-    dtype : FixedSizeType
-        The exact type of the literal.
-    """
-
-    __slots__ = ("_value", "_class_type")
-
-    def __init__(self, value, dtype=PythonNativeFloat()):
-        if not isinstance(value, (int, float, LiteralFloat, numpy.integer, numpy.floating)):
-            raise TypeError(
-                "A LiteralFloat can only be created with an integer or a float"
-            )
-        if isinstance(value, LiteralFloat):
-            self._value = value.python_value
-        else:
-            self._value = float(value)
-        self._class_type = dtype
-        super().__init__()
-
-    @property
-    def python_value(self):
-        """
-        Get the Python literal represented by this instance.
-
-        Get the Python literal represented by this instance.
-        """
-        return self._value
-
-
-# ------------------------------------------------------------------------------
-class LiteralComplex(Literal):
-    """
-    Class representing a complex literal in Python.
-
-    Class representing a complex literal, such as 3+2j, in Python.
-
-    Parameters
-    ----------
-    real : float
-        The real part of the Python literal.
-
-    imag : float
-        The imaginary part of the Python literal.
-
-    dtype : FixedSizeType
-        The exact type of the literal.
-    """
-
-    __slots__ = ("_real_part", "_imag_part", "_class_type")
-
-    def __new__(cls, real, imag, dtype=PythonNativeComplex()):
-        if cls is LiteralImaginaryUnit:
-            return super().__new__(cls)
-        real_part = cls._collect_python_val(real)
-        imag_part = cls._collect_python_val(imag)
-        if real_part == 0 and imag_part == 1:
-            return LiteralImaginaryUnit()
-        else:
-            return super().__new__(cls)
-
-    def __init__(self, real, imag, dtype=PythonNativeComplex()):
-        self._real_part = LiteralFloat(
-            self._collect_python_val(real), dtype=dtype.element_type
-        )
-        self._imag_part = LiteralFloat(
-            self._collect_python_val(imag), dtype=dtype.element_type
-        )
-        self._class_type = dtype
-        super().__init__()
-
-    @staticmethod
-    def _collect_python_val(arg):
-        """
-        Extract the Python value from the input argument.
-
-        Extract the Python value from the input argument which can either
-        be a literal or a Python variable. The input argument represents
-        either the real or the imaginary part of the complex literal.
-
-        Parameters
-        ----------
-        arg : Literal | int | float
-            The Python value.
-
-        Returns
-        -------
-        float
-            The Python value of the argument.
-        """
-        if isinstance(arg, Literal):
-            return float(arg.python_value)
-        elif isinstance(arg, (int, float, numpy.integer, numpy.floating)):
-            return float(arg)
-        else:
-            raise TypeError(
-                f"LiteralComplex argument must be an int/float/LiteralInt/LiteralFloat not a {type(arg)}"
-            )
-
-    @property
-    def real(self):
-        """
-        Return the real part of the complex literal.
-
-        Return the real part of the complex literal.
-        """
-        return self._real_part
-
-    @property
-    def imag(self):
-        """
-        Return the imaginary part of the complex literal.
-
-        Return the imaginary part of the complex literal.
-        """
-        return self._imag_part
-
-    @property
-    def python_value(self):
-        """
-        Get the Python literal represented by this instance.
-
-        Get the Python literal represented by this instance.
-        """
-        return self.real.python_value + self.imag.python_value * 1j
-
-
-# ------------------------------------------------------------------------------
-class LiteralImaginaryUnit(LiteralComplex):
-    """
-    Class representing the Python value j.
-
-    Class representing the imaginary unit j in Python.
-
-    Parameters
-    ----------
-    real : float = 0
-        The value of the real part. This argument is necessary to handle the
-        inheritance but should not be provided explicitly.
-    imag : float = 0
-        The value of the real part. This argument is necessary to handle the
-        inheritance but should not be provided explicitly.
-    dtype : FixedSizeType
-        The exact type of the literal.
-    """
-
-    __slots__ = ()
-
-    def __new__(cls, real=0, imag=1, dtype=PythonNativeComplex()):
-        return super().__new__(cls, 0, 1, dtype=dtype)
-
-    def __init__(self, real=0, imag=1, dtype=PythonNativeComplex()):
-        super().__init__(0, 1, dtype)
-
-    @property
-    def python_value(self):
-        """
-        Get the Python literal represented by this instance.
-
-        Get the Python literal represented by this instance.
-        """
-        return 1j
-
-
-# ------------------------------------------------------------------------------
-class LiteralString(Literal):
-    """
-    Class representing a string literal in Python.
-
-    Class representing a string literal, such as 'hello' in Python.
-
-    Parameters
-    ----------
-    arg : str
-        The Python literal.
-    """
-
-    __slots__ = ("_string",)
-    _class_type = StringType()
-    _shape = (None,)
-
-    def __init__(self, arg):
-        super().__init__()
-        if not isinstance(arg, str):
-            raise TypeError("arg must be of type str")
-        self._string = arg
-
-    def __repr__(self):
-        return f"'{self.python_value}'"
-
-    def __str__(self):
-        return str(self.python_value)
-
     def __add__(self, o):
-        if isinstance(o, LiteralString):
-            return LiteralString(self._string + o._string)
+        if (
+            isinstance(self.class_type, StringType)
+            and isinstance(o, Literal)
+            and isinstance(o.class_type, StringType)
+        ):
+            return Literal(self.python_value + o.python_value, StringType())
         return NotImplemented
 
-    @property
-    def python_value(self):
-        """
-        Get the Python literal represented by this instance.
-
-        Get the Python literal represented by this instance.
-        """
-        return self._string
-
-
-# ------------------------------------------------------------------------------
-
-
-class Nil(Literal, metaclass=Singleton):
-    """
-    Class representing a None object in the code.
-
-    Class representing the Python value None in the code.
-    """
-
-    __slots__ = ()
-    _attribute_nodes = ()
-    _class_type = VoidType()
-
-    def __str__(self):
-        return "None"
-
     def __bool__(self):
-        return False
-
-    def __eq__(self, other):
-        return isinstance(other, Nil)
-
-    def __hash__(self):
-        return hash("Nil") + hash(None)
+        return self.python_value is not None
 
 
-# ------------------------------------------------------------------------------
-
-
-class NilArgument:
-    """
-    Represents None when passed as an argument to an inline function.
-
-    Represents the Python value None when passed as an argument
-    to an inline function. This class is necessary as to avoid
-    accidental substitution due to Singletons.
-    """
-
-    __slots__ = ()
-    _attribute_nodes = ()
-
-    def __init__(self):
-        init_model_object(self)
-
-    def __str__(self):
-        return "Argument(None)"
-
-    def __bool__(self):
-        return False
-
-
-# ------------------------------------------------------------------------------
-
-
-class LiteralEllipsis(Literal, metaclass=Singleton):
-    """
-    Class representing an Ellipsis object in the code.
-
-    Class representing the Python value Ellipsis in the code.
-    """
-
-    __slots__ = ()
-
-    def __str__(self):
-        return "..."
-
-    @property
-    def python_value(self):
-        """
-        Get the Python literal represented by this instance.
-
-        Get the Python literal represented by this instance.
-        """
-        return ...
+NIL = Literal(None, VoidType())
 
 
 # ------------------------------------------------------------------------------
@@ -2207,7 +1632,7 @@ def convert_to_literal(value, dtype=None):
 
     Parameters
     ----------
-    value : int/float/complex/bool/str
+    value : int/float/complex/bool/str or NumPy scalar
         The Python value.
     dtype : DataType
         The datatype of the Python value.
@@ -2221,16 +1646,27 @@ def convert_to_literal(value, dtype=None):
     """
     from .core import UnarySub  # Imported here to avoid circular import
 
+    if isinstance(value, Literal):
+        if dtype is None or dtype == value.dtype:
+            return value
+        value = value.python_value
+
     # Calculate the default datatype
     if dtype is None:
-        if isinstance(value, bool):
-            dtype = PythonNativeBool()
+        if isinstance(value, numpy.generic):
+            numpy_type = numpy.asarray(value).dtype.type
+            try:
+                dtype = original_type_to_x2py_type[numpy_type]
+            except KeyError as e:
+                raise TypeError(f"Unknown type of object {value}") from e
+        elif isinstance(value, bool):
+            dtype = NumpyBoolType()
         elif isinstance(value, int):
-            dtype = PythonNativeInt()
+            dtype = NumpyInt64Type()
         elif isinstance(value, float):
-            dtype = PythonNativeFloat()
+            dtype = NumpyFloat64Type()
         elif isinstance(value, complex):
-            dtype = PythonNativeComplex()
+            dtype = NumpyComplex128Type()
         elif isinstance(value, str):
             dtype = StringType()
         else:
@@ -2238,34 +1674,38 @@ def convert_to_literal(value, dtype=None):
 
     # Resolve any datatypes which don't inherit from FixedSizeType
     if isinstance(dtype, StringType):
-        return LiteralString(value)
+        return Literal(value, dtype)
 
     assert isinstance(dtype, FixedSizeNumericType)
 
     primitive_type = dtype.primitive_type
     if isinstance(primitive_type, PrimitiveIntegerType):
         if value >= 0:
-            literal_val = LiteralInteger(value, dtype)
+            literal_val = Literal(value, dtype)
         else:
-            literal_val = UnarySub(LiteralInteger(-value, dtype))
+            literal_val = UnarySub(Literal(-value, dtype))
     elif isinstance(primitive_type, PrimitiveFloatingPointType):
-        literal_val = LiteralFloat(value, dtype)
+        literal_val = Literal(value, dtype)
     elif isinstance(primitive_type, PrimitiveComplexType):
-        literal_val = LiteralComplex(value.real, value.imag, dtype)
+        literal_val = Literal(value, dtype)
     elif isinstance(primitive_type, PrimitiveBooleanType):
-        if value:
-            literal_val = LiteralTrue(dtype)
-        else:
-            literal_val = LiteralFalse(dtype)
+        literal_val = Literal(value, dtype)
     else:
         raise TypeError(f"Unknown type {dtype}")
 
     return literal_val
 
 
-def process_shape(is_scalar, shape):
-    """Return ``None`` for scalars and keep the existing shape for arrays."""
-    return None if is_scalar else shape
+def _cast_result_type(arg, target_type):
+    """Return the scalar or array datatype produced by a cast."""
+    if arg.rank == 0:
+        return target_type
+    return NumpyNDArrayType.get_new(
+        target_type,
+        arg.rank,
+        arg.order,
+        getattr(arg.class_type, "allows_strides", True),
+    )
 
 
 class _DataTypeFunction:
@@ -2295,322 +1735,72 @@ class _DataTypeFunction:
     def is_indexable(self):
         return self.is_elemental
 
-#========================================================================================================
-class PythonComplexProperty(_DataTypeFunction):
-    """
-    Represents a call to the .real or .imag property.
+class ComplexPart(_DataTypeFunction):
+    """Access the real or imaginary component of a complex expression."""
 
-    Represents a call to a property of a complex number. The relevant properties
-    are the `.real` and `.imag` properties.
+    __slots__ = ("_part", "_shape", "_class_type")
 
-    e.g:
-    >>> a = 1+2j
-    >>> a.real
-    1.0
-
-    Parameters
-    ----------
-    arg : model object
-        The object which the property is called from.
-    """
-
-    __slots__ = ()
-    _shape = None
-    _class_type = PythonNativeFloat()
-
-    def __init__(self, arg):
-        super().__init__(arg)
-
-    @property
-    def internal_var(self):
-        """Return the variable on which the function was called"""
-        return self._args[0]
-
-
-# ==============================================================================
-class PythonReal(PythonComplexProperty):
-    """
-    Represents a call to the .real property.
-
-    e.g:
-    >>> a = 1+2j
-    >>> a.real
-    1.0
-
-    Parameters
-    ----------
-    arg : model object
-        The object which the property is called from.
-    """
-
-    __slots__ = ()
-    name = "real"
-
-    def __new__(cls, arg):
-        if isinstance(arg.dtype, PythonNativeBool):
-            return PythonInt(arg)
-        elif not isinstance(arg.dtype.primitive_type, PrimitiveComplexType):
-            return arg
-        else:
-            return super().__new__(cls)
-
-    def __str__(self):
-        return f"Real({self.internal_var})"
-
-
-# ==============================================================================
-class PythonImag(PythonComplexProperty):
-    """
-    Represents a call to the .imag property.
-
-    Represents a call to the .imag property of an object with a complex type.
-    e.g:
-    >>> a = 1+2j
-    >>> a.imag
-    1.0
-
-    Parameters
-    ----------
-    arg : model object
-        The object on which the property is called.
-    """
-
-    __slots__ = ()
-    name = "imag"
-
-    def __new__(cls, arg):
+    def __new__(cls, arg, part):
+        if part not in ("real", "imag"):
+            raise ValueError("part must be 'real' or 'imag'")
         if not isinstance(arg.dtype.primitive_type, PrimitiveComplexType):
+            if part == "real":
+                if isinstance(arg.dtype, NumpyBoolType):
+                    return cast_to(arg, NumpyInt64Type())
+                return arg
+            if arg.rank > 0:
+                raise NotImplementedError(
+                    "imaginary-part access for non-complex arrays is not supported"
+                )
             return convert_to_literal(0, dtype=arg.dtype)
-        else:
-            return super().__new__(cls)
-
-    def __str__(self):
-        return f"Imag({self.internal_var})"
-
-# ==============================================================================
-class PythonBool(_DataTypeFunction):
-    """
-    Represents a call to Python's native `bool()` function.
-
-    Represents a call to Python's native `bool()` function which casts an
-    argument to a boolean.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ()
-    name = "bool"
-    _static_type = PythonNativeBool()
-    _shape = None
-    _class_type = PythonNativeBool()
-
-    def __new__(cls, arg):
-        if getattr(arg, "is_optional", None):
-            bool_expr = super().__new__(cls)
-            bool_expr.__init__(arg)
-            from .core import And, IsNot
-            return And(IsNot(arg, Nil()), bool_expr)
-        else:
-            return super().__new__(cls)
-
-    @property
-    def arg(self):
-        """
-        Get the argument which was passed to the function.
-
-        Get the argument which was passed to the function.
-        """
-        return self._args[0]
-
-    def __str__(self):
-        return f"Bool({self.arg})"
-
-
-# ==============================================================================
-class PythonComplex(_DataTypeFunction):
-    """
-    Represents a call to Python's native `complex()` function.
-
-    Represents a call to Python's native `complex()` function which casts an
-    argument to a complex number.
-
-    Parameters
-    ----------
-    arg0 : model object
-        The first argument passed to the function (either a real or a complex).
-
-    arg1 : model object, default=0
-        The second argument passed to the function (the imaginary part).
-    """
-
-    __slots__ = ("_real_part", "_imag_part", "_internal_var", "_is_cast")
-    name = "complex"
-
-    _static_type = PythonNativeComplex()
-    _shape = None
-    _class_type = PythonNativeComplex()
-    _real_cast = PythonReal
-    _imag_cast = PythonImag
-    _attribute_nodes = ("_real_part", "_imag_part", "_internal_var")
-
-    def __new__(cls, arg0, arg1=0.):
         return super().__new__(cls)
 
-    def __init__(self, arg0, arg1=0.):
-        if not is_model_object(arg1):
-            arg1 = convert_to_literal(arg1)
-        self._is_cast = arg1.python_value == 0.
-
-        self._internal_var = None
-        self._real_part = self._real_cast(arg0)
-        self._imag_part = self._real_cast(arg1)
-        super().__init__()
-
-    @property
-    def is_cast(self):
-        """Indicates if the function is casting or assembling a complex"""
-        return self._is_cast
-
-    @property
-    def real(self):
-        """Returns the real part of the complex"""
-        return self._real_part
-
-    @property
-    def imag(self):
-        """Returns the imaginary part of the complex"""
-        return self._imag_part
-
-    @property
-    def internal_var(self):
-        """
-        When the complex call is a cast, returns the variable being cast.
-
-        When the complex call is a cast, returns the variable being cast.
-        This property should only be used when handling a cast.
-        """
-        assert self._is_cast
-        return self._internal_var
-
-    def __str__(self):
-        return f"complex({self.real}, {self.imag})"
-
-# ==============================================================================
-class PythonFloat(_DataTypeFunction):
-    """
-    Represents a call to Python's native `float()` function.
-
-    Represents a call to Python's native `float()` function which casts an
-    argument to a floating point number.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ()
-    name = "float"
-    _static_type = PythonNativeFloat()
-    _shape = None
-    _class_type = PythonNativeFloat()
-
-    def __new__(cls, arg):
-        return super().__new__(cls)
-
-    def __init__(self, arg):
+    def __init__(self, arg, part):
+        self._part = part
+        self._shape = arg.shape
+        self._class_type = _cast_result_type(arg, arg.dtype.element_type)
         super().__init__(arg)
 
     @property
     def arg(self):
-        """
-        Get the argument which was passed to the function.
-
-        Get the argument which was passed to the function.
-        """
         return self._args[0]
-
-    def __str__(self):
-        return f"float({self.arg})"
-
-# ==============================================================================
-class PythonInt(_DataTypeFunction):
-    """
-    Represents a call to Python's native `int()` function.
-
-    Represents a call to Python's native `int()` function which casts an
-    argument to an integer.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ()
-    name = "int"
-    _static_type = PythonNativeInt()
-    _shape = None
-    _class_type = PythonNativeInt()
-
-    def __new__(cls, arg):
-        return super().__new__(cls)
-
-    def __init__(self, arg):
-        super().__init__(arg)
 
     @property
-    def arg(self):
-        """
-        Get the argument which was passed to the function.
+    def part(self):
+        return self._part
 
-        Get the argument which was passed to the function.
-        """
-        return self._args[0]
+    def __str__(self):
+        return f"ComplexPart({self.arg}, {self.part!r})"
 
+class Cast(_DataTypeFunction):
+    """A conversion of one model expression to a target datatype."""
 
-class PythonStr(_DataTypeFunction):
-    """
-    Represents a call to Python's `str` function.
+    __slots__ = ("_shape", "_class_type")
 
-    Represents a call to Python's `str` function which describes a string
-    cast.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument that is cast to a string.
-    """
-
-    __slots__ = ("_shape",)
-    _static_type = StringType()
-    _class_type = StringType()
-    name = "str"
-
-    def __new__(cls, arg):
-        if isinstance(arg, LiteralString):
-            return arg
-        else:
-            return super().__new__(cls)
-
-    def __init__(self, arg):
-        if not isinstance(arg.class_type, (StringType, CharType)):
+    def __init__(self, arg, datatype):
+        if not isinstance(datatype, Type):
+            raise TypeError("datatype must be a codegen Type")
+        if isinstance(datatype, StringType) and not isinstance(
+            arg.class_type, (StringType, CharType)
+        ):
             raise NotImplementedError(
-                "Support for casting non-character types to strings is not yet available"
+                "Support for casting non-character types to strings is not available"
             )
-        self._shape = (None,)
+        self._shape = (None,) if isinstance(datatype, StringType) else arg.shape
+        self._class_type = _cast_result_type(arg, datatype)
         super().__init__(arg)
 
+    @property
+    def arg(self):
+        """Return the expression being converted."""
+        return self._args[0]
 
-DtypePrecisionToCastFunction = {
-    PythonNativeBool(): PythonBool,
-    PythonNativeInt(): PythonInt,
-    PythonNativeFloat(): PythonFloat,
-    PythonNativeComplex(): PythonComplex,
-}
+    @property
+    def is_elemental(self):
+        return True
+
+    def __str__(self):
+        return f"Cast({self.arg}, {self.dtype})"
 
 
 #==============================================================================================
@@ -2638,41 +1828,6 @@ dtype_registry.update(
     }
 )
 
-class NumpyResultType(_DataTypeFunction):
-    """
-    Class representing a call to the `numpy.result_type` function.
-
-    A class representing a call to the NumPy function `result_type` which returns
-    the datatype of an expression. This function can be used to access the `dtype`
-    property of a NumPy array.
-
-    Parameters
-    ----------
-    *arrays_and_dtypes : model object
-        Any arrays and dtypes passed to the function (currently only accepts one array
-        and no dtypes).
-    """
-
-    __slots__ = ("_class_type",)
-    _shape = None
-    name = "result_type"
-
-    def __init__(self, *arrays_and_dtypes):
-        from .core import X2pyFunctionDef
-        types = [
-            (
-                a.cls_name.static_type()
-                if isinstance(a, X2pyFunctionDef)
-                else a.class_type
-            )
-            for a in arrays_and_dtypes
-        ]
-        self._class_type = sum(types, start=GenericType())
-        if isinstance(self._class_type, ContainerType):
-            self._class_type = self._class_type.element_type
-
-        super().__init__(*arrays_and_dtypes)
-
 def process_dtype(dtype):
     """
     Analyse a dtype passed to a NumPy array creation function.
@@ -2686,7 +1841,7 @@ def process_dtype(dtype):
 
     Parameters
     ----------
-    dtype : X2pyFunctionDef, LiteralString, str
+    dtype : X2pyFunctionDef, Literal, str
         The actual dtype passed to the NumPy function.
 
     Returns
@@ -2702,413 +1857,39 @@ def process_dtype(dtype):
     TypeError: In the case of passed string argument not recognized as valid dtype.
     """
     from .core import X2pyFunctionDef
-    if isinstance(dtype, NumpyResultType):
-        dtype = dtype.dtype
-
-    elif isinstance(dtype, X2pyFunctionDef):
+    if isinstance(dtype, X2pyFunctionDef):
         dtype = dtype.cls_name.static_type()
 
-    elif isinstance(dtype, (LiteralString, str)):
+    elif isinstance(dtype, Literal) and isinstance(dtype.dtype, StringType):
+        dtype = dtype.python_value
+
+    if isinstance(dtype, str):
         try:
-            dtype = dtype_registry[str(dtype)]
+            dtype = dtype_registry[dtype]
         except KeyError as e:
             raise TypeError(f"Unknown type of {dtype}.") from e
 
-    if isinstance(dtype, (NumpyNumericType, PythonNativeBool, GenericType)):
+    if isinstance(dtype, (NumpyNumericType, GenericType)):
         return dtype
     if isinstance(dtype, FixedSizeNumericType):
         return numpy_precision_map[(dtype.primitive_type, dtype.precision)]
     else:
         raise TypeError(f"Unknown type of {dtype}.")
-# =======================================================================================
-class NumpyFloat(PythonFloat):
-    """
-    Represents a call to `numpy.float()` function.
+def cast_to(arg, target_type):
+    """Return ``arg`` cast to ``target_type`` using the codegen cast node."""
+    if arg.class_type == target_type:
+        return arg
+    if isinstance(target_type, NumpyNDArrayType):
+        target_type = target_type.element_type
 
-    Represents a call to the NumPy cast function `float`.
+    if isinstance(target_type, NumpyBoolType) and getattr(arg, "is_optional", False):
+        from .core import And, IsNot
 
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
+        return And(IsNot(arg, NIL), Cast(arg, target_type))
+    return Cast(arg, target_type)
 
-    __slots__ = ("_shape", "_class_type")
-    _static_type = NumpyFloat64Type()
-    name = "float"
 
-    def __init__(self, arg):
-        self._shape = arg.shape
-        rank = arg.rank
-        order = arg.order
-        self._class_type = NumpyNDArrayType.get_new(self.static_type(), rank, order)
-        super().__init__(arg)
-
-    @property
-    def is_elemental(self):
-        """
-        Indicates whether the function can be applied elementwise.
-
-        Indicates whether the function should be
-        called elementwise for an array argument
-        """
-        return True
-
-
-class NumpyFloat32(NumpyFloat):
-    """
-    Represents a call to numpy.float32() function.
-
-    Represents a call to numpy.float32() function.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ()
-    _static_type = NumpyFloat32Type()
-    name = "float32"
-
-
-class NumpyFloat64(NumpyFloat):
-    """
-    Represents a call to numpy.float64() function.
-
-    Represents a call to numpy.float64() function.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ()
-    _static_type = NumpyFloat64Type()
-    name = "float64"
-
-class NumpyBool(PythonBool):
-    """
-    Represents a call to `numpy.bool()` function.
-
-    Represents a call to the NumPy cast function `bool`.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ("_shape", "_class_type")
-    name = "bool"
-
-    def __init__(self, arg):
-        self._shape = arg.shape
-        rank = arg.rank
-        order = arg.order
-        self._class_type = NumpyNDArrayType.get_new(self.static_type(), rank, order)
-        super().__init__(arg)
-
-    @property
-    def is_elemental(self):
-        """
-        Indicates whether the function can be applied elementwise.
-
-        Indicates whether the function should be
-        called elementwise for an array argument
-        """
-        return True
-
-class NumpyInt(PythonInt):
-    """
-    Represents a call to `numpy.int()` function.
-
-    Represents a call to the NumPy cast function `int`.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    base : model object
-        The argument passed to the function to indicate the base in which
-        the integer is expressed.
-    """
-
-    __slots__ = ("_shape", "_class_type")
-    _static_type = numpy_precision_map[
-        (PrimitiveIntegerType(), PythonInt._static_type.precision)
-    ]
-    name = "int"
-
-    def __init__(self, arg=None, base=10):
-        if base != 10:
-            raise TypeError("numpy.int's base argument is not yet supported")
-        self._shape = arg.shape
-        rank = arg.rank
-        order = arg.order
-        self._class_type = NumpyNDArrayType.get_new(self.static_type(), rank, order)
-        super().__init__(arg)
-
-    @property
-    def is_elemental(self):
-        """
-        Indicates whether the function can be applied elementwise.
-
-        Indicates whether the function should be
-        called elementwise for an array argument
-        """
-        return True
-
-
-class NumpyInt8(NumpyInt):
-    """
-    Represents a call to numpy.int8() function.
-
-    Represents a call to numpy.int8() function.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ()
-    _static_type = NumpyInt8Type()
-    name = "int8"
-
-
-class NumpyInt16(NumpyInt):
-    """
-    Represents a call to numpy.int16() function.
-
-    Represents a call to numpy.int16() function.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ()
-    _static_type = NumpyInt16Type()
-    name = "int16"
-
-
-class NumpyInt32(NumpyInt):
-    """
-    Represents a call to numpy.int32() function.
-
-    Represents a call to numpy.int32() function.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ()
-    _static_type = NumpyInt32Type()
-    name = "int32"
-
-
-class NumpyInt64(NumpyInt):
-    """
-    Represents a call to numpy.int64() function.
-
-    Represents a call to numpy.int64() function.
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ()
-    _static_type = NumpyInt64Type()
-    name = "int64"
-
-
-# ==============================================================================
-class NumpyReal(PythonReal):
-    """
-    Represents a call to numpy.real for code generation.
-
-    Represents a call to the NumPy function real.
-    > a = 1+2j
-    > np.real(a)
-    1.0
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ("_shape", "_class_type")
-    name = "real"
-
-    def __new__(cls, arg):
-        if isinstance(arg.dtype, PythonNativeBool):
-            if arg.rank:
-                return NumpyInt(arg)
-            else:
-                return PythonInt(arg)
-        else:
-            return super().__new__(cls, arg)
-
-    def __init__(self, arg):
-        super().__init__(arg)
-        rank = arg.rank
-        order = arg.order
-        dtype = process_dtype(arg.dtype.element_type)
-        self._class_type = NumpyNDArrayType.get_new(dtype, rank, order)
-        self._shape = process_shape(self.rank == 0, self.internal_var.shape)
-
-    @property
-    def is_elemental(self):
-        """Indicates whether the function should be
-        called elementwise for an array argument
-        """
-        return True
-
-
-# ==============================================================================
-
-
-class NumpyImag(PythonImag):
-    """
-    Represents a call to numpy.imag for code generation.
-
-    Represents a call to the NumPy function imag.
-    > a = 1+2j
-    > np.imag(a)
-    2.0
-
-    Parameters
-    ----------
-    arg : model object
-        The argument passed to the function.
-    """
-
-    __slots__ = ("_shape", "_class_type")
-    name = "imag"
-
-    def __new__(cls, arg):
-
-        if not isinstance(arg.dtype.primitive_type, PrimitiveComplexType):
-            dtype = (
-                PythonNativeInt()
-                if isinstance(arg.dtype, PythonNativeBool)
-                else arg.dtype
-            )
-            if arg.rank == 0:
-                return convert_to_literal(0, dtype)
-            dtype = DtypePrecisionToCastFunction[dtype].static_type()
-            return NumpyZeros(arg.shape, dtype=dtype)
-        return super().__new__(cls, arg)
-
-    def __init__(self, arg):
-        super().__init__(arg)
-        rank = arg.rank
-        order = arg.order
-        dtype = process_dtype(arg.dtype.element_type)
-        self._class_type = NumpyNDArrayType.get_new(dtype, rank, order)
-        self._shape = process_shape(self.rank == 0, self.internal_var.shape)
-
-    @property
-    def is_elemental(self):
-        """Indicates whether the function should be
-        called elementwise for an array argument
-        """
-        return True
-
-
-# =======================================================================================
-class NumpyComplex(PythonComplex):
-    """
-    Represents a call to `numpy.complex()` function.
-
-    Represents a call to the NumPy cast function `complex`.
-
-    Parameters
-    ----------
-    arg0 : model object
-        The first argument passed to the function. Either the array/scalar being cast
-        or the real part of the complex.
-    arg1 : model object, optional
-        The second argument passed to the function. The imaginary part of the complex.
-    """
-
-    _real_cast = NumpyReal
-    _imag_cast = NumpyImag
-    __slots__ = ("_shape", "_class_type")
-    _static_type = NumpyComplex128Type()
-    name = "complex"
-
-    def __init__(self, arg0, arg1=None):
-        if arg1 is not None:
-            raise NotImplementedError(
-                "Use builtin complex function not deprecated np.complex"
-            )
-        self._shape = arg0.shape
-        rank = arg0.rank
-        order = arg0.order
-        self._class_type = NumpyNDArrayType.get_new(self.static_type(), rank, order)
-        super().__init__(arg0)
-
-    @property
-    def is_elemental(self):
-        """
-        Indicates whether the function can be applied elementwise.
-
-        Indicates whether the function should be
-        called elementwise for an array argument
-        """
-        return True
-
-
-class NumpyComplex64(NumpyComplex):
-    """
-    Represents a call to numpy.complex64() function.
-
-    Represents a call to numpy.complex64() function.
-
-    Parameters
-    ----------
-    arg0 : model object
-        The argument passed to the function.
-
-    arg1 : model object
-        Unused inherited argument.
-    """
-
-    __slots__ = ()
-    _static_type = NumpyComplex64Type()
-    name = "complex64"
-
-
-class NumpyComplex128(NumpyComplex):
-    """
-    Represents a call to numpy.complex128() function.
-
-    Represents a call to numpy.complex128() function.
-
-    Parameters
-    ----------
-    arg0 : model object
-        The argument passed to the function.
-
-    arg1 : model object
-        Unused inherited argument.
-    """
-
-    __slots__ = ()
-    _static_type = NumpyComplex128Type()
-    name = "complex128"
-
-
-for _model_cls in (Literal, NilArgument, _DataTypeFunction):
+for _model_cls in (Literal, _DataTypeFunction):
     register_model_class(_model_cls)
 
 del _model_cls

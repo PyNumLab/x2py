@@ -15,16 +15,15 @@ from .models.core import (
     Function,
 )
 from .models.datatypes import (
-    ContainerType,
     FixedSizeType,
     init_model_object,
-    PythonNativeInt,
+    NumpyInt64Type,
     register_model_class,
     StringType,
+    Type,
     TupleType,
+    convert_to_literal,
 )
-
-from .models.datatypes import LiteralInteger
 from .models.core import Variable
 
 __all__ = (
@@ -42,6 +41,7 @@ __all__ = (
     "C_F_Pointer",
     "C_NULL_CHAR",
     "DeallocatePointer",
+    "FortranTransfer",
     "c_malloc",
 )
 
@@ -62,7 +62,7 @@ class BindCPointer(FixedSizeType):
     _name = "bindcpointer"
 
 
-class BindCArrayType(ContainerType, TupleType):
+class BindCArrayType(Type, TupleType):
     """
     Datatype for a tuple containing all the information necessary to describe an array.
 
@@ -95,9 +95,9 @@ class BindCArrayType(ContainerType, TupleType):
         if not isinstance(has_strides, bool):
             raise TypeError("has_strides must be a boolean")
 
-        shape_types = (PythonNativeInt(),) * rank
-        ubound_types = (PythonNativeInt(),) * rank * has_strides
-        stride_types = (PythonNativeInt(),) * rank * has_strides
+        shape_types = (NumpyInt64Type(),) * rank
+        ubound_types = (NumpyInt64Type(),) * rank * has_strides
+        stride_types = (NumpyInt64Type(),) * rank * has_strides
         element_types = (
             (BindCPointer(),) + shape_types + ubound_types + stride_types
         )
@@ -106,7 +106,7 @@ class BindCArrayType(ContainerType, TupleType):
             self._array_rank = rank
             self._has_strides = has_strides
             self._element_types = element_types
-            ContainerType.__init__(self)
+            Type.__init__(self)
 
         name = f"BindCArray{rank}DType"
         if has_strides:
@@ -490,7 +490,7 @@ class BindCClassProperty:
         The function which modifies the value of the class attribute.
     class_type : Variable
         The type of the class to which the attribute belongs.
-    docstring : LiteralString, optional
+    docstring : Literal, optional
         The docstring of the property.
     """
 
@@ -736,11 +736,35 @@ class BindCSizeOf(Function):
     """
 
     __slots__ = ()
-    _class_type = PythonNativeInt()
+    _class_type = NumpyInt64Type()
     _shape = None
 
     def __init__(self, element):
         super().__init__(element)
+
+
+class FortranTransfer(Function):
+    """Represent the Fortran ``transfer(source, mold[, size])`` intrinsic."""
+
+    __slots__ = ("_class_type", "_shape")
+
+    def __init__(self, source, mold, size=None):
+        self._class_type = mold.class_type
+        self._shape = mold.shape
+        args = (source, mold) if size is None else (source, mold, size)
+        super().__init__(*args)
+
+    @property
+    def source(self):
+        return self.args[0]
+
+    @property
+    def mold(self):
+        return self.args[1]
+
+    @property
+    def size(self):
+        return self.args[2] if len(self.args) == 3 else None
 
 
 class C_NULL_CHAR:
@@ -754,7 +778,7 @@ class C_NULL_CHAR:
 
     __slots__ = ()
     _class_type = StringType()
-    _shape = (LiteralInteger(1),)
+    _shape = (convert_to_literal(1),)
     _attribute_nodes = ()
 
     def __init__(self):
@@ -763,13 +787,19 @@ class C_NULL_CHAR:
 
 c_malloc = FunctionDef(
     "c_malloc",
-    (FunctionDefArgument(Variable(PythonNativeInt(), "size")),),
+    (FunctionDefArgument(Variable(NumpyInt64Type(), "size")),),
     (),
     FunctionDefResult(Variable(BindCPointer(), "ptr")),
 )
 
 
-for _model_cls in (BindCClassProperty, CLocFunc, C_F_Pointer, C_NULL_CHAR):
+for _model_cls in (
+    BindCClassProperty,
+    CLocFunc,
+    C_F_Pointer,
+    C_NULL_CHAR,
+    FortranTransfer,
+):
     register_model_class(_model_cls)
 
 del _model_cls

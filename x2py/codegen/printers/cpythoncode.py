@@ -6,7 +6,7 @@ printing the C-Python interface.
 import sys
 
 from ..bind_c import BindCFunctionDef, BindCModule, BindCPointer
-from ..bindings.c_concepts import CStackArray, CStrStr, ObjectAddress
+from ..bindings.c_concepts import CStrStr, ObjectAddress
 from ..models.core import Declare, FunctionAddress, Import, Module, SeparatorComment
 from ..bindings.cpython_api import (
     Py_None,
@@ -20,8 +20,13 @@ from ..bindings.cpython_api import (
     PyTuple_Pack,
     WrapperCustomDataType,
 )
-from ..models.datatypes import FinalType
-from ..models.datatypes import LiteralInteger, LiteralString, Nil
+from ..models.datatypes import (
+    FinalType,
+    Literal,
+    NIL,
+    NumpyNDArrayType,
+    convert_to_literal,
+)
 from ..bindings.numpy_cpython_api import NumpyArrayObjectType
 from .ccode import CCodePrinter
 
@@ -91,9 +96,12 @@ class CPythonCodePrinter(CCodePrinter):
         --------
         CCodePrinter.is_c_pointer : The extended function.
         """
-        if isinstance(
-            a.class_type,
-            (WrapperCustomDataType, BindCPointer, CStackArray, PyTuple_Pack),
+        if (
+            isinstance(a.class_type, (WrapperCustomDataType, BindCPointer, PyTuple_Pack))
+            or (
+                isinstance(a.class_type, NumpyNDArrayType)
+                and a.class_type.raw
+            )
         ):
             return True
         elif isinstance(
@@ -256,7 +264,7 @@ class CPythonCodePrinter(CCodePrinter):
 
     def _print_PyArgKeywords(self, expr):
         arg_names = ",\n".join(
-            [f'(char*)"{a}"' for a in expr.arg_names] + [self._print(Nil())]
+            [f'(char*)"{a}"' for a in expr.arg_names] + [self._print(NIL)]
         )
         return f"static char *{expr.name}[] = {{\n" f"{arg_names}\n" "};\n"
 
@@ -398,7 +406,7 @@ class CPythonCodePrinter(CCodePrinter):
                 name=self.get_python_name(expr.scope, f.original_function),
                 wrapper_name=f.name,
                 docstring=(
-                    self._print(CStrStr(LiteralString("\n".join(f.docstring.comments))))
+                    self._print(CStrStr(convert_to_literal("\n".join(f.docstring.comments))))
                     if f.docstring
                     else '""'
                 ),
@@ -465,7 +473,7 @@ class CPythonCodePrinter(CCodePrinter):
         type_name = expr.type_name
         name = self.scope.get_python_name(expr.name)
         docstring = (
-            self._print(CStrStr(LiteralString("\n".join(expr.docstring.comments))))
+            self._print(CStrStr(convert_to_literal("\n".join(expr.docstring.comments))))
             if expr.docstring
             else '""'
         )
@@ -493,20 +501,24 @@ class CPythonCodePrinter(CCodePrinter):
                 del_string = f"    .tp_dealloc = (destructor) {f.name},\n"
             else:
                 docstring = (
-                    self._print(CStrStr(LiteralString("\n".join(f.docstring.comments))))
+                    self._print(CStrStr(convert_to_literal("\n".join(f.docstring.comments))))
                     if f.docstring
                     else '""'
                 )
-                funcs[py_name] = (f.name, docstring)
+                original_args = f.original_function.arguments
+                flags = "METH_VARARGS | METH_KEYWORDS"
+                if not original_args or not original_args[0].bound_argument:
+                    flags += " | METH_STATIC"
+                funcs[py_name] = (f.name, docstring, flags)
 
         for f in expr.interfaces:
             py_name = self.get_python_name(original_scope, f.original_function)
             docstring = (
-                self._print(CStrStr(LiteralString("\n".join(f.docstring.comments))))
+                self._print(CStrStr(convert_to_literal("\n".join(f.docstring.comments))))
                 if f.docstring
                 else '""'
             )
-            funcs[py_name] = (f.name, docstring)
+            funcs[py_name] = (f.name, docstring, "METH_VARARGS | METH_KEYWORDS")
 
         property_definitions = "".join(
             "".join(
@@ -529,11 +541,11 @@ class CPythonCodePrinter(CCodePrinter):
                 "{\n"
                 f'"{name}",\n'
                 f"(PyCFunction){wrapper_name},\n"
-                "METH_VARARGS | METH_KEYWORDS,\n"
+                f"{flags},\n"
                 f"{doc_string}\n"
                 "},\n"
             )
-            for name, (wrapper_name, doc_string) in funcs.items()
+            for name, (wrapper_name, doc_string, flags) in funcs.items()
         )
 
         magic_methods = {
@@ -722,7 +734,7 @@ class CPythonCodePrinter(CCodePrinter):
                 return f"{static}{external}{declaration_type} {variable}{init};\n"
 
             size = var.shape[0]
-            if isinstance(size, LiteralInteger):
+            if isinstance(size, Literal):
                 return f"{static}{external}{declaration_type} {variable}[{size}];\n"
             else:
                 return f"{static}{external}{declaration_type}* {variable}{init};\n"
@@ -730,16 +742,20 @@ class CPythonCodePrinter(CCodePrinter):
             return CCodePrinter._print_Declare(self, expr)
 
     def _print_IndexedElement(self, expr):
-        if isinstance(expr.base.class_type, CStackArray):
+        if (
+            isinstance(expr.base.class_type, NumpyNDArrayType)
+            and expr.base.class_type.raw
+        ):
             base = self._print(expr.base.name)
             idxs = "".join(f"[{self._print(a)}]" for a in expr.indices)
             return f"{base}{idxs}"
         else:
             return CCodePrinter._print_IndexedElement(self, expr)
 
-    def _print_Py_ssize_t_Cast(self, expr):
-        var = self._print(expr.args[0])
-        return f"(Py_ssize_t){var}"
+    def _print_Cast(self, expr):
+        if expr.dtype is Py_ssize_t():
+            return f"(Py_ssize_t){self._print(expr.arg)}"
+        return super()._print_Cast(expr)
 
     def _print_PyTuple_Pack(self, expr):
         args = expr.args

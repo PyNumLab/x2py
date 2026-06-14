@@ -23,6 +23,9 @@
 
 extern const int NO_TYPE_CHECK;
 extern const int NO_ORDER_CHECK;
+extern const int REQUIRE_C_CONTIGUOUS;
+extern const int REQUIRE_F_CONTIGUOUS;
+extern const int REQUIRE_ANY_CONTIGUOUS;
 
 /*
  * A function which can be passed to a PyCapsule in order to free data that was created by x2py.

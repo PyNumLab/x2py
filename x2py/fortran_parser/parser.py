@@ -3101,7 +3101,10 @@ class FortranParser:
                 raw_name, shape = self._var(entity)
                 if not raw_name:
                     continue
-                normalized_name = self._normalize_declared_name(raw_name, meta)
+                entity_meta = self._entity_decl_meta(raw_name, meta)
+                normalized_name = self._normalize_declared_name(
+                    raw_name, entity_meta
+                )
                 if not normalized_name:
                     continue
                 lowered_name = self._proc_scope_mark_declared_symbol(
@@ -3115,9 +3118,11 @@ class FortranParser:
                     self._proc_scope_add_external_symbol(proc_state, lowered_name)
                 arg = self._proc_scope_get_symbol(proc_state, lowered_name)
                 if arg is None:
-                    self._proc_scope_set_declared_local_type(proc_state, lowered_name, meta)
+                    self._proc_scope_set_declared_local_type(
+                        proc_state, lowered_name, entity_meta
+                    )
                     continue
-                self._apply(arg, meta, shape)
+                self._apply(arg, entity_meta, shape)
             return
 
         target = scope.model
@@ -3133,21 +3138,37 @@ class FortranParser:
             raw_name, shape = self._var(entity)
             if not raw_name:
                 continue
-            normalized_name = self._normalize_declared_name(raw_name, meta)
+            entity_meta = self._entity_decl_meta(raw_name, meta)
+            normalized_name = self._normalize_declared_name(raw_name, entity_meta)
             if not normalized_name:
                 continue
             if role == "type_field":
                 field = FortranArgument(name=normalized_name)
-                self._apply(field, meta, shape)
+                self._apply(field, entity_meta, shape)
                 target.fields.append(field)
                 continue
             var = FortranArgument(name=normalized_name)
-            self._apply(var, meta, shape)
+            self._apply(var, entity_meta, shape)
             if initializer is not None and meta["parameter"]:
                 var.value = self._normalize_parameter_value(initializer)
                 var.symbolic_value = initializer
                 var.value_type = "expression"
             target.variables.append(var)
+
+    @staticmethod
+    def _entity_decl_meta(raw_name: str, meta: dict) -> dict:
+        if meta["base_type"] != "character":
+            return meta
+        match = re.search(r"\*\s*(\([^)]*\)|\*|[A-Za-z_]\w*|\d+)\s*$", raw_name)
+        if match is None:
+            return meta
+        length = match.group(1).strip()
+        if length.startswith("(") and length.endswith(")"):
+            length = length[1:-1].strip()
+        entity_meta = dict(meta)
+        entity_meta["kind"] = length
+        entity_meta["character_length_syntax"] = True
+        return entity_meta
 
     @staticmethod
     def _new_decl_meta(base_type: str, kind: str | None) -> dict:

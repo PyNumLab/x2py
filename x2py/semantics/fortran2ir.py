@@ -242,6 +242,11 @@ class FortranToIRConverter:
         if derived_type_ref is not None:
             semantic_name, ref_metadata = derived_type_ref
             metadata[EXTERNAL_TYPE_REF_METADATA] = ref_metadata
+        if var.base_type.lower() == "character":
+            metadata["fortran_character_length"] = self._character_length(var)
+            metadata["fortran_allocatable"] = bool(
+                getattr(var, "allocatable", False)
+            )
         shape = [self._resolve_compile_time_text(dim) for dim in var.shape]
         storage = self._array_storage_contract(var, shape) if var.rank > 0 else None
         semantic_type = SemanticType(
@@ -255,6 +260,15 @@ class FortranToIRConverter:
         )
         self._add_variable_constraints(semantic_type, var)
         return semantic_type
+
+    def _character_length(self, var: FortranVariable) -> str:
+        raw = self._resolve_compile_time_text(str(var.kind or "")).strip()
+        length_match = re.search(r"(?:^|,)\s*len\s*=\s*([^,]+)", raw, re.IGNORECASE)
+        if length_match is not None:
+            return length_match.group(1).strip()
+        if var.character_length_syntax and raw:
+            return raw
+        return "1"
 
     def visit_argument(
         self,
@@ -933,23 +947,43 @@ class FortranToIRConverter:
         procedure_lookup: dict[str, SemanticFunction],
     ) -> list[SemanticMethod]:
         methods: list[SemanticMethod] = []
-        for method_name in dtype.methods:
-            proc = procedure_lookup.get(method_name)
+        bindings = getattr(dtype, "procedure_bindings", ()) or [
+            {"name": method_name, "attrs": []} for method_name in dtype.methods
+        ]
+        for binding in bindings:
+            binding_name, target_name = self._procedure_binding_names(binding["name"])
+            proc = procedure_lookup.get(target_name) or procedure_lookup.get(
+                target_name.lower()
+            )
             if proc is None:
                 continue
+            attrs = set(binding.get("attrs", ()))
+            visibility = proc.visibility
+            if "private" in attrs:
+                visibility = "private"
+            elif "public" in attrs:
+                visibility = "public"
             methods.append(
                 SemanticMethod(
-                    name=proc.name,
+                    name=binding_name,
                     native_name=proc.native_name,
                     arguments=proc.arguments,
                     return_type=proc.return_type,
                     contracts=proc.contracts,
                     projection=proc.projection,
-                    visibility=proc.visibility,
+                    visibility=visibility,
+                    is_static="nopass" in attrs,
                     origin=proc.origin,
                 )
             )
         return methods
+
+    @staticmethod
+    def _procedure_binding_names(name: str) -> tuple[str, str]:
+        if "=>" not in name:
+            return name.strip(), name.strip()
+        binding_name, target_name = name.split("=>", 1)
+        return binding_name.strip(), target_name.strip()
 
     @staticmethod
     def _projected_procedure_arguments(proc: FortranProcedureSignature) -> list[FortranArgument]:

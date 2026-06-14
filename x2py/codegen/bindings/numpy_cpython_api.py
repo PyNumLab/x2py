@@ -5,7 +5,7 @@ Handling the transitions between Python code and C code using (Numpy/C Api).
 
 import numpy as np
 
-from .c_concepts import CNativeInt, CStackArray
+from .c_concepts import CNativeInt
 from ..models.core import FunctionDef, FunctionDefArgument, FunctionDefResult
 from .cpython_api import (
     PythonObjectType,
@@ -13,7 +13,7 @@ from .cpython_api import (
     check_type_registry,
     pytype_parse_registry,
 )
-from ..models.datatypes import CharType, FixedSizeType, GenericType, PythonNativeBool, VoidType
+from ..models.datatypes import CharType, FixedSizeType, GenericType, NumpyBoolType, VoidType
 from ..models.datatypes import (
     NumpyComplex64Type,
     NumpyComplex128Type,
@@ -92,7 +92,7 @@ PyArray_Check = FunctionDef(
     name="PyArray_Check",
     body=[],
     arguments=[FunctionDefArgument(Variable(PythonObjectType(), name="o"))],
-    results=FunctionDefResult(Variable(PythonNativeBool(), name="b")),
+    results=FunctionDefResult(Variable(NumpyBoolType(), name="b")),
 )
 
 PyArray_DATA = FunctionDef(
@@ -129,7 +129,7 @@ PyArray_SHAPE = FunctionDef(
     ],
     results=FunctionDefResult(
         Variable(
-            CStackArray.get_new(NumpyInt32Type()), name="s", memory_handling="alias"
+            NumpyNDArrayType.get_new(NumpyInt32Type(), 1, None, raw=True), name="s", memory_handling="alias"
         )
     ),
 )
@@ -144,7 +144,7 @@ PyArray_STRIDES = FunctionDef(
     ],
     results=FunctionDefResult(
         Variable(
-            CStackArray.get_new(NumpyInt32Type()), name="s", memory_handling="alias"
+            NumpyNDArrayType.get_new(NumpyInt32Type(), 1, None, raw=True), name="s", memory_handling="alias"
         )
     ),
 )
@@ -181,7 +181,7 @@ numpy_to_stc_strides = FunctionDef(
     ],
     body=[],
     results=FunctionDefResult(
-        Variable(CStackArray.get_new(NumpyInt32Type()), "strides")
+        Variable(NumpyNDArrayType.get_new(NumpyInt32Type(), 1, None, raw=True), "strides")
     ),
 )
 
@@ -194,10 +194,10 @@ pyarray_check = FunctionDef(
         FunctionDefArgument(Variable(CNativeInt(), "dtype")),
         FunctionDefArgument(Variable(CNativeInt(), "rank")),
         FunctionDefArgument(Variable(CNativeInt(), "flag")),
-        FunctionDefArgument(Variable(PythonNativeBool(), "allow_empty")),
+        FunctionDefArgument(Variable(NumpyBoolType(), "allow_empty")),
     ],
     body=[],
-    results=FunctionDefResult(Variable(PythonNativeBool(), "b")),
+    results=FunctionDefResult(Variable(NumpyBoolType(), "b")),
 )
 
 is_numpy_array = FunctionDef(
@@ -207,10 +207,10 @@ is_numpy_array = FunctionDef(
         FunctionDefArgument(Variable(CNativeInt(), "dtype")),
         FunctionDefArgument(Variable(CNativeInt(), "rank")),
         FunctionDefArgument(Variable(CNativeInt(), "flag")),
-        FunctionDefArgument(Variable(PythonNativeBool(), "allow_empty")),
+        FunctionDefArgument(Variable(NumpyBoolType(), "allow_empty")),
     ],
     body=[],
-    results=FunctionDefResult(Variable(PythonNativeBool(), "b")),
+    results=FunctionDefResult(Variable(NumpyBoolType(), "b")),
 )
 
 get_strides_and_shape_from_numpy_array = FunctionDef(
@@ -219,26 +219,26 @@ get_strides_and_shape_from_numpy_array = FunctionDef(
         FunctionDefArgument(Variable(PythonObjectType(), "arr", memory_handling="alias")),
         FunctionDefArgument(
             Variable(
-                CStackArray.get_new(NumpyInt64Type()),
+                NumpyNDArrayType.get_new(NumpyInt64Type(), 1, None, raw=True),
                 "base_shape",
                 memory_handling="alias",
             )
         ),
         FunctionDefArgument(
             Variable(
-                CStackArray.get_new(NumpyInt64Type()),
+                NumpyNDArrayType.get_new(NumpyInt64Type(), 1, None, raw=True),
                 "ubounds",
                 memory_handling="alias",
             )
         ),
         FunctionDefArgument(
             Variable(
-                CStackArray.get_new(NumpyInt64Type()),
+                NumpyNDArrayType.get_new(NumpyInt64Type(), 1, None, raw=True),
                 "strides",
                 memory_handling="alias",
             )
         ),
-        FunctionDefArgument(Variable(PythonNativeBool(), "c_order")),
+        FunctionDefArgument(Variable(NumpyBoolType(), "c_order")),
     ],
     body=[],
 )
@@ -275,9 +275,9 @@ to_pyarray = FunctionDef(
         FunctionDefArgument(Variable(CNativeInt(), name="nd")),
         FunctionDefArgument(Variable(CNativeInt(), name="typenum")),
         FunctionDefArgument(Variable(VoidType(), name="data", memory_handling="alias")),
-        FunctionDefArgument(Variable(CStackArray.get_new(NumpyInt64Type()), "shape")),
-        FunctionDefArgument(Variable(PythonNativeBool(), "c_order")),
-        FunctionDefArgument(Variable(PythonNativeBool(), "release_memory")),
+        FunctionDefArgument(Variable(NumpyNDArrayType.get_new(NumpyInt64Type(), 1, None, raw=True), "shape")),
+        FunctionDefArgument(Variable(NumpyBoolType(), "c_order")),
+        FunctionDefArgument(Variable(NumpyBoolType(), "release_memory")),
     ],
     results=FunctionDefResult(
         Variable(PythonObjectType(), name="arr", memory_handling="alias")
@@ -298,6 +298,9 @@ numpy_flag_f_contig = Variable(CNativeInt(), name="NPY_ARRAY_F_CONTIGUOUS")
 # Custom Array Flags defined in x2py/stdlib/cwrapper/cwrapper_ndarrays.h
 no_type_check = Variable(CNativeInt(), name="NO_TYPE_CHECK")
 no_order_check = Variable(CNativeInt(), name="NO_ORDER_CHECK")
+require_c_contiguous = Variable(CNativeInt(), name="REQUIRE_C_CONTIGUOUS")
+require_f_contiguous = Variable(CNativeInt(), name="REQUIRE_F_CONTIGUOUS")
+require_any_contiguous = Variable(CNativeInt(), name="REQUIRE_ANY_CONTIGUOUS")
 
 # https://numpy.org/doc/stable/reference/c-api/dtype.html
 numpy_bool_type = Variable(CNativeInt(), name="NPY_BOOL")
@@ -319,7 +322,7 @@ numpy_cdouble_type = Variable(CNativeInt(), name="NPY_CDOUBLE")
 numpy_clongdouble_type = Variable(CNativeInt(), name="NPY_CLONGDOUBLE")
 
 numpy_dtype_registry = {
-    PythonNativeBool(): numpy_bool_type,
+    NumpyBoolType(): numpy_bool_type,
     NumpyInt8Type(): numpy_byte_type,
     NumpyInt16Type(): numpy_short_type,
     NumpyInt32Type(): numpy_int32_type,

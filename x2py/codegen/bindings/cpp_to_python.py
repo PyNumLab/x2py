@@ -4,7 +4,7 @@ which creates an interface exposing C++ code to Python using pybind11.
 """
 
 from ..models.core import Import
-from ..models.datatypes import Nil, attach_model_child
+from ..models.datatypes import NIL, attach_model_child
 from ..models.core import Variable
 from .cpython_api import PythonObjectType, PyModInitFunc, PyModule
 from ..scope import Scope
@@ -33,7 +33,7 @@ class Pybind11BindingGenerator(BindingGenerator):
         # A map used to find the Python-compatible Variable equivalent to an object in the AST
         self._python_object_map = {}
         # The object that should be returned to indicate an error
-        self._error_exit_code = Nil()
+        self._error_exit_code = NIL
 
         self._sharedlib_dirpath = sharedlib_dirpath
         super().__init__(verbose)

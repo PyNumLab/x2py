@@ -15,11 +15,11 @@ from ..models.datatypes import (
     PrimitiveComplexType,
     PrimitiveFloatingPointType,
     PrimitiveIntegerType,
-    PythonNativeFloat,
     StringType,
+    Literal,
+    NIL,
 )
-from ..models.datatypes import LiteralString, LiteralTrue, Nil
-from ..models.datatypes import NumpyFloat
+from ..models.datatypes import NumpyFloat64Type, cast_to
 from ..models.core import Variable
 from .codeprinter import CodePrinter
 
@@ -254,7 +254,7 @@ class CppCodePrinter(CodePrinter):
 
         args = ", ".join(self._print(a) for a in expr.arguments)
 
-        result = "void" if result_var is Nil() else self._print(result_var.class_type)
+        result = "void" if result_var is NIL else self._print(result_var.class_type)
 
         return f"{result} {name}({args})"
 
@@ -512,7 +512,7 @@ class CppCodePrinter(CodePrinter):
             self._print(
                 a
                 if a.dtype.primitive_type is PrimitiveFloatingPointType()
-                else NumpyFloat(a)
+                else cast_to(a, NumpyFloat64Type())
             )
             for a in expr.args
         )
@@ -550,7 +550,7 @@ class CppCodePrinter(CodePrinter):
                 dtype
                 if dtype.primitive_type
                 not in (PrimitiveIntegerType(), PrimitiveBooleanType())
-                else PythonNativeFloat()
+                else NumpyFloat64Type()
             )
 
         if current_dtype != dtype:
@@ -652,7 +652,7 @@ class CppCodePrinter(CodePrinter):
     #  Casts
     # ------------------------------
 
-    def _print_PythonFloat(self, expr):
+    def _print_Cast(self, expr):
         value = self._print(expr.arg)
         type_name = self._print(expr.dtype)
         return f"static_cast<{type_name}>({value})"
@@ -661,17 +661,17 @@ class CppCodePrinter(CodePrinter):
     #  Types
     # ------------------------------
 
-    def _print_PythonNativeBool(self, expr):
+    def _print_NumpyBoolType(self, expr):
         return "bool"
 
-    def _print_PythonNativeInt(self, expr):
-        # TODO: Improve, wrong precision
-        return "int"
+    def _print_NumpyInt64Type(self, expr):
+        self.add_import(cpp_imports["cstdint"])
+        return "int64_t"
 
-    def _print_PythonNativeFloat(self, expr):
+    def _print_NumpyFloat64Type(self, expr):
         return "double"
 
-    def _print_PythonNativeComplex(self, expr):
+    def _print_NumpyComplex128Type(self, expr):
         self.add_import(cpp_imports["complex"])
         return "std::complex<double>"
 
@@ -682,9 +682,6 @@ class CppCodePrinter(CodePrinter):
     def _print_NumpyFloat32Type(self, expr):
         return "float"
 
-    def _print_NumpyFloat64Type(self, expr):
-        return "double"
-
     # ------------------------------
     #  Mathematical functions
     # ------------------------------
@@ -694,42 +691,37 @@ class CppCodePrinter(CodePrinter):
     # ------------------------------
 
     def _print_Literal(self, expr):
-        # TODO: Ensure correct precision
-        return repr(expr.python_value)
+        value = expr.python_value
+        dtype = expr.dtype
 
-    def _print_LiteralTrue(self, expr):
-        return "true"
+        if expr is NIL:
+            return "nullptr"
+        if isinstance(dtype, StringType):
+            escaped = (
+                value.replace("\\", "\\\\")
+                .replace("\a", "\\a")
+                .replace("\b", "\\b")
+                .replace("\f", "\\f")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t")
+                .replace("\v", "\\v")
+                .replace('"', '\\"')
+            )
+            return f'"{escaped}"'
 
-    def _print_LiteralFalse(self, expr):
-        return "false"
-
-    def _print_LiteralImaginaryUnit(self, expr):
-        self.add_import(cpp_imports["complex"])
-        return "1i"
-
-    def _print_LiteralComplex(self, expr):
-        if self._in_header:
-            return f"{self._print(expr.dtype)}{{{self._print(expr.real)}, {self._print(expr.imag)}}}"
-        else:
-            if expr.real == 0:
-                return self._print(expr.imag) + "i"
-            else:
-                return f"({self._print(expr.real)} + {self._print(expr.imag)}i)"
-
-    def _print_LiteralString(self, expr):
-        escaped_str = expr.python_value
-        escaped_str = (
-            escaped_str.replace("\\", "\\\\")
-            .replace("\a", "\\a")
-            .replace("\b", "\\b")
-            .replace("\f", "\\f")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r")
-            .replace("\t", "\\t")
-            .replace("\v", "\\v")
-            .replace('"', '\\"')
-        )
-        return f'"{escaped_str}"'
+        primitive_type = dtype.primitive_type
+        if isinstance(primitive_type, PrimitiveBooleanType):
+            return "true" if value else "false"
+        if isinstance(primitive_type, PrimitiveFloatingPointType):
+            suffix = "f" if dtype.precision == 4 else ""
+            return f"{value!r}{suffix}"
+        if isinstance(primitive_type, PrimitiveComplexType):
+            self.add_import(cpp_imports["complex"])
+            real = self._print(Literal(value.real, dtype.element_type))
+            imag = self._print(Literal(value.imag, dtype.element_type))
+            return f"{self._print(dtype)}{{{real}, {imag}}}"
+        return repr(value)
 
     # ------------------------------
     #  Miscellaneous
@@ -760,7 +752,11 @@ class CppCodePrinter(CodePrinter):
         condition_setup = []
         for i, (c, b) in enumerate(expr.blocks):
             body = self._print(b)
-            if i == len(expr.blocks) - 1 and isinstance(c, LiteralTrue):
+            if (
+                i == len(expr.blocks) - 1
+                and isinstance(c, Literal)
+                and c.python_value is True
+            ):
                 if i == 0:
                     lines.append(body)
                     break
@@ -820,7 +816,7 @@ class CppCodePrinter(CodePrinter):
             mod = get_direct_module(func)
             assert mod is not None
             call_code = f"{mod.name}::{call_code}"
-        if func.results.var is not Nil():
+        if func.results.var is not NIL:
             return call_code
         else:
             return f"{call_code};\n"
