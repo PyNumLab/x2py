@@ -375,15 +375,17 @@ static char* _check_pyarray_order(PyArrayObject *a, int flag)
     else if (flag == NPY_ARRAY_C_CONTIGUOUS) {
         int nd = PyArray_NDIM(a);
         npy_intp* np_strides = PyArray_STRIDES(a);
+        valid = nd == 0 || np_strides[0] > 0;
         for (int i = 1; i<nd; ++i) {
-            valid = valid & (np_strides[i-1] >= np_strides[i]);
+            valid = valid && np_strides[i] > 0 && np_strides[i-1] >= np_strides[i];
         }
     }
     else if (flag == NPY_ARRAY_F_CONTIGUOUS) {
         int nd = PyArray_NDIM(a);
         npy_intp* np_strides = PyArray_STRIDES(a);
+        valid = nd == 0 || np_strides[0] > 0;
         for (int i = 1; i<nd; ++i) {
-            valid = valid & (np_strides[i-1] <= np_strides[i]);
+            valid = valid && np_strides[i] > 0 && np_strides[i-1] <= np_strides[i];
         }
     }
     else {
