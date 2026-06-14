@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module providing objects that are useful for describing the compilation of a project
 via the `x2py make` command.
@@ -6,6 +5,7 @@ via the `x2py make` command.
 
 from collections.abc import Iterable
 from pathlib import Path
+
 
 class CompileTarget:
     """
@@ -36,13 +36,13 @@ class CompileTarget:
     """
 
     __slots__ = (
-        "_name",
-        "_pyfile",
-        "_file",
-        "_wrapper_files",
-        "_program_file",
         "_dependencies",
+        "_file",
+        "_name",
+        "_program_file",
+        "_pyfile",
         "_stdlib_deps",
+        "_wrapper_files",
     )
 
     def __init__(self, name, pyfile, file, wrapper_files, program_file, stdlib_deps):
@@ -164,7 +164,7 @@ class DirTarget:
         An iterable of the CompileTarget objects which are found in this directory.
     """
 
-    __slots__ = ("_folder", "_targets", "_dependencies")
+    __slots__ = ("_dependencies", "_folder", "_targets")
 
     def __init__(self, folder, compile_targets: Iterable[CompileTarget]):
         # Group compile targets by subdirectory
@@ -194,9 +194,7 @@ class DirTarget:
         placed = []
         targets = []
         while deps:
-            new_target = next(
-                (c for (c, d) in deps.items() if all(di in placed for di in d)), None
-            )
+            new_target = next((c for (c, d) in deps.items() if all(di in placed for di in d)), None)
             if new_target is None:
                 break
             deps.pop(new_target)
@@ -213,29 +211,15 @@ class DirTarget:
                 c = cycle[-1]
                 unfulfilled_dep = next(d for d in deps[c] if d not in placed)
                 cycle.append(
-                    next(
-                        c
-                        for c in deps
-                        if (c.pyfile if isinstance(c, CompileTarget) else c.folder)
-                        == unfulfilled_dep
-                    )
+                    next(c for c in deps if (c.pyfile if isinstance(c, CompileTarget) else c.folder) == unfulfilled_dep)
                 )
 
-            cycle_example = " -> ".join(
-                str((c.pyfile if isinstance(c, CompileTarget) else c.folder))
-                for c in cycle
-            )
-            raise
-            errors.report(
-                f"Found circular dependencies between directories: {cycle_example}",
-                severity="fatal",
-            )
+            cycle_example = " -> ".join(str(c.pyfile if isinstance(c, CompileTarget) else c.folder) for c in cycle)
+            raise RuntimeError(f"Found circular dependencies between directories: {cycle_example}")
 
         self._folder = folder
         self._targets = targets
-        self._dependencies = {
-            d for t in self._targets for d in t.dependencies if d not in self
-        }
+        self._dependencies = {d for t in self._targets for d in t.dependencies if d not in self}
 
     @property
     def dependencies(self):
@@ -268,8 +252,7 @@ class DirTarget:
     def __contains__(self, other):
         if isinstance(other, CompileTarget):
             return self.folder in other.pyfile.parents
-        else:
-            return self.folder in other.folder.parents
+        return self.folder in other.folder.parents
 
     def __repr__(self):
         return f"DirTarget({self.folder})"

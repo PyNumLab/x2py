@@ -7,9 +7,6 @@ in the target language.
 See developer_docs/codegen_stage.md for more details on the codegen stage.
 """
 
-import os
-
-from ..models.core import ModuleHeader
 from .ccode import CCodePrinter
 from .cppcode import CppCodePrinter
 from .fcode import FCodePrinter

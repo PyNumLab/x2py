@@ -34,17 +34,13 @@ def test_literal_stores_value_and_datatype_without_specialized_subclasses():
 
 
 def test_raw_array_uses_array_attributes_and_variable_storage():
-    array_type = NumpyNDArrayType.get_new(
-        NumpyInt64Type(), 1, None, raw=True
-    )
+    array_type = NumpyNDArrayType.get_new(NumpyInt64Type(), 1, None, raw=True)
     variable = Variable(array_type, "shape", shape=(4,), memory_handling="stack")
 
     assert array_type.raw is True
     assert variable.is_raw_array
     assert variable.on_stack
-    assert CCodePrinter("test.c", verbose=0)._print(Declare(variable)) == (
-        "int64_t shape[4];\n"
-    )
+    assert CCodePrinter("test.c", verbose=0)._print(Declare(variable)) == ("int64_t shape[4];\n")
 
 
 def test_cast_to_uses_shared_cast_concept_with_requested_datatype():
@@ -96,10 +92,7 @@ def test_scope_expands_bind_c_array_to_registered_fields():
     scope = Scope(name="f", scope_type="function")
     array_type = BindCArrayType.get_new(1, has_strides=True)
     packed = Variable(array_type, "packed", shape=(convert_to_literal(4),))
-    fields = [
-        Variable(array_type[i], f"field_{i}")
-        for i in range(len(array_type))
-    ]
+    fields = [Variable(array_type[i], f"field_{i}") for i in range(len(array_type))]
 
     for i, field in enumerate(fields):
         scope.insert_symbolic_alias(IndexedElement(packed, i), field)
@@ -124,6 +117,4 @@ def test_fortran_printer_prints_array_slice_with_inclusive_stop():
     printer = FCodePrinter("test.f90", verbose=0)
     printer.set_scope(Scope(name="f", scope_type="function"))
     printer.print_kind = lambda expr: "i32"
-    assert printer._print(element) == (
-        "values(1_i32:upper + 1_i32 - 1_i32:stride)"
-    )
+    assert printer._print(element) == ("values(1_i32:upper + 1_i32 - 1_i32:stride)")

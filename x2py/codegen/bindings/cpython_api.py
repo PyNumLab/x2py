@@ -1,4 +1,3 @@
-
 """
 Module representing objects (functions/variables etc) required for the interface
 between Python code and C code (using Python/C Api and cwrapper.c).
@@ -44,56 +43,56 @@ from ..models.core import Function
 from ..models.core import Variable
 
 __all__ = (
-    # --------- DATATYPES -----------
-    "Py_ssize_t",
-    "PythonClassType",
-    "PythonObjectType",
-    "PythonTypeObjectType",
-    "WrapperCustomDataType",
     # --------- CLASSES -----------
     "PyArgKeywords",
     "PyArg_ParseTupleNode",
     "PyArgumentError",
+    # --------- CONSTANTS ----------
+    "PyAttributeError",
     "PyBuildValueNode",
     "PyCapsule_Import",
     "PyCapsule_New",
     "PyClassDef",
-    "PyFunctionDef",
-    "PyGetSetDefElement",
-    "PyInterface",
-    "PyList_Clear",
-    "PyModInitFunc",
-    "PyModule",
-    "PyModule_AddObject",
-    "PyModule_Create",
-    "PyTuple_Pack",
-    # --------- CONSTANTS ----------
-    "PyAttributeError",
-    "PyNotImplementedError",
-    "PyRuntimeWarning",
-    "PyTypeError",
-    "Py_False",
-    "Py_None",
-    "Py_True",
     # ----- C / PYTHON FUNCTIONS ---
     "PyDict_New",
     "PyDict_SetItem",
     "PyErr_Occurred",
     "PyErr_SetString",
     "PyErr_WarnEx",
+    "PyFunctionDef",
+    "PyGetSetDefElement",
+    "PyInterface",
     "PyList_Append",
+    "PyList_Clear",
     "PyList_GetItem",
     "PyList_New",
     "PyList_SetItem",
+    "PyModInitFunc",
+    "PyModule",
+    "PyModule_AddObject",
+    "PyModule_Create",
+    "PyNotImplementedError",
     "PyObject_TypeCheck",
+    "PyRuntimeWarning",
     "PySys_GetObject",
+    "PyTuple_Pack",
+    "PyTypeError",
     "PyType_Ready",
     "PyUnicode_AsUTF8",
     "PyUnicode_AsUTF8AndSize",
     "PyUnicode_Check",
     "PyUnicode_FromString",
     "Py_DECREF",
+    "Py_False",
     "Py_INCREF",
+    "Py_None",
+    "Py_True",
+    # --------- DATATYPES -----------
+    "Py_ssize_t",
+    "PythonClassType",
+    "PythonObjectType",
+    "PythonTypeObjectType",
+    "WrapperCustomDataType",
 )
 
 
@@ -179,7 +178,7 @@ class PyArgKeywords:
         A list of the names of the function arguments
     """
 
-    __slots__ = ("_name", "_arg_names")
+    __slots__ = ("_arg_names", "_name")
     _attribute_nodes = ()
 
     def __init__(self, name, arg_names):
@@ -225,19 +224,15 @@ class PyArg_ParseTupleNode:
         A list of the names of the function arguments.
     """
 
-    __slots__ = ("_pyarg", "_pykwarg", "_parse_args", "_arg_names", "_flags")
+    __slots__ = ("_arg_names", "_flags", "_parse_args", "_pyarg", "_pykwarg")
     _attribute_nodes = ("_pyarg", "_pykwarg", "_parse_args", "_arg_names")
 
-    def __init__(
-        self, python_func_args, python_func_kwargs, c_func_args, parse_args, arg_names
-    ):
+    def __init__(self, python_func_args, python_func_kwargs, c_func_args, parse_args, arg_names):
         if not isinstance(python_func_args, Variable):
             raise TypeError("Python func args should be a Variable")
         if not isinstance(python_func_kwargs, Variable):
             raise TypeError("Python func kwargs should be a Variable")
-        if not isinstance(parse_args, list) and any(
-            not isinstance(c, Variable) for c in parse_args
-        ):
+        if not isinstance(parse_args, list) and any(not isinstance(c, Variable) for c in parse_args):
             raise TypeError("Parse args should be a list of Variables")
         if not isinstance(arg_names, PyArgKeywords):
             raise TypeError("Parse args should be a list of Variables")
@@ -454,7 +449,7 @@ class PyCapsule_New(Function):
         The name of the module being exposed.
     """
 
-    __slots__ = ("_capsule_name", "_API_var")
+    __slots__ = ("_API_var", "_capsule_name")
     _attribute_nodes = ("_API_var",)
     _shape = None
     _class_type = PythonObjectType()
@@ -568,12 +563,8 @@ class PyModule(Module):
     Module : The super class from which the class inherits.
     """
 
-    __slots__ = ("_external_funcs", "_declarations", "_import_func", "_module_def_name")
-    _attribute_nodes = Module._attribute_nodes + (
-        "_external_funcs",
-        "_declarations",
-        "_import_func",
-    )
+    __slots__ = ("_declarations", "_external_funcs", "_import_func", "_module_def_name")
+    _attribute_nodes = (*Module._attribute_nodes, "_external_funcs", "_declarations", "_import_func")
 
     def __init__(
         self,
@@ -733,12 +724,8 @@ class PyInterface(Interface):
     Interface : The super class.
     """
 
-    __slots__ = ("_interface_func", "_type_check_func", "_original_interface")
-    _attribute_nodes = Interface._attribute_nodes + (
-        "_interface_func",
-        "_type_check_func",
-        "_original_interface",
-    )
+    __slots__ = ("_interface_func", "_original_interface", "_type_check_func")
+    _attribute_nodes = (*Interface._attribute_nodes, "_interface_func", "_type_check_func", "_original_interface")
 
     def __init__(
         self,
@@ -754,9 +741,7 @@ class PyInterface(Interface):
         self._original_interface = original_interface
         for f in functions:
             if not isinstance(f, PyFunctionDef):
-                raise TypeError(
-                    "PyInterface functions should be instances of the class PyFunctionDef."
-                )
+                raise TypeError("PyInterface functions should be instances of the class PyFunctionDef.")
         super().__init__(name, functions, False, **kwargs)
 
     @property
@@ -823,15 +808,15 @@ class PyClassDef(ClassDef):
     """
 
     __slots__ = (
+        "_magic_methods",
+        "_new_func",
         "_original_class",
+        "_properties",
         "_struct_name",
         "_type_name",
         "_type_object",
-        "_new_func",
-        "_properties",
-        "_magic_methods",
     )
-    _attribute_nodes = ClassDef._attribute_nodes + ("_magic_methods",)
+    _attribute_nodes = (*ClassDef._attribute_nodes, "_magic_methods")
 
     def __init__(self, original_class, struct_name, type_name, scope, **kwargs):
         assert isinstance(original_class, ClassDef)
@@ -843,9 +828,7 @@ class PyClassDef(ClassDef):
         self._properties = ()
         self._magic_methods = ()
         variables = [
-            Variable(
-                VoidType(), scope.get_new_name("instance"), memory_handling="alias"
-            ),
+            Variable(VoidType(), scope.get_new_name("instance"), memory_handling="alias"),
             Variable(
                 PythonObjectType(),
                 scope.get_new_name("referenced_objects"),
@@ -993,7 +976,7 @@ class PyGetSetDefElement:
     """
 
     _attribute_nodes = ("_getter", "_setter", "_docstring")
-    __slots__ = ("_python_name", "_getter", "_setter", "_docstring")
+    __slots__ = ("_docstring", "_getter", "_python_name", "_setter")
 
     def __init__(self, python_name, getter, setter, docstring):
         assert isinstance(getter, PyFunctionDef)
@@ -1083,11 +1066,7 @@ class PyModInitFunc(FunctionDef):
             Declare(
                 v,
                 static=(v in self._static_vars),
-                value=(
-                    NIL
-                    if isinstance(v.class_type, (VoidType, BindCPointer))
-                    else None
-                ),
+                value=(NIL if isinstance(v.class_type, VoidType | BindCPointer) else None),
             )
             for v in self.scope.variables.values()
         ]
@@ -1130,7 +1109,7 @@ class PyArgumentError:
         The arguments whose types will be printed.
     """
 
-    __slots__ = ("_error_type", "_error_msg", "_args")
+    __slots__ = ("_args", "_error_msg", "_error_type")
     _attribute_nodes = ("_args",)
 
     def __init__(self, error_type, error_msg: str, **kwargs):
@@ -1195,33 +1174,21 @@ Py_None = Variable(PythonObjectType(), "Py_None", memory_handling="alias")
 Py_INCREF = FunctionDef(
     name="Py_INCREF",
     body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), name="o", memory_handling="alias")
-        )
-    ],
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), name="o", memory_handling="alias"))],
 )
 
 # https://docs.python.org/3/c-api/refcounting.html#c.Py_DECREF
 Py_DECREF = FunctionDef(
     name="Py_DECREF",
     body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), name="o", memory_handling="alias")
-        )
-    ],
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), name="o", memory_handling="alias"))],
 )
 
 # https://docs.python.org/3/c-api/type.html#c.PyType_Ready
 PyType_Ready = FunctionDef(
     name="PyType_Ready",
     body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), name="o", memory_handling="alias")
-        )
-    ],
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), name="o", memory_handling="alias"))],
     results=FunctionDefResult(Variable(NumpyInt64Type(), "_")),
 )
 
@@ -1230,9 +1197,7 @@ PySys_GetObject = FunctionDef(
     name="PySys_GetObject",
     body=[],
     arguments=[FunctionDefArgument(Variable(StringType(), name="_"))],
-    results=FunctionDefResult(
-        Variable(PythonObjectType(), name="o", memory_handling="alias")
-    ),
+    results=FunctionDefResult(Variable(PythonObjectType(), name="o", memory_handling="alias")),
 )
 
 # https://docs.python.org/3/c-api/unicode.html#c.PyUnicode_FromString
@@ -1240,9 +1205,7 @@ PyUnicode_FromString = FunctionDef(
     name="PyUnicode_FromString",
     body=[],
     arguments=[FunctionDefArgument(Variable(StringType(), name="_"))],
-    results=FunctionDefResult(
-        Variable(PythonObjectType(), name="o", memory_handling="alias")
-    ),
+    results=FunctionDefResult(Variable(PythonObjectType(), name="o", memory_handling="alias")),
 )
 
 # -------------------------------------------------------------------
@@ -1300,7 +1263,7 @@ def C_to_Python(c_object):
         raise TypeError(f"No C-to-Python cast registered for {c_object.dtype}") from None
     memory_handling = "alias"
 
-    cast_func = FunctionDef(
+    return FunctionDef(
         name=cast_function,
         body=[],
         arguments=[
@@ -1313,12 +1276,8 @@ def C_to_Python(c_object):
                 )
             )
         ],
-        results=FunctionDefResult(
-            Variable(PythonObjectType(), name="o", memory_handling="alias")
-        ),
+        results=FunctionDefResult(Variable(PythonObjectType(), name="o", memory_handling="alias")),
     )
-
-    return cast_func
 
 
 # Functions definitions are defined in x2py/stdlib/cwrapper/cwrapper.c
@@ -1338,9 +1297,7 @@ c_to_py_registry = {
 PyErr_Occurred = FunctionDef(
     name="PyErr_Occurred",
     arguments=[],
-    results=FunctionDefResult(
-        Variable(PythonObjectType(), name="r", memory_handling="alias")
-    ),
+    results=FunctionDefResult(Variable(PythonObjectType(), name="r", memory_handling="alias")),
     body=[],
 )
 
@@ -1358,9 +1315,7 @@ PyErr_WarnEx = FunctionDef(
     body=[],
     arguments=[
         FunctionDefArgument(Variable(PythonObjectType(), name="category")),
-        FunctionDefArgument(
-            Variable(CharType(), name="message", memory_handling="alias")
-        ),
+        FunctionDefArgument(Variable(CharType(), name="message", memory_handling="alias")),
         FunctionDefArgument(Variable(Py_ssize_t(), name="stack_level")),
     ],
     results=FunctionDefResult(Variable(CNativeInt(), name="status")),
@@ -1375,9 +1330,7 @@ PyObject_TypeCheck = FunctionDef(
     name="PyObject_TypeCheck",
     arguments=[
         FunctionDefArgument(Variable(PythonObjectType(), "o", memory_handling="alias")),
-        FunctionDefArgument(
-            Variable(PythonClassType(), "c_type", memory_handling="alias")
-        ),
+        FunctionDefArgument(Variable(PythonClassType(), "c_type", memory_handling="alias")),
     ],
     results=FunctionDefResult(Variable(NumpyBoolType(), "r")),
     body=[],
@@ -1390,11 +1343,7 @@ PyObject_TypeCheck = FunctionDef(
 # https://docs.python.org/3/c-api/list.html#c.PyList_New
 PyList_New = FunctionDef(
     name="PyList_New",
-    arguments=[
-        FunctionDefArgument(
-            Variable(NumpyInt64Type(), "size"), value=convert_to_literal(0)
-        )
-    ],
+    arguments=[FunctionDefArgument(Variable(NumpyInt64Type(), "size"), value=convert_to_literal(0))],
     results=FunctionDefResult(Variable(PythonObjectType(), "r", memory_handling="alias")),
     body=[],
 )
@@ -1403,12 +1352,8 @@ PyList_New = FunctionDef(
 PyList_Append = FunctionDef(
     name="PyList_Append",
     arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), "list", memory_handling="alias")
-        ),
-        FunctionDefArgument(
-            Variable(PythonObjectType(), "item", memory_handling="alias")
-        ),
+        FunctionDefArgument(Variable(PythonObjectType(), "list", memory_handling="alias")),
+        FunctionDefArgument(Variable(PythonObjectType(), "item", memory_handling="alias")),
     ],
     results=FunctionDefResult(Variable(CNativeInt(), "i")),
     body=[],
@@ -1418,14 +1363,10 @@ PyList_Append = FunctionDef(
 PyList_GetItem = FunctionDef(
     name="PyList_GetItem",
     arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), "list", memory_handling="alias")
-        ),
+        FunctionDefArgument(Variable(PythonObjectType(), "list", memory_handling="alias")),
         FunctionDefArgument(Variable(NumpyInt64Type(), "i")),
     ],
-    results=FunctionDefResult(
-        Variable(PythonObjectType(), "item", memory_handling="alias")
-    ),
+    results=FunctionDefResult(Variable(PythonObjectType(), "item", memory_handling="alias")),
     body=[],
 )
 
@@ -1434,16 +1375,13 @@ PyList_SetItem = FunctionDef(
     name="PyList_SetItem",
     body=[],
     arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), name="l", memory_handling="alias")
-        ),
+        FunctionDefArgument(Variable(PythonObjectType(), name="l", memory_handling="alias")),
         FunctionDefArgument(Variable(NumpyInt64Type(), name="i")),
-        FunctionDefArgument(
-            Variable(PythonObjectType(), name="new_item", memory_handling="alias")
-        ),
+        FunctionDefArgument(Variable(PythonObjectType(), name="new_item", memory_handling="alias")),
     ],
     results=FunctionDefResult(Variable(CNativeInt(), "i")),
 )
+
 
 class PyList_Clear:
     """
@@ -1487,9 +1425,7 @@ class PyList_Clear:
 PyDict_New = FunctionDef(
     name="PyDict_New",
     arguments=[],
-    results=FunctionDefResult(
-        Variable(PythonObjectType(), "dict", memory_handling="alias")
-    ),
+    results=FunctionDefResult(Variable(PythonObjectType(), "dict", memory_handling="alias")),
     body=[],
 )
 
@@ -1497,9 +1433,7 @@ PyDict_New = FunctionDef(
 PyDict_SetItem = FunctionDef(
     name="PyDict_SetItem",
     arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), "dict", memory_handling="alias")
-        ),
+        FunctionDefArgument(Variable(PythonObjectType(), "dict", memory_handling="alias")),
         FunctionDefArgument(Variable(PythonObjectType(), "key", memory_handling="alias")),
         FunctionDefArgument(Variable(PythonObjectType(), "val", memory_handling="alias")),
     ],
@@ -1514,11 +1448,7 @@ PyDict_SetItem = FunctionDef(
 # https://docs.python.org/3/c-api/unicode.html#c.PyUnicode_AsUTF8
 PyUnicode_AsUTF8 = FunctionDef(
     name="PyUnicode_AsUTF8",
-    arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), "unicode", memory_handling="alias")
-        )
-    ],
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), "unicode", memory_handling="alias"))],
     results=FunctionDefResult(Variable(CharType(), "str", memory_handling="alias")),
     body=[],
 )
@@ -1527,12 +1457,8 @@ PyUnicode_AsUTF8 = FunctionDef(
 PyUnicode_AsUTF8AndSize = FunctionDef(
     name="PyUnicode_AsUTF8AndSize",
     arguments=[
-        FunctionDefArgument(
-            Variable(PythonObjectType(), "unicode", memory_handling="alias")
-        ),
-        FunctionDefArgument(
-            Variable(Py_ssize_t(), "size", memory_handling="alias")
-        ),
+        FunctionDefArgument(Variable(PythonObjectType(), "unicode", memory_handling="alias")),
+        FunctionDefArgument(Variable(Py_ssize_t(), "size", memory_handling="alias")),
     ],
     results=FunctionDefResult(Variable(CharType(), "str", memory_handling="alias")),
     body=[],
@@ -1541,9 +1467,7 @@ PyUnicode_AsUTF8AndSize = FunctionDef(
 # https://docs.python.org/3/c-api/unicode.html#c.PyUnicode_Check
 PyUnicode_Check = FunctionDef(
     name="PyUnicode_Check",
-    arguments=[
-        FunctionDefArgument(Variable(PythonObjectType(), "str", memory_handling="alias"))
-    ],
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), "str", memory_handling="alias"))],
     results=FunctionDefResult(Variable(CNativeInt(), "out")),
     body=[],
 )

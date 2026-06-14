@@ -1,4 +1,3 @@
-
 """
 Handling the transitions between Python code and C code using (Numpy/C Api).
 """
@@ -34,8 +33,6 @@ __all__ = (
     "NumpyArrayObjectType",
     # -------HELPERS ------
     "PyArray_SetBaseObject",
-    "array_get_c_step",
-    "array_get_f_step",
     # -------OTHERS--------
     "get_numpy_max_acceptable_version_file",
     # ------- CAST FUNCTIONS ------
@@ -77,20 +74,12 @@ def get_numpy_max_acceptable_version_file():
     """
     numpy_max_acceptable_version = [1, 19]
     numpy_current_version = [int(v) for v in np.version.version.split(".")[:2]]
-    numpy_api_acceptable_version = min(
-        numpy_max_acceptable_version, numpy_current_version
-    )
+    numpy_api_acceptable_version = min(numpy_max_acceptable_version, numpy_current_version)
     major, minor = numpy_api_acceptable_version
-    numpy_api_macro = (
-        f"# define NPY_NO_DEPRECATED_API NPY_{major}_{minor}_API_VERSION\n"
-    )
+    numpy_api_macro = f"# define NPY_NO_DEPRECATED_API NPY_{major}_{minor}_API_VERSION\n"
     version_file = "#ifndef NPY_NO_DEPRECATED_API\n" + numpy_api_macro + "#endif\n"
     if numpy_current_version[0] >= 2:
-        version_file += (
-            "#ifndef NPY_TARGET_VERSION\n"
-            "# define NPY_TARGET_VERSION NPY_2_0_API_VERSION\n"
-            "#endif\n"
-        )
+        version_file += "#ifndef NPY_TARGET_VERSION\n# define NPY_TARGET_VERSION NPY_2_0_API_VERSION\n#endif\n"
     return version_file
 
 
@@ -104,65 +93,39 @@ PyArray_Check = FunctionDef(
 PyArray_DATA = FunctionDef(
     name="PyArray_DATA",
     body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(NumpyArrayObjectType(), name="o", memory_handling="alias")
-        )
-    ],
+    arguments=[FunctionDefArgument(Variable(NumpyArrayObjectType(), name="o", memory_handling="alias"))],
     results=FunctionDefResult(Variable(VoidType(), name="b", memory_handling="alias")),
 )
 
 PyArray_BASE = FunctionDef(
     name="PyArray_BASE",
     body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(NumpyArrayObjectType(), name="o", memory_handling="alias")
-        )
-    ],
-    results=FunctionDefResult(
-        Variable(NumpyArrayObjectType(), name="o", memory_handling="alias")
-    ),
+    arguments=[FunctionDefArgument(Variable(NumpyArrayObjectType(), name="o", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(NumpyArrayObjectType(), name="o", memory_handling="alias")),
 )
 
 PyArray_SHAPE = FunctionDef(
     name="PyArray_SHAPE",
     body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(NumpyArrayObjectType(), name="o", memory_handling="alias")
-        )
-    ],
+    arguments=[FunctionDefArgument(Variable(NumpyArrayObjectType(), name="o", memory_handling="alias"))],
     results=FunctionDefResult(
-        Variable(
-            NumpyNDArrayType.get_new(NumpyInt32Type(), 1, None, raw=True), name="s", memory_handling="alias"
-        )
+        Variable(NumpyNDArrayType.get_new(NumpyInt32Type(), 1, None, raw=True), name="s", memory_handling="alias")
     ),
 )
 
 PyArray_STRIDES = FunctionDef(
     name="PyArray_STRIDES",
     body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(NumpyArrayObjectType(), name="o", memory_handling="alias")
-        )
-    ],
+    arguments=[FunctionDefArgument(Variable(NumpyArrayObjectType(), name="o", memory_handling="alias"))],
     results=FunctionDefResult(
-        Variable(
-            NumpyNDArrayType.get_new(NumpyInt32Type(), 1, None, raw=True), name="s", memory_handling="alias"
-        )
+        Variable(NumpyNDArrayType.get_new(NumpyInt32Type(), 1, None, raw=True), name="s", memory_handling="alias")
     ),
 )
 
 PyArray_ITEMSIZE = FunctionDef(
     name="PyArray_ITEMSIZE",
     body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(NumpyArrayObjectType(), name="o", memory_handling="alias")
-        )
-    ],
+    arguments=[FunctionDefArgument(Variable(NumpyArrayObjectType(), name="o", memory_handling="alias"))],
     results=FunctionDefResult(Variable(NumpyInt32Type(), name="s")),
 )
 
@@ -170,25 +133,15 @@ PyArray_ITEMSIZE = FunctionDef(
 pyarray_to_ndarray = FunctionDef(
     name="pyarray_to_ndarray",
     body=[],
-    arguments=[
-        FunctionDefArgument(Variable(PythonObjectType(), "a", memory_handling="alias"))
-    ],
-    results=FunctionDefResult(
-        Variable(NumpyNDArrayType.get_new(GenericType(), 1, None), "array")
-    ),
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), "a", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(NumpyNDArrayType.get_new(GenericType(), 1, None), "array")),
 )
 
 numpy_to_stc_strides = FunctionDef(
     name="numpy_to_stc_strides",
-    arguments=[
-        FunctionDefArgument(
-            Variable(NumpyArrayObjectType(), name="o", memory_handling="alias")
-        )
-    ],
+    arguments=[FunctionDefArgument(Variable(NumpyArrayObjectType(), name="o", memory_handling="alias"))],
     body=[],
-    results=FunctionDefResult(
-        Variable(NumpyNDArrayType.get_new(NumpyInt32Type(), 1, None, raw=True), "strides")
-    ),
+    results=FunctionDefResult(Variable(NumpyNDArrayType.get_new(NumpyInt32Type(), 1, None, raw=True), "strides")),
 )
 
 # NumPy array check elements : function definition in x2py/stdlib/cwrapper/cwrapper_ndarrays.c
@@ -252,11 +205,7 @@ get_strides_and_shape_from_numpy_array = FunctionDef(
 PyArray_DATA = FunctionDef(
     name="PyArray_DATA",
     body=[],
-    arguments=[
-        FunctionDefArgument(
-            Variable(NumpyArrayObjectType(), "arr", memory_handling="alias")
-        )
-    ],
+    arguments=[FunctionDefArgument(Variable(NumpyArrayObjectType(), "arr", memory_handling="alias"))],
     results=FunctionDefResult(Variable(VoidType(), "data", memory_handling="alias")),
 )
 
@@ -264,12 +213,8 @@ PyArray_SetBaseObject = FunctionDef(
     name="PyArray_SetBaseObject",
     body=[],
     arguments=[
-        FunctionDefArgument(
-            Variable(NumpyArrayObjectType(), name="arr", memory_handling="alias")
-        ),
-        FunctionDefArgument(
-            Variable(PythonObjectType(), name="obj", memory_handling="alias")
-        ),
+        FunctionDefArgument(Variable(NumpyArrayObjectType(), name="arr", memory_handling="alias")),
+        FunctionDefArgument(Variable(PythonObjectType(), name="obj", memory_handling="alias")),
     ],
     results=FunctionDefResult(Variable(CNativeInt(), name="d")),
 )
@@ -285,9 +230,7 @@ to_pyarray = FunctionDef(
         FunctionDefArgument(Variable(NumpyBoolType(), "c_order")),
         FunctionDefArgument(Variable(NumpyBoolType(), "release_memory")),
     ],
-    results=FunctionDefResult(
-        Variable(PythonObjectType(), name="arr", memory_handling="alias")
-    ),
+    results=FunctionDefResult(Variable(PythonObjectType(), name="arr", memory_handling="alias")),
 )
 
 

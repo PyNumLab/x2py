@@ -72,9 +72,7 @@ class Pybind11BindingGenerator(BindingGenerator):
 
         # Call the initialisation function
         if expr.init_func:
-            init_func_clone = expr.init_func.clone(
-                expr.init_func.name, is_imported=True
-            )
+            init_func_clone = expr.init_func.clone(expr.init_func.name, is_imported=True)
             attach_model_child(expr, init_func_clone)
             body.append(init_func_clone())
 

@@ -35,6 +35,7 @@ support claims.
 ## Design Documents
 
 - [Wrapper design notes](wrapper_design_notes.md)
+- [Fortran wrapper implementation checklist](fortran_wrapper_checklist.md)
 - [Semantic multilanguage wrapper runtime architecture](architecture/semantic_multilanguage_wrapper_runtime_architecture.md)
 
 Design documents describe deferred or long-term wrapper decisions. They are

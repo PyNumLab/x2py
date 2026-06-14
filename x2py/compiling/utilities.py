@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
 This file contains some useful functions to compile the generated fortran code
 """
@@ -16,7 +14,7 @@ from .library_config import recognised_libs
 # get path to x2py/
 x2py_root = Path(__file__).parent.parent
 
-__all__ = ["copy_internal_library", "recompile_object"]
+__all__ = ["recompile_object"]
 
 # ==============================================================================
 language_extension = {"fortran": "f90", "c": "c", "python": "py"}
@@ -92,9 +90,8 @@ def generate_extension_modules(
         code = printer.doprint(mod)
         if not os.path.exists(folder):
             os.mkdir(folder)
-        with FileLock(f"{folder}.lock"):
-            with open(filename, "w", encoding="utf-8") as f:
-                f.write(code)
+        with FileLock(f"{folder}.lock"), open(filename, "w", encoding="utf-8") as f:
+            f.write(code)
 
         compile_obj = CompileObj(
             os.path.basename(filename),
@@ -208,9 +205,7 @@ def manage_dependencies(
         if stdlib is None:
             continue
         if any(i == lib_name or i.startswith(f"{lib_name}/") for i in x2py_imports):
-            stdlib_obj = stdlib.install_to(
-                x2py_dirpath, installed_libs, verbose, compiler
-            )
+            stdlib_obj = stdlib.install_to(x2py_dirpath, installed_libs, verbose, compiler)
 
             if isinstance(mod_obj, CompileObj):
                 mod_obj.add_dependencies(stdlib_obj)
@@ -221,17 +216,11 @@ def manage_dependencies(
                 continue
 
     if not convert_only:
-        lib_compile_objs = [
-            lib_obj
-            for key, lib_obj in installed_libs.items()
-            if key != "gFTL_extensions"
-        ]
+        lib_compile_objs = [lib_obj for key, lib_obj in installed_libs.items() if key != "gFTL_extensions"]
         lib_compile_objs.extend(installed_libs.get("gFTL_extensions", {}).values())
         for lib_obj in lib_compile_objs:
             # get the include folder path and library files
-            recompile_object(
-                lib_obj, compiler=compiler, language=language, verbose=verbose
-            )
+            recompile_object(lib_obj, compiler=compiler, language=language, verbose=verbose)
 
     # Iterate over the imports and determine if the printer
     # requires an extension module to be generated
@@ -255,9 +244,7 @@ def manage_dependencies(
             continue
         if isinstance(mod_obj, CompileObj):
             for d in deps:
-                recompile_object(
-                    d, compiler=compiler, language=language, verbose=verbose
-                )
+                recompile_object(d, compiler=compiler, language=language, verbose=verbose)
                 mod_obj.add_dependencies(d)
 
 
@@ -294,11 +281,7 @@ def get_module_and_compile_dependencies(parser, compile_libs=None, deps=None):
         is the CompileObj describing the .o file.
     """
     dep_fname = Path(parser.filename)
-    assert (
-        compile_libs is None
-        or dep_fname.suffix == ".pyi"
-        or x2py_root in dep_fname.parents
-    )
+    assert compile_libs is None or dep_fname.suffix == ".pyi" or x2py_root in dep_fname.parents
     mod_folder = dep_fname.parent
     mod_base = dep_fname.name
 
@@ -314,24 +297,13 @@ def get_module_and_compile_dependencies(parser, compile_libs=None, deps=None):
         if parser.compile_obj:
             deps[dep_fname] = parser.compile_obj
         elif dep_fname not in deps:
-            dep_compile_includes = [
-                mod_folder / i
-                for i in parser.metavars.get("includes", "").split(",")
-                if i
-            ]
+            dep_compile_includes = [mod_folder / i for i in parser.metavars.get("includes", "").split(",") if i]
             dep_compile_libdirs = [
-                mod_folder / l
-                for l in parser.metavars.get("libdirs", "").split(",")
-                if l
+                mod_folder / libdir for libdir in parser.metavars.get("libdirs", "").split(",") if libdir
             ]
-            dep_compile_libs = [
-                l for l in parser.metavars.get("libraries", "").split(",") if l
-            ]
+            dep_compile_libs = [library for library in parser.metavars.get("libraries", "").split(",") if library]
             if not parser.metavars.get("ignore_at_import", False):
-                is_header_only = (
-                    dep_fname.suffix == ".pyi"
-                    and parser.original_filename.suffix != ".py"
-                )
+                is_header_only = dep_fname.suffix == ".pyi" and parser.original_filename.suffix != ".py"
                 deps[dep_fname] = CompileObj(
                     mod_base,
                     folder=mod_folder,

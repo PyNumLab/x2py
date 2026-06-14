@@ -786,9 +786,7 @@ def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentPa
 
     if args.language == "c":
         if not _has_stage(args):
-            parser.error(
-                f"--language c requires a stage flag: choose one of {_STAGE_FLAGS_DESCRIPTION}"
-            )
+            parser.error(f"--language c requires a stage flag: choose one of {_STAGE_FLAGS_DESCRIPTION}")
         if args.show_vars:
             parser.error("--show-vars is Fortran-only and is not supported for --language c")
 

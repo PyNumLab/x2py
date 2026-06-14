@@ -1,5 +1,6 @@
 from .cppcode import CppCodePrinter
 
+
 class PyBindCodePrinter(CppCodePrinter):
     """
     A printer for printing the C++-Python interface.

@@ -31,6 +31,7 @@ printer_registry = {
     Pybind11BindingGenerator: PyBindCodePrinter,
 }
 
+
 class BindingPipeline:
     """
     Pipeline responsible for generating bridge and binding files.
@@ -80,9 +81,7 @@ class BindingPipeline:
                     self._name,
                 )
 
-            Scope.name_clash_checker = name_clash_checkers[
-                Step.start_language.lower()
-            ]
+            Scope.name_clash_checker = name_clash_checkers[Step.start_language.lower()]
             step = Step(sharedlib_dirpath, verbose=self._verbose)
 
             ast = step.generate(ast)
@@ -109,12 +108,11 @@ class BindingPipeline:
         """
         dirpath = Path(dirpath)
         files = [
-            dirpath
-            / f"{ast.name}_wrapper.{_extension_registry[Step.start_language.lower()]}"
-            for ast, Step in zip(self._generated_asts, self._pipeline_steps)
+            dirpath / f"{ast.name}_wrapper.{_extension_registry[Step.start_language.lower()]}"
+            for ast, Step in zip(self._generated_asts, self._pipeline_steps, strict=False)
         ]
         for i, (filepath, ast, Printer) in enumerate(
-            zip(files, self._generated_asts, self._printer_types)
+            zip(files, self._generated_asts, self._printer_types, strict=False)
         ):
             header_ext = _header_extension_registry[Printer.language.lower()]
 

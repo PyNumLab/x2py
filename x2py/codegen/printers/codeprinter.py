@@ -49,7 +49,7 @@ class CodePrinter:
         str
             The generated code.
         """
-        assert isinstance(expr, (Module, ModuleHeader, Program))
+        assert isinstance(expr, Module | ModuleHeader | Program)
 
         # Do the actual printing
         lines = self._print(expr).splitlines(True)
@@ -134,24 +134,20 @@ class CodePrinter:
                     print(f">>>> Calling {type(self).__name__}.{print_method}")
                 try:
                     obj = getattr(self, print_method)(expr)
-                except:
-                    raise NotImplementedError(print_method)
+                except Exception as error:
+                    raise NotImplementedError(print_method) from error
                 return obj
         return self._print_not_supported(expr)
 
     def _declare_number_const(self, name, value):
         """Declare a numeric constant at the top of a function"""
-        raise NotImplementedError(
-            "This function must be implemented by " "subclass of CodePrinter."
-        )
+        raise NotImplementedError("This function must be implemented by subclass of CodePrinter.")
 
     def _format_code(self, lines):
         """Take in a list of lines of code, and format them accordingly.
 
         This may include indenting, wrapping long lines, etc..."""
-        raise NotImplementedError(
-            "This function must be implemented by " "subclass of CodePrinter."
-        )
+        raise NotImplementedError("This function must be implemented by subclass of CodePrinter.")
 
     def _print_NumberSymbol(self, expr):
         """Print sympy symbols used for constants"""
@@ -164,9 +160,7 @@ class CodePrinter:
     def _print_not_supported(self, expr):
         """Print an error message if the print function for the type
         is not implemented"""
-        msg = "_print_{} is not yet implemented for language : {}\n".format(
-            type(expr).__name__, self.language
-        )
+        f"_print_{type(expr).__name__} is not yet implemented for language : {self.language}\n"
 
     # Number constants
     _print_Catalan = _print_NumberSymbol

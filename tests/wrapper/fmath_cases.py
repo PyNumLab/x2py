@@ -97,4 +97,3 @@ def fmath_cases():
         ("IS_POSITIVE_R8", (r8(-1.0),), False),
         ("IS_EVEN_I4", (i4(8),), True),
     ]
-

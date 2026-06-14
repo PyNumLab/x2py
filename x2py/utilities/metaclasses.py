@@ -36,5 +36,4 @@ class Singleton(type):
             new_instance = super().__call__()
             cls._instance = new_instance
             return new_instance
-        else:
-            return existing_instance
+        return existing_instance

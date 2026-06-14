@@ -1134,9 +1134,7 @@ def test_printer_emits_extended_storage_and_callable_forms():
     assert printer.emit_semantic_type(annotated_array) == (
         "Annotated[Float64[:, :], ORDER_ANY, Allocatable, Pointer, Finite, Range(1, 3)]"
     )
-    assert printer.emit_semantic_type(character) == (
-        'Annotated[Ptr(String), FortranCharacterLength("16")]'
-    )
+    assert printer.emit_semantic_type(character) == ('Annotated[Ptr(String), FortranCharacterLength("16")]')
     assert printer.emit_semantic_type(allocatable_character) == (
         'Annotated[String, FortranCharacterLength(":"), FortranAllocatable]'
     )

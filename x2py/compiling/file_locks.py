@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module handling classes which handle file locking to avoid deadlocks.
 """
@@ -21,17 +20,17 @@ class FileLockSet:
     """
 
     def __init__(self, locks=()):
-        assert all(isinstance(l, FileLock) for l in locks)
+        assert all(isinstance(lock, FileLock) for lock in locks)
         self._locks = list(locks)
 
     def __enter__(self):
-        for l in self._locks:
-            l.acquire()
+        for lock in self._locks:
+            lock.acquire()
 
     def __exit__(self, exc_type, exc_value, traceback):
         # Release the locks
-        for l in reversed(self._locks):
-            l.release()
+        for lock in reversed(self._locks):
+            lock.release()
 
     def append(self, new_lock):
         """

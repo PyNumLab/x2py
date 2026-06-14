@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 """
 Module handling classes for compiler information relevant to a given object
 """
@@ -56,20 +55,20 @@ class CompileObj:
 
     compilation_in_progress = FileLock(".lock_acquisition.lock")
     __slots__ = (
+        "_dependencies",
+        "_extra_compilation_tools",
         "_file",
+        "_flags",
         "_folder",
+        "_has_target_file",
+        "_include",
+        "_libdir",
+        "_libs",
+        "_lock_source",
+        "_lock_target",
         "_module_name",
         "_module_target",
         "_prog_target",
-        "_lock_target",
-        "_lock_source",
-        "_flags",
-        "_include",
-        "_libs",
-        "_libdir",
-        "_extra_compilation_tools",
-        "_dependencies",
-        "_has_target_file",
     )
 
     def __init__(
@@ -85,7 +84,6 @@ class CompileObj:
         has_target_file=True,
         prog_target=None,
     ):
-
         folder = Path(folder)
         self._folder = folder
         self._file = folder / file_name
@@ -101,12 +99,8 @@ class CompileObj:
         if sys.platform == "win32":
             self._prog_target = self._prog_target + ".exe"
 
-        self._lock_target = FileLock(
-            str(self.module_target.with_suffix(self.module_target.suffix + ".lock"))
-        )
-        self._lock_source = FileLock(
-            str(self.source.with_suffix(self.source.suffix + ".lock"))
-        )
+        self._lock_target = FileLock(str(self.module_target.with_suffix(self.module_target.suffix + ".lock")))
+        self._lock_source = FileLock(str(self.source.with_suffix(self.source.suffix + ".lock")))
 
         self._flags = list(flags)
         self._include = {*(Path(i) for i in include)}
@@ -139,9 +133,7 @@ class CompileObj:
         self._include.add(folder)
 
         self._file = folder / self._file.name
-        self._lock_source = FileLock(
-            self.source.with_suffix(self.source.suffix + ".lock")
-        )
+        self._lock_source = FileLock(self.source.with_suffix(self.source.suffix + ".lock"))
         self._folder = folder
         self._include.add(self._folder)
 
@@ -152,9 +144,7 @@ class CompileObj:
         if sys.platform == "win32":
             self._prog_target.with_suffix(".exe")
 
-        self._lock_target = FileLock(
-            self.module_target.with_suffix(self.module_target.suffix + ".lock")
-        )
+        self._lock_target = FileLock(self.module_target.with_suffix(self.module_target.suffix + ".lock"))
 
     @property
     def source(self):
@@ -194,9 +184,7 @@ class CompileObj:
         Return a set containing all the directories which must be passed to the
         compiler via the include flag `-I`.
         """
-        return self._include.union(
-            [di for d in self._dependencies.values() for di in d.include]
-        )
+        return self._include.union([di for d in self._dependencies.values() for di in d.include])
 
     @property
     def libs(self):
@@ -217,9 +205,7 @@ class CompileObj:
         compiler via the library directory flag `-L` so that the necessary
         libraries can be correctly located.
         """
-        return self._libdir.union(
-            [dld for d in self._dependencies.values() for dld in d.libdir]
-        )
+        return self._libdir.union([dld for d in self._dependencies.values() for dld in d.libdir])
 
     @property
     def extra_modules(self):
@@ -319,11 +305,7 @@ class CompileObj:
         Examples of 'extra_compilation_tools' are: openmp, openacc, python.
         """
         return self._extra_compilation_tools.union(
-            [
-                da
-                for d in self._dependencies.values()
-                for da in d.extra_compilation_tools
-            ]
+            [da for d in self._dependencies.values() for da in d.extra_compilation_tools]
         )
 
     def __eq__(self, other):

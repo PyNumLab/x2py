@@ -16,6 +16,3 @@ class PythonCodePrinter(CodePrinter):
     verbose : int
         The level of verbosity.
     """
-    
-
-

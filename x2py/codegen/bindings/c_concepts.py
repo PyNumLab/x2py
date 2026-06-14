@@ -64,7 +64,7 @@ class ObjectAddress:
     'a'
     """
 
-    __slots__ = ("_obj", "_shape", "_class_type")
+    __slots__ = ("_class_type", "_obj", "_shape")
     _attribute_nodes = ("_obj",)
 
     def __init__(self, obj):
@@ -108,7 +108,7 @@ class PointerCast:
         A model object describing the object resulting from the cast.
     """
 
-    __slots__ = ("_obj", "_shape", "_class_type", "_cast_type")
+    __slots__ = ("_cast_type", "_class_type", "_obj", "_shape")
     _attribute_nodes = ("_obj",)
 
     def __init__(self, obj, cast_type):
@@ -202,10 +202,8 @@ class CStringExpression:
         """
         if isinstance(o, str):
             o = convert_to_literal(o)
-        if not (_is_string_literal(o) or isinstance(o, (CMacro, CStringExpression))):
-            raise TypeError(
-                f"unsupported operand type(s) for +: '{self.__class__}' and '{type(o)}'"
-            )
+        if not (_is_string_literal(o) or isinstance(o, CMacro | CStringExpression)):
+            raise TypeError(f"unsupported operand type(s) for +: '{self.__class__}' and '{type(o)}'")
         return CStringExpression(*self._expression, o)
 
     def __radd__(self, o):
@@ -228,10 +226,8 @@ class CStringExpression:
         """
         if isinstance(o, str):
             o = convert_to_literal(o)
-        if not (_is_string_literal(o) or isinstance(o, (CMacro, CStringExpression))):
-            raise TypeError(
-                f"unsupported operand type(s) for append: '{self.__class__}' and '{type(o)}'"
-            )
+        if not (_is_string_literal(o) or isinstance(o, CMacro | CStringExpression)):
+            raise TypeError(f"unsupported operand type(s) for append: '{self.__class__}' and '{type(o)}'")
         self._expression += (o,)
         attach_model_child(self, o)
 
@@ -355,8 +351,7 @@ class CStrStr(Function):
     def __new__(cls, arg):
         if isinstance(arg, CMacro):
             return arg
-        else:
-            return super().__new__(cls)
+        return super().__new__(cls)
 
     def __init__(self, arg):
         super().__init__(arg)

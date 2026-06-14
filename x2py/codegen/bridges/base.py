@@ -103,8 +103,8 @@ class BridgeGenerator:
                     print(f">>>> Calling {type(self).__name__}.{visit_method}")
                 try:
                     obj = getattr(self, visit_method)(expr)
-                except:
-                    raise NotImplementedError(visit_method)
+                except Exception as error:
+                    raise NotImplementedError(visit_method) from error
                 return obj
 
         return self._visit_not_supported(expr)

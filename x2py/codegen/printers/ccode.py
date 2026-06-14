@@ -3,38 +3,28 @@ Module containing the `CCodePrinter` class which converts X2py's AST to
 strings of C code.
 """
 
-import ast
 import functools
-import sys
-from itertools import chain, product
+from itertools import chain
+from typing import ClassVar
 
-import numpy as np
 
 from ..bind_c import BindCArrayType, BindCPointer, BindCVariable
 from ..bindings.c_concepts import (
     CMacro,
-    CStringExpression,
     CStrStr,
     ObjectAddress,
     PointerCast,
 )
 from ..models.core import (
-    AliasAssign,
     AsName,
     Assign,
-    AugAssign,
-    CodeBlock,
     Deallocate,
     Declare,
     FunctionAddress,
     FunctionCall,
-    FunctionCallArgument,
-    FunctionDef,
     get_direct_assignment,
     get_direct_module,
     get_enclosing_function,
-    If,
-    IfSection,
     Import,
     Module,
     PythonTuple,
@@ -45,7 +35,6 @@ from ..models.datatypes import (
     CustomDataType,
     FinalType,
     FixedSizeNumericType,
-    FixedSizeType,
     PrimitiveBooleanType,
     PrimitiveComplexType,
     PrimitiveFloatingPointType,
@@ -55,10 +44,8 @@ from ..models.datatypes import (
     NumpyInt64Type,
     ComplexPart,
     StringType,
-    TupleType,
     VoidType,
 )
-from ..models.core import Function, Slice
 from ..models.datatypes import (
     Literal,
     NIL,
@@ -66,25 +53,14 @@ from ..models.datatypes import (
     convert_to_literal,
 )
 from ..models.datatypes import (
-    NumpyFloat32Type,
     NumpyFloat64Type,
-    NumpyFloat128Type,
     NumpyNDArrayType,
-    numpy_precision_map,
 )
 from ..models.core import (
     IfTernaryOperator,
-    Add,
     AssociativeParenthesis,
-    Div,
-    Gt,
-    Lt,
-    Minus,
-    Mod,
     Mul,
-    Ne,
     Operator,
-    Pow,
 )
 from ..models.core import DottedVariable, IndexedElement, Variable
 from .codeprinter import CodePrinter
@@ -138,6 +114,7 @@ stc_extension_mapping = {
     "stc/common": "STC_Extensions/Common_extensions",
 }
 
+
 class CCodePrinter(CodePrinter):
     """
     A printer for printing code in C.
@@ -159,11 +136,11 @@ class CCodePrinter(CodePrinter):
     printmethod = "_ccode"
     language = "C"
 
-    _default_settings = {
+    _default_settings: ClassVar = {
         "tabwidth": 4,
     }
 
-    dtype_registry = {
+    dtype_registry: ClassVar = {
         VoidType(): "void",
         CharType(): "char",
         (PrimitiveIntegerType(), None): "int",
@@ -178,7 +155,7 @@ class CCodePrinter(CodePrinter):
         (PrimitiveBooleanType(), -1): "bool",
     }
 
-    type_to_format = {
+    type_to_format: ClassVar = {
         (PrimitiveFloatingPointType(), 8): "%.15lf",
         (PrimitiveFloatingPointType(), 4): "%.6f",
         (PrimitiveIntegerType(), 4): "%d",
@@ -188,7 +165,6 @@ class CCodePrinter(CodePrinter):
     }
 
     def __init__(self, filename, *, verbose, prefix_module=None):
-
         super().__init__(verbose)
         self.prefix_module = prefix_module
         self._additional_imports = {"stdlib": c_imports["stdlib"]}
@@ -215,9 +191,7 @@ class CCodePrinter(CodePrinter):
         list[Import]
             A sorted list of the imports.
         """
-        stc_imports = [
-            i for i in imports if str(i.source) in import_header_guard_prefix
-        ]
+        stc_imports = [i for i in imports if str(i.source) in import_header_guard_prefix]
         split_stc_imports = [Import(i.source, t) for i in stc_imports for t in i.target]
         split_stc_imports.sort(
             key=lambda i:
@@ -264,17 +238,14 @@ class CCodePrinter(CodePrinter):
         bool
             True if a C pointer, False otherwise.
         """
-        if a is NIL or isinstance(a, (ObjectAddress, PointerCast, CStrStr)):
+        if a is NIL or isinstance(a, ObjectAddress | PointerCast | CStrStr):
             return True
         if isinstance(a, FunctionCall):
             a = a.funcdef.results.var
         # STC _at and _at_mut functions return pointers
         if (
             isinstance(a, IndexedElement)
-            and not (
-                isinstance(a.base.class_type, NumpyNDArrayType)
-                and a.base.class_type.raw
-            )
+            and not (isinstance(a.base.class_type, NumpyNDArrayType) and a.base.class_type.raw)
             and a.rank == 0
         ):
             return True
@@ -282,27 +253,13 @@ class CCodePrinter(CodePrinter):
             return False
         if isinstance(a.class_type, NumpyNDArrayType):
             if a.class_type.raw:
-                return (
-                    a.is_alias
-                    or a.is_optional
-                    or any(a is bi for b in self._additional_args for bi in b)
-                )
-            return a.is_optional or any(
-                a is bi for b in self._additional_args for bi in b
-            )
+                return a.is_alias or a.is_optional or any(a is bi for b in self._additional_args for bi in b)
+            return a.is_optional or any(a is bi for b in self._additional_args for bi in b)
 
-        if (
-            isinstance(a.class_type, CustomDataType)
-            and a.is_argument
-            and not isinstance(a.class_type, FinalType)
-        ):
+        if isinstance(a.class_type, CustomDataType) and a.is_argument and not isinstance(a.class_type, FinalType):
             return True
 
-        return (
-            a.is_alias
-            or a.is_optional
-            or any(a is bi for b in self._additional_args for bi in b)
-        )
+        return a.is_alias or a.is_optional or any(a is bi for b in self._additional_args for bi in b)
 
     # ============ Elements ============ #
 
@@ -315,7 +272,7 @@ class CCodePrinter(CodePrinter):
             func = "cabs"
         else:
             func = "labs"
-        return "{}({})".format(func, self._print(expr.arg))
+        return f"{func}({self._print(expr.arg)})"
 
     def _print_PythonRound(self, expr):
         self.add_import(c_imports["pyc_math_c"])
@@ -323,11 +280,10 @@ class CCodePrinter(CodePrinter):
         ndigits = self._print(expr.ndigits or convert_to_literal(0))
         if isinstance(
             expr.arg.class_type.primitive_type,
-            (PrimitiveBooleanType, PrimitiveIntegerType),
+            PrimitiveBooleanType | PrimitiveIntegerType,
         ):
             return f"ipyc_bankers_round({arg}, {ndigits})"
-        else:
-            return f"fpyc_bankers_round({arg}, {ndigits})"
+        return f"fpyc_bankers_round({arg}, {ndigits})"
 
     def _print_Cast(self, expr):
         value = self._print(expr.arg)
@@ -336,9 +292,7 @@ class CCodePrinter(CodePrinter):
         if isinstance(dtype, StringType):
             if isinstance(expr.arg.class_type, StringType):
                 return f"cstr_clone({value})"
-            assert isinstance(expr.arg.class_type, CharType) and getattr(
-                expr.arg, "is_alias", True
-            )
+            assert isinstance(expr.arg.class_type, CharType) and getattr(expr.arg, "is_alias", True)
             return f"cstr_from({value})"
         if isinstance(dtype.primitive_type, PrimitiveBooleanType):
             return f"({value} != 0)"
@@ -404,9 +358,7 @@ class CCodePrinter(CodePrinter):
                 classes += self._print(classDef.docstring)
             classes += f"struct {classDef.name} {{\n"
             # Is external is required to avoid the default initialisation of containers
-            attrib_decl = [
-                self._print(Declare(var, external=True)) for var in classDef.attributes
-            ]
+            attrib_decl = [self._print(Declare(var, external=True)) for var in classDef.attributes]
             classes += "".join(d.removeprefix("extern ") for d in attrib_decl)
             func_blocks.append("")
             for method in classDef.methods:
@@ -416,46 +368,26 @@ class CCodePrinter(CodePrinter):
                 for func in interface.functions:
                     func_blocks[-1] += f"{self.function_signature(func)};\n"
             classes += "};\n"
-        func_blocks.append(
-            "".join(
-                f"{self.function_signature(f)};\n"
-                for f in expr.module.funcs
-                if f.is_semantic
-            )
-        )
+        func_blocks.append("".join(f"{self.function_signature(f)};\n" for f in expr.module.funcs if f.is_semantic))
 
         func_blocks.extend(
-            "".join(
-                f"{self.function_signature(f)};\n" for f in i.functions if f.is_semantic
-            )
+            "".join(f"{self.function_signature(f)};\n" for f in i.functions if f.is_semantic)
             for i in expr.module.interfaces
         )
 
         funcs = "\n".join(f for f in func_blocks if f)
 
-        decls = [
-            Declare(v, external=True, module_variable=True)
-            for v in expr.module.variables
-            if not v.is_private
-        ]
+        decls = [Declare(v, external=True, module_variable=True) for v in expr.module.variables if not v.is_private]
         global_variables = "".join(self._print(d) for d in decls)
 
         # Print imports last to be sure that all additional_imports have been collected
-        imports = [
-            i
-            for i in chain(expr.module.imports, self._additional_imports.values())
-            if not i.ignore
-        ]
+        imports = [i for i in chain(expr.module.imports, self._additional_imports.values()) if not i.ignore]
         imports = self.sort_imports(imports)
         imports = "".join(self._print(i) for i in imports)
 
         self._in_header = False
         self.exit_scope()
-        body = "\n".join(
-            info_block
-            for info_block in (imports, global_variables, classes, funcs)
-            if info_block
-        )
+        body = "\n".join(info_block for info_block in (imports, global_variables, classes, funcs) if info_block)
         return f"#ifndef {name.upper()}_H\n \
                 #define {name.upper()}_H\n\n \
                 {body}\n \
@@ -468,9 +400,7 @@ class CCodePrinter(CodePrinter):
         global_variables = "".join([self._print(d) for d in expr.declarations])
 
         # Print imports last to be sure that all additional_imports have been collected
-        imports = Import(
-            self.scope.get_python_name(expr.name), Module(expr.name, (), ())
-        )
+        imports = Import(self.scope.get_python_name(expr.name), Module(expr.name, (), ()))
         imports = self._print(imports)
 
         code = "\n".join((imports, global_variables, body))
@@ -489,18 +419,14 @@ class CCodePrinter(CodePrinter):
         body = self._print(expr.body)
         self.exit_scope()
         cond = self._print(expr.test)
-        return "while({condi})\n{{\n{body}}}\n".format(condi=cond, body=body)
+        return f"while({cond})\n{{\n{body}}}\n"
 
     def _print_If(self, expr):
         lines = []
         condition_setup = []
         for i, (c, b) in enumerate(expr.blocks):
             body = self._print(b)
-            if (
-                i == len(expr.blocks) - 1
-                and isinstance(c, Literal)
-                and c.python_value is True
-            ):
+            if i == len(expr.blocks) - 1 and isinstance(c, Literal) and c.python_value is True:
                 if i == 0:
                     lines.append(body)
                     break
@@ -531,8 +457,7 @@ class CCodePrinter(CodePrinter):
         args = [
             (
                 f"({self._print(a)})"
-                if isinstance(a, Operator)
-                and not isinstance(a, AssociativeParenthesis)
+                if isinstance(a, Operator) and not isinstance(a, AssociativeParenthesis)
                 else self._print(a)
             )
             for a in expr.args
@@ -543,8 +468,7 @@ class CCodePrinter(CodePrinter):
         args = [
             (
                 f"({self._print(a)})"
-                if isinstance(a, Operator)
-                and not isinstance(a, AssociativeParenthesis)
+                if isinstance(a, Operator) and not isinstance(a, AssociativeParenthesis)
                 else self._print(a)
             )
             for a in expr.args
@@ -553,63 +477,54 @@ class CCodePrinter(CodePrinter):
 
     def _print_Eq(self, expr):
         lhs, rhs = expr.args
-        if isinstance(lhs.class_type, StringType) and isinstance(
-            rhs.class_type, StringType
-        ):
+        if isinstance(lhs.class_type, StringType) and isinstance(rhs.class_type, StringType):
             lhs_code = self._print(CStrStr(lhs))
             rhs_code = self._print(CStrStr(rhs))
             return f"!strcmp({lhs_code}, {rhs_code})"
-        elif isinstance(lhs.class_type, FixedSizeNumericType):
+        if isinstance(lhs.class_type, FixedSizeNumericType):
             lhs_code = self._print(lhs)
             rhs_code = self._print(rhs)
             return f"{lhs_code} == {rhs_code}"
-        else:
-            raise NotImplementedError(f"C equality printing is not implemented for {expr}")
+        raise NotImplementedError(f"C equality printing is not implemented for {expr}")
 
     def _print_Ne(self, expr):
         lhs, rhs = expr.args
-        if isinstance(lhs.class_type, StringType) and isinstance(
-            rhs.class_type, StringType
-        ):
+        if isinstance(lhs.class_type, StringType) and isinstance(rhs.class_type, StringType):
             lhs_code = self._print(CStrStr(lhs))
             rhs_code = self._print(CStrStr(rhs))
             return f"strcmp({lhs_code}, {rhs_code})"
-        elif isinstance(lhs.class_type, FixedSizeNumericType):
+        if isinstance(lhs.class_type, FixedSizeNumericType):
             lhs_code = self._print(lhs)
             rhs_code = self._print(rhs)
             return f"{lhs_code} != {rhs_code}"
-        else:
-            raise NotImplementedError(f"C inequality printing is not implemented for {expr}")
+        raise NotImplementedError(f"C inequality printing is not implemented for {expr}")
 
     def _print_Lt(self, expr):
         lhs = self._print(expr.args[0])
         rhs = self._print(expr.args[1])
-        return "{0} < {1}".format(lhs, rhs)
+        return f"{lhs} < {rhs}"
 
     def _print_Le(self, expr):
         lhs = self._print(expr.args[0])
         rhs = self._print(expr.args[1])
-        return "{0} <= {1}".format(lhs, rhs)
+        return f"{lhs} <= {rhs}"
 
     def _print_Gt(self, expr):
         lhs = self._print(expr.args[0])
         rhs = self._print(expr.args[1])
-        return "{0} > {1}".format(lhs, rhs)
+        return f"{lhs} > {rhs}"
 
     def _print_Ge(self, expr):
         lhs = self._print(expr.args[0])
         rhs = self._print(expr.args[1])
-        return "{0} >= {1}".format(lhs, rhs)
+        return f"{lhs} >= {rhs}"
 
     def _print_Not(self, expr):
         arg = expr.args[0]
         a = self._print(arg)
-        if isinstance(arg, Operator) and not isinstance(
-            arg, AssociativeParenthesis
-        ):
+        if isinstance(arg, Operator) and not isinstance(arg, AssociativeParenthesis):
             a = f"({a})"
         return f"!{a}"
-
 
     def _print_Mod(self, expr):
         self.add_import(c_imports["math"])
@@ -619,13 +534,13 @@ class CCodePrinter(CodePrinter):
         second = self._print(expr.args[1])
 
         if expr.dtype.primitive_type is PrimitiveIntegerType():
-            return "pyc_modulo({n}, {base})".format(n=first, base=second)
+            return f"pyc_modulo({first}, {second})"
 
         if expr.args[0].dtype.primitive_type is PrimitiveIntegerType():
             first = self._print(cast_to(expr.args[0], NumpyFloat64Type()))
         if expr.args[1].dtype.primitive_type is PrimitiveIntegerType():
             second = self._print(cast_to(expr.args[1], NumpyFloat64Type()))
-        return "pyc_fmodulo({n}, {base})".format(n=first, base=second)
+        return f"pyc_fmodulo({first}, {second})"
 
     def _print_Pow(self, expr):
         b = expr.args[0]
@@ -633,39 +548,24 @@ class CCodePrinter(CodePrinter):
 
         if expr.dtype.primitive_type is PrimitiveComplexType():
             b = self._print(
-                b
-                if b.dtype.primitive_type is PrimitiveComplexType()
-                else cast_to(b, NumpyComplex128Type())
+                b if b.dtype.primitive_type is PrimitiveComplexType() else cast_to(b, NumpyComplex128Type())
             )
             e = self._print(
-                e
-                if e.dtype.primitive_type is PrimitiveComplexType()
-                else cast_to(e, NumpyComplex128Type())
+                e if e.dtype.primitive_type is PrimitiveComplexType() else cast_to(e, NumpyComplex128Type())
             )
             self.add_import(c_imports["complex"])
-            return "cpow({}, {})".format(b, e)
+            return f"cpow({b}, {e})"
 
         self.add_import(c_imports["math"])
-        b = self._print(
-            b
-            if b.dtype.primitive_type is PrimitiveFloatingPointType()
-            else cast_to(b, NumpyFloat64Type())
-        )
-        e = self._print(
-            e
-            if e.dtype.primitive_type is PrimitiveFloatingPointType()
-            else cast_to(e, NumpyFloat64Type())
-        )
-        code = "pow({}, {})".format(b, e)
+        b = self._print(b if b.dtype.primitive_type is PrimitiveFloatingPointType() else cast_to(b, NumpyFloat64Type()))
+        e = self._print(e if e.dtype.primitive_type is PrimitiveFloatingPointType() else cast_to(e, NumpyFloat64Type()))
+        code = f"pow({b}, {e})"
         return self._cast_to(expr, expr.dtype).format(code)
 
     def _print_Import(self, expr):
         if expr.ignore:
             return ""
-        if isinstance(expr.source, AsName):
-            source = expr.source.name
-        else:
-            source = expr.source
+        source = expr.source.name if isinstance(expr.source, AsName) else expr.source
 
         source = self._print(source)
 
@@ -678,9 +578,8 @@ class CCodePrinter(CodePrinter):
         if source is None:
             return ""
         if expr.source in c_library_headers:
-            return "#include <{0}.h>\n".format(source)
-        else:
-            return '#include "{0}.h"\n'.format(source)
+            return f"#include <{source}.h>\n"
+        return f'#include "{source}.h"\n'
 
     def get_print_format_and_arg(self, var):
         """
@@ -706,17 +605,13 @@ class CCodePrinter(CodePrinter):
         if isinstance(var.dtype, FixedSizeNumericType):
             primitive_type = var.dtype.primitive_type
             if isinstance(primitive_type, PrimitiveComplexType):
-                _, real_part = self.get_print_format_and_arg(
-                    ComplexPart(var, "real")
-                )
-                float_format, imag_part = self.get_print_format_and_arg(
-                    ComplexPart(var, "imag")
-                )
+                _, real_part = self.get_print_format_and_arg(ComplexPart(var, "real"))
+                float_format, imag_part = self.get_print_format_and_arg(ComplexPart(var, "imag"))
                 return (
                     f"({float_format} + {float_format}j)",
                     f"{real_part}, {imag_part}",
                 )
-            elif isinstance(primitive_type, PrimitiveBooleanType):
+            if isinstance(primitive_type, PrimitiveBooleanType):
                 return self.get_print_format_and_arg(
                     IfTernaryOperator(
                         var,
@@ -724,16 +619,13 @@ class CCodePrinter(CodePrinter):
                         CStrStr(convert_to_literal("False")),
                     )
                 )
-            else:
-                try:
-                    arg_format = self.type_to_format[
-                        (primitive_type, var.dtype.precision)
-                    ]
-                except KeyError:
-                    raise TypeError(
-                        f"Printing {var.dtype} type is not supported currently",
-                    )
-                arg = self._print(var)
+            try:
+                arg_format = self.type_to_format[(primitive_type, var.dtype.precision)]
+            except KeyError as error:
+                raise TypeError(
+                    f"Printing {var.dtype} type is not supported currently",
+                ) from error
+            arg = self._print(var)
         elif isinstance(var.dtype, StringType):
             arg = self._print(CStrStr(var))
             arg_format = "%s"
@@ -743,10 +635,10 @@ class CCodePrinter(CodePrinter):
         else:
             try:
                 arg_format = self.type_to_format[var.dtype]
-            except KeyError:
+            except KeyError as error:
                 raise TypeError(
                     f"Printing {var.dtype} type is not supported currently",
-                )
+                ) from error
 
             arg = self._print(var)
 
@@ -785,7 +677,7 @@ class CCodePrinter(CodePrinter):
             if isinstance(primitive_type, PrimitiveComplexType):
                 self.add_import(c_imports["complex"])
                 return f"{self.get_c_type(dtype.element_type)} complex"
-            elif isinstance(primitive_type, PrimitiveIntegerType):
+            if isinstance(primitive_type, PrimitiveIntegerType):
                 self.add_import(c_imports["stdint"])
             elif isinstance(dtype, NumpyBoolType):
                 self.add_import(c_imports["stdbool"])
@@ -853,12 +745,9 @@ class CCodePrinter(CodePrinter):
         else:
             dtype = self.get_c_type(expr.class_type)
 
-        if self.is_c_pointer(expr) and not (
-            isinstance(class_type, NumpyNDArrayType) and class_type.raw
-        ):
+        if self.is_c_pointer(expr) and not (isinstance(class_type, NumpyNDArrayType) and class_type.raw):
             return f"{dtype}*"
-        else:
-            return dtype
+        return dtype
 
     def _print_Declare(self, expr):
         var = expr.variable
@@ -869,7 +758,7 @@ class CCodePrinter(CodePrinter):
         if isinstance(var.class_type, NumpyNDArrayType) and var.class_type.raw:
             assert init == ""
             preface = ""
-            if isinstance(var.alloc_shape[0], (int, Literal)):
+            if isinstance(var.alloc_shape[0], int | Literal):
                 init = f"[{var.alloc_shape[0]}]"
             else:
                 declaration_type += "*"
@@ -878,24 +767,14 @@ class CCodePrinter(CodePrinter):
             preface, init = self._init_stack_array(var)
         else:
             preface = ""
-            if (
-                isinstance(var.class_type, NumpyNDArrayType)
-                and not expr.external
-                and not var.is_alias
-            ):
+            if isinstance(var.class_type, NumpyNDArrayType) and not expr.external and not var.is_alias:
                 init = " = {0}"
 
         external = "extern " if expr.external else ""
         static = "static " if expr.static else ""
-        const = (
-            "const "
-            if isinstance(var.class_type, FinalType) and self.is_c_pointer(var)
-            else ""
-        )
+        const = "const " if isinstance(var.class_type, FinalType) and self.is_c_pointer(var) else ""
 
-        return (
-            f"{preface}{static}{external}{const}{declaration_type} {var.name}{init};\n"
-        )
+        return f"{preface}{static}{external}{const}{declaration_type} {var.name}{init};\n"
 
     def function_signature(self, expr, print_arg_names=True):
         """
@@ -923,31 +802,21 @@ class CCodePrinter(CodePrinter):
             Signature of the function.
         """
         arg_vars = [a.var for a in expr.arguments]
-        result_vars = [
-            v
-            for v in expr.scope.collect_all_tuple_elements(expr.results.var)
-            if v and not v.is_argument
-        ]
+        result_vars = [v for v in expr.scope.collect_all_tuple_elements(expr.results.var) if v and not v.is_argument]
 
         n_results = len(result_vars)
-        returns_bind_c_array = isinstance(
-            expr.results.var, BindCVariable
-        ) and isinstance(expr.results.var.class_type, BindCArrayType)
+        returns_bind_c_array = isinstance(expr.results.var, BindCVariable) and isinstance(
+            expr.results.var.class_type, BindCArrayType
+        )
 
         if n_results > 1:
-            ret_type = (
-                self.get_c_type(VoidType())
-                if returns_bind_c_array
-                else self.get_c_type(NumpyInt64Type())
-            )
+            ret_type = self.get_c_type(VoidType()) if returns_bind_c_array else self.get_c_type(NumpyInt64Type())
             if expr.arguments and expr.arguments[0].bound_argument:
                 # Place the first arg_var (the bound class object) first
                 arg_vars = arg_vars[:1] + result_vars + arg_vars[1:]
             else:
                 arg_vars = result_vars + arg_vars
-            self._additional_args.append(
-                result_vars
-            )  # Ensure correct result for is_c_pointer
+            self._additional_args.append(result_vars)  # Ensure correct result for is_c_pointer
         elif n_results == 1:
             ret_type = self.get_declare_type(result_vars[0])
             self._additional_args.append([])
@@ -959,9 +828,7 @@ class CCodePrinter(CodePrinter):
             if get_direct_module(v) is None:
                 self._additional_args[-1].append(v)
                 arg_vars.append(v)
-        arg_vars = [
-            ai for a in arg_vars for ai in expr.scope.collect_all_tuple_elements(a)
-        ]
+        arg_vars = [ai for a in arg_vars for ai in expr.scope.collect_all_tuple_elements(a)]
 
         name = expr.name
         if not arg_vars:
@@ -977,11 +844,7 @@ class CCodePrinter(CodePrinter):
                 return code
 
             arg_code_list = [
-                (
-                    self.function_signature(var, False)
-                    if isinstance(var, FunctionAddress)
-                    else get_arg_declaration(var)
-                )
+                (self.function_signature(var, False) if isinstance(var, FunctionAddress) else get_arg_declaration(var))
                 for var in arg_vars
             ]
             arg_code = ", ".join(arg_code_list)
@@ -992,13 +855,12 @@ class CCodePrinter(CodePrinter):
 
         if isinstance(expr, FunctionAddress):
             return f"{static}{ret_type} (*{name})({arg_code})"
-        else:
-            return f"{static}{ret_type} {name}({arg_code})"
+        return f"{static}{ret_type} {name}({arg_code})"
 
     def _print_IndexedElement(self, expr):
         base = expr.base
 
-        inds = list(expr.indices)
+        list(expr.indices)
         raise NotImplementedError(f"Indexing not implemented for {base}")
 
     def _cast_to(self, expr, dtype):
@@ -1025,7 +887,7 @@ class CCodePrinter(CodePrinter):
         """
         if expr.dtype != dtype:
             cast = self.get_c_type(dtype)
-            return "({}){{}}".format(cast)
+            return f"({cast}){{}}"
         return "{}"
 
     def _print_DottedVariable(self, expr):
@@ -1039,8 +901,7 @@ class CCodePrinter(CodePrinter):
             code = f"{lhs_code}.{name_code}"
         if self.is_c_pointer(expr):
             return f"(*{code})"
-        else:
-            return code
+        return code
 
     def _print_ArraySize(self, expr):
         arg = self._print(ObjectAddress(expr.arg))
@@ -1056,13 +917,10 @@ class CCodePrinter(CodePrinter):
                 return f"{cast_code}{arg_code}->shape[{idx}]"
             arg_code = self._print(arg)
             return f"{cast_code}{arg_code}.shape[{idx}]"
-        elif isinstance(arg.class_type, StringType):
+        if isinstance(arg.class_type, StringType):
             arg_code = self._print(ObjectAddress(arg))
             return f"cstr_size({arg_code})"
-        else:
-            raise NotImplementedError(
-                f"Don't know how to represent shape of object of type {arg.class_type}"
-            )
+        raise NotImplementedError(f"Don't know how to represent shape of object of type {arg.class_type}")
 
     def _print_Allocate(self, expr):
         free_code = ""
@@ -1084,17 +942,13 @@ class CCodePrinter(CodePrinter):
                         f"{container_type}_reserve({variable_address}, {size});\n"
                     )
                 return f"{container_type}_reserve({variable_address}, {size});\n"
-            elif expr.alloc_type == "resize":
+            if expr.alloc_type == "resize":
                 return f"{container_type}_resize({variable_address}, {size}, {0});\n"
             return free_code
-        elif isinstance(variable.class_type, (NumpyNDArrayType)):
+        if isinstance(variable.class_type, (NumpyNDArrayType)):
             # free the array if its already allocated and checking if its not null if the status is unknown
             if expr.status == "unknown":
-                data_ptr = ObjectAddress(
-                    DottedVariable(
-                        VoidType(), "data", lhs=variable, memory_handling="alias"
-                    )
-                )
+                data_ptr = ObjectAddress(DottedVariable(VoidType(), "data", lhs=variable, memory_handling="alias"))
                 free_code = f"if ({self._print(data_ptr)} != NULL)\n"
                 free_code += "".join(("{\n", self._print(Deallocate(variable)), "}\n"))
             elif expr.status == "allocated":
@@ -1102,9 +956,7 @@ class CCodePrinter(CodePrinter):
             if expr.alloc_type == "function":
                 return free_code
 
-            tot_shape = self._print(
-                functools.reduce(Mul.make_simplified, expr.shape)
-            )
+            tot_shape = self._print(functools.reduce(Mul.make_simplified, expr.shape))
             c_type = self.get_c_type(variable.class_type)
             element_type = self.get_c_type(variable.class_type.element_type)
 
@@ -1132,25 +984,17 @@ class CCodePrinter(CodePrinter):
                 + buffer_array
                 + f"{self._print(variable)} = ({c_type})cspan_md_layout({order}, {dummy_array_name}, {shape});\n"
             )
-        elif variable.is_alias:
+        if variable.is_alias:
             var_code = self._print(ObjectAddress(variable))
             if expr.like:
                 declaration_type = self.get_declare_type(expr.like)
                 malloc_size = f"sizeof({declaration_type})"
                 if variable.rank:
-                    tot_shape = self._print(
-                        functools.reduce(Mul.make_simplified, expr.shape)
-                    )
+                    tot_shape = self._print(functools.reduce(Mul.make_simplified, expr.shape))
                     malloc_size = f"{malloc_size} * ({tot_shape})"
                 return f"{var_code} = malloc({malloc_size});\n"
-            else:
-                raise NotImplementedError(
-                    f"Allocate not implemented for {variable.class_type}"
-                )
-        else:
-            raise NotImplementedError(
-                f"Allocate not implemented for {variable.class_type}"
-            )
+            raise NotImplementedError(f"Allocate not implemented for {variable.class_type}")
+        raise NotImplementedError(f"Allocate not implemented for {variable.class_type}")
 
     def _print_Deallocate(self, expr):
         var = expr.variable
@@ -1166,20 +1010,15 @@ class CCodePrinter(CodePrinter):
             x2py__del = var.cls_base.scope.find("__del__")
             if x2py__del:
                 return f"{x2py__del.name}({variable_address});\n"
-            else:
-                return ""
-        elif isinstance(var.class_type, NumpyNDArrayType):
+            return ""
+        if isinstance(var.class_type, NumpyNDArrayType):
             if var.is_alias:
                 return ""
-            else:
-                data_ptr = DottedVariable(
-                    VoidType(), "data", lhs=var, memory_handling="alias"
-                )
-                data_ptr_code = self._print(ObjectAddress(data_ptr))
-                return f"free({data_ptr_code});\n{data_ptr_code} = NULL;\n"
-        else:
-            variable_address = self._print(ObjectAddress(var))
-            return f"free({variable_address});\n"
+            data_ptr = DottedVariable(VoidType(), "data", lhs=var, memory_handling="alias")
+            data_ptr_code = self._print(ObjectAddress(data_ptr))
+            return f"free({data_ptr_code});\n{data_ptr_code} = NULL;\n"
+        variable_address = self._print(ObjectAddress(var))
+        return f"free({variable_address});\n"
 
     def _print_FunctionAddress(self, expr):
         return expr.name
@@ -1197,19 +1036,12 @@ class CCodePrinter(CodePrinter):
 
         sep = self._print(SeparatorComment(40))
 
-        inner_funcs = "".join(
-            self._print(f).removeprefix(sep).removesuffix(sep) + "\n"
-            for f in expr.functions
-        )
+        inner_funcs = "".join(self._print(f).removeprefix(sep).removesuffix(sep) + "\n" for f in expr.functions)
 
         self.set_scope(expr.scope)
 
         # Collect results filtering out NIL
-        results = [
-            r
-            for r in self.scope.collect_all_tuple_elements(expr.results.var)
-            if isinstance(r, Variable)
-        ]
+        results = [r for r in self.scope.collect_all_tuple_elements(expr.results.var) if isinstance(r, Variable)]
         returning_tuple = False
         if len(results) > 1 or returning_tuple:
             self._additional_args.append(results)
@@ -1223,11 +1055,7 @@ class CCodePrinter(CodePrinter):
         decs = [
             Declare(
                 i,
-                value=(
-                    NIL
-                    if i.is_alias and isinstance(i.class_type, (VoidType, BindCPointer))
-                    else None
-                ),
+                value=(NIL if i.is_alias and isinstance(i.class_type, VoidType | BindCPointer) else None),
             )
             for i in expr.local_vars
         ]
@@ -1249,7 +1077,7 @@ class CCodePrinter(CodePrinter):
             sep,
             inner_funcs,
             docstring,
-            "{signature}\n{{\n".format(signature=self.function_signature(expr)),
+            f"{self.function_signature(expr)}\n{{\n",
             decs,
             body,
             "}\n",
@@ -1265,7 +1093,7 @@ class CCodePrinter(CodePrinter):
         parent_assign = get_direct_assignment(expr)
         # Ensure the correct syntax is used for pointers
         args = []
-        for a, f in zip(expr.args, func.arguments):
+        for a, f in zip(expr.args, func.arguments, strict=False):
             arg_val = a.value
             f = f.var
             if self.is_c_pointer(f):
@@ -1308,11 +1136,7 @@ class CCodePrinter(CodePrinter):
                 args.append(output_arg)
 
         self._temporary_args = []
-        args = ", ".join(
-            self._print(ai)
-            for a in args
-            for ai in self.scope.collect_all_tuple_elements(a)
-        )
+        args = ", ".join(self._print(ai) for a in args for ai in self.scope.collect_all_tuple_elements(a))
 
         call_code = f"{func.name}({args})"
         if (
@@ -1323,8 +1147,7 @@ class CCodePrinter(CodePrinter):
             return f"{call_code};\n"
         if func.results.var is not NIL:
             return call_code
-        else:
-            return f"{call_code};\n"
+        return f"{call_code};\n"
 
     def _print_Return(self, expr):
         func = get_enclosing_function(expr)
@@ -1335,13 +1158,7 @@ class CCodePrinter(CodePrinter):
         if return_obj is None:
             args = []
         else:
-            args = [
-                (
-                    ObjectAddress(return_obj)
-                    if self.is_c_pointer(return_obj)
-                    else return_obj
-                )
-            ]
+            args = [(ObjectAddress(return_obj) if self.is_c_pointer(return_obj) else return_obj)]
 
         if len(args) == 0:
             return code + "return;\n"
@@ -1359,7 +1176,7 @@ class CCodePrinter(CodePrinter):
     def _print_Minus(self, expr):
         args = [self._print(a) for a in expr.args]
         if len(args) == 1:
-            return "-{}".format(args[0])
+            return f"-{args[0]}"
         return " - ".join(args)
 
     def _print_Mul(self, expr):
@@ -1377,8 +1194,7 @@ class CCodePrinter(CodePrinter):
         # type, if all arguments are integers or booleans the result is integer
         # otherwise the result type is float
         need_to_cast = all(
-            a.dtype.primitive_type in (PrimitiveIntegerType(), PrimitiveBooleanType())
-            for a in expr.args
+            a.dtype.primitive_type in (PrimitiveIntegerType(), PrimitiveBooleanType()) for a in expr.args
         )
         if need_to_cast:
             self.add_import(c_imports["pyc_math_c"])
@@ -1387,11 +1203,7 @@ class CCodePrinter(CodePrinter):
 
         self.add_import(c_imports["math"])
         code = " / ".join(
-            self._print(
-                a
-                if a.dtype.primitive_type is PrimitiveFloatingPointType()
-                else cast_to(a, NumpyFloat64Type())
-            )
+            self._print(a if a.dtype.primitive_type is PrimitiveFloatingPointType() else cast_to(a, NumpyFloat64Type()))
             for a in expr.args
         )
         return f"floor({code})"
@@ -1404,17 +1216,14 @@ class CCodePrinter(CodePrinter):
 
     def _print_BitXor(self, expr):
         if expr.dtype is NumpyBoolType():
-            return "{0} != {1}".format(
-                self._print(expr.args[0]), self._print(expr.args[1])
-            )
+            return f"{self._print(expr.args[0])} != {self._print(expr.args[1])}"
         return " ^ ".join(self._print(a) for a in expr.args)
 
     def _print_BitOr(self, expr):
         args = [
             (
                 f"({self._print(a)})"
-                if isinstance(a, Operator)
-                and not isinstance(a, AssociativeParenthesis)
+                if isinstance(a, Operator) and not isinstance(a, AssociativeParenthesis)
                 else self._print(a)
             )
             for a in expr.args
@@ -1427,8 +1236,7 @@ class CCodePrinter(CodePrinter):
         args = [
             (
                 f"({self._print(a)})"
-                if isinstance(a, Operator)
-                and not isinstance(a, AssociativeParenthesis)
+                if isinstance(a, Operator) and not isinstance(a, AssociativeParenthesis)
                 else self._print(a)
             )
             for a in expr.args
@@ -1441,27 +1249,23 @@ class CCodePrinter(CodePrinter):
         arg = self._print(expr.args[0])
         if expr.dtype is NumpyBoolType():
             return f"!{arg}"
-        else:
-            return f"~{arg}"
+        return f"~{arg}"
 
     def _print_AssociativeParenthesis(self, expr):
-        return "({})".format(self._print(expr.args[0]))
+        return f"({self._print(expr.args[0])})"
 
     def _print_UnaryPlus(self, expr):
-        return "+{}".format(self._print(expr.args[0]))
+        return f"+{self._print(expr.args[0])}"
 
     def _print_UnarySub(self, expr):
-        return "-{}".format(self._print(expr.args[0]))
+        return f"-{self._print(expr.args[0])}"
 
     def _print_AugAssign(self, expr):
         op = expr.op
         lhs = expr.lhs
         rhs = expr.rhs
 
-        if op == "//" or (
-            op == "%"
-            and isinstance(lhs.dtype.primitive_type, PrimitiveFloatingPointType)
-        ):
+        if op == "//" or (op == "%" and isinstance(lhs.dtype.primitive_type, PrimitiveFloatingPointType)):
             _expr = expr.to_basic_assign()
             return self._print(_expr)
 
@@ -1492,11 +1296,7 @@ class CCodePrinter(CodePrinter):
         rhs_address = ObjectAddress(rhs_var)
 
         # The condition below handles the case of reassigning a pointer to an array view.
-        if (
-            isinstance(lhs_var, Variable)
-            and lhs_var.is_ndarray
-            and not lhs_var.is_optional
-        ):
+        if isinstance(lhs_var, Variable) and lhs_var.is_ndarray and not lhs_var.is_optional:
             lhs = self._print(lhs_var)
 
             if isinstance(rhs_var, Variable) and rhs_var.is_ndarray:
@@ -1508,14 +1308,12 @@ class CCodePrinter(CodePrinter):
                 if lhs_var.order != rhs_var.order:
                     code += f"cspan_transpose({lhs_ptr});\n"
                 return code
-            else:
-                rhs = self._print(rhs_var)
-                return f"{lhs} = {rhs};\n"
-        else:
-            lhs = self._print(lhs_address)
-            rhs = self._print(rhs_address)
-
+            rhs = self._print(rhs_var)
             return f"{lhs} = {rhs};\n"
+        lhs = self._print(lhs_address)
+        rhs = self._print(rhs_address)
+
+        return f"{lhs} = {rhs};\n"
 
     def _print_CodeBlock(self, expr):
         body_exprs = expr.body
@@ -1535,7 +1333,7 @@ class CCodePrinter(CodePrinter):
         return f"{function}({self._print(expr.arg)})"
 
     def _print_PythonConjugate(self, expr):
-        return "conj({})".format(self._print(expr.internal_var))
+        return f"conj({self._print(expr.internal_var)})"
 
     def _handle_is_operator(self, Op, expr):
         """
@@ -1568,21 +1366,16 @@ class CCodePrinter(CodePrinter):
         b = expr.args[1]
 
         if NIL in expr.args:
-            lhs = (
-                ObjectAddress(expr.args[0]) if isinstance(expr.args[0], Variable) else expr.args[0]
-            )
-            rhs = (
-                ObjectAddress(expr.args[1]) if isinstance(expr.args[1], Variable) else expr.args[1]
-            )
+            lhs = ObjectAddress(expr.args[0]) if isinstance(expr.args[0], Variable) else expr.args[0]
+            rhs = ObjectAddress(expr.args[1]) if isinstance(expr.args[1], Variable) else expr.args[1]
 
             lhs = self._print(lhs)
             rhs = self._print(rhs)
-            return "{} {} {}".format(lhs, Op, rhs)
+            return f"{lhs} {Op} {rhs}"
 
         if a.dtype is NumpyBoolType() and b.dtype is NumpyBoolType():
-            return "{} {} {}".format(lhs, Op, rhs)
-        else:
-            raise TypeError("C is/is not printing is only supported for booleans and nil checks")
+            return f"{lhs} {Op} {rhs}"
+        raise TypeError("C is/is not printing is only supported for booleans and nil checks")
 
     def _print_IsNot(self, expr):
         return self._handle_is_operator("!=", expr)
@@ -1605,32 +1398,27 @@ class CCodePrinter(CodePrinter):
         if expr.has(Assign):
             for i, (e, c) in enumerate(expr.args):
                 if i == 0:
-                    lines.append("if (%s) {\n" % self._print(c))
+                    lines.append(f"if ({self._print(c)}) {{\n")
                 elif i == len(expr.args) - 1 and c is True:
                     lines.append("else {\n")
                 else:
-                    lines.append("else if (%s) {\n" % self._print(c))
+                    lines.append(f"else if ({self._print(c)}) {{\n")
                 code0 = self._print(e)
                 lines.append(code0)
                 lines.append("}\n")
             return "".join(lines)
-        else:
-            # The piecewise was used in an expression, need to do inline
-            # operators. This has the downside that inline operators will
-            # not work for statements that span multiple lines (Matrix or
-            # Indexed expressions).
-            ecpairs = [
-                "((%s) ? (\n%s\n)\n" % (self._print(c), self._print(e))
-                for e, c in expr.args[:-1]
-            ]
-            last_line = ": (\n%s\n)" % self._print(expr.args[-1].expr)
-            return ": ".join(ecpairs) + last_line + " ".join([")" * len(ecpairs)])
+        # The piecewise was used in an expression, need to do inline
+        # operators. This has the downside that inline operators will
+        # not work for statements that span multiple lines (Matrix or
+        # Indexed expressions).
+        ecpairs = [f"(({self._print(c)}) ? (\n{self._print(e)}\n)\n" for e, c in expr.args[:-1]]
+        last_line = f": (\n{self._print(expr.args[-1].expr)}\n)"
+        return ": ".join(ecpairs) + last_line + " ".join([")" * len(ecpairs)])
 
     def _print_Variable(self, expr):
         if self.is_c_pointer(expr):
-            return "(*{0})".format(expr.name)
-        else:
-            return expr.name
+            return f"(*{expr.name})"
+        return expr.name
 
     def _print_FunctionDefArgument(self, expr):
         return self._print(expr.name)
@@ -1642,12 +1430,11 @@ class CCodePrinter(CodePrinter):
         obj_code = self._print(expr.obj)
         if isinstance(expr.obj, ObjectAddress):
             return f"&{obj_code}"
-        elif obj_code.startswith("(*") and obj_code.endswith(")"):
+        if obj_code.startswith("(*") and obj_code.endswith(")"):
             return f"{obj_code[2:-1]}"
-        elif not self.is_c_pointer(expr.obj):
+        if not self.is_c_pointer(expr.obj):
             return f"&{obj_code}"
-        else:
-            return obj_code
+        return obj_code
 
     def _print_PointerCast(self, expr):
         declare_type = self.get_declare_type(expr.cast_type)
@@ -1682,13 +1469,7 @@ class CCodePrinter(CodePrinter):
         ln = max(len(i) for i in txts)
         if ln < max(20, header_size + 4):
             ln = 20
-        top = (
-            "/*"
-            + "_" * int((ln - header_size) / 2)
-            + header
-            + "_" * int((ln - header_size) / 2)
-            + "*/\n"
-        )
+        top = "/*" + "_" * int((ln - header_size) / 2) + header + "_" * int((ln - header_size) / 2) + "*/\n"
         ln = len(top) - 4
         bottom = "/*" + "_" * ln + "*/\n"
 
@@ -1710,16 +1491,18 @@ class CCodePrinter(CodePrinter):
         clauses += str(expr.txt)
         if expr.has_nowait:
             clauses = clauses + " nowait"
-        omp_expr = "#pragma omp {}{}\n".format(expr.name, clauses)
+        omp_expr = f"#pragma omp {expr.name}{clauses}\n"
 
-        if expr.is_multiline:
-            if expr.combined is None:
-                omp_expr += "{\n"
-            elif expr.combined and "for" not in expr.combined:
-                if ("masked taskloop" not in expr.combined) and (
-                    "distribute" not in expr.combined
-                ):
-                    omp_expr += "{\n"
+        if expr.is_multiline and (
+            expr.combined is None
+            or (
+                expr.combined
+                and "for" not in expr.combined
+                and "masked taskloop" not in expr.combined
+                and "distribute" not in expr.combined
+            )
+        ):
+            omp_expr += "{\n"
 
         return omp_expr
 
@@ -1734,11 +1517,7 @@ class CCodePrinter(CodePrinter):
         variables = self.scope.variables.values()
         decs = "".join(self._print(Declare(v)) for v in variables)
 
-        imports = [
-            i
-            for i in chain(expr.imports, self._additional_imports.values())
-            if not i.ignore
-        ]
+        imports = [i for i in chain(expr.imports, self._additional_imports.values()) if not i.ignore]
         imports = self.sort_imports(imports)
         imports = "".join(self._print(i) for i in imports)
 
@@ -1755,11 +1534,7 @@ class CCodePrinter(CodePrinter):
 
     def _print_ClassDef(self, expr):
         methods = "".join(self._print(method) for method in expr.methods)
-        interfaces = "".join(
-            self._print(function)
-            for interface in expr.interfaces
-            for function in interface.functions
-        )
+        interfaces = "".join(self._print(function) for interface in expr.interfaces for function in interface.functions)
 
         return methods + interfaces
 
@@ -1770,8 +1545,7 @@ class CCodePrinter(CodePrinter):
         code = self._print(ObjectAddress(arg))
         if code.startswith("&cstr_lit("):
             return code[10:-1]
-        else:
-            return f"cstr_str({code})"
+        return f"cstr_str({code})"
 
     def _print_AllDeclaration(self, expr):
         return ""

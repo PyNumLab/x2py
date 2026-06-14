@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module contains tools useful for handling the compilation of stdlib imports.
 """
@@ -100,12 +99,8 @@ class StdlibInstaller:
                 to_delete = False
             else:
                 # If folder exists check if it needs updating
-                src_files = [
-                    f.relative_to(self._src_dir) for f in self._src_dir.glob("*")
-                ]
-                _, mismatch, _ = filecmp.cmpfiles(
-                    lib_dest_path, self._src_dir, src_files
-                )
+                src_files = [f.relative_to(self._src_dir) for f in self._src_dir.glob("*")]
+                _, mismatch, _ = filecmp.cmpfiles(lib_dest_path, self._src_dir, src_files)
                 to_copy = len(mismatch) != 0
                 to_delete = to_copy
 
@@ -123,11 +118,7 @@ class StdlibInstaller:
             if d in installed_libs:
                 dependencies.append(installed_libs[d])
             else:
-                dependencies.append(
-                    recognised_libs[d].install_to(
-                        x2py_dirpath, installed_libs, verbose, compiler
-                    )
-                )
+                dependencies.append(recognised_libs[d].install_to(x2py_dirpath, installed_libs, verbose, compiler))
 
         new_obj = CompileObj(
             self._file_name,
@@ -191,9 +182,7 @@ class CWrapperInstaller(StdlibInstaller):
             The object that should be added as a dependency to objects that depend on this
             library.
         """
-        compile_obj = super().install_to(
-            x2py_dirpath, installed_libs, verbose, compiler
-        )
+        compile_obj = super().install_to(x2py_dirpath, installed_libs, verbose, compiler)
         numpy_file = compile_obj.source_folder / "numpy_version.h"
         with open(numpy_file, "w", encoding="utf-8") as f:
             f.writelines(get_numpy_max_acceptable_version_file())
@@ -283,24 +272,16 @@ class ExternalLibInstaller:
                 f.write(f"project(Test LANGUAGES {languages})\n")
                 f.write("cmake_minimum_required(VERSION 3.28)\n")
                 f.write(f"find_package({pkg_name} REQUIRED {options})\n")
-                f.write(
-                    f"get_target_property(FLAGS {pkg_name}::{target_name} COMPILE_FLAGS)\n"
-                )
-                f.write(
-                    f"get_target_property(INCLUDE_DIRS {pkg_name}::{target_name} INCLUDE_DIRECTORIES)\n"
-                )
+                f.write(f"get_target_property(FLAGS {pkg_name}::{target_name} COMPILE_FLAGS)\n")
+                f.write(f"get_target_property(INCLUDE_DIRS {pkg_name}::{target_name} INCLUDE_DIRECTORIES)\n")
                 f.write(
                     f"get_target_property(INTERFACE_INCLUDE_DIRS {pkg_name}::{target_name} INTERFACE_INCLUDE_DIRECTORIES)\n"
                 )
-                f.write(
-                    f"get_target_property(LIBRARIES {pkg_name}::{target_name} LINK_LIBRARIES)\n"
-                )
+                f.write(f"get_target_property(LIBRARIES {pkg_name}::{target_name} LINK_LIBRARIES)\n")
                 f.write(
                     f"get_target_property(INTERFACE_LIBRARIES {pkg_name}::{target_name} INTERFACE_LINK_LIBRARIES)\n"
                 )
-                f.write(
-                    f"get_target_property(LIB_DIRS {pkg_name}::{target_name} INTERFACE_LINK_DIRECTORIES)\n"
-                )
+                f.write(f"get_target_property(LIB_DIRS {pkg_name}::{target_name} INTERFACE_LINK_DIRECTORIES)\n")
                 f.write(f'message(STATUS "{pkg_name} Found : ${{{pkg_name}_FOUND}}")\n')
                 f.write('message(STATUS "${FLAGS}")\n')
                 f.write('message(STATUS "${INCLUDE_DIRS}")\n')
@@ -319,40 +300,26 @@ class ExternalLibInstaller:
 
         if p.returncode:
             return None
-        else:
-            self._discovery_method = "CMake"
-            output = p.stdout.split("\n-- ")
-            start = next(
-                i for i, l in enumerate(output) if l == f"{pkg_name} Found : 1"
-            )
-            (
-                flags,
-                include_dirs,
-                interface_include_dirs,
-                libs,
-                interface_libs,
-                libdirs,
-            ) = (
-                "" if o.endswith("NOTFOUND") else o
-                for o in output[start + 1 : start + 7]
-            )
-            return CompileObj(
-                pkg_name,
-                folder="",
-                has_target_file=False,
-                include=[
-                    i
-                    for i in chain(
-                        include_dirs.split(","), interface_include_dirs.split(",")
-                    )
-                    if i
-                ],
-                flags=[f for f in flags.split(",") if f],
-                libdir=[l for l in libdirs.split(",") if l],
-                libs=[
-                    l for l in chain(libs.split(","), interface_libs.split(",")) if l
-                ],
-            )
+        self._discovery_method = "CMake"
+        output = p.stdout.split("\n-- ")
+        start = next(i for i, line in enumerate(output) if line == f"{pkg_name} Found : 1")
+        (
+            flags,
+            include_dirs,
+            interface_include_dirs,
+            libs,
+            interface_libs,
+            libdirs,
+        ) = ("" if o.endswith("NOTFOUND") else o for o in output[start + 1 : start + 7])
+        return CompileObj(
+            pkg_name,
+            folder="",
+            has_target_file=False,
+            include=[i for i in chain(include_dirs.split(","), interface_include_dirs.split(",")) if i],
+            flags=[f for f in flags.split(",") if f],
+            libdir=[libdir for libdir in libdirs.split(",") if libdir],
+            libs=[library for library in chain(libs.split(","), interface_libs.split(",")) if library],
+        )
 
     def _check_for_package(self, pkg_name, options=()):
         """
@@ -412,7 +379,7 @@ class ExternalLibInstaller:
             text=True,
             check=True,
         )
-        libdir = {l.removeprefix("-L") for l in p.stdout.split()}
+        libdir = {flag.removeprefix("-L") for flag in p.stdout.split()}
 
         p = subprocess.run(
             [pkg_config, pkg_name, "--libs-only-l"],
@@ -463,9 +430,7 @@ class STCInstaller(ExternalLibInstaller):
             libdir=("lib/*",),
         )
 
-    def install_to(
-        self, x2py_dirpath, installed_libs, verbose, compiler, *, use_pkg_config=True
-    ):
+    def install_to(self, x2py_dirpath, installed_libs, verbose, compiler, *, use_pkg_config=True):
         """
         Install the files to the X2py dirpath.
 
@@ -500,9 +465,7 @@ class STCInstaller(ExternalLibInstaller):
         if use_pkg_config:
             # Use pkg-config to try to locate an existing (system or user) installation
             # with version >= 5.0 < 6
-            existing_installation = self._check_for_package(
-                "stc", ["--max-version=6", "--atleast-version=5"]
-            )
+            existing_installation = self._check_for_package("stc", ["--max-version=6", "--atleast-version=5"])
 
             if existing_installation:
                 installed_libs["stc"] = existing_installation
@@ -512,9 +475,7 @@ class STCInstaller(ExternalLibInstaller):
         PKG_CONFIG_PATH = os.environ.get("PKG_CONFIG_PATH", "").split(sep)
 
         try:
-            stc_installation = importlib.resources.files(
-                f"x2py.extensions.stc_install_{compiler_family}"
-            )
+            stc_installation = importlib.resources.files(f"x2py.extensions.stc_install_{compiler_family}")
         except ModuleNotFoundError:
             stc_installation = None
 
@@ -522,40 +483,28 @@ class STCInstaller(ExternalLibInstaller):
             with importlib.resources.as_file(stc_installation) as f:
                 pkgconfig_dir = next(f.glob("**/*.pc")).parent
                 os.environ["PKG_CONFIG_PATH"] = sep.join(
-                    p
-                    for p in (*PKG_CONFIG_PATH, str(pkgconfig_dir))
-                    if p and Path(p).exists()
+                    p for p in (*PKG_CONFIG_PATH, str(pkgconfig_dir)) if p and Path(p).exists()
                 )
 
                 # Use pkg-config to try to locate an existing (system or user) installation
                 # with version >= 5.0 < 6
                 # This must be done in the with statement to ensure pkgconfig_dir exists
-                existing_installation = self._check_for_package(
-                    "stc", ["--max-version=6", "--atleast-version=5"]
-                )
+                existing_installation = self._check_for_package("stc", ["--max-version=6", "--atleast-version=5"])
 
             installed_libs["stc"] = existing_installation
             return existing_installation
 
-        custom_compiler_path = (
-            Path(os.environ.get("X2PY_CONFIG_HOME", Path.home() / ".x2py"))
-            / compiler_family
-            / "STC"
-        )
+        custom_compiler_path = Path(os.environ.get("X2PY_CONFIG_HOME", Path.home() / ".x2py")) / compiler_family / "STC"
         if custom_compiler_path.exists():
             pkgconfig_dir = next(custom_compiler_path.glob("**/*.pc")).parent
             os.environ["PKG_CONFIG_PATH"] = sep.join(
-                p
-                for p in (*PKG_CONFIG_PATH, str(pkgconfig_dir))
-                if p and Path(p).exists()
+                p for p in (*PKG_CONFIG_PATH, str(pkgconfig_dir)) if p and Path(p).exists()
             )
 
             # Use pkg-config to try to locate an existing (system or user) installation
             # with version >= 5.0 < 6
             # This must be done in the with statement to ensure pkgconfig_dir exists
-            existing_installation = self._check_for_package(
-                "stc", ["--max-version=6", "--atleast-version=5"]
-            )
+            existing_installation = self._check_for_package("stc", ["--max-version=6", "--atleast-version=5"])
 
             installed_libs["stc"] = existing_installation
             return existing_installation
@@ -567,10 +516,7 @@ class STCInstaller(ExternalLibInstaller):
         build_dir = x2py_dirpath / "STC" / f"build-{compiler_family}"
         install_dir = x2py_dirpath / "STC" / "install"
         with FileLock(install_dir.with_suffix(".lock")):
-            if (
-                build_dir.exists()
-                and build_dir.lstat().st_mtime < self._src_dir.lstat().st_mtime
-            ):
+            if build_dir.exists() and build_dir.lstat().st_mtime < self._src_dir.lstat().st_mtime:
                 shutil.rmtree(build_dir)
                 shutil.rmtree(install_dir)
 
@@ -614,9 +560,7 @@ class STCInstaller(ExternalLibInstaller):
 
         self._discovery_method = "pkgconfig"
         os.environ["PKG_CONFIG_PATH"] = ":".join(
-            p
-            for p in (*PKG_CONFIG_PATH, str(libdir / "pkgconfig"))
-            if p and Path(p).exists()
+            p for p in (*PKG_CONFIG_PATH, str(libdir / "pkgconfig")) if p and Path(p).exists()
         )
 
         new_obj = CompileObj(
@@ -683,9 +627,7 @@ class GFTLInstaller(ExternalLibInstaller):
             The object that should be added as a dependency to objects that depend on this
             library.
         """
-        existing_installation = self._check_for_cmake_package(
-            "GFTL", "Fortran", target_name=self.target_name
-        )
+        existing_installation = self._check_for_cmake_package("GFTL", "Fortran", target_name=self.target_name)
 
         if existing_installation:
             installed_libs["gFTL"] = existing_installation
@@ -698,13 +640,9 @@ class GFTLInstaller(ExternalLibInstaller):
         with importlib.resources.as_file(gftl_installation) as f:
             cmake_dir = next(f.glob("**/*.cmake")).parent
             os.environ["CMAKE_PREFIX_PATH"] = ":".join(
-                s
-                for s in (*CMAKE_PREFIX_PATH, str(cmake_dir))
-                if s and Path(s).exists()
+                s for s in (*CMAKE_PREFIX_PATH, str(cmake_dir)) if s and Path(s).exists()
             )
-            existing_installation = self._check_for_cmake_package(
-                "GFTL", "Fortran", target_name=self.target_name
-            )
+            existing_installation = self._check_for_cmake_package("GFTL", "Fortran", target_name=self.target_name)
 
             installed_libs["gFTL"] = existing_installation
 
@@ -722,12 +660,8 @@ recognised_libs = {
     "pyc_math_c": StdlibInstaller("pyc_math_c.c", "math", dependencies=("stc",)),
     "pyc_math_cpp": StdlibInstaller("pyc_math_cpp.cpp", "math"),
     "pyc_tools_f90": StdlibInstaller("pyc_tools_f90.f90", "tools"),
-    "cwrapper": CWrapperInstaller(
-        "cwrapper.c", "cwrapper", extra_compilation_tools=("python",)
-    ),
-    "STC_Extensions": StdlibInstaller(
-        "STC_Extensions", "STC_Extensions", has_target_file=False, dependencies=("stc",)
-    ),
+    "cwrapper": CWrapperInstaller("cwrapper.c", "cwrapper", extra_compilation_tools=("python",)),
+    "STC_Extensions": StdlibInstaller("STC_Extensions", "STC_Extensions", has_target_file=False, dependencies=("stc",)),
     "gFTL_functions": StdlibInstaller(
         "gFTL_functions",
         "gFTL_functions",

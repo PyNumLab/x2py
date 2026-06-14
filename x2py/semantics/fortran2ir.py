@@ -951,9 +951,7 @@ class FortranToIRConverter:
         ]
         for binding in bindings:
             binding_name, target_name = self._procedure_binding_names(binding["name"])
-            proc = procedure_lookup.get(target_name) or procedure_lookup.get(
-                target_name.lower()
-            )
+            proc = procedure_lookup.get(target_name) or procedure_lookup.get(target_name.lower())
             if proc is None:
                 continue
             attrs = set(binding.get("attrs", ()))

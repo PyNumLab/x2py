@@ -1,7 +1,8 @@
-# coding: utf-8
 """
 Handles name clash problems in Python
 """
+
+from typing import ClassVar
 
 from .languagenameclashchecker import LanguageNameClashChecker
 
@@ -15,7 +16,7 @@ class PythonNameClashChecker(LanguageNameClashChecker):
     generating names for new variables.
     """
 
-    keywords = set()
+    keywords: ClassVar[set[str]] = set()
 
     def has_clash(self, name, symbols):
         """

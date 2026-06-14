@@ -74,13 +74,9 @@ gpp_info = {
 
 
 if sys.platform == "darwin":
-    p = subprocess.run(
-        [shutil.which("gcc"), "--version"], check=False, capture_output=True, text=True
-    )
+    p = subprocess.run([shutil.which("gcc"), "--version"], check=False, capture_output=True, text=True)
     if p.returncode == 0 and "Apple clang" in p.stdout:
-        p = subprocess.run(
-            [shutil.which("brew"), "--prefix"], check=True, capture_output=True
-        )
+        p = subprocess.run([shutil.which("brew"), "--prefix"], check=True, capture_output=True)
         HOMEBREW_PREFIX = p.stdout.decode().strip()
         OMP_PATH = os.path.join(HOMEBREW_PREFIX, "opt/libomp")
 
@@ -310,9 +306,8 @@ def change_to_lib_flag(lib):
             end = end - 3
         if lib.endswith(".dylib"):
             end = end - 5
-        return "-l{}".format(lib[3:end])
-    else:
-        return lib
+        return f"-l{lib[3:end]}"
+    return lib
 
 
 config_vars = sysconfig.get_config_vars()
@@ -320,8 +315,7 @@ config_vars = sysconfig.get_config_vars()
 python_info = {
     "libs": config_vars.get("LIBM", "").split(),  # Strip -l from beginning
     "python": {
-        "flags": config_vars.get("CFLAGS", "").split()
-        + config_vars.get("CC", "").split()[1:],
+        "flags": config_vars.get("CFLAGS", "").split() + config_vars.get("CC", "").split()[1:],
         "include": [get_numpy_include(), *config_vars.get("INCLUDEPY", "").split()],
         "shared_suffix": config_vars["EXT_SUFFIX"],
     },
@@ -346,8 +340,8 @@ else:
     # Collect a list of all possible libraries matching the name in the configs
     # which can be found on the system
     shared_ending = ".dylib" if sys.platform == "darwin" else ".so"
-    possible_shared_lib = [l for l in python_shared_libs if shared_ending in l]
-    possible_static_lib = [l for l in python_shared_libs if ".a" in l]
+    possible_shared_lib = [library for library in python_shared_libs if shared_ending in library]
+    possible_static_lib = [library for library in python_shared_libs if ".a" in library]
 
     # Prefer saving the library as a dependency where possible to avoid
     # unnecessary libdir which may lead to the wrong versions being linked
@@ -355,9 +349,7 @@ else:
     # Prefer a shared library as it requires less memory
     if possible_shared_lib:
         if len(possible_shared_lib) > 1:
-            preferred_lib = [
-                l for l in possible_shared_lib if l.endswith(shared_ending)
-            ]
+            preferred_lib = [library for library in possible_shared_lib if library.endswith(shared_ending)]
             if preferred_lib:
                 possible_shared_lib = preferred_lib
 
@@ -365,7 +357,7 @@ else:
         python_info["python"]["libdir"] = [os.path.dirname(possible_shared_lib[0])]
     elif possible_static_lib:
         if len(possible_static_lib) > 1:
-            preferred_lib = [l for l in possible_static_lib if l.endswith(".a")]
+            preferred_lib = [library for library in possible_static_lib if library.endswith(".a")]
             if preferred_lib:
                 possible_static_lib = preferred_lib
         python_info["python"]["dependencies"] = [possible_static_lib[0]]
@@ -373,15 +365,12 @@ else:
         # If the proposed library does not exist use different config flags
         # to specify the library
         linker_flags = [
-            change_to_lib_flag(l)
-            for l in config_vars.get("LDSHARED", "").split()
-            + config_vars.get("LIBRARY", "").split()[1:]
+            change_to_lib_flag(flag)
+            for flag in config_vars.get("LDSHARED", "").split() + config_vars.get("LIBRARY", "").split()[1:]
         ]
-        python_info["python"]["libs"] = [
-            l[2:] for l in linker_flags if l.startswith("-l")
-        ]
+        python_info["python"]["libs"] = [flag[2:] for flag in linker_flags if flag.startswith("-l")]
         python_info["python"]["libdir"] = (
-            [l[2:] for l in linker_flags if l.startswith("-L")]
+            [flag[2:] for flag in linker_flags if flag.startswith("-L")]
             + config_vars.get("LIBPL", "").split()
             + config_vars.get("LIBDIR", "").split()
         )

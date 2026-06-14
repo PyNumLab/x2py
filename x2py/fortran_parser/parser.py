@@ -3102,9 +3102,7 @@ class FortranParser:
                 if not raw_name:
                     continue
                 entity_meta = self._entity_decl_meta(raw_name, meta)
-                normalized_name = self._normalize_declared_name(
-                    raw_name, entity_meta
-                )
+                normalized_name = self._normalize_declared_name(raw_name, entity_meta)
                 if not normalized_name:
                     continue
                 lowered_name = self._proc_scope_mark_declared_symbol(
@@ -3118,9 +3116,7 @@ class FortranParser:
                     self._proc_scope_add_external_symbol(proc_state, lowered_name)
                 arg = self._proc_scope_get_symbol(proc_state, lowered_name)
                 if arg is None:
-                    self._proc_scope_set_declared_local_type(
-                        proc_state, lowered_name, entity_meta
-                    )
+                    self._proc_scope_set_declared_local_type(proc_state, lowered_name, entity_meta)
                     continue
                 self._apply(arg, entity_meta, shape)
             return

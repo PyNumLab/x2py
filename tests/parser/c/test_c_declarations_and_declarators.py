@@ -460,7 +460,17 @@ extern int exported_value;
 
 
 def test_declarations_return_concrete_objects_instead_of_kind_fields():
-    from x2py.c_parser import CArray, CFunction, CFunctionType, CInt, CPointer, CStruct, CTypedef, CVariable, parse_c_file
+    from x2py.c_parser import (
+        CArray,
+        CFunction,
+        CFunctionType,
+        CInt,
+        CPointer,
+        CStruct,
+        CTypedef,
+        CVariable,
+        parse_c_file,
+    )
 
     parsed = parse_c_file(
         """

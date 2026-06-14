@@ -2,6 +2,8 @@
 Handles name clash problems in C++
 """
 
+from typing import ClassVar
+
 from .languagenameclashchecker import LanguageNameClashChecker
 
 
@@ -15,44 +17,42 @@ class CppNameClashChecker(LanguageNameClashChecker):
     """
 
     # Keywords as mentioned on https://en.cppreference.com/w/c/keyword
-    keywords = set(
-        [
-            "auto",
-            "break",
-            "case",
-            "char",
-            "const",
-            "continue",
-            "default",
-            "double",
-            "else",
-            "enum",
-            "extern",
-            "float",
-            "for",
-            "goto",
-            "if",
-            "inline",
-            "int",
-            "long",
-            "register",
-            "restrict",
-            "return",
-            "short",
-            "signed",
-            "sizeof",
-            "static",
-            "struct",
-            "switch",
-            "typedef",
-            "union",
-            "unsigned",
-            "void",
-            "volatile",
-            "while",
-            "namespace",
-        ]
-    )
+    keywords: ClassVar[set[str]] = {
+        "auto",
+        "break",
+        "case",
+        "char",
+        "const",
+        "continue",
+        "default",
+        "double",
+        "else",
+        "enum",
+        "extern",
+        "float",
+        "for",
+        "goto",
+        "if",
+        "inline",
+        "int",
+        "long",
+        "register",
+        "restrict",
+        "return",
+        "short",
+        "signed",
+        "sizeof",
+        "static",
+        "struct",
+        "switch",
+        "typedef",
+        "union",
+        "unsigned",
+        "void",
+        "volatile",
+        "while",
+        "namespace",
+    }
 
     def has_clash(self, name, symbols):
         """
@@ -103,11 +103,7 @@ class CppNameClashChecker(LanguageNameClashChecker):
         """
         assert context in ("module", "function", "class", "variable", "wrapper")
         assert parent_context in ("module", "function", "class", "loop", "program")
-        if (
-            len(name) > 4
-            and all(name[i] == "_" for i in (0, 1, -1, -2))
-            and parent_context == "class"
-        ):
+        if len(name) > 4 and all(name[i] == "_" for i in (0, 1, -1, -2)) and parent_context == "class":
             return name
         if name == "__init__":
             name = "init"

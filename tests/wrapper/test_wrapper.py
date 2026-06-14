@@ -114,20 +114,13 @@ def _assert_array_result(function_name, result, expected, size):
 
 def _assert_fmath_array_examples(module, *, suffix="", strided=False):
     cases = fmath_cases()
-    missing = sorted(
-        f"{name}{suffix}"
-        for name, _, _ in cases
-        if not hasattr(module, f"{name}{suffix}")
-    )
+    missing = sorted(f"{name}{suffix}" for name, _, _ in cases if not hasattr(module, f"{name}{suffix}"))
     assert missing == []
 
     size = 4
     for function_name, scalar_args, expected in cases:
         wrapped_name = f"{function_name}{suffix}"
-        array_args = [
-            _array_argument(scalar_arg, size, strided=strided)
-            for scalar_arg in scalar_args
-        ]
+        array_args = [_array_argument(scalar_arg, size, strided=strided) for scalar_arg in scalar_args]
         result = _array_result(expected, size, strided=strided)
 
         getattr(module, wrapped_name)(np.int32(size), *array_args, result)
@@ -204,9 +197,7 @@ def _assert_modern_class_examples(module):
     store.set_values(np.array([4.0, 5.0], dtype=np.float64))
     np.testing.assert_allclose(store.values, np.array([4.0, 5.0]))
 
-    matrix = np.asfortranarray(
-        np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64)
-    )
+    matrix = np.asfortranarray(np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64))
     store.allocate_matrix(np.int64(2), np.int64(3))
     store.matrix[:, :] = matrix
     np.testing.assert_allclose(store.matrix, matrix)
@@ -298,8 +289,7 @@ def test_legacy_fortran_character_arguments_and_results(tmp_path: Path):
     assert "C_fixed = transfer(C_0001, C_fixed)" in bind_c_source
     assert "C = transfer(C_0001, C) C_fixed = C" not in bind_c_source
     assert (
-        "CHAR_RESULT_DEFAULT_ptr = transfer(CHAR_RESULT_DEFAULT_0001, "
-        "CHAR_RESULT_DEFAULT_ptr, CHAR_RESULT_DEFAULT_len)"
+        "CHAR_RESULT_DEFAULT_ptr = transfer(CHAR_RESULT_DEFAULT_0001, CHAR_RESULT_DEFAULT_ptr, CHAR_RESULT_DEFAULT_len)"
     ) in bind_c_source
     assert "do Dummy_" not in bind_c_source
 

@@ -121,6 +121,7 @@ class SemanticType:
             return False
         return _semantic_type_key(self, {}) == _semantic_type_key(other, {})
 
+
 # ============================================================
 # Semantic Variables And Bindings
 # ============================================================

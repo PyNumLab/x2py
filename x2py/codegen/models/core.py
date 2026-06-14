@@ -5,10 +5,11 @@ include model objects representing variable assignment, code blocks, and memory
 allocation. Relationship bookkeeping lives in standalone helper functions,
 without a shared model base class.
 """
+
 import inspect
 
 from itertools import chain
-from functools import lru_cache
+from typing import ClassVar
 
 from .datatypes import (
     CustomDataType,
@@ -19,7 +20,6 @@ from .datatypes import (
     TupleType,
     PrimitiveIntegerType,
     NumpyInt64Type,
-    CharType,
     StringType,
     _find_direct_model_parent,
     _find_model_parent,
@@ -38,17 +38,17 @@ from .datatypes import (
     NumpyNDArrayType,
     convert_to_literal,
 )
-from .datatypes import FixedSizeType, GenericType
+from .datatypes import GenericType
 
 __all__ = (
     "Add",
     "AliasAssign",
     "Allocate",
     "And",
+    "ArithmeticOperator",
     "ArrayAllocated",
     "ArrayShapeElement",
     "ArraySize",
-    "ArithmeticOperator",
     "AsName",
     "Assign",
     "AssociativeParenthesis",
@@ -61,8 +61,8 @@ __all__ = (
     "Comment",
     "CommentBlock",
     "ComparisonOperator",
-    "Declare",
     "Deallocate",
+    "Declare",
     "Div",
     "DottedVariable",
     "EmptyNode",
@@ -75,13 +75,6 @@ __all__ = (
     "FunctionDef",
     "FunctionDefArgument",
     "FunctionDefResult",
-    "get_direct_assignment",
-    "get_direct_function_argument",
-    "get_direct_interface",
-    "get_direct_module",
-    "get_enclosing_class",
-    "get_enclosing_function",
-    "get_enclosing_module",
     "Ge",
     "Gt",
     "If",
@@ -118,6 +111,13 @@ __all__ = (
     "UnarySub",
     "Variable",
     "X2pyFunctionDef",
+    "get_direct_assignment",
+    "get_direct_function_argument",
+    "get_direct_interface",
+    "get_direct_module",
+    "get_enclosing_class",
+    "get_enclosing_function",
+    "get_enclosing_module",
     "has_return_statement",
     "is_in_interface",
 )
@@ -131,15 +131,17 @@ def make_operator_class(name, base, op):
             "__slots__": (),
             "__module__": __name__,
             "op": op,
-        }
+        },
     )
+
 
 # ==============================================================================
 class Operator:
-    __slots__ = ("_args", "_shape", "_class_type")
+    __slots__ = ("_args", "_class_type", "_shape")
     _attribute_nodes = ("_args",)
     op = None
     _DEFAULT = object()
+
     def __init__(self, *args, shape=_DEFAULT, class_type=_DEFAULT):
         self._args = tuple(args)
 
@@ -155,38 +157,40 @@ class Operator:
     def __str__(self):
         return repr(self)
 
+
 class UnaryOperator(Operator):
     __slots__ = ()
 
     def __repr__(self):
-        return f"{self.op}{repr(self.args[0])}"
+        return f"{self.op}{self.args[0]!r}"
+
 
 class BinaryOperator(Operator):
     __slots__ = ()
 
     def __repr__(self):
-        return f"{repr(self.args[0])} {self.op} {repr(self.args[1])}"
+        return f"{self.args[0]!r} {self.op} {self.args[1]!r}"
+
 
 class BooleanOperator(Operator):
     __slots__ = ()
 
     def __init__(self, *args):
-        super().__init__(
-            *args,
-            shape=None,
-            class_type=NumpyBoolType()
-        )
+        super().__init__(*args, shape=None, class_type=NumpyBoolType())
 
     def __repr__(self):
         return f" {self.op} ".join(repr(a) for a in self.args)
 
+
 class UnaryBooleanOperator(BooleanOperator, UnaryOperator):
     __slots__ = ()
+
     def __init__(self, arg):
         super().__init__(arg)
 
     def __repr__(self):
         return UnaryOperator.__repr__(self)
+
 
 class BinaryBooleanOperator(BooleanOperator, BinaryOperator):
     __slots__ = ()
@@ -194,23 +198,26 @@ class BinaryBooleanOperator(BooleanOperator, BinaryOperator):
     def __init__(self, arg1, arg2):
         super().__init__(arg1, arg2)
 
+
 class ArithmeticOperator(BinaryOperator):
     __slots__ = ()
+
 
 class ComparisonOperator(BinaryBooleanOperator):
     __slots__ = ()
 
-UnaryPlus    = make_operator_class("UnaryPlus",    UnaryOperator, "+")
+
+UnaryPlus = make_operator_class("UnaryPlus", UnaryOperator, "+")
 UnarySub = make_operator_class("UnarySub", UnaryOperator, "-")
 
-Not      = make_operator_class("Not",    UnaryBooleanOperator, "not ")
+Not = make_operator_class("Not", UnaryBooleanOperator, "not ")
 
-Pow      = make_operator_class("Pow", ArithmeticOperator, "**")
-Add      = make_operator_class("Add", ArithmeticOperator, "+")
-Mul      = make_operator_class("Mul", ArithmeticOperator, "*")
-Minus    = make_operator_class("Minus", ArithmeticOperator, "-")
-Div      = make_operator_class("Div", ArithmeticOperator, "/")
-Mod      = make_operator_class("Mod", ArithmeticOperator, "%")
+Pow = make_operator_class("Pow", ArithmeticOperator, "**")
+Add = make_operator_class("Add", ArithmeticOperator, "+")
+Mul = make_operator_class("Mul", ArithmeticOperator, "*")
+Minus = make_operator_class("Minus", ArithmeticOperator, "-")
+Div = make_operator_class("Div", ArithmeticOperator, "/")
+Mod = make_operator_class("Mod", ArithmeticOperator, "%")
 FloorDiv = make_operator_class("FloorDiv", ArithmeticOperator, "//")
 
 Eq = make_operator_class("Eq", ComparisonOperator, "==")
@@ -220,17 +227,20 @@ Le = make_operator_class("Le", ComparisonOperator, "<=")
 Gt = make_operator_class("Gt", ComparisonOperator, ">")
 Ge = make_operator_class("Ge", ComparisonOperator, ">=")
 
-And   = make_operator_class("And",   BooleanOperator, "and")
-Or    = make_operator_class("Or",    BooleanOperator, "or")
-Is    = make_operator_class("Is",    BinaryBooleanOperator, "is")
+And = make_operator_class("And", BooleanOperator, "and")
+Or = make_operator_class("Or", BooleanOperator, "or")
+Is = make_operator_class("Is", BinaryBooleanOperator, "is")
 IsNot = make_operator_class("IsNot", BinaryBooleanOperator, "is not")
-In    = make_operator_class("In",    BinaryBooleanOperator, "in")
+In = make_operator_class("In", BinaryBooleanOperator, "in")
+
+
 # ==============================================================================
 class AssociativeParenthesis(UnaryOperator):
     __slots__ = ()
 
     def __repr__(self):
-        return f"({repr(self.args[0])})"
+        return f"({self.args[0]!r})"
+
 
 class IfTernaryOperator(Operator):
     """
@@ -262,13 +272,7 @@ class IfTernaryOperator(Operator):
     __slots__ = ()
 
     def __init__(self, cond, value_true, value_false):
-        super().__init__(
-            cond,
-            value_true,
-            value_false,
-            shape=value_true._shape,
-            class_type=value_true._class_type
-        )
+        super().__init__(cond, value_true, value_false, shape=value_true._shape, class_type=value_true._class_type)
 
     @property
     def cond(self):
@@ -284,6 +288,7 @@ class IfTernaryOperator(Operator):
 
     def __str__(self):
         return f"(({self.value_true}) if ({self.cond}) else ({self.value_false})"
+
 
 # ==============================================================================
 class Symbol(str):
@@ -328,6 +333,7 @@ class Symbol(str):
         and was not present in the original Python code [default value : False].
         """
         return self._is_temp
+
 
 class Variable:
     """
@@ -391,17 +397,17 @@ class Variable:
     """
 
     __slots__ = (
-        "_name",
         "_alloc_shape",
-        "_memory_handling",
-        "_is_target",
-        "_is_optional",
+        "_class_type",
         "_cls_base",
         "_is_argument",
-        "_is_temp",
-        "_shape",
+        "_is_optional",
         "_is_private",
-        "_class_type",
+        "_is_target",
+        "_is_temp",
+        "_memory_handling",
+        "_name",
+        "_shape",
     )
     _attribute_nodes = ()
 
@@ -490,15 +496,12 @@ class Variable:
         """
         if self.rank == 0:
             return None
-        elif not hasattr(shape, "__iter__"):
+        if not hasattr(shape, "__iter__"):
             shape = [shape]
 
-        new_shape = [None]*len(shape)
+        new_shape = [None] * len(shape)
         for i, s in enumerate(shape):
-            if (
-                isinstance(s, Literal)
-                and isinstance(s.dtype.primitive_type, PrimitiveIntegerType)
-            ):
+            if isinstance(s, Literal) and isinstance(s.dtype.primitive_type, PrimitiveIntegerType):
                 new_shape[i] = s
             elif isinstance(s, int):
                 new_shape[i] = convert_to_literal(s)
@@ -617,24 +620,18 @@ class Variable:
 
         User friendly method to check if the variable is an ndarray.
         """
-        return (
-            isinstance(self.class_type, NumpyNDArrayType)
-            and not self.class_type.raw
-        )
+        return isinstance(self.class_type, NumpyNDArrayType) and not self.class_type.raw
 
     @property
     def is_raw_array(self):
         """Whether the variable is represented directly as a C array or pointer."""
-        return (
-            isinstance(self.class_type, NumpyNDArrayType)
-            and self.class_type.raw
-        )
+        return isinstance(self.class_type, NumpyNDArrayType) and self.class_type.raw
 
     def __str__(self):
         return str(self.name)
 
     def __repr__(self):
-        return f"{type(self).__name__}({self.name}, type={repr(self.class_type)})"
+        return f"{type(self).__name__}({self.name}, type={self.class_type!r})"
 
     def __hash__(self):
         return hash((type(self).__name__, self._name))
@@ -664,17 +661,10 @@ class Variable:
             The cloned variable.
         """
 
-        if new_class is None:
-            cls = self.__class__
-        else:
-            cls = new_class
+        cls = self.__class__ if new_class is None else new_class
 
         args = inspect.signature(Variable.__init__)
-        new_kwargs = {
-            k: getattr(self, "_" + k)
-            for k in args.parameters.keys()
-            if "_" + k in dir(self)
-        }
+        new_kwargs = {k: getattr(self, "_" + k) for k in args.parameters if "_" + k in dir(self)}
         new_kwargs.update(kwargs)
         new_kwargs["name"] = name
         if "shape" not in kwargs:
@@ -691,9 +681,10 @@ class Variable:
     def is_temp(self, is_temp):
         if not isinstance(is_temp, bool):
             raise TypeError("is_temp must be a boolean")
-        elif is_temp:
+        if is_temp:
             raise ValueError("Variables cannot become temporary")
         self._is_temp = is_temp
+
 
 class IndexedElement:
     """
@@ -732,38 +723,30 @@ class IndexedElement:
     True
     """
 
-    __slots__ = ("_label", "_indices", "_shape", "_class_type", "_is_slice")
+    __slots__ = ("_class_type", "_indices", "_is_slice", "_label", "_shape")
     _attribute_nodes = ("_label", "_indices", "_shape")
 
     def __init__(self, base, *indices):
-
         self._label = base
         self._shape = None
 
-        shape = base.shape
         rank = base.class_type.container_rank
         assert len(indices) <= rank
 
-        if any(not isinstance(a, (int, Slice)) and not is_model_object(a) for a in indices):
+        if any(not isinstance(a, int | Slice) and not is_model_object(a) for a in indices):
             raise TypeError("Index is not of valid type")
 
         if len(indices) < rank:
             indices = indices + tuple([Slice(None, None)] * (rank - len(indices)))
-            self._indices = tuple(
-                convert_to_literal(a) if isinstance(a, int) else a for a in indices
-            )
+            self._indices = tuple(convert_to_literal(a) if isinstance(a, int) else a for a in indices)
         else:
-            self._indices = tuple(
-                convert_to_literal(a) if isinstance(a, int) else a for a in indices
-            )
+            self._indices = tuple(convert_to_literal(a) if isinstance(a, int) else a for a in indices)
 
         if isinstance(base.class_type, TupleType):
             assert (
                 len(self._indices) == 1
                 and isinstance(self._indices[0], Literal)
-                and isinstance(
-                    self._indices[0].dtype.primitive_type, PrimitiveIntegerType
-                )
+                and isinstance(self._indices[0].dtype.primitive_type, PrimitiveIntegerType)
             )
             self._class_type = base.class_type[self._indices[0]]
             self._is_slice = False
@@ -791,7 +774,7 @@ class IndexedElement:
 
     def __repr__(self):
         indices = ",".join(repr(i) for i in self.indices)
-        return f"{repr(self.base)}[{indices}]"
+        return f"{self.base!r}[{indices}]"
 
     @property
     def is_slice(self):
@@ -804,6 +787,7 @@ class IndexedElement:
 
     def __hash__(self):
         return hash((self.base, self._indices))
+
 
 class DottedVariable(Variable):
     """
@@ -861,6 +845,7 @@ class DottedVariable(Variable):
         classname = type(self).__name__
         return f"{classname}({lhs}.{name}, type={class_type})"
 
+
 class AsName:
     """
     Represents a renaming of an object, used with Import.
@@ -876,13 +861,11 @@ class AsName:
         Name of variable or function in this context.
     """
 
-    __slots__ = ("_obj", "_local_alias")
+    __slots__ = ("_local_alias", "_obj")
     _attribute_nodes = ()
 
     def __init__(self, obj, local_alias):
-        assert (
-                is_model_object(obj) and not isinstance(obj, Symbol)
-            ) or is_model_class(obj)
+        assert (is_model_object(obj) and not isinstance(obj, Symbol)) or is_model_class(obj)
         self._obj = obj
         self._local_alias = local_alias
         init_model_object(self)
@@ -891,10 +874,9 @@ class AsName:
     def name(self):
         """The original name of the object"""
         obj = self._obj
-        if isinstance(obj, (str, Symbol)):
+        if isinstance(obj, str | Symbol):
             return obj
-        else:
-            return obj.name
+        return obj.name
 
     @property
     def local_alias(self):
@@ -916,16 +898,16 @@ class AsName:
     def __eq__(self, string):
         if isinstance(string, str):
             return string == self.local_alias
-        elif isinstance(string, AsName):
+        if isinstance(string, AsName):
             return string.local_alias == self.local_alias
-        else:
-            return self is string
+        return self is string
 
     def __ne__(self, string):
         return not self == string
 
     def __hash__(self):
         return hash(self.local_alias)
+
 
 class Assign:
     """
@@ -973,7 +955,7 @@ class Assign:
     _attribute_nodes = ("_lhs", "_rhs")
 
     def __init__(self, lhs, rhs):
-        if isinstance(lhs, (tuple, list)):
+        if isinstance(lhs, tuple | list):
             lhs = tuple(lhs)
         self._lhs = lhs
         self._rhs = rhs
@@ -983,7 +965,7 @@ class Assign:
         return f"{self.lhs} := {self.rhs}"
 
     def __repr__(self):
-        return f"{repr(self.lhs)} := {repr(self.rhs)}"
+        return f"{self.lhs!r} := {self.rhs!r}"
 
     @property
     def lhs(self):
@@ -1004,8 +986,7 @@ class Assign:
         cond = isinstance(rhs, Variable) and rhs.rank > 0
         cond = cond or isinstance(rhs, IndexedElement)
         cond = cond and isinstance(lhs, Symbol)
-        cond = cond or isinstance(rhs, Variable) and rhs.is_alias
-        return cond
+        return cond or (isinstance(rhs, Variable) and rhs.is_alias)
 
 
 # ------------------------------------------------------------------------------
@@ -1051,32 +1032,25 @@ class Allocate:
     mutable Variable object.
     """
 
-    __slots__ = ("_variable", "_shape", "_order", "_status", "_like", "_alloc_type")
+    __slots__ = ("_alloc_type", "_like", "_order", "_shape", "_status", "_variable")
     _attribute_nodes = ("_variable", "_like")
 
     # ...
     def __init__(self, variable, *, shape, status, like=None, alloc_type=None):
-
         if not isinstance(variable, Variable):
-            raise TypeError(
-                f"Can only allocate a 'Variable' object, got {type(variable)} instead"
-            )
+            raise TypeError(f"Can only allocate a 'Variable' object, got {type(variable)} instead")
 
         if variable.on_stack:
             # Variable may only be a pointer in the wrapper
             raise ValueError("Variable must be allocatable")
 
-        if shape and not isinstance(shape, (int, tuple, list)):
-            raise TypeError(
-                f"Cannot understand 'shape' parameter of type '{type(shape)}'"
-            )
+        if shape and not isinstance(shape, int | tuple | list):
+            raise TypeError(f"Cannot understand 'shape' parameter of type '{type(shape)}'")
 
         assert variable.class_type.shape_is_compatible(shape)
 
         if not isinstance(status, str):
-            raise TypeError(
-                f"Cannot understand 'status' parameter of type '{type(status)}'"
-            )
+            raise TypeError(f"Cannot understand 'status' parameter of type '{type(status)}'")
 
         if status not in ("allocated", "unallocated", "unknown"):
             raise ValueError(f"Value of 'status' not allowed: '{status}'")
@@ -1165,8 +1139,7 @@ class Allocate:
                 and (self.order == other.order)
                 and (self.status == other.status)
             )
-        else:
-            return False
+        return False
 
     def __hash__(self):
         return hash((id(self.variable), self.shape, self.order, self.status))
@@ -1197,11 +1170,8 @@ class Deallocate:
 
     # ...
     def __init__(self, variable):
-
         if not isinstance(variable, Variable):
-            raise TypeError(
-                f"Can only allocate a 'Variable' object, got {type(variable)} instead"
-            )
+            raise TypeError(f"Can only allocate a 'Variable' object, got {type(variable)} instead")
 
         self._variable = variable
         init_model_object(self)
@@ -1215,8 +1185,7 @@ class Deallocate:
     def __eq__(self, other):
         if isinstance(other, Deallocate):
             return self.variable is other.variable
-        else:
-            return False
+        return False
 
     def __hash__(self):
         return hash(id(self.variable))
@@ -1280,9 +1249,9 @@ class CodeBlock:
         for child in obj:
             attach_model_child(self, child)
         if back:
-            self._body = tuple([*self.body, *obj])
+            self._body = (*self.body, *obj)
         else:
-            self._body = tuple([*obj, *self.body])
+            self._body = (*obj, *self.body)
 
     def __repr__(self):
         return f"CodeBlock({self.body})"
@@ -1330,9 +1299,7 @@ class AliasAssign:
             raise TypeError("lhs must be a pointer")
 
         if isinstance(rhs, FunctionCall) and not rhs.funcdef.results.var.is_alias:
-            raise TypeError(
-                "A pointer cannot point to the address of a temporary variable"
-            )
+            raise TypeError("A pointer cannot point to the address of a temporary variable")
 
         self._lhs = lhs
         self._rhs = rhs
@@ -1384,13 +1351,12 @@ class AugAssign(Assign):
     """
 
     __slots__ = ("_op",)
-    _accepted_operators = {
+    _accepted_operators: ClassVar = {
         "+": Add,
     }
 
     def __init__(self, lhs, op, rhs):
-
-        if op not in self._accepted_operators.keys():
+        if op not in self._accepted_operators:
             raise TypeError("Unrecognized Operator")
 
         self._op = op
@@ -1434,6 +1400,7 @@ class AugAssign(Assign):
             An assignment equivalent to the AugAssign.
         """
         return Assign(self.lhs, self._accepted_operators[self._op](self.lhs, self.rhs))
+
 
 class Module:
     """
@@ -1507,18 +1474,18 @@ class Module:
     """
 
     __slots__ = (
-        "_name",
-        "_variables",
-        "_funcs",
-        "_interfaces",
         "_classes",
+        "_free_func",
+        "_funcs",
         "_imports",
         "_init_func",
-        "_free_func",
-        "_program",
-        "_variable_inits",
+        "_interfaces",
         "_internal_dictionary",
         "_is_external",
+        "_name",
+        "_program",
+        "_variable_inits",
+        "_variables",
     )
     _attribute_nodes = (
         "_variables",
@@ -1575,22 +1542,20 @@ class Module:
                 raise TypeError("Only a Interface instance is allowed.")
 
         NoneType = type(None)
-        assert isinstance(init_func, (NoneType, FunctionDef))
+        assert isinstance(init_func, NoneType | FunctionDef)
 
-        if not isinstance(free_func, (NoneType, FunctionDef)):
+        if not isinstance(free_func, NoneType | FunctionDef):
             raise TypeError("free_func must be a FunctionDef")
 
-        if not isinstance(program, (NoneType, Program, CodeBlock)):
-            raise TypeError(
-                "program must be a Program (or a CodeBlock at the syntactic stage)"
-            )
+        if not isinstance(program, NoneType | Program | CodeBlock):
+            raise TypeError("program must be a Program (or a CodeBlock at the syntactic stage)")
 
         if not iterable(imports):
             raise TypeError("imports must be an iterable")
         imports = list(imports)
         for i in classes:
             imports += i.imports
-        imports = {i: None for i in imports}  # for unicity and ordering
+        imports = dict.fromkeys(imports)  # for unicity and ordering
         imports = tuple(imports.keys())
 
         assert isinstance(is_external, bool)
@@ -1622,9 +1587,7 @@ class Module:
             for i in imports
             if isinstance(i, Import)
         }
-        self._internal_dictionary.update(
-            {v: t[0] for v, t in import_mods.items() if t}
-        )
+        self._internal_dictionary.update({v: t[0] for v, t in import_mods.items() if t})
 
         init_model_object(self, scope=scope)
 
@@ -1692,7 +1655,7 @@ class Module:
         """
         return [
             Declare(i, value=v, module_variable=True)
-            for i, v in zip(self.variables, self._variable_inits)
+            for i, v in zip(self.variables, self._variable_inits, strict=False)
         ]
 
     @property
@@ -1711,7 +1674,7 @@ class Module:
         return result
 
     def __contains__(self, arg):
-        assert isinstance(arg, (str, Symbol))
+        assert isinstance(arg, str | Symbol)
         args = str(arg).split(".")
         current_pos = self._internal_dictionary
         key = args[0]
@@ -1822,11 +1785,10 @@ class Program:
         The scope of the program.
     """
 
-    __slots__ = ("_name", "_variables", "_body", "_imports")
+    __slots__ = ("_body", "_imports", "_name", "_variables")
     _attribute_nodes = ("_variables", "_body", "_imports")
 
     def __init__(self, name, variables, body, imports=(), scope=None):
-
         if not isinstance(name, str):
             raise TypeError("name must be a string")
 
@@ -1842,7 +1804,7 @@ class Program:
         if not iterable(imports):
             raise TypeError("imports must be an iterable")
 
-        imports = {i: None for i in imports}  # for unicity and ordering
+        imports = dict.fromkeys(imports)  # for unicity and ordering
         imports = tuple(imports.keys())
 
         self._name = name
@@ -1894,7 +1856,7 @@ class FunctionCallArgument:
         is that keyword.
     """
 
-    __slots__ = ("_value", "_keyword")
+    __slots__ = ("_keyword", "_value")
     _attribute_nodes = ("_value",)
 
     def __init__(self, value, keyword=None):
@@ -1919,15 +1881,13 @@ class FunctionCallArgument:
 
     def __repr__(self):
         if self.has_keyword:
-            return f"FunctionCallArgument({self.keyword} = {repr(self.value)})"
-        else:
-            return f"FunctionCallArgument({repr(self.value)})"
+            return f"FunctionCallArgument({self.keyword} = {self.value!r})"
+        return f"FunctionCallArgument({self.value!r})"
 
     def __str__(self):
         if self.has_keyword:
             return f"{self.keyword} = {self.value}"
-        else:
-            return f"{self.value}"
+        return f"{self.value}"
 
 
 class FunctionDefArgument:
@@ -1983,17 +1943,17 @@ class FunctionDefArgument:
     """
 
     __slots__ = (
-        "_name",
-        "_var",
-        "_posonly",
-        "_kwonly",
         "_annotation",
-        "_value",
-        "_inout",
-        "_persistent_target",
         "_bound_argument",
-        "_is_vararg",
+        "_inout",
         "_is_kwarg",
+        "_is_vararg",
+        "_kwonly",
+        "_name",
+        "_persistent_target",
+        "_posonly",
+        "_value",
+        "_var",
     )
     _attribute_nodes = ("_value", "_var")
 
@@ -2010,7 +1970,7 @@ class FunctionDefArgument:
         is_vararg=False,
         is_kwarg=False,
     ):
-        if isinstance(name, (Variable, FunctionAddress)):
+        if isinstance(name, Variable | FunctionAddress):
             self._var = name
             self._name = name.name
         elif isinstance(name, Symbol):
@@ -2034,10 +1994,7 @@ class FunctionDefArgument:
 
         if isinstance(self.var, Variable):
             self._inout = (
-                (
-                    self.var.rank > 0
-                    or isinstance(self.var.class_type, CustomDataType)
-                )
+                (self.var.rank > 0 or isinstance(self.var.class_type, CustomDataType))
                 and not isinstance(self.var.class_type, FinalType)
                 and not isinstance(self.var.class_type, TupleType)
             )
@@ -2096,11 +2053,7 @@ class FunctionDefArgument:
         """The FunctionCallArgument which is passed to FunctionCall
         if no value is provided for this argument
         """
-        return (
-            FunctionCallArgument(self.value, keyword=self.name)
-            if self.has_default
-            else None
-        )
+        return FunctionCallArgument(self.value, keyword=self.name) if self.has_default else None
 
     @property
     def has_default(self):
@@ -2169,8 +2122,7 @@ class FunctionDefArgument:
 
         if self.has_default:
             return f"{name}={self.value}"
-        else:
-            return name
+        return name
 
     def __repr__(self):
         name = repr(self.name)
@@ -2181,8 +2133,7 @@ class FunctionDefArgument:
 
         if self.has_default:
             return f"FunctionDefArgument({name}={self.value})"
-        else:
-            return f"FunctionDefArgument({name})"
+        return f"FunctionDefArgument({name})"
 
     @property
     def is_vararg(self):
@@ -2231,7 +2182,7 @@ class FunctionDefResult:
     n
     """
 
-    __slots__ = ("_var", "_is_argument", "_annotation")
+    __slots__ = ("_annotation", "_is_argument", "_var")
     _attribute_nodes = ("_var",)
 
     def __init__(self, var, *, annotation=None):
@@ -2240,8 +2191,7 @@ class FunctionDefResult:
 
         if not isinstance(var, Variable) and var is not NIL:
             raise TypeError(f"Var must be a Variable not a {type(var)}")
-        else:
-            self._is_argument = getattr(var, "is_argument", False)
+        self._is_argument = getattr(var, "is_argument", False)
 
         init_model_object(self)
 
@@ -2277,14 +2227,10 @@ class FunctionDefResult:
         return self._is_argument
 
     def __len__(self):
-        return (
-            0
-            if self.var is None
-            else 1
-        )
+        return 0 if self.var is None else 1
 
     def __repr__(self):
-        return f"FunctionDefResult({repr(self.var)})"
+        return f"FunctionDefResult({self.var!r})"
 
     def __str__(self):
         return str(self.var)
@@ -2314,27 +2260,23 @@ class FunctionCall:
 
     __slots__ = (
         "_arguments",
+        "_class_type",
+        "_func_name",
         "_funcdef",
         "_interface",
-        "_func_name",
         "_interface_name",
         "_shape",
-        "_class_type",
     )
     _attribute_nodes = ("_arguments", "_funcdef", "_interface")
 
     def __init__(self, func, args, current_function=None):
-
         for a in args:
             assert not isinstance(a, FunctionDefArgument)
         # Ensure all arguments are of type FunctionCallArgument
-        args = [
-            a if isinstance(a, FunctionCallArgument) else FunctionCallArgument(a)
-            for a in args
-        ]
+        args = [a if isinstance(a, FunctionCallArgument) else FunctionCallArgument(a) for a in args]
 
         # ...
-        if not isinstance(func, (FunctionDef, Interface)):
+        if not isinstance(func, FunctionDef | Interface):
             raise TypeError("> expecting a FunctionDef or an Interface")
 
         if isinstance(func, Interface):
@@ -2349,16 +2291,14 @@ class FunctionCall:
         if current_function == name:
             func.set_recursive()
 
-        if not isinstance(args, (tuple, list)):
+        if not isinstance(args, tuple | list):
             raise TypeError("args must be a list or tuple")
 
         # add the missing argument in the case of optional arguments
         f_args = func.arguments
-        if not len(args) == len(f_args):
+        if len(args) != len(f_args):
             # Collect dict of keywords and values (initialised as default)
-            f_args_dict = {
-                a.name: (a.name, a.value) if a.has_default else None for a in f_args
-            }
+            f_args_dict = {a.name: (a.name, a.value) if a.has_default else None for a in f_args}
             keyword_args = []
             for i, a in enumerate(args):
                 if a.keyword is None:
@@ -2373,11 +2313,7 @@ class FunctionCall:
                 f_args_dict[a.keyword] = a
 
             args = [
-                (
-                    FunctionCallArgument(keyword=a[0], value=a[1])
-                    if isinstance(a, tuple)
-                    else a
-                )
+                (FunctionCallArgument(keyword=a[0], value=a[1]) if isinstance(a, tuple) else a)
                 for a in f_args_dict.values()
             ]
 
@@ -2392,14 +2328,11 @@ class FunctionCall:
                 if isinstance(av, FunctionDef)
                 else a
             )
-            for a, av in zip(args, arg_vals)
+            for a, av in zip(args, arg_vals, strict=False)
         ]
 
-        if current_function == func.name:
-            if len(func.results) > 0 and not is_model_object(func.results):
-                raise RuntimeError(
-                    "Recursive functions with results must declare a result variable."
-                )
+        if current_function == func.name and len(func.results) > 0 and not is_model_object(func.results):
+            raise RuntimeError("Recursive functions with results must declare a result variable.")
 
         self._funcdef = func
         self._arguments = args
@@ -2471,22 +2404,17 @@ class Return:
         Any assign statements in the case of expression return.
     """
 
-    __slots__ = ("_expr", "_stmt", "_n_returns")
+    __slots__ = ("_expr", "_n_returns", "_stmt")
     _attribute_nodes = ("_expr", "_stmt")
 
     def __init__(self, expr, stmt=None):
-
         assert stmt is None or isinstance(stmt, CodeBlock)
         assert expr is None or is_model_object(expr) or isinstance(expr, Symbol)
 
         self._expr = expr
         self._stmt = stmt
 
-        self._n_returns = (
-            0
-            if expr is NIL
-            else 1 if not hasattr(expr, "__iter__") else len(expr)
-        )
+        self._n_returns = 0 if expr is NIL else 1 if not hasattr(expr, "__iter__") else len(expr)
 
         init_model_object(self)
 
@@ -2508,11 +2436,8 @@ class Return:
         return self._n_returns
 
     def __repr__(self):
-        if self.stmt:
-            code = repr(self.stmt) + ";"
-        else:
-            code = ""
-        return code + f"Return({repr(self.expr)})"
+        code = repr(self.stmt) + ";" if self.stmt else ""
+        return code + f"Return({self.expr!r})"
 
 
 class FunctionDef:
@@ -2628,28 +2553,28 @@ class FunctionDef:
     """
 
     __slots__ = (
-        "_name",
         "_arguments",
-        "_results",
         "_body",
-        "_global_vars",
         "_cls_name",
-        "_is_static",
-        "_imports",
         "_decorators",
-        "_headers",
-        "_is_recursive",
-        "_is_pure",
-        "_is_elemental",
-        "_is_private",
-        "_is_header",
-        "_functions",
-        "_interfaces",
         "_docstring",
+        "_functions",
+        "_global_vars",
+        "_headers",
+        "_imports",
+        "_interfaces",
+        "_is_elemental",
         "_is_external",
-        "_result_pointer_map",
+        "_is_header",
         "_is_imported",
+        "_is_private",
+        "_is_pure",
+        "_is_recursive",
         "_is_semantic",
+        "_is_static",
+        "_name",
+        "_result_pointer_map",
+        "_results",
     )
 
     _attribute_nodes = (
@@ -2673,7 +2598,7 @@ class FunctionDef:
         cls_name=None,
         is_static=False,
         imports=(),
-        decorators={},
+        decorators=None,
         headers=(),
         is_recursive=False,
         is_pure=False,
@@ -2684,14 +2609,17 @@ class FunctionDef:
         is_imported=False,
         functions=(),
         interfaces=(),
-        result_pointer_map={},
+        result_pointer_map=None,
         docstring=None,
         scope=None,
     ):
-
+        if result_pointer_map is None:
+            result_pointer_map = {}
+        if decorators is None:
+            decorators = {}
         if isinstance(name, str):
             name = Symbol(name)
-        elif isinstance(name, (tuple, list)):
+        elif isinstance(name, tuple | list):
             name_ = []
             for i in name:
                 if isinstance(i, str):
@@ -2709,7 +2637,7 @@ class FunctionDef:
         if not all(isinstance(a, FunctionDefArgument) for a in arguments):
             raise TypeError("arguments must be all be FunctionDefArguments")
 
-        arg_vars = [a.var for a in arguments]
+        [a.var for a in arguments]
 
         # body
 
@@ -2722,10 +2650,8 @@ class FunctionDef:
             results = FunctionDefResult(NIL)
         assert isinstance(results, FunctionDefResult)
 
-        if cls_name:
-
-            if not isinstance(cls_name, str):
-                raise TypeError("cls_name must be a string")
+        if cls_name and not isinstance(cls_name, str):
+            raise TypeError("cls_name must be a string")
 
         if not isinstance(is_static, bool):
             raise TypeError("Expecting a boolean for is_static attribute")
@@ -2823,9 +2749,8 @@ class FunctionDef:
         scope = self.scope
         local_vars = scope.variables.values()
         result_vars = [self.results.var]
-        tuple_result_vars = [self.results.var]
         return tuple(
-            l for l in local_vars if l not in result_vars and not l.is_argument
+            local_var for local_var in local_vars if local_var not in result_vars and not local_var.is_argument
         )
 
     @property
@@ -3011,8 +2936,7 @@ class FunctionDef:
         cls = type(self)
 
         args = (newname,) + args[1:]
-        new_func = cls(*args, **kwargs)
-        return new_func
+        return cls(*args, **kwargs)
 
     def __getnewargs_ex__(self):
         """
@@ -3060,12 +2984,10 @@ class FunctionDef:
         return self._result_pointer_map
 
     def __call__(self, *args, **kwargs):
-        arguments = [
-            a if isinstance(a, FunctionCallArgument) else FunctionCallArgument(a)
-            for a in args
-        ]
+        arguments = [a if isinstance(a, FunctionCallArgument) else FunctionCallArgument(a) for a in args]
         arguments += [FunctionCallArgument(a, keyword=key) for key, a in kwargs.items()]
         return FunctionCall(self, arguments)
+
 
 class X2pyFunctionDef(FunctionDef):
     """
@@ -3098,10 +3020,12 @@ class X2pyFunctionDef(FunctionDef):
     __slots__ = ("_argument_description",)
     class_type = SymbolicType()
 
-    def __init__(self, name, func_class, *, decorators={}, argument_description={}):
-        assert isinstance(func_class, type) and (
-            issubclass(func_class, Function) or is_model_class(func_class)
-        )
+    def __init__(self, name, func_class, *, decorators=None, argument_description=None):
+        if argument_description is None:
+            argument_description = {}
+        if decorators is None:
+            decorators = {}
+        assert isinstance(func_class, type) and (issubclass(func_class, Function) or is_model_class(func_class))
         assert isinstance(argument_description, dict)
         arguments = ()
         body = ()
@@ -3157,10 +3081,10 @@ class Interface:
     """
 
     __slots__ = (
-        "_name",
         "_functions",
         "_is_argument",
         "_is_imported",
+        "_name",
         "_syntactic_node",
     )
     _attribute_nodes = ("_functions",)
@@ -3173,7 +3097,6 @@ class Interface:
         is_imported=False,
         syntactic_node=None,
     ):
-
         if not isinstance(name, str):
             raise TypeError("Expecting an str")
 
@@ -3331,15 +3254,13 @@ class Interface:
         FunctionDef
             The function definition which corresponds with the arguments.
         """
-        fs_args = [[j for j in i.arguments] for i in self._functions]
+        fs_args = [list(i.arguments) for i in self._functions]
 
         def type_match(call_arg, func_arg):
             """
             Check that the types of the arguments in the function and the call match.
             """
-            return call_arg.class_type == func_arg.class_type and (
-                call_arg.rank == func_arg.rank
-            )
+            return call_arg.class_type == func_arg.class_type and (call_arg.rank == func_arg.rank)
 
         j = -1
         for i in fs_args:
@@ -3357,10 +3278,7 @@ class Interface:
         return self._functions[j]
 
     def __call__(self, *args, **kwargs):
-        arguments = [
-            a if isinstance(a, FunctionCallArgument) else FunctionCallArgument(a)
-            for a in args
-        ]
+        arguments = [a if isinstance(a, FunctionCallArgument) else FunctionCallArgument(a) for a in args]
         arguments += [FunctionCallArgument(a, keyword=key) for key, a in kwargs.items()]
         return FunctionCall(self, arguments)
 
@@ -3411,7 +3329,7 @@ class FunctionAddress(FunctionDef):
     >>> FunctionDef('g', [FunctionAddress('f', [x], [y])], [], [])
     """
 
-    __slots__ = ("_is_optional", "_is_kwonly", "_is_argument", "_memory_handling")
+    __slots__ = ("_is_argument", "_is_kwonly", "_is_optional", "_memory_handling")
 
     def __init__(
         self,
@@ -3429,14 +3347,12 @@ class FunctionAddress(FunctionDef):
             raise TypeError("Expecting a boolean for is_argument")
 
         if memory_handling not in ("heap", "alias", "stack"):
-            raise TypeError(
-                "Expecting 'heap', 'stack', 'alias' or None for memory_handling"
-            )
+            raise TypeError("Expecting 'heap', 'stack', 'alias' or None for memory_handling")
 
         if not isinstance(is_kwonly, bool):
             raise TypeError("Expecting a boolean for kwonly")
 
-        elif not isinstance(is_optional, bool):
+        if not isinstance(is_optional, bool):
             raise TypeError("is_optional must be a boolean.")
 
         self._is_optional = is_optional
@@ -3545,15 +3461,15 @@ class ClassDef:
     """
 
     __slots__ = (
-        "_name",
         "_attributes",
-        "_methods",
         "_class_type",
-        "_imports",
-        "_superclasses",
-        "_interfaces",
-        "_docstring",
         "_decorators",
+        "_docstring",
+        "_imports",
+        "_interfaces",
+        "_methods",
+        "_name",
+        "_superclasses",
     )
     _attribute_nodes = (
         "_attributes",
@@ -3576,7 +3492,6 @@ class ClassDef:
         class_type=None,
         decorators=(),
     ):
-
         # name
 
         if isinstance(name, str):
@@ -3712,10 +3627,7 @@ class ClassDef:
         A dictionary containing all the methods in the class. The keys are the original
         Python names of the methods. The values are the methods themselves.
         """
-        return {
-            self.scope.get_python_name(m.name) if m.is_semantic else m.name: m
-            for m in self.methods
-        }
+        return {self.scope.get_python_name(m.name) if m.is_semantic else m.name: m for m in self.methods}
 
     @property
     def attributes_as_dict(self):
@@ -3798,9 +3710,7 @@ class ClassDef:
         assert semantic_method.is_semantic
         detach_model_child(self, syntactic_method)
         attach_model_child(self, semantic_method)
-        self._methods = tuple(m for m in self._methods if m is not syntactic_method) + (
-            semantic_method,
-        )
+        self._methods = (*tuple(m for m in self._methods if m is not syntactic_method), semantic_method)
 
     def update_interface(self, syntactic_interface, semantic_interface):
         """
@@ -3841,11 +3751,10 @@ class ClassDef:
             detach_model_child(self, syntactic_interface)
         attach_model_child(self, semantic_interface)
         self._methods = tuple(m for m in self._methods if m is not syntactic_interface)
-        self._interfaces = tuple(
-            m
-            for m in self._interfaces
-            if m is not syntactic_interface and m.name != semantic_interface.name
-        ) + (semantic_interface,)
+        self._interfaces = (
+            *tuple(m for m in self._interfaces if m is not syntactic_interface and m.name != semantic_interface.name),
+            semantic_interface,
+        )
 
     def get_method(self, name, raise_error_from=None):
         """
@@ -3881,18 +3790,13 @@ class ClassDef:
             # Collect translated name from scope
             try:
                 name = self.scope.get_expected_name(name)
-            except RuntimeError:
+            except RuntimeError as error:
                 if raise_error_from:
-                    raise AttributeError(
-                        f"Can't find method {name} in class {self.name}"
-                    )
-                else:
-                    return None
+                    raise AttributeError(f"Can't find method {name} in class {self.name}") from error
+                return None
 
         try:
-            method = next(
-                i for i in chain(self.methods, self.interfaces) if i.name == name
-            )
+            method = next(i for i in chain(self.methods, self.interfaces) if i.name == name)
         except StopIteration:
             method = None
             i = 0
@@ -3916,12 +3820,11 @@ class ClassDef:
         names = [str(m.name) for m in self.methods]
         if "__next__" in names and "__iter__" in names:
             return True
-        elif "__next__" in names:
+        if "__next__" in names:
             raise ValueError("ClassDef does not contain __iter__ method")
-        elif "__iter__" in names:
+        if "__iter__" in names:
             raise ValueError("ClassDef does not contain __next__ method")
-        else:
-            return False
+        return False
 
     @property
     def is_with_construct(self):
@@ -3930,12 +3833,11 @@ class ClassDef:
         names = [str(m.name) for m in self.methods]
         if "__enter__" in names and "__exit__" in names:
             return True
-        elif "__enter__" in names:
+        if "__enter__" in names:
             raise ValueError("ClassDef does not contain __exit__ method")
-        elif "__exit__" in names:
+        if "__exit__" in names:
             raise ValueError("ClassDef does not contain __enter__ method")
-        else:
-            return False
+        return False
 
     @property
     def hide(self):
@@ -3977,12 +3879,11 @@ class Import:
     from foo import bar
     """
 
-    __slots__ = ("_source", "_target", "_ignore_at_print", "_source_mod")
+    __slots__ = ("_ignore_at_print", "_source", "_source_mod", "_target")
     _attribute_nodes = ()
 
     def __init__(self, source, target=None, ignore_at_print=False, mod=None):
-
-        if not source is None:
+        if source is not None:
             source = Import._format(source)
 
         self._source = source
@@ -3995,12 +3896,12 @@ class Import:
 
         if target is None:
             raise KeyError("Missing argument 'target'")
-        elif not iterable(target):
+        if not iterable(target):
             target = [target]
 
         else:
             for i in target:
-                assert isinstance(i, (AsName, Module))
+                assert isinstance(i, AsName | Module)
                 if isinstance(i, Module):
                     self._target[AsName(i, source)] = None
                 else:
@@ -4033,14 +3934,9 @@ class Import:
         """
         if isinstance(i, str):
             return Symbol(i)
-        if isinstance(i, (AsName, Symbol)) or (
-            isinstance(i, Literal) and isinstance(i.dtype, StringType)
-        ):
+        if isinstance(i, AsName | Symbol) or (isinstance(i, Literal) and isinstance(i.dtype, StringType)):
             return i
-        else:
-            raise TypeError(
-                f"Expecting a string, Symbol, given {type(i)}"
-            )
+        raise TypeError(f"Expecting a string, Symbol, given {type(i)}")
 
     @property
     def target(self):
@@ -4069,9 +3965,8 @@ class Import:
         source = str(self.source)
         if len(self.target) == 0:
             return f"import {source}"
-        else:
-            target = ", ".join([str(i) for i in self.target])
-            return f"from {source} import {target}"
+        target = ", ".join([str(i) for i in self.target])
+        return f"from {source} import {target}"
 
     def define_target(self, new_target):
         """
@@ -4092,7 +3987,7 @@ class Import:
         """
 
         if iterable(new_target):
-            self._target.update({t: None for t in new_target})
+            self._target.update(dict.fromkeys(new_target))
         else:
             self._target[new_target] = None
 
@@ -4140,7 +4035,7 @@ class Import:
         for t in self._target:
             if isinstance(t, AsName) and new_target == t.name:
                 return t.local_alias
-            elif new_target == t:
+            if new_target == t:
                 return t
         return None
 
@@ -4185,12 +4080,12 @@ class Declare:
     """
 
     __slots__ = (
-        "_variable",
-        "_intent",
-        "_value",
-        "_static",
         "_external",
+        "_intent",
         "_module_variable",
+        "_static",
+        "_value",
+        "_variable",
     )
     _attribute_nodes = ("_variable", "_value")
 
@@ -4206,9 +4101,8 @@ class Declare:
         if not isinstance(variable, Variable):
             raise TypeError(f"var must be of type Variable, given {variable}")
 
-        if intent:
-            if not intent in ["in", "out", "inout"]:
-                raise ValueError("intent must be one among {'in', 'out', 'inout'}")
+        if intent and intent not in ["in", "out", "inout"]:
+            raise ValueError("intent must be one among {'in', 'out', 'inout'}")
 
         if not isinstance(static, bool):
             raise TypeError("Expecting a boolean for static attribute")
@@ -4255,7 +4149,8 @@ class Declare:
         return self._module_variable
 
     def __repr__(self):
-        return f"Declare({repr(self.variable)})"
+        return f"Declare({self.variable!r})"
+
 
 class EmptyNode:
     """
@@ -4341,6 +4236,7 @@ class SeparatorComment(Comment):
         text = """.""" * n
         super().__init__(text)
 
+
 class CommentBlock:
     """Represents a Block of Comments
 
@@ -4350,7 +4246,7 @@ class CommentBlock:
 
     """
 
-    __slots__ = ("_header", "_comments")
+    __slots__ = ("_comments", "_header")
     _attribute_nodes = ()
 
     def __init__(self, txt, header="CommentBlock"):
@@ -4411,14 +4307,13 @@ class IfSection:
     IfSection((n>1), CodeBlock([Assign(n,n-1)]))
     """
 
-    __slots__ = ("_condition", "_block")
+    __slots__ = ("_block", "_condition")
     _attribute_nodes = ("_condition", "_block")
 
     def __init__(self, cond, body):
-
         assert cond.dtype is NumpyBoolType()
 
-        if isinstance(body, (list, tuple)):
+        if isinstance(body, list | tuple):
             body = CodeBlock(body)
         elif isinstance(body, CodeBlock):
             body = body
@@ -4473,7 +4368,6 @@ class If:
     # TODO add type check in the semantic stage
 
     def __init__(self, *args):
-
         if not all(isinstance(a, IfSection) for a in args):
             raise TypeError("An If must be composed of IfSections")
 
@@ -4494,7 +4388,8 @@ class If:
         blocks = ",".join(str(b) for b in self.blocks)
         return f"If({blocks})"
 
-#========================================================================================
+
+# ========================================================================================
 class Function:
     """
     Abstract class for function calls translated to X2py objects.
@@ -4596,8 +4491,7 @@ class ArraySize(Function):
     def __eq__(self, other):
         if isinstance(other, ArraySize):
             return self.arg == other.arg
-        else:
-            return False
+        return False
 
 
 class ArrayShapeElement(Function):
@@ -4684,7 +4578,7 @@ class Slice:
     start : stop : step
     """
 
-    __slots__ = ("_start", "_stop", "_step")
+    __slots__ = ("_start", "_step", "_stop")
     _attribute_nodes = ("_start", "_stop", "_step")
 
     def __init__(self, start, stop, step=None):
@@ -4693,15 +4587,9 @@ class Slice:
         self._step = step
         init_model_object(self)
 
-        assert start is None or isinstance(
-            getattr(start.dtype, "primitive_type", None), PrimitiveIntegerType
-        )
-        assert stop is None or isinstance(
-            getattr(stop.dtype, "primitive_type", None), PrimitiveIntegerType
-        )
-        assert step is None or isinstance(
-            getattr(step.dtype, "primitive_type", None), PrimitiveIntegerType
-        )
+        assert start is None or isinstance(getattr(start.dtype, "primitive_type", None), PrimitiveIntegerType)
+        assert stop is None or isinstance(getattr(stop.dtype, "primitive_type", None), PrimitiveIntegerType)
+        assert step is None or isinstance(getattr(step.dtype, "primitive_type", None), PrimitiveIntegerType)
 
     @property
     def start(self):
@@ -4721,17 +4609,12 @@ class Slice:
         return self._step
 
     def __str__(self):
-        if self.start is None:
-            start = ""
-        else:
-            start = str(self.start)
-        if self.stop is None:
-            stop = ""
-        else:
-            stop = str(self.stop)
+        start = "" if self.start is None else str(self.start)
+        stop = "" if self.stop is None else str(self.stop)
         return f"{start} : {stop} : {self.step}"
 
-#=======================================================================================================
+
+# =======================================================================================================
 class PythonTuple:
     """
     Class representing a call to Python's native (,) function which creates tuples.
@@ -4751,7 +4634,7 @@ class PythonTuple:
         empty tuple. Otherwise it is not used.
     """
 
-    __slots__ = ("_args", "_is_homogeneous", "_shape", "_class_type")
+    __slots__ = ("_args", "_class_type", "_is_homogeneous", "_shape")
     _iterable = True
     _attribute_nodes = ("_args",)
 
@@ -4798,6 +4681,7 @@ class PythonTuple:
         """
         return self._args
 
+
 def get_direct_assignment(obj):
     """Return the assignment that directly consumes ``obj``, if present."""
     return _find_direct_model_parent(obj, (Assign, AliasAssign))
@@ -4840,9 +4724,7 @@ def has_return_statement(obj):
 
 def is_in_interface(obj):
     """Return whether ``obj`` belongs to an interface outside a function call."""
-    return _find_model_parent(
-        obj, Interface, excluded_types=(FunctionCall,)
-    ) is not None
+    return _find_model_parent(obj, Interface, excluded_types=(FunctionCall,)) is not None
 
 
 for _model_cls in (

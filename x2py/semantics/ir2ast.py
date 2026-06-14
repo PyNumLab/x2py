@@ -142,24 +142,17 @@ def semantic_ir_to_codegen_ast(
                 legacy,
                 custom_types=custom_types,
                 cls_base=cls_base
-                if isinstance(node, models.SemanticMethod)
-                and not node.is_static
-                and index == 0
+                if isinstance(node, models.SemanticMethod) and not node.is_static and index == 0
                 else None,
             )
             for index, item in enumerate(node.arguments)
         ]
         if node.return_type:
             return_dtype = _codegen_type(node.return_type.dtype, custom_types)
-            result_shape = (
-                _string_shape(node.return_type)
-                if isinstance(return_dtype, StringType)
-                else None
-            )
+            result_shape = _string_shape(node.return_type) if isinstance(return_dtype, StringType) else None
             result_memory = (
                 "heap"
-                if isinstance(return_dtype, StringType)
-                and node.return_type.metadata.get("fortran_allocatable")
+                if isinstance(return_dtype, StringType) and node.return_type.metadata.get("fortran_allocatable")
                 else "stack"
             )
             result_var = Variable(
@@ -176,9 +169,7 @@ def semantic_ir_to_codegen_ast(
         args = [
             FunctionDefArgument(
                 item,
-                bound_argument=isinstance(node, models.SemanticMethod)
-                and index == 0
-                and not node.is_static,
+                bound_argument=isinstance(node, models.SemanticMethod) and index == 0 and not node.is_static,
             )
             for index, item in enumerate(declarations)
         ]
@@ -218,9 +209,7 @@ def semantic_ir_to_codegen_ast(
             for item in node.fields
         ]
         superclasses = tuple(
-            cls
-            for base_name in node.base_classes
-            if (cls := scope.find(base_name, "classes")) is not None
+            cls for base_name in node.base_classes if (cls := scope.find(base_name, "classes")) is not None
         )
         cls = ClassDef(
             name,

@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 """
 Module handling everything related to the compilers used to compile the various generated files
 """
@@ -17,9 +16,7 @@ from .default_compilers import available_compilers, vendors
 if platform.system() == "Darwin":
     # Collect version using mac tools to avoid unexpected results on Big Sur
     # https://developer.apple.com/documentation/macos-release-notes/macos-big-sur-11_0_1-release-notes#Third-Party-Apps
-    with subprocess.Popen(
-        [shutil.which("sw_vers"), "-productVersion"], stdout=subprocess.PIPE
-    ) as p:
+    with subprocess.Popen([shutil.which("sw_vers"), "-productVersion"], stdout=subprocess.PIPE) as p:
         result, err = p.communicate()
     mac_version_tuple = result.decode("utf-8").strip().split(".")
     mac_target = ".".join(mac_version_tuple[:2])
@@ -54,20 +51,14 @@ def get_condaless_search_path(conda_warnings="basic"):
         "Anaconda",
         "Miniconda",
     )
-    conda_folders = [
-        p for p, f in folders.items() if any(con in f for con in conda_folder_names)
-    ]
-    if conda_folders:
-        if conda_warnings in ("basic", "verbose"):
-            message_warning = "Conda paths are ignored. See https://github.com/x2py/x2py/blob/devel/docs/compiler.md#utilising-x2py-within-anaconda-environment for details"
-            if conda_warnings == "verbose":
-                message_warning = message_warning + "\nConda ignored PATH:\n"
-                message_warning = message_warning + ":".join(conda_folders)
-            warnings.warn(UserWarning(message_warning))
-    acceptable_search_paths = path_sep.join(
-        p for p in folders.keys() if p not in conda_folders and os.path.exists(p)
-    )
-    return acceptable_search_paths
+    conda_folders = [p for p, f in folders.items() if any(con in f for con in conda_folder_names)]
+    if conda_folders and conda_warnings in ("basic", "verbose"):
+        message_warning = "Conda paths are ignored. See https://github.com/x2py/x2py/blob/devel/docs/compiler.md#utilising-x2py-within-anaconda-environment for details"
+        if conda_warnings == "verbose":
+            message_warning = message_warning + "\nConda ignored PATH:\n"
+            message_warning = message_warning + ":".join(conda_folders)
+        warnings.warn(UserWarning(message_warning), stacklevel=2)
+    return path_sep.join(p for p in folders if p not in conda_folders and os.path.exists(p))
 
 
 # ------------------------------------------------------------
@@ -88,7 +79,7 @@ class Compiler:
                Indicates whether we are compiling in debug mode.
     """
 
-    __slots__ = ("_debug", "_compiler_info", "_language_info", "_compiler_family")
+    __slots__ = ("_compiler_family", "_compiler_info", "_debug", "_language_info")
     acceptable_bin_paths = None
 
     def __init__(self, vendor: str, debug=False):
@@ -105,22 +96,13 @@ class Compiler:
                     raise NotImplementedError("Compiler not available") from e
             else:
                 installed_compiler = (
-                    pathlib.Path(
-                        os.environ.get(
-                            "X2PY_CONFIG_HOME", pathlib.Path.home() / ".x2py"
-                        )
-                    )
-                    / vendor
+                    pathlib.Path(os.environ.get("X2PY_CONFIG_HOME", pathlib.Path.home() / ".x2py")) / vendor
                 )
                 if installed_compiler.exists():
-                    with open(
-                        installed_compiler / "config.json", encoding="utf-8"
-                    ) as vendor_file:
+                    with open(installed_compiler / "config.json", encoding="utf-8") as vendor_file:
                         self._compiler_info = json.load(vendor_file)
                 else:
-                    raise NotImplementedError(
-                        f"Unrecognised compiler vendor : {vendor}"
-                    )
+                    raise NotImplementedError(f"Unrecognised compiler vendor : {vendor}")
 
         self._debug = debug
         self._language_info = None
@@ -151,15 +133,9 @@ class Compiler:
         X2pyError
             If the compiler executable cannot be found.
         """
-        language_info = (
-            self._language_info if language is None else self._compiler_info[language]
-        )
+        language_info = self._language_info if language is None else self._compiler_info[language]
         # Get executable
-        exec_cmd = (
-            language_info["mpi_exec"]
-            if "mpi" in extra_compilation_tools
-            else language_info["exec"]
-        )
+        exec_cmd = language_info["mpi_exec"] if "mpi" in extra_compilation_tools else language_info["exec"]
 
         # Clean conda paths out of the PATH variable
         current_path = os.environ["PATH"]
@@ -172,8 +148,7 @@ class Compiler:
         os.environ["PATH"] = current_path
 
         if exec_loc is None:
-            raise
-            errors.report(f"Could not find compiler ({exec_cmd})", severity="fatal")
+            raise FileNotFoundError(f"Could not find compiler ({exec_cmd})")
 
         return exec_loc
 
@@ -256,9 +231,7 @@ class Compiler:
         properties.update(dict.fromkeys(self._language_info.get(key, ())))
 
         for a in extra_compilation_tools:
-            properties.update(
-                dict.fromkeys(self._language_info.get(a, {}).get(key, ()))
-            )
+            properties.update(dict.fromkeys(self._language_info.get(a, {}).get(key, ())))
 
         return properties.keys()
 
@@ -404,9 +377,7 @@ class Compiler:
         inc_flags = self._insert_prefix_to_list(include, "-I")
 
         # Get dependencies (.o/.a)
-        m_code = self._get_dependencies(
-            compile_obj.extra_modules, extra_compilation_tools
-        )
+        m_code = self._get_dependencies(compile_obj.extra_modules, extra_compilation_tools)
 
         # Get libraries and library directories
         libs = self._get_libs(compile_obj.libs, extra_compilation_tools)
@@ -459,10 +430,7 @@ class Compiler:
         # Get executable
         exec_cmd = self.get_exec(extra_compilation_tools)
 
-        if language == "fortran":
-            j_code = (self._language_info["module_output_flag"], output_folder)
-        else:
-            j_code = ()
+        j_code = (self._language_info["module_output_flag"], output_folder) if language == "fortran" else ()
 
         cmd = [
             exec_cmd,
@@ -512,10 +480,10 @@ class Compiler:
         flags = self._get_flags(compile_obj.flags, extra_compilation_tools)
 
         # Get compile options
-        exec_cmd, include, libs_flags, libdir_flags, m_code = (
-            self._get_compile_components(compile_obj, extra_compilation_tools)
+        exec_cmd, include, libs_flags, libdir_flags, m_code = self._get_compile_components(
+            compile_obj, extra_compilation_tools
         )
-        linker_libdir_flags = ["-Wl,-rpath" if l == "-L" else l for l in libdir_flags]
+        linker_libdir_flags = ["-Wl,-rpath" if flag == "-L" else flag for flag in libdir_flags]
 
         out_target = os.path.join(output_folder, compile_obj.program_target)
 
@@ -542,9 +510,7 @@ class Compiler:
 
         return out_target
 
-    def compile_shared_library(
-        self, compile_obj, output_folder, language, verbose, sharedlib_modname=None
-    ):
+    def compile_shared_library(self, compile_obj, output_folder, language, verbose, sharedlib_modname=None):
         """
         Compile a module to a shared library.
 
@@ -590,7 +556,7 @@ class Compiler:
         exec_cmd, _, libs_flags, libdir_flags, m_code = self._get_compile_components(
             compile_obj, extra_compilation_tools
         )
-        linker_libdir_flags = ["-Wl,-rpath" if l == "-L" else l for l in libdir_flags]
+        linker_libdir_flags = ["-Wl,-rpath" if flag == "-L" else flag for flag in libdir_flags]
 
         flags.insert(0, "-shared")
 
@@ -650,9 +616,7 @@ class Compiler:
         if verbose > 1:
             print(" ".join(cmd))
 
-        with subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
-        ) as p:
+        with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True) as p:
             out, err = p.communicate()
 
         if verbose and out:
@@ -662,7 +626,7 @@ class Compiler:
             err_msg += "\n" + err
             raise RuntimeError(err_msg)
         if err:
-            warnings.warn(UserWarning(err))
+            warnings.warn(UserWarning(err), stacklevel=2)
 
         return cmd
 

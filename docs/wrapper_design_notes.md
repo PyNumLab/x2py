@@ -10,6 +10,7 @@ Reference details live in:
 - `docs/c_parser.md`
 - `docs/fortran_parser.md`
 - `docs/semantics.md`
+- `docs/fortran_wrapper_checklist.md`
 
 ## Known Semantic Gaps To Track
 

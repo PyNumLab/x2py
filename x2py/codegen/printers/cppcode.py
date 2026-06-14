@@ -1,6 +1,7 @@
 """Functions for printing C++ code."""
 
 from itertools import chain
+from typing import ClassVar
 
 from ..models.core import (
     AsName,
@@ -142,12 +143,11 @@ class CppCodePrinter(CodePrinter):
     printmethod = "_cppcode"
     language = "C++"
 
-    _default_settings = {
+    _default_settings: ClassVar = {
         "tabwidth": 4,
     }
 
     def __init__(self, filename, *, verbose):
-
         super().__init__(verbose)
 
         self._additional_imports = {}
@@ -202,9 +202,8 @@ class CppCodePrinter(CodePrinter):
         tab = " " * self._default_settings["tabwidth"]
         if code == "":
             return code
-        else:
-            # code ends with \n
-            return tab + code.replace("\n", "\n" + tab).rstrip(" ")
+        # code ends with \n
+        return tab + code.replace("\n", "\n" + tab).rstrip(" ")
 
     def _format_code(self, lines):
         """
@@ -315,27 +314,15 @@ class CppCodePrinter(CodePrinter):
         self.set_scope(expr.module.scope)
         self._in_header = True
 
-        decls = [
-            Declare(v, external=True, module_variable=True)
-            for v in expr.module.variables
-            if not v.is_private
-        ]
+        decls = [Declare(v, external=True, module_variable=True) for v in expr.module.variables if not v.is_private]
         global_variables = "".join(self._print(d) for d in decls)
 
         classes = "\n".join(self._print(classDef) for classDef in expr.module.classes)
 
-        funcs = "\n".join(
-            f"{self.function_signature(f)};"
-            for f in expr.module.funcs
-            if not f.is_inline
-        )
+        funcs = "\n".join(f"{self.function_signature(f)};" for f in expr.module.funcs if not f.is_inline)
 
         # Print imports last to be sure that all additional_imports have been collected
-        imports = [
-            i
-            for i in chain(expr.module.imports, self._additional_imports.values())
-            if not i.ignore
-        ]
+        imports = [i for i in chain(expr.module.imports, self._additional_imports.values()) if not i.ignore]
         # imports = self.sort_imports(imports)
         imports = "".join(self._print(i) for i in imports)
 
@@ -362,18 +349,14 @@ class CppCodePrinter(CodePrinter):
         body = "".join(self._print(i) for i in expr.body)
 
         # Print imports last to be sure that all additional_imports have been collected
-        imports = Import(
-            self.scope.get_python_name(expr.name), Module(expr.name, (), ())
-        )
+        imports = Import(self.scope.get_python_name(expr.name), Module(expr.name, (), ()))
         imports_code = self._print(imports)
         if "complex" in self._additional_imports:
             imports_code += "using namespace std::complex_literals;\n"
 
         self.exit_scope()
 
-        return "".join(
-            (imports_code, f"namespace {name} {{\n\n", global_variables, body, "\n}\n")
-        )
+        return "".join((imports_code, f"namespace {name} {{\n\n", global_variables, body, "\n}\n"))
 
     def _print_Program(self, expr):
         mod = get_direct_module(expr)
@@ -382,17 +365,9 @@ class CppCodePrinter(CodePrinter):
         self.set_scope(expr.scope)
         body = self._print(expr.body)
         variables = self.scope.variables.values()
-        decs = "".join(
-            self._print(Declare(v))
-            for v in variables
-            if v not in self._declared_vars[-1]
-        )
+        decs = "".join(self._print(Declare(v)) for v in variables if v not in self._declared_vars[-1])
 
-        imports = [
-            i
-            for i in chain(expr.imports, self._additional_imports.values())
-            if not i.ignore
-        ]
+        imports = [i for i in chain(expr.imports, self._additional_imports.values()) if not i.ignore]
         imports = "".join(self._print(i) for i in imports)
         if "complex" in self._additional_imports:
             imports += "using namespace std::complex_literals;\n"
@@ -500,8 +475,7 @@ class CppCodePrinter(CodePrinter):
         # type, if all arguments are integers or booleans the result is integer
         # otherwise the result type is float
         need_to_cast = all(
-            a.dtype.primitive_type in (PrimitiveIntegerType(), PrimitiveBooleanType())
-            for a in expr.args
+            a.dtype.primitive_type in (PrimitiveIntegerType(), PrimitiveBooleanType()) for a in expr.args
         )
         if need_to_cast:
             self.add_import(cpp_imports["pyc_math_cpp"])
@@ -509,11 +483,7 @@ class CppCodePrinter(CodePrinter):
 
         self.add_import(cpp_imports["cmath"])
         code = " / ".join(
-            self._print(
-                a
-                if a.dtype.primitive_type is PrimitiveFloatingPointType()
-                else cast_to(a, NumpyFloat64Type())
-            )
+            self._print(a if a.dtype.primitive_type is PrimitiveFloatingPointType() else cast_to(a, NumpyFloat64Type()))
             for a in expr.args
         )
         return f"std::floor({code})"
@@ -535,9 +505,7 @@ class CppCodePrinter(CodePrinter):
         dtype = expr.dtype
 
         try:
-            exponent_is_pos_int = (
-                exponent.dtype.primitive_type is PrimitiveIntegerType() and exponent > 0
-            )
+            exponent_is_pos_int = exponent.dtype.primitive_type is PrimitiveIntegerType() and exponent > 0
         except TypeError:
             exponent_is_pos_int = False
 
@@ -548,15 +516,13 @@ class CppCodePrinter(CodePrinter):
             code = f"std::pow({base_code}, {exponent_code})"
             current_dtype = (
                 dtype
-                if dtype.primitive_type
-                not in (PrimitiveIntegerType(), PrimitiveBooleanType())
+                if dtype.primitive_type not in (PrimitiveIntegerType(), PrimitiveBooleanType())
                 else NumpyFloat64Type()
             )
 
         if current_dtype != dtype:
             return f"({self._print(dtype)})({code})"
-        else:
-            return code
+        return code
 
     # ------------------------------
     #  Unary operators
@@ -731,8 +697,7 @@ class CppCodePrinter(CodePrinter):
         name = expr.name
         if expr.is_alias:
             return f"(*{name})"
-        else:
-            return name
+        return name
 
     def _print_Declare(self, expr):
         var = expr.variable
@@ -752,11 +717,7 @@ class CppCodePrinter(CodePrinter):
         condition_setup = []
         for i, (c, b) in enumerate(expr.blocks):
             body = self._print(b)
-            if (
-                i == len(expr.blocks) - 1
-                and isinstance(c, Literal)
-                and c.python_value is True
-            ):
+            if i == len(expr.blocks) - 1 and isinstance(c, Literal) and c.python_value is True:
                 if i == 0:
                     lines.append(body)
                     break
@@ -785,10 +746,7 @@ class CppCodePrinter(CodePrinter):
     def _print_Import(self, expr):
         if expr.ignore:
             return ""
-        if isinstance(expr.source, AsName):
-            source = expr.source.name
-        else:
-            source = expr.source
+        source = expr.source.name if isinstance(expr.source, AsName) else expr.source
         source = self._print(source)
 
         if source == "omp_lib":
@@ -798,8 +756,7 @@ class CppCodePrinter(CodePrinter):
             return ""
         if expr.source in cpp_library_headers:
             return f"#include <{source}>\n"
-        else:
-            return f'#include "{source}.hpp"\n'
+        return f'#include "{source}.hpp"\n'
 
     def _print_FunctionCall(self, expr):
         func = expr.funcdef
@@ -818,17 +775,13 @@ class CppCodePrinter(CodePrinter):
             call_code = f"{mod.name}::{call_code}"
         if func.results.var is not NIL:
             return call_code
-        else:
-            return f"{call_code};\n"
+        return f"{call_code};\n"
 
     def _print_Allocate(self, expr):
         variable = expr.variable
         if isinstance(variable.class_type, StringType):
             return ""
-        else:
-            raise NotImplementedError(
-                f"Allocate not implemented for {variable.class_type}"
-            )
+        raise NotImplementedError(f"Allocate not implemented for {variable.class_type}")
 
     def _print_Deallocate(self, expr):
         return ""

@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """Module containing helper functions for managing strings"""
 
 import random
 import string
 
-__all__ = ("random_string", "create_incremented_string")
+__all__ = ("create_incremented_string", "random_string")
 # ==============================================================================
 random_selector = random.SystemRandom()
 
@@ -30,9 +29,7 @@ def random_string(n):
 
 
 # ==============================================================================
-def create_incremented_string(
-    forbidden_exprs, prefix="Dummy", counter=1, name_clash_checker=None
-):
+def create_incremented_string(forbidden_exprs, prefix="Dummy", counter=1, name_clash_checker=None):
     """
     Create a new unique string by incrementing a prefix.
 

@@ -27,6 +27,7 @@ from .models.datatypes import (
 from .models.core import Variable
 
 __all__ = (
+    "C_NULL_CHAR",
     "BindCArrayType",
     "BindCArrayVariable",
     "BindCClassDef",
@@ -39,7 +40,6 @@ __all__ = (
     "BindCVariable",
     "CLocFunc",
     "C_F_Pointer",
-    "C_NULL_CHAR",
     "DeallocatePointer",
     "FortranTransfer",
     "c_malloc",
@@ -70,7 +70,7 @@ class BindCArrayType(Type, TupleType):
     shape and strides.
     """
 
-    __slots__ = ("_array_rank", "_has_strides", "_element_types")
+    __slots__ = ("_array_rank", "_element_types", "_has_strides")
     _name = "BindCArrayType"
 
     @classmethod
@@ -98,9 +98,7 @@ class BindCArrayType(Type, TupleType):
         shape_types = (NumpyInt64Type(),) * rank
         ubound_types = (NumpyInt64Type(),) * rank * has_strides
         stride_types = (NumpyInt64Type(),) * rank * has_strides
-        element_types = (
-            (BindCPointer(),) + shape_types + ubound_types + stride_types
-        )
+        element_types = (BindCPointer(), *shape_types, *ubound_types, *stride_types)
 
         def __init__(self):
             self._array_rank = rank
@@ -150,11 +148,7 @@ class BindCArrayType(Type, TupleType):
 
     def shape_is_compatible(self, shape):
         """Return whether ``shape`` has one entry with the descriptor field count."""
-        return (
-            isinstance(shape, tuple)
-            and len(shape) == 1
-            and shape[0] == len(self)
-        )
+        return isinstance(shape, tuple) and len(shape) == 1 and shape[0] == len(self)
 
     def __getitem__(self, index):
         return self._element_types[index]
@@ -254,7 +248,7 @@ class BindCVariable(Variable):
     """
 
     __slots__ = ("_new_var", "_original_var")
-    _attribute_nodes = Variable._attribute_nodes + ("_new_var", "_original_var")
+    _attribute_nodes = (*Variable._attribute_nodes, "_new_var", "_original_var")
 
     def __init__(self, new_var, original_var):
         self._new_var = new_var
@@ -320,12 +314,8 @@ class BindCModule(Module):
         about the args and kwargs.
     """
 
-    __slots__ = ("_orig_mod", "_variable_wrappers", "_removed_functions")
-    _attribute_nodes = Module._attribute_nodes + (
-        "_orig_mod",
-        "_variable_wrappers",
-        "_removed_functions",
-    )
+    __slots__ = ("_orig_mod", "_removed_functions", "_variable_wrappers")
+    _attribute_nodes = (*Module._attribute_nodes, "_orig_mod", "_variable_wrappers", "_removed_functions")
 
     def __init__(
         self,
@@ -438,7 +428,7 @@ class BindCArrayVariable(Variable):
     Variable : The super class.
     """
 
-    __slots__ = ("_wrapper_function", "_original_variable")
+    __slots__ = ("_original_variable", "_wrapper_function")
     _attribute_nodes = ("_wrapper_function", "_original_variable")
 
     def __init__(self, *args, wrapper_function, original_variable, **kwargs):
@@ -494,7 +484,7 @@ class BindCClassProperty:
         The docstring of the property.
     """
 
-    __slots__ = ("_getter", "_setter", "_python_name", "_docstring", "_class_type")
+    __slots__ = ("_class_type", "_docstring", "_getter", "_python_name", "_setter")
     _attribute_nodes = ("_getter", "_setter")
 
     def __init__(self, python_name, getter, setter, class_type, docstring=None):
@@ -578,7 +568,7 @@ class BindCClassDef(ClassDef):
         See ClassDef.
     """
 
-    __slots__ = ("_original_class", "_new_func")
+    __slots__ = ("_new_func", "_original_class")
 
     def __init__(self, original_class, new_func, **kwargs):
         self._original_class = original_class

@@ -1,4 +1,3 @@
-# coding: utf-8
 # pylint: disable=no-member, protected-access
 
 
@@ -6,7 +5,7 @@
 Classes and methods that handle supported datatypes in C/Fortran.
 """
 
-from functools import cache, lru_cache
+from functools import lru_cache
 from types import GeneratorType
 import numpy
 
@@ -19,9 +18,7 @@ dict_values = type({}.values())
 
 def iterable(value):
     """Return whether a value is a supported model collection."""
-    return isinstance(
-        value, (list, tuple, dict_keys, dict_values, set, GeneratorType)
-    )
+    return isinstance(value, list | tuple | dict_keys | dict_values | set | GeneratorType)
 
 
 _MODEL_CLASSES = set()
@@ -39,17 +36,11 @@ def is_model_class(value):
 
 
 def _model_state(obj):
-    return _MODEL_STATE.setdefault(
-        id(obj), {"parents": [], "scope": None}
-    )
+    return _MODEL_STATE.setdefault(id(obj), {"parents": [], "scope": None})
 
 
 def _ignore_model_child(value):
-    return (
-        value is None
-        or isinstance(value, type)
-        or getattr(value, "_model_immutable", False)
-    )
+    return value is None or isinstance(value, type) or getattr(value, "_model_immutable", False)
 
 
 def init_model_object(obj, scope=None):
@@ -64,15 +55,14 @@ def init_model_object(obj, scope=None):
         if _ignore_model_child(child):
             continue
 
-        if isinstance(child, (int, float, complex, str, bool)):
+        if isinstance(child, int | float | complex | str | bool):
             child = convert_to_literal(child)
             setattr(obj, attribute_name, child)
         elif iterable(child):
             size = len(child)
             child = tuple(
                 item
-                if not isinstance(item, (int, float, complex, str, bool))
-                or _ignore_model_child(item)
+                if not isinstance(item, int | float | complex | str | bool) or _ignore_model_child(item)
                 else convert_to_literal(item)
                 for item in child
                 if not iterable(item)
@@ -81,9 +71,7 @@ def init_model_object(obj, scope=None):
                 raise TypeError("model child cannot contain nested collections")
             setattr(obj, attribute_name, child)
         elif not is_model_object(child):
-            raise TypeError(
-                f"model child must be a model object or collection, not {type(child)}"
-            )
+            raise TypeError(f"model child must be a model object or collection, not {type(child)}")
 
         children = child if isinstance(child, tuple) else (child,)
         for item in children:
@@ -106,11 +94,7 @@ def detach_model_child(parent, child):
 def _find_direct_model_parent(obj, parent_type):
     """Return the first direct parent of ``obj`` with the requested type."""
     return next(
-        (
-            parent
-            for parent in _model_state(obj)["parents"]
-            if isinstance(parent, parent_type)
-        ),
+        (parent for parent in _model_state(obj)["parents"] if isinstance(parent, parent_type)),
         None,
     )
 
@@ -130,8 +114,7 @@ def _find_model_parent(obj, parent_type, excluded_types=()):
             (
                 parent
                 for parent in parents
-                if isinstance(parent, parent_type)
-                and not isinstance(parent, excluded_types)
+                if isinstance(parent, parent_type) and not isinstance(parent, excluded_types)
             ),
             None,
         )
@@ -139,11 +122,7 @@ def _find_model_parent(obj, parent_type, excluded_types=()):
             return direct_parent
 
         for parent in parents:
-            if (
-                _ignore_model_child(parent)
-                or isinstance(parent, excluded_types)
-                or not is_model_object(parent)
-            ):
+            if _ignore_model_child(parent) or isinstance(parent, excluded_types) or not is_model_object(parent):
                 continue
             result = find(parent)
             if result is not None:
@@ -171,11 +150,7 @@ def _has_model_descendant(obj, descendant_type, excluded_types=()):
                     continue
                 if isinstance(item, descendant_type):
                     return True
-                if (
-                    not _ignore_model_child(item)
-                    and is_model_object(item)
-                    and contains(item)
-                ):
+                if not _ignore_model_child(item) and is_model_object(item) and contains(item):
                     return True
         return False
 
@@ -231,33 +206,24 @@ def register_model_class(cls):
 
 
 __all__ = (
-    # ------------ Super classes ------------
-    "FixedSizeType",
-    "PrimitiveType",
-    "Type",
-    # ------------ Primitive types ------------
-    "PrimitiveBooleanType",
-    "PrimitiveCharacterType",
-    "PrimitiveComplexType",
-    "PrimitiveFloatingPointType",
-    "PrimitiveIntegerType",
-    # ------------ Modifying types ------------
-    "FinalType",
-    # ------------ Fixed size types ------------
-    "CharType",
-    "FixedSizeNumericType",
-    "GenericType",
-    "SymbolicType",
-    "VoidType",
-    # ------------ Container types ------------
-    "CustomDataType",
-    "StringType",
-    "TupleType",
+    "NIL",
     # ---------- Functions -------------------
     "Cast",
+    # ------------ Fixed size types ------------
+    "CharType",
     "ComplexPart",
+    # ------------ Container types ------------
+    "CustomDataType",
     "DataTypeFactory",
-    #---------------numpy types --------------
+    # ------------ Modifying types ------------
+    "FinalType",
+    "FixedSizeNumericType",
+    # ------------ Super classes ------------
+    "FixedSizeType",
+    "GenericType",
+    # -----------------literals-----------------
+    "Literal",
+    # ---------------numpy types --------------
     "NumpyBoolType",
     "NumpyComplex64Type",
     "NumpyComplex128Type",
@@ -272,9 +238,18 @@ __all__ = (
     "NumpyIntType",
     "NumpyNDArrayType",
     "NumpyNumericType",
-    #-----------------literals-----------------
-    "Literal",
-    "NIL",
+    # ------------ Primitive types ------------
+    "PrimitiveBooleanType",
+    "PrimitiveCharacterType",
+    "PrimitiveComplexType",
+    "PrimitiveFloatingPointType",
+    "PrimitiveIntegerType",
+    "PrimitiveType",
+    "StringType",
+    "SymbolicType",
+    "TupleType",
+    "Type",
+    "VoidType",
     "attach_model_child",
     "cast_to",
     "convert_to_literal",
@@ -637,7 +612,7 @@ class GenericType(FixedSizeType):
     _name = "Generic"
     _primitive_type = None
 
-    @lru_cache
+    @lru_cache  # noqa: B019 - datatype instances are interned and process-lived.
     def __add__(self, other):
         return other
 
@@ -770,6 +745,7 @@ class StringType(Type):
     def __hash__(self):
         return hash(self.__class__)
 
+
 # ==============================================================================
 
 
@@ -813,6 +789,7 @@ class CustomDataType(Type):
         """
         return None
 
+
 # ==============================================================================
 def DataTypeFactory(ll_name, python_name, argnames=(), *, BaseClass=CustomDataType):
     """
@@ -850,9 +827,7 @@ def DataTypeFactory(ll_name, python_name, argnames=(), *, BaseClass=CustomDataTy
             # here, the argnames variable is the one passed to the
             # DataTypeFactory call
             if key not in argnames:
-                raise TypeError(
-                    f"Argument {key} not valid for {self.__class__.__name__}"
-                )
+                raise TypeError(f"Argument {key} not valid for {self.__class__.__name__}")
             setattr(self, key, value)
 
         BaseClass.__init__(self)  # pylint: disable=unnecessary-dunder-call
@@ -867,8 +842,7 @@ def DataTypeFactory(ll_name, python_name, argnames=(), *, BaseClass=CustomDataTy
         if argnames:
             param = ", ".join(str(getattr(self, a)) for a in argnames)
             return f"{self._name}[{param}]"  # pylint: disable=protected-access
-        else:
-            return self._name  # pylint: disable=protected-access
+        return self._name  # pylint: disable=protected-access
 
     def low_level_name(self):
         """
@@ -877,7 +851,7 @@ def DataTypeFactory(ll_name, python_name, argnames=(), *, BaseClass=CustomDataTy
         """
         return ll_name
 
-    newclass = type(
+    return type(
         python_name,
         (BaseClass,),
         {
@@ -888,10 +862,8 @@ def DataTypeFactory(ll_name, python_name, argnames=(), *, BaseClass=CustomDataTy
         },
     )
 
-    return newclass
 
-
-#========================================================================================
+# ========================================================================================
 primitive_type_precedence = [
     PrimitiveBooleanType(),
     PrimitiveIntegerType(),
@@ -911,7 +883,7 @@ class NumpyNumericType(FixedSizeNumericType):
 
     __slots__ = ()
 
-    @lru_cache
+    @lru_cache  # noqa: B019 - datatype instances are interned and process-lived.
     def __add__(self, other):
         try:
             return original_type_to_x2py_type[
@@ -923,22 +895,18 @@ class NumpyNumericType(FixedSizeNumericType):
         except KeyError:
             return NotImplemented
 
-    @lru_cache
+    @lru_cache  # noqa: B019 - datatype instances are interned and process-lived.
     def __radd__(self, other):
         return self.__add__(other)
 
     def __eq__(self, other):
         if other is self:
             return True
-        elif isinstance(other, NumpyNumericType):
+        if isinstance(other, NumpyNumericType):
             return False
-        elif isinstance(other, FixedSizeNumericType):
-            return (
-                other.primitive_type == self.primitive_type
-                and other.precision == self.precision
-            )
-        else:
-            return NotImplemented
+        if isinstance(other, FixedSizeNumericType):
+            return other.primitive_type == self.primitive_type and other.precision == self.precision
+        return NotImplemented
 
     def __hash__(self):
         return hash(f"numpy.{self}")
@@ -959,25 +927,23 @@ class NumpyBoolType(NumpyNumericType):
     _primitive_type = PrimitiveBooleanType()
     _precision = -1
 
-    @lru_cache
+    @lru_cache  # noqa: B019 - datatype instances are interned and process-lived.
     def __add__(self, other):
         if isinstance(other, NumpyBoolType):
             return NumpyInt64Type()
-        elif isinstance(other, NumpyNumericType):
+        if isinstance(other, NumpyNumericType):
             return other
-        else:
-            return NotImplemented
+        return NotImplemented
 
-    @lru_cache
+    @lru_cache  # noqa: B019 - datatype instances are interned and process-lived.
     def __and__(self, other):
         if isinstance(other, NumpyBoolType):
             return self
-        elif isinstance(other, NumpyNumericType):
+        if isinstance(other, NumpyNumericType):
             return other
-        else:
-            return NotImplemented
+        return NotImplemented
 
-    @lru_cache
+    @lru_cache  # noqa: B019 - datatype instances are interned and process-lived.
     def __rand__(self, other):
         return self.__and__(other)
 
@@ -995,25 +961,23 @@ class NumpyIntType(NumpyNumericType):
     __slots__ = ()
     _primitive_type = PrimitiveIntegerType()
 
-    @lru_cache
+    @lru_cache  # noqa: B019 - datatype instances are interned and process-lived.
     def __and__(self, other):
         if isinstance(other, NumpyBoolType):
             return self
-        elif isinstance(other, FixedSizeNumericType):
+        if isinstance(other, FixedSizeNumericType):
             precision = max(self.precision, other.precision)
             return numpy_precision_map[(self._primitive_type, precision)]
-        else:
-            return NotImplemented
+        return NotImplemented
 
-    @lru_cache
+    @lru_cache  # noqa: B019 - datatype instances are interned and process-lived.
     def __rand__(self, other):
         if isinstance(other, NumpyBoolType):
             return self
-        elif isinstance(other, FixedSizeNumericType):
+        if isinstance(other, FixedSizeNumericType):
             precision = max(self.precision, other.precision)
             return numpy_precision_map[(self._primitive_type, precision)]
-        else:
-            return NotImplemented
+        return NotImplemented
 
 
 class NumpyInt8Type(NumpyIntType):
@@ -1189,10 +1153,10 @@ class NumpyNDArrayType(Type):
     """
 
     __slots__ = (
-        "_element_type",
-        "_container_rank",
-        "_order",
         "_allows_strides",
+        "_container_rank",
+        "_element_type",
+        "_order",
         "_raw",
     )
     _name = "numpy.ndarray"
@@ -1228,7 +1192,7 @@ class NumpyNDArrayType(Type):
         if raw:
             assert isinstance(dtype, FixedSizeType)
         else:
-            assert isinstance(dtype, (NumpyNumericType, GenericType, CharType))
+            assert isinstance(dtype, NumpyNumericType | GenericType | CharType)
 
         if rank == 0:
             return dtype
@@ -1243,10 +1207,7 @@ class NumpyNDArrayType(Type):
 
         representation = "Raw" if raw else "Numpy"
         stride_suffix = "strided" if allows_strides else "contiguous"
-        name = (
-            f"{representation}{rank}DArrayType_{order}_{stride_suffix}_"
-            f"{type(dtype).__name__}"
-        )
+        name = f"{representation}{rank}DArrayType_{order}_{stride_suffix}_{type(dtype).__name__}"
         return type(name, (NumpyNDArrayType,), {"__init__": __init__})()
 
     @property
@@ -1282,20 +1243,16 @@ class NumpyNDArrayType(Type):
         """Check if the provided shape is compatible with this ndarray."""
         return isinstance(shape, tuple) and len(shape) == self.container_rank
 
-    @lru_cache
+    @lru_cache  # noqa: B019 - datatype instances are interned and process-lived.
     def __add__(self, other):
         test_type = numpy.zeros(1, dtype=x2py_type_to_original_type[self.element_type])
         if isinstance(other, FixedSizeNumericType):
             comparison_type = x2py_type_to_original_type[other]()
         elif isinstance(other, NumpyNDArrayType):
-            comparison_type = numpy.zeros(
-                1, dtype=x2py_type_to_original_type[other.element_type]
-            )
+            comparison_type = numpy.zeros(1, dtype=x2py_type_to_original_type[other.element_type])
         else:
             return NotImplemented
-        result_type = original_type_to_x2py_type[
-            numpy.result_type(test_type, comparison_type).type
-        ]
+        result_type = original_type_to_x2py_type[numpy.result_type(test_type, comparison_type).type]
         rank = max(other.rank, self.rank)
         if rank < 2:
             order = None
@@ -1303,26 +1260,23 @@ class NumpyNDArrayType(Type):
             other_f_contiguous = other.order in (None, "F")
             self_f_contiguous = self.order in (None, "F")
             order = "F" if other_f_contiguous and self_f_contiguous else "C"
-        allows_strides = getattr(self, "allows_strides", True) or getattr(
-            other, "allows_strides", True
-        )
+        allows_strides = getattr(self, "allows_strides", True) or getattr(other, "allows_strides", True)
         return NumpyNDArrayType.get_new(result_type, rank, order, allows_strides)
 
-    @lru_cache
+    @lru_cache  # noqa: B019 - datatype instances are interned and process-lived.
     def __radd__(self, other):
         return self.__add__(other)
 
-    @lru_cache
+    @lru_cache  # noqa: B019 - datatype instances are interned and process-lived.
     def __and__(self, other):
         elem_type = self.element_type
         if isinstance(other, FixedSizeNumericType):
             return self.switch_basic_type(elem_type & other)
-        elif isinstance(other, NumpyNDArrayType):
+        if isinstance(other, NumpyNDArrayType):
             return self.switch_basic_type(elem_type & other.element_type)
-        else:
-            return NotImplemented
+        return NotImplemented
 
-    @lru_cache
+    @lru_cache  # noqa: B019 - datatype instances are interned and process-lived.
     def __rand__(self, other):
         return self.__and__(other)
 
@@ -1378,15 +1332,14 @@ class NumpyNDArrayType(Type):
         """
         if new_rank == 0:
             return self.element_type
-        else:
-            new_order = (new_order or self._order) if new_rank > 1 else None
-            return NumpyNDArrayType.get_new(
-                self.element_type,
-                new_rank,
-                new_order,
-                self._allows_strides,
-                raw=self.raw,
-            )
+        new_order = (new_order or self._order) if new_rank > 1 else None
+        return NumpyNDArrayType.get_new(
+            self.element_type,
+            new_rank,
+            new_order,
+            self._allows_strides,
+            raw=self.raw,
+        )
 
     def swap_order(self):
         """
@@ -1513,9 +1466,7 @@ if hasattr(numpy, "float128"):
     )
 
 x2py_type_to_original_type.update(numpy_type_to_original_type)
-original_type_to_x2py_type.update(
-    {v: k for k, v in numpy_type_to_original_type.items()}
-)
+original_type_to_x2py_type.update({v: k for k, v in numpy_type_to_original_type.items()})
 
 typenames_to_dtypes = {
     "float": NumpyFloat64Type(),
@@ -1529,11 +1480,12 @@ typenames_to_dtypes = {
     "str": StringType(),
 }
 
-#======================================================================
+
+# ======================================================================
 class Literal:
     """A value expressed directly in generated code."""
 
-    __slots__ = ("_value", "_class_type", "_shape")
+    __slots__ = ("_class_type", "_shape", "_value")
     _attribute_nodes = ()
 
     def __init__(self, value, datatype):
@@ -1553,19 +1505,19 @@ class Literal:
         elif isinstance(datatype, FixedSizeNumericType):
             primitive_type = datatype.primitive_type
             if isinstance(primitive_type, PrimitiveBooleanType):
-                if not isinstance(value, (bool, numpy.bool_)):
+                if not isinstance(value, bool | numpy.bool_):
                     raise TypeError("boolean literals require a bool value")
                 self._value = bool(value)
             elif isinstance(primitive_type, PrimitiveIntegerType):
-                if not isinstance(value, (int, numpy.integer)):
+                if not isinstance(value, int | numpy.integer):
                     raise TypeError("integer literals require an integer value")
                 self._value = int(value)
             elif isinstance(primitive_type, PrimitiveFloatingPointType):
-                if not isinstance(value, (int, float, numpy.integer, numpy.floating)):
+                if not isinstance(value, int | float | numpy.integer | numpy.floating):
                     raise TypeError("floating-point literals require a real value")
                 self._value = float(value)
             elif isinstance(primitive_type, PrimitiveComplexType):
-                if not isinstance(value, (int, float, complex, numpy.number)):
+                if not isinstance(value, int | float | complex | numpy.number):
                     raise TypeError("complex literals require a numeric value")
                 self._value = complex(value)
             else:
@@ -1606,11 +1558,7 @@ class Literal:
         return self.python_value
 
     def __add__(self, o):
-        if (
-            isinstance(self.class_type, StringType)
-            and isinstance(o, Literal)
-            and isinstance(o.class_type, StringType)
-        ):
+        if isinstance(self.class_type, StringType) and isinstance(o, Literal) and isinstance(o.class_type, StringType):
             return Literal(self.python_value + o.python_value, StringType())
         return NotImplemented
 
@@ -1680,15 +1628,8 @@ def convert_to_literal(value, dtype=None):
 
     primitive_type = dtype.primitive_type
     if isinstance(primitive_type, PrimitiveIntegerType):
-        if value >= 0:
-            literal_val = Literal(value, dtype)
-        else:
-            literal_val = UnarySub(Literal(-value, dtype))
-    elif isinstance(primitive_type, PrimitiveFloatingPointType):
-        literal_val = Literal(value, dtype)
-    elif isinstance(primitive_type, PrimitiveComplexType):
-        literal_val = Literal(value, dtype)
-    elif isinstance(primitive_type, PrimitiveBooleanType):
+        literal_val = Literal(value, dtype) if value >= 0 else UnarySub(Literal(-value, dtype))
+    elif isinstance(primitive_type, PrimitiveFloatingPointType | PrimitiveComplexType | PrimitiveBooleanType):
         literal_val = Literal(value, dtype)
     else:
         raise TypeError(f"Unknown type {dtype}")
@@ -1735,10 +1676,11 @@ class _DataTypeFunction:
     def is_indexable(self):
         return self.is_elemental
 
+
 class ComplexPart(_DataTypeFunction):
     """Access the real or imaginary component of a complex expression."""
 
-    __slots__ = ("_part", "_shape", "_class_type")
+    __slots__ = ("_class_type", "_part", "_shape")
 
     def __new__(cls, arg, part):
         if part not in ("real", "imag"):
@@ -1749,9 +1691,7 @@ class ComplexPart(_DataTypeFunction):
                     return cast_to(arg, NumpyInt64Type())
                 return arg
             if arg.rank > 0:
-                raise NotImplementedError(
-                    "imaginary-part access for non-complex arrays is not supported"
-                )
+                raise NotImplementedError("imaginary-part access for non-complex arrays is not supported")
             return convert_to_literal(0, dtype=arg.dtype)
         return super().__new__(cls)
 
@@ -1772,20 +1712,17 @@ class ComplexPart(_DataTypeFunction):
     def __str__(self):
         return f"ComplexPart({self.arg}, {self.part!r})"
 
+
 class Cast(_DataTypeFunction):
     """A conversion of one model expression to a target datatype."""
 
-    __slots__ = ("_shape", "_class_type")
+    __slots__ = ("_class_type", "_shape")
 
     def __init__(self, arg, datatype):
         if not isinstance(datatype, Type):
             raise TypeError("datatype must be a codegen Type")
-        if isinstance(datatype, StringType) and not isinstance(
-            arg.class_type, (StringType, CharType)
-        ):
-            raise NotImplementedError(
-                "Support for casting non-character types to strings is not available"
-            )
+        if isinstance(datatype, StringType) and not isinstance(arg.class_type, StringType | CharType):
+            raise NotImplementedError("Support for casting non-character types to strings is not available")
         self._shape = (None,) if isinstance(datatype, StringType) else arg.shape
         self._class_type = _cast_result_type(arg, datatype)
         super().__init__(arg)
@@ -1803,7 +1740,7 @@ class Cast(_DataTypeFunction):
         return f"Cast({self.arg}, {self.dtype})"
 
 
-#==============================================================================================
+# ==============================================================================================
 dtype_registry = typenames_to_dtypes
 dtype_registry.update(
     {
@@ -1827,6 +1764,7 @@ dtype_registry.update(
         "c16": NumpyComplex128Type(),
     }
 )
+
 
 def process_dtype(dtype):
     """
@@ -1857,6 +1795,7 @@ def process_dtype(dtype):
     TypeError: In the case of passed string argument not recognized as valid dtype.
     """
     from .core import X2pyFunctionDef
+
     if isinstance(dtype, X2pyFunctionDef):
         dtype = dtype.cls_name.static_type()
 
@@ -1869,12 +1808,13 @@ def process_dtype(dtype):
         except KeyError as e:
             raise TypeError(f"Unknown type of {dtype}.") from e
 
-    if isinstance(dtype, (NumpyNumericType, GenericType)):
+    if isinstance(dtype, NumpyNumericType | GenericType):
         return dtype
     if isinstance(dtype, FixedSizeNumericType):
         return numpy_precision_map[(dtype.primitive_type, dtype.precision)]
-    else:
-        raise TypeError(f"Unknown type of {dtype}.")
+    raise TypeError(f"Unknown type of {dtype}.")
+
+
 def cast_to(arg, target_type):
     """Return ``arg`` cast to ``target_type`` using the codegen cast node."""
     if arg.class_type == target_type:
