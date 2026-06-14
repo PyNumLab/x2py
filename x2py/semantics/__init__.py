@@ -18,7 +18,6 @@ from .c2ir import (
     c_type_to_semantic_type,
 )
 from .pyi_parser import convert_pyi_to_ir, load_pyi_file, load_pyi_modules, parse_pyi_text
-from .pyi_printer import emit_module_stubs, opaque_dependency_modules
 from .readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
 
 __all__ = (
@@ -36,13 +35,11 @@ __all__ = (
     "c_type_to_semantic_type",
     "collect_semantic_compile_time_requirements",
     "convert_pyi_to_ir",
-    "emit_module_stubs",
     "fortran_file_to_semantic_modules",
     "fortran_module_to_semantic_module",
     "fortran_project_to_semantic_modules",
     "load_pyi_file",
     "load_pyi_modules",
-    "opaque_dependency_modules",
     "parse_pyi_text",
     "resolve_semantic_compile_time_values",
 )

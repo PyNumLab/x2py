@@ -1084,7 +1084,9 @@ def test_x2py_main_argument_validation_errors(tmp_path: Path, monkeypatch, capsy
     assert print_limit_error.value.code == 2
     assert "--print-limit must be >= 0" in capsys.readouterr().err
 
-    monkeypatch.setattr(sys, "argv", ["x2py", str(f90)])
+    pyi = tmp_path / "mini.pyi"
+    pyi.write_text("def f() -> None: ...\n", encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["x2py", str(pyi)])
     with pytest.raises(SystemExit) as stage_error:
         x2py_cli.main()
     assert stage_error.value.code == 2

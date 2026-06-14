@@ -38,7 +38,7 @@ from x2py.semantics.c2ir import (
     c_type_to_semantic_type,
 )
 from x2py.semantics.pyi_parser import convert_pyi_to_ir, load_pyi_file, load_pyi_modules, parse_pyi_text
-from x2py.semantics.pyi_printer import emit_module_stubs, opaque_dependency_modules
+from x2py.codegen.printers.pyi_printer import emit_module_stubs, opaque_dependency_modules
 from x2py.semantics.readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
 
 from .cli import main

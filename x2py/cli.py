@@ -388,7 +388,7 @@ def _fortran_semantic_report(
 
 
 def _semantic_payload_for_converted_files(converted_files) -> dict[str, dict]:
-    from x2py.semantics.pyi_printer import emit_module_stubs
+    from x2py.codegen.printers.pyi_printer import emit_module_stubs
 
     out: dict[str, dict] = {}
     available_modules = [module for _p, modules in converted_files for module in modules]
@@ -713,6 +713,22 @@ def _has_stage(args: argparse.Namespace) -> bool:
     return bool(args.parse or args.semantics or args.pyi or args.wrap_readiness or getattr(args, "wrap", False))
 
 
+def _path_is_fortran_source(path: str) -> bool:
+    return Path(path).suffix.lower() in _FORTRAN_SOURCE_SUFFIXES
+
+
+def _stage_defaults_to_wrap(args: argparse.Namespace) -> bool:
+    return bool(
+        args.language == "fortran"
+        and not _has_stage(args)
+        and any(Path(path).is_dir() or _path_is_fortran_source(path) for path in args.paths)
+    )
+
+
+def _should_run_wrap(args: argparse.Namespace) -> bool:
+    return bool(getattr(args, "wrap", False) or _stage_defaults_to_wrap(args))
+
+
 def _has_semantic_stage(args: argparse.Namespace) -> bool:
     return bool(args.semantics or args.pyi or args.wrap_readiness)
 
@@ -756,7 +772,7 @@ def _validate_c_type_probe_options(args: argparse.Namespace, parser: argparse.Ar
 
 
 def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int | None:
-    if getattr(args, "wrap", False):
+    if _should_run_wrap(args):
         if args.language != "fortran":
             parser.error("--wrap currently requires --language fortran")
         if len(args.paths) != 1:
@@ -784,6 +800,8 @@ def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentPa
         automatic_options=_automatic_fortran_type_probe_options(args),
         parser=parser,
     )
+    if args.out is not None and _should_run_wrap(args):
+        parser.error("--wrap writes build artifacts; use --out-dir instead of --out")
     if args.out is not None and not _has_stage(args):
         parser.error(f"--out requires a stage flag: choose one of {_STAGE_FLAGS_DESCRIPTION}")
     if (args.show_vars or args.print_limit is not None or args.vars_limit is not None) and not args.parse:
@@ -792,7 +810,7 @@ def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentPa
     print_limit = args.print_limit if args.print_limit is not None else args.vars_limit
     if print_limit is not None and print_limit < 0:
         parser.error("--print-limit must be >= 0")
-    if not _has_stage(args):
+    if not _has_stage(args) and not _stage_defaults_to_wrap(args):
         parser.error(f"Select at least one stage flag: {_STAGE_FLAGS_DESCRIPTION}")
     return print_limit
 
@@ -1145,7 +1163,7 @@ def main() -> int:
             "  Print semantic readiness JSON:\n"
             "    python -m x2py path/to/module.pyi --wrap-readiness --json\n"
             "  Build a Python extension from a Fortran source:\n"
-            "    python -m x2py path/to/file.f --wrap\n"
+            "    python -m x2py path/to/file.f\n"
             "\nOptional:\n"
             "  Install 'rich' for colored terminal syntax highlighting:\n"
             "      pip install rich"
@@ -1310,7 +1328,7 @@ def main() -> int:
     parser.add_argument(
         "--wrap",
         action="store_true",
-        help="Build a Python extension module from one Fortran source file",
+        help="Explicitly build a Python extension module from one Fortran source file",
     )
     parser.add_argument(
         "--semantics", action="store_true", help="Generate semantic IR models from parsed source modules"
@@ -1341,7 +1359,7 @@ def main() -> int:
     args.language = _resolve_language(args.paths, args.language, parser)
     preprocessing = _build_preprocessing_config(args, parser)
     print_limit = _validate_main_options(args, parser)
-    if getattr(args, "wrap", False):
+    if _should_run_wrap(args):
         result = _run_wrap_build_with_diagnostics(args, preprocessing)
         if result is None:
             return 1

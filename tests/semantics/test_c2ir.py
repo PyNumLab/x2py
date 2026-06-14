@@ -76,7 +76,7 @@ from x2py.semantics.models import (
 )
 from x2py.semantics.pyi_parser import parse_pyi_text
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
-from x2py.semantics.pyi_printer import emit_module, emit_module_stubs
+from x2py.codegen.printers.pyi_printer import emit_module, emit_module_stubs
 
 
 def _function(module, name):

@@ -2,7 +2,7 @@ from pathlib import Path
 
 from x2py import parse_fortran_file
 from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
-from x2py.semantics.pyi_printer import emit_module
+from x2py.codegen.printers.pyi_printer import emit_module
 
 
 def test_modern_fortran_example_pyi_snapshot():

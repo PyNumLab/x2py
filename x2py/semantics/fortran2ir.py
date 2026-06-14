@@ -244,9 +244,8 @@ class FortranToIRConverter:
             metadata[EXTERNAL_TYPE_REF_METADATA] = ref_metadata
         if var.base_type.lower() == "character":
             metadata["fortran_character_length"] = self._character_length(var)
-            metadata["fortran_allocatable"] = bool(
-                getattr(var, "allocatable", False)
-            )
+            if getattr(var, "allocatable", False):
+                metadata["fortran_allocatable"] = True
         shape = [self._resolve_compile_time_text(dim) for dim in var.shape]
         storage = self._array_storage_contract(var, shape) if var.rank > 0 else None
         semantic_type = SemanticType(

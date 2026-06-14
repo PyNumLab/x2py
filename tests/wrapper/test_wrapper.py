@@ -46,7 +46,6 @@ def _build_and_import(source_template: Path, workdir: Path, expected_generated_s
         "-m",
         "x2py",
         str(source),
-        "--wrap",
         "--out-dir",
         str(workdir),
         "--json",
@@ -192,10 +191,34 @@ def _assert_modern_class_examples(module):
     store = module.vector_store()
     with pytest.warns(RuntimeWarning, match="values is not allocated"):
         assert store.values is None
+    with pytest.warns(RuntimeWarning, match="matrix is not allocated"):
+        assert store.matrix is None
+
+    with pytest.raises(AttributeError, match="reallocate"):
+        store.values = np.array([9.0], dtype=np.float64)
 
     store.allocate_values(np.int64(3))
     store.values[:] = np.array([1.0, 2.0, 3.0], dtype=np.float64)
     np.testing.assert_allclose(store.values, np.array([1.0, 2.0, 3.0]))
+
+    store.set_values(np.array([4.0, 5.0], dtype=np.float64))
+    np.testing.assert_allclose(store.values, np.array([4.0, 5.0]))
+
+    matrix = np.asfortranarray(
+        np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64)
+    )
+    store.allocate_matrix(np.int64(2), np.int64(3))
+    store.matrix[:, :] = matrix
+    np.testing.assert_allclose(store.matrix, matrix)
+    assert store.matrix.flags.f_contiguous
+
+    replacement = np.asfortranarray(matrix * 2.0)
+    store.set_matrix(replacement)
+    np.testing.assert_allclose(store.matrix, replacement)
+    assert store.matrix.flags.f_contiguous
+
+    with pytest.raises(TypeError, match=r"expected ordering \(F\)"):
+        store.set_matrix(np.array(replacement, order="C"))
 
     made = module.vector_store.make(np.int64(4), np.float64(1.5))
     np.testing.assert_allclose(made.values, np.full(4, 1.5, dtype=np.float64))
@@ -315,7 +338,7 @@ def test_fortran_wrapper_default_places_extension_beside_source(tmp_path: Path):
     source = tmp_path / SCALAR_LEGACY_SOURCE.name
     shutil.copyfile(SCALAR_LEGACY_SOURCE, source)
 
-    cmd = [sys.executable, "-m", "x2py", str(source), "--wrap", "--json"]
+    cmd = [sys.executable, "-m", "x2py", str(source), "--json"]
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     payload = json.loads(result.stdout)
 

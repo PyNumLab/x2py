@@ -27,7 +27,7 @@ from x2py.semantics.pyi_parser import (
     load_pyi_modules,
     parse_pyi_text,
 )
-from x2py.semantics.pyi_printer import emit_module
+from x2py.codegen.printers.pyi_printer import emit_module
 from tests._shared.fixture_outputs import FORTRAN_DATA_DIR, FORTRAN_SUFFIXES
 from x2py import parse_fortran_file
 
@@ -1007,6 +1007,7 @@ def test_parse_pyi_text_preserves_extended_array_metadata_and_nested_selector():
         """
 value: Annotated[Float64, ORDER_F, Allocatable, Pointer, Contiguous, ArrayCategory("deferred_shape"), SourceDims("1:n", "*", "extent"), LowerBounds(None, "0"), UpperBounds("n", None)]
 nested: Float64[:, :][rank, kind]
+name: Annotated[Ptr(String), FortranCharacterLength("16"), FortranAllocatable]
 
 def fill(x: Annotated[Float64[:], Intent("out")]) -> None: ...
 """,
@@ -1016,6 +1017,7 @@ def fill(x: Annotated[Float64[:], Intent("out")]) -> None: ...
     value_type = module.variables[0].semantic_type
     value = value_type.storage.array
     nested = module.variables[1].semantic_type
+    name = module.variables[2].semantic_type
     output = module.functions[0].arguments[0]
     assert value.order == "ORDER_F"
     assert value.allocatable is True
@@ -1028,6 +1030,8 @@ def fill(x: Annotated[Float64[:], Intent("out")]) -> None: ...
     assert value_type.constraints == []
     assert nested.metadata["rank_selector"] == "rank, kind"
     assert nested.storage.array.metadata["rank_selector"] == "rank, kind"
+    assert name.metadata["fortran_character_length"] == "16"
+    assert name.metadata["fortran_allocatable"] is True
     assert output.intent == "out"
 
 

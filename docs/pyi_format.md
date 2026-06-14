@@ -7,7 +7,7 @@ future wrapper generator needs.
 
 Status terms used below:
 
-- **Generated**: emitted today by `--pyi` or `semantics.pyi_printer`.
+- **Generated**: emitted today by `--pyi` or `codegen.printers.pyi_printer`.
 - **Loaded**: accepted today by `semantics.pyi_parser` and converted back to
   semantic IR.
 - **Readiness**: understood by the semantic readiness checker.
@@ -137,6 +137,8 @@ Generated canonical metadata:
 | `Pointer` | Fortran pointer array storage |
 | `Intent("out")` | exact native argument is an output argument |
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
+| `FortranCharacterLength("n")` | Fortran character storage length for `String` contracts |
+| `FortranAllocatable` | Fortran scalar character storage is allocatable |
 
 Loaded compatibility metadata:
 

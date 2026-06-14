@@ -9,7 +9,7 @@ same_name_l: Bool
 
 same_name_c: Complex64
 
-same_name_s: String
+same_name_s: Annotated[String, FortranCharacterLength("8")]
 
 def do_work_i(
     same_name: Ptr(Int32)
@@ -37,8 +37,8 @@ def convert_to_complex(
 
 def convert_to_char(
     same_name: Ptr(Const(Float32))
-) -> String: ...
+) -> Annotated[String, FortranCharacterLength("16")]: ...
 
 def convert_to_logical(
-    same_name: Ptr(Const(String))
+    same_name: Annotated[Ptr(Const(String)), FortranCharacterLength("*")]
 ) -> Bool: ...

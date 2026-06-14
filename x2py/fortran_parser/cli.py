@@ -81,7 +81,7 @@ def _parse_paths(paths: list[str]) -> dict[str, dict]:
 def _semantic_report(paths: list[str]) -> dict[str, dict]:
     """Generate semantic IR and pyi text per parsed file."""
     from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
-    from x2py.semantics.pyi_printer import emit_module
+    from x2py.codegen.printers.pyi_printer import emit_module
 
     parsed = _parse_paths(paths)
     semantic_out: dict[str, dict] = {}

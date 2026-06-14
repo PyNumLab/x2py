@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
-from x2py.semantics.pyi_printer import emit_module
+from x2py.codegen.printers.pyi_printer import emit_module
 
 from _fixture_conversion_utils import FORTRAN_FIXTURES, TESTS_DIR, parse_fixture
 

@@ -11,8 +11,12 @@ module fclasses_f90
 
   type :: vector_store
     real(8), allocatable :: values(:)
+    real(8), allocatable :: matrix(:, :)
   contains
     procedure :: allocate_values
+    procedure :: set_values
+    procedure :: allocate_matrix
+    procedure :: set_matrix
     procedure, nopass :: make => make_vector_store
   end type vector_store
 
@@ -41,6 +45,39 @@ contains
     end if
     allocate(self%values(n))
   end subroutine allocate_values
+
+  subroutine set_values(self, source)
+    class(vector_store), intent(inout) :: self
+    real(8), intent(in) :: source(:)
+
+    if (allocated(self%values)) then
+      deallocate(self%values)
+    end if
+    allocate(self%values(size(source, 1)))
+    self%values = source
+  end subroutine set_values
+
+  subroutine allocate_matrix(self, rows, cols)
+    class(vector_store), intent(inout) :: self
+    integer(8), intent(in) :: rows
+    integer(8), intent(in) :: cols
+
+    if (allocated(self%matrix)) then
+      deallocate(self%matrix)
+    end if
+    allocate(self%matrix(rows, cols))
+  end subroutine allocate_matrix
+
+  subroutine set_matrix(self, source)
+    class(vector_store), intent(inout) :: self
+    real(8), intent(in) :: source(:, :)
+
+    if (allocated(self%matrix)) then
+      deallocate(self%matrix)
+    end if
+    allocate(self%matrix(size(source, 1), size(source, 2)))
+    self%matrix = source
+  end subroutine set_matrix
 
   function make_vector_store(n, fill_value) result(self)
     integer(8), intent(in) :: n

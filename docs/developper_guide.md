@@ -188,7 +188,7 @@ implementation files.
 | Generated target datatype mapping examples | `x2py/type_mapping_report.py` | `tests/tools/test_type_mapping_report.py`, `tests/tools/test_documentation_examples.py` |
 | Fortran to semantic IR | `x2py/semantics/fortran2ir.py`, `x2py/semantics/models.py` | `tests/semantics/test_fortran2ir.py` |
 | C to semantic IR | `x2py/semantics/c2ir.py`, `x2py/semantics/models.py` | `tests/semantics/test_c2ir.py`, `tests/semantics/test_c_semantic_readiness.py` |
-| `.pyi` printing | `x2py/semantics/pyi_printer.py` | `tests/semantics/test_pyi_printer.py`, `tests/semantics/test_pyi_printer_modern_example.py` |
+| `.pyi` printing | `x2py/codegen/printers/pyi_printer.py` | `tests/semantics/test_pyi_printer.py`, `tests/semantics/test_pyi_printer_modern_example.py` |
 | `.pyi` loading/editing | `x2py/semantics/pyi_parser.py` | `tests/pyi/test_pyi_to_ir.py`, `tests/pyi/test_pyi_fixture_suite.py` |
 | Readiness reports | `x2py/semantics/readiness.py` | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_wrap_readiness_fixture_suite.py` |
 | Public API exports | `x2py/__init__.py` | `tests/parser/test_parser_public_entrypoints.py`, `tests/parser/c/test_c_public_api_skeleton.py` |
@@ -197,7 +197,7 @@ implementation files.
 ### `.pyi` Contract Internals
 
 User-visible `.pyi` syntax is parsed by `x2py/semantics/pyi_parser.py` and printed
-by `x2py/semantics/pyi_printer.py`. Both operate on `x2py/semantics/models.py`.
+by `x2py/codegen/printers/pyi_printer.py`. Both operate on `x2py/semantics/models.py`.
 
 Important implementation rules:
 
@@ -683,7 +683,7 @@ from `x2py/semantics/models.py`.
   or local constants if a frontend later promotes them into semantic IR; local
   bindings are not emitted into `.pyi` or treated as wrapper interface items by
   default.
-- `x2py/semantics/pyi_printer.py` emits editable user contracts.
+- `x2py/codegen/printers/pyi_printer.py` emits editable user contracts.
 - `x2py/semantics/pyi_parser.py` loads edited contracts back into semantic IR.
 - `x2py/semantics/readiness.py` decides whether that IR is complete enough for
   wrapping.
@@ -885,7 +885,7 @@ Example target: add a new `Annotated[...]` metadata item or projection helper.
 1. Add loader tests in `tests/pyi/test_pyi_to_ir.py`.
 2. Update `x2py/semantics/pyi_parser.py`.
 3. Add printer tests in `tests/semantics/test_pyi_printer.py`.
-4. Update `x2py/semantics/pyi_printer.py`.
+4. Update `x2py/codegen/printers/pyi_printer.py`.
 5. Update semantic models in `x2py/semantics/models.py` only if the IR needs a new
    field or constraint.
 6. Update readiness behavior if the new syntax resolves a blocker.

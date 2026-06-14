@@ -7,7 +7,7 @@ import json
 import keyword
 import re
 
-from .models import (
+from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     ProjectionMapping,
     SemanticArgument,
@@ -74,7 +74,10 @@ class PyiPrinter:
             text = self._emit_storage_type(semantic_type)
         else:
             text = semantic_type.name
-        annotations = [self.emit_constraint(constraint) for constraint in semantic_type.constraints]
+        annotations = [
+            *self._semantic_annotation_metadata(semantic_type),
+            *[self.emit_constraint(constraint) for constraint in semantic_type.constraints],
+        ]
         if annotations:
             return self._annotated_type_text(text, annotations)
         return text
@@ -140,6 +143,16 @@ class PyiPrinter:
             metadata.append("Allocatable")
         if array.pointer:
             metadata.append("Pointer")
+        return metadata
+
+    @staticmethod
+    def _semantic_annotation_metadata(semantic_type: SemanticType) -> list[str]:
+        metadata: list[str] = []
+        character_length = semantic_type.metadata.get("fortran_character_length")
+        if character_length is not None:
+            metadata.append(f"FortranCharacterLength({json.dumps(str(character_length))})")
+        if semantic_type.metadata.get("fortran_allocatable"):
+            metadata.append("FortranAllocatable")
         return metadata
 
     def _emit_callable_type(self, semantic_type: SemanticType) -> str:

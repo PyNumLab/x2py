@@ -8,7 +8,7 @@ from x2py.semantics.fortran2ir import (
 )
 
 from x2py.semantics.pyi_parser import parse_pyi_text
-from x2py.semantics.pyi_printer import (
+from x2py.codegen.printers.pyi_printer import (
     emit_module,
     emit_module_stubs,
     opaque_dependency_modules,
@@ -1108,6 +1108,15 @@ def test_printer_emits_extended_storage_and_callable_forms():
         },
     )
     any_callback = SemanticType("Callable", metadata={"return": SemanticType("Float64")})
+    character = SemanticType(
+        "String",
+        metadata={"fortran_character_length": "16"},
+        storage=SemanticStorageContract(kind="reference", mutable=True, pointer_depth=1),
+    )
+    allocatable_character = SemanticType(
+        "String",
+        metadata={"fortran_character_length": ":", "fortran_allocatable": True},
+    )
 
     canonical_constant = SemanticArgument(
         "answer",
@@ -1124,6 +1133,12 @@ def test_printer_emits_extended_storage_and_callable_forms():
     assert printer.emit_semantic_type(inferred_array) == "Float64[:, :]"
     assert printer.emit_semantic_type(annotated_array) == (
         "Annotated[Float64[:, :], ORDER_ANY, Allocatable, Pointer, Finite, Range(1, 3)]"
+    )
+    assert printer.emit_semantic_type(character) == (
+        'Annotated[Ptr(String), FortranCharacterLength("16")]'
+    )
+    assert printer.emit_semantic_type(allocatable_character) == (
+        'Annotated[String, FortranCharacterLength(":"), FortranAllocatable]'
     )
     assert printer.emit_semantic_type(full_callback) == "Callable[[Int32, Float64], Float64]"
     assert printer.emit_semantic_type(any_callback) == "Callable[..., Float64]"

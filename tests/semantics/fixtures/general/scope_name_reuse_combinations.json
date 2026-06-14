@@ -750,7 +750,9 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {},
+            "metadata": {
+              "fortran_character_length": "16"
+            },
             "storage": null,
             "origin": {
               "source_language": "fortran",
@@ -817,7 +819,9 @@
                   "mutable": false,
                   "aliasing": true
                 },
-                "metadata": {},
+                "metadata": {
+                  "fortran_character_length": "*"
+                },
                 "storage": {
                   "kind": "reference",
                   "read_only": true,
@@ -1280,7 +1284,9 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {},
+            "metadata": {
+              "fortran_character_length": "8"
+            },
             "storage": null,
             "origin": {
               "source_language": "fortran",

@@ -17,7 +17,14 @@ python3 -m pip install -e .
 python3 -m x2py --help
 ```
 
-The supported workflow has four user-facing stages:
+The default user-facing action for a single Fortran source is to build a Python
+extension:
+
+```bash
+python3 -m x2py solver.f90
+```
+
+The inspection workflow also has four explicit stages:
 
 ```text
 native source
@@ -36,7 +43,9 @@ native source
 | Find missing information or unsupported contracts | `--wrap-readiness` |
 
 `Wrappable: yes` means the semantic contract has no known readiness blockers.
-x2py does not currently generate or compile a runtime wrapper.
+The current runtime wrapper build path is implemented for single Fortran
+sources; C runtime wrapping is still tracked through semantic readiness until
+the C wrapper backend is completed.
 The [generated target datatype mapping example](docs/semantics.md#generated-linux-x86_64-mapping-example)
 shows how the GitHub Actions C and Fortran scalar types map to NumPy dtypes.
 

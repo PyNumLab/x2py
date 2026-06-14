@@ -1017,7 +1017,7 @@ def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(monkey
         ),
         (
             {"out": ""},
-            "--out requires a stage flag: choose one of --parse, --semantics, --pyi, --wrap-readiness, or --wrap",
+            "--wrap writes build artifacts; use --out-dir instead of --out",
         ),
         ({"show_vars": True}, "--show-vars/--print-limit require --parse"),
         ({"print_limit": 1}, "--show-vars/--print-limit require --parse"),
@@ -1044,7 +1044,10 @@ def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(monkey
             {"semantics": True, "fortran_type_report": "types.json", "refresh_fortran_type_probe": True},
             "--fortran-type-report cannot be combined with automatic Fortran type probe options",
         ),
-        ({}, "Select at least one stage flag: --parse, --semantics, --pyi, --wrap-readiness, or --wrap"),
+        (
+            {"paths": ["input.pyi"]},
+            "Select at least one stage flag: --parse, --semantics, --pyi, --wrap-readiness, or --wrap",
+        ),
     ],
 )
 def test_x2py_main_preserves_validation_diagnostics(monkeypatch, overrides, expected):
@@ -1806,7 +1809,7 @@ def test_cli_out_requires_stage_flag():
     cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--out"]
     res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 2
-    assert "--out requires a stage flag" in res.stderr
+    assert "--wrap writes build artifacts; use --out-dir instead of --out" in res.stderr
 
 
 def test_cli_help_includes_examples():
@@ -1819,7 +1822,7 @@ def test_cli_help_includes_examples():
     assert "python -m x2py path/to/file.f90 --parse --print-limit 50" in res.stdout
     assert "python -m x2py path/to/api.h --language c --parse --print-limit 50" in res.stdout
     assert "python -m x2py path/to/file.f90 --pyi --out module.pyi" in res.stdout
-    assert "python -m x2py path/to/file.f --wrap" in res.stdout
+    assert "python -m x2py path/to/file.f" in res.stdout
 
 
 def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
@@ -1896,7 +1899,7 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
                 "  Print semantic readiness JSON:\n"
                 "    python -m x2py path/to/module.pyi --wrap-readiness --json\n"
                 "  Build a Python extension from a Fortran source:\n"
-                "    python -m x2py path/to/file.f --wrap\n"
+                "    python -m x2py path/to/file.f\n"
                 "\nOptional:\n"
                 "  Install 'rich' for colored terminal syntax highlighting:\n"
                 "      pip install rich"
@@ -2107,7 +2110,7 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
             ("--wrap",),
             {
                 "action": "store_true",
-                "help": "Build a Python extension module from one Fortran source file",
+                "help": "Explicitly build a Python extension module from one Fortran source file",
             },
         ),
         (
@@ -2511,8 +2514,10 @@ def test_x2py_print_pyi_output_uses_rich_and_falls_back(monkeypatch, capsys):
         ([], "Select at least one stage flag"),
     ],
 )
-def test_x2py_cli_rejects_invalid_stage_combinations(extra_args, message):
-    cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), *extra_args]
+def test_x2py_cli_rejects_pyi_without_stage(extra_args, message, tmp_path: Path):
+    pyi = tmp_path / "module.pyi"
+    pyi.write_text("def f() -> None: ...\n", encoding="utf-8")
+    cmd = [sys.executable, "-m", "x2py", str(pyi), *extra_args]
     res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 2
     assert message in res.stderr
@@ -2871,7 +2876,7 @@ def test_x2py_semantic_report_preserves_c_module_and_dependency_contracts(monkey
     monkeypatch.setattr(x2py_cli, "_parse_c_project", parse_project)
     monkeypatch.setattr(x2py_cli, "c_project_to_semantic_modules", convert)
     monkeypatch.setattr(x2py_cli, "expand_c_paths", expand)
-    monkeypatch.setattr("x2py.semantics.pyi_printer.emit_module_stubs", emit)
+    monkeypatch.setattr("x2py.codegen.printers.pyi_printer.emit_module_stubs", emit)
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
 
     assert x2py_cli._semantic_report(
@@ -2980,7 +2985,7 @@ def test_x2py_semantic_report_preserves_fortran_conversion_and_stub_contracts(mo
     monkeypatch.setattr(x2py_cli, "_fortran_wrapped_derived_types", wrapped)
     monkeypatch.setattr(x2py_cli, "_fortran_compile_time_values", compile_values)
     monkeypatch.setattr("x2py.semantics.fortran2ir.fortran_module_to_semantic_module", convert)
-    monkeypatch.setattr("x2py.semantics.pyi_printer.emit_module_stubs", emit)
+    monkeypatch.setattr("x2py.codegen.printers.pyi_printer.emit_module_stubs", emit)
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
 
     assert x2py_cli._semantic_report(["api"], config) == {

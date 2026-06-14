@@ -14,7 +14,7 @@ from tests._shared.fixture_outputs import (
     pyi_text_for_fixture,
 )
 from x2py.semantics.pyi_parser import parse_pyi_text
-from x2py.semantics.pyi_printer import emit_module
+from x2py.codegen.printers.pyi_printer import emit_module
 
 
 FORTRAN_FIXTURES = iter_general_fortran_fixtures()

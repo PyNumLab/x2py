@@ -53,23 +53,41 @@ def test_modern_fortran_derived_type_and_type_bound_methods_become_codegen_class
     assert isinstance(vector_store, ClassDef)
     assert isinstance(vector_store.class_type, CustomDataType)
     assert vector_store.class_type.name == "vector_store"
-    assert [str(attribute.name) for attribute in vector_store.attributes] == ["values"]
-    values = vector_store.attributes[0]
+    assert [str(attribute.name) for attribute in vector_store.attributes] == [
+        "values",
+        "matrix",
+    ]
+    values, matrix = vector_store.attributes
     assert isinstance(values.class_type, NumpyNDArrayType)
     assert values.class_type.element_type is NumpyFloat64Type()
     assert values.memory_handling == "heap"
+    assert isinstance(matrix.class_type, NumpyNDArrayType)
+    assert matrix.class_type.element_type is NumpyFloat64Type()
+    assert matrix.class_type.rank == 2
+    assert matrix.class_type.order == "F"
+    assert matrix.memory_handling == "heap"
 
-    assert [
-        vector_store.scope.get_python_name(method.name)
-        for method in vector_store.methods
-    ] == [
+    assert [vector_store.scope.get_python_name(method.name) for method in vector_store.methods] == [
         "allocate_values",
+        "set_values",
+        "allocate_matrix",
+        "set_matrix",
         "make",
     ]
     allocate_values = vector_store.methods_as_dict["allocate_values"]
     assert allocate_values.arguments[0].bound_argument
     assert allocate_values.arguments[0].var.class_type is vector_store.class_type
     assert allocate_values.arguments[1].var.class_type is NumpyInt64Type()
+
+    set_values = vector_store.methods_as_dict["set_values"]
+    assert set_values.arguments[0].bound_argument
+    assert isinstance(set_values.arguments[1].var.class_type, NumpyNDArrayType)
+
+    set_matrix = vector_store.methods_as_dict["set_matrix"]
+    assert set_matrix.arguments[0].bound_argument
+    assert isinstance(set_matrix.arguments[1].var.class_type, NumpyNDArrayType)
+    assert set_matrix.arguments[1].var.class_type.rank == 2
+    assert set_matrix.arguments[1].var.class_type.order == "F"
 
     make = vector_store.methods_as_dict["make"]
     assert str(make.name) == "make_vector_store"

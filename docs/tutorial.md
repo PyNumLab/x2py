@@ -1,8 +1,8 @@
 # Tutorial
 
 This tutorial is the main user guide for the supported x2py pipeline from
-native source to semantic readiness. The commands use version-controlled
-fixtures so they can be run from the repository root.
+native source to wrapper builds and semantic readiness. The commands use
+version-controlled fixtures so they can be run from the repository root.
 
 For additional copy-paste commands and Python snippets, continue to the
 [examples cookbook](examples.md). For detailed user-facing contracts, use the
@@ -13,7 +13,13 @@ maintenance material starts in the [developer guide](developper_guide.md).
 
 ## Current Scope
 
-x2py currently supports four user-facing stages:
+x2py builds a Python extension by default when given one Fortran source file:
+
+```bash
+python3 -m x2py solver.f90
+```
+
+x2py also supports four explicit inspection stages:
 
 1. Parse wrapper-relevant Fortran or C declarations.
 2. Convert parser facts to language-neutral semantic IR.
@@ -21,9 +27,10 @@ x2py currently supports four user-facing stages:
 4. Report whether that semantic interface has enough information for future
    wrapper generation.
 
-x2py does **not** currently generate, compile, or load a runtime wrapper.
-`Wrappable: yes` means the semantic contract has no known readiness blockers;
-it does not mean a compiled Python extension already exists.
+The current runtime wrapper build path is implemented for one Fortran source
+file. `Wrappable: yes` means the semantic contract has no known readiness
+blockers; for C and edited `.pyi` contracts it does not mean a compiled Python
+extension already exists.
 
 The supported pipeline is:
 

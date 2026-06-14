@@ -465,6 +465,11 @@ class _PyiAstParser:
                     raise ValueError(f"Intent metadata expects one argument: {ast.unparse(node)!r}")
                 semantic_type.metadata["_pyi_intent"] = str(ast.literal_eval(node.args[0]))
                 return
+            if helper == "FortranCharacterLength":
+                if len(node.args) != 1:
+                    raise ValueError(f"FortranCharacterLength metadata expects one argument: {ast.unparse(node)!r}")
+                semantic_type.metadata["fortran_character_length"] = str(ast.literal_eval(node.args[0]))
+                return
             if helper == "ArrayCategory":
                 self._require_array_storage(semantic_type).category = str(ast.literal_eval(node.args[0]))
                 return
@@ -513,6 +518,9 @@ class _PyiAstParser:
             return True
         if name == "Contiguous":
             self._require_array_storage(semantic_type).contiguous = True
+            return True
+        if name == "FortranAllocatable":
+            semantic_type.metadata["fortran_allocatable"] = True
             return True
         return False
 
