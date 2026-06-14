@@ -20,35 +20,39 @@ EXPECTED_GENERATED_SOURCES = {
 @pytest.fixture(scope="module")
 def module(tmp_path_factory):
     workdir = tmp_path_factory.mktemp("multid_arrays_wrapper")
+    build_dir = workdir / "build"
     source_path = workdir / SOURCE.name
     shutil.copyfile(SOURCE, source_path)
 
+    cmd = [
+        sys.executable,
+        "-m",
+        "x2py",
+        str(source_path),
+        "--out-dir",
+        str(build_dir),
+        "--json",
+    ]
     result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "x2py",
-            str(source_path),
-            "--out-dir",
-            str(workdir),
-            "--json",
-        ],
-        check=True,
-        cwd=workdir,
+        cmd,
         text=True,
         capture_output=True,
     )
+    if result.returncode != 0:
+        pytest.fail(
+            f"wrapper build failed\ncommand: {' '.join(cmd)}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
 
     payload = json.loads(result.stdout)
     generated_sources = {Path(path).name for path in payload["generated_sources"]}
     assert generated_sources == EXPECTED_GENERATED_SOURCES
 
     sys.modules.pop(SOURCE.stem, None)
-    sys.path.insert(0, str(workdir))
+    sys.path.insert(0, str(build_dir))
     try:
         return importlib.import_module(SOURCE.stem)
     finally:
-        sys.path.remove(str(workdir))
+        sys.path.remove(str(build_dir))
 
 
 def _matrix(rows=4, cols=3):
@@ -100,18 +104,14 @@ def _strided_rank3(shape=(4, 3, 2)):
 
 
 def _strided_rank3_output(shape):
-    base = np.zeros(
-        (shape[0] * 2, shape[1], shape[2]), dtype=np.float64, order="F"
-    )
+    base = np.zeros((shape[0] * 2, shape[1], shape[2]), dtype=np.float64, order="F")
     return base[::2, :, :]
 
 
 def _checksum3(array):
     total = 0.0
     for i, j, k in np.ndindex(array.shape):
-        total += array[i, j, k] * (
-            10000.0 * (i + 1) + 100.0 * (j + 1) + (k + 1)
-        )
+        total += array[i, j, k] * (10000.0 * (i + 1) + 100.0 * (j + 1) + (k + 1))
     return total
 
 

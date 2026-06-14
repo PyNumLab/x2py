@@ -321,7 +321,7 @@ python_info = {
     "python": {
         "flags": config_vars.get("CFLAGS", "").split()
         + config_vars.get("CC", "").split()[1:],
-        "include": [*config_vars.get("INCLUDEPY", "").split(), get_numpy_include()],
+        "include": [get_numpy_include(), *config_vars.get("INCLUDEPY", "").split()],
         "shared_suffix": config_vars["EXT_SUFFIX"],
     },
 }

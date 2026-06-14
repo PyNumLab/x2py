@@ -84,8 +84,14 @@ def get_numpy_max_acceptable_version_file():
     numpy_api_macro = (
         f"# define NPY_NO_DEPRECATED_API NPY_{major}_{minor}_API_VERSION\n"
     )
-
-    return "#ifndef NPY_NO_DEPRECATED_API\n" + numpy_api_macro + "#endif"
+    version_file = "#ifndef NPY_NO_DEPRECATED_API\n" + numpy_api_macro + "#endif\n"
+    if numpy_current_version[0] >= 2:
+        version_file += (
+            "#ifndef NPY_TARGET_VERSION\n"
+            "# define NPY_TARGET_VERSION NPY_2_0_API_VERSION\n"
+            "#endif\n"
+        )
+    return version_file
 
 
 PyArray_Check = FunctionDef(

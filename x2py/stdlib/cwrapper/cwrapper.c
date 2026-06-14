@@ -283,7 +283,7 @@ static char*	_check_pyarray_dtype(PyArrayObject *a, int dtype)
 	current_dtype = PyArray_TYPE(a);
 	if (current_dtype != dtype)
 	{
-        PyObject* current_type_name = PyObject_Str((PyObject*)PyArray_DESCR(a)->typeobj);
+        PyObject* current_type_name = PyObject_Str(PyArray_TypeObjectFromType(current_dtype));
         PyObject* expected_type_name = PyObject_Str(PyArray_TypeObjectFromType(dtype));
         Py_ssize_t c_size;
         const char* current_name = PyUnicode_AsUTF8AndSize(current_type_name, &c_size);
@@ -292,6 +292,8 @@ static char*	_check_pyarray_dtype(PyArrayObject *a, int dtype)
         sprintf(error, "argument dtype must be %s, not %s",
 			expected_name,
 			current_name);
+        Py_DECREF(current_type_name);
+        Py_DECREF(expected_type_name);
 		return error;
 	}
 
