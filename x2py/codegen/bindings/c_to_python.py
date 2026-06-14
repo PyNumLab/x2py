@@ -2892,7 +2892,6 @@ class CPythonBindingGenerator(BindingGenerator):
             is_optional=False,
             memory_handling="alias",
             new_class=Variable,
-            allows_negative_indexes=False,
             class_type=class_type,
         )
         self.scope.insert_variable(arg_var)
@@ -2903,7 +2902,6 @@ class CPythonBindingGenerator(BindingGenerator):
                 is_optional=False,
                 memory_handling="alias",
                 new_class=Variable,
-                allows_negative_indexes=False,
                 class_type=class_type,
             )
             self.scope.insert_variable(sliced_arg_var)
@@ -2914,7 +2912,6 @@ class CPythonBindingGenerator(BindingGenerator):
                 is_optional=False,
                 memory_handling="alias",
                 new_class=Variable,
-                allows_negative_indexes=False,
                 class_type=class_type,
             )
             self.scope.insert_variable(sliced_arg_var, orig_var.name)
@@ -3042,7 +3039,6 @@ class CPythonBindingGenerator(BindingGenerator):
                     arg_var,
                     name=arg_var.name + "_memory",
                     is_optional=False,
-                    clone_scope=self.scope,
                 )
                 body.insert(0, AliasAssign(arg_var, memory_var))
 

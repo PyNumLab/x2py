@@ -266,7 +266,7 @@ class CompileObj:
         if self.has_target_file:
             self._lock_target.acquire()
 
-    def __exit__(self, exc_type, value, traceback):
+    def __exit__(self, _exc_type, value, _traceback):
         self.release_lock()
         self.compilation_in_progress.release()
 

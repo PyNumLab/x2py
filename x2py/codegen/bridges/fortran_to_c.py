@@ -468,7 +468,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             is_argument=False,
             is_optional=False,
             memory_handling="alias",
-            allows_negative_indexes=False,
             new_class=Variable,
         )
         scope.insert_variable(arg_var)
@@ -541,7 +540,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             is_argument=False,
             is_optional=False,
             memory_handling="alias",
-            allows_negative_indexes=False,
             new_class=Variable,
         )
         scope.insert_variable(arg_var)
@@ -592,7 +590,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 is_argument=False,
                 is_optional=False,
                 memory_handling="stack",
-                allows_negative_indexes=False,
                 new_class=Variable,
             )
             scope.insert_variable(fixed_var)
@@ -608,7 +605,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 is_optional=False,
                 memory_handling="stack",
                 shape=(shape_var,),
-                allows_negative_indexes=False,
                 new_class=Variable,
             )
             scope.insert_variable(arg_var)
@@ -622,7 +618,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                     is_argument=False,
                     is_optional=False,
                     memory_handling="stack",
-                    allows_negative_indexes=False,
                     new_class=Variable,
                 )
                 scope.insert_variable(fixed_var)

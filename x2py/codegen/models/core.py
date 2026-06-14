@@ -379,10 +379,6 @@ class Variable:
         Indicates if this symbol represents a temporary variable created by X2py,
         and was not present in the original Python code.
 
-    allows_negative_indexes : bool, default: False
-        Indicates if non-literal negative indexes should be correctly handled when indexing this
-        variable. The default is False for performance reasons.
-
     Examples
     --------
     >>> from x2py.ast.datatypes import NumpyInt64Type, NumpyFloat64Type
@@ -424,7 +420,6 @@ class Variable:
         cls_base=None,
         is_argument=False,
         is_temp=False,
-        allows_negative_indexes=False,
     ):
         init_model_object(self)
 
@@ -4626,9 +4621,6 @@ class PythonTuple:
     ----------
     *args : tuple of model object
         The arguments passed to the tuple function.
-    prefer_inhomogeneous : bool, default=False
-        A boolean that can be used to ensure that the tuple is stocked as an
-        inhomogeneous object even if it could be homogeneous.
     class_type : Type, optional
         The final type of the tuple. This is necessary to create a printable
         empty tuple. Otherwise it is not used.
@@ -4638,7 +4630,7 @@ class PythonTuple:
     _iterable = True
     _attribute_nodes = ("_args",)
 
-    def __init__(self, *args, prefer_inhomogeneous=False, class_type=None):
+    def __init__(self, *args, class_type=None):
         self._args = args
         init_model_object(self)
 

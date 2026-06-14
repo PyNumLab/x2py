@@ -27,7 +27,7 @@ class FileLockSet:
         for lock in self._locks:
             lock.acquire()
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, _exc_type, _exc_value, _traceback):
         # Release the locks
         for lock in reversed(self._locks):
             lock.release()
