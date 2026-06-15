@@ -9,6 +9,8 @@ jobs:
   static-analysis:
     name: Static Analysis
     uses: ./.github/workflows/quality.yml
+    with:
+      static_analysis_only: true
     permissions:
       contents: read
 
