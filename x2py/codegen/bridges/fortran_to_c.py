@@ -4,6 +4,7 @@ which creates an interface exposing Fortran code to C.
 THIS CREATES BIND(C) FORTRAN FILE
 """
 
+import re
 import warnings
 from functools import reduce
 
@@ -144,6 +145,16 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             return [If(true_section, false_section)]
         args = [a["f_arg"] for a in generated_args]
         body = [line for a in generated_args for line in a["body"]]
+
+        if isinstance(func, FunctionOverloadSet):
+            selected = func.point(args)
+            native_name = func.native_name_for(selected)
+        else:
+            selected = None
+            native_name = ""
+        if re.sub(r"\s+", "", native_name).casefold() == "assignment(=)":
+            lhs, rhs = func.native_arguments(selected, args)
+            return [*body, Assign(lhs.value, rhs.value)]
 
         if len(results) == 1:
             res = results[0]
@@ -337,7 +348,13 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             The C-compatible interface.
         """
         functions = [self._visit(f) for f in expr.functions if not isinstance(f, EmptyNode)]
-        return FunctionOverloadSet(expr.name, functions, expr.is_argument)
+        return FunctionOverloadSet(
+            expr.name,
+            functions,
+            expr.is_argument,
+            native_name=expr.native_name,
+            native_names=expr.native_names,
+        )
 
     def _extract_FunctionDefArgument(self, expr, func):
         """

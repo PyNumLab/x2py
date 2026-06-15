@@ -949,7 +949,7 @@ class FCodePrinter(CodePrinter):
             )
             raise NotImplementedError(message)
 
-        name = self._print(expr.name)
+        name = self._print(expr.native_name)
         if all(isinstance(f, FunctionAddress) for f in dispatcher_funcs):
             funcs = dispatcher_funcs
         else:
@@ -1147,7 +1147,7 @@ class FCodePrinter(CodePrinter):
         for i in expr.overload_sets:
             names = ",".join(f.cls_name for f in i.functions if f.is_semantic)
             if names:
-                methods += f"generic, public :: {i.name} => {names}\n"
+                methods += f"generic, public :: {i.native_name} => {names}\n"
                 methods += f"procedure :: {names}\n"
 
         self.exit_scope()
@@ -1473,6 +1473,21 @@ class FCodePrinter(CodePrinter):
     def _print_FunctionCall(self, expr):
         func = expr.funcdef
 
+        native_name = expr.overload_set.native_name_for(func) if expr.overload_set else ""
+        if expr.overload_set and self._is_defined_operator(native_name):
+            args = expr.overload_set.native_arguments(func, expr.args)
+            values = [self._print(argument.value) for argument in args]
+            token = self._defined_operator_token(native_name)
+            if len(values) == 1:
+                code = f".not. {values[0]}" if token == ".not." else f"{token}{values[0]}"
+            else:
+                code = f"{values[0]} {token} {values[1]}"
+            parent_assign = get_direct_assignment(expr)
+            if parent_assign:
+                assignment = "=>" if isinstance(parent_assign, AliasAssign) else "="
+                return f"{self._print(parent_assign.lhs)} {assignment} {code}\n"
+            return code
+
         f_name = self._print(expr.func_name if not expr.overload_set else expr.overload_set_name)
 
         if func.is_imported:
@@ -1546,6 +1561,15 @@ class FCodePrinter(CodePrinter):
                 return f"{result_code} => {code}\n"
             return f"{result_code} = {code}\n"
         return code
+
+    @staticmethod
+    def _is_defined_operator(name):
+        return re.fullmatch(r"operator\(.+\)", re.sub(r"\s+", "", str(name)), re.IGNORECASE) is not None
+
+    @staticmethod
+    def _defined_operator_token(name):
+        compact = re.sub(r"\s+", "", str(name))
+        return compact[compact.index("(") + 1 : -1]
 
     # =======================================================================================
 

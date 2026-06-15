@@ -322,6 +322,14 @@ class ProcedureOverloadSet:
     procedures: list[SemanticFunction] = field(default_factory=list)
 
 
+FORTRAN_GENERIC_NAME_METADATA = "fortran_generic_name"
+OVERLOAD_KIND_METADATA = "overload_kind"
+OVERLOAD_TARGET_METADATA = "overload_target"
+PYTHON_BOUND_POSITION_METADATA = "python_bound_position"
+PYTHON_METHOD_NAME_METADATA = "python_method_name"
+PYTHON_STATIC_METADATA = "python_static"
+
+
 def _call_arguments(func: SemanticFunction) -> list[SemanticArgument]:
     return list(func.arguments)
 

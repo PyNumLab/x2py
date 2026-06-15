@@ -1,5 +1,6 @@
 import json
 from dataclasses import asdict
+from pathlib import Path
 
 import pytest
 
@@ -48,6 +49,8 @@ from x2py.semantics.models import (
     SemanticType,
     SemanticVariable,
 )
+
+OPERATOR_F90_SOURCE = Path(__file__).parents[1] / "wrapper" / "foperators_f90.f90"
 
 
 # ============================================================
@@ -472,6 +475,108 @@ end module operator_mod
     module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
 
     assert module.overload_sets == []
+
+
+def test_converter_preserves_defined_operators_assignment_and_type_bound_operators():
+    module = FortranToIRConverter().visit_module(
+        parse_fortran_source(
+            OPERATOR_F90_SOURCE.read_text(),
+            filename=str(OPERATOR_F90_SOURCE),
+        ).modules[0]
+    )
+
+    assert [(item.name, len(item.procedures)) for item in module.overload_sets] == [("convert", 2)]
+    classes = {cls.name: cls for cls in module.classes}
+    vector_sets = {item.name: item for item in classes["vector"].overload_sets}
+    assert set(vector_sets) == {
+        "__add__",
+        "__pos__",
+        "__sub__",
+        "__neg__",
+        "__mul__",
+        "__truediv__",
+        "__pow__",
+        "__eq__",
+        "__ne__",
+        "__lt__",
+        "__le__",
+        "__gt__",
+        "__ge__",
+        "__and__",
+        "__or__",
+        "__invert__",
+        "operator_dot",
+        "r_operator_shift",
+        "assign",
+    }
+    assert [procedure.name for procedure in vector_sets["__add__"].procedures] == [
+        "add_vectors",
+        "add_vector_integer",
+        "add_vector_real",
+        "add_real_vector",
+        "add_vector_array",
+        "add_vector_offset",
+    ]
+    reflected = next(
+        procedure for procedure in vector_sets["__add__"].procedures if procedure.name == "add_real_vector"
+    )
+    assert reflected.metadata["python_method_name"] == "__radd__"
+    assert reflected.metadata["python_bound_position"] == 1
+    assert reflected.metadata["fortran_generic_name"] == "operator(+)"
+    assert vector_sets["assign"].procedures[0].metadata["fortran_generic_name"] == "assignment(=)"
+    assert vector_sets["operator_dot"].procedures[0].metadata["python_method_name"] == "operator_dot"
+    assert vector_sets["r_operator_shift"].procedures[0].metadata["python_method_name"] == "r_operator_shift"
+
+    assert [
+        (item.name, [procedure.name for procedure in item.procedures]) for item in classes["counter"].overload_sets
+    ] == [("__add__", ["counter_add_integer"])]
+
+
+def test_converter_reports_invalid_defined_assignment_as_readiness_blocker():
+    source = """
+module invalid_assignment
+  interface assignment(=)
+    module procedure assign_value
+  end interface assignment(=)
+  type :: box
+    integer :: value
+  end type box
+contains
+  subroutine assign_value(left, right)
+    type(box), intent(in) :: left
+    integer, intent(in) :: right
+  end subroutine assign_value
+end module invalid_assignment
+"""
+    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+    report = assess_semantic_wrap_readiness(module)
+    blocker = next(
+        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_defined_generic_invalid"
+    )
+
+    assert blocker["items"][0]["generic"] == "assignment(=)"
+    assert "intent(out) or intent(inout)" in blocker["items"][0]["detail"]
+
+
+def test_converter_reports_missing_defined_operator_target_as_readiness_blocker():
+    source = """
+module missing_operator
+  type :: box
+    integer :: value
+  end type box
+  interface operator(+)
+    module procedure missing
+  end interface operator(+)
+end module missing_operator
+"""
+    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+    report = assess_semantic_wrap_readiness(module)
+    blocker = next(
+        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_generic_target_unresolved"
+    )
+
+    assert blocker["items"][0]["generic"] == "operator(+)"
+    assert blocker["items"][0]["missing_targets"] == ["missing"]
 
 
 def test_semantic_compile_time_requirements_can_be_supplied_for_kind_selection():

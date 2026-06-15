@@ -942,8 +942,8 @@ class PyClassDef(ClassDef):
             The Method that will be added.
         """
 
-        if not isinstance(method, PyFunctionDef):
-            raise TypeError("Method must be FunctionDef")
+        if not isinstance(method, PyFunctionDef | PyFunctionOverloadSet):
+            raise TypeError("Method must be PyFunctionDef or PyFunctionOverloadSet")
         attach_model_child(self, method)
         self._magic_methods += (method,)
 

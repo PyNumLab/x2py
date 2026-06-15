@@ -280,25 +280,55 @@ method and is not treated as a native argument.
 
 ## Generic Procedure Overloads
 
-Named Fortran generic interfaces and type-bound generics are emitted as
-repeated `@overload` declarations under one Python-visible name:
+The x2py semantic `.pyi` format uses `@overload("specific_name")` to link one
+Python-visible declaration to an ordinary concrete procedure declaration. This
+decorator is x2py metadata; it is not `typing.overload` and must not be imported
+from `typing`.
 
 ```python
-from typing import overload
+@private
+def convert_integer(value: Ptr(Const(Int32))) -> Int32: ...
 
-@overload
+@private
+def convert_real(value: Ptr(Const(Float64))) -> Float64: ...
+
+@overload("convert_integer")
 def convert(value: Ptr(Const(Int32))) -> Int32: ...
 
-@overload
+@overload("convert_real")
 def convert(value: Ptr(Const(Float64))) -> Float64: ...
 
 class accumulator:
-    @overload
+    @overload("accumulator_add_integer")
     def add(self, value: Ptr(Const(Int32))) -> None: ...
 
-    @overload
+    @overload("accumulator_add_real")
     def add(self, value: Ptr(Const(Float64))) -> None: ...
 ```
+
+Concrete specifics remain ordinary functions with their native names and
+source visibility. Public specifics remain public; private specifics use
+`@private`. `@native_call` is not emitted merely to restate an unchanged native
+function name.
+
+The loader resolves only the decorator string. It never guesses a target by
+signature. The target must exist exactly once, each target may occur only once
+in one overload set, and the public declaration must agree with the concrete
+call signature and return type. Missing, duplicate, ambiguous, and incompatible
+links are deterministic errors.
+
+Python method names recover the native generic for ordinary operators. When
+two distinct Fortran generics share one Python method, the decorator carries
+the otherwise unrecoverable spelling:
+
+```python
+@overload("equivalent_values", generic="operator(.eqv.)")
+def __eq__(self, other: value) -> Bool: ...
+```
+
+The optional `generic=` argument is restricted to a compatible operator or
+assignment generic. It is currently emitted for `.eqv.` and `.neqv.`, which
+would otherwise be indistinguishable from `operator(==)` and `operator(/=)`.
 
 The generated C extension exposes one callable for each generic name. It
 dispatches before conversion using the wrapped scalar dtype, array element
@@ -318,6 +348,91 @@ Python C-type inheritance, so a base-type overload is not a fallback for a
 derived wrapper. Each accepted wrapped derived type needs an explicit specific
 procedure. User-defined Python subclasses are not part of this runtime
 contract.
+
+## Defined Operators And Assignment
+
+Defined operators use the same explicit link. The concrete function keeps its
+full Fortran operand list, while the class declaration describes the Python
+method call:
+
+```python
+@private
+def add_vector_real(left: Ptr(Const(vector)), right: Ptr(Const(Float64))) -> vector: ...
+
+@private
+def add_real_vector(left: Ptr(Const(Float64)), right: Ptr(Const(vector))) -> vector: ...
+
+class vector:
+    @overload("add_vector_real")
+    def __add__(self, right: Ptr(Const(Float64))) -> vector: ...
+
+    @overload("add_real_vector")
+    def __radd__(self, left: Ptr(Const(Float64))) -> vector: ...
+```
+
+Operand positions are fixed:
+
+| Python method | Native operands |
+| --- | --- |
+| non-reflected binary method | `self` is operand 1; `other` is operand 2 |
+| reflected binary method | `other` is operand 1; `self` is operand 2 |
+| unary method | `self` is the only operand |
+| comparison method | `self` is the Python left operand; reflected comparison metadata restores native order |
+
+Return annotations must equal the concrete procedure result. The generated C
+extension dispatches the Python slot before conversion by dtype, rank, and
+wrapped extension class. Operator slots also accept a native Python scalar when
+there is exactly one candidate precision in that integer, real, or complex
+family; this is needed when CPython or NumPy invokes a reflected slot with a
+built-in scalar. No match raises `TypeError`, and indistinguishable candidates
+fail during generation. Three-argument `pow(value, exponent, modulus)` is not a
+Fortran operator form and raises `TypeError`.
+
+Mappings:
+
+| Fortran generic | Python methods |
+| --- | --- |
+| binary `operator(+)` | `__add__`, `__radd__` |
+| unary `operator(+)` | `__pos__` |
+| binary `operator(-)` | `__sub__`, `__rsub__` |
+| unary `operator(-)` | `__neg__` |
+| `operator(*)`, `operator(/)`, `operator(**)` | `__mul__`/`__rmul__`, `__truediv__`/`__rtruediv__`, `__pow__`/`__rpow__` |
+| `operator(==)`, `operator(/=)` | `__eq__`, `__ne__` |
+| `operator(<)`, `operator(<=)`, `operator(>)`, `operator(>=)` | `__lt__`, `__le__`, `__gt__`, `__ge__` with reflected comparison routing |
+| `operator(.and.)`, `operator(.or.)`, `operator(.not.)` | `__and__`/`__rand__`, `__or__`/`__ror__`, `__invert__` |
+| `operator(.eqv.)`, `operator(.neqv.)` | `__eq__`, `__ne__` |
+
+x2py does not infer in-place methods such as `__iadd__`. Python's fallback
+therefore applies: an expression such as `value += other` may replace the
+Python reference with the ordinary operator result rather than invoking
+Fortran defined assignment.
+
+A named operator `.custom.` is exposed as `operator_custom(self, other)`. If
+the wrapped class is native operand 2, the method is
+`r_operator_custom(self, other)`. These are normal methods because Python has
+no syntax or data-model slot for arbitrary Fortran operator names.
+
+Python assignment cannot be intercepted. Fortran `assignment(=)` is exposed as
+explicit mutation:
+
+```python
+@private
+def assign_vector_real(
+    left: Annotated[Ptr(vector), Intent("out")],
+    right: Ptr(Const(Float64)),
+) -> None: ...
+
+class vector:
+    @overload("assign_vector_real")
+    def assign(self, right: Ptr(Const(Float64))) -> None: ...
+```
+
+`lhs.assign(rhs)` invokes native `lhs = rhs`, mutates the existing wrapped
+object, preserves Python object identity, and returns `None`. It never replaces
+the Python variable. Assigning an object to itself is a no-op. A supported
+specific must be a two-argument subroutine whose wrapped derived-type LHS has
+`intent(out)` or `intent(inout)` and whose RHS has `intent(in)`. Unsafe or
+unsupported forms are readiness blockers.
 
 ## Visibility And Names
 
@@ -385,7 +500,9 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Constants | `Final[T]` module variables |
 | C enums | open `Enum[T]` class plus module-level enumerators |
 | Fortran derived types | classes with fields and methods when resolvable |
-| Fortran generic interfaces | repeated `@overload` functions or methods with C-extension dtype/rank dispatch |
+| Fortran generic interfaces | explicit `@overload("specific")` links with C-extension dtype/rank dispatch |
+| Fortran defined operators | Python data-model methods plus explicit named-operator methods |
+| Fortran defined assignment | explicit mutating `assign(...)` overloads |
 | C structs/unions | `CStruct` and `CUnion` classes |
 | C anonymous aggregate members | nested `CAnonymous` classes plus `CAnonymousMember` fields |
 | Opaque types | `Opaque` classes and owner-module dependency stubs |
@@ -415,8 +532,11 @@ The loader intentionally rejects syntax that would be ambiguous or stale:
 - positional-only, keyword-only, vararg or kwarg function parameters.
 - nested enum declarations.
 - ordinary function bodies instead of `...`.
-- unsupported decorators other than `@private`, `@native_call`, `@overload`,
-  and `@staticmethod`.
+- unsupported decorators other than `@private`, `@native_call`,
+  `@overload("specific")`, its documented `generic=` form, and
+  `@staticmethod`.
+- bare `@overload` or `typing.overload`; overload links require one concrete
+  procedure name.
 
 ## Roadmap
 
@@ -430,8 +550,8 @@ Near-term format work:
    and `bind(c)` byte-string metadata.
 4. Expand aggregate layout metadata for C bitfields, C attributes, Fortran
    `bind(c)`, `sequence`, and by-value aggregate ABI checks.
-5. Represent Fortran polymorphic `class(...)`, procedure bindings, and
-   operators without losing dynamic-type or dispatch information.
+5. Represent Fortran polymorphic `class(...)` and procedure bindings without
+   losing dynamic-type or dispatch information.
 
 Projection/runtime roadmap:
 

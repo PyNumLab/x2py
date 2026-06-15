@@ -22838,7 +22838,7 @@
       "wrappable": false,
       "status": "ok",
       "n_modules": 1,
-      "n_functions": 8,
+      "n_functions": 13,
       "n_classes": 1,
       "n_variables": 657,
       "messages": [
@@ -22848,7 +22848,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 8
         }
       ]
     },

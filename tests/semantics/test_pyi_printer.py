@@ -1,13 +1,19 @@
+from pathlib import Path
+
 import pytest
 
 import x2py
 from x2py import parse_fortran_file as parse_fortran_source
+from x2py.codegen.binding_pipeline import BindingPipeline
+from x2py.codegen.codegen import Codegen
+from x2py.codegen.scope import Scope
 
 from x2py.semantics.fortran2ir import (
     fortran_module_to_semantic_module,
 )
 
 from x2py.semantics.pyi_parser import parse_pyi_text
+from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
 from x2py.codegen.printers.pyi_printer import (
     emit_module,
     emit_module_stubs,
@@ -996,9 +1002,11 @@ end module generic_mod
 """
     code = generate_pyi(source)
 
-    assert "from typing import overload" in code
-    assert code.count("@overload\ndef convert(") == 2
-    assert code.count("    @overload\n    def set(") == 2
+    assert "from typing import overload" not in code
+    assert code.count('@overload("convert_integer")\ndef convert(') == 1
+    assert code.count('@overload("convert_real")\ndef convert(') == 1
+    assert code.count('    @overload("set_integer")\n    def set(') == 1
+    assert code.count('    @overload("set_real")\n    def set(') == 1
 
     loaded = parse_pyi_text(code, module_name="generic_mod")
     assert [(item.name, len(item.procedures)) for item in loaded.overload_sets] == [("convert", 2)]
@@ -1012,6 +1020,73 @@ end module generic_mod
         "set_integer",
         "set_real",
     ]
+
+
+def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_source():
+    source_path = Path(__file__).parents[1] / "wrapper" / "foperators_f90.f90"
+    semantic_module = fortran_module_to_semantic_module(
+        parse_fortran_source(source_path.read_text(), filename=str(source_path))
+    )
+    code = emit_module(semantic_module)
+
+    assert '@overload("add_real_vector")' in code
+    assert "def __radd__(" in code
+    assert '@overload("assign_vector_real")' in code
+    assert "def assign(" in code
+    assert '@overload("dot_vectors")' in code
+    assert "def operator_dot(" in code
+    assert '@overload("equivalent_vector_offset", generic="operator(.eqv.)")' in code
+    assert '@overload("not_equivalent_vector_integer", generic="operator(.neqv.)")' in code
+    assert "from typing import overload" not in code
+
+    loaded = parse_pyi_text(code, module_name=semantic_module.name)
+    assert emit_module(loaded) == code
+    codegen_module = semantic_ir_to_codegen_ast(
+        loaded,
+        Scope(name=loaded.name, scope_type="module"),
+    )
+    vector = next(cls for cls in codegen_module.classes if str(cls.name) == "vector")
+    overload_sets = {item.name: item.native_name for item in vector.overload_sets}
+    assert overload_sets["__add__"] == "operator(+)"
+    assert overload_sets["operator_dot"] == "operator(.dot.)"
+    assert overload_sets["assign"] == "assignment(=)"
+    assert set(next(item for item in vector.overload_sets if item.name == "__eq__").native_names) == {
+        "operator(==)",
+        "operator(.eqv.)",
+    }
+
+
+def test_defined_operator_pyi_generates_wrapper_sources_without_fortran_source(tmp_path: Path):
+    source_path = Path(__file__).parents[1] / "wrapper" / "foperators_f90.f90"
+    semantic_module = fortran_module_to_semantic_module(
+        parse_fortran_source(source_path.read_text(), filename=str(source_path))
+    )
+    pyi = emit_module(semantic_module)
+    loaded = parse_pyi_text(pyi, module_name=semantic_module.name)
+    scope = Scope(name=loaded.name, scope_type="module")
+    codegen_module = semantic_ir_to_codegen_ast(loaded, scope)
+    pipeline = BindingPipeline(
+        Codegen(loaded.name, codegen_module, codegen_module.scope),
+        loaded.name,
+        "fortran",
+        verbose=0,
+    )
+
+    pipeline.generate(str(tmp_path))
+    generated = pipeline.write(tmp_path)
+
+    assert [path.name for path in generated] == [
+        "bind_c_foperators_f90_wrapper.f90",
+        "foperators_f90_wrapper.c",
+    ]
+    fortran_wrapper = generated[0].read_text()
+    c_wrapper = generated[1].read_text()
+    assert "left + right" in fortran_wrapper
+    assert "left = right" in fortran_wrapper
+    assert "left .eqv. right" in fortran_wrapper
+    assert "left .neqv. right" in fortran_wrapper
+    assert ".nb_add = (binaryfunc)" in c_wrapper
+    assert ".tp_richcompare =" in c_wrapper
 
 
 def test_emit_module_variables_with_visibility():

@@ -692,6 +692,29 @@ end module generic_mod
     assert interface.abstract is False
 
 
+def test_defined_operator_and_assignment_interfaces_preserve_generic_names_and_targets():
+    code = """
+module defined_generics
+  interface operator(+)
+    module procedure add_values
+  end interface operator(+)
+  interface operator(.cross.)
+    module procedure cross_values
+  end interface operator(.cross.)
+  interface assignment(=)
+    module procedure assign_value
+  end interface assignment(=)
+end module defined_generics
+"""
+    interfaces = parse_fortran_module(code).interfaces
+
+    assert [(interface.name, interface.specific_procedures) for interface in interfaces] == [
+        ("operator(+)", ["add_values"]),
+        ("operator(.cross.)", ["cross_values"]),
+        ("assignment(=)", ["assign_value"]),
+    ]
+
+
 def test_external_dummy_keeps_recursive_attribute_metadata():
     code = """
 recursive function apply_once(f, x) result(y)

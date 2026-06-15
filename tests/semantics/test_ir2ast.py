@@ -16,6 +16,7 @@ from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
 
 
 FORTRAN_CLASS_SOURCE = Path(__file__).parents[1] / "wrapper" / "fclasses_f90.f90"
+FORTRAN_OPERATOR_SOURCE = Path(__file__).parents[1] / "wrapper" / "foperators_f90.f90"
 
 
 def test_modern_fortran_derived_type_and_type_bound_methods_become_codegen_class():
@@ -194,6 +195,61 @@ end module generic_mod
 """
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
     with pytest.raises(ValueError, match="missing specific procedure.*missing"):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )
+
+
+def test_defined_operators_and_assignment_become_named_codegen_overload_sets():
+    semantic_module = fortran_module_to_semantic_module(
+        parse_fortran_file(
+            FORTRAN_OPERATOR_SOURCE.read_text(),
+            filename=str(FORTRAN_OPERATOR_SOURCE),
+        )
+    )
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+    vector = next(cls for cls in codegen_module.classes if str(cls.name) == "vector")
+    overload_sets = {item.name: item for item in vector.overload_sets}
+
+    assert overload_sets["__add__"].native_name == "operator(+)"
+    assert overload_sets["__sub__"].native_name == "operator(-)"
+    assert set(overload_sets["__eq__"].native_names) == {"operator(==)", "operator(.eqv.)"}
+    assert overload_sets["operator_dot"].native_name == "operator(.dot.)"
+    assert overload_sets["assign"].native_name == "assignment(=)"
+    assert overload_sets["assign"].functions[0].arguments[0].bound_argument
+    reflected = next(
+        function for function in overload_sets["__add__"].functions if "add_real_vector" in str(function.name)
+    )
+    assert not reflected.arguments[0].bound_argument
+
+
+def test_indistinguishable_defined_operator_overloads_raise_generation_error():
+    source = """
+module ambiguous_operator
+  type :: box
+    integer :: value
+  end type box
+  interface operator(+)
+    module procedure add_first, add_second
+  end interface operator(+)
+contains
+  type(box) function add_first(left, right)
+    type(box), intent(in) :: left
+    integer, intent(in) :: right
+  end function add_first
+  type(box) function add_second(left, right)
+    type(box), intent(in) :: left
+    integer, intent(in) :: right
+  end function add_second
+end module ambiguous_operator
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    with pytest.raises(ValueError, match="indistinguishable overload"):
         semantic_ir_to_codegen_ast(
             semantic_module,
             Scope(name=semantic_module.name, scope_type="module"),

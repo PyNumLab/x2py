@@ -23,6 +23,12 @@ from x2py.fortran_parser.models import (
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
+    FORTRAN_GENERIC_NAME_METADATA,
+    OVERLOAD_KIND_METADATA,
+    OVERLOAD_TARGET_METADATA,
+    PYTHON_BOUND_POSITION_METADATA,
+    PYTHON_METHOD_NAME_METADATA,
+    PYTHON_STATIC_METADATA,
     SemanticArgument,
     SemanticArrayContract,
     SemanticClass,
@@ -41,6 +47,32 @@ from .models import (
     ProjectionMapping,
     ProcedureOverloadSet,
 )
+
+
+_BINARY_OPERATOR_METHODS = {
+    "+": ("__add__", "__radd__"),
+    "-": ("__sub__", "__rsub__"),
+    "*": ("__mul__", "__rmul__"),
+    "/": ("__truediv__", "__rtruediv__"),
+    "**": ("__pow__", "__rpow__"),
+    ".and.": ("__and__", "__rand__"),
+    ".or.": ("__or__", "__ror__"),
+}
+_UNARY_OPERATOR_METHODS = {
+    "+": "__pos__",
+    "-": "__neg__",
+    ".not.": "__invert__",
+}
+_COMPARISON_OPERATOR_METHODS = {
+    "==": ("__eq__", "__eq__"),
+    "/=": ("__ne__", "__ne__"),
+    "<": ("__lt__", "__gt__"),
+    "<=": ("__le__", "__ge__"),
+    ">": ("__gt__", "__lt__"),
+    ">=": ("__ge__", "__le__"),
+    ".eqv.": ("__eq__", "__eq__"),
+    ".neqv.": ("__ne__", "__ne__"),
+}
 
 
 FORTRAN_TYPE_MAP = {
@@ -410,7 +442,12 @@ class FortranToIRConverter:
         for semantic_cls in semantic_classes:
             semantic_cls.visibility = self._symbol_visibility(module, semantic_cls.name)
 
-        overload_sets, overload_blockers = self._module_overload_sets(module, procedure_lookup, context)
+        overload_sets, overload_blockers = self._module_overload_sets(
+            module,
+            procedure_lookup,
+            context,
+            semantic_classes,
+        )
         metadata = {}
         if overload_blockers:
             metadata["readiness_blockers"] = overload_blockers
@@ -1000,11 +1037,12 @@ class FortranToIRConverter:
         module: FortranModule,
         procedure_lookup: dict[str, SemanticFunction],
         context: _DerivedTypeContext,
+        semantic_classes: list[SemanticClass],
     ) -> tuple[list[ProcedureOverloadSet], list[dict[str, object]]]:
         overload_sets: list[ProcedureOverloadSet] = []
         blockers: list[dict[str, object]] = []
         for interface in module.interfaces:
-            if not interface.name or interface.abstract or not self._is_procedure_generic_name(interface.name):
+            if not interface.name or interface.abstract:
                 continue
             inline_lookup = {
                 signature.name.casefold(): self.visit_procedure(
@@ -1020,9 +1058,23 @@ class FortranToIRConverter:
                 procedure_lookup | inline_lookup,
                 visibility=self._symbol_visibility(module, interface.name),
             )
-            overload_sets.append(ProcedureOverloadSet(interface.name, procedures))
             if missing or not procedures:
                 blockers.append(self._unresolved_generic_target_blocker(module.name, interface.name, missing))
+                if self._is_procedure_generic_name(interface.name):
+                    overload_sets.append(ProcedureOverloadSet(interface.name))
+                continue
+            if self._is_procedure_generic_name(interface.name):
+                overload_sets.append(self._normal_overload_set(interface.name, procedures))
+                continue
+            defined_sets, defined_blockers = self._defined_overload_sets(
+                interface.name,
+                procedures,
+                {semantic_class.name.casefold(): semantic_class for semantic_class in semantic_classes},
+                owner=module.name,
+            )
+            for semantic_class, class_sets in defined_sets:
+                self._merge_overload_sets(semantic_class.overload_sets, class_sets)
+            blockers.extend(defined_blockers)
         return overload_sets, blockers
 
     def _bound_overload_sets(
@@ -1035,8 +1087,6 @@ class FortranToIRConverter:
         blockers: list[dict[str, object]] = []
         for binding in dtype.generic_bindings:
             name = str(binding["name"])
-            if not self._is_procedure_generic_name(name):
-                continue
             attrs = {str(attr).casefold() for attr in binding.get("attrs", ())}
             visibility = "private" if "private" in attrs else "public" if "public" in attrs else None
             procedures, missing = self._resolve_overload_targets(
@@ -1044,10 +1094,261 @@ class FortranToIRConverter:
                 lookup,
                 visibility=visibility,
             )
-            overload_sets.append(ProcedureOverloadSet(name, procedures))
             if missing or not procedures:
                 blockers.append(self._unresolved_generic_target_blocker(dtype.name, name, missing))
+                if self._is_procedure_generic_name(name):
+                    overload_sets.append(ProcedureOverloadSet(name))
+                continue
+            if self._is_procedure_generic_name(name):
+                overload_sets.append(self._normal_overload_set(name, procedures))
+                continue
+            placeholder = SemanticClass(dtype.name)
+            defined_sets, defined_blockers = self._defined_overload_sets(
+                name,
+                procedures,
+                {dtype.name.casefold(): placeholder},
+                owner=dtype.name,
+            )
+            self._merge_overload_sets(overload_sets, defined_sets[0][1] if defined_sets else ())
+            blockers.extend(defined_blockers)
         return overload_sets, blockers
+
+    @staticmethod
+    def _merge_overload_sets(
+        overload_sets: list[ProcedureOverloadSet],
+        incoming: list[ProcedureOverloadSet],
+    ) -> None:
+        for overload_set in incoming:
+            existing = next((item for item in overload_sets if item.name == overload_set.name), None)
+            if existing is None:
+                overload_sets.append(overload_set)
+            else:
+                existing.procedures.extend(overload_set.procedures)
+
+    @staticmethod
+    def _normal_overload_set(name: str, procedures: list[SemanticFunction]) -> ProcedureOverloadSet:
+        candidates = []
+        for procedure in procedures:
+            candidate = deepcopy(procedure)
+            if isinstance(candidate, SemanticMethod):
+                bound_position = candidate.passed_object_position
+                is_static = candidate.is_static
+                candidate = SemanticFunction(
+                    name=candidate.native_name or candidate.name,
+                    native_name=candidate.native_name,
+                    arguments=candidate.arguments,
+                    return_type=candidate.return_type,
+                    locals=candidate.locals,
+                    contracts=candidate.contracts,
+                    projection=candidate.projection,
+                    metadata=candidate.metadata,
+                    visibility=candidate.visibility,
+                    origin=candidate.origin,
+                )
+                if bound_position is not None:
+                    candidate.metadata[PYTHON_BOUND_POSITION_METADATA] = bound_position
+                if is_static:
+                    candidate.metadata[PYTHON_STATIC_METADATA] = True
+            candidate.metadata[FORTRAN_GENERIC_NAME_METADATA] = name
+            candidate.metadata[OVERLOAD_KIND_METADATA] = "generic"
+            candidate.metadata[OVERLOAD_TARGET_METADATA] = candidate.native_name or candidate.name
+            candidates.append(candidate)
+        return ProcedureOverloadSet(name, candidates)
+
+    def _defined_overload_sets(
+        self,
+        generic_name: str,
+        procedures: list[SemanticFunction],
+        classes: dict[str, SemanticClass],
+        *,
+        owner: str,
+    ) -> tuple[list[tuple[SemanticClass, list[ProcedureOverloadSet]]], list[dict[str, object]]]:
+        grouped: dict[str, tuple[SemanticClass, dict[str, ProcedureOverloadSet]]] = {}
+        blockers: list[dict[str, object]] = []
+        kind, token = self._defined_generic_identity(generic_name)
+        if kind is None:
+            return [], [self._invalid_defined_generic_blocker(owner, generic_name, "unsupported generic name")]
+
+        for procedure in procedures:
+            error = self._defined_procedure_error(kind, token, procedure, classes)
+            if error is not None:
+                blockers.append(
+                    self._invalid_defined_generic_blocker(
+                        owner,
+                        generic_name,
+                        error,
+                        procedure=procedure.native_name or procedure.name,
+                    )
+                )
+                continue
+            for semantic_class, set_name, method_name, bound_position in self._defined_python_bindings(
+                kind,
+                token,
+                procedure,
+                classes,
+            ):
+                _, class_sets = grouped.setdefault(semantic_class.name.casefold(), (semantic_class, {}))
+                overload_set = class_sets.setdefault(set_name, ProcedureOverloadSet(set_name))
+                candidate = self._defined_overload_candidate(
+                    procedure,
+                    generic_name=generic_name,
+                    kind=kind,
+                    method_name=method_name,
+                    bound_position=bound_position,
+                )
+                overload_set.procedures.append(candidate)
+        return [(semantic_class, list(items.values())) for semantic_class, items in grouped.values()], blockers
+
+    @staticmethod
+    def _defined_generic_identity(name: str) -> tuple[str | None, str]:
+        compact = re.sub(r"\s+", "", name).casefold()
+        if compact == "assignment(=)":
+            return "assignment", "="
+        match = re.fullmatch(r"operator\((.+)\)", compact)
+        if match is None:
+            return None, ""
+        token = match.group(1)
+        intrinsic_aliases = {
+            ".eq.": "==",
+            ".ne.": "/=",
+            ".lt.": "<",
+            ".le.": "<=",
+            ".gt.": ">",
+            ".ge.": ">=",
+        }
+        token = intrinsic_aliases.get(token, token)
+        if (
+            token.startswith(".")
+            and token.endswith(".")
+            and token
+            not in {
+                ".and.",
+                ".or.",
+                ".not.",
+                ".eqv.",
+                ".neqv.",
+            }
+        ):
+            return "named_operator", token[1:-1]
+        if token in {*_BINARY_OPERATOR_METHODS, *_UNARY_OPERATOR_METHODS, *_COMPARISON_OPERATOR_METHODS}:
+            return "operator", token
+        return None, token
+
+    @staticmethod
+    def _defined_procedure_error(
+        kind: str,
+        token: str,
+        procedure: SemanticFunction,
+        classes: dict[str, SemanticClass],
+    ) -> str | None:
+        arguments = procedure.arguments
+        if kind == "assignment":
+            if len(arguments) != 2 or procedure.return_type is not None:
+                return "defined assignment must be a subroutine with exactly two dummy arguments"
+            lhs = arguments[0]
+            if lhs.semantic_type.name.casefold() not in classes:
+                return "defined assignment left-hand side must be a wrapped derived type"
+            if lhs.intent.casefold() not in {"out", "inout"}:
+                return "defined assignment left-hand side must have intent(out) or intent(inout)"
+            if arguments[1].intent.casefold() not in {"in", ""}:
+                return "defined assignment right-hand side must have intent(in)"
+            return None
+
+        expected_arities = (
+            {1, 2} if token in {"+", "-"} or kind == "named_operator" else {1} if token == ".not." else {2}
+        )
+        if len(arguments) not in expected_arities or procedure.return_type is None:
+            return f"defined operator {token!r} must be a function with {sorted(expected_arities)} operand count"
+        if not any(argument.semantic_type.name.casefold() in classes for argument in arguments):
+            return "defined operator must have at least one wrapped derived-type operand"
+        if token in _COMPARISON_OPERATOR_METHODS and procedure.return_type.dtype != "Bool":
+            return "defined relational operator must return Bool"
+        return None
+
+    def _defined_python_bindings(
+        self,
+        kind: str,
+        token: str,
+        procedure: SemanticFunction,
+        classes: dict[str, SemanticClass],
+    ) -> list[tuple[SemanticClass, str, str, int]]:
+        if kind == "assignment":
+            semantic_class = classes[procedure.arguments[0].semantic_type.name.casefold()]
+            return [(semantic_class, "assign", "assign", 0)]
+
+        bindings: list[tuple[SemanticClass, str, str, int]] = []
+        class_positions = [
+            (position, classes[argument.semantic_type.name.casefold()])
+            for position, argument in enumerate(procedure.arguments)
+            if argument.semantic_type.name.casefold() in classes
+        ]
+        seen_classes: set[str] = set()
+        for position, semantic_class in class_positions:
+            class_key = semantic_class.name.casefold()
+            if class_key in seen_classes:
+                continue
+            seen_classes.add(class_key)
+            if len(procedure.arguments) == 1:
+                method_name = f"operator_{token}" if kind == "named_operator" else _UNARY_OPERATOR_METHODS[token]
+                bindings.append((semantic_class, method_name, method_name, position))
+                continue
+            if kind == "named_operator":
+                method_name = f"{'r_' if position == 1 else ''}operator_{token}"
+                bindings.append((semantic_class, method_name, method_name, position))
+                continue
+            if token in _COMPARISON_OPERATOR_METHODS:
+                method_name = _COMPARISON_OPERATOR_METHODS[token][position]
+                bindings.append((semantic_class, method_name, method_name, position))
+                continue
+            direct_name, reflected_name = _BINARY_OPERATOR_METHODS[token]
+            method_name = direct_name if position == 0 else reflected_name
+            bindings.append((semantic_class, direct_name, method_name, position))
+        return bindings
+
+    @staticmethod
+    def _defined_overload_candidate(
+        procedure: SemanticFunction,
+        *,
+        generic_name: str,
+        kind: str,
+        method_name: str,
+        bound_position: int,
+    ) -> SemanticFunction:
+        candidate = deepcopy(procedure)
+        candidate.metadata[FORTRAN_GENERIC_NAME_METADATA] = generic_name
+        candidate.metadata[OVERLOAD_KIND_METADATA] = (
+            "comparison"
+            if method_name
+            in {
+                "__eq__",
+                "__ne__",
+                "__lt__",
+                "__le__",
+                "__gt__",
+                "__ge__",
+            }
+            else kind
+        )
+        candidate.metadata[OVERLOAD_TARGET_METADATA] = candidate.native_name or candidate.name
+        candidate.metadata[PYTHON_METHOD_NAME_METADATA] = method_name
+        candidate.metadata[PYTHON_BOUND_POSITION_METADATA] = bound_position
+
+        return FortranToIRConverter._as_semantic_function(candidate)
+
+    @staticmethod
+    def _as_semantic_function(procedure: SemanticFunction) -> SemanticFunction:
+        return SemanticFunction(
+            name=procedure.native_name or procedure.name,
+            native_name=procedure.native_name,
+            arguments=procedure.arguments,
+            return_type=procedure.return_type,
+            locals=procedure.locals,
+            contracts=procedure.contracts,
+            projection=procedure.projection,
+            metadata=procedure.metadata,
+            visibility=procedure.visibility,
+            origin=procedure.origin,
+        )
 
     @staticmethod
     def _is_procedure_generic_name(name: str) -> bool:
@@ -1091,6 +1392,27 @@ class FortranToIRConverter:
                     "missing_targets": list(missing),
                 }
             ],
+        }
+
+    @staticmethod
+    def _invalid_defined_generic_blocker(
+        owner: str,
+        name: str,
+        detail: str,
+        *,
+        procedure: str | None = None,
+    ) -> dict[str, object]:
+        item: dict[str, object] = {
+            "owner": owner,
+            "generic": name,
+            "detail": detail,
+        }
+        if procedure is not None:
+            item["procedure"] = procedure
+        return {
+            "code": "fortran_defined_generic_invalid",
+            "message": "Defined operators and assignment must satisfy the Python wrapper contract.",
+            "items": [item],
         }
 
     @staticmethod

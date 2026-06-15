@@ -3094,6 +3094,8 @@ class FunctionOverloadSet:
         "_is_argument",
         "_is_imported",
         "_name",
+        "_native_name",
+        "_native_names",
         "_syntactic_node",
     )
     _attribute_nodes = ("_functions",)
@@ -3104,6 +3106,8 @@ class FunctionOverloadSet:
         functions,
         is_argument=False,
         is_imported=False,
+        native_name=None,
+        native_names=None,
         syntactic_node=None,
     ):
         if not isinstance(name, str):
@@ -3120,6 +3124,14 @@ class FunctionOverloadSet:
             self._validate_dispatch_signatures(name, source_functions)
 
         self._name = name
+        if native_names is None:
+            native_names = (native_name or name,) * len(functions)
+        else:
+            native_names = tuple(native_names)
+            if len(native_names) != len(functions):
+                raise ValueError("Function overload set native names must align with its functions")
+        self._native_names = native_names
+        self._native_name = native_name or (native_names[0] if len(set(native_names)) == 1 else name)
         self._functions = functions
         self._is_argument = is_argument
         self._is_imported = is_imported
@@ -3132,6 +3144,20 @@ class FunctionOverloadSet:
         return self._name
 
     @property
+    def native_name(self):
+        """Native generic name used by the source-language bridge."""
+        return self._native_name
+
+    @property
+    def native_names(self):
+        """Native generic name for each concrete overload candidate."""
+        return self._native_names
+
+    def native_name_for(self, function):
+        """Return the native generic name associated with one candidate."""
+        return self._native_names[self._functions.index(function)]
+
+    @property
     def functions(self):
         """ "Functions of the interface."""
         return self._functions
@@ -3142,9 +3168,9 @@ class FunctionOverloadSet:
         return self._functions[0].arguments
 
     @staticmethod
-    def _dispatch_arguments(function):
+    def _dispatch_arguments(function, *, include_bound=False):
         arguments = list(function.arguments)
-        if arguments and arguments[0].bound_argument:
+        if not include_bound and arguments and arguments[0].bound_argument:
             return arguments[1:]
         return arguments
 
@@ -3153,7 +3179,7 @@ class FunctionOverloadSet:
         call_shapes = []
         dispatch_keys = []
         for function in functions:
-            arguments = cls._dispatch_arguments(function)
+            arguments = cls._dispatch_arguments(function, include_bound=name.startswith("__"))
             call_shapes.append(
                 tuple(
                     (
@@ -3289,6 +3315,8 @@ class FunctionOverloadSet:
         kwargs = {
             "is_argument": self._is_argument,
             "is_imported": self._is_imported,
+            "native_name": self._native_name,
+            "native_names": self._native_names,
             "syntactic_node": self._syntactic_node,
         }
         return args, kwargs
@@ -3333,6 +3361,19 @@ class FunctionOverloadSet:
             names = ", ".join(str(function.name) for function in matches)
             raise TypeError(f"Arguments provided to {self.name} match multiple overloads: {names}")
         return matches[0]
+
+    @staticmethod
+    def native_arguments(function, args):
+        """Restore the native argument order after Python method binding."""
+        native_args = list(args)
+        if not function.arguments or not function.arguments[0].bound_argument:
+            return native_args
+        position = function.arguments[0].bound_argument_position
+        if position in {None, 0}:
+            return native_args
+        bound_arg = native_args.pop(0)
+        native_args.insert(position, bound_arg)
+        return native_args
 
     def __call__(self, *args, **kwargs):
         arguments = [a if isinstance(a, FunctionCallArgument) else FunctionCallArgument(a) for a in args]

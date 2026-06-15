@@ -88,6 +88,13 @@ def test_bind_c_array_type_rejects_invalid_parameters(rank, has_strides, error):
         BindCArrayType.get_new(rank, has_strides)
 
 
+def test_bind_c_array_type_validates_before_cached_lookup():
+    BindCArrayType.get_new(1, True)
+
+    with pytest.raises(TypeError, match="has_strides must be a boolean"):
+        BindCArrayType.get_new(1, 1)
+
+
 def test_scope_expands_bind_c_array_to_registered_fields():
     scope = Scope(name="f", scope_type="function")
     array_type = BindCArrayType.get_new(1, has_strides=True)

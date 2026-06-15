@@ -95,6 +95,9 @@ from ..models.datatypes import (
     FinalType,
     FixedSizeNumericType,
     NumpyBoolType,
+    PrimitiveComplexType,
+    PrimitiveFloatingPointType,
+    PrimitiveIntegerType,
     StringType,
     TupleType,
     VoidType,
@@ -133,6 +136,7 @@ from ..models.core import (
     Lt,
     Ne,
     Not,
+    Or,
 )
 from ..models.core import DottedVariable, IndexedElement, Variable
 from ..scope import Scope
@@ -167,6 +171,9 @@ magic_binary_funcs = (
     "__ior__",
     "__getitem__",
 )
+magic_unary_funcs = ("__pos__", "__neg__", "__invert__")
+magic_comparison_funcs = ("__eq__", "__ne__", "__lt__", "__le__", "__gt__", "__ge__")
+magic_overload_funcs = (*magic_binary_funcs, *magic_unary_funcs, *magic_comparison_funcs)
 
 
 class CPythonBindingGenerator(BindingGenerator):
@@ -371,7 +378,16 @@ class CPythonBindingGenerator(BindingGenerator):
         self._python_object_map.update(dict(zip(results, collect_results, strict=False)))
         return collect_results
 
-    def _get_type_check_condition(self, py_obj, arg, raise_error, body, allow_empty_arrays):
+    def _get_type_check_condition(
+        self,
+        py_obj,
+        arg,
+        raise_error,
+        body,
+        allow_empty_arrays,
+        *,
+        native_scalar_check=None,
+    ):
         """
         Get the condition which checks if an argument has the expected type.
 
@@ -430,6 +446,14 @@ class CPythonBindingGenerator(BindingGenerator):
             )
 
             type_check_condition = func(py_obj)
+            if native_scalar_check is not None:
+                native_func = FunctionDef(
+                    name=native_scalar_check,
+                    body=[],
+                    arguments=[FunctionDefArgument(Variable(PythonObjectType(), name="o", memory_handling="alias"))],
+                    results=FunctionDefResult(Variable(NumpyBoolType(), name="v")),
+                )
+                type_check_condition = Or(type_check_condition, native_func(py_obj))
         elif isinstance(arg.class_type, NumpyNDArrayType):
             try:
                 type_ref = numpy_dtype_registry[dtype]
@@ -479,7 +503,7 @@ class CPythonBindingGenerator(BindingGenerator):
 
         return type_check_condition, error_code
 
-    def _get_type_check_function(self, name, args, funcs):
+    def _get_type_check_function(self, name, args, funcs, *, allow_native_scalars=False):
         """
         Determine the flags which allow correct function to be identified from the interface.
 
@@ -552,6 +576,25 @@ class CPythonBindingGenerator(BindingGenerator):
             type_to_example_arg = {a.class_type: a for a in interface_args}
             # Get a list of unique keys
             possible_types = list(type_to_example_arg.keys())
+            native_scalar_checks = {}
+            if allow_native_scalars:
+                family_counts = {}
+                for possible_type in possible_types:
+                    if not isinstance(possible_type, FixedSizeNumericType):
+                        continue
+                    primitive_type = possible_type.primitive_type
+                    family_counts[type(primitive_type)] = family_counts.get(type(primitive_type), 0) + 1
+                native_check_names = {
+                    PrimitiveIntegerType: "PyIs_NativeInt",
+                    PrimitiveFloatingPointType: "PyIs_NativeFloat",
+                    PrimitiveComplexType: "PyIs_NativeComplex",
+                }
+                for possible_type in possible_types:
+                    if not isinstance(possible_type, FixedSizeNumericType):
+                        continue
+                    primitive_cls = type(possible_type.primitive_type)
+                    if family_counts[primitive_cls] == 1 and primitive_cls in native_check_names:
+                        native_scalar_checks[possible_type] = native_check_names[primitive_cls]
 
             n_possible_types = len(possible_types)
             if orig_funcs[0].arguments[i].has_default:
@@ -573,6 +616,7 @@ class CPythonBindingGenerator(BindingGenerator):
                         False,
                         body,
                         allow_empty_arrays=is_bind_c,
+                        native_scalar_check=native_scalar_checks.get(t),
                     )
                     if_blocks.append(
                         IfSection(
@@ -603,6 +647,7 @@ class CPythonBindingGenerator(BindingGenerator):
                     True,
                     body,
                     allow_empty_arrays=is_bind_c,
+                    native_scalar_check=next(iter(native_scalar_checks.values()), None),
                 )
                 err_body = (*err_body, Return(convert_to_literal(-1)))
                 if_sec = IfSection(Not(check_func_call), err_body)
@@ -1711,6 +1756,7 @@ class CPythonBindingGenerator(BindingGenerator):
         class_base = get_enclosing_class(expr)
         has_bound_arg = bool(expr.arguments and expr.arguments[0].bound_argument)
         class_dtype = class_base.class_type if class_base and has_bound_arg else None
+        is_magic = expr.name in magic_overload_funcs
 
         for f in original_funcs:
             self._visit(f)
@@ -1721,10 +1767,43 @@ class CPythonBindingGenerator(BindingGenerator):
 
         # Create necessary arguments
         python_args = example_func.arguments
-        func_args, body = self._unpack_python_args(python_args, class_dtype)
+        if is_magic:
+            func_args = self._get_python_argument_variables(python_args)
+            body = []
+            if expr.name == "__pow__":
+                modulo = self.get_new_PyObject("modulo")
+                func_args.append(modulo)
+                body.append(
+                    If(
+                        IfSection(
+                            IsNot(modulo, Py_None),
+                            [
+                                PyErr_SetString(
+                                    PyTypeError,
+                                    CStrStr(convert_to_literal("pow() with a modulus is not supported")),
+                                ),
+                                Return(self._error_exit_code),
+                            ],
+                        )
+                    )
+                )
+        else:
+            func_args, body = self._unpack_python_args(python_args, class_dtype)
 
         # Get python arguments which will be passed to FunctionDefs
         python_arg_objs = [self._python_object_map[a] for a in python_args]
+        if expr.native_name.casefold() == "assignment(=)" and len(python_arg_objs) == 2:
+            body.append(
+                If(
+                    IfSection(
+                        Is(python_arg_objs[0], python_arg_objs[1]),
+                        [
+                            Py_INCREF(Py_None),
+                            Return(Py_None),
+                        ],
+                    )
+                )
+            )
 
         type_indicator = Variable(NumpyInt64Type(), self.scope.get_new_name("type_indicator"))
         self.scope.insert_variable(type_indicator)
@@ -1734,7 +1813,10 @@ class CPythonBindingGenerator(BindingGenerator):
         # Determine flags which indicate argument type
         type_check_name = self.scope.get_new_name(expr.name + "_type_check", object_type="wrapper")
         type_check_func, argument_type_flags = self._get_type_check_function(
-            type_check_name, python_arg_objs, original_funcs
+            type_check_name,
+            python_arg_objs,
+            original_funcs,
+            allow_native_scalars=is_magic,
         )
 
         self.scope = func_scope
@@ -2515,7 +2597,11 @@ class CPythonBindingGenerator(BindingGenerator):
         for i in expr.overload_sets:
             for f in i.functions:
                 self._visit(f)
-            wrapped_class.add_new_overload_set(self._visit(i))
+            wrapped_overload_set = self._visit(i)
+            if i.name in magic_overload_funcs:
+                wrapped_class.add_new_magic_method(wrapped_overload_set)
+            else:
+                wrapped_class.add_new_overload_set(wrapped_overload_set)
 
         if bound_class:
             wrapped_class.add_alloc_method(self._get_class_allocator(orig_cls_dtype, expr.new_func))

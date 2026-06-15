@@ -74,7 +74,6 @@ class BindCArrayType(Type, TupleType):
     _name = "BindCArrayType"
 
     @classmethod
-    @cache
     def get_new(cls, rank, has_strides):
         """
         Get the parametrised BindCArrayType subclass.
@@ -94,7 +93,11 @@ class BindCArrayType(Type, TupleType):
             raise ValueError("rank must be positive")
         if not isinstance(has_strides, bool):
             raise TypeError("has_strides must be a boolean")
+        return cls._get_new(rank, has_strides)
 
+    @classmethod
+    @cache
+    def _get_new(cls, rank, has_strides):
         shape_types = (NumpyInt64Type(),) * rank
         ubound_types = (NumpyInt64Type(),) * rank * has_strides
         stride_types = (NumpyInt64Type(),) * rank * has_strides

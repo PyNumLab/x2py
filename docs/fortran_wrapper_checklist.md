@@ -55,11 +55,12 @@ while the checklist is implemented.
 ## 1. Generic Procedure Interfaces
 
 Current state: named module interfaces and type-bound generics are preserved as
-semantic overload sets, emitted as `.pyi` overloads, and dispatched by the
-generated C extension. Dispatch is exact by scalar/array dtype, rank, and
-generated extension class. Fortran inheritance is retained semantically but is
-not yet Python C-type inheritance, so derived wrappers require explicit
-specific procedures.
+semantic overload sets, emitted with explicit x2py
+`@overload("specific_procedure")` links, and dispatched by the generated C
+extension. Dispatch is exact by scalar/array dtype, rank, and generated
+extension class. Fortran inheritance is retained semantically but is not yet
+Python C-type inheritance, so derived wrappers require explicit specific
+procedures.
 
 - [x] Define the Python API for a generic name with multiple concrete Fortran
   procedures.
@@ -80,28 +81,30 @@ specific procedures.
 
 ## 2. Defined Operators And Assignment
 
-Current state: type-bound generic/operator declarations can be recognized by the
-parser, but they are not represented end to end or mapped to Python methods.
+Current state: module-level and type-bound defined operators are preserved as
+semantic overload sets, mapped to Python slots or documented named methods,
+and dispatched in the generated C extension. Defined assignment is explicit
+mutating `assign(...)`; Python `=` is never intercepted.
 
-- [ ] Preserve `operator(...)` and `assignment(=)` names in semantic IR.
-- [ ] Resolve every operator target through its generic binding.
-- [ ] Map arithmetic operators to `__add__`, `__sub__`, `__mul__`,
+- [x] Preserve `operator(...)` and `assignment(=)` names in semantic IR.
+- [x] Resolve every operator target through its generic binding.
+- [x] Map arithmetic operators to `__add__`, `__sub__`, `__mul__`,
   `__truediv__`, and `__pow__` where signatures permit.
-- [ ] Map unary operators to `__pos__` and `__neg__`.
-- [ ] Map relational operators to `__eq__`, `__ne__`, `__lt__`, `__le__`,
+- [x] Map unary operators to `__pos__` and `__neg__`.
+- [x] Map relational operators to `__eq__`, `__ne__`, `__lt__`, `__le__`,
   `__gt__`, and `__ge__`.
-- [ ] Define reverse-operator behavior such as `__radd__` for mixed operand
+- [x] Define reverse-operator behavior such as `__radd__` for mixed operand
   types.
-- [ ] Define whether safe in-place forms such as `__iadd__` are generated.
-- [ ] Expose named defined operators such as `.cross.` as documented Python
+- [x] Define whether safe in-place forms such as `__iadd__` are generated.
+- [x] Expose named defined operators such as `.cross.` as documented Python
   methods rather than inventing Python syntax.
-- [ ] Define `assignment(=)` behavior: copy, mutation, replacement, and
+- [x] Define `assignment(=)` behavior: copy, mutation, replacement, and
   self-assignment.
-- [ ] Preserve Fortran overload selection when multiple concrete procedures
+- [x] Preserve Fortran overload selection when multiple concrete procedures
   implement one operator.
-- [ ] Test derived-type/derived-type and derived-type/scalar operands.
-- [ ] Test reflected operands, unsupported operands, and exception messages.
-- [ ] Test that temporary results and assigned objects have correct lifetimes.
+- [x] Test derived-type/derived-type and derived-type/scalar operands.
+- [x] Test reflected operands, unsupported operands, and exception messages.
+- [x] Test that temporary results and assigned objects have correct lifetimes.
 
 ## 3. Output Arguments And Multiple Results
 

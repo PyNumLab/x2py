@@ -15,10 +15,12 @@ from ..bindings.cpython_api import (
     PyBuildValueNode,
     PyCapsule_Import,
     PyCapsule_New,
+    PyFunctionOverloadSet,
     PythonObjectType,
     PythonTypeObjectType,
     PyModule_Create,
     PyTuple_Pack,
+    PythonClassType,
     WrapperCustomDataType,
 )
 from ..models.datatypes import (
@@ -208,6 +210,11 @@ class CPythonCodePrinter(CCodePrinter):
             lhs = self._print(lhs)
             rhs = self._print(rhs)
             return f"{lhs} {Op} {rhs}"
+        python_object_types = (PythonObjectType, PythonClassType, WrapperCustomDataType, NumpyArrayObjectType)
+        if all(isinstance(arg.dtype, python_object_types) for arg in expr.args):
+            lhs = self._print(ObjectAddress(expr.args[0]))
+            rhs = self._print(ObjectAddress(expr.args[1]))
+            return f"(PyObject *){lhs} {Op} (PyObject *){rhs}"
         return super()._handle_is_operator(Op, expr)
 
     # --------------------------------------------------------------------
@@ -299,7 +306,10 @@ class CPythonCodePrinter(CCodePrinter):
                 *tuple(f for i in c.overload_sets for f in i.functions),
                 *tuple(i.dispatcher_func for i in c.overload_sets),
                 *tuple(getset for p in c.properties for getset in (p.getter, p.setter) if getset),
-                *c.magic_methods,
+                *tuple(
+                    method.dispatcher_func if isinstance(method, PyFunctionOverloadSet) else method
+                    for method in c.magic_methods
+                ),
             )
             function_signatures += "\n" + "".join(self.function_signature(f) + ";\n" for f in sig_methods)
             macro_defs += f"#define {type_name} (*(PyTypeObject*){API_var.name}[{i}])\n"
@@ -491,6 +501,14 @@ class CPythonCodePrinter(CCodePrinter):
             number_magic_methods_def += f"     .nb_multiply = (binaryfunc){magic_methods['__mul__'].name},\n"
         if "__truediv__" in magic_methods:
             number_magic_methods_def += f"     .nb_true_divide = (binaryfunc){magic_methods['__truediv__'].name},\n"
+        if "__pow__" in magic_methods:
+            number_magic_methods_def += f"     .nb_power = (ternaryfunc){magic_methods['__pow__'].name},\n"
+        if "__neg__" in magic_methods:
+            number_magic_methods_def += f"     .nb_negative = (unaryfunc){magic_methods['__neg__'].name},\n"
+        if "__pos__" in magic_methods:
+            number_magic_methods_def += f"     .nb_positive = (unaryfunc){magic_methods['__pos__'].name},\n"
+        if "__invert__" in magic_methods:
+            number_magic_methods_def += f"     .nb_invert = (unaryfunc){magic_methods['__invert__'].name},\n"
         if "__lshift__" in magic_methods:
             number_magic_methods_def += f"     .nb_lshift = (binaryfunc){magic_methods['__lshift__'].name},\n"
         if "__rshift__" in magic_methods:
@@ -539,6 +557,38 @@ class CPythonCodePrinter(CCodePrinter):
         property_def_name = self.scope.get_new_name(f"{expr.name}_properties", object_type="wrapper")
         property_def = f"static PyGetSetDef {property_def_name}[] = {{\n{property_definitions}}};\n"
 
+        comparison_ops = {
+            "__eq__": "Py_EQ",
+            "__ne__": "Py_NE",
+            "__lt__": "Py_LT",
+            "__le__": "Py_LE",
+            "__gt__": "Py_GT",
+            "__ge__": "Py_GE",
+        }
+        richcompare_methods = {
+            method_name: magic_methods[method_name] for method_name in comparison_ops if method_name in magic_methods
+        }
+        richcompare_def = ""
+        richcompare_slot = ""
+        if richcompare_methods:
+            richcompare_name = self.scope.get_new_name(f"{expr.name}_richcompare", object_type="wrapper")
+            cases = "".join(
+                f"    case {comparison_ops[method_name]}:\n        return {method.name}(lhs, rhs);\n"
+                for method_name, method in richcompare_methods.items()
+            )
+            richcompare_def = (
+                f"static PyObject *{richcompare_name}(PyObject *lhs, PyObject *rhs, int op)\n"
+                "{\n"
+                "    switch (op) {\n"
+                f"{cases}"
+                "    default:\n"
+                "        Py_INCREF(Py_NotImplemented);\n"
+                "        return Py_NotImplemented;\n"
+                "    }\n"
+                "}\n"
+            )
+            richcompare_slot = f"    .tp_richcompare = {richcompare_name},\n"
+
         type_code = (
             f"static PyTypeObject {type_name} = {{\n"
             "    PyVarObject_HEAD_INIT(NULL, 0)\n"
@@ -552,6 +602,7 @@ class CPythonCodePrinter(CCodePrinter):
             "    .tp_flags = Py_TPFLAGS_DEFAULT,\n"
             f"    .tp_new = {expr.new_func.name},\n"
             f"{init_string}{del_string}"
+            f"{richcompare_slot}"
             f"    .tp_methods = {method_def_name},\n"
             f"    .tp_getset = {property_def_name},\n"
             "};\n"
@@ -564,6 +615,7 @@ class CPythonCodePrinter(CCodePrinter):
                 seq_magic_methods_def,
                 map_magic_methods_def,
                 property_def,
+                richcompare_def,
                 type_code,
                 functions,
             )

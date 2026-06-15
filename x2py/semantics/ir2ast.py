@@ -23,6 +23,11 @@ from x2py.codegen.models.datatypes import (
     original_type_to_x2py_type,
 )
 from x2py.semantics import models
+from x2py.semantics.models import (
+    FORTRAN_GENERIC_NAME_METADATA,
+    OVERLOAD_KIND_METADATA,
+    PYTHON_BOUND_POSITION_METADATA,
+)
 
 
 _SEMANTIC_ORDER_TO_NUMPY_ORDER = {
@@ -89,6 +94,10 @@ def _memory_handling(semantic_type: models.SemanticType) -> str:
 
 
 def _passed_object_position(node: models.SemanticFunction) -> int | None:
+    overload_kind = node.metadata.get(OVERLOAD_KIND_METADATA)
+    if overload_kind in {"generic", "assignment", "named_operator", "comparison"}:
+        position = node.metadata.get(PYTHON_BOUND_POSITION_METADATA)
+        return position if isinstance(position, int) else None
     if not isinstance(node, models.SemanticMethod) or node.is_static:
         return None
     return node.passed_object_position if node.passed_object_position is not None else 0
@@ -194,7 +203,10 @@ def semantic_ir_to_codegen_ast(
             for procedure in node.procedures
         ]
         name = scope.get_new_name(node.name)
-        overload_set = FunctionOverloadSet(str(name), functions)
+        native_names = tuple(
+            str(procedure.metadata.get(FORTRAN_GENERIC_NAME_METADATA, node.name)) for procedure in node.procedures
+        )
+        overload_set = FunctionOverloadSet(str(name), functions, native_names=native_names)
         scope.insert_function(overload_set, name)
         return overload_set
 

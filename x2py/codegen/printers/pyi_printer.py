@@ -9,6 +9,12 @@ import re
 
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
+    FORTRAN_GENERIC_NAME_METADATA,
+    OVERLOAD_KIND_METADATA,
+    OVERLOAD_TARGET_METADATA,
+    PYTHON_BOUND_POSITION_METADATA,
+    PYTHON_METHOD_NAME_METADATA,
+    PYTHON_STATIC_METADATA,
     ProjectionMapping,
     ProcedureOverloadSet,
     SemanticArgument,
@@ -279,17 +285,56 @@ class PyiPrinter:
             parameter_indent="        ",
         ).rstrip()
 
-    def emit_overload_set(self, overload_set: ProcedureOverloadSet) -> str:
+    def emit_overload_set(self, overload_set: ProcedureOverloadSet, *, in_class: bool = False) -> str:
         definitions = []
         for procedure in overload_set.procedures:
             candidate = deepcopy(procedure)
-            candidate.name = overload_set.name
-            definition = (
-                self.emit_method(candidate) if isinstance(candidate, SemanticMethod) else self.emit_function(candidate)
-            )
-            indent = "    " if isinstance(candidate, SemanticMethod) else ""
-            definitions.append(f"{indent}@overload\n{definition}")
+            target = str(candidate.metadata.get(OVERLOAD_TARGET_METADATA) or candidate.native_name or candidate.name)
+            if in_class:
+                candidate = self._overload_method(overload_set, candidate)
+                definition = self.emit_method(candidate)
+                indent = "    "
+            else:
+                candidate.name = overload_set.name
+                definition = self.emit_function(candidate)
+                indent = ""
+            generic = self._overload_generic_argument(candidate)
+            definitions.append(f'{indent}@overload("{target}"{generic})\n{definition}')
         return "\n\n".join(definitions)
+
+    @staticmethod
+    def _overload_generic_argument(procedure: SemanticFunction) -> str:
+        if procedure.metadata.get(OVERLOAD_KIND_METADATA) not in {"operator", "comparison"}:
+            return ""
+        generic_name = str(procedure.metadata.get(FORTRAN_GENERIC_NAME_METADATA, ""))
+        if re.sub(r"\s+", "", generic_name).casefold() not in {
+            "operator(.eqv.)",
+            "operator(.neqv.)",
+        }:
+            return ""
+        return f', generic="{generic_name}"'
+
+    @staticmethod
+    def _overload_method(
+        overload_set: ProcedureOverloadSet,
+        procedure: SemanticFunction,
+    ) -> SemanticMethod:
+        bound_position = procedure.metadata.get(PYTHON_BOUND_POSITION_METADATA)
+        return SemanticMethod(
+            name=str(procedure.metadata.get(PYTHON_METHOD_NAME_METADATA, overload_set.name)),
+            native_name=procedure.native_name,
+            arguments=procedure.arguments,
+            return_type=procedure.return_type,
+            locals=procedure.locals,
+            contracts=procedure.contracts,
+            projection=procedure.projection,
+            metadata=procedure.metadata,
+            visibility=procedure.visibility,
+            origin=procedure.origin,
+            is_static=bool(procedure.metadata.get(PYTHON_STATIC_METADATA)),
+            passed_object_name=(procedure.arguments[bound_position].name if isinstance(bound_position, int) else None),
+            passed_object_position=bound_position if isinstance(bound_position, int) else None,
+        )
 
     def emit_class(self, cls: SemanticClass) -> str:
         bases = f"({', '.join(cls.base_classes)})" if cls.base_classes else ""
@@ -347,7 +392,9 @@ class PyiPrinter:
         if methods:
             body_parts.append(methods)
 
-        overload_sets = "\n\n".join(self.emit_overload_set(overload_set) for overload_set in cls.overload_sets)
+        overload_sets = "\n\n".join(
+            self.emit_overload_set(overload_set, in_class=True) for overload_set in cls.overload_sets
+        )
         if overload_sets:
             body_parts.append(overload_sets)
 
@@ -375,10 +422,6 @@ class PyiPrinter:
             if isinstance(imp, SemanticImport)
             for item in imp.items
         }
-        overload_import = ("typing", "overload", "overload")
-        if PyiPrinter._has_overload_sets(module) and overload_import not in imported_items:
-            imports.append(SemanticImport(module="typing", items=[SemanticImportItem(source="overload")]))
-            imported_items.add(overload_import)
         synthetic: dict[str, list[SemanticImportItem]] = {}
         for semantic_type in _iter_module_semantic_types(module):
             ref = semantic_type.metadata.get(EXTERNAL_TYPE_REF_METADATA)

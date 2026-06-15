@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -8,6 +9,12 @@ from pathlib import Path
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
+    FORTRAN_GENERIC_NAME_METADATA,
+    OVERLOAD_KIND_METADATA,
+    OVERLOAD_TARGET_METADATA,
+    PYTHON_BOUND_POSITION_METADATA,
+    PYTHON_METHOD_NAME_METADATA,
+    PYTHON_STATIC_METADATA,
     ProjectionMapping,
     ProcedureOverloadSet,
     SemanticArgument,
@@ -84,16 +91,27 @@ class _Decorators:
     visibility: str = "public"
     projection: list[ProjectionMapping] = field(default_factory=list)
     has_native_call: bool = False
-    is_overload: bool = False
+    overload_target: str | None = None
+    overload_generic: str | None = None
     is_static: bool = False
+
+
+@dataclass
+class _PendingOverload:
+    owner: SemanticModule | SemanticClass
+    declaration: SemanticFunction
+    target: str
+    generic_name: str | None = None
 
 
 class _PyiAstParser:
     def __init__(self, *, module_name: str):
         self.module = SemanticModule(name=module_name)
+        self._pending_overloads: list[_PendingOverload] = []
 
     def parse(self, tree: ast.Module) -> SemanticModule:
         _ModuleVisitor(self).visit(tree)
+        self._resolve_overloads()
         self._link_enum_constants()
         return self.module
 
@@ -112,17 +130,21 @@ class _PyiAstParser:
         body.visit_body(node.body)
         base_classes = [ast.unparse(base) for base in node.bases]
 
-        return SemanticClass(
+        semantic_class = SemanticClass(
             name=node.name,
             native_name=node.name,
             fields=body.fields,
             methods=body.methods,
-            overload_sets=body.overload_sets,
             classes=body.classes,
             base_classes=base_classes,
             metadata=self._class_metadata(base_classes),
             visibility=visibility,
         )
+        self._pending_overloads.extend(
+            _PendingOverload(semantic_class, declaration, target, generic_name)
+            for declaration, target, generic_name in body.pending_overloads
+        )
+        return semantic_class
 
     @staticmethod
     def _class_metadata(base_classes: list[str]) -> dict[str, object]:
@@ -248,9 +270,27 @@ class _PyiAstParser:
             if self.matches_name(node, "private"):
                 parsed.visibility = "private"
                 continue
-            if self.matches_name(node, "overload"):
-                parsed.is_overload = True
+            if isinstance(node, ast.Call) and self.matches_name(node.func, "overload"):
+                if parsed.overload_target is not None:
+                    raise ValueError(f"Duplicate {context} overload decorator")
+                if self.qualified_name(node.func) == ("typing", "overload"):
+                    raise ValueError('typing.overload is not supported; use x2py @overload("specific")')
+                if len(node.args) != 1:
+                    raise ValueError("overload expects one specific procedure name")
+                target = ast.literal_eval(node.args[0])
+                if not isinstance(target, str) or not target:
+                    raise ValueError("overload expects a non-empty specific procedure name")
+                if len(node.keywords) > 1 or any(keyword.arg != "generic" for keyword in node.keywords):
+                    raise ValueError("overload accepts only the optional generic keyword")
+                if node.keywords:
+                    generic_name = ast.literal_eval(node.keywords[0].value)
+                    if not isinstance(generic_name, str) or not generic_name:
+                        raise ValueError("overload generic expects a non-empty Fortran generic name")
+                    parsed.overload_generic = generic_name
+                parsed.overload_target = target
                 continue
+            if self.matches_name(node, "overload"):
+                raise ValueError("overload expects one specific procedure name")
             if self.matches_name(node, "staticmethod"):
                 parsed.is_static = True
                 continue
@@ -261,21 +301,6 @@ class _PyiAstParser:
             raise ValueError(f"Unsupported {context} decorator: {ast.unparse(node)!r}")
         return parsed
 
-    @staticmethod
-    def overload_candidate(
-        candidate: SemanticFunction,
-        concrete_procedures: list[SemanticFunction],
-    ) -> SemanticFunction:
-        for procedure in concrete_procedures:
-            if type(procedure) is not type(candidate):
-                continue
-            if procedure.arguments != candidate.arguments or procedure.return_type != candidate.return_type:
-                continue
-            resolved = deepcopy(procedure)
-            resolved.visibility = candidate.visibility
-            return resolved
-        return candidate
-
     def native_call(self, node: ast.Call) -> list[ProjectionMapping]:
         if len(node.args) != 1 or node.keywords:
             raise ValueError("native_call expects a single list argument")
@@ -285,6 +310,222 @@ class _PyiAstParser:
         return [
             self.native_projection_entry(entry, native_position) for native_position, entry in enumerate(entries.elts)
         ]
+
+    def _resolve_overloads(self) -> None:
+        for pending in self._pending_overloads:
+            target = self._resolve_overload_target(pending.owner, pending.target)
+            candidate = self._validated_overload_candidate(
+                pending.owner,
+                pending.declaration,
+                target,
+                generic_name=pending.generic_name,
+            )
+            overload_sets = pending.owner.overload_sets
+            overload_name = self._overload_set_name(pending.owner, pending.declaration.name)
+            overload_set = next((item for item in overload_sets if item.name == overload_name), None)
+            if overload_set is None:
+                overload_set = ProcedureOverloadSet(overload_name)
+                overload_sets.append(overload_set)
+            if any(proc.metadata.get(OVERLOAD_TARGET_METADATA) == pending.target for proc in overload_set.procedures):
+                raise ValueError(
+                    f"Overload {pending.declaration.name!r} references specific procedure "
+                    f"{pending.target!r} more than once"
+                )
+            overload_set.procedures.append(candidate)
+
+    @staticmethod
+    def _overload_set_name(owner: SemanticModule | SemanticClass, declaration_name: str) -> str:
+        if isinstance(owner, SemanticModule):
+            return declaration_name
+        return {
+            "__radd__": "__add__",
+            "__rsub__": "__sub__",
+            "__rmul__": "__mul__",
+            "__rtruediv__": "__truediv__",
+            "__rpow__": "__pow__",
+            "__rand__": "__and__",
+            "__ror__": "__or__",
+        }.get(declaration_name, declaration_name)
+
+    def _resolve_overload_target(
+        self,
+        owner: SemanticModule | SemanticClass,
+        target_name: str,
+    ) -> SemanticFunction:
+        candidates = [
+            function for function in self.module.functions if target_name in {function.name, function.native_name}
+        ]
+        if isinstance(owner, SemanticClass) and not candidates:
+            candidates = [method for method in owner.methods if target_name in {method.name, method.native_name}]
+        if not candidates:
+            raise ValueError(f"Overload references missing specific procedure {target_name!r}")
+        if len(candidates) != 1:
+            raise ValueError(f"Overload target {target_name!r} is ambiguous")
+        return candidates[0]
+
+    def _validated_overload_candidate(
+        self,
+        owner: SemanticModule | SemanticClass,
+        declaration: SemanticFunction,
+        target: SemanticFunction,
+        *,
+        generic_name: str | None,
+    ) -> SemanticFunction:
+        candidate = deepcopy(target)
+        candidate.visibility = declaration.visibility
+        candidate.metadata[OVERLOAD_TARGET_METADATA] = target.native_name or target.name
+
+        if isinstance(owner, SemanticModule):
+            if generic_name is not None:
+                raise ValueError("overload generic is only valid for class operator and assignment declarations")
+            self._validate_overload_signature(declaration, candidate, list(candidate.arguments))
+            candidate.metadata[FORTRAN_GENERIC_NAME_METADATA] = declaration.name
+            candidate.metadata[OVERLOAD_KIND_METADATA] = "generic"
+            return candidate
+
+        bound_position = self._class_overload_bound_position(owner, declaration, candidate)
+        call_arguments = (
+            list(candidate.arguments)
+            if bound_position is None
+            else [arg for index, arg in enumerate(candidate.arguments) if index != bound_position]
+        )
+        self._validate_overload_signature(declaration, candidate, call_arguments)
+        kind, native_name = self._class_overload_identity(
+            declaration.name,
+            bound_position,
+            generic_name=generic_name,
+        )
+        candidate.metadata[FORTRAN_GENERIC_NAME_METADATA] = native_name
+        candidate.metadata[OVERLOAD_KIND_METADATA] = kind
+        candidate.metadata[PYTHON_METHOD_NAME_METADATA] = declaration.name
+        if bound_position is not None:
+            candidate.metadata[PYTHON_BOUND_POSITION_METADATA] = bound_position
+        if isinstance(declaration, SemanticMethod) and declaration.is_static:
+            candidate.metadata[PYTHON_STATIC_METADATA] = True
+        return candidate
+
+    @staticmethod
+    def _validate_overload_signature(
+        declaration: SemanticFunction,
+        target: SemanticFunction,
+        call_arguments: list[SemanticArgument],
+    ) -> None:
+        if declaration.arguments != call_arguments or declaration.return_type != target.return_type:
+            raise ValueError(
+                f"Overload declaration {declaration.name!r} is incompatible with "
+                f"specific procedure {target.native_name or target.name!r}"
+            )
+
+    @staticmethod
+    def _class_overload_bound_position(
+        owner: SemanticClass,
+        declaration: SemanticFunction,
+        target: SemanticFunction,
+    ) -> int | None:
+        if isinstance(declaration, SemanticMethod) and declaration.is_static:
+            return None
+        remaining_names = [argument.name for argument in declaration.arguments]
+        matching = [
+            index
+            for index, argument in enumerate(target.arguments)
+            if argument.semantic_type.name.casefold() == owner.name.casefold()
+            and [arg.name for pos, arg in enumerate(target.arguments) if pos != index] == remaining_names
+        ]
+        if len(matching) == 1:
+            return matching[0]
+        if not matching:
+            raise ValueError(
+                f"Overload declaration {declaration.name!r} cannot bind an argument of type {owner.name!r} "
+                f"from specific procedure {target.native_name or target.name!r}"
+            )
+        raise ValueError(
+            f"Overload declaration {declaration.name!r} has an ambiguous bound argument in "
+            f"specific procedure {target.native_name or target.name!r}"
+        )
+
+    @staticmethod
+    def _class_overload_identity(
+        method_name: str,
+        bound_position: int | None,
+        *,
+        generic_name: str | None,
+    ) -> tuple[str, str]:
+        direct_operators = {
+            "__add__": "+",
+            "__sub__": "-",
+            "__mul__": "*",
+            "__truediv__": "/",
+            "__pow__": "**",
+            "__and__": ".and.",
+            "__or__": ".or.",
+            "__invert__": ".not.",
+            "__pos__": "+",
+            "__neg__": "-",
+            "__eq__": "==",
+            "__ne__": "/=",
+            "__lt__": "<",
+            "__le__": "<=",
+            "__gt__": ">",
+            "__ge__": ">=",
+        }
+        reflected_operators = {
+            "__radd__": "+",
+            "__rsub__": "-",
+            "__rmul__": "*",
+            "__rtruediv__": "/",
+            "__rpow__": "**",
+            "__rand__": ".and.",
+            "__ror__": ".or.",
+        }
+        if method_name in reflected_operators:
+            if bound_position != 1:
+                raise ValueError(f"{method_name} requires the wrapped object to be the second native operand")
+            identity = ("operator", f"operator({reflected_operators[method_name]})")
+            return _PyiAstParser._validated_generic_override(method_name, identity, generic_name)
+        if method_name in direct_operators:
+            token = direct_operators[method_name]
+            if method_name in {"__lt__", "__le__", "__gt__", "__ge__"} and bound_position == 1:
+                token = {"<": ">", "<=": ">=", ">": "<", ">=": "<="}[token]
+            kind = (
+                "comparison"
+                if method_name in {"__eq__", "__ne__", "__lt__", "__le__", "__gt__", "__ge__"}
+                else "operator"
+            )
+            identity = (kind, f"operator({token})")
+            return _PyiAstParser._validated_generic_override(method_name, identity, generic_name)
+        if method_name == "assign":
+            identity = ("assignment", "assignment(=)")
+            return _PyiAstParser._validated_generic_override(method_name, identity, generic_name)
+        reflected_named = method_name.startswith("r_operator_")
+        if reflected_named or method_name.startswith("operator_"):
+            prefix = "r_operator_" if reflected_named else "operator_"
+            token = method_name.removeprefix(prefix)
+            if not token or not token.isidentifier():
+                raise ValueError(f"Invalid named operator method {method_name!r}")
+            if reflected_named and bound_position != 1:
+                raise ValueError(f"{method_name} requires the wrapped object to be the second native operand")
+            identity = ("named_operator", f"operator(.{token}.)")
+            return _PyiAstParser._validated_generic_override(method_name, identity, generic_name)
+        if generic_name is not None:
+            raise ValueError(f"overload generic is not valid for ordinary method {method_name!r}")
+        return "generic", method_name
+
+    @staticmethod
+    def _validated_generic_override(
+        method_name: str,
+        identity: tuple[str, str],
+        generic_name: str | None,
+    ) -> tuple[str, str]:
+        if generic_name is None:
+            return identity
+        compact = re.sub(r"\s+", "", generic_name).casefold()
+        allowed_overrides = {
+            "__eq__": {"operator(==)", "operator(.eq.)", "operator(.eqv.)"},
+            "__ne__": {"operator(/=)", "operator(.ne.)", "operator(.neqv.)"},
+        }
+        if compact not in allowed_overrides.get(method_name, {identity[1].casefold()}):
+            raise ValueError(f"overload generic {generic_name!r} is incompatible with method {method_name!r}")
+        return identity[0], generic_name
 
     def native_projection_entry(self, node: ast.AST, native_position: int) -> ProjectionMapping:
         shape_mapping = self.native_shape_projection_entry(node, native_position)
@@ -975,7 +1216,7 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         self.parser = parser
         self.fields: list[SemanticField] = []
         self.methods: list[SemanticMethod] = []
-        self.overload_sets: list[ProcedureOverloadSet] = []
+        self.pending_overloads: list[tuple[SemanticMethod, str, str | None]] = []
         self.classes: list[SemanticClass] = []
 
     def visit_body(self, nodes: list[ast.stmt]) -> None:
@@ -996,14 +1237,8 @@ class _ClassBodyVisitor(ast.NodeVisitor):
             projection=decorators.projection,
             is_static=decorators.is_static,
         )
-        if decorators.is_overload:
-            overload_name = method.name
-            method = self.parser.overload_candidate(method, self.methods)
-            overload_set = next((item for item in self.overload_sets if item.name == overload_name), None)
-            if overload_set is None:
-                overload_set = ProcedureOverloadSet(overload_name)
-                self.overload_sets.append(overload_set)
-            overload_set.procedures.append(method)
+        if decorators.overload_target is not None:
+            self.pending_overloads.append((method, decorators.overload_target, decorators.overload_generic))
         else:
             self.methods.append(method)
 
@@ -1032,10 +1267,9 @@ class _ModuleVisitor(ast.NodeVisitor):
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         semantic_import = self.parser.import_from(node)
-        if semantic_import.module == "typing":
-            semantic_import.items = [item for item in semantic_import.items if item.source != "overload"]
-        if semantic_import.items:
-            self.parser.module.imports.append(semantic_import)
+        if semantic_import.module == "typing" and any(item.source == "overload" for item in semantic_import.items):
+            raise ValueError('typing.overload is not supported; use x2py @overload("specific")')
+        self.parser.module.imports.append(semantic_import)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
         self.parser.module.variables.append(self.parser.ann_assign(node, default_intent="in"))
@@ -1056,17 +1290,15 @@ class _ModuleVisitor(ast.NodeVisitor):
             visibility=decorators.visibility,
             projection=decorators.projection,
         )
-        if decorators.is_overload:
-            overload_name = function.name
-            function = self.parser.overload_candidate(function, self.parser.module.functions)
-            overload_set = next(
-                (item for item in self.parser.module.overload_sets if item.name == overload_name),
-                None,
+        if decorators.overload_target is not None:
+            self.parser._pending_overloads.append(
+                _PendingOverload(
+                    self.parser.module,
+                    function,
+                    decorators.overload_target,
+                    decorators.overload_generic,
+                )
             )
-            if overload_set is None:
-                overload_set = ProcedureOverloadSet(overload_name)
-                self.parser.module.overload_sets.append(overload_set)
-            overload_set.procedures.append(function)
         else:
             self.parser.module.functions.append(function)
 

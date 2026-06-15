@@ -1038,7 +1038,11 @@
                   "intent": "inout"
                 }
               ],
-              "metadata": {},
+              "metadata": {
+                "fortran_generic_name": "do_work",
+                "overload_kind": "generic",
+                "overload_target": "do_work_i"
+              },
               "visibility": "public",
               "origin": {
                 "source_language": "fortran",
@@ -1142,7 +1146,11 @@
                   "intent": "in"
                 }
               ],
-              "metadata": {},
+              "metadata": {
+                "fortran_generic_name": "do_work",
+                "overload_kind": "generic",
+                "overload_target": "do_work_r"
+              },
               "visibility": "public",
               "origin": {
                 "source_language": "fortran",
@@ -1246,7 +1254,11 @@
                   "intent": "in"
                 }
               ],
-              "metadata": {},
+              "metadata": {
+                "fortran_generic_name": "do_work",
+                "overload_kind": "generic",
+                "overload_target": "do_work_l"
+              },
               "visibility": "public",
               "origin": {
                 "source_language": "fortran",
