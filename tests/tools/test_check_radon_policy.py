@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from tools.check_radon_policy import (
+    ChangedPythonFile,
     ComplexityBlock,
     ZERO_SHA,
     block_changed,
@@ -10,6 +11,8 @@ from tools.check_radon_policy import (
     changed_block_violates_policy,
     complexity_blocks_for_file,
     is_under_source_roots,
+    legacy_baseline_complexity,
+    parse_changed_python_files,
     resolve_base_ref,
 )
 
@@ -59,6 +62,31 @@ def test_source_root_filter_uses_path_boundaries():
     assert is_under_source_roots("x2py/c_parser/parser.py", ("x2py",))
     assert is_under_source_roots("x2py", ("x2py",))
     assert not is_under_source_roots("x2py_extra/parser.py", ("x2py",))
+
+
+def test_changed_python_files_preserve_pre_rename_paths():
+    output = "R098\told/parser.py\tx2py/parser.py\nM\tx2py/cli.py\nA\tx2py/new.py\n"
+
+    assert parse_changed_python_files(output) == [
+        ChangedPythonFile("x2py/parser.py", "old/parser.py"),
+        ChangedPythonFile("x2py/cli.py", "x2py/cli.py"),
+        ChangedPythonFile("x2py/new.py", None),
+    ]
+
+
+def test_legacy_baseline_is_limited_to_named_imported_hotspots():
+    known = ComplexityBlock(
+        Path("x2py/semantics/ir2ast.py"),
+        "function",
+        "semantic_ir_to_codegen_ast",
+        1,
+        10,
+        33,
+    )
+    unknown = ComplexityBlock(Path("x2py/new.py"), "function", "branchy", 1, 10, 33)
+
+    assert legacy_baseline_complexity(known) == 33
+    assert legacy_baseline_complexity(unknown) is None
 
 
 def test_changed_block_policy_allows_existing_hotspots_unless_worsened():

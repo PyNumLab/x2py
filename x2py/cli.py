@@ -771,24 +771,40 @@ def _validate_c_type_probe_options(args: argparse.Namespace, parser: argparse.Ar
         parser.error("--c-type-report cannot be combined with automatic C type probe options")
 
 
-def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int | None:
-    if _should_run_wrap(args):
-        if args.language != "fortran":
-            parser.error("--wrap currently requires --language fortran")
-        if len(args.paths) != 1:
-            parser.error("--wrap expects exactly one Fortran source file")
-        if Path(args.paths[0]).is_dir():
-            parser.error("--wrap expects a Fortran source file, not a directory")
-        if args.parse or args.semantics or args.pyi or args.wrap_readiness:
-            parser.error("--wrap cannot be combined with --parse, --semantics, --pyi, or --wrap-readiness")
-        if args.out is not None:
-            parser.error("--wrap writes build artifacts; use --out-dir instead of --out")
+def _validate_wrap_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    if not _should_run_wrap(args):
+        return
+    if args.language != "fortran":
+        parser.error("--wrap currently requires --language fortran")
+    if len(args.paths) != 1:
+        parser.error("--wrap expects exactly one Fortran source file")
+    if Path(args.paths[0]).is_dir():
+        parser.error("--wrap expects a Fortran source file, not a directory")
+    if args.parse or args.semantics or args.pyi or args.wrap_readiness:
+        parser.error("--wrap cannot be combined with --parse, --semantics, --pyi, or --wrap-readiness")
+    if args.out is not None:
+        parser.error("--wrap writes build artifacts; use --out-dir instead of --out")
 
-    if args.language == "c":
-        if not _has_stage(args):
-            parser.error(f"--language c requires a stage flag: choose one of {_STAGE_FLAGS_DESCRIPTION}")
-        if args.show_vars:
-            parser.error("--show-vars is Fortran-only and is not supported for --language c")
+
+def _validate_c_main_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    if args.language != "c":
+        return
+    if not _has_stage(args):
+        parser.error(f"--language c requires a stage flag: choose one of {_STAGE_FLAGS_DESCRIPTION}")
+    if args.show_vars:
+        parser.error("--show-vars is Fortran-only and is not supported for --language c")
+
+
+def _validate_output_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    if args.out is not None and not _has_stage(args):
+        parser.error(f"--out requires a stage flag: choose one of {_STAGE_FLAGS_DESCRIPTION}")
+    if (args.show_vars or args.print_limit is not None or args.vars_limit is not None) and not args.parse:
+        parser.error("--show-vars/--print-limit require --parse")
+
+
+def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int | None:
+    _validate_wrap_options(args, parser)
+    _validate_c_main_options(args, parser)
 
     _validate_c_type_probe_options(args, parser)
     _validate_fortran_type_probe_options(
@@ -798,12 +814,7 @@ def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentPa
         automatic_options=_automatic_fortran_type_probe_options(args),
         parser=parser,
     )
-    if args.out is not None and _should_run_wrap(args):
-        parser.error("--wrap writes build artifacts; use --out-dir instead of --out")
-    if args.out is not None and not _has_stage(args):
-        parser.error(f"--out requires a stage flag: choose one of {_STAGE_FLAGS_DESCRIPTION}")
-    if (args.show_vars or args.print_limit is not None or args.vars_limit is not None) and not args.parse:
-        parser.error("--show-vars/--print-limit require --parse")
+    _validate_output_options(args, parser)
 
     print_limit = args.print_limit if args.print_limit is not None else args.vars_limit
     if print_limit is not None and print_limit < 0:

@@ -459,49 +459,47 @@ class _PyiAstParser:
                 self._append_constraint_metadata(semantic_type, node.id, [])
             return
         if isinstance(node, ast.Call):
-            helper = self.required_name(node.func)
-            if helper == "Intent":
-                if len(node.args) != 1:
-                    raise ValueError(f"Intent metadata expects one argument: {ast.unparse(node)!r}")
-                semantic_type.metadata["_pyi_intent"] = str(ast.literal_eval(node.args[0]))
-                return
-            if helper == "FortranCharacterLength":
-                if len(node.args) != 1:
-                    raise ValueError(f"FortranCharacterLength metadata expects one argument: {ast.unparse(node)!r}")
-                semantic_type.metadata["fortran_character_length"] = str(ast.literal_eval(node.args[0]))
-                return
-            if helper == "ArrayCategory":
-                self._require_array_storage(semantic_type).category = str(ast.literal_eval(node.args[0]))
-                return
-            if helper == "SourceDims":
-                values = [str(ast.literal_eval(arg)) for arg in node.args]
-                array = self._require_array_storage(semantic_type)
-                array.source_shape = values
-                array.lower_bounds, array.upper_bounds = self._bounds_from_source_shape(values)
-                return
-            if helper == "SourceShape":
-                raise ValueError("SourceShape metadata is not supported; use SourceDims")
-            if helper == "LowerBounds":
-                self._require_array_storage(semantic_type).lower_bounds = [
-                    None if isinstance(arg, ast.Constant) and arg.value is None else str(ast.literal_eval(arg))
-                    for arg in node.args
-                ]
-                return
-            if helper == "UpperBounds":
-                self._require_array_storage(semantic_type).upper_bounds = [
-                    None if isinstance(arg, ast.Constant) and arg.value is None else str(ast.literal_eval(arg))
-                    for arg in node.args
-                ]
-                return
-            if node.keywords:
-                raise ValueError(f"Constraint metadata expects positional arguments only: {ast.unparse(node)!r}")
-            self._append_constraint_metadata(
-                semantic_type,
-                helper,
-                [ast.literal_eval(arg) for arg in node.args],
-            )
+            self._apply_annotation_metadata_call(semantic_type, node)
             return
         raise ValueError(f"Unsupported Annotated metadata: {ast.unparse(node)!r}")
+
+    def _apply_annotation_metadata_call(self, semantic_type: SemanticType, node: ast.Call) -> None:
+        helper = self.required_name(node.func)
+        if helper in {"Intent", "FortranCharacterLength"}:
+            if len(node.args) != 1:
+                raise ValueError(f"{helper} metadata expects one argument: {ast.unparse(node)!r}")
+            metadata_key = "_pyi_intent" if helper == "Intent" else "fortran_character_length"
+            semantic_type.metadata[metadata_key] = str(ast.literal_eval(node.args[0]))
+            return
+        if helper == "ArrayCategory":
+            self._require_array_storage(semantic_type).category = str(ast.literal_eval(node.args[0]))
+            return
+        if helper == "SourceDims":
+            values = [str(ast.literal_eval(arg)) for arg in node.args]
+            array = self._require_array_storage(semantic_type)
+            array.source_shape = values
+            array.lower_bounds, array.upper_bounds = self._bounds_from_source_shape(values)
+            return
+        if helper == "SourceShape":
+            raise ValueError("SourceShape metadata is not supported; use SourceDims")
+        if helper in {"LowerBounds", "UpperBounds"}:
+            bounds = [
+                None if isinstance(arg, ast.Constant) and arg.value is None else str(ast.literal_eval(arg))
+                for arg in node.args
+            ]
+            array = self._require_array_storage(semantic_type)
+            if helper == "LowerBounds":
+                array.lower_bounds = bounds
+            else:
+                array.upper_bounds = bounds
+            return
+        if node.keywords:
+            raise ValueError(f"Constraint metadata expects positional arguments only: {ast.unparse(node)!r}")
+        self._append_constraint_metadata(
+            semantic_type,
+            helper,
+            [ast.literal_eval(arg) for arg in node.args],
+        )
 
     def _apply_metadata_name(self, semantic_type: SemanticType, name: str) -> bool:
         if name in {"ORDER_C", "ORDER_F", "ORDER_ANY"}:

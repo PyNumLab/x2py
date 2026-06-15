@@ -6,7 +6,14 @@ on:
   workflow_dispatch:
 
 jobs:
+  static-analysis:
+    name: Static Analysis
+    uses: ./.github/workflows/quality.yml
+    permissions:
+      contents: read
+
   fuzz:
+    needs: static-analysis
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

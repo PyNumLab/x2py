@@ -7,9 +7,11 @@ on:
     branches:
       - main
       - release/*
+  workflow_call:
 
 jobs:
   static-analysis:
+    name: Static Analysis
     runs-on: ubuntu-latest
     permissions:
       contents: read

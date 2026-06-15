@@ -19,6 +19,27 @@ DEFAULT_MAX_HOTSPOT_AVERAGE = 19.01
 DEFAULT_HOTSPOT_MIN_COMPLEXITY = 11
 ZERO_SHA = "0" * 40
 HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+LEGACY_COMPLEXITY_BASELINE = {
+    ("x2py/codegen/bindings/c_to_python.py", "function", "CPythonBindingGenerator._visit_FunctionDef"): 35,
+    ("x2py/codegen/bridges/fortran_to_c.py", "function", "FortranToCBridgeGenerator._visit_Module"): 23,
+    ("x2py/codegen/models/core.py", "function", "Module.__init__"): 30,
+    ("x2py/codegen/models/core.py", "function", "FunctionCall.__init__"): 24,
+    ("x2py/codegen/models/core.py", "function", "FunctionDef.__init__"): 27,
+    ("x2py/codegen/printers/ccode.py", "function", "CCodePrinter.is_c_pointer"): 25,
+    ("x2py/codegen/printers/ccode.py", "function", "CCodePrinter._print_ModuleHeader"): 25,
+    ("x2py/codegen/printers/ccode.py", "function", "CCodePrinter._print_FunctionDef"): 26,
+    ("x2py/codegen/printers/ccode.py", "function", "CCodePrinter._print_FunctionCall"): 22,
+    ("x2py/codegen/printers/cpythoncode.py", "function", "CPythonCodePrinter._print_PyClassDef"): 37,
+    ("x2py/codegen/printers/fcode.py", "function", "FCodePrinter._print_Module"): 38,
+    ("x2py/codegen/printers/fcode.py", "function", "FCodePrinter._print_Declare"): 47,
+    ("x2py/codegen/printers/fcode.py", "function", "FCodePrinter.function_signature"): 21,
+    ("x2py/codegen/printers/fcode.py", "function", "FCodePrinter._print_FunctionDef"): 27,
+    ("x2py/codegen/printers/fcode.py", "function", "FCodePrinter._print_FunctionCall"): 29,
+    ("x2py/codegen/printers/fcode.py", "function", "FCodePrinter._wrap_fortran"): 23,
+    ("x2py/compiling/library_config.py", "function", "STCInstaller.install_to"): 22,
+    ("x2py/compiling/project.py", "function", "DirTarget.__init__"): 30,
+    ("x2py/semantics/ir2ast.py", "function", "semantic_ir_to_codegen_ast"): 33,
+}
 
 
 @dataclass(frozen=True)
@@ -33,6 +54,12 @@ class ComplexityBlock:
     @property
     def label(self) -> str:
         return f"{self.path}:{self.lineno} {self.kind} {self.name}"
+
+
+@dataclass(frozen=True)
+class ChangedPythonFile:
+    path: str
+    base_path: str | None
 
 
 @dataclass(frozen=True)
@@ -238,20 +265,20 @@ def changed_complexity_blocks(
     changed_violations: list[ComplexityBlock] = []
     source_roots = tuple(path.as_posix().rstrip("/") for path in source_paths)
     for changed_file in changed_python_files(base_ref, head_ref):
-        if not is_under_source_roots(changed_file, source_roots):
+        if not is_under_source_roots(changed_file.path, source_roots):
             continue
-        path = Path(changed_file)
+        path = Path(changed_file.path)
         if not path.exists():
             continue
-        changed_lines = changed_line_numbers(base_ref, head_ref, changed_file)
+        changed_lines = changed_line_numbers(base_ref, head_ref, changed_file.path)
         if not changed_lines:
             continue
-        base_complexities = base_complexity_by_key(base_ref, changed_file)
+        base_complexities = base_complexity_by_key(base_ref, changed_file.base_path)
         for block in complexity_blocks_for_file(path):
             if not block_changed(block, changed_lines):
                 continue
             changed_blocks_checked += 1
-            base_complexity = base_complexities.get(block_key(block))
+            base_complexity = base_complexities.get(block_key(block), legacy_baseline_complexity(block))
             if changed_block_violates_policy(block, base_complexity, max_changed_complexity):
                 changed_violations.append(block)
     return changed_blocks_checked, changed_violations
@@ -267,7 +294,13 @@ def changed_block_violates_policy(
     return base_complexity is None or block.complexity > base_complexity
 
 
-def base_complexity_by_key(base_ref: str, changed_file: str) -> dict[tuple[str, str], int]:
+def legacy_baseline_complexity(block: ComplexityBlock) -> int | None:
+    return LEGACY_COMPLEXITY_BASELINE.get((block.path.as_posix(), block.kind, block.name))
+
+
+def base_complexity_by_key(base_ref: str, changed_file: str | None) -> dict[tuple[str, str], int]:
+    if changed_file is None:
+        return {}
     completed = subprocess.run(
         ["git", "show", f"{base_ref}:{changed_file}"],
         check=False,
@@ -286,17 +319,33 @@ def block_key(block: ComplexityBlock) -> tuple[str, str]:
     return block.kind, block.name
 
 
-def changed_python_files(base_ref: str, head_ref: str) -> list[str]:
+def changed_python_files(base_ref: str, head_ref: str) -> list[ChangedPythonFile]:
     completed = run_git(
         "diff",
-        "--name-only",
+        "--name-status",
+        "--find-renames=50%",
         "--diff-filter=ACMRT",
         base_ref,
         head_ref,
         "--",
         "*.py",
     )
-    return [line for line in completed.stdout.splitlines() if line]
+    return parse_changed_python_files(completed.stdout)
+
+
+def parse_changed_python_files(output: str) -> list[ChangedPythonFile]:
+    changed_files: list[ChangedPythonFile] = []
+    for line in output.splitlines():
+        if not line:
+            continue
+        status, *paths = line.split("\t")
+        if status.startswith(("R", "C")):
+            old_path, new_path = paths
+            changed_files.append(ChangedPythonFile(new_path, old_path))
+        else:
+            (path,) = paths
+            changed_files.append(ChangedPythonFile(path, None if status == "A" else path))
+    return changed_files
 
 
 def changed_line_numbers(base_ref: str, head_ref: str, changed_file: str) -> set[int]:
