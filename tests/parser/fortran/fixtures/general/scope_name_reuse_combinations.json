@@ -479,7 +479,13 @@
         {
           "name": "do_work",
           "module": "scope_name_reuse_combinations",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "do_work_i",
+            "do_work_r",
+            "do_work_l"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "public",
@@ -972,7 +978,13 @@
         {
           "name": "do_work",
           "module": "scope_name_reuse_combinations",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "do_work_i",
+            "do_work_r",
+            "do_work_l"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "public",

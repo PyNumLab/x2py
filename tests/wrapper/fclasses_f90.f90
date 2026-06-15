@@ -6,6 +6,7 @@ module fclasses_f90
     real(8) :: y
   contains
     procedure :: scale
+    procedure, pass(owner) :: shift => shift_vector
     procedure :: magnitude
   end type vector
 
@@ -28,6 +29,15 @@ contains
     self%x = self%x * factor
     self%y = self%y * factor
   end subroutine scale
+
+  subroutine shift_vector(dx, owner, dy)
+    real(8), intent(in) :: dx
+    class(vector), intent(inout) :: owner
+    real(8), intent(in) :: dy
+
+    owner%x = owner%x + dx
+    owner%y = owner%y + dy
+  end subroutine shift_vector
 
   function magnitude(self) result(value)
     class(vector), intent(in) :: self

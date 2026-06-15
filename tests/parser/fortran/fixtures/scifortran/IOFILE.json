@@ -2244,32 +2244,67 @@
         {
           "name": "str",
           "module": "IOFILE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "str_i_to_ch",
+            "str_i_to_ch_pad",
+            "str_r_to_ch",
+            "str_c_to_ch",
+            "str_l_to_ch",
+            "str_ch_to_ch"
+          ],
+          "abstract": false
         },
         {
           "name": "txtfy",
           "module": "IOFILE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "str_i_to_ch",
+            "str_i_to_ch_pad",
+            "str_r_to_ch",
+            "str_c_to_ch",
+            "str_l_to_ch",
+            "str_ch_to_ch"
+          ],
+          "abstract": false
         },
         {
           "name": "reg",
           "module": "IOFILE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "reg_filename"
+          ],
+          "abstract": false
         },
         {
           "name": "create_dir",
           "module": "IOFILE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "create_data_dir"
+          ],
+          "abstract": false
         },
         {
           "name": "newunit",
           "module": "IOFILE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "free_unit"
+          ],
+          "abstract": false
         },
         {
           "name": "print_matrix",
           "module": "IOFILE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "print_array_d",
+            "print_array_c"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -4555,32 +4590,67 @@
         {
           "name": "str",
           "module": "IOFILE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "str_i_to_ch",
+            "str_i_to_ch_pad",
+            "str_r_to_ch",
+            "str_c_to_ch",
+            "str_l_to_ch",
+            "str_ch_to_ch"
+          ],
+          "abstract": false
         },
         {
           "name": "txtfy",
           "module": "IOFILE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "str_i_to_ch",
+            "str_i_to_ch_pad",
+            "str_r_to_ch",
+            "str_c_to_ch",
+            "str_l_to_ch",
+            "str_ch_to_ch"
+          ],
+          "abstract": false
         },
         {
           "name": "reg",
           "module": "IOFILE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "reg_filename"
+          ],
+          "abstract": false
         },
         {
           "name": "create_dir",
           "module": "IOFILE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "create_data_dir"
+          ],
+          "abstract": false
         },
         {
           "name": "newunit",
           "module": "IOFILE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "free_unit"
+          ],
+          "abstract": false
         },
         {
           "name": "print_matrix",
           "module": "IOFILE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "print_array_d",
+            "print_array_c"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

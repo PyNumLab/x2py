@@ -644,7 +644,18 @@
         {
           "name": "matmul",
           "module": "SF_SPARSE_ARRAY_ALGEBRA",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "dmatmul_csr_csr",
+            "zmatmul_csr_csr",
+            "dmatmul_csc_csc",
+            "zmatmul_csc_csc",
+            "dmatmul_csc_csr_2csr",
+            "zmatmul_csc_csr_2csr",
+            "dmatmul_csc_csr_2csc",
+            "zmatmul_csc_csr_2csc"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "public",
@@ -1304,7 +1315,18 @@
         {
           "name": "matmul",
           "module": "SF_SPARSE_ARRAY_ALGEBRA",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "dmatmul_csr_csr",
+            "zmatmul_csr_csr",
+            "dmatmul_csc_csc",
+            "zmatmul_csc_csc",
+            "dmatmul_csc_csr_2csr",
+            "zmatmul_csc_csr_2csr",
+            "dmatmul_csc_csr_2csc",
+            "zmatmul_csc_csr_2csc"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "public",

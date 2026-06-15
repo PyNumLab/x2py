@@ -817,27 +817,76 @@
         {
           "name": "trapz",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_trapz_ab_sample",
+            "c_trapz_ab_sample",
+            "d_trapz_dh_sample",
+            "c_trapz_dh_sample",
+            "d_trapz_nonlin_sample",
+            "c_trapz_nonlin_sample",
+            "d_trapz_ab_func",
+            "c_trapz_ab_func",
+            "d_trapz_nonlin_func",
+            "c_trapz_nonlin_func"
+          ],
+          "abstract": false
         },
         {
           "name": "trapz2d",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_trapz2d_func",
+            "c_trapz2d_func",
+            "d_trapz2d_func_recursive",
+            "c_trapz2d_func_recursive",
+            "d_trapz2d_sample",
+            "c_trapz2d_sample"
+          ],
+          "abstract": false
         },
         {
           "name": "simps",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_simpson_dh_sample",
+            "c_simpson_dh_sample",
+            "d_simpson_ab_sample",
+            "c_simpson_ab_sample",
+            "d_simpson_nonlin_sample",
+            "c_simpson_nonlin_sample",
+            "d_simps_ab_func",
+            "c_simps_ab_func",
+            "d_simps_nonlin_func",
+            "c_simps_nonlin_func"
+          ],
+          "abstract": false
         },
         {
           "name": "simps2d",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_simps2d_func",
+            "c_simps2d_func",
+            "d_simps2d_func_recursive",
+            "c_simps2d_func_recursive",
+            "d_simps2d_sample",
+            "c_simps2d_sample"
+          ],
+          "abstract": false
         },
         {
           "name": "quad",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "quad_func",
+            "quad_sample"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -1678,27 +1727,76 @@
         {
           "name": "trapz",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_trapz_ab_sample",
+            "c_trapz_ab_sample",
+            "d_trapz_dh_sample",
+            "c_trapz_dh_sample",
+            "d_trapz_nonlin_sample",
+            "c_trapz_nonlin_sample",
+            "d_trapz_ab_func",
+            "c_trapz_ab_func",
+            "d_trapz_nonlin_func",
+            "c_trapz_nonlin_func"
+          ],
+          "abstract": false
         },
         {
           "name": "trapz2d",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_trapz2d_func",
+            "c_trapz2d_func",
+            "d_trapz2d_func_recursive",
+            "c_trapz2d_func_recursive",
+            "d_trapz2d_sample",
+            "c_trapz2d_sample"
+          ],
+          "abstract": false
         },
         {
           "name": "simps",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_simpson_dh_sample",
+            "c_simpson_dh_sample",
+            "d_simpson_ab_sample",
+            "c_simpson_ab_sample",
+            "d_simpson_nonlin_sample",
+            "c_simpson_nonlin_sample",
+            "d_simps_ab_func",
+            "c_simps_ab_func",
+            "d_simps_nonlin_func",
+            "c_simps_nonlin_func"
+          ],
+          "abstract": false
         },
         {
           "name": "simps2d",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_simps2d_func",
+            "c_simps2d_func",
+            "d_simps2d_func_recursive",
+            "c_simps2d_func_recursive",
+            "d_simps2d_sample",
+            "c_simps2d_sample"
+          ],
+          "abstract": false
         },
         {
           "name": "quad",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "quad_func",
+            "quad_sample"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

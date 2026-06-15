@@ -1,3 +1,5 @@
+from typing import overload
+
 class same_name:
     payload: Int32
 
@@ -42,3 +44,18 @@ def convert_to_char(
 def convert_to_logical(
     same_name: Annotated[Ptr(Const(String)), FortranCharacterLength("*")]
 ) -> Bool: ...
+
+@overload
+def do_work(
+    same_name: Ptr(Int32)
+) -> None: ...
+
+@overload
+def do_work(
+    same_name: Ptr(Const(Float32))
+) -> None: ...
+
+@overload
+def do_work(
+    same_name: Ptr(Const(Bool))
+) -> None: ...

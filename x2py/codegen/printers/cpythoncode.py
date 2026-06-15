@@ -218,8 +218,8 @@ class CPythonCodePrinter(CCodePrinter):
         names = expr.name
         return ".".join(self._print(n) for n in names)
 
-    def _print_PyInterface(self, expr):
-        funcs_to_print = (*expr.functions, expr.type_check_func, expr.interface_func)
+    def _print_PyFunctionOverloadSet(self, expr):
+        funcs_to_print = (*expr.functions, expr.type_check_func, expr.dispatcher_func)
         return "\n".join(self._print(f) for f in funcs_to_print)
 
     def _print_PyArg_ParseTupleNode(self, expr):
@@ -296,8 +296,8 @@ class CPythonCodePrinter(CCodePrinter):
             sig_methods = (
                 *c.methods,
                 c.new_func,
-                *tuple(f for i in c.interfaces for f in i.functions),
-                *tuple(i.interface_func for i in c.interfaces),
+                *tuple(f for i in c.overload_sets for f in i.functions),
+                *tuple(i.dispatcher_func for i in c.overload_sets),
                 *tuple(getset for p in c.properties for getset in (p.getter, p.setter) if getset),
                 *c.magic_methods,
             )
@@ -346,10 +346,10 @@ class CPythonCodePrinter(CCodePrinter):
         self._module_name = expr.name
         sep = self._print(SeparatorComment(40))
 
-        interface_funcs = [f.name for i in expr.interfaces for f in i.functions]
+        dispatcher_funcs = [f.name for i in expr.overload_sets for f in i.functions]
         funcs += [
-            *expr.interfaces,
-            *(f for f in expr.funcs if f.name not in interface_funcs),
+            *expr.overload_sets,
+            *(f for f in expr.funcs if f.name not in dispatcher_funcs),
         ]
 
         self._in_header = True
@@ -429,7 +429,7 @@ class CPythonCodePrinter(CCodePrinter):
         original_scope = expr.original_class.scope
         getters = tuple(p.getter for p in expr.properties)
         setters = tuple(p.setter for p in expr.properties if p.setter)
-        print_methods = (*expr.methods, expr.new_func, *expr.interfaces, *expr.magic_methods, *getters, *setters)
+        print_methods = (*expr.methods, expr.new_func, *expr.overload_sets, *expr.magic_methods, *getters, *setters)
         functions = "\n".join(self._print(f) for f in print_methods)
         init_string = ""
         del_string = ""
@@ -450,7 +450,7 @@ class CPythonCodePrinter(CCodePrinter):
                     flags += " | METH_STATIC"
                 funcs[py_name] = (f.name, docstring, flags)
 
-        for f in expr.interfaces:
+        for f in expr.overload_sets:
             py_name = self.get_python_name(original_scope, f.original_function)
             docstring = (
                 self._print(CStrStr(convert_to_literal("\n".join(f.docstring.comments)))) if f.docstring else '""'

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from x2py.codegen.models.core import FunctionDef, Interface, ModuleHeader
+from x2py.codegen.models.core import FunctionDef, FunctionOverloadSet, ModuleHeader
 from x2py.codegen.printers.codegen import _extension_registry, _header_extension_registry, printer_registry
 
 
@@ -24,7 +24,7 @@ class Codegen:
             "classes": [],
             "modules": [],
             "variables": [],
-            "interfaces": [],
+            "overload_sets": [],
         }
         self._collect_statements()
         self._is_program = self.ast.program is not None
@@ -58,8 +58,8 @@ class Codegen:
         return self._stmts["classes"]
 
     @property
-    def interfaces(self):
-        return self._stmts["interfaces"]
+    def overload_sets(self):
+        return self._stmts["overload_sets"]
 
     @property
     def modules(self):
@@ -89,18 +89,18 @@ class Codegen:
 
     def _collect_statements(self):
         funcs = []
-        interfaces = []
+        overload_sets = []
         for item in self.scope.functions.values():
             if isinstance(item, FunctionDef) and not item.is_header:
                 funcs.append(item)
-            elif isinstance(item, Interface):
-                interfaces.append(item)
+            elif isinstance(item, FunctionOverloadSet):
+                overload_sets.append(item)
 
         self._stmts["imports"] = list(self.scope.imports["imports"].values())
         self._stmts["variables"] = list(self.scope.variables.values())
         self._stmts["routines"] = funcs
         self._stmts["classes"] = list(self.scope.classes.values())
-        self._stmts["interfaces"] = interfaces
+        self._stmts["overload_sets"] = overload_sets
         self._stmts["body"] = self.ast
 
     def doprint(self, **settings):

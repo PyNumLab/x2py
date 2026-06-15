@@ -872,10 +872,15 @@ class FortranParser:
                 source_line=header[2],
                 code="PARSE_EXPECTED_UNIT",
             )
-        interface = FortranInterface(name=interface_name, module=parent_scope.module_owner)
+        interface = FortranInterface(
+            name=interface_name,
+            module=parent_scope.module_owner,
+            abstract=header[0].strip().lower().startswith("abstract interface"),
+        )
         scope = self._helper_scope_for_model("interface", interface, parent=parent_scope)
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("interface"), filename=filename)
         self._helper_validate_interface_lines(scope, parts.specification, filename=filename)
+        interface.specific_procedures.extend(self._interface_specific_procedure_names(parts.specification))
         child_units = self._helper_slice_child_units(
             unit.lines[1:-1],
             parent_scope=scope,
@@ -894,6 +899,29 @@ class FortranParser:
             self._add_interface_attribute(sig, interface.name)
             interface.procedures.append(sig)
         return interface
+
+    @staticmethod
+    def _interface_specific_procedure_names(lines: _PreprocessedLines) -> list[str]:
+        """Collect specific procedure names declared by a generic interface."""
+        names: list[str] = []
+        for line, _, _ in lines:
+            stripped = line.strip()
+            module_procedure = re.match(
+                r"^module\s+procedure\s*(?:::)?\s*(?P<names>.+)$",
+                stripped,
+                re.IGNORECASE,
+            )
+            if module_procedure:
+                names.extend(name.strip() for name in split_csv(module_procedure.group("names")))
+                continue
+            procedure = re.match(
+                r"^procedure(?:\s*\([^)]*\))?(?:\s*,\s*[^:]*)?\s*::\s*(?P<names>.+)$",
+                stripped,
+                re.IGNORECASE,
+            )
+            if procedure:
+                names.extend(name.strip() for name in split_csv(procedure.group("names")))
+        return names
 
     def visit_procedure_unit(
         self,

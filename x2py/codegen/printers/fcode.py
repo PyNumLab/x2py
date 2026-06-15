@@ -278,7 +278,7 @@ class FCodePrinter(CodePrinter):
         for method in expr.methods:
             if method.is_semantic:
                 method.cls_name = scope.get_new_name(f"{name}_{method.name}")
-        for i in expr.interfaces:
+        for i in expr.overload_sets:
             for f in i.functions:
                 if f.is_semantic:
                     f.cls_name = scope.get_new_name(f"{name}_{f.name}")
@@ -342,7 +342,7 @@ class FCodePrinter(CodePrinter):
         self._get_external_declarations(declarations)
         decs += "".join(self._print(d) for d in declarations)
 
-        funcs_to_print = list(expr.funcs) + [f for i in expr.interfaces for f in i.functions]
+        funcs_to_print = list(expr.funcs) + [f for i in expr.overload_sets for f in i.functions]
 
         # ...
         public_decs = "".join(
@@ -367,9 +367,9 @@ class FCodePrinter(CodePrinter):
                 "end interface\n"
             )
         else:
-            interfaces = "\n".join(self._print(i) for i in expr.interfaces)
+            interfaces = "\n".join(self._print(i) for i in expr.overload_sets)
             public_decs += "".join(
-                f"public :: {i.name}\n" for i in expr.interfaces if i.is_semantic and not i.is_private
+                f"public :: {i.name}\n" for i in expr.overload_sets if i.is_semantic and not i.is_private
             )
 
         func_strings = []
@@ -382,8 +382,8 @@ class FCodePrinter(CodePrinter):
         body = "\n".join(func_strings)
         # ...
 
-        private = "private\n" if (funcs_to_print or expr.classes or expr.interfaces) else ""
-        contains = "contains\n" if (funcs_to_print or expr.classes or expr.interfaces) else ""
+        private = "private\n" if (funcs_to_print or expr.classes or expr.overload_sets) else ""
+        contains = "contains\n" if (funcs_to_print or expr.classes or expr.overload_sets) else ""
         imports += "".join(self._print(i) for i in self._additional_imports.values())
         imports = self.print_constant_imports() + imports
         implicit_none = "" if expr.is_external else "implicit none\n"
@@ -931,16 +931,16 @@ class FCodePrinter(CodePrinter):
     def _print_DataType(self, expr):
         return self._print(expr.name)
 
-    def _print_Interface(self, expr):
-        interface_funcs = expr.functions
+    def _print_FunctionOverloadSet(self, expr):
+        dispatcher_funcs = expr.functions
 
-        example_func = interface_funcs[0]
+        example_func = dispatcher_funcs[0]
 
         # ... we don't print 'hidden' functions
         if not example_func.is_semantic:
             return ""
 
-        if example_func.results and len({f.results.var.rank == 0 for f in interface_funcs}) != 1:
+        if example_func.results and len({f.results.var.rank == 0 for f in dispatcher_funcs}) != 1:
             message = (
                 "Fortran cannot yet handle a templated function returning either a scalar or an array. "
                 "If you are using the terminal interface, please pass --language c, "
@@ -950,12 +950,12 @@ class FCodePrinter(CodePrinter):
             raise NotImplementedError(message)
 
         name = self._print(expr.name)
-        if all(isinstance(f, FunctionAddress) for f in interface_funcs):
-            funcs = interface_funcs
+        if all(isinstance(f, FunctionAddress) for f in dispatcher_funcs):
+            funcs = dispatcher_funcs
         else:
             funcs = [
                 f
-                for f in interface_funcs
+                for f in dispatcher_funcs
                 if f
                 is expr.point([FunctionCallArgument(a.var.clone("arg_" + str(i))) for i, a in enumerate(f.arguments)])
             ]
@@ -1083,7 +1083,7 @@ class FCodePrinter(CodePrinter):
         bind_c = " bind(c)" if isinstance(expr, BindCFunctionDef) else ""
         prelude = sig_parts.pop("arg_decs")
         functions = [f for f in expr.functions if f.is_semantic]
-        func_interfaces = "\n".join(self._print(i) for i in expr.interfaces)
+        func_interfaces = "\n".join(self._print(i) for i in expr.overload_sets)
         body_code = self._print(expr.body)
         docstring = self._print(expr.docstring) if expr.docstring else ""
 
@@ -1144,7 +1144,7 @@ class FCodePrinter(CodePrinter):
         methods = "".join(
             f"procedure :: {method.name} => {method.cls_name}\n" for method in expr.methods if method.is_semantic
         )
-        for i in expr.interfaces:
+        for i in expr.overload_sets:
             names = ",".join(f.cls_name for f in i.functions if f.is_semantic)
             if names:
                 methods += f"generic, public :: {i.name} => {names}\n"
@@ -1163,7 +1163,7 @@ class FCodePrinter(CodePrinter):
 
         sep = self._print(SeparatorComment(40))
         cls_methods = [i for i in expr.methods if i.is_semantic]
-        for i in expr.interfaces:
+        for i in expr.overload_sets:
             cls_methods += [j for j in i.functions if j.is_semantic]
 
         methods = "".join("\n".join(["", sep, self._print(i), sep, ""]) for i in cls_methods)
@@ -1473,12 +1473,12 @@ class FCodePrinter(CodePrinter):
     def _print_FunctionCall(self, expr):
         func = expr.funcdef
 
-        f_name = self._print(expr.func_name if not expr.interface else expr.interface_name)
+        f_name = self._print(expr.func_name if not expr.overload_set else expr.overload_set_name)
 
         if func.is_imported:
             f_name = self.scope.get_import_alias(func, "functions")
-        elif expr.interface and expr.interface.is_imported:
-            f_name = self.scope.get_import_alias(expr.interface, "functions")
+        elif expr.overload_set and expr.overload_set.is_imported:
+            f_name = self.scope.get_import_alias(expr.overload_set, "functions")
 
         args = expr.args
         func_result_variables = (
@@ -1491,6 +1491,8 @@ class FCodePrinter(CodePrinter):
         )
 
         if func.arguments and func.arguments[0].bound_argument:
+            bound_name = expr.overload_set_name if expr.overload_set else func.scope.get_python_name(func.name)
+            f_name = self._print(bound_name)
             class_variable = args[0].value
             args = args[1:]
             if isinstance(class_variable, FunctionCall):
@@ -1736,7 +1738,7 @@ class FCodePrinter(CodePrinter):
         funcs = [
             expr.new_func,
             *expr.methods,
-            *[f for i in expr.interfaces for f in i.functions],
+            *[f for i in expr.overload_sets for f in i.functions],
             *[a.getter for a in expr.attributes],
             *[a.setter for a in expr.attributes if a.setter],
         ]

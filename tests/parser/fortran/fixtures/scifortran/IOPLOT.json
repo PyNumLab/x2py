@@ -60,17 +60,60 @@
         {
           "name": "splot",
           "module": "IOPLOT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "splotA1_RR",
+            "splotA1_RC",
+            "splotA2_RR",
+            "splotA2_RC",
+            "splotA3_RR",
+            "splotA3_RC",
+            "splotA4_RR",
+            "splotA4_RC",
+            "splotA5_RR",
+            "splotA5_RC",
+            "splotA6_RR",
+            "splotA6_RC",
+            "splotA7_RR",
+            "splotA7_RC"
+          ],
+          "abstract": false
         },
         {
           "name": "splot3d",
           "module": "IOPLOT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_splot3d",
+            "c_splot3d",
+            "d_splot3d_animate",
+            "c_splot3d_animate"
+          ],
+          "abstract": false
         },
         {
           "name": "save_array",
           "module": "IOPLOT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "data_saveA0_R",
+            "data_saveA0_C",
+            "data_saveA1_R",
+            "data_saveA1_C",
+            "data_saveA2_R",
+            "data_saveA2_C",
+            "data_saveA3_R",
+            "data_saveA3_C",
+            "data_saveA4_R",
+            "data_saveA4_C",
+            "data_saveA5_R",
+            "data_saveA5_C",
+            "data_saveA6_R",
+            "data_saveA6_C",
+            "data_saveA7_R",
+            "data_saveA7_C"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -148,17 +191,60 @@
         {
           "name": "splot",
           "module": "IOPLOT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "splotA1_RR",
+            "splotA1_RC",
+            "splotA2_RR",
+            "splotA2_RC",
+            "splotA3_RR",
+            "splotA3_RC",
+            "splotA4_RR",
+            "splotA4_RC",
+            "splotA5_RR",
+            "splotA5_RC",
+            "splotA6_RR",
+            "splotA6_RC",
+            "splotA7_RR",
+            "splotA7_RC"
+          ],
+          "abstract": false
         },
         {
           "name": "splot3d",
           "module": "IOPLOT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_splot3d",
+            "c_splot3d",
+            "d_splot3d_animate",
+            "c_splot3d_animate"
+          ],
+          "abstract": false
         },
         {
           "name": "save_array",
           "module": "IOPLOT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "data_saveA0_R",
+            "data_saveA0_C",
+            "data_saveA1_R",
+            "data_saveA1_C",
+            "data_saveA2_R",
+            "data_saveA2_C",
+            "data_saveA3_R",
+            "data_saveA3_C",
+            "data_saveA4_R",
+            "data_saveA4_C",
+            "data_saveA5_R",
+            "data_saveA5_C",
+            "data_saveA6_R",
+            "data_saveA6_C",
+            "data_saveA7_R",
+            "data_saveA7_C"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

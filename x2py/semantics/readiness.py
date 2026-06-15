@@ -130,6 +130,9 @@ class _SemanticReadinessChecker:
 
         for module in self.modules:
             n_functions += sum(1 for func in module.functions if _is_public(func))
+            n_functions += sum(
+                1 for overload_set in module.overload_sets if any(_is_public(proc) for proc in overload_set.procedures)
+            )
             n_variables += sum(1 for var in module.variables if _is_public(var))
             for cls in module.classes:
                 if not isinstance(cls, SemanticClass):
@@ -140,6 +143,12 @@ class _SemanticReadinessChecker:
                 n_classes += len(public_classes)
                 n_functions += sum(
                     1 for public_class in public_classes for method in public_class.methods if _is_public(method)
+                )
+                n_functions += sum(
+                    1
+                    for public_class in public_classes
+                    for overload_set in public_class.overload_sets
+                    if any(_is_public(proc) for proc in overload_set.procedures)
                 )
 
         return {
@@ -206,6 +215,19 @@ class _SemanticReadinessChecker:
                 unit=f"{module.name}.{func.name}",
                 unit_kind="function",
             )
+        for overload_set in module.overload_sets:
+            for procedure in overload_set.procedures:
+                if not _is_public(procedure):
+                    continue
+                self._check_function(
+                    procedure,
+                    module=module,
+                    known_shape_symbols=set(module_constants),
+                    constant_names=module_constant_names,
+                    owner=f"{module.name}.{overload_set.name}",
+                    unit=f"{module.name}.{overload_set.name}",
+                    unit_kind="overload_set",
+                )
 
     def _check_enum(
         self,
@@ -286,6 +308,19 @@ class _SemanticReadinessChecker:
                 unit=f"{module.name}.{cls.name}.{method.name}",
                 unit_kind="method",
             )
+        for overload_set in cls.overload_sets:
+            for procedure in overload_set.procedures:
+                if not _is_public(procedure):
+                    continue
+                self._check_function(
+                    procedure,
+                    module=module,
+                    known_shape_symbols=known_shape_symbols,
+                    constant_names=constant_names,
+                    owner=f"{module.name}.{cls.name}.{overload_set.name}",
+                    unit=f"{module.name}.{cls.name}.{overload_set.name}",
+                    unit_kind="overload_set",
+                )
 
     def _check_function(
         self,

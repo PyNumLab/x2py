@@ -585,12 +585,22 @@
         {
           "name": "append",
           "module": "SF_SPARSE_COMMON",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "append_I",
+            "append_D",
+            "append_Z"
+          ],
+          "abstract": false
         },
         {
           "name": "shape",
           "module": "SF_SPARSE_COMMON",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "shape_matrix"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "public",
@@ -1191,12 +1201,22 @@
         {
           "name": "append",
           "module": "SF_SPARSE_COMMON",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "append_I",
+            "append_D",
+            "append_Z"
+          ],
+          "abstract": false
         },
         {
           "name": "shape",
           "module": "SF_SPARSE_COMMON",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "shape_matrix"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "public",

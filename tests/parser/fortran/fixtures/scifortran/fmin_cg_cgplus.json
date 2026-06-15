@@ -659,7 +659,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     }
   ],
   "derived_types": [],

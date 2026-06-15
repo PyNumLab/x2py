@@ -942,6 +942,325 @@
           }
         }
       ],
+      "overload_sets": [
+        {
+          "name": "do_work",
+          "procedures": [
+            {
+              "name": "do_work_i",
+              "native_name": "do_work_i",
+              "arguments": [
+                {
+                  "name": "same_name",
+                  "semantic_type": {
+                    "name": "Int32",
+                    "rank": 0,
+                    "dtype": "Int32",
+                    "shape": [],
+                    "constraints": [],
+                    "coercions": [],
+                    "ownership": {
+                      "ownership": "borrowed",
+                      "mutable": true,
+                      "aliasing": true
+                    },
+                    "metadata": {},
+                    "storage": {
+                      "kind": "reference",
+                      "read_only": false,
+                      "mutable": true,
+                      "pointer_depth": 1,
+                      "ownership": "borrowed",
+                      "array": null,
+                      "calling_convention": null,
+                      "metadata": {}
+                    },
+                    "origin": {
+                      "source_language": "fortran",
+                      "native_name": "same_name",
+                      "native_scope": null,
+                      "source_kind": "variable",
+                      "source_type": "integer",
+                      "source_location": {},
+                      "metadata": {
+                        "rank": 0,
+                        "shape": [],
+                        "lower_bounds": [],
+                        "upper_bounds": [],
+                        "intent": "inout",
+                        "optional": false,
+                        "value": false,
+                        "allocatable": false,
+                        "pointer": false,
+                        "contiguous": false
+                      }
+                    }
+                  },
+                  "visibility": "public",
+                  "default_value": null,
+                  "metadata": {},
+                  "origin": {
+                    "source_language": "fortran",
+                    "native_name": "same_name",
+                    "native_scope": "do_work_i",
+                    "source_kind": "argument",
+                    "source_type": "integer",
+                    "source_location": {},
+                    "metadata": {
+                      "rank": 0,
+                      "shape": [],
+                      "lower_bounds": [],
+                      "upper_bounds": [],
+                      "intent": "inout",
+                      "optional": false,
+                      "value": false,
+                      "allocatable": false,
+                      "pointer": false,
+                      "contiguous": false
+                    }
+                  },
+                  "intent": "inout",
+                  "optional": false
+                }
+              ],
+              "return_type": null,
+              "locals": [],
+              "contracts": [],
+              "projection": [
+                {
+                  "python_name": "same_name",
+                  "native_name": "same_name",
+                  "native_position": 0,
+                  "python_position": 0,
+                  "result_position": null,
+                  "value_kind": "",
+                  "value": null,
+                  "intent": "inout"
+                }
+              ],
+              "metadata": {},
+              "visibility": "public",
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "do_work_i",
+                "native_scope": "scope_name_reuse_combinations",
+                "source_kind": "subroutine",
+                "source_type": null,
+                "source_location": {},
+                "metadata": {}
+              }
+            },
+            {
+              "name": "do_work_r",
+              "native_name": "do_work_r",
+              "arguments": [
+                {
+                  "name": "same_name",
+                  "semantic_type": {
+                    "name": "Float32",
+                    "rank": 0,
+                    "dtype": "Float32",
+                    "shape": [],
+                    "constraints": [],
+                    "coercions": [],
+                    "ownership": {
+                      "ownership": "borrowed",
+                      "mutable": false,
+                      "aliasing": true
+                    },
+                    "metadata": {},
+                    "storage": {
+                      "kind": "reference",
+                      "read_only": true,
+                      "mutable": false,
+                      "pointer_depth": 1,
+                      "ownership": "borrowed",
+                      "array": null,
+                      "calling_convention": null,
+                      "metadata": {}
+                    },
+                    "origin": {
+                      "source_language": "fortran",
+                      "native_name": "same_name",
+                      "native_scope": null,
+                      "source_kind": "variable",
+                      "source_type": "real",
+                      "source_location": {},
+                      "metadata": {
+                        "rank": 0,
+                        "shape": [],
+                        "lower_bounds": [],
+                        "upper_bounds": [],
+                        "intent": "in",
+                        "optional": false,
+                        "value": false,
+                        "allocatable": false,
+                        "pointer": false,
+                        "contiguous": false
+                      }
+                    }
+                  },
+                  "visibility": "public",
+                  "default_value": null,
+                  "metadata": {},
+                  "origin": {
+                    "source_language": "fortran",
+                    "native_name": "same_name",
+                    "native_scope": "do_work_r",
+                    "source_kind": "argument",
+                    "source_type": "real",
+                    "source_location": {},
+                    "metadata": {
+                      "rank": 0,
+                      "shape": [],
+                      "lower_bounds": [],
+                      "upper_bounds": [],
+                      "intent": "in",
+                      "optional": false,
+                      "value": false,
+                      "allocatable": false,
+                      "pointer": false,
+                      "contiguous": false
+                    }
+                  },
+                  "intent": "in",
+                  "optional": false
+                }
+              ],
+              "return_type": null,
+              "locals": [],
+              "contracts": [],
+              "projection": [
+                {
+                  "python_name": "same_name",
+                  "native_name": "same_name",
+                  "native_position": 0,
+                  "python_position": 0,
+                  "result_position": null,
+                  "value_kind": "",
+                  "value": null,
+                  "intent": "in"
+                }
+              ],
+              "metadata": {},
+              "visibility": "public",
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "do_work_r",
+                "native_scope": "scope_name_reuse_combinations",
+                "source_kind": "subroutine",
+                "source_type": null,
+                "source_location": {},
+                "metadata": {}
+              }
+            },
+            {
+              "name": "do_work_l",
+              "native_name": "do_work_l",
+              "arguments": [
+                {
+                  "name": "same_name",
+                  "semantic_type": {
+                    "name": "Bool",
+                    "rank": 0,
+                    "dtype": "Bool",
+                    "shape": [],
+                    "constraints": [],
+                    "coercions": [],
+                    "ownership": {
+                      "ownership": "borrowed",
+                      "mutable": false,
+                      "aliasing": true
+                    },
+                    "metadata": {},
+                    "storage": {
+                      "kind": "reference",
+                      "read_only": true,
+                      "mutable": false,
+                      "pointer_depth": 1,
+                      "ownership": "borrowed",
+                      "array": null,
+                      "calling_convention": null,
+                      "metadata": {}
+                    },
+                    "origin": {
+                      "source_language": "fortran",
+                      "native_name": "same_name",
+                      "native_scope": null,
+                      "source_kind": "variable",
+                      "source_type": "logical",
+                      "source_location": {},
+                      "metadata": {
+                        "rank": 0,
+                        "shape": [],
+                        "lower_bounds": [],
+                        "upper_bounds": [],
+                        "intent": "in",
+                        "optional": false,
+                        "value": false,
+                        "allocatable": false,
+                        "pointer": false,
+                        "contiguous": false
+                      }
+                    }
+                  },
+                  "visibility": "public",
+                  "default_value": null,
+                  "metadata": {},
+                  "origin": {
+                    "source_language": "fortran",
+                    "native_name": "same_name",
+                    "native_scope": "do_work_l",
+                    "source_kind": "argument",
+                    "source_type": "logical",
+                    "source_location": {},
+                    "metadata": {
+                      "rank": 0,
+                      "shape": [],
+                      "lower_bounds": [],
+                      "upper_bounds": [],
+                      "intent": "in",
+                      "optional": false,
+                      "value": false,
+                      "allocatable": false,
+                      "pointer": false,
+                      "contiguous": false
+                    }
+                  },
+                  "intent": "in",
+                  "optional": false
+                }
+              ],
+              "return_type": null,
+              "locals": [],
+              "contracts": [],
+              "projection": [
+                {
+                  "python_name": "same_name",
+                  "native_name": "same_name",
+                  "native_position": 0,
+                  "python_position": 0,
+                  "result_position": null,
+                  "value_kind": "",
+                  "value": null,
+                  "intent": "in"
+                }
+              ],
+              "metadata": {},
+              "visibility": "public",
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "do_work_l",
+                "native_scope": "scope_name_reuse_combinations",
+                "source_kind": "subroutine",
+                "source_type": null,
+                "source_location": {},
+                "metadata": {}
+              }
+            }
+          ]
+        }
+      ],
       "classes": [
         {
           "name": "same_name",
@@ -1010,6 +1329,7 @@
             }
           ],
           "methods": [],
+          "overload_sets": [],
           "base_classes": [],
           "contracts": [],
           "metadata": {},

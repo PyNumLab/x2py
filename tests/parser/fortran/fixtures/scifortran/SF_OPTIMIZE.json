@@ -310,57 +310,130 @@
         {
           "name": "fmin_cg",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fmin_cg_df",
+            "fmin_cg_f"
+          ],
+          "abstract": false
         },
         {
           "name": "fmin_cgplus",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fmin_cgplus_df",
+            "fmin_cgplus_f"
+          ],
+          "abstract": false
         },
         {
           "name": "fmin_cgminimize",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fmin_cgminimize_func",
+            "fmin_cgminimize_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "leastsq",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "leastsq_lmdif_func",
+            "leastsq_lmdif_sub",
+            "leastsq_lmder_func",
+            "leastsq_lmder_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "curvefit",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "curvefit_lmdif_func",
+            "curvefit_lmdif_sub",
+            "curvefit_lmder_func",
+            "curvefit_lmder_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "dbrent",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "dbrent_wgrad",
+            "dbrent_nograd"
+          ],
+          "abstract": false
         },
         {
           "name": "fmin_bfgs",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "bfgs_with_grad",
+            "bfgs_no_grad"
+          ],
+          "abstract": false
         },
         {
           "name": "linear_mix",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_linear_mix_1",
+            "d_linear_mix_2",
+            "d_linear_mix_3",
+            "d_linear_mix_4",
+            "d_linear_mix_5",
+            "d_linear_mix_6",
+            "d_linear_mix_7",
+            "c_linear_mix_1",
+            "c_linear_mix_2",
+            "c_linear_mix_3",
+            "c_linear_mix_4",
+            "c_linear_mix_5",
+            "c_linear_mix_6",
+            "c_linear_mix_7"
+          ],
+          "abstract": false
         },
         {
           "name": "adaptive_mix",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_adaptive_mix",
+            "c_adaptive_mix"
+          ],
+          "abstract": false
         },
         {
           "name": "broyden_mix",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_broyden_mix",
+            "c_broyden_mix"
+          ],
+          "abstract": false
         },
         {
           "name": "fsolve",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fsolve_hybrd_func",
+            "fsolve_hybrd_sub",
+            "fsolve_hybrj_func",
+            "fsolve_hybrj_sub"
+          ],
+          "abstract": false
         },
         {
           "name": null,
@@ -425,7 +498,9 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         },
         {
           "name": null,
@@ -490,7 +565,9 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -834,57 +911,130 @@
         {
           "name": "fmin_cg",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fmin_cg_df",
+            "fmin_cg_f"
+          ],
+          "abstract": false
         },
         {
           "name": "fmin_cgplus",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fmin_cgplus_df",
+            "fmin_cgplus_f"
+          ],
+          "abstract": false
         },
         {
           "name": "fmin_cgminimize",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fmin_cgminimize_func",
+            "fmin_cgminimize_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "leastsq",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "leastsq_lmdif_func",
+            "leastsq_lmdif_sub",
+            "leastsq_lmder_func",
+            "leastsq_lmder_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "curvefit",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "curvefit_lmdif_func",
+            "curvefit_lmdif_sub",
+            "curvefit_lmder_func",
+            "curvefit_lmder_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "dbrent",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "dbrent_wgrad",
+            "dbrent_nograd"
+          ],
+          "abstract": false
         },
         {
           "name": "fmin_bfgs",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "bfgs_with_grad",
+            "bfgs_no_grad"
+          ],
+          "abstract": false
         },
         {
           "name": "linear_mix",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_linear_mix_1",
+            "d_linear_mix_2",
+            "d_linear_mix_3",
+            "d_linear_mix_4",
+            "d_linear_mix_5",
+            "d_linear_mix_6",
+            "d_linear_mix_7",
+            "c_linear_mix_1",
+            "c_linear_mix_2",
+            "c_linear_mix_3",
+            "c_linear_mix_4",
+            "c_linear_mix_5",
+            "c_linear_mix_6",
+            "c_linear_mix_7"
+          ],
+          "abstract": false
         },
         {
           "name": "adaptive_mix",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_adaptive_mix",
+            "c_adaptive_mix"
+          ],
+          "abstract": false
         },
         {
           "name": "broyden_mix",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_broyden_mix",
+            "c_broyden_mix"
+          ],
+          "abstract": false
         },
         {
           "name": "fsolve",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fsolve_hybrd_func",
+            "fsolve_hybrd_sub",
+            "fsolve_hybrj_func",
+            "fsolve_hybrj_sub"
+          ],
+          "abstract": false
         },
         {
           "name": null,
@@ -949,7 +1099,9 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         },
         {
           "name": null,
@@ -1014,7 +1166,9 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

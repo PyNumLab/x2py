@@ -1,7 +1,9 @@
 from pathlib import Path
 
+import pytest
+
 from x2py import parse_fortran_file
-from x2py.codegen.models.core import ClassDef
+from x2py.codegen.models.core import ClassDef, FunctionOverloadSet
 from x2py.codegen.models.datatypes import (
     CustomDataType,
     NumpyFloat64Type,
@@ -22,6 +24,11 @@ def test_modern_fortran_derived_type_and_type_bound_methods_become_codegen_class
         filename=str(FORTRAN_CLASS_SOURCE),
     )
     semantic_module = fortran_module_to_semantic_module(parsed)
+    semantic_vector = next(cls for cls in semantic_module.classes if cls.name == "vector")
+    semantic_shift = next(method for method in semantic_vector.methods if method.name == "shift")
+    assert semantic_shift.passed_object_name == "owner"
+    assert semantic_shift.passed_object_position == 1
+    assert semantic_shift.binding_attributes == ("pass(owner)",)
 
     scope = Scope(name=semantic_module.name, scope_type="module")
     codegen_module = semantic_ir_to_codegen_ast(semantic_module, scope)
@@ -39,12 +46,19 @@ def test_modern_fortran_derived_type_and_type_bound_methods_become_codegen_class
     assert [str(attribute.name) for attribute in vector.attributes] == ["x", "y"]
     assert all(attribute.class_type is NumpyFloat64Type() for attribute in vector.attributes)
 
-    assert [str(method.name) for method in vector.methods] == ["scale", "magnitude"]
+    assert [str(method.name) for method in vector.methods] == ["scale", "shift_vector", "magnitude"]
     scale = vector.methods_as_dict["scale"]
     self_arg = scale.arguments[0]
     assert self_arg.bound_argument
     assert self_arg.var.class_type is vector.class_type
     assert self_arg.var.cls_base is vector
+
+    shift = vector.methods_as_dict["shift"]
+    assert vector.scope.get_python_name(shift.name) == "shift"
+    assert [str(argument.name) for argument in shift.arguments] == ["owner", "dx", "dy"]
+    assert shift.arguments[0].bound_argument
+    assert shift.arguments[0].bound_argument_position == 1
+    assert shift.arguments[0].var.cls_base is vector
 
     magnitude = vector.methods_as_dict["magnitude"]
     assert magnitude.arguments[0].bound_argument
@@ -95,3 +109,92 @@ def test_modern_fortran_derived_type_and_type_bound_methods_become_codegen_class
     assert make.arguments[0].var.class_type is NumpyInt64Type()
     assert make.arguments[1].var.class_type is NumpyFloat64Type()
     assert make.results.var.class_type is vector_store.class_type
+
+
+def test_generic_interfaces_become_module_and_class_function_overload_sets():
+    source = """
+module generic_mod
+  interface convert
+    module procedure convert_integer, convert_real
+  end interface convert
+  type :: box
+  contains
+    procedure :: set_integer
+    procedure :: set_real
+    generic :: set => set_integer, set_real
+  end type box
+contains
+  integer function convert_integer(value)
+    integer :: value
+    convert_integer = value
+  end function convert_integer
+  real function convert_real(value)
+    real :: value
+    convert_real = value
+  end function convert_real
+  subroutine set_integer(self, value)
+    class(box) :: self
+    integer :: value
+  end subroutine set_integer
+  subroutine set_real(self, value)
+    class(box) :: self
+    real :: value
+  end subroutine set_real
+end module generic_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    assert len(codegen_module.overload_sets) == 1
+    assert isinstance(codegen_module.overload_sets[0], FunctionOverloadSet)
+    assert codegen_module.overload_sets[0].name == "convert"
+    assert [str(func.name) for func in codegen_module.overload_sets[0].functions] == [
+        "convert_integer_0001",
+        "convert_real_0001",
+    ]
+    assert len(codegen_module.classes[0].overload_sets) == 1
+    assert codegen_module.classes[0].overload_sets[0].name == "set"
+
+
+def test_indistinguishable_generic_overloads_raise_generation_error():
+    source = """
+module generic_mod
+  interface convert
+    module procedure convert_first, convert_second
+  end interface convert
+contains
+  integer function convert_first(value)
+    integer :: value
+    convert_first = value
+  end function convert_first
+  integer function convert_second(value)
+    integer :: value
+    convert_second = value
+  end function convert_second
+end module generic_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+    with pytest.raises(ValueError, match="indistinguishable overload"):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )
+
+
+def test_unresolved_generic_target_raises_before_codegen():
+    source = """
+module generic_mod
+  interface convert
+    module procedure missing
+  end interface convert
+end module generic_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+    with pytest.raises(ValueError, match="missing specific procedure.*missing"):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )

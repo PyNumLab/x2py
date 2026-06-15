@@ -2839,42 +2839,90 @@
         {
           "name": "djacobian",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fdjac_nn_func",
+            "fdjac_nn_sub",
+            "fdjac_mn_func",
+            "fdjac_mn_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "dgradient",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fdjac_1n_func",
+            "fdjac_1n_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "f_djacobian",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "f_jac_nn_func",
+            "f_jac_nn_sub",
+            "f_jac_mn_func",
+            "f_jac_mn_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "f_dgradient",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "f_jac_1n_func",
+            "f_jac_1n_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "cjacobian",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "c_fdjac_nn_func",
+            "c_fdjac_nn_sub",
+            "c_fdjac_mn_func",
+            "c_fdjac_mn_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "cgradient",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "c_fdjac_1n_func",
+            "c_fdjac_1n_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "f_cjacobian",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "c_f_jac_nn_func",
+            "c_f_jac_nn_sub",
+            "c_f_jac_mn_func",
+            "c_f_jac_mn_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "f_cgradient",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "c_f_jac_1n_func",
+            "c_f_jac_1n_sub"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -5742,42 +5790,90 @@
         {
           "name": "djacobian",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fdjac_nn_func",
+            "fdjac_nn_sub",
+            "fdjac_mn_func",
+            "fdjac_mn_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "dgradient",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fdjac_1n_func",
+            "fdjac_1n_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "f_djacobian",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "f_jac_nn_func",
+            "f_jac_nn_sub",
+            "f_jac_mn_func",
+            "f_jac_mn_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "f_dgradient",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "f_jac_1n_func",
+            "f_jac_1n_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "cjacobian",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "c_fdjac_nn_func",
+            "c_fdjac_nn_sub",
+            "c_fdjac_mn_func",
+            "c_fdjac_mn_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "cgradient",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "c_fdjac_1n_func",
+            "c_fdjac_1n_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "f_cjacobian",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "c_f_jac_nn_func",
+            "c_f_jac_nn_sub",
+            "c_f_jac_mn_func",
+            "c_f_jac_mn_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "f_cgradient",
           "module": "SF_DERIVATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "c_f_jac_1n_func",
+            "c_f_jac_1n_sub"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

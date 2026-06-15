@@ -1435,7 +1435,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     },
     {
       "name": null,
@@ -1507,7 +1509,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     },
     {
       "name": null,
@@ -1578,7 +1582,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     },
     {
       "name": null,
@@ -1650,7 +1656,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     },
     {
       "name": null,
@@ -1742,7 +1750,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     },
     {
       "name": null,
@@ -1835,7 +1845,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     },
     {
       "name": null,
@@ -1927,7 +1939,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     },
     {
       "name": null,
@@ -2020,7 +2034,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     },
     {
       "name": null,
@@ -2085,7 +2101,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     },
     {
       "name": null,
@@ -2151,7 +2169,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     },
     {
       "name": null,
@@ -2216,7 +2236,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     },
     {
       "name": null,
@@ -2282,7 +2304,9 @@
           "in_interface": true,
           "variables": {}
         }
-      ]
+      ],
+      "specific_procedures": [],
+      "abstract": false
     }
   ],
   "derived_types": [],

@@ -10,6 +10,7 @@ import re
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     ProjectionMapping,
+    ProcedureOverloadSet,
     SemanticArgument,
     SemanticArrayContract,
     SemanticClass,
@@ -36,6 +37,8 @@ class PyiPrinter:
     def emit(self, node) -> str:
         if isinstance(node, SemanticModule):
             return self.emit_module(node)
+        if isinstance(node, ProcedureOverloadSet):
+            return self.emit_overload_set(node)
         if isinstance(node, SemanticClass):
             return self.emit_class(node)
         if isinstance(node, SemanticEnum):
@@ -264,17 +267,29 @@ class PyiPrinter:
     def emit_method(self, method: SemanticMethod) -> str:
         return_type = self._projected_return_annotation(method)
         decorator = self._decorators(method, indent="    ")
+        arguments = [self.emit_argument(arg) for arg in self._method_call_arguments(method)]
+        if not method.is_static:
+            arguments.insert(0, "self")
         return self._emit_callable(
             name=method.name,
-            arguments=[
-                "self",
-                *[self.emit_argument(arg) for arg in self._method_call_arguments(method)],
-            ],
+            arguments=arguments,
             return_type=return_type,
             decorator=decorator,
             def_indent="    ",
             parameter_indent="        ",
         ).rstrip()
+
+    def emit_overload_set(self, overload_set: ProcedureOverloadSet) -> str:
+        definitions = []
+        for procedure in overload_set.procedures:
+            candidate = deepcopy(procedure)
+            candidate.name = overload_set.name
+            definition = (
+                self.emit_method(candidate) if isinstance(candidate, SemanticMethod) else self.emit_function(candidate)
+            )
+            indent = "    " if isinstance(candidate, SemanticMethod) else ""
+            definitions.append(f"{indent}@overload\n{definition}")
+        return "\n\n".join(definitions)
 
     def emit_class(self, cls: SemanticClass) -> str:
         bases = f"({', '.join(cls.base_classes)})" if cls.base_classes else ""
@@ -296,6 +311,7 @@ class PyiPrinter:
         self._append_items(sections, module.classes, self.emit)
         self._append_items(sections, module.variables, self.emit_data_member)
         self._append_items(sections, module.functions, self.emit_function)
+        self._append_items(sections, module.overload_sets, self.emit_overload_set)
         return "\n".join(sections)
 
     def _emit_callable(
@@ -331,6 +347,10 @@ class PyiPrinter:
         if methods:
             body_parts.append(methods)
 
+        overload_sets = "\n\n".join(self.emit_overload_set(overload_set) for overload_set in cls.overload_sets)
+        if overload_sets:
+            body_parts.append(overload_sets)
+
         if not body_parts:
             return "    pass"
         return "\n\n".join(body_parts)
@@ -355,6 +375,10 @@ class PyiPrinter:
             if isinstance(imp, SemanticImport)
             for item in imp.items
         }
+        overload_import = ("typing", "overload", "overload")
+        if PyiPrinter._has_overload_sets(module) and overload_import not in imported_items:
+            imports.append(SemanticImport(module="typing", items=[SemanticImportItem(source="overload")]))
+            imported_items.add(overload_import)
         synthetic: dict[str, list[SemanticImportItem]] = {}
         for semantic_type in _iter_module_semantic_types(module):
             ref = semantic_type.metadata.get(EXTERNAL_TYPE_REF_METADATA)
@@ -383,6 +407,15 @@ class PyiPrinter:
             for module_name, items in sorted(synthetic.items())
         )
         return imports
+
+    @staticmethod
+    def _has_overload_sets(module: SemanticModule) -> bool:
+        def class_has_overloads(cls: SemanticClass) -> bool:
+            return bool(cls.overload_sets) or any(class_has_overloads(nested) for nested in cls.classes)
+
+        return bool(module.overload_sets) or any(
+            class_has_overloads(cls) for cls in module.classes if isinstance(cls, SemanticClass)
+        )
 
     @staticmethod
     def _emit_import(imp: str | SemanticImport) -> str:
@@ -425,6 +458,8 @@ class PyiPrinter:
         decorators = []
         if self._is_private(func):
             decorators.append(f"{indent}@private")
+        if isinstance(func, SemanticMethod) and func.is_static:
+            decorators.append(f"{indent}@staticmethod")
         if self._requires_native_call(func):
             decorators.append(f"{indent}{self._native_call(func.projection)}")
         if not decorators:
@@ -502,6 +537,10 @@ class PyiPrinter:
     @classmethod
     def _method_call_arguments(cls, method: SemanticMethod) -> list[SemanticArgument]:
         args = cls._call_arguments(method)
+        if method.is_static:
+            return args
+        if method.passed_object_position is not None:
+            return [arg for index, arg in enumerate(args) if index != method.passed_object_position]
         if args and args[0].name == "self":
             return args[1:]
         return args

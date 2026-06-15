@@ -278,6 +278,47 @@ return components after the first are converted to generated output arguments.
 Class methods use the same stub form. An untyped leading `self` is allowed in a
 method and is not treated as a native argument.
 
+## Generic Procedure Overloads
+
+Named Fortran generic interfaces and type-bound generics are emitted as
+repeated `@overload` declarations under one Python-visible name:
+
+```python
+from typing import overload
+
+@overload
+def convert(value: Ptr(Const(Int32))) -> Int32: ...
+
+@overload
+def convert(value: Ptr(Const(Float64))) -> Float64: ...
+
+class accumulator:
+    @overload
+    def add(self, value: Ptr(Const(Int32))) -> None: ...
+
+    @overload
+    def add(self, value: Ptr(Const(Float64))) -> None: ...
+```
+
+The generated C extension exposes one callable for each generic name. It
+dispatches before conversion using the wrapped scalar dtype, array element
+dtype and rank, or wrapped derived-type class. It does not use implicit numeric
+coercion to choose an overload. Array shape, bounds, and layout are validated
+by the selected concrete wrapper, but they do not distinguish overloads;
+overloads that differ only in those properties are rejected during generation.
+
+All specifics must have one compatible Python call shape. Parameter names and
+keyword parsing use the first specific procedure's signature. A call that
+matches no specific raises `TypeError`; duplicate dtype/rank signatures are a
+deterministic generation error.
+
+Wrapped derived types dispatch by their generated extension class. Fortran
+`extends` relationships are preserved semantically but do not currently create
+Python C-type inheritance, so a base-type overload is not a fallback for a
+derived wrapper. Each accepted wrapped derived type needs an explicit specific
+procedure. User-defined Python subclasses are not part of this runtime
+contract.
+
 ## Visibility And Names
 
 `@private` marks classes, functions and methods private:
@@ -344,6 +385,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Constants | `Final[T]` module variables |
 | C enums | open `Enum[T]` class plus module-level enumerators |
 | Fortran derived types | classes with fields and methods when resolvable |
+| Fortran generic interfaces | repeated `@overload` functions or methods with C-extension dtype/rank dispatch |
 | C structs/unions | `CStruct` and `CUnion` classes |
 | C anonymous aggregate members | nested `CAnonymous` classes plus `CAnonymousMember` fields |
 | Opaque types | `Opaque` classes and owner-module dependency stubs |
@@ -373,7 +415,8 @@ The loader intentionally rejects syntax that would be ambiguous or stale:
 - positional-only, keyword-only, vararg or kwarg function parameters.
 - nested enum declarations.
 - ordinary function bodies instead of `...`.
-- unsupported decorators other than `@private` and `@native_call`.
+- unsupported decorators other than `@private`, `@native_call`, `@overload`,
+  and `@staticmethod`.
 
 ## Roadmap
 
@@ -387,8 +430,8 @@ Near-term format work:
    and `bind(c)` byte-string metadata.
 4. Expand aggregate layout metadata for C bitfields, C attributes, Fortran
    `bind(c)`, `sequence`, and by-value aggregate ABI checks.
-5. Represent Fortran polymorphic `class(...)`, procedure bindings, generics and
-   operators without losing dispatch or overload information.
+5. Represent Fortran polymorphic `class(...)`, procedure bindings, and
+   operators without losing dynamic-type or dispatch information.
 
 Projection/runtime roadmap:
 

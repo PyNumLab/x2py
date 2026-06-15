@@ -15,7 +15,7 @@ from ..models.core import (
     FunctionDef,
     FunctionDefArgument,
     FunctionDefResult,
-    Interface,
+    FunctionOverloadSet,
     Module,
 )
 from ..models.datatypes import (
@@ -60,8 +60,8 @@ __all__ = (
     "PyErr_SetString",
     "PyErr_WarnEx",
     "PyFunctionDef",
+    "PyFunctionOverloadSet",
     "PyGetSetDefElement",
-    "PyInterface",
     "PyList_Append",
     "PyList_Clear",
     "PyList_GetItem",
@@ -691,73 +691,78 @@ class PyFunctionDef(FunctionDef):
 
 
 # -------------------------------------------------------------------
-class PyInterface(Interface):
+class PyFunctionOverloadSet(FunctionOverloadSet):
     """
-    Class to hold an Interface which is accessible from Python.
+    Class to hold an FunctionOverloadSet which is accessible from Python.
 
-    A class which holds the Python-compatible Interface. It contains functions for
-    determining the type of the arguments passed to the Interface and the functions
+    A class which holds the Python-compatible FunctionOverloadSet. It contains functions for
+    determining the type of the arguments passed to the FunctionOverloadSet and the functions
     called through the interface.
 
     Parameters
     ----------
     name : str
-        The name of the interface. See Interface.
+        The name of the interface. See FunctionOverloadSet.
 
     functions : iterable of FunctionDef
-        The functions of the interface. See Interface.
+        The functions of the interface. See FunctionOverloadSet.
 
-    interface_func : FunctionDef
+    dispatcher_func : FunctionDef
         The function which Python will call to access the interface.
 
     type_check_func : FunctionDef
         The helper function which will determine the types of the arguments passed.
 
-    original_interface : Interface
+    original_overload_set : FunctionOverloadSet
         The interface being wrapped.
 
     **kwargs : dict
-        See Interface.
+        See FunctionOverloadSet.
 
     See Also
     --------
-    Interface : The super class.
+    FunctionOverloadSet : The super class.
     """
 
-    __slots__ = ("_interface_func", "_original_interface", "_type_check_func")
-    _attribute_nodes = (*Interface._attribute_nodes, "_interface_func", "_type_check_func", "_original_interface")
+    __slots__ = ("_dispatcher_func", "_original_overload_set", "_type_check_func")
+    _attribute_nodes = (
+        *FunctionOverloadSet._attribute_nodes,
+        "_dispatcher_func",
+        "_type_check_func",
+        "_original_overload_set",
+    )
 
     def __init__(
         self,
         name,
         functions,
-        interface_func,
+        dispatcher_func,
         type_check_func,
-        original_interface,
+        original_overload_set,
         **kwargs,
     ):
-        self._interface_func = interface_func
+        self._dispatcher_func = dispatcher_func
         self._type_check_func = type_check_func
-        self._original_interface = original_interface
+        self._original_overload_set = original_overload_set
         for f in functions:
             if not isinstance(f, PyFunctionDef):
-                raise TypeError("PyInterface functions should be instances of the class PyFunctionDef.")
+                raise TypeError("PyFunctionOverloadSet functions should be instances of the class PyFunctionDef.")
         super().__init__(name, functions, False, **kwargs)
 
     @property
-    def interface_func(self):
+    def dispatcher_func(self):
         """
         The function which is exposed to Python.
 
         The function which receives the Python arguments `self`, `args`, and `kwargs` and calls
         the appropriate function.
         """
-        return self._interface_func
+        return self._dispatcher_func
 
     @property
     def type_check_func(self):
         """
-        The function which determines the types which were passed to the Interface.
+        The function which determines the types which were passed to the FunctionOverloadSet.
 
         The function which takes the arguments passed to the function and returns an integer
         indicating which function was called.
@@ -767,11 +772,11 @@ class PyInterface(Interface):
     @property
     def original_function(self):
         """
-        The Interface which is wrapped by this PyInterface.
+        The FunctionOverloadSet which is wrapped by this PyFunctionOverloadSet.
 
         The original interface which would be printed in C.
         """
-        return self._original_interface
+        return self._original_overload_set
 
 
 # -------------------------------------------------------------------

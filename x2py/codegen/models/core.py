@@ -75,6 +75,7 @@ __all__ = (
     "FunctionDef",
     "FunctionDefArgument",
     "FunctionDefResult",
+    "FunctionOverloadSet",
     "Ge",
     "Gt",
     "If",
@@ -83,7 +84,6 @@ __all__ = (
     "Import",
     "In",
     "IndexedElement",
-    "Interface",
     "Is",
     "IsNot",
     "Le",
@@ -113,13 +113,13 @@ __all__ = (
     "X2pyFunctionDef",
     "get_direct_assignment",
     "get_direct_function_argument",
-    "get_direct_interface",
     "get_direct_module",
+    "get_direct_overload_set",
     "get_enclosing_class",
     "get_enclosing_function",
     "get_enclosing_module",
     "has_return_statement",
-    "is_in_interface",
+    "is_in_overload_set",
 )
 
 
@@ -1426,8 +1426,8 @@ class Module:
         CodeBlock containing any expressions which are only executed
         when the module is executed directly.
 
-    interfaces : list
-        A list of Interface instances.
+    overload_sets : list
+        A list of FunctionOverloadSet instances.
 
     classes : list
         A list of ClassDef instances.
@@ -1474,10 +1474,10 @@ class Module:
         "_funcs",
         "_imports",
         "_init_func",
-        "_interfaces",
         "_internal_dictionary",
         "_is_external",
         "_name",
+        "_overload_sets",
         "_program",
         "_variable_inits",
         "_variables",
@@ -1485,7 +1485,7 @@ class Module:
     _attribute_nodes = (
         "_variables",
         "_funcs",
-        "_interfaces",
+        "_overload_sets",
         "_classes",
         "_imports",
         "_init_func",
@@ -1502,7 +1502,7 @@ class Module:
         init_func=None,
         free_func=None,
         program=None,
-        interfaces=(),
+        overload_sets=(),
         classes=(),
         imports=(),
         scope=None,
@@ -1530,11 +1530,11 @@ class Module:
             if not isinstance(i, ClassDef):
                 raise TypeError("Only a ClassDef instance is allowed.")
 
-        if not iterable(interfaces):
-            raise TypeError("interfaces must be an iterable")
-        for i in interfaces:
-            if not isinstance(i, Interface):
-                raise TypeError("Only a Interface instance is allowed.")
+        if not iterable(overload_sets):
+            raise TypeError("overload_sets must be an iterable")
+        for i in overload_sets:
+            if not isinstance(i, FunctionOverloadSet):
+                raise TypeError("Only a FunctionOverloadSet instance is allowed.")
 
         NoneType = type(None)
         assert isinstance(init_func, NoneType | FunctionDef)
@@ -1562,7 +1562,7 @@ class Module:
         self._init_func = init_func
         self._free_func = free_func
         self._program = program
-        self._interfaces = interfaces
+        self._overload_sets = overload_sets
         self._classes = classes
         self._imports = imports
         self._is_external = is_external
@@ -1574,7 +1574,7 @@ class Module:
 
         self._internal_dictionary = {get_name(v): v for v in variables}
         self._internal_dictionary.update({get_name(f): f for f in funcs})
-        self._internal_dictionary.update({get_name(i): i for i in interfaces})
+        self._internal_dictionary.update({get_name(i): i for i in overload_sets})
         self._internal_dictionary.update({get_name(c): c for c in classes})
 
         import_mods = {
@@ -1627,9 +1627,9 @@ class Module:
         return self._funcs
 
     @property
-    def interfaces(self):
-        """Any interfaces defined in the module"""
-        return self._interfaces
+    def overload_sets(self):
+        """Any overload_sets defined in the module"""
+        return self._overload_sets
 
     @property
     def classes(self):
@@ -1655,10 +1655,10 @@ class Module:
 
     @property
     def body(self):
-        """Returns the functions, interfaces and classes defined
+        """Returns the functions, overload_sets and classes defined
         in the module
         """
-        return self.interfaces + self.funcs + self.classes
+        return self.overload_sets + self.funcs + self.classes
 
     def __getitem__(self, arg):
         assert isinstance(arg, str)
@@ -1911,9 +1911,11 @@ class FunctionDefArgument:
         The type annotation describing the argument.
 
     bound_argument : bool, default: False
-        Indicates if the argument is bound to the function call. This is
-        the case if the argument is the first argument of a method of a
-        class.
+        Indicates if the argument is the passed object bound to a method call.
+
+    bound_argument_position : int, optional
+        The position of the passed-object dummy in the native procedure
+        signature before wrapper normalization.
 
     persistent_target : bool, default: False
         Indicates if the object passed as this argument becomes a target.
@@ -1940,6 +1942,7 @@ class FunctionDefArgument:
     __slots__ = (
         "_annotation",
         "_bound_argument",
+        "_bound_argument_position",
         "_inout",
         "_is_kwarg",
         "_is_vararg",
@@ -1961,6 +1964,7 @@ class FunctionDefArgument:
         kwonly=False,
         annotation=None,
         bound_argument=False,
+        bound_argument_position=None,
         persistent_target=False,
         is_vararg=False,
         is_kwarg=False,
@@ -1975,12 +1979,17 @@ class FunctionDefArgument:
             raise TypeError("Name must be a Symbol, Variable or FunctionAddress")
         if not isinstance(bound_argument, bool):
             raise TypeError("bound_argument must be a boolean")
+        if bound_argument_position is not None and not isinstance(bound_argument_position, int):
+            raise TypeError("bound_argument_position must be an integer or None")
+        if bound_argument_position is not None and not bound_argument:
+            raise ValueError("bound_argument_position requires bound_argument=True")
         self._value = value
         self._posonly = posonly
         self._kwonly = kwonly
         self._annotation = annotation
         self._persistent_target = persistent_target
         self._bound_argument = bound_argument
+        self._bound_argument_position = bound_argument_position
         self._is_vararg = is_vararg
         self._is_kwarg = is_kwarg
 
@@ -2101,6 +2110,11 @@ class FunctionDefArgument:
         class.
         """
         return self._bound_argument
+
+    @property
+    def bound_argument_position(self):
+        """Position of the passed-object dummy in the native signature."""
+        return self._bound_argument_position
 
     @bound_argument.setter
     def bound_argument(self, bound):
@@ -2258,11 +2272,11 @@ class FunctionCall:
         "_class_type",
         "_func_name",
         "_funcdef",
-        "_interface",
-        "_interface_name",
+        "_overload_set",
+        "_overload_set_name",
         "_shape",
     )
-    _attribute_nodes = ("_arguments", "_funcdef", "_interface")
+    _attribute_nodes = ("_arguments", "_funcdef", "_overload_set")
 
     def __init__(self, func, args, current_function=None):
         for a in args:
@@ -2271,15 +2285,15 @@ class FunctionCall:
         args = [a if isinstance(a, FunctionCallArgument) else FunctionCallArgument(a) for a in args]
 
         # ...
-        if not isinstance(func, FunctionDef | Interface):
-            raise TypeError("> expecting a FunctionDef or an Interface")
+        if not isinstance(func, FunctionDef | FunctionOverloadSet):
+            raise TypeError("> expecting a FunctionDef or an FunctionOverloadSet")
 
-        if isinstance(func, Interface):
-            self._interface = func
-            self._interface_name = func.name
+        if isinstance(func, FunctionOverloadSet):
+            self._overload_set = func
+            self._overload_set_name = func.name
             func = func.point(args)
         else:
-            self._interface = None
+            self._overload_set = None
 
         name = func.name
         # ...
@@ -2350,9 +2364,9 @@ class FunctionCall:
         return self._funcdef
 
     @property
-    def interface(self):
+    def overload_set(self):
         """The interface called by this function call"""
-        return self._interface
+        return self._overload_set
 
     @property
     def func_name(self):
@@ -2360,9 +2374,9 @@ class FunctionCall:
         return self._func_name
 
     @property
-    def interface_name(self):
+    def overload_set_name(self):
         """The name of the interface called by this function call"""
-        return self._interface_name
+        return self._overload_set_name
 
     @property
     def is_alias(self):
@@ -2500,8 +2514,8 @@ class FunctionDef:
     functions : list, tuple
         A list of functions defined within this function.
 
-    interfaces : list, tuple
-        A list of interfaces defined within this function.
+    overload_sets : list, tuple
+        A list of overload_sets defined within this function.
 
     result_pointer_map : dict[FunctionDefResult, list[int]]
         A dictionary connecting any pointer results to the index of the possible target arguments.
@@ -2557,7 +2571,6 @@ class FunctionDef:
         "_global_vars",
         "_headers",
         "_imports",
-        "_interfaces",
         "_is_elemental",
         "_is_external",
         "_is_header",
@@ -2568,6 +2581,7 @@ class FunctionDef:
         "_is_semantic",
         "_is_static",
         "_name",
+        "_overload_sets",
         "_result_pointer_map",
         "_results",
     )
@@ -2579,7 +2593,7 @@ class FunctionDef:
         "_global_vars",
         "_imports",
         "_functions",
-        "_interfaces",
+        "_overload_sets",
     )
 
     def __init__(
@@ -2603,7 +2617,7 @@ class FunctionDef:
         is_external=False,
         is_imported=False,
         functions=(),
-        interfaces=(),
+        overload_sets=(),
         result_pointer_map=None,
         docstring=None,
         scope=None,
@@ -2692,7 +2706,7 @@ class FunctionDef:
         self._is_external = is_external
         self._is_imported = is_imported
         self._functions = functions
-        self._interfaces = interfaces
+        self._overload_sets = overload_sets
         self._result_pointer_map = result_pointer_map
         self._docstring = docstring
         init_model_object(self, scope=scope)
@@ -2888,9 +2902,9 @@ class FunctionDef:
         return self._functions
 
     @property
-    def interfaces(self):
-        """List of interfaces within this function"""
-        return self._interfaces
+    def overload_sets(self):
+        """List of overload_sets within this function"""
+        return self._overload_sets
 
     @property
     def docstring(self):
@@ -2957,7 +2971,7 @@ class FunctionDef:
             "functions": self._functions,
             "is_external": self._is_external,
             "is_imported": self._is_imported,
-            "interfaces": self._interfaces,
+            "overload_sets": self._overload_sets,
             "docstring": self._docstring,
             "scope": self._scope,
         }
@@ -3043,7 +3057,7 @@ class X2pyFunctionDef(FunctionDef):
         return self._cls_name(*args, **kwargs)
 
 
-class Interface:
+class FunctionOverloadSet:
     """
     Class representing an interface function.
 
@@ -3070,9 +3084,9 @@ class Interface:
 
     Examples
     --------
-    >>> from x2py.ast.core import Interface, FunctionDef
+    >>> from x2py.ast.core import FunctionOverloadSet, FunctionDef
     >>> f = FunctionDef('F', [], [], [])
-    >>> Interface('I', [f])
+    >>> FunctionOverloadSet('I', [f])
     """
 
     __slots__ = (
@@ -3096,9 +3110,17 @@ class Interface:
             raise TypeError("Expecting an str")
 
         assert iterable(functions)
+        functions = tuple(functions)
+        if not functions:
+            raise ValueError(f"Function overload set {name!r} must contain at least one function")
+        if not all(isinstance(function, FunctionDef) for function in functions):
+            raise TypeError("Function overload set entries must be FunctionDef instances")
+        if type(self) is FunctionOverloadSet:
+            source_functions = tuple(getattr(function, "original_function", function) for function in functions)
+            self._validate_dispatch_signatures(name, source_functions)
 
         self._name = name
-        self._functions = tuple(functions)
+        self._functions = functions
         self._is_argument = is_argument
         self._is_imported = is_imported
         self._syntactic_node = syntactic_node
@@ -3113,6 +3135,45 @@ class Interface:
     def functions(self):
         """ "Functions of the interface."""
         return self._functions
+
+    @property
+    def arguments(self):
+        """Arguments shared by every overload as seen by the generated wrapper."""
+        return self._functions[0].arguments
+
+    @staticmethod
+    def _dispatch_arguments(function):
+        arguments = list(function.arguments)
+        if arguments and arguments[0].bound_argument:
+            return arguments[1:]
+        return arguments
+
+    @classmethod
+    def _validate_dispatch_signatures(cls, name, functions):
+        call_shapes = []
+        dispatch_keys = []
+        for function in functions:
+            arguments = cls._dispatch_arguments(function)
+            call_shapes.append(
+                tuple(
+                    (
+                        argument.has_default,
+                        argument.is_kwonly,
+                        argument.is_vararg,
+                        argument.is_kwarg,
+                    )
+                    for argument in arguments
+                )
+            )
+            dispatch_keys.append(tuple((argument.var.class_type, argument.var.rank) for argument in arguments))
+
+        if any(shape != call_shapes[0] for shape in call_shapes[1:]):
+            raise ValueError(f"Function overload set {name!r} has incompatible Python call signatures")
+        seen = set()
+        for function, key in zip(functions, dispatch_keys, strict=True):
+            if key in seen:
+                raise ValueError(f"Function overload set {name!r} has indistinguishable overload {function.name!s}")
+            seen.add(key)
 
     @property
     def is_argument(self):
@@ -3176,37 +3237,37 @@ class Interface:
 
     def rename(self, newname):
         """
-        Rename the Interface name to a newname.
+        Rename the FunctionOverloadSet name to a newname.
 
-        Rename the Interface name to a newname.
+        Rename the FunctionOverloadSet name to a newname.
 
         Parameters
         ----------
         newname : str
-            New name for the Interface.
+            New name for the FunctionOverloadSet.
         """
 
         self._name = newname
 
     def clone(self, newname, **new_kwargs):
         """
-        Create an almost identical Interface with name `newname`.
+        Create an almost identical FunctionOverloadSet with name `newname`.
 
-        Create an almost identical Interface with name `newname`.
+        Create an almost identical FunctionOverloadSet with name `newname`.
         Additional parameters can be passed to alter the resulting
         FunctionDef.
 
         Parameters
         ----------
         newname : str
-            New name for the Interface.
+            New name for the FunctionOverloadSet.
 
         **new_kwargs : dict
-            Any new keyword arguments to be passed to the new Interface.
+            Any new keyword arguments to be passed to the new FunctionOverloadSet.
 
         Returns
         -------
-        Interface
+        FunctionOverloadSet
             The clone of the interface.
         """
 
@@ -3237,7 +3298,7 @@ class Interface:
         Return the actual function that will be called, depending on the passed arguments.
 
         From the arguments passed in the function call, determine which of the FunctionDef
-        objects in the Interface is actually called.
+        objects in the FunctionOverloadSet is actually called.
 
         Parameters
         ----------
@@ -3249,7 +3310,6 @@ class Interface:
         FunctionDef
             The function definition which corresponds with the arguments.
         """
-        fs_args = [list(i.arguments) for i in self._functions]
 
         def type_match(call_arg, func_arg):
             """
@@ -3257,20 +3317,22 @@ class Interface:
             """
             return call_arg.class_type == func_arg.class_type and (call_arg.rank == func_arg.rank)
 
-        j = -1
-        for i in fs_args:
-            j += 1
-            found = True
-            for x, y in enumerate(args):
-                func_arg = i[x].var
-                call_arg = y.value
-                found = found and type_match(call_arg, func_arg)
-            if found:
-                break
+        matches = []
+        for function in self._functions:
+            function_args = list(function.arguments)
+            if len(args) != len(function_args):
+                continue
+            if all(
+                type_match(call_arg.value, func_arg.var) for call_arg, func_arg in zip(args, function_args, strict=True)
+            ):
+                matches.append(function)
 
-        if not found:
+        if not matches:
             raise TypeError(f"Arguments types provided to {self.name} are incompatible")
-        return self._functions[j]
+        if len(matches) > 1:
+            names = ", ".join(str(function.name) for function in matches)
+            raise TypeError(f"Arguments provided to {self.name} match multiple overloads: {names}")
+        return matches[0]
 
     def __call__(self, *args, **kwargs):
         arguments = [a if isinstance(a, FunctionCallArgument) else FunctionCallArgument(a) for a in args]
@@ -3401,7 +3463,7 @@ class ClassDef:
     Represents a class definition.
 
     Class representing a class definition in the code. It holds all objects
-    which may be defined in a class including methods, interfaces, attributes,
+    which may be defined in a class including methods, overload_sets, attributes,
     etc. It also handles inheritance.
 
     Parameters
@@ -3421,7 +3483,7 @@ class ClassDef:
     superclasses : iterable
         The definition of all classes from which this class inherits.
 
-    interfaces : iterable
+    overload_sets : iterable
         The interface methods.
 
     docstring : CommentBlock, optional
@@ -3461,16 +3523,16 @@ class ClassDef:
         "_decorators",
         "_docstring",
         "_imports",
-        "_interfaces",
         "_methods",
         "_name",
+        "_overload_sets",
         "_superclasses",
     )
     _attribute_nodes = (
         "_attributes",
         "_methods",
         "_imports",
-        "_interfaces",
+        "_overload_sets",
         "_docstring",
     )
 
@@ -3481,7 +3543,7 @@ class ClassDef:
         methods=(),
         imports=(),
         superclasses=(),
-        interfaces=(),
+        overload_sets=(),
         docstring=None,
         scope=None,
         class_type=None,
@@ -3520,8 +3582,8 @@ class ClassDef:
             if not isinstance(class_type, Type):
                 raise TypeError("class_type must be a Type")
 
-        if not iterable(interfaces):
-            raise TypeError("interfaces must be iterable")
+        if not iterable(overload_sets):
+            raise TypeError("overload_sets must be iterable")
 
         imports = list(imports)
         for i in methods:
@@ -3538,7 +3600,7 @@ class ClassDef:
         self._methods = methods
         self._imports = imports
         self._superclasses = superclasses
-        self._interfaces = interfaces
+        self._overload_sets = overload_sets
         self._docstring = docstring
         self._class_type = class_type
         self._decorators = decorators
@@ -3592,8 +3654,8 @@ class ClassDef:
         return self._superclasses
 
     @property
-    def interfaces(self):
-        return self._interfaces
+    def overload_sets(self):
+        return self._overload_sets
 
     @property
     def docstring(self):
@@ -3670,7 +3732,7 @@ class ClassDef:
         attach_model_child(self, method)
         self._methods += (method,)
 
-    def add_new_interface(self, interface):
+    def add_new_overload_set(self, overload_set):
         """
         Add a new interface to the current class.
 
@@ -3682,10 +3744,10 @@ class ClassDef:
             The interface that will be added.
         """
 
-        if not isinstance(interface, Interface):
-            raise TypeError("Argument 'interface' must be of type Interface")
-        attach_model_child(self, interface)
-        self._interfaces += (interface,)
+        if not isinstance(overload_set, FunctionOverloadSet):
+            raise TypeError("Argument 'overload_set' must be of type FunctionOverloadSet")
+        attach_model_child(self, overload_set)
+        self._overload_sets += (overload_set,)
 
     def update_method(self, syntactic_method, semantic_method):
         """
@@ -3707,7 +3769,7 @@ class ClassDef:
         attach_model_child(self, semantic_method)
         self._methods = (*tuple(m for m in self._methods if m is not syntactic_method), semantic_method)
 
-    def update_interface(self, syntactic_interface, semantic_interface):
+    def update_overload_set(self, syntactic_overload_set, semantic_overload_set):
         """
         Replace an existing interface with a new interface.
 
@@ -3724,7 +3786,7 @@ class ClassDef:
 
         When translating a .pyi file, an additional case is seen due to
         the use of the `@overload` decorator. When this decorator is used
-        each `FunctionDef` in the `Interface` is visited individually.
+        each `FunctionDef` in the `FunctionOverloadSet` is visited individually.
         When the first implementation is visited, the syntactic interface
         will be replaced by the semantic interface, but when subsequent
         implementations are visited, the syntactic interface will already
@@ -3733,29 +3795,33 @@ class ClassDef:
 
         Parameters
         ----------
-        syntactic_interface : FunctionDef
+        syntactic_overload_set : FunctionDef
             The syntactic interface that should be removed from the class.
             In the case of a .pyi file this interface may not appear in
             the class any more.
-        semantic_interface : FunctionDef
+        semantic_overload_set : FunctionDef
             The new interface that should appear in the class.
         """
-        assert isinstance(semantic_interface, Interface)
-        assert semantic_interface.is_semantic
-        if syntactic_interface in self._methods:
-            detach_model_child(self, syntactic_interface)
-        attach_model_child(self, semantic_interface)
-        self._methods = tuple(m for m in self._methods if m is not syntactic_interface)
-        self._interfaces = (
-            *tuple(m for m in self._interfaces if m is not syntactic_interface and m.name != semantic_interface.name),
-            semantic_interface,
+        assert isinstance(semantic_overload_set, FunctionOverloadSet)
+        assert semantic_overload_set.is_semantic
+        if syntactic_overload_set in self._methods:
+            detach_model_child(self, syntactic_overload_set)
+        attach_model_child(self, semantic_overload_set)
+        self._methods = tuple(m for m in self._methods if m is not syntactic_overload_set)
+        self._overload_sets = (
+            *tuple(
+                m
+                for m in self._overload_sets
+                if m is not syntactic_overload_set and m.name != semantic_overload_set.name
+            ),
+            semantic_overload_set,
         )
 
     def get_method(self, name, raise_error_from=None):
         """
         Get the method `name` of the current class.
 
-        Look through all methods and interfaces of the current class to
+        Look through all methods and overload_sets of the current class to
         find a method called `name`. If this class inherits from another
         class, that class is also searched to ensure that the inherited
         methods are available.
@@ -3791,7 +3857,7 @@ class ClassDef:
                 return None
 
         try:
-            method = next(i for i in chain(self.methods, self.interfaces) if i.name == name)
+            method = next(i for i in chain(self.methods, self.overload_sets) if i.name == name)
         except StopIteration:
             method = None
             i = 0
@@ -4684,9 +4750,9 @@ def get_direct_function_argument(obj):
     return _find_direct_model_parent(obj, FunctionDefArgument)
 
 
-def get_direct_interface(obj):
+def get_direct_overload_set(obj):
     """Return the interface that directly contains ``obj``, if present."""
-    return _find_direct_model_parent(obj, Interface)
+    return _find_direct_model_parent(obj, FunctionOverloadSet)
 
 
 def get_direct_module(obj):
@@ -4714,9 +4780,9 @@ def has_return_statement(obj):
     return _has_model_descendant(obj, Return)
 
 
-def is_in_interface(obj):
+def is_in_overload_set(obj):
     """Return whether ``obj`` belongs to an interface outside a function call."""
-    return _find_model_parent(obj, Interface, excluded_types=(FunctionCall,)) is not None
+    return _find_model_parent(obj, FunctionOverloadSet, excluded_types=(FunctionCall,)) is not None
 
 
 for _model_cls in (
@@ -4738,7 +4804,7 @@ for _model_cls in (
     FunctionCall,
     Return,
     FunctionDef,
-    Interface,
+    FunctionOverloadSet,
     ClassDef,
     Import,
     Declare,

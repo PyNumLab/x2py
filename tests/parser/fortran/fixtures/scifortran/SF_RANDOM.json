@@ -684,92 +684,181 @@
         {
           "name": "mersenne_init",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "init_genrand"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_init",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "init_genrand"
+          ],
+          "abstract": false
         },
         {
           "name": "mersenne",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "grnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_random",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_grnd_1",
+            "d_grnd_2",
+            "d_grnd_3",
+            "d_grnd_4",
+            "d_grnd_5",
+            "d_grnd_6",
+            "d_grnd_7",
+            "c_grnd_1",
+            "c_grnd_2",
+            "c_grnd_3",
+            "c_grnd_4",
+            "c_grnd_5",
+            "c_grnd_6",
+            "c_grnd_7"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_uniform",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "igrnd",
+            "dgrnd_uniform"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_normal",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "gaussrnd",
+            "normalrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_exponential",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "exponentialrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_gamma",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "gammarnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_chi_square",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "chi_squarernd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_inverse_gamma",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "inverse_gammarnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_weibull",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "weibullrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_cauchy",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cauchyrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_student_t",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "student_trnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_laplace",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "laplacernd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_log_normal",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "log_normalrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_beta",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "betarnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_save",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "mtsavef",
+            "mtsaveu"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_get",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "mtgetf",
+            "mtgetu"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -1507,92 +1596,181 @@
         {
           "name": "mersenne_init",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "init_genrand"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_init",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "init_genrand"
+          ],
+          "abstract": false
         },
         {
           "name": "mersenne",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "grnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_random",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_grnd_1",
+            "d_grnd_2",
+            "d_grnd_3",
+            "d_grnd_4",
+            "d_grnd_5",
+            "d_grnd_6",
+            "d_grnd_7",
+            "c_grnd_1",
+            "c_grnd_2",
+            "c_grnd_3",
+            "c_grnd_4",
+            "c_grnd_5",
+            "c_grnd_6",
+            "c_grnd_7"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_uniform",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "igrnd",
+            "dgrnd_uniform"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_normal",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "gaussrnd",
+            "normalrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_exponential",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "exponentialrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_gamma",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "gammarnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_chi_square",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "chi_squarernd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_inverse_gamma",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "inverse_gammarnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_weibull",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "weibullrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_cauchy",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cauchyrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_student_t",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "student_trnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_laplace",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "laplacernd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_log_normal",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "log_normalrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_beta",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "betarnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_save",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "mtsavef",
+            "mtsaveu"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_get",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "mtgetf",
+            "mtgetu"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

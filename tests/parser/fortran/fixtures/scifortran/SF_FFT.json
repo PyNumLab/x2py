@@ -4056,117 +4056,224 @@
         {
           "name": "FT_direct",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_FT_direct",
+            "c_FT_direct"
+          ],
+          "abstract": false
         },
         {
           "name": "FT_inverse",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_FT_inverse",
+            "c_FT_inverse"
+          ],
+          "abstract": false
         },
         {
           "name": "FFT_signal",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_FFT_signal",
+            "c_FFT_signal"
+          ],
+          "abstract": false
         },
         {
           "name": "iFFT_signal",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_iFFT_signal",
+            "c_iFFT_signal"
+          ],
+          "abstract": false
         },
         {
           "name": "tfft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_tfft",
+            "c_tfft"
+          ],
+          "abstract": false
         },
         {
           "name": "itfft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_itfft",
+            "c_itfft"
+          ],
+          "abstract": false
         },
         {
           "name": "fft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_forward",
+            "cfft_1d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "ifft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_backward",
+            "cfft_1d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "fft2",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_2d_forward",
+            "cfft_2d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "ifft2",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_2d_backward",
+            "cfft_2d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "fftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_nd_forward",
+            "cfft_nd_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "ifftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_nd_backward",
+            "cfft_nd_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "cosft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_1d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "icosft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_1d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "cosftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_Nd_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "icosftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_Nd_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "sinft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_1d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "isinft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_1d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "sinftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_Nd_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "isinftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_Nd_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "fftshift",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_shift",
+            "cfft_1d_shift"
+          ],
+          "abstract": false
         },
         {
           "name": "ifftshift",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_ishift",
+            "cfft_1d_ishift"
+          ],
+          "abstract": false
         },
         {
           "name": "fftex",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_ex",
+            "cfft_1d_ex"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -8290,117 +8397,224 @@
         {
           "name": "FT_direct",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_FT_direct",
+            "c_FT_direct"
+          ],
+          "abstract": false
         },
         {
           "name": "FT_inverse",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_FT_inverse",
+            "c_FT_inverse"
+          ],
+          "abstract": false
         },
         {
           "name": "FFT_signal",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_FFT_signal",
+            "c_FFT_signal"
+          ],
+          "abstract": false
         },
         {
           "name": "iFFT_signal",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_iFFT_signal",
+            "c_iFFT_signal"
+          ],
+          "abstract": false
         },
         {
           "name": "tfft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_tfft",
+            "c_tfft"
+          ],
+          "abstract": false
         },
         {
           "name": "itfft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_itfft",
+            "c_itfft"
+          ],
+          "abstract": false
         },
         {
           "name": "fft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_forward",
+            "cfft_1d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "ifft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_backward",
+            "cfft_1d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "fft2",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_2d_forward",
+            "cfft_2d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "ifft2",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_2d_backward",
+            "cfft_2d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "fftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_nd_forward",
+            "cfft_nd_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "ifftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_nd_backward",
+            "cfft_nd_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "cosft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_1d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "icosft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_1d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "cosftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_Nd_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "icosftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_Nd_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "sinft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_1d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "isinft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_1d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "sinftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_Nd_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "isinftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_Nd_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "fftshift",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_shift",
+            "cfft_1d_shift"
+          ],
+          "abstract": false
         },
         {
           "name": "ifftshift",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_ishift",
+            "cfft_1d_ishift"
+          ],
+          "abstract": false
         },
         {
           "name": "fftex",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_ex",
+            "cfft_1d_ex"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

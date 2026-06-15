@@ -41,7 +41,7 @@ from ..models.core import (
     If,
     IfSection,
     Import,
-    is_in_interface,
+    is_in_overload_set,
     Module,
     Return,
 )
@@ -65,7 +65,7 @@ from .cpython_api import (
     PyErr_WarnEx,
     PyFunctionDef,
     PyGetSetDefElement,
-    PyInterface,
+    PyFunctionOverloadSet,
     PyList_Append,
     PyList_GetItem,
     PyList_New,
@@ -520,7 +520,7 @@ class CPythonBindingGenerator(BindingGenerator):
             arguments that were passed to the function from Python.
 
         funcs : list of FunctionDefs
-            The functions in the Interface.
+            The functions in the FunctionOverloadSet.
 
         Returns
         -------
@@ -1549,7 +1549,7 @@ class CPythonBindingGenerator(BindingGenerator):
         funcs = [self._visit(f) for f in funcs_to_wrap]
 
         # Wrap interfaces
-        interfaces = [self._visit(i) for i in expr.interfaces]
+        interfaces = [self._visit(i) for i in expr.overload_sets]
 
         module_def_name = self.scope.get_new_name("module")
         init_func = self._build_module_init_function(expr, imports, module_def_name)
@@ -1566,7 +1566,7 @@ class CPythonBindingGenerator(BindingGenerator):
             [API_var],
             funcs,
             imports=imports,
-            interfaces=interfaces,
+            overload_sets=interfaces,
             classes=classes,
             scope=mod_scope,
             init_func=init_func,
@@ -1629,7 +1629,7 @@ class CPythonBindingGenerator(BindingGenerator):
                 is_header=True,
                 scope=f.scope,
             )
-            for i in expr.interfaces
+            for i in expr.overload_sets
             for f in i.functions
         )
 
@@ -1647,7 +1647,7 @@ class CPythonBindingGenerator(BindingGenerator):
                         scope=m.scope,
                     )
                 )
-            for i in c.interfaces:
+            for i in c.overload_sets:
                 for f in i.functions:
                     external_funcs.append(
                         FunctionDef(
@@ -1676,11 +1676,11 @@ class CPythonBindingGenerator(BindingGenerator):
 
         return pymod
 
-    def _visit_Interface(self, expr):
+    def _visit_FunctionOverloadSet(self, expr):
         """
-        Build a `PyInterface` from an `Interface`.
+        Build a `PyFunctionOverloadSet` from an `FunctionOverloadSet`.
 
-        Create a `PyInterface` which wraps a C-compatible `Interface`. The `PyInterface`
+        Create a `PyFunctionOverloadSet` which wraps a C-compatible `FunctionOverloadSet`. The `PyFunctionOverloadSet`
         should take three arguments (`self`, `args`, and `kwargs`) and return a
         `PythonObjectType`. The arguments are unpacked into multiple `PythonObjectType`s
         which are passed to `PyFunctionDef`s describing each of the internal
@@ -1689,12 +1689,12 @@ class CPythonBindingGenerator(BindingGenerator):
 
         Parameters
         ----------
-        expr : Interface
+        expr : FunctionOverloadSet
             The interface which can be called from C.
 
         Returns
         -------
-        PyInterface
+        PyFunctionOverloadSet
             The interface which can be called from Python.
 
         See Also
@@ -1775,7 +1775,7 @@ class CPythonBindingGenerator(BindingGenerator):
         result_var = self.get_new_PyObject("result", is_temp=True)
         self.exit_scope()
 
-        interface_func = FunctionDef(
+        dispatcher_func = FunctionDef(
             func_name,
             [FunctionDefArgument(a) for a in func_args],
             body,
@@ -1785,7 +1785,7 @@ class CPythonBindingGenerator(BindingGenerator):
         for a in python_args:
             self._python_object_map.pop(a)
 
-        return PyInterface(func_name, functions, interface_func, type_check_func, expr)
+        return PyFunctionOverloadSet(func_name, functions, dispatcher_func, type_check_func, expr)
 
     def _visit_FunctionDef(self, expr):
         """
@@ -1794,7 +1794,7 @@ class CPythonBindingGenerator(BindingGenerator):
         Create a `PyFunctionDef` which wraps a C-compatible `FunctionDef`.
         The `PyFunctionDef` should take three arguments (`self`, `args`,
         and `kwargs`) and return a `PythonObjectType`. If the function is
-        called from an Interface then the arguments are `PythonObjectType`s
+        called from an FunctionOverloadSet then the arguments are `PythonObjectType`s
         describing each of the arguments of the C-compatible function.
 
         Parameters
@@ -1841,7 +1841,7 @@ class CPythonBindingGenerator(BindingGenerator):
             a_var = a.var
             func_scope.insert_symbol(getattr(a_var, "original_var", a_var).name)
 
-        in_interface = is_in_interface(expr)
+        in_overload_set = is_in_overload_set(expr)
 
         # Get variables describing the arguments and results that are seen from Python
         python_args = expr.arguments
@@ -1857,7 +1857,7 @@ class CPythonBindingGenerator(BindingGenerator):
             func_args = [FunctionDefArgument(a) for a in func_args]
             body = []
         else:
-            if in_interface or original_func_name in magic_binary_funcs or original_func_name == "__len__":
+            if in_overload_set or original_func_name in magic_binary_funcs or original_func_name == "__len__":
                 func_args = [FunctionDefArgument(a) for a in self._get_python_argument_variables(python_args)]
                 body = []
             else:
@@ -1982,7 +1982,7 @@ class CPythonBindingGenerator(BindingGenerator):
              - args : a list of Variables which should be passed to call the function being wrapped.
         """
         collect_arg = self._python_object_map[expr]
-        in_interface = is_in_interface(expr)
+        in_overload_set = is_in_overload_set(expr)
         is_bind_c_argument = isinstance(expr.var, BindCVariable)
 
         orig_var = getattr(expr.var, "original_var", expr.var)
@@ -2027,7 +2027,7 @@ class CPythonBindingGenerator(BindingGenerator):
                     )
                 )
             )
-        elif not (in_interface or bound_argument):
+        elif not (in_overload_set or bound_argument):
             check_func, err = self._get_type_check_condition(
                 collect_arg, orig_var, True, body, allow_empty_arrays=is_bind_c_argument
             )
@@ -2512,10 +2512,10 @@ class CPythonBindingGenerator(BindingGenerator):
             else:
                 wrapped_class.add_new_method(self._visit(f))
 
-        for i in expr.interfaces:
+        for i in expr.overload_sets:
             for f in i.functions:
                 self._visit(f)
-            wrapped_class.add_new_interface(self._visit(i))
+            wrapped_class.add_new_overload_set(self._visit(i))
 
         if bound_class:
             wrapped_class.add_alloc_method(self._get_class_allocator(orig_cls_dtype, expr.new_func))

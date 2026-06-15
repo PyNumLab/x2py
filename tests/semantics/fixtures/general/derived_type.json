@@ -108,6 +108,7 @@
           }
         }
       ],
+      "overload_sets": [],
       "classes": [
         {
           "name": "particle",
@@ -279,6 +280,7 @@
             }
           ],
           "methods": [],
+          "overload_sets": [],
           "base_classes": [],
           "contracts": [],
           "metadata": {},

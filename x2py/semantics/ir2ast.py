@@ -10,6 +10,7 @@ from x2py.codegen.models.core import (
     FunctionDef,
     FunctionDefArgument,
     FunctionDefResult,
+    FunctionOverloadSet,
     Module,
     Variable,
 )
@@ -87,6 +88,44 @@ def _memory_handling(semantic_type: models.SemanticType) -> str:
     return "stack"
 
 
+def _passed_object_position(node: models.SemanticFunction) -> int | None:
+    if not isinstance(node, models.SemanticMethod) or node.is_static:
+        return None
+    return node.passed_object_position if node.passed_object_position is not None else 0
+
+
+def _codegen_function_arguments(declarations: list[Variable], passed_object_position: int | None):
+    native_args = [
+        FunctionDefArgument(
+            item,
+            bound_argument=index == passed_object_position,
+            bound_argument_position=index if index == passed_object_position else None,
+        )
+        for index, item in enumerate(declarations)
+    ]
+    if passed_object_position is None:
+        return native_args
+    return [
+        native_args[passed_object_position],
+        *native_args[:passed_object_position],
+        *native_args[passed_object_position + 1 :],
+    ]
+
+
+def _raise_for_unresolved_generic_targets(node: models.SemanticModule | models.SemanticClass) -> None:
+    blockers = node.metadata.get("readiness_blockers", ())
+    for blocker in blockers:
+        if blocker.get("code") != "fortran_generic_target_unresolved":
+            continue
+        item = next(iter(blocker.get("items", ())), {})
+        generic = item.get("generic", "<unnamed>")
+        missing = item.get("missing_targets", ())
+        if missing:
+            targets = ", ".join(str(target) for target in missing)
+            raise ValueError(f"Generic interface {generic!r} references missing specific procedure(s): {targets}")
+        raise ValueError(f"Generic interface {generic!r} does not declare any specific procedures")
+
+
 def semantic_ir_to_codegen_ast(
     node,
     scope,
@@ -98,6 +137,7 @@ def semantic_ir_to_codegen_ast(
     """Convert one semantic IR node into the current codegen AST representation."""
 
     if isinstance(node, models.SemanticModule):
+        _raise_for_unresolved_generic_targets(node)
         custom_types = dict(custom_types or {})
         for semantic_class in node.classes:
             custom_types.setdefault(semantic_class.name, _class_type(semantic_class))
@@ -121,6 +161,15 @@ def semantic_ir_to_codegen_ast(
             )
             for item in node.functions
         ]
+        overload_sets = [
+            semantic_ir_to_codegen_ast(
+                item,
+                scope,
+                legacy,
+                custom_types=custom_types,
+            )
+            for item in node.overload_sets
+        ]
         declarations = [
             semantic_ir_to_codegen_ast(
                 item,
@@ -131,19 +180,34 @@ def semantic_ir_to_codegen_ast(
             for item in node.variables
         ]
         name = scope.get_new_name(node.name)
-        return Module(name, declarations, funcs, classes=classes, scope=scope)
+        return Module(name, declarations, funcs, overload_sets=overload_sets, classes=classes, scope=scope)
+
+    if isinstance(node, models.ProcedureOverloadSet):
+        functions = [
+            semantic_ir_to_codegen_ast(
+                procedure,
+                scope,
+                legacy,
+                custom_types=custom_types,
+                cls_base=cls_base,
+            )
+            for procedure in node.procedures
+        ]
+        name = scope.get_new_name(node.name)
+        overload_set = FunctionOverloadSet(str(name), functions)
+        scope.insert_function(overload_set, name)
+        return overload_set
 
     if isinstance(node, models.SemanticFunction):
         func_scope = scope.new_child_scope(name=node.name, scope_type="function")
+        passed_object_position = _passed_object_position(node)
         declarations = [
             semantic_ir_to_codegen_ast(
                 item,
                 func_scope,
                 legacy,
                 custom_types=custom_types,
-                cls_base=cls_base
-                if isinstance(node, models.SemanticMethod) and not node.is_static and index == 0
-                else None,
+                cls_base=cls_base if index == passed_object_position else None,
             )
             for index, item in enumerate(node.arguments)
         ]
@@ -166,13 +230,7 @@ def semantic_ir_to_codegen_ast(
         else:
             result = FunctionDefResult(NIL)
 
-        args = [
-            FunctionDefArgument(
-                item,
-                bound_argument=isinstance(node, models.SemanticMethod) and index == 0 and not node.is_static,
-            )
-            for index, item in enumerate(declarations)
-        ]
+        args = _codegen_function_arguments(declarations, passed_object_position)
         native_name = node.native_name or node.name
         name = scope.get_new_name(native_name)
         if native_name != node.name:
@@ -190,6 +248,7 @@ def semantic_ir_to_codegen_ast(
         return func
 
     if isinstance(node, models.SemanticClass):
+        _raise_for_unresolved_generic_targets(node)
         class_type = (custom_types or {}).get(node.name)
         if class_type is None:
             class_type = _class_type(node)
@@ -224,6 +283,16 @@ def semantic_ir_to_codegen_ast(
             cls.add_new_method(
                 semantic_ir_to_codegen_ast(
                     method,
+                    class_scope,
+                    legacy,
+                    custom_types=custom_types,
+                    cls_base=cls,
+                )
+            )
+        for overload_set in node.overload_sets:
+            cls.add_new_overload_set(
+                semantic_ir_to_codegen_ast(
+                    overload_set,
                     class_scope,
                     legacy,
                     custom_types=custom_types,

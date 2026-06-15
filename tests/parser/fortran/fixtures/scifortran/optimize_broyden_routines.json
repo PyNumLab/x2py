@@ -81,7 +81,9 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": true
         }
       ],
       "default_visibility": "public",
@@ -1821,7 +1823,9 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         }
       ],
       "default_visibility": "public",
@@ -1916,7 +1920,9 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": true
         }
       ],
       "default_visibility": "public",
@@ -3656,7 +3662,9 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         }
       ],
       "default_visibility": "public",

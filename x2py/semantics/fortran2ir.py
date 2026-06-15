@@ -39,6 +39,7 @@ from .models import (
     SemanticType,
     SemanticVariable,
     ProjectionMapping,
+    ProcedureOverloadSet,
 )
 
 
@@ -355,6 +356,11 @@ class FortranToIRConverter:
             module=dtype.module,
             local_types=frozenset({dtype.name.lower()}),
         )
+        methods = self._bound_methods(dtype, lookup)
+        overload_sets, overload_blockers = self._bound_overload_sets(dtype, methods)
+        metadata = {}
+        if overload_blockers:
+            metadata["readiness_blockers"] = overload_blockers
         return SemanticClass(
             name=dtype.name,
             native_name=dtype.name,
@@ -368,8 +374,10 @@ class FortranToIRConverter:
                 )
                 for field in dtype.fields
             ],
-            methods=self._bound_methods(dtype, lookup),
+            methods=methods,
+            overload_sets=overload_sets,
             base_classes=self._base_classes(dtype),
+            metadata=metadata,
             visibility=getattr(dtype, "visibility", "public"),
             origin=SemanticOrigin(
                 source_language="fortran",
@@ -389,7 +397,7 @@ class FortranToIRConverter:
             )
             for proc in module.procedures
         ]
-        procedure_lookup = {func.name: func for func in semantic_functions}
+        procedure_lookup = {func.name.casefold(): func for func in semantic_functions}
 
         semantic_classes = [
             self.visit_derived_type(
@@ -402,15 +410,21 @@ class FortranToIRConverter:
         for semantic_cls in semantic_classes:
             semantic_cls.visibility = self._symbol_visibility(module, semantic_cls.name)
 
+        overload_sets, overload_blockers = self._module_overload_sets(module, procedure_lookup, context)
+        metadata = {}
+        if overload_blockers:
+            metadata["readiness_blockers"] = overload_blockers
         return SemanticModule(
             name=module.name,
             functions=semantic_functions,
+            overload_sets=overload_sets,
             classes=semantic_classes,
             variables=[
                 self.visit_data_member(var, intent="in", derived_type_context=context)
                 for var in getattr(module, "variables", [])
             ],
             imports=self._module_imports(module),
+            metadata=metadata,
             origin=SemanticOrigin(
                 source_language="fortran",
                 native_name=module.name,
@@ -951,15 +965,18 @@ class FortranToIRConverter:
         ]
         for binding in bindings:
             binding_name, target_name = self._procedure_binding_names(binding["name"])
-            proc = procedure_lookup.get(target_name) or procedure_lookup.get(target_name.lower())
+            proc = procedure_lookup.get(target_name.casefold())
             if proc is None:
                 continue
-            attrs = set(binding.get("attrs", ()))
+            binding_attributes = tuple(binding.get("attrs", ()))
+            attrs = set(binding_attributes)
             visibility = proc.visibility
             if "private" in attrs:
                 visibility = "private"
             elif "public" in attrs:
                 visibility = "public"
+            is_static = "nopass" in attrs
+            passed_object_name, passed_object_position = self._passed_object_argument(proc, binding_attributes)
             methods.append(
                 SemanticMethod(
                     name=binding_name,
@@ -969,11 +986,139 @@ class FortranToIRConverter:
                     contracts=proc.contracts,
                     projection=proc.projection,
                     visibility=visibility,
-                    is_static="nopass" in attrs,
+                    is_static=is_static,
+                    passed_object_name=passed_object_name,
+                    passed_object_position=passed_object_position,
+                    binding_attributes=binding_attributes,
                     origin=proc.origin,
                 )
             )
         return methods
+
+    def _module_overload_sets(
+        self,
+        module: FortranModule,
+        procedure_lookup: dict[str, SemanticFunction],
+        context: _DerivedTypeContext,
+    ) -> tuple[list[ProcedureOverloadSet], list[dict[str, object]]]:
+        overload_sets: list[ProcedureOverloadSet] = []
+        blockers: list[dict[str, object]] = []
+        for interface in module.interfaces:
+            if not interface.name or interface.abstract or not self._is_procedure_generic_name(interface.name):
+                continue
+            inline_lookup = {
+                signature.name.casefold(): self.visit_procedure(
+                    signature,
+                    visibility=self._symbol_visibility(module, interface.name),
+                    derived_type_context=context,
+                )
+                for signature in interface.procedures
+            }
+            target_names = interface.specific_procedures or [signature.name for signature in interface.procedures]
+            procedures, missing = self._resolve_overload_targets(
+                target_names,
+                procedure_lookup | inline_lookup,
+                visibility=self._symbol_visibility(module, interface.name),
+            )
+            overload_sets.append(ProcedureOverloadSet(interface.name, procedures))
+            if missing or not procedures:
+                blockers.append(self._unresolved_generic_target_blocker(module.name, interface.name, missing))
+        return overload_sets, blockers
+
+    def _bound_overload_sets(
+        self,
+        dtype: FortranDerivedType,
+        methods: list[SemanticMethod],
+    ) -> tuple[list[ProcedureOverloadSet], list[dict[str, object]]]:
+        lookup = {method.name.casefold(): method for method in methods}
+        overload_sets: list[ProcedureOverloadSet] = []
+        blockers: list[dict[str, object]] = []
+        for binding in dtype.generic_bindings:
+            name = str(binding["name"])
+            if not self._is_procedure_generic_name(name):
+                continue
+            attrs = {str(attr).casefold() for attr in binding.get("attrs", ())}
+            visibility = "private" if "private" in attrs else "public" if "public" in attrs else None
+            procedures, missing = self._resolve_overload_targets(
+                list(binding.get("targets", ())),
+                lookup,
+                visibility=visibility,
+            )
+            overload_sets.append(ProcedureOverloadSet(name, procedures))
+            if missing or not procedures:
+                blockers.append(self._unresolved_generic_target_blocker(dtype.name, name, missing))
+        return overload_sets, blockers
+
+    @staticmethod
+    def _is_procedure_generic_name(name: str) -> bool:
+        return re.fullmatch(r"[a-z_]\w*", name, re.IGNORECASE) is not None
+
+    @staticmethod
+    def _resolve_overload_targets(
+        target_names: list[str],
+        procedure_lookup: dict[str, SemanticFunction],
+        *,
+        visibility: str | None,
+    ) -> tuple[list[SemanticFunction], list[str]]:
+        procedures: list[SemanticFunction] = []
+        missing: list[str] = []
+        for target_name in target_names:
+            procedure = procedure_lookup.get(target_name.casefold())
+            if procedure is None:
+                missing.append(target_name)
+                continue
+            candidate = deepcopy(procedure)
+            if visibility is not None:
+                candidate.visibility = visibility
+            procedures.append(candidate)
+        return procedures, missing
+
+    @staticmethod
+    def _unresolved_generic_target_blocker(
+        owner: str,
+        name: str,
+        missing: list[str],
+    ) -> dict[str, object]:
+        detail = "references missing specific procedure(s)" if missing else "does not declare any specific procedures"
+        return {
+            "code": "fortran_generic_target_unresolved",
+            "message": "Every Fortran generic target must resolve before wrapper generation.",
+            "items": [
+                {
+                    "owner": owner,
+                    "generic": name,
+                    "detail": detail,
+                    "missing_targets": list(missing),
+                }
+            ],
+        }
+
+    @staticmethod
+    def _passed_object_argument(
+        proc: SemanticFunction,
+        binding_attributes: tuple[str, ...],
+    ) -> tuple[str | None, int | None]:
+        if "nopass" in binding_attributes:
+            return None, None
+
+        pass_name = None
+        for attribute in binding_attributes:
+            match = re.fullmatch(r"pass(?:\(\s*([a-z_]\w*)\s*\))?", attribute, re.IGNORECASE)
+            if match:
+                pass_name = match.group(1)
+                break
+
+        if pass_name is None:
+            if not proc.arguments:
+                raise ValueError(f"Type-bound procedure {proc.name!r} has no passed-object dummy argument")
+            return proc.arguments[0].name, 0
+
+        for position, argument in enumerate(proc.arguments):
+            if argument.name.casefold() == pass_name.casefold():
+                return argument.name, position
+        raise ValueError(
+            f"Type-bound procedure {proc.name!r} declares pass({pass_name}), but that dummy argument is not present"
+        )
 
     @staticmethod
     def _procedure_binding_names(name: str) -> tuple[str, str]:

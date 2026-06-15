@@ -1706,7 +1706,7 @@
       "wrappable": true,
       "status": "ok",
       "n_modules": 1,
-      "n_functions": 8,
+      "n_functions": 9,
       "n_classes": 1,
       "n_variables": 5,
       "messages": [],
@@ -22640,25 +22640,7 @@
       "wrappable": false,
       "status": "ok",
       "n_modules": 1,
-      "n_functions": 0,
-      "n_classes": 0,
-      "n_variables": 0,
-      "messages": [
-        "The semantic interface does not declare any public wrapper API."
-      ],
-      "blockers": [
-        {
-          "code": "no_public_api",
-          "message": "The semantic interface does not declare any public wrapper API.",
-          "n_items": 1
-        }
-      ]
-    },
-    "scifortran/FFT_FFTPACK.f90": {
-      "wrappable": false,
-      "status": "ok",
-      "n_modules": 1,
-      "n_functions": 30,
+      "n_functions": 1,
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
@@ -22668,7 +22650,25 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 84
+          "n_items": 560
+        }
+      ]
+    },
+    "scifortran/FFT_FFTPACK.f90": {
+      "wrappable": false,
+      "status": "ok",
+      "n_modules": 1,
+      "n_functions": 49,
+      "n_classes": 0,
+      "n_variables": 0,
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 168
         }
       ]
     },
@@ -22676,29 +22676,43 @@
       "wrappable": false,
       "status": "ok",
       "n_modules": 1,
-      "n_functions": 0,
+      "n_functions": 2,
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "The semantic interface does not declare any public wrapper API."
+        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "no_public_api",
-          "message": "The semantic interface does not declare any public wrapper API.",
-          "n_items": 1
+          "code": "callback_signature_incomplete",
+          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "n_items": 8
+        },
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 60
         }
       ]
     },
     "scifortran/IOFILE.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
-      "n_functions": 21,
+      "n_functions": 27,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 8
+        }
+      ]
     },
     "scifortran/IOPLOT.f90": {
       "wrappable": false,
@@ -22708,13 +22722,19 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "The semantic interface does not declare any public wrapper API."
+        "The semantic interface does not declare any public wrapper API.",
+        "Every Fortran generic target must resolve before wrapper generation."
       ],
       "blockers": [
         {
           "code": "no_public_api",
           "message": "The semantic interface does not declare any public wrapper API.",
           "n_items": 1
+        },
+        {
+          "code": "fortran_generic_target_unresolved",
+          "message": "Every Fortran generic target must resolve before wrapper generation.",
+          "n_items": 3
         }
       ]
     },
@@ -22726,25 +22746,39 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "The semantic interface does not declare any public wrapper API."
+        "The semantic interface does not declare any public wrapper API.",
+        "Every Fortran generic target must resolve before wrapper generation."
       ],
       "blockers": [
         {
           "code": "no_public_api",
           "message": "The semantic interface does not declare any public wrapper API.",
           "n_items": 1
+        },
+        {
+          "code": "fortran_generic_target_unresolved",
+          "message": "Every Fortran generic target must resolve before wrapper generation.",
+          "n_items": 2
         }
       ]
     },
     "scifortran/LIST_INPUT.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
-      "n_functions": 4,
+      "n_functions": 5,
       "n_classes": 1,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 6
+        }
+      ]
     },
     "scifortran/MOD_QUADPACK.f90": {
       "wrappable": false,
@@ -22822,7 +22856,7 @@
       "wrappable": true,
       "status": "ok",
       "n_modules": 1,
-      "n_functions": 12,
+      "n_functions": 15,
       "n_classes": 0,
       "n_variables": 96,
       "messages": [],
@@ -22836,9 +22870,15 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
+        "Every Fortran generic target must resolve before wrapper generation.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
+        {
+          "code": "fortran_generic_target_unresolved",
+          "message": "Every Fortran generic target must resolve before wrapper generation.",
+          "n_items": 8
+        },
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
@@ -22850,7 +22890,7 @@
       "wrappable": false,
       "status": "ok",
       "n_modules": 1,
-      "n_functions": 30,
+      "n_functions": 53,
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
@@ -22860,7 +22900,7 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 68
+          "n_items": 200
         }
       ]
     },
@@ -22882,9 +22922,15 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
+        "Every Fortran generic target must resolve before wrapper generation.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
+        {
+          "code": "fortran_generic_target_unresolved",
+          "message": "Every Fortran generic target must resolve before wrapper generation.",
+          "n_items": 5
+        },
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
@@ -22893,14 +22939,28 @@
       ]
     },
     "scifortran/SF_INTERPOLATE.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
-      "n_functions": 0,
+      "n_functions": 3,
       "n_classes": 2,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Every Fortran generic target must resolve before wrapper generation.",
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "fortran_generic_target_unresolved",
+          "message": "Every Fortran generic target must resolve before wrapper generation.",
+          "n_items": 1
+        },
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 168
+        }
+      ]
     },
     "scifortran/SF_IOTOOLS.f90": {
       "wrappable": false,
@@ -22928,35 +22988,63 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "The semantic interface does not declare any public wrapper API."
+        "The semantic interface does not declare any public wrapper API.",
+        "Every Fortran generic target must resolve before wrapper generation."
       ],
       "blockers": [
         {
           "code": "no_public_api",
           "message": "The semantic interface does not declare any public wrapper API.",
           "n_items": 1
+        },
+        {
+          "code": "fortran_generic_target_unresolved",
+          "message": "Every Fortran generic target must resolve before wrapper generation.",
+          "n_items": 11
         }
       ]
     },
     "scifortran/SF_PARSE_INPUT.f90": {
-      "wrappable": true,
-      "status": "ok",
-      "n_modules": 1,
-      "n_functions": 1,
-      "n_classes": 0,
-      "n_variables": 0,
-      "messages": [],
-      "blockers": []
-    },
-    "scifortran/SF_RANDOM.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 4,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Every Fortran generic target must resolve before wrapper generation.",
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
+      ],
+      "blockers": [
+        {
+          "code": "fortran_generic_target_unresolved",
+          "message": "Every Fortran generic target must resolve before wrapper generation.",
+          "n_items": 1
+        },
+        {
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 24
+        }
+      ]
+    },
+    "scifortran/SF_RANDOM.f90": {
+      "wrappable": false,
+      "status": "ok",
+      "n_modules": 1,
+      "n_functions": 4,
+      "n_classes": 0,
+      "n_variables": 0,
+      "messages": [
+        "Every Fortran generic target must resolve before wrapper generation."
+      ],
+      "blockers": [
+        {
+          "code": "fortran_generic_target_unresolved",
+          "message": "Every Fortran generic target must resolve before wrapper generation.",
+          "n_items": 18
+        }
+      ]
     },
     "scifortran/SF_SPARSE.f90": {
       "wrappable": false,
@@ -22980,7 +23068,7 @@
       "wrappable": false,
       "status": "ok",
       "n_modules": 1,
-      "n_functions": 8,
+      "n_functions": 9,
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
@@ -22990,7 +23078,7 @@
         {
           "code": "unresolved_semantic_types",
           "message": "Some semantic type references are not declared by the .pyi interface or its imports.",
-          "n_items": 24
+          "n_items": 48
         }
       ]
     },
@@ -22998,7 +23086,7 @@
       "wrappable": false,
       "status": "ok",
       "n_modules": 1,
-      "n_functions": 7,
+      "n_functions": 9,
       "n_classes": 1,
       "n_variables": 0,
       "messages": [
@@ -23016,7 +23104,7 @@
       "wrappable": true,
       "status": "ok",
       "n_modules": 1,
-      "n_functions": 6,
+      "n_functions": 8,
       "n_classes": 0,
       "n_variables": 0,
       "messages": [],
@@ -23048,9 +23136,15 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
+        "Every Fortran generic target must resolve before wrapper generation.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
+        {
+          "code": "fortran_generic_target_unresolved",
+          "message": "Every Fortran generic target must resolve before wrapper generation.",
+          "n_items": 19
+        },
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",

@@ -2179,22 +2179,50 @@
         {
           "name": "parse_cmd_variable",
           "module": "SF_PARSE_INPUT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_parse_cmd_variable",
+            "d_parse_cmd_variable",
+            "l_parse_cmd_variable",
+            "iv_parse_cmd_variable",
+            "dv_parse_cmd_variable",
+            "lv_parse_cmd_variable",
+            "ch_parse_cmd_variable"
+          ],
+          "abstract": false
         },
         {
           "name": "parse_input_variable",
           "module": "SF_PARSE_INPUT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_parse_input",
+            "d_parse_input",
+            "l_parse_input",
+            "iv_parse_input",
+            "dv_parse_input",
+            "lv_parse_input",
+            "ch_parse_input"
+          ],
+          "abstract": false
         },
         {
           "name": "save_input",
           "module": "SF_PARSE_INPUT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "save_input_file"
+          ],
+          "abstract": false
         },
         {
           "name": "print_input",
           "module": "SF_PARSE_INPUT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "print_input_list"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -4394,22 +4422,50 @@
         {
           "name": "parse_cmd_variable",
           "module": "SF_PARSE_INPUT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_parse_cmd_variable",
+            "d_parse_cmd_variable",
+            "l_parse_cmd_variable",
+            "iv_parse_cmd_variable",
+            "dv_parse_cmd_variable",
+            "lv_parse_cmd_variable",
+            "ch_parse_cmd_variable"
+          ],
+          "abstract": false
         },
         {
           "name": "parse_input_variable",
           "module": "SF_PARSE_INPUT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_parse_input",
+            "d_parse_input",
+            "l_parse_input",
+            "iv_parse_input",
+            "dv_parse_input",
+            "lv_parse_input",
+            "ch_parse_input"
+          ],
+          "abstract": false
         },
         {
           "name": "save_input",
           "module": "SF_PARSE_INPUT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "save_input_file"
+          ],
+          "abstract": false
         },
         {
           "name": "print_input",
           "module": "SF_PARSE_INPUT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "print_input_list"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

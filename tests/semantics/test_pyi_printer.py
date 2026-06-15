@@ -935,6 +935,85 @@ end module vector_mod
     assert "        self: vector" not in code
 
 
+def test_emit_explicit_pass_name_and_nopass_methods():
+    source = """
+module pass_mod
+  type :: vector
+  contains
+    procedure, pass(owner) :: shift => shift_vector
+    procedure, nopass :: make => make_vector
+  end type vector
+contains
+  subroutine shift_vector(dx, owner, dy)
+    real(8), intent(in) :: dx
+    class(vector), intent(inout) :: owner
+    real(8), intent(in) :: dy
+  end subroutine shift_vector
+  function make_vector(value) result(created)
+    real(8), intent(in) :: value
+    type(vector) :: created
+  end function make_vector
+end module pass_mod
+"""
+
+    code = generate_pyi(source)
+
+    assert "    def shift(\n        self,\n        dx: Ptr(Const(Float64)),\n        dy: Ptr(Const(Float64))" in code
+    assert "        owner: Ptr(vector)" not in code
+    assert "    @staticmethod\n    def make(\n        value: Ptr(Const(Float64))\n    ) -> vector: ..." in code
+
+
+def test_emit_and_load_module_and_type_bound_overload_sets():
+    source = """
+module generic_mod
+  interface convert
+    module procedure convert_integer, convert_real
+  end interface convert
+  type :: box
+  contains
+    procedure :: set_integer
+    procedure :: set_real
+    generic :: set => set_integer, set_real
+  end type box
+contains
+  integer function convert_integer(value)
+    integer :: value
+    convert_integer = value
+  end function convert_integer
+  real function convert_real(value)
+    real :: value
+    convert_real = value
+  end function convert_real
+  subroutine set_integer(self, value)
+    class(box) :: self
+    integer :: value
+  end subroutine set_integer
+  subroutine set_real(self, value)
+    class(box) :: self
+    real :: value
+  end subroutine set_real
+end module generic_mod
+"""
+    code = generate_pyi(source)
+
+    assert "from typing import overload" in code
+    assert code.count("@overload\ndef convert(") == 2
+    assert code.count("    @overload\n    def set(") == 2
+
+    loaded = parse_pyi_text(code, module_name="generic_mod")
+    assert [(item.name, len(item.procedures)) for item in loaded.overload_sets] == [("convert", 2)]
+    assert [procedure.name for procedure in loaded.overload_sets[0].procedures] == [
+        "convert_integer",
+        "convert_real",
+    ]
+    assert loaded.imports == []
+    assert [(item.name, len(item.procedures)) for item in loaded.classes[0].overload_sets] == [("set", 2)]
+    assert [procedure.name for procedure in loaded.classes[0].overload_sets[0].procedures] == [
+        "set_integer",
+        "set_real",
+    ]
+
+
 def test_emit_module_variables_with_visibility():
     source = """
 module state_mod

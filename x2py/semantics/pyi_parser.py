@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Iterable
+from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
     ProjectionMapping,
+    ProcedureOverloadSet,
     SemanticArgument,
     SemanticArrayContract,
     SemanticClass,
@@ -82,6 +84,8 @@ class _Decorators:
     visibility: str = "public"
     projection: list[ProjectionMapping] = field(default_factory=list)
     has_native_call: bool = False
+    is_overload: bool = False
+    is_static: bool = False
 
 
 class _PyiAstParser:
@@ -113,6 +117,7 @@ class _PyiAstParser:
             native_name=node.name,
             fields=body.fields,
             methods=body.methods,
+            overload_sets=body.overload_sets,
             classes=body.classes,
             base_classes=base_classes,
             metadata=self._class_metadata(base_classes),
@@ -195,6 +200,7 @@ class _PyiAstParser:
         *,
         visibility: str,
         projection: list[ProjectionMapping] | None = None,
+        is_static: bool = False,
     ) -> SemanticMethod:
         semantic_args, return_type = self._callable_parts(
             node,
@@ -208,6 +214,7 @@ class _PyiAstParser:
             return_type=return_type,
             projection=projection or [],
             visibility=visibility,
+            is_static=is_static,
         )
 
     def ann_assign(
@@ -241,12 +248,33 @@ class _PyiAstParser:
             if self.matches_name(node, "private"):
                 parsed.visibility = "private"
                 continue
+            if self.matches_name(node, "overload"):
+                parsed.is_overload = True
+                continue
+            if self.matches_name(node, "staticmethod"):
+                parsed.is_static = True
+                continue
             if isinstance(node, ast.Call) and self.matches_name(node.func, "native_call"):
                 parsed.has_native_call = True
                 parsed.projection = self.native_call(node)
                 continue
             raise ValueError(f"Unsupported {context} decorator: {ast.unparse(node)!r}")
         return parsed
+
+    @staticmethod
+    def overload_candidate(
+        candidate: SemanticFunction,
+        concrete_procedures: list[SemanticFunction],
+    ) -> SemanticFunction:
+        for procedure in concrete_procedures:
+            if type(procedure) is not type(candidate):
+                continue
+            if procedure.arguments != candidate.arguments or procedure.return_type != candidate.return_type:
+                continue
+            resolved = deepcopy(procedure)
+            resolved.visibility = candidate.visibility
+            return resolved
+        return candidate
 
     def native_call(self, node: ast.Call) -> list[ProjectionMapping]:
         if len(node.args) != 1 or node.keywords:
@@ -947,6 +975,7 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         self.parser = parser
         self.fields: list[SemanticField] = []
         self.methods: list[SemanticMethod] = []
+        self.overload_sets: list[ProcedureOverloadSet] = []
         self.classes: list[SemanticClass] = []
 
     def visit_body(self, nodes: list[ast.stmt]) -> None:
@@ -961,13 +990,22 @@ class _ClassBodyVisitor(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context="class body")
-        self.methods.append(
-            self.parser.method_def(
-                node,
-                visibility=decorators.visibility,
-                projection=decorators.projection,
-            )
+        method = self.parser.method_def(
+            node,
+            visibility=decorators.visibility,
+            projection=decorators.projection,
+            is_static=decorators.is_static,
         )
+        if decorators.is_overload:
+            overload_name = method.name
+            method = self.parser.overload_candidate(method, self.methods)
+            overload_set = next((item for item in self.overload_sets if item.name == overload_name), None)
+            if overload_set is None:
+                overload_set = ProcedureOverloadSet(overload_name)
+                self.overload_sets.append(overload_set)
+            overload_set.procedures.append(method)
+        else:
+            self.methods.append(method)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context="class body")
@@ -993,7 +1031,11 @@ class _ModuleVisitor(ast.NodeVisitor):
         self.parser.module.imports.append(self.parser.import_name(node))
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-        self.parser.module.imports.append(self.parser.import_from(node))
+        semantic_import = self.parser.import_from(node)
+        if semantic_import.module == "typing":
+            semantic_import.items = [item for item in semantic_import.items if item.source != "overload"]
+        if semantic_import.items:
+            self.parser.module.imports.append(semantic_import)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
         self.parser.module.variables.append(self.parser.ann_assign(node, default_intent="in"))
@@ -1009,13 +1051,24 @@ class _ModuleVisitor(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context=".pyi")
-        self.parser.module.functions.append(
-            self.parser.function_def(
-                node,
-                visibility=decorators.visibility,
-                projection=decorators.projection,
-            )
+        function = self.parser.function_def(
+            node,
+            visibility=decorators.visibility,
+            projection=decorators.projection,
         )
+        if decorators.is_overload:
+            overload_name = function.name
+            function = self.parser.overload_candidate(function, self.parser.module.functions)
+            overload_set = next(
+                (item for item in self.parser.module.overload_sets if item.name == overload_name),
+                None,
+            )
+            if overload_set is None:
+                overload_set = ProcedureOverloadSet(overload_name)
+                self.parser.module.overload_sets.append(overload_set)
+            overload_set.procedures.append(function)
+        else:
+            self.parser.module.functions.append(function)
 
     def generic_visit(self, node: ast.AST) -> None:
         raise ValueError(f"Unsupported .pyi node: {_node_text(node)!r}")

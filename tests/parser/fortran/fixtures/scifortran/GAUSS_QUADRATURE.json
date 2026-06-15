@@ -4266,17 +4266,37 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": true
         },
         {
           "name": "gauss_quad",
           "module": "GAUSS_QUADRATURE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "integrate_1d_func_main",
+            "integrate_nd_func_main",
+            "integrate_1d_func_1",
+            "integrate_nd_func_1",
+            "integrate_1d_sample",
+            "integrate_2d_sample"
+          ],
+          "abstract": false
         },
         {
           "name": "integrate",
           "module": "GAUSS_QUADRATURE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "integrate_1d_func_main",
+            "integrate_nd_func_main",
+            "integrate_1d_func_1",
+            "integrate_nd_func_1",
+            "integrate_1d_sample",
+            "integrate_2d_sample"
+          ],
+          "abstract": false
         },
         {
           "name": null,
@@ -4335,7 +4355,9 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         },
         {
           "name": null,
@@ -4400,7 +4422,9 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -8683,17 +8707,37 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": true
         },
         {
           "name": "gauss_quad",
           "module": "GAUSS_QUADRATURE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "integrate_1d_func_main",
+            "integrate_nd_func_main",
+            "integrate_1d_func_1",
+            "integrate_nd_func_1",
+            "integrate_1d_sample",
+            "integrate_2d_sample"
+          ],
+          "abstract": false
         },
         {
           "name": "integrate",
           "module": "GAUSS_QUADRATURE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "integrate_1d_func_main",
+            "integrate_nd_func_main",
+            "integrate_1d_func_1",
+            "integrate_nd_func_1",
+            "integrate_1d_sample",
+            "integrate_2d_sample"
+          ],
+          "abstract": false
         },
         {
           "name": null,
@@ -8752,7 +8796,9 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         },
         {
           "name": null,
@@ -8817,7 +8863,9 @@
               "in_interface": true,
               "variables": {}
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

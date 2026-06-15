@@ -283,6 +283,9 @@ class SemanticFunction:
             self.metadata,
             self.visibility,
             getattr(self, "is_static", None),
+            getattr(self, "passed_object_name", None),
+            getattr(self, "passed_object_position", None),
+            getattr(self, "binding_attributes", ()),
         ) == (
             other.name,
             other.native_name,
@@ -294,6 +297,9 @@ class SemanticFunction:
             other.metadata,
             other.visibility,
             getattr(other, "is_static", None),
+            getattr(other, "passed_object_name", None),
+            getattr(other, "passed_object_position", None),
+            getattr(other, "binding_attributes", ()),
         )
 
 
@@ -305,6 +311,15 @@ class SemanticFunction:
 @dataclass(eq=False)
 class SemanticMethod(SemanticFunction):
     is_static: bool = False
+    passed_object_name: str | None = None
+    passed_object_position: int | None = None
+    binding_attributes: tuple[str, ...] = ()
+
+
+@dataclass
+class ProcedureOverloadSet:
+    name: str
+    procedures: list[SemanticFunction] = field(default_factory=list)
 
 
 def _call_arguments(func: SemanticFunction) -> list[SemanticArgument]:
@@ -509,6 +524,8 @@ class SemanticClass:
 
     methods: list[SemanticMethod] = field(default_factory=list)
 
+    overload_sets: list[ProcedureOverloadSet] = field(default_factory=list)
+
     classes: list[SemanticClass] = field(default_factory=list)
 
     base_classes: list[str] = field(default_factory=list)
@@ -560,6 +577,8 @@ class SemanticModule:
 
     functions: list[SemanticFunction] = field(default_factory=list)
 
+    overload_sets: list[ProcedureOverloadSet] = field(default_factory=list)
+
     classes: list[SemanticClass | SemanticEnum] = field(default_factory=list)
     variables: list[SemanticVariable] = field(default_factory=list)
 
@@ -596,6 +615,11 @@ def _iter_module_semantic_types(module: SemanticModule):
             for argument in method.arguments:
                 yield from _iter_semantic_type_tree(argument.semantic_type)
             yield from _iter_semantic_type_tree(method.return_type)
+        for overload_set in declaration.overload_sets:
+            for procedure in overload_set.procedures:
+                for argument in procedure.arguments:
+                    yield from _iter_semantic_type_tree(argument.semantic_type)
+                yield from _iter_semantic_type_tree(procedure.return_type)
 
     for variable in module.variables:
         yield from _iter_semantic_type_tree(variable.semantic_type)
@@ -610,3 +634,8 @@ def _iter_module_semantic_types(module: SemanticModule):
         for argument in function.arguments:
             yield from _iter_semantic_type_tree(argument.semantic_type)
         yield from _iter_semantic_type_tree(function.return_type)
+    for overload_set in module.overload_sets:
+        for procedure in overload_set.procedures:
+            for argument in procedure.arguments:
+                yield from _iter_semantic_type_tree(argument.semantic_type)
+            yield from _iter_semantic_type_tree(procedure.return_type)

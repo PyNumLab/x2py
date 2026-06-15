@@ -14441,27 +14441,47 @@
         {
           "name": "assignment(=)",
           "module": "SF_COLORS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "equal_colors"
+          ],
+          "abstract": false
         },
         {
           "name": "operator(+)",
           "module": "SF_COLORS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "add_colors"
+          ],
+          "abstract": false
         },
         {
           "name": "operator(-)",
           "module": "SF_COLORS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "subtract_colors"
+          ],
+          "abstract": false
         },
         {
           "name": "operator(*)",
           "module": "SF_COLORS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "scalar_left_color"
+          ],
+          "abstract": false
         },
         {
           "name": "operator(.dot.)",
           "module": "SF_COLORS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "dot_scalar_colors"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "public",
@@ -28916,27 +28936,47 @@
         {
           "name": "assignment(=)",
           "module": "SF_COLORS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "equal_colors"
+          ],
+          "abstract": false
         },
         {
           "name": "operator(+)",
           "module": "SF_COLORS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "add_colors"
+          ],
+          "abstract": false
         },
         {
           "name": "operator(-)",
           "module": "SF_COLORS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "subtract_colors"
+          ],
+          "abstract": false
         },
         {
           "name": "operator(*)",
           "module": "SF_COLORS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "scalar_left_color"
+          ],
+          "abstract": false
         },
         {
           "name": "operator(.dot.)",
           "module": "SF_COLORS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "dot_scalar_colors"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "public",

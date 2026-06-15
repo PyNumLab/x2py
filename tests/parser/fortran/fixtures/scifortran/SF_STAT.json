@@ -1481,97 +1481,188 @@
         {
           "name": "pdf_allocate",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_allocate_1d",
+            "pdf_allocate_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_deallocate",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_deallocate_1d",
+            "pdf_deallocate_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_save",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_save_1d",
+            "pdf_save_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_read",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_read_1d",
+            "pdf_read_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_set_range",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_set_range_1d",
+            "pdf_set_range_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_push_sigma",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_push_sigma_1d",
+            "pdf_push_sigma_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_get_sigma",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_get_sigma_1d",
+            "pdf_get_sigma_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_sigma",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_sigma_data_1d",
+            "pdf_sigma_sdev_1d",
+            "pdf_sigma_data_2d",
+            "pdf_sigma_sdev_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_accumulate",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_accumulate_s_1d",
+            "pdf_accumulate_v_1d",
+            "pdf_accumulate_s_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_normalize",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_normalize_1d",
+            "pdf_normalize_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_print",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_print_pfile_1d",
+            "pdf_print_pfile_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_write",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_print_pfile_1d",
+            "pdf_print_pfile_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_mean",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_mean_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_var",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_var_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_sdev",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_sdev_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_moment",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_moment_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_skew",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_skew_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_curt",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_curt_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_print_moments",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_print_moments_pfile_1d"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -3099,97 +3190,188 @@
         {
           "name": "pdf_allocate",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_allocate_1d",
+            "pdf_allocate_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_deallocate",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_deallocate_1d",
+            "pdf_deallocate_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_save",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_save_1d",
+            "pdf_save_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_read",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_read_1d",
+            "pdf_read_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_set_range",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_set_range_1d",
+            "pdf_set_range_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_push_sigma",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_push_sigma_1d",
+            "pdf_push_sigma_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_get_sigma",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_get_sigma_1d",
+            "pdf_get_sigma_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_sigma",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_sigma_data_1d",
+            "pdf_sigma_sdev_1d",
+            "pdf_sigma_data_2d",
+            "pdf_sigma_sdev_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_accumulate",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_accumulate_s_1d",
+            "pdf_accumulate_v_1d",
+            "pdf_accumulate_s_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_normalize",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_normalize_1d",
+            "pdf_normalize_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_print",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_print_pfile_1d",
+            "pdf_print_pfile_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_write",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_print_pfile_1d",
+            "pdf_print_pfile_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_mean",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_mean_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_var",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_var_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_sdev",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_sdev_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_moment",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_moment_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_skew",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_skew_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_curt",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_curt_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_print_moments",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_print_moments_pfile_1d"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

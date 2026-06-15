@@ -668,6 +668,30 @@ end interface foo
     assert all(p.in_interface for p in interfaces[0].procedures)
 
 
+def test_named_generic_interface_preserves_specific_procedure_references():
+    code = """
+module generic_mod
+  interface convert
+    module procedure convert_integer, convert_real
+  end interface convert
+contains
+  integer function convert_integer(value)
+    integer :: value
+    convert_integer = value
+  end function convert_integer
+  real function convert_real(value)
+    real :: value
+    convert_real = value
+  end function convert_real
+end module generic_mod
+"""
+    interface = parse_fortran_module(code).interfaces[0]
+    assert interface.name == "convert"
+    assert interface.specific_procedures == ["convert_integer", "convert_real"]
+    assert interface.procedures == []
+    assert interface.abstract is False
+
+
 def test_external_dummy_keeps_recursive_attribute_metadata():
     code = """
 recursive function apply_once(f, x) result(y)

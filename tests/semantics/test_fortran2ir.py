@@ -34,6 +34,7 @@ from x2py.semantics.fortran2ir import (
     resolve_semantic_compile_time_values,
 )
 from x2py.semantics import models as semantic_models
+from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
 from x2py.semantics.models import (
     ProjectionMapping,
@@ -362,15 +363,115 @@ def test_converter_covers_derived_dispatch_methods_and_kind_edges():
             return_type=callback.return_type,
             contracts=callback.contracts,
             visibility="private",
+            passed_object_name="state",
+            passed_object_position=0,
         )
     ]
     assert converter.visit(FortranVariable(name="count", base_type="integer")).name == "Int32"
+
+
+def test_converter_preserves_module_and_type_bound_generic_overload_sets():
+    source = """
+module generic_mod
+  private
+  public :: box, convert
+  interface convert
+    module procedure convert_integer, convert_real
+  end interface convert
+  type :: box
+  contains
+    procedure, private :: set_integer
+    procedure, private :: set_real
+    generic, public :: set => set_integer, set_real
+  end type box
+contains
+  integer function convert_integer(value)
+    integer :: value
+    convert_integer = value
+  end function convert_integer
+  real function convert_real(value)
+    real :: value
+    convert_real = value
+  end function convert_real
+  subroutine set_integer(self, value)
+    class(box) :: self
+    integer :: value
+  end subroutine set_integer
+  subroutine set_real(self, value)
+    class(box) :: self
+    real :: value
+  end subroutine set_real
+end module generic_mod
+"""
+    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+
+    assert [(item.name, [proc.name for proc in item.procedures]) for item in module.overload_sets] == [
+        ("convert", ["convert_integer", "convert_real"])
+    ]
+    assert all(proc.visibility == "public" for proc in module.overload_sets[0].procedures)
+    box = module.classes[0]
+    assert [(item.name, [proc.name for proc in item.procedures]) for item in box.overload_sets] == [
+        ("set", ["set_integer", "set_real"])
+    ]
+    assert all(proc.visibility == "public" for proc in box.overload_sets[0].procedures)
+
+
+def test_converter_reports_missing_generic_target_as_readiness_blocker():
+    converter = FortranToIRConverter()
+    source = """
+module generic_mod
+  interface convert
+    module procedure missing
+  end interface convert
+end module generic_mod
+"""
+    module = converter.visit_module(parse_fortran_source(source).modules[0])
+    report = assess_semantic_wrap_readiness(module)
+
+    assert module.overload_sets[0].procedures == []
+    blocker = next(
+        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_generic_target_unresolved"
+    )
+    assert blocker["items"] == [
+        {
+            "owner": "generic_mod",
+            "item": "generic_mod",
+            "generic": "convert",
+            "detail": "references missing specific procedure(s)",
+            "missing_targets": ["missing"],
+        }
+    ]
     assert (
         converter.first_module([FortranProcedureSignature(name="hidden", kind="subroutine", in_interface=True)]).name
         == ""
     )
     assert FortranToIRConverter._literal_kind_key("kind(1.0q0)") == "16"
     assert FortranToIRConverter._literal_kind_key("kind(1)") is None
+
+
+def test_converter_leaves_defined_operators_and_assignment_for_operator_lowering():
+    source = """
+module operator_mod
+  interface operator(+)
+    module procedure add_values
+  end interface operator(+)
+  interface assignment(=)
+    module procedure assign_value
+  end interface assignment(=)
+contains
+  integer function add_values(left, right)
+    integer :: left, right
+    add_values = left + right
+  end function add_values
+  subroutine assign_value(left, right)
+    integer :: left, right
+    left = right
+  end subroutine assign_value
+end module operator_mod
+"""
+    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+
+    assert module.overload_sets == []
 
 
 def test_semantic_compile_time_requirements_can_be_supplied_for_kind_selection():

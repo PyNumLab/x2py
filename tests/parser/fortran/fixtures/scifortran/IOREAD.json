@@ -81,12 +81,48 @@
         {
           "name": "sread",
           "module": "IOREAD",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sreadA1_RR",
+            "sreadA1_RC",
+            "sreadA2_RR",
+            "sreadA2_RC",
+            "sreadA3_RR",
+            "sreadA3_RC",
+            "sreadA4_RR",
+            "sreadA4_RC",
+            "sreadA5_RR",
+            "sreadA5_RC",
+            "sreadA6_RR",
+            "sreadA6_RC",
+            "sreadA7_RR",
+            "sreadA7_RC"
+          ],
+          "abstract": false
         },
         {
           "name": "read_array",
           "module": "IOREAD",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "data_readA0_R",
+            "data_readA0_C",
+            "data_readA1_R",
+            "data_readA1_C",
+            "data_readA2_R",
+            "data_readA2_C",
+            "data_readA3_R",
+            "data_readA3_C",
+            "data_readA4_R",
+            "data_readA4_C",
+            "data_readA5_R",
+            "data_readA5_C",
+            "data_readA6_R",
+            "data_readA6_C",
+            "data_readA7_R",
+            "data_readA7_C"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -184,12 +220,48 @@
         {
           "name": "sread",
           "module": "IOREAD",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sreadA1_RR",
+            "sreadA1_RC",
+            "sreadA2_RR",
+            "sreadA2_RC",
+            "sreadA3_RR",
+            "sreadA3_RC",
+            "sreadA4_RR",
+            "sreadA4_RC",
+            "sreadA5_RR",
+            "sreadA5_RC",
+            "sreadA6_RR",
+            "sreadA6_RC",
+            "sreadA7_RR",
+            "sreadA7_RC"
+          ],
+          "abstract": false
         },
         {
           "name": "read_array",
           "module": "IOREAD",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "data_readA0_R",
+            "data_readA0_C",
+            "data_readA1_R",
+            "data_readA1_C",
+            "data_readA2_R",
+            "data_readA2_C",
+            "data_readA3_R",
+            "data_readA3_C",
+            "data_readA4_R",
+            "data_readA4_C",
+            "data_readA5_R",
+            "data_readA5_C",
+            "data_readA6_R",
+            "data_readA6_C",
+            "data_readA7_R",
+            "data_readA7_C"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

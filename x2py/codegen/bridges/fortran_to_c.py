@@ -39,12 +39,12 @@ from ..models.core import (
     FunctionDef,
     FunctionDefArgument,
     FunctionDefResult,
-    get_direct_interface,
+    get_direct_overload_set,
     get_enclosing_module,
     If,
     IfSection,
     Import,
-    Interface,
+    FunctionOverloadSet,
     Pass,
 )
 from ..models.datatypes import (
@@ -195,7 +195,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             free_func = None
         removed_functions = [f for f, w in zip(funcs_to_generate, funcs, strict=False) if isinstance(w, EmptyNode)]
         funcs = [f for f in funcs if not isinstance(f, EmptyNode)]
-        interfaces = [self._visit(f) for f in expr.interfaces]
+        interfaces = [self._visit(f) for f in expr.overload_sets]
         classes = [self._visit(f) for f in expr.classes]
         variables = [self._visit(v) for v in expr.variables if not v.is_private]
         variable_getters = [v for v in variables if isinstance(v, BindCArrayVariable)]
@@ -219,7 +219,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             variable_wrappers=variable_getters,
             init_func=init_func,
             free_func=free_func,
-            interfaces=interfaces,
+            overload_sets=interfaces,
             classes=classes,
             imports=imports,
             original_module=expr,
@@ -256,8 +256,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         orig_name = expr.cls_name or expr.name
         name = self.scope.get_new_name(f"bind_c_{orig_name.lower()}")
         self._generator_names_dict[expr.name] = name
-        in_cls = expr.arguments and expr.arguments[0].bound_argument
-
         self._additional_exprs = []
 
         if any(isinstance(a.var, FunctionAddress) for a in expr.arguments):
@@ -283,10 +281,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             func_results = result["c_result"]
             func_call_results = self.scope.collect_all_tuple_elements(result["f_result"])
 
-        interface = get_direct_interface(expr)
+        overload_set = get_direct_overload_set(expr)
 
-        if in_cls and interface:
-            body = self._get_function_def_body(interface, generated_args, func_call_results)
+        if overload_set:
+            body = self._get_function_def_body(overload_set, generated_args, func_call_results)
         else:
             body = self._get_function_def_body(expr, generated_args, func_call_results)
 
@@ -321,7 +319,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         return func
 
-    def _visit_Interface(self, expr):
+    def _visit_FunctionOverloadSet(self, expr):
         """
         Create an interface containing only C-compatible functions.
 
@@ -330,16 +328,16 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         Parameters
         ----------
-        expr : x2py.ast.core.Interface
+        expr : x2py.ast.core.FunctionOverloadSet
             The interface to be wrapped.
 
         Returns
         -------
-        x2py.ast.core.Interface
+        x2py.ast.core.FunctionOverloadSet
             The C-compatible interface.
         """
         functions = [self._visit(f) for f in expr.functions if not isinstance(f, EmptyNode)]
-        return Interface(expr.name, functions, expr.is_argument)
+        return FunctionOverloadSet(expr.name, functions, expr.is_argument)
 
     def _extract_FunctionDefArgument(self, expr, func):
         """
@@ -383,6 +381,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                     kwonly=expr.is_kwonly,
                     annotation=expr.annotation,
                     bound_argument=expr.bound_argument,
+                    bound_argument_position=expr.bound_argument_position,
                     persistent_target=expr.persistent_target,
                     is_vararg=expr.is_vararg,
                     is_kwarg=expr.is_kwarg,
@@ -856,10 +855,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         methods = [self._visit(m) for m in expr.methods]
         methods = [m for m in methods if not isinstance(m, EmptyNode)]
-        for i in expr.interfaces:
+        for i in expr.overload_sets:
             for f in i.functions:
                 self._visit(f)
-        interfaces = [self._visit(i) for i in expr.interfaces]
+        interfaces = [self._visit(i) for i in expr.overload_sets]
 
         del_method = expr.methods_as_dict.get("__del__", None)
         if del_method is None:
@@ -906,7 +905,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             expr,
             new_func=new_method,
             methods=methods,
-            interfaces=interfaces,
+            overload_sets=interfaces,
             attributes=properties_getters + properties,
             docstring=expr.docstring,
             class_type=expr.class_type,

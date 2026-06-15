@@ -1405,12 +1405,22 @@
         {
           "name": "step",
           "module": "SF_SPECIAL",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "step_x",
+            "step_ij"
+          ],
+          "abstract": false
         },
         {
           "name": "sgn",
           "module": "SF_SPECIAL",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_sgn",
+            "d_sgn"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -3008,12 +3018,22 @@
         {
           "name": "step",
           "module": "SF_SPECIAL",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "step_x",
+            "step_ij"
+          ],
+          "abstract": false
         },
         {
           "name": "sgn",
           "module": "SF_SPECIAL",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_sgn",
+            "d_sgn"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

@@ -330,6 +330,8 @@ class FortranInterface:
     name: str | None = None
     module: str | None = None
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
+    specific_procedures: list[str] = field(default_factory=list)
+    abstract: bool = False
 
 
 @dataclass

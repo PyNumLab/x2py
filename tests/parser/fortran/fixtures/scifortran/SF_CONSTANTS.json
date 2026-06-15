@@ -2588,17 +2588,35 @@
         {
           "name": "isinfty",
           "module": "SF_CONSTANTS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_isinfty",
+            "d_isinfty",
+            "z_isinfty"
+          ],
+          "abstract": false
         },
         {
           "name": "isnan",
           "module": "SF_CONSTANTS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_isnan",
+            "d_isnan",
+            "z_isnan"
+          ],
+          "abstract": false
         },
         {
           "name": "wait",
           "module": "SF_CONSTANTS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_wait",
+            "r_wait",
+            "d_wait"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "public",
@@ -5206,17 +5224,35 @@
         {
           "name": "isinfty",
           "module": "SF_CONSTANTS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_isinfty",
+            "d_isinfty",
+            "z_isinfty"
+          ],
+          "abstract": false
         },
         {
           "name": "isnan",
           "module": "SF_CONSTANTS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_isnan",
+            "d_isnan",
+            "z_isnan"
+          ],
+          "abstract": false
         },
         {
           "name": "wait",
           "module": "SF_CONSTANTS",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_wait",
+            "r_wait",
+            "d_wait"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "public",

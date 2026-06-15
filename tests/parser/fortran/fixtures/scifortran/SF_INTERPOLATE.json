@@ -3773,22 +3773,56 @@
         {
           "name": "linear_spline",
           "module": "SF_INTERPOLATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_linear_spline_s",
+            "d_linear_spline_v",
+            "c_linear_spline_s",
+            "c_linear_spline_v",
+            "d_linear_spline_2d_s",
+            "d_linear_spline_2d_v",
+            "c_linear_spline_2d_s",
+            "c_linear_spline_2d_v"
+          ],
+          "abstract": false
         },
         {
           "name": "poly_spline",
           "module": "SF_INTERPOLATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_poly_spline_s",
+            "d_poly_spline_v",
+            "c_poly_spline_s",
+            "c_poly_spline_v",
+            "d_poly_spline_2d_s",
+            "d_poly_spline_2d_v",
+            "c_poly_spline_2d_s",
+            "c_poly_spline_2d_v"
+          ],
+          "abstract": false
         },
         {
           "name": "cubic_spline",
           "module": "SF_INTERPOLATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_cub_interp_s",
+            "d_cub_interp_v",
+            "c_cub_interp_s",
+            "c_cub_interp_v"
+          ],
+          "abstract": false
         },
         {
           "name": "init_finter",
           "module": "SF_INTERPOLATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "init_finter_d",
+            "init_finter_c"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",
@@ -7591,22 +7625,56 @@
         {
           "name": "linear_spline",
           "module": "SF_INTERPOLATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_linear_spline_s",
+            "d_linear_spline_v",
+            "c_linear_spline_s",
+            "c_linear_spline_v",
+            "d_linear_spline_2d_s",
+            "d_linear_spline_2d_v",
+            "c_linear_spline_2d_s",
+            "c_linear_spline_2d_v"
+          ],
+          "abstract": false
         },
         {
           "name": "poly_spline",
           "module": "SF_INTERPOLATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_poly_spline_s",
+            "d_poly_spline_v",
+            "c_poly_spline_s",
+            "c_poly_spline_v",
+            "d_poly_spline_2d_s",
+            "d_poly_spline_2d_v",
+            "c_poly_spline_2d_s",
+            "c_poly_spline_2d_v"
+          ],
+          "abstract": false
         },
         {
           "name": "cubic_spline",
           "module": "SF_INTERPOLATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_cub_interp_s",
+            "d_cub_interp_v",
+            "c_cub_interp_s",
+            "c_cub_interp_v"
+          ],
+          "abstract": false
         },
         {
           "name": "init_finter",
           "module": "SF_INTERPOLATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "init_finter_d",
+            "init_finter_c"
+          ],
+          "abstract": false
         }
       ],
       "default_visibility": "private",

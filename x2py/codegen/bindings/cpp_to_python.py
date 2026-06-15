@@ -137,7 +137,7 @@ class Pybind11BindingGenerator(BindingGenerator):
             [],
             (),
             imports=imports,
-            interfaces=(),
+            overload_sets=(),
             classes=(),
             scope=mod_scope,
             init_func=init_func,

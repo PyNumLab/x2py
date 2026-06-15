@@ -3,6 +3,7 @@
     {
       "name": "mesh_mod",
       "functions": [],
+      "overload_sets": [],
       "classes": [
         {
           "name": "node",
@@ -174,6 +175,7 @@
             }
           ],
           "methods": [],
+          "overload_sets": [],
           "base_classes": [],
           "contracts": [],
           "metadata": {},
@@ -358,6 +360,7 @@
             }
           ],
           "methods": [],
+          "overload_sets": [],
           "base_classes": [],
           "contracts": [],
           "metadata": {},

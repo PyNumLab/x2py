@@ -48,32 +48,35 @@ while the checklist is implemented.
 - [x] Rejection of C-ordered, zero-stride, and negative-stride arrays where the
   Fortran contract does not permit them.
 - [x] Fixed-length, assumed-length, and allocatable character function results.
-- [x] Basic derived-type construction, scalar fields, type-bound methods, and
-  `nopass` methods.
+- [x] Basic derived-type construction, scalar fields, default `pass`, explicit
+  non-first `pass(name)`, and `nopass` type-bound methods.
 - [x] Allocatable rank-1 and rank-2 derived-type fields exposed as NumPy arrays.
 
 ## 1. Generic Procedure Interfaces
 
-Current state: the parser records interfaces and some type-bound generic
-bindings, but semantic conversion and runtime wrapper generation do not expose
-an overload set.
+Current state: named module interfaces and type-bound generics are preserved as
+semantic overload sets, emitted as `.pyi` overloads, and dispatched by the
+generated C extension. Dispatch is exact by scalar/array dtype, rank, and
+generated extension class. Fortran inheritance is retained semantically but is
+not yet Python C-type inheritance, so derived wrappers require explicit
+specific procedures.
 
-- [ ] Define the Python API for a generic name with multiple concrete Fortran
+- [x] Define the Python API for a generic name with multiple concrete Fortran
   procedures.
-- [ ] Preserve module generic interfaces in semantic IR.
-- [ ] Preserve type-bound generic bindings and their visibility.
-- [ ] Resolve each generic target to a concrete procedure or emit a readiness
+- [x] Preserve module generic interfaces in semantic IR.
+- [x] Preserve type-bound generic bindings and their visibility.
+- [x] Resolve each generic target to a concrete procedure or emit a readiness
   blocker for missing targets.
-- [ ] Define dispatch precedence by Python/NumPy dtype.
-- [ ] Define dispatch precedence by scalar versus array rank.
-- [ ] Define dispatch for derived-type arguments and inheritance.
-- [ ] Reject indistinguishable overloads with a deterministic generation error.
-- [ ] Generate `.pyi` overload declarations for unambiguous overload sets.
-- [ ] Generate one Python-visible callable that selects the correct native
+- [x] Define dispatch precedence by Python/NumPy dtype.
+- [x] Define dispatch precedence by scalar versus array rank.
+- [x] Define dispatch for derived-type arguments and inheritance.
+- [x] Reject indistinguishable overloads with a deterministic generation error.
+- [x] Generate `.pyi` overload declarations for unambiguous overload sets.
+- [x] Generate one Python-visible callable that selects the correct native
   target.
-- [ ] Test integer, real, and complex overloads under one generic name.
-- [ ] Test scalar and array overloads under one generic name.
-- [ ] Test no-match and ambiguous-match errors.
+- [x] Test integer, real, and complex overloads under one generic name.
+- [x] Test scalar and array overloads under one generic name.
+- [x] Test no-match and ambiguous-match errors.
 
 ## 2. Defined Operators And Assignment
 

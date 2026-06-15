@@ -365,7 +365,7 @@ class CCodePrinter(CodePrinter):
             for method in classDef.methods:
                 if method.is_semantic:
                     func_blocks[-1] += f"{self.function_signature(method)};\n"
-            for interface in classDef.interfaces:
+            for interface in classDef.overload_sets:
                 for func in interface.functions:
                     func_blocks[-1] += f"{self.function_signature(func)};\n"
             classes += "};\n"
@@ -373,7 +373,7 @@ class CCodePrinter(CodePrinter):
 
         func_blocks.extend(
             "".join(f"{self.function_signature(f)};\n" for f in i.functions if f.is_semantic)
-            for i in expr.module.interfaces
+            for i in expr.module.overload_sets
         )
 
         funcs = "\n".join(f for f in func_blocks if f)
@@ -1024,7 +1024,7 @@ class CCodePrinter(CodePrinter):
     def _print_FunctionAddress(self, expr):
         return expr.name
 
-    def _print_Interface(self, expr):
+    def _print_FunctionOverloadSet(self, expr):
         return "".join(self._print(f) for f in expr.functions)
 
     def _print_FunctionDef(self, expr):
@@ -1535,7 +1535,9 @@ class CCodePrinter(CodePrinter):
 
     def _print_ClassDef(self, expr):
         methods = "".join(self._print(method) for method in expr.methods)
-        interfaces = "".join(self._print(function) for interface in expr.interfaces for function in interface.functions)
+        interfaces = "".join(
+            self._print(function) for interface in expr.overload_sets for function in interface.functions
+        )
 
         return methods + interfaces
 
