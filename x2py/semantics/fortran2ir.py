@@ -1068,12 +1068,14 @@ class FortranToIRConverter:
             if self._is_procedure_generic_name(interface.name):
                 overload_sets.append(self._normal_overload_set(interface.name, procedures))
                 continue
+            class_map = {semantic_class.name.casefold(): semantic_class for semantic_class in semantic_classes}
             defined_sets, defined_blockers = self._defined_overload_sets(
                 interface.name,
                 procedures,
-                {semantic_class.name.casefold(): semantic_class for semantic_class in semantic_classes},
+                class_map,
                 owner=module.name,
             )
+            self._apply_assignment_projection_to_originals(interface.name, procedures, procedure_lookup, class_map)
             for semantic_class, class_sets in defined_sets:
                 self._merge_overload_sets(semantic_class.overload_sets, class_sets)
             blockers.extend(defined_blockers)
@@ -1111,9 +1113,32 @@ class FortranToIRConverter:
                 {dtype.name.casefold(): placeholder},
                 owner=dtype.name,
             )
+            self._apply_assignment_projection_to_originals(
+                name,
+                procedures,
+                lookup,
+                {dtype.name.casefold(): placeholder},
+            )
             self._merge_overload_sets(overload_sets, defined_sets[0][1] if defined_sets else ())
             blockers.extend(defined_blockers)
         return overload_sets, blockers
+
+    def _apply_assignment_projection_to_originals(
+        self,
+        generic_name: str,
+        procedures: list[SemanticFunction],
+        lookup: dict[str, SemanticFunction],
+        classes: dict[str, SemanticClass],
+    ) -> None:
+        kind, token = self._defined_generic_identity(generic_name)
+        if kind != "assignment":
+            return
+        for procedure in procedures:
+            if self._defined_procedure_error(kind, token, procedure, classes) is not None:
+                continue
+            original = lookup.get((procedure.native_name or procedure.name).casefold())
+            if original is not None:
+                original.projection = self._assignment_projection(original, 0)
 
     @staticmethod
     def _merge_overload_sets(
@@ -1183,12 +1208,15 @@ class FortranToIRConverter:
                     )
                 )
                 continue
-            for semantic_class, set_name, method_name, bound_position in self._defined_python_bindings(
+            python_bindings = self._defined_python_bindings(
                 kind,
                 token,
                 procedure,
                 classes,
-            ):
+            )
+            if kind == "assignment" and python_bindings:
+                procedure.projection = self._assignment_projection(procedure, python_bindings[0][3])
+            for semantic_class, set_name, method_name, bound_position in python_bindings:
                 _, class_sets = grouped.setdefault(semantic_class.name.casefold(), (semantic_class, {}))
                 overload_set = class_sets.setdefault(set_name, ProcedureOverloadSet(set_name))
                 candidate = self._defined_overload_candidate(
@@ -1334,8 +1362,48 @@ class FortranToIRConverter:
         candidate.metadata[OVERLOAD_TARGET_METADATA] = candidate.native_name or candidate.name
         candidate.metadata[PYTHON_METHOD_NAME_METADATA] = method_name
         candidate.metadata[PYTHON_BOUND_POSITION_METADATA] = bound_position
+        if kind == "assignment":
+            candidate.projection = FortranToIRConverter._assignment_projection(candidate, bound_position)
 
         return FortranToIRConverter._as_semantic_function(candidate)
+
+    @staticmethod
+    def _assignment_projection(procedure: SemanticFunction, bound_position: int) -> list[ProjectionMapping]:
+        projection = []
+        python_position = 0
+        for mapping in sorted(procedure.projection, key=lambda item: item.native_position or 0):
+            native_position = mapping.native_position
+            if native_position == bound_position:
+                projection.append(
+                    ProjectionMapping(
+                        python_name=mapping.python_name,
+                        native_name=mapping.native_name,
+                        native_position=native_position,
+                        python_position=python_position,
+                        result_position=None,
+                        value_kind=mapping.value_kind,
+                        value=mapping.value,
+                        intent=mapping.intent,
+                    )
+                )
+                python_position += 1
+                continue
+            is_hidden = native_position is not None and mapping.python_position is None
+            projection.append(
+                ProjectionMapping(
+                    python_name=mapping.python_name,
+                    native_name=mapping.native_name,
+                    native_position=native_position,
+                    python_position=None if is_hidden else python_position,
+                    result_position=mapping.result_position,
+                    value_kind=mapping.value_kind,
+                    value=mapping.value,
+                    intent=mapping.intent,
+                )
+            )
+            if not is_hidden:
+                python_position += 1
+        return projection
 
     @staticmethod
     def _as_semantic_function(procedure: SemanticFunction) -> SemanticFunction:
@@ -1473,9 +1541,14 @@ class FortranToIRConverter:
         for native_position, native_arg in enumerate(proc.arguments):
             arg = by_name[native_arg.name]
             intent = getattr(arg, "intent", "in")
-            is_copy_return_output = intent == "out" and FortranToIRConverter._is_allocatable_array(arg.semantic_type)
-            mapping_python_position = None if is_copy_return_output else python_position
-            mapping_result_position = result_position if is_copy_return_output else None
+            is_output = intent == "out"
+            is_scalar_copy_return = FortranToIRConverter._is_scalar_copy_return(arg.semantic_type)
+            is_returned_output = is_output and (is_scalar_copy_return or arg.semantic_type.rank > 0)
+            is_hidden_output = is_output and (
+                is_scalar_copy_return or FortranToIRConverter._is_allocatable_array(arg.semantic_type)
+            )
+            mapping_python_position = None if is_hidden_output else python_position
+            mapping_result_position = result_position if is_returned_output else None
             projection.append(
                 ProjectionMapping(
                     python_name=arg.name,
@@ -1486,9 +1559,9 @@ class FortranToIRConverter:
                     intent=intent,
                 )
             )
-            if is_copy_return_output:
+            if is_returned_output:
                 result_position += 1
-            else:
+            if not is_hidden_output:
                 python_position += 1
         return projection
 
@@ -1500,6 +1573,10 @@ class FortranToIRConverter:
             and semantic_type.storage.array is not None
             and semantic_type.storage.array.allocatable
         )
+
+    @staticmethod
+    def _is_scalar_copy_return(semantic_type: SemanticType | None) -> bool:
+        return bool(semantic_type is not None and semantic_type.rank == 0)
 
     @staticmethod
     def _base_classes(dtype: FortranDerivedType) -> list[str]:

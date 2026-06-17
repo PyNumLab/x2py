@@ -70,6 +70,7 @@ from .cpython_api import (
     PyList_GetItem,
     PyList_New,
     PyList_SetItem,
+    PyMemoryError,
     PyModInitFunc,
     PyModule,
     PyModule_AddObject,
@@ -77,6 +78,7 @@ from .cpython_api import (
     PyNotImplementedError,
     PyObject_TypeCheck,
     PySys_GetObject,
+    PyTuple_Pack,
     PyType_Ready,
     PyTypeError,
     PyUnicode_AsUTF8,
@@ -206,7 +208,7 @@ class CPythonBindingGenerator(BindingGenerator):
         original_func = original_func or func
         visible_args = [arg for arg in func.arguments if not arg.bound_argument]
         result_vars = self._doc_python_result_vars(func, original_func)
-        signature = f"{name}({', '.join(str(arg.name) for arg in visible_args)})"
+        signature = f"{name}({', '.join(self._doc_argument_name(arg) for arg in visible_args)})"
         signature += f" -> {self._doc_result_summary(result_vars)}" if result_vars else " -> None"
 
         sections = [signature]
@@ -250,7 +252,7 @@ class CPythonBindingGenerator(BindingGenerator):
     def _argument_doc_lines(self, arg):
         var = self._doc_original_var(arg.var)
         can_be_none = getattr(arg.var, "is_optional", False) or getattr(var, "is_optional", False)
-        header = f"{arg.name} : {self._type_doc(var, include_none=can_be_none)}"
+        header = f"{self._doc_argument_name(arg)} : {self._type_doc(var, include_none=can_be_none)}"
         details = self._argument_detail_lines(var)
         if can_be_none:
             details.append("    May be omitted or passed as None.")
@@ -269,6 +271,8 @@ class CPythonBindingGenerator(BindingGenerator):
         lines.append(f"    Intent: {intent}")
         if intent == "out":
             lines.append("    Mutates: fills in-place")
+            if getattr(var, "rank", 0):
+                lines.append("    Initial contents are ignored.")
         elif intent == "inout":
             lines.append("    Mutates: yes")
         return lines
@@ -278,6 +282,8 @@ class CPythonBindingGenerator(BindingGenerator):
         if var.rank and var.memory_handling == "heap":
             lines.append("    Ownership: Python-owned")
             lines.append("    Returns None when unallocated.")
+        elif var.rank and getattr(var, "intent", "in") == "out":
+            lines.append("    Ownership: Python-owned")
         elif var.rank and var.memory_handling == "alias":
             lines.append("    Ownership: Native-owned")
         return lines
@@ -291,12 +297,25 @@ class CPythonBindingGenerator(BindingGenerator):
         return lines
 
     def _result_notes(self, result_vars):
+        notes = []
+        if any(
+            self._doc_original_var(var).rank and self._doc_original_var(var).memory_handling == "heap"
+            for var in result_vars
+        ):
+            notes.extend(
+                [
+                    "Allocatable array outputs are copied into Python-owned NumPy arrays.",
+                    "This copy adds overhead proportional to the returned array size.",
+                ]
+            )
         if any(
             self._doc_original_var(var).rank and self._doc_original_var(var).memory_handling == "alias"
             for var in result_vars
         ):
-            return self._borrowed_view_notes()
-        return []
+            if notes:
+                notes.append("")
+            notes.extend(self._borrowed_view_notes())
+        return notes
 
     @staticmethod
     def _borrowed_view_notes():
@@ -364,6 +383,9 @@ class CPythonBindingGenerator(BindingGenerator):
     def _doc_original_var(var):
         return getattr(var, "original_var", var)
 
+    def _doc_argument_name(self, arg):
+        return str(self._doc_original_var(arg.var).name)
+
     @staticmethod
     def _doc_result_vars(func):
         if func.results.var is NIL:
@@ -381,15 +403,19 @@ class CPythonBindingGenerator(BindingGenerator):
         result_vars.extend(
             arg.var
             for arg in original_func.arguments
-            if not arg.bound_argument
-            and getattr(arg.var, "intent", "in") == "out"
-            and getattr(arg.var, "is_ndarray", False)
-            and getattr(arg.var, "memory_handling", None) == "heap"
+            if not arg.bound_argument and getattr(arg.var, "intent", "in") == "out"
         )
         return result_vars or self._doc_result_vars(func)
 
     def _doc_result_summary(self, result_vars):
-        parts = [self._type_doc(self._doc_original_var(var), signature=True) for var in result_vars]
+        parts = [
+            self._type_doc(
+                self._doc_original_var(var),
+                include_none=self._may_return_none(self._doc_original_var(var)),
+                signature=True,
+            )
+            for var in result_vars
+        ]
         if len(parts) == 1:
             result_var = self._doc_original_var(result_vars[0])
             return self._type_doc(result_var, include_none=self._may_return_none(result_var), signature=True)
@@ -1736,6 +1762,60 @@ class CPythonBindingGenerator(BindingGenerator):
             return Assign(res, func_call)
         return Assign(results, func(*args))
 
+    def _project_python_return(self, func, original_func, native_py_results, native_owned_results):
+        output_items = []
+        output_owned = []
+        native_index = 0
+
+        if original_func.results.var is not NIL:
+            output_items.append(native_py_results[native_index])
+            output_owned.append(native_owned_results[native_index])
+            native_index += 1
+
+        visible_outputs = self._visible_output_argument_objects(func)
+        for argument in original_func.arguments:
+            orig_var = argument.var
+            if argument.bound_argument or getattr(orig_var, "intent", "in") != "out":
+                continue
+            visible_object = visible_outputs.get(orig_var)
+            if visible_object is not None:
+                output_items.append(visible_object)
+                output_owned.append(False)
+            else:
+                output_items.append(native_py_results[native_index])
+                output_owned.append(native_owned_results[native_index])
+                native_index += 1
+
+        if not output_items:
+            return {
+                "body": [Py_INCREF(Py_None)],
+                "result": Py_None,
+                "owned_result": False,
+            }
+        if len(output_items) == 1:
+            if not output_owned[0]:
+                return {
+                    "body": [Py_INCREF(output_items[0])],
+                    "result": output_items[0],
+                    "owned_result": False,
+                }
+            return {"body": [], "result": output_items[0], "owned_result": True}
+
+        tuple_result = self.get_new_PyObject("result_obj")
+        body = [AliasAssign(tuple_result, PyTuple_Pack(*(ObjectAddress(item) for item in output_items)))]
+        body.append(If(IfSection(Is(tuple_result, NIL), [Return(self._error_exit_code)])))
+        body.extend(Py_DECREF(item) for item, owned in zip(output_items, output_owned, strict=False) if owned)
+        return {"body": body, "result": tuple_result, "owned_result": True}
+
+    def _visible_output_argument_objects(self, func):
+        outputs = {}
+        for argument in func.arguments:
+            var = argument.var
+            orig_var = getattr(var, "original_var", var)
+            if getattr(orig_var, "intent", "in") == "out":
+                outputs[orig_var] = self._python_object_map[argument]
+        return outputs
+
     def connect_pointer_targets(self, orig_var, python_res, funcdef, is_bind_c):
         """
         Get the code to connect pointers to their targets.
@@ -2257,18 +2337,35 @@ class CPythonBindingGenerator(BindingGenerator):
         if original_func_name == "__len__":
             self.scope.remove_variable(python_result_variable)
             python_result_variable = c_results[0]
+        elif original_func_name in magic_binary_funcs and original_func_name.startswith("__i"):
+            body.extend(wrapped_results["body"])
         else:
             body.extend(wrapped_results["body"])
+            native_py_results = wrapped_results.get(
+                "py_results",
+                [] if python_result_variable is Py_None else [python_result_variable],
+            )
+            native_owned_results = wrapped_results.get(
+                "owned_py_results",
+                [True] * len(native_py_results),
+            )
+            projected_return = self._project_python_return(
+                expr,
+                original_func,
+                native_py_results,
+                native_owned_results,
+            )
+            body.extend(projected_return["body"])
+            python_result_variable = projected_return["result"]
         body.extend(ai for arg in wrapped_args for ai in arg["clean_up"])
 
         # Pack the Python compatible results of the function into one argument.
-        if python_result_variable is Py_None:
-            res = Py_None
-            func_results = FunctionDefResult(self.get_new_PyObject("result", is_temp=True))
-            body.append(Py_INCREF(res))
-        elif original_func_name == "__len__":
+        if original_func_name == "__len__":
             res = cast_to(python_result_variable, Py_ssize_t())
             func_results = FunctionDefResult(Variable(Py_ssize_t(), self.scope.get_new_name(), is_temp=True))
+        elif python_result_variable is Py_None:
+            res = Py_None
+            func_results = FunctionDefResult(self.get_new_PyObject("result", is_temp=True))
         else:
             res = python_result_variable
             func_results = FunctionDefResult(res)
@@ -2532,15 +2629,49 @@ class CPythonBindingGenerator(BindingGenerator):
             original_function=original,
         )
 
-    @staticmethod
-    def _return_none_if_unallocated(data_ptr):
+    def _return_none_if_unallocated(self, data_ptr, shape_vars=()):
         return [
             If(
                 IfSection(
                     Is(data_ptr, NIL),
                     [
+                        *self._raise_memory_error_if_shape_is_nonzero(shape_vars),
                         Py_INCREF(Py_None),
                         Return(Py_None),
+                    ],
+                )
+            )
+        ]
+
+    def _set_none_if_unallocated(self, data_ptr, py_res, shape_vars):
+        return If(
+            IfSection(
+                Is(data_ptr, NIL),
+                [
+                    *self._raise_memory_error_if_shape_is_nonzero(shape_vars),
+                    Py_INCREF(Py_None),
+                    AliasAssign(py_res, Py_None),
+                ],
+            )
+        )
+
+    def _raise_memory_error_if_shape_is_nonzero(self, shape_vars):
+        condition = None
+        for shape_var in shape_vars:
+            axis_has_extent = Ne(shape_var, convert_to_literal(0))
+            condition = axis_has_extent if condition is None else Or(condition, axis_has_extent)
+        if condition is None:
+            return []
+        return [
+            If(
+                IfSection(
+                    condition,
+                    [
+                        PyErr_SetString(
+                            PyMemoryError,
+                            CStrStr(convert_to_literal("Unable to allocate copy-return output array.")),
+                        ),
+                        Return(self._error_exit_code),
                     ],
                 )
             )
@@ -3253,6 +3384,7 @@ class CPythonBindingGenerator(BindingGenerator):
         stride_elems = [IndexedElement(strides, i) for i in range(orig_var.rank)]
         ubound_elems = [IndexedElement(ubounds, i) for i in range(orig_var.rank)]
         args = [parts["data"], *shape_elems, *stride_elems]
+        body.extend(self._array_shape_validation(orig_var, shape_elems))
         default_body = (
             [AliasAssign(parts["data"], NIL)]
             + [Assign(s, 0) for s in shape_elems]
@@ -3333,6 +3465,31 @@ class CPythonBindingGenerator(BindingGenerator):
             default_body.append(AliasAssign(optional_arg_var, NIL))
             collect_arg = optional_arg_var
         return {"body": body, "args": [collect_arg], "default_init": default_body}
+
+    def _array_shape_validation(self, orig_var, shape_elems):
+        checks = []
+        for axis, (actual, expected) in enumerate(zip(shape_elems, orig_var.alloc_shape or (), strict=False)):
+            if expected is None:
+                continue
+            checks.append(
+                If(
+                    IfSection(
+                        Ne(actual, expected),
+                        [
+                            PyErr_SetString(
+                                PyTypeError,
+                                CStrStr(
+                                    convert_to_literal(
+                                        f"Argument {orig_var.name} has incompatible shape at axis {axis}"
+                                    )
+                                ),
+                            ),
+                            Return(self._error_exit_code),
+                        ],
+                    )
+                )
+            )
+        return checks
 
     def _extract_StringType_FunctionDefArgument(
         self, orig_var, collect_arg, bound_argument, is_bind_c_argument, *, arg_var=None
@@ -3625,7 +3782,38 @@ class CPythonBindingGenerator(BindingGenerator):
 
         return {"c_results": c_result_vars, "py_result": py_res, "body": body}
 
-    def _extract_BindCArrayType_FunctionDefResult(self, wrapped_var, funcdef):
+    def _extract_BindCResultTupleType_FunctionDefResult(self, tuple_var, is_bind_c, funcdef):
+        c_results = []
+        py_results = []
+        owned_py_results = []
+        setup = []
+        body = []
+        assert funcdef is not None
+        for index in range(len(tuple_var.class_type)):
+            element = funcdef.scope.collect_tuple_element(IndexedElement(tuple_var, index))
+            if isinstance(getattr(element, "class_type", None), BindCArrayType):
+                result = self._extract_BindCArrayType_FunctionDefResult(element, funcdef, tuple_item=True)
+            else:
+                result = self._extract_FunctionDefResult(element, is_bind_c, funcdef)
+            item_c_results = result["c_results"]
+            if isinstance(item_c_results, PythonTuple):
+                c_results.extend(item_c_results.args)
+            else:
+                c_results.extend(item_c_results)
+            setup.extend(result.get("setup", ()))
+            body.extend(result["body"])
+            py_results.extend(result.get("py_results", [result["py_result"]]))
+            owned_py_results.extend(result.get("owned_py_results", [True]))
+        return {
+            "c_results": PythonTuple(*c_results),
+            "py_result": Py_None,
+            "py_results": py_results,
+            "owned_py_results": owned_py_results,
+            "body": body,
+            "setup": setup,
+        }
+
+    def _extract_BindCArrayType_FunctionDefResult(self, wrapped_var, funcdef, *, tuple_item=False):
         """
         Get the code which translates a `Variable` containing an array to a PyObject.
 
@@ -3666,29 +3854,40 @@ class CPythonBindingGenerator(BindingGenerator):
             arg_targets = funcdef.result_pointer_map.get(orig_var, ())
             release_memory = len(arg_targets) == 0 and not isinstance(orig_var, DottedVariable)
 
-        body = [
-            AliasAssign(
-                py_res,
-                to_pyarray(
-                    convert_to_literal(orig_var.rank),
-                    typenum,
-                    data_var,
-                    shape_var,
-                    convert_to_literal(orig_var.order != "F"),
-                    convert_to_literal(release_memory),
-                ),
-            )
-        ]
-        if getattr(orig_var, "memory_handling", None) == "heap":
-            body = [*self._return_none_if_unallocated(data_var), *body]
-
+        array_to_python = AliasAssign(
+            py_res,
+            to_pyarray(
+                convert_to_literal(orig_var.rank),
+                typenum,
+                data_var,
+                shape_var,
+                convert_to_literal(orig_var.order != "F"),
+                convert_to_literal(release_memory),
+            ),
+        )
         shape_vars = [IndexedElement(shape_var, i) for i in range(orig_var.rank)]
+        body = [array_to_python]
+        if getattr(orig_var, "memory_handling", None) == "heap":
+            if tuple_item:
+                body = [
+                    self._set_none_if_unallocated(data_var, py_res, shape_vars),
+                    If(IfSection(IsNot(data_var, NIL), [array_to_python])),
+                ]
+            else:
+                body = [*self._return_none_if_unallocated(data_var, shape_vars), *body]
+
         c_result_vars = PythonTuple(ObjectAddress(data_var), *shape_vars)
 
         if funcdef:
             body.extend(self.connect_pointer_targets(orig_var, py_res, funcdef, True))
 
-        return {"c_results": c_result_vars, "py_result": py_res, "body": body}
+        return {
+            "c_results": c_result_vars,
+            "py_result": py_res,
+            "py_results": [py_res],
+            "owned_py_results": [True],
+            "body": body,
+        }
 
     def _extract_StringType_FunctionDefResult(self, wrapped_var, is_bind_c, funcdef):
         orig_var = getattr(wrapped_var, "original_var", wrapped_var)
@@ -3709,7 +3908,23 @@ class CPythonBindingGenerator(BindingGenerator):
             char_data = CStrStr(c_res)
             result = [c_res]
 
-        body = [AliasAssign(py_res, PyBuildValueNode([char_data]))]
         if is_bind_c:
+            body = [
+                If(
+                    IfSection(
+                        Is(c_res, NIL),
+                        [
+                            PyErr_SetString(
+                                PyMemoryError,
+                                CStrStr(convert_to_literal("Unable to allocate copy-return output string.")),
+                            ),
+                            Return(self._error_exit_code),
+                        ],
+                    )
+                ),
+                AliasAssign(py_res, PyBuildValueNode([char_data])),
+            ]
             body.append(Deallocate(c_res))
+        else:
+            body = [AliasAssign(py_res, PyBuildValueNode([char_data]))]
         return {"c_results": result, "py_result": py_res, "body": body}

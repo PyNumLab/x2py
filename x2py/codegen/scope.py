@@ -2,7 +2,8 @@
 
 from immutabledict import immutabledict
 
-from .bind_c import BindCArrayType, BindCVariable
+from .bind_c import BindCVariable
+from .models.datatypes import TupleType
 from .models.core import ClassDef, FunctionDef
 from .models.core import Symbol
 from .models.core import (
@@ -1064,7 +1065,7 @@ class Scope:
             if cls_scope is not self:
                 return cls_scope.collect_tuple_element(tuple_elem)
 
-        if isinstance(tuple_elem, IndexedElement) and isinstance(tuple_elem.base.class_type, BindCArrayType):
+        if isinstance(tuple_elem, IndexedElement) and isinstance(tuple_elem.base.class_type, TupleType):
             for element, alias in self.symbolic_aliases.items():
                 if (
                     isinstance(element, IndexedElement)
@@ -1072,7 +1073,7 @@ class Scope:
                     and element.indices == tuple_elem.indices
                 ):
                     return alias
-            raise RuntimeError(f"Bind-C array element {tuple_elem} has no symbolic alias")
+            raise RuntimeError(f"Tuple element {tuple_elem} has no symbolic alias")
 
         return tuple_elem
 
@@ -1100,7 +1101,11 @@ class Scope:
         if isinstance(tuple_var, BindCVariable):
             tuple_var = tuple_var.new_var
 
-        if isinstance(tuple_var, Variable) and isinstance(tuple_var.class_type, BindCArrayType):
-            return [self.collect_tuple_element(IndexedElement(tuple_var, i)) for i in range(len(tuple_var.class_type))]
+        if isinstance(tuple_var, Variable) and isinstance(tuple_var.class_type, TupleType):
+            elements = []
+            for i in range(len(tuple_var.class_type)):
+                element = self.collect_tuple_element(IndexedElement(tuple_var, i))
+                elements.extend(self.collect_all_tuple_elements(element))
+            return elements
 
         return [tuple_var]

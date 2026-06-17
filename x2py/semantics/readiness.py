@@ -374,7 +374,6 @@ class _SemanticReadinessChecker:
                 unit=unit,
                 unit_kind=unit_kind,
             )
-        self._check_allocatable_copy_return_count(func, owner, unit, unit_kind)
         self._check_type(
             func.return_type,
             owner=f"{owner}.return",
@@ -477,31 +476,6 @@ class _SemanticReadinessChecker:
     @classmethod
     def _is_unsupported_allocatable_output(cls, semantic_type: SemanticType | None, intent: str) -> bool:
         return cls._is_allocatable_array(semantic_type) and str(intent).lower() == "inout"
-
-    def _check_allocatable_copy_return_count(
-        self,
-        func: SemanticFunction,
-        owner: str,
-        unit: str,
-        unit_kind: str,
-    ) -> None:
-        copy_return_items = []
-        if self._is_allocatable_array(func.return_type):
-            copy_return_items.append("return")
-        copy_return_items.extend(
-            arg.name
-            for arg in func.arguments
-            if self._is_allocatable_array(arg.semantic_type) and str(arg.intent).lower() == "out"
-        )
-        if len(copy_return_items) <= 1:
-            return
-        self._add_blocker(
-            "allocatable_multiple_copy_returns_unsupported",
-            "Multiple allocatable copy-return arrays are not yet supported.",
-            {"owner": owner, "item": ", ".join(copy_return_items)},
-            unit=unit,
-            unit_kind=unit_kind,
-        )
 
     @staticmethod
     def _is_allocatable_array(semantic_type: SemanticType | None) -> bool:

@@ -125,41 +125,81 @@ methods because inventing syntax would hide dispatch and error behavior.
 ## 3. Output Arguments And Multiple Results
 
 Current state: intent metadata and projection information exist in semantic IR.
-Allocatable array function results and allocatable `intent(out)` array dummy
-arguments use a copy-return policy: the Fortran bridge copies allocated native
-storage into C memory, deallocates the Fortran temporary, and returns a NumPy
-array that owns the copied memory. General output projection for scalar,
-non-allocatable array, string, derived-type, and multi-output combinations is
-still incomplete.
+Numeric, logical, fixed-length scalar character, and scalar derived-type
+`intent(out)` dummy arguments, non-allocatable array `intent(out)` dummy
+arguments, allocatable array `intent(out)` dummy arguments, and function results
+combined with output dummy arguments are projected into the documented Python
+return shape. Allocatable array function results and allocatable `intent(out)`
+array dummy arguments use a copy-return policy: the Fortran bridge copies
+allocated native storage into C memory, deallocates the Fortran temporary, and
+returns a NumPy array that owns the copied memory.
 
-Example: `call solve(a, x, info)` where `x` and `info` are `intent(out)` could
-return `(x, info)`, or require a caller-provided mutable `x` and return only
-`info`. The choice affects allocation, tuple ordering, and whether Python can
-distinguish `intent(out)` from `intent(inout)` mutation.
-For allocatable `intent(out)` arrays and allocatable array function results the
-chosen path is copy-return. Unallocated allocatable results return `None`.
+The Python API distinguishes output projection from in-place mutation:
+
+- A scalar, non-allocatable `intent(out)` dummy is hidden from the Python
+  signature. The bridge allocates native temporary storage, passes it to
+  Fortran, converts the written value after the call, and returns it to Python.
+  Generated `.pyi` stubs expose the by-reference return type, such as
+  `Ptr(Float64)`. A primitive scalar return is reserved for by-value semantics.
+- A fixed-length scalar `character, intent(out)` dummy follows the same hidden
+  output rule and is returned as a new Python `str`. Caller-provided mutable
+  character output buffers and character `intent(inout)` mutation remain
+  unsupported until a mutable-buffer policy is defined.
+- A scalar derived-type `intent(out)` dummy follows the same hidden output rule
+  and is returned as a Python wrapper object for the produced native value.
+- An `intent(out), allocatable` dummy is hidden from the Python signature. The
+  wrapper lets Fortran allocate it and returns the result. If it remains
+  unallocated, Python receives `None`. Allocatable array outputs use
+  copy-return NumPy-owned storage: the bridge copies the allocated native
+  storage into C memory, deallocates the Fortran temporary, and returns a NumPy
+  array with `Ownership: Python-owned`. If that copy allocation fails after
+  Fortran produced a non-empty shape, Python raises `MemoryError`; this is
+  distinct from the `None` result used for a genuinely unallocated output.
+- A non-allocatable array-like `intent(out)` dummy stays in the Python
+  signature because the caller must provide storage. The wrapper validates
+  dtype, rank, shape, and layout, Fortran writes into the supplied object, and
+  the same Python object is returned. Its initial contents are ignored.
+- An `intent(inout)` dummy stays in the Python signature, is mutated in place,
+  and is not duplicated into the return value unless explicit `intent(out)`
+  values require a tuple.
+
+If a Fortran function has both a function result and one or more `intent(out)`
+dummy arguments, Python returns a tuple. Tuple order is always the function
+result first, followed by `intent(out)` values in Fortran dummy argument order.
+This order covers hidden scalar outputs, allocatable outputs, and
+caller-provided non-allocatable array outputs. Generated NumPy-style docstrings
+and `.pyi` stubs must match these signatures: `.pyi` `Returns["name", T]`
+annotations are used only for returned values that are also present as
+Python-visible arguments, such as caller-provided non-allocatable output arrays.
+Hidden scalar and allocatable outputs use plain return annotations, with
+allocatable outputs written as `T | None` to represent the unallocated case.
+Caller-provided array outputs remain under `Parameters` with `Intent: out`, and
+returned arrays document Python ownership and copy overhead when applicable.
+
 `intent(inout)` allocatable replacement remains section 6 work because Python
 must decide whether the existing object is replaced, detached, or mutated.
 
-- [ ] Define Python return behavior for scalar `intent(out)` arguments.
+- [x] Define Python return behavior for scalar `intent(out)` arguments.
 - [x] Define Python return behavior for allocatable array `intent(out)`
   arguments.
-- [ ] Define Python return behavior for non-allocatable array `intent(out)`
+- [x] Define Python return behavior for non-allocatable array `intent(out)`
   arguments.
-- [ ] Define whether callers may provide preallocated output arrays.
-- [ ] Define tuple ordering for multiple output arguments and function results.
+- [x] Define whether callers may provide preallocated output arrays.
+- [x] Define tuple ordering for multiple output arguments and function results.
 - [x] Preserve `intent(in)`, allocatable `intent(out)`, and `intent(inout)`
   through codegen AST conversion.
-- [ ] Preserve non-allocatable `intent(out)` through codegen AST conversion.
+- [x] Preserve non-allocatable `intent(out)` through codegen AST conversion.
 - [ ] Consume semantic projection mappings during wrapper generation.
-- [ ] Return newly produced scalar outputs directly to Python.
-- [ ] Return multiple outputs as a stable Python tuple.
-- [ ] Verify that `intent(inout)` mutates the supplied Python object and is not
+- [x] Return newly produced scalar outputs directly to Python.
+- [x] Return multiple outputs as a stable Python tuple.
+- [x] Verify that `intent(inout)` mutates the supplied Python object and is not
   duplicated unnecessarily.
-- [ ] Handle a function result combined with output dummy arguments.
+- [x] Handle a function result combined with output dummy arguments.
 - [x] Test allocatable array outputs and allocatable array function results.
-- [ ] Test scalar, non-allocatable array, string, and derived-type outputs.
-- [ ] Test output allocation failures and invalid preallocated output shapes.
+- [x] Test scalar and non-allocatable array outputs.
+- [x] Test string and derived-type outputs.
+- [x] Test invalid preallocated output dtype, rank, shape, and layout.
+- [x] Test output allocation failure exceptions.
 
 ## 4. Optional Arguments
 

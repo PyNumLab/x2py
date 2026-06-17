@@ -249,7 +249,7 @@ end module alloc_mod
     assert result.class_type.rank == 1
 
 
-def test_allocatable_inout_and_multiple_copy_returns_raise_before_codegen():
+def test_allocatable_inout_raises_before_codegen():
     inout_source = """
 module alloc_mod
 contains
@@ -266,6 +266,8 @@ end module alloc_mod
             Scope(name=semantic_module.name, scope_type="module"),
         )
 
+
+def test_multiple_allocatable_copy_returns_lower_before_codegen():
     multiple_source = """
 module alloc_mod
 contains
@@ -277,11 +279,14 @@ end module alloc_mod
 """
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(multiple_source))
 
-    with pytest.raises(ValueError, match="multiple allocatable copy-return arrays"):
-        semantic_ir_to_codegen_ast(
-            semantic_module,
-            Scope(name=semantic_module.name, scope_type="module"),
-        )
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    make_pair = next(function for function in codegen_module.funcs if str(function.name) == "make_pair")
+    assert [argument.var.intent for argument in make_pair.arguments] == ["out", "out"]
+    assert all(argument.var.memory_handling == "heap" for argument in make_pair.arguments)
 
 
 def test_defined_operators_and_assignment_become_named_codegen_overload_sets():

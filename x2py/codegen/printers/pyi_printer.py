@@ -208,6 +208,11 @@ class PyiPrinter:
             and arg.metadata.get(MODULE_VARIABLE_GETTER_METADATA) is not False
         )
 
+    @staticmethod
+    def _is_allocatable_array(semantic_type: SemanticType) -> bool:
+        storage = semantic_type.storage
+        return bool(storage is not None and storage.array is not None and storage.array.allocatable)
+
     def _emit_typed_name(
         self,
         name: str,
@@ -504,17 +509,16 @@ class PyiPrinter:
             sections.append("")
 
     def _projected_return_annotation(self, func: SemanticFunction) -> str:
-        returned_args = [
-            arg
-            for _, arg in sorted(
-                self._projected_return_arguments(func),
-                key=lambda item: item[0],
-            )
-        ]
         parts = []
         if func.return_type:
             parts.append(self.emit_semantic_type(func.return_type))
-        parts.extend(self._projected_argument_return(arg) for arg in returned_args)
+        parts.extend(
+            self._projected_argument_return(arg, visible=visible)
+            for _, arg, visible in sorted(
+                self._projected_return_arguments(func),
+                key=lambda item: item[0],
+            )
+        )
         if not parts:
             return "None"
         if len(parts) == 1:
@@ -522,32 +526,34 @@ class PyiPrinter:
         return f"tuple[{', '.join(parts)}]"
 
     @staticmethod
-    def _projected_return_arguments(func: SemanticFunction) -> list[tuple[int, SemanticArgument]]:
-        by_native_position = {
-            mapping.native_position: mapping
-            for mapping in func.projection
-            if mapping.native_position is not None
-            and mapping.result_position is not None
-            and mapping.python_position is None
-        }
+    def _projected_return_arguments(func: SemanticFunction) -> list[tuple[int, SemanticArgument, bool]]:
+        if func.metadata.get(OVERLOAD_KIND_METADATA) == "assignment":
+            return []
+        by_name = {arg.name: arg for arg in func.arguments}
         returned = []
-        for native_position, arg in enumerate(func.arguments):
-            mapping = by_native_position.get(native_position)
-            if mapping is not None:
-                returned.append((mapping.result_position, arg))
+        for mapping in func.projection:
+            if mapping.result_position is None:
+                continue
+            arg_name = mapping.python_name or mapping.native_name
+            arg = by_name.get(arg_name)
+            if arg is not None:
+                returned.append((mapping.result_position, arg, mapping.python_position is not None))
         return returned
 
-    def _projected_argument_return(self, arg: SemanticArgument) -> str:
-        if self._requires_named_return(arg):
+    def _projected_argument_return(self, arg: SemanticArgument, *, visible: bool) -> str:
+        if visible:
             return self._named_return(arg)
-        return self.emit_semantic_type(arg.semantic_type)
-
-    def _requires_named_return(self, arg: SemanticArgument) -> bool:
-        return getattr(arg, "intent", "in") in {"out", "inout"}
+        return self._plain_projected_return(arg)
 
     def _named_return(self, arg: SemanticArgument) -> str:
-        optional = ", Optional" if arg.optional else ""
+        optional = ", Optional" if arg.optional or self._is_allocatable_array(arg.semantic_type) else ""
         return f'Returns["{arg.name}", {self.emit_semantic_type(arg.semantic_type)}{optional}]'
+
+    def _plain_projected_return(self, arg: SemanticArgument) -> str:
+        type_text = self.emit_semantic_type(arg.semantic_type)
+        if arg.optional or self._is_allocatable_array(arg.semantic_type):
+            return f"{type_text} | None"
+        return type_text
 
     def _decorators(self, func: SemanticFunction, *, indent: str = "") -> str:
         decorators = []
@@ -623,14 +629,12 @@ class PyiPrinter:
 
     @staticmethod
     def _call_arguments(func: SemanticFunction) -> list[SemanticArgument]:
-        returned_positions = {
-            mapping.native_position
+        hidden_names = {
+            mapping.python_name or mapping.native_name
             for mapping in func.projection
-            if mapping.native_position is not None
-            and mapping.result_position is not None
-            and mapping.python_position is None
+            if mapping.native_position is not None and mapping.python_position is None
         }
-        return [arg for index, arg in enumerate(func.arguments) if index not in returned_positions]
+        return [arg for arg in func.arguments if arg.name not in hidden_names]
 
     @staticmethod
     def _requires_intent_metadata(arg: SemanticVariable) -> bool:

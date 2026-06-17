@@ -106,9 +106,9 @@ def make_pair() -> tuple[Returns["left", Annotated[Float64[:], Allocatable]], Re
     assert _blocker_codes(report) >= {
         "allocatable_module_target_missing",
         "allocatable_replacement_policy_missing",
-        "allocatable_multiple_copy_returns_unsupported",
     }
     assert "allocatable_owner_policy_missing" not in _blocker_codes(report)
+    assert "allocatable_multiple_copy_returns_unsupported" not in _blocker_codes(report)
     target_blocker = next(
         blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "allocatable_module_target_missing"
     )
@@ -120,13 +120,6 @@ def make_pair() -> tuple[Returns["left", Annotated[Float64[:], Allocatable]], Re
         if blocker["code"] == "allocatable_replacement_policy_missing"
     )
     assert replacement_blocker["items"] == [{"owner": "solver.replace", "item": "values", "intent": "inout"}]
-
-    multiple_blocker = next(
-        blocker
-        for blocker in report["wrappability_blockers"]
-        if blocker["code"] == "allocatable_multiple_copy_returns_unsupported"
-    )
-    assert multiple_blocker["items"] == [{"owner": "solver.make_pair", "item": "left, right"}]
 
 
 def test_imported_type_can_complete_semantic_readiness():

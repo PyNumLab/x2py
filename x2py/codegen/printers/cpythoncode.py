@@ -430,6 +430,7 @@ class CPythonCodePrinter(CCodePrinter):
                 "#define PY_ARRAY_UNIQUE_SYMBOL CWRAPPER_ARRAY_API",
                 f"#define {pymod_name.upper()}\n",
                 imports,
+                self._x2py_malloc_helper(),
                 decs,
                 sep,
                 class_defs,

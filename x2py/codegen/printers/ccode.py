@@ -8,7 +8,7 @@ from itertools import chain
 from typing import ClassVar
 
 
-from ..bind_c import BindCArrayType, BindCPointer, BindCVariable
+from ..bind_c import BindCPointer
 from ..bindings.c_concepts import (
     CMacro,
     CStrStr,
@@ -404,10 +404,23 @@ class CCodePrinter(CodePrinter):
         imports = Import(self.scope.get_python_name(expr.name), Module(expr.name, (), ()))
         imports = self._print(imports)
 
-        code = "\n".join((imports, global_variables, body))
+        code = "\n".join((imports, self._x2py_malloc_helper(), global_variables, body))
 
         self.exit_scope()
         return code
+
+    @staticmethod
+    def _x2py_malloc_helper():
+        return (
+            "void* x2py_malloc(size_t size)\n"
+            "{\n"
+            '    const char* fail_alloc = getenv("X2PY_WRAPPER_FAIL_ALLOC");\n'
+            "    if (fail_alloc != NULL && fail_alloc[0] != '\\0' && fail_alloc[0] != '0') {\n"
+            "        return NULL;\n"
+            "    }\n"
+            "    return malloc(size);\n"
+            "}\n"
+        )
 
     def _print_Break(self, expr):
         return "break;\n"
@@ -806,12 +819,9 @@ class CCodePrinter(CodePrinter):
         result_vars = [v for v in expr.scope.collect_all_tuple_elements(expr.results.var) if v and not v.is_argument]
 
         n_results = len(result_vars)
-        returns_bind_c_array = isinstance(expr.results.var, BindCVariable) and isinstance(
-            expr.results.var.class_type, BindCArrayType
-        )
 
         if n_results > 1:
-            ret_type = self.get_c_type(VoidType()) if returns_bind_c_array else self.get_c_type(NumpyInt64Type())
+            ret_type = self.get_c_type(VoidType())
             if expr.arguments and expr.arguments[0].bound_argument:
                 # Place the first arg_var (the bound class object) first
                 arg_vars = arg_vars[:1] + result_vars + arg_vars[1:]
@@ -1092,6 +1102,7 @@ class CCodePrinter(CodePrinter):
     def _print_FunctionCall(self, expr):
         func = expr.funcdef
         parent_assign = get_direct_assignment(expr)
+        returns_via_output_args = self._returns_via_output_args(func)
         # Ensure the correct syntax is used for pointers
         args = []
         for a, f in zip(expr.args, func.arguments, strict=False):
@@ -1122,11 +1133,7 @@ class CCodePrinter(CodePrinter):
                 args.append(ObjectAddress(v))
 
         output_args = []
-        if (
-            parent_assign is not None
-            and isinstance(func.results.var, BindCVariable)
-            and isinstance(func.results.var.class_type, BindCArrayType)
-        ):
+        if parent_assign is not None and returns_via_output_args:
             if isinstance(parent_assign.lhs, PythonTuple):
                 result_args = parent_assign.lhs.args
             else:
@@ -1145,11 +1152,7 @@ class CCodePrinter(CodePrinter):
         args = ", ".join(self._print(ai) for a in args for ai in self.scope.collect_all_tuple_elements(a))
 
         call_code = f"{func.name}({args})"
-        if (
-            parent_assign is not None
-            and isinstance(func.results.var, BindCVariable)
-            and isinstance(func.results.var.class_type, BindCArrayType)
-        ):
+        if parent_assign is not None and returns_via_output_args:
             return f"{call_code};\n"
         if func.results.var is not NIL:
             return call_code
@@ -1283,16 +1286,21 @@ class CCodePrinter(CodePrinter):
         lhs = expr.lhs
         rhs = expr.rhs
 
-        if (
-            isinstance(rhs, FunctionCall)
-            and isinstance(rhs.funcdef.results.var, BindCVariable)
-            and isinstance(rhs.funcdef.results.var.class_type, BindCArrayType)
-        ):
+        if isinstance(rhs, FunctionCall) and self._returns_via_output_args(rhs.funcdef):
             return self._print(rhs)
 
         lhs_code = self._print(lhs)
         rhs_code = self._print(rhs)
         return f"{lhs_code} = {rhs_code};\n"
+
+    @staticmethod
+    def _result_vars(func):
+        if func.scope is None:
+            return [func.results.var] if func.results.var is not NIL else []
+        return [v for v in func.scope.collect_all_tuple_elements(func.results.var) if isinstance(v, Variable)]
+
+    def _returns_via_output_args(self, func):
+        return len(self._result_vars(func)) > 1
 
     def _print_AliasAssign(self, expr):
         lhs_var = expr.lhs

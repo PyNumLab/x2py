@@ -359,7 +359,7 @@ class FCodePrinter(CodePrinter):
         if isinstance(expr, BindCModule):
             interfaces = (
                 "interface\n"
-                'function c_malloc(size) bind(C,name="malloc") result(ptr)\n'
+                'function c_malloc(size) bind(C,name="x2py_malloc") result(ptr)\n'
                 "use iso_c_binding\n"
                 "integer(c_size_t), value, intent(in) :: size\n"
                 "type(c_ptr) :: ptr\n"
@@ -1200,6 +1200,22 @@ class FCodePrinter(CodePrinter):
             self._constantImports[-1].setdefault("ISO_C_Binding", set()).add("c_associated")
             return f"c_associated({lhs})"
         return f"present({lhs})"
+
+    def _print_IsNot(self, expr):
+        lhs, rhs = expr.args
+        if rhs is NIL:
+            return self._handle_not_none(self._print(lhs), lhs)
+        if lhs is NIL:
+            return self._handle_not_none(self._print(rhs), rhs)
+        raise NotImplementedError(f"Fortran is-not printing is not implemented for {expr}")
+
+    def _print_Is(self, expr):
+        lhs, rhs = expr.args
+        if rhs is NIL:
+            return f".not. {self._handle_not_none(self._print(lhs), lhs)}"
+        if lhs is NIL:
+            return f".not. {self._handle_not_none(self._print(rhs), rhs)}"
+        raise NotImplementedError(f"Fortran is printing is not implemented for {expr}")
 
     def _print_If(self, expr):
         # ...

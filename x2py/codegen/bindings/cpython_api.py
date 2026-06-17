@@ -67,6 +67,7 @@ __all__ = (
     "PyList_GetItem",
     "PyList_New",
     "PyList_SetItem",
+    "PyMemoryError",
     "PyModInitFunc",
     "PyModule",
     "PyModule_AddObject",
@@ -1327,6 +1328,7 @@ PyErr_WarnEx = FunctionDef(
 )
 
 PyNotImplementedError = Variable(PythonObjectType(), name="PyExc_NotImplementedError")
+PyMemoryError = Variable(PythonObjectType(), name="PyExc_MemoryError")
 PyTypeError = Variable(PythonObjectType(), name="PyExc_TypeError")
 PyAttributeError = Variable(PythonObjectType(), name="PyExc_AttributeError")
 PyRuntimeWarning = Variable(PythonObjectType(), name="PyExc_RuntimeWarning")

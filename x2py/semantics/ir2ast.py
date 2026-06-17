@@ -77,6 +77,30 @@ def _array_allows_strides(semantic_type: models.SemanticType) -> bool:
     return contract is None or contract.contiguous is not True
 
 
+def _codegen_array_shape(semantic_type: models.SemanticType, scope) -> tuple[object | None, ...] | None:
+    if semantic_type.rank <= 0:
+        return None
+    shape = list(semantic_type.shape)
+    if not shape:
+        contract = _array_contract(semantic_type)
+        shape = list(contract.shape if contract is not None and contract.shape else [])
+    if not shape:
+        return None
+
+    result = []
+    for dimension in shape:
+        text = str(dimension).strip()
+        if text in {"", ":", "*"} or "Strided" in text:
+            result.append(None)
+        elif text.isdigit():
+            result.append(convert_to_literal(int(text)))
+        elif text.isidentifier():
+            result.append(scope.find(text, "variables"))
+        else:
+            result.append(None)
+    return tuple(result)
+
+
 def _class_type(semantic_class: models.SemanticClass):
     return DataTypeFactory(
         semantic_class.native_name or semantic_class.name,
@@ -155,16 +179,6 @@ def _raise_for_unsupported_allocatable_module_variables(node: models.SemanticMod
 
 
 def _raise_for_unsupported_allocatable_outputs(node: models.SemanticFunction) -> None:
-    copy_return_count = int(_is_allocatable_array(node.return_type))
-    copy_return_count += sum(
-        1
-        for argument in node.arguments
-        if _is_allocatable_array(argument.semantic_type) and str(argument.intent).lower() == "out"
-    )
-    if copy_return_count > 1:
-        raise ValueError(
-            f"Function {node.name!r} has multiple allocatable copy-return arrays, which are not yet supported"
-        )
     for argument in node.arguments:
         if _is_allocatable_array(argument.semantic_type) and str(argument.intent).lower() == "inout":
             raise ValueError(
@@ -368,7 +382,10 @@ def semantic_ir_to_codegen_ast(
                 order=_numpy_array_order(semantic_type, rank),
                 allows_strides=_array_allows_strides(semantic_type),
             )
-        shape = _string_shape(semantic_type) if isinstance(dtype, StringType) else None
+        if isinstance(dtype, StringType):
+            shape = _string_shape(semantic_type)
+        else:
+            shape = _codegen_array_shape(semantic_type, scope)
         try:
             name = scope.get_expected_name(node.name)
         except RuntimeError:

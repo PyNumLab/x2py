@@ -18,6 +18,7 @@ from ..bind_c import (
     BindCModule,
     BindCModuleVariable,
     BindCPointer,
+    BindCResultTupleType,
     BindCSizeOf,
     BindCVariable,
     C_F_Pointer,
@@ -57,6 +58,7 @@ from ..models.datatypes import (
     NumpyInt64Type,
     TupleType,
     NIL,
+    StringType,
     cast_to,
     convert_to_literal,
 )
@@ -318,12 +320,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         # Wrap the arguments and collect the expressions passed as the call argument.
         generated_args = []
-        copy_return_results = []
+        hidden_output_results = []
         for argument in expr.arguments:
-            if self._is_allocatable_copy_return_argument(argument.var):
+            if not argument.bound_argument and self._is_hidden_output_argument(argument.var):
                 result = self._extract_FunctionDefResult(argument.var, expr.scope)
                 self._additional_exprs.extend(result["body"])
-                copy_return_results.append(result)
+                hidden_output_results.append(result)
                 generated_args.append(
                     {
                         "c_arg": None,
@@ -345,14 +347,14 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             self._additional_exprs.extend(result["body"])
             result_infos.append(result)
             func_call_results = self.scope.collect_all_tuple_elements(result["f_result"])
-        result_infos.extend(copy_return_results)
+        result_infos.extend(hidden_output_results)
 
         if not result_infos:
             func_results = NIL
         elif len(result_infos) == 1:
             func_results = result_infos[0]["c_result"]
         else:
-            raise NotImplementedError("Multiple allocatable copy-return arrays are not yet supported")
+            func_results = self._pack_function_results(result_infos)
 
         overload_set = get_direct_overload_set(expr)
 
@@ -398,6 +400,28 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     @staticmethod
     def _is_allocatable_copy_return_argument(var):
         return var.is_ndarray and var.memory_handling == "heap" and getattr(var, "intent", "in") == "out"
+
+    @classmethod
+    def _is_hidden_output_argument(cls, var):
+        if getattr(var, "intent", "in") != "out":
+            return False
+        return (
+            (var.rank == 0 and isinstance(var.class_type, FixedSizeNumericType | CustomDataType))
+            or (isinstance(var.class_type, StringType) and var.memory_handling == "stack")
+            or cls._is_allocatable_copy_return_argument(var)
+        )
+
+    def _pack_function_results(self, result_infos):
+        result_type = BindCResultTupleType.get_new(tuple(info["c_result"].class_type for info in result_infos))
+        result_var = Variable(
+            result_type,
+            self.scope.get_new_name("results"),
+            shape=(convert_to_literal(len(result_infos)),),
+            is_temp=True,
+        )
+        for index, info in enumerate(result_infos):
+            self.scope.insert_symbolic_alias(IndexedElement(result_var, convert_to_literal(index)), info["c_result"])
+        return result_var
 
     def _visit_FunctionOverloadSet(self, expr):
         """
@@ -1135,7 +1159,14 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             )
             result = self._get_bind_c_array(name, orig_var, copy_shape)
 
-            result["body"].append(Assign(result["f_array"], local_var))
+            result["body"].append(
+                If(
+                    IfSection(
+                        IsNot(result["bind_var"], NIL),
+                        [Assign(result["f_array"], local_var)],
+                    )
+                )
+            )
             if memory_handling == "heap":
                 allocated_body = [*result["body"], Deallocate(local_var)]
                 unallocated_body = [
@@ -1194,9 +1225,16 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         body = [
             Assign(shape_var, Add(ArraySize(local_var), convert_to_literal(1))),
             Assign(bind_var, c_malloc(Mul(BindCSizeOf(elem_var), shape_var))),
-            C_F_Pointer(bind_var, ptr_var, [shape_var]),
-            Assign(ptr_var, FortranTransfer(local_var, ptr_var, shape_var)),
-            Assign(IndexedElement(ptr_var, shape_var), C_NULL_CHAR()),
+            If(
+                IfSection(
+                    IsNot(bind_var, NIL),
+                    [
+                        C_F_Pointer(bind_var, ptr_var, [shape_var]),
+                        Assign(ptr_var, FortranTransfer(local_var, ptr_var, shape_var)),
+                        Assign(IndexedElement(ptr_var, shape_var), C_NULL_CHAR()),
+                    ],
+                )
+            ),
         ]
 
         return {
@@ -1294,7 +1332,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             body = [
                 *body,
                 Assign(bind_var, c_malloc(size)),
-                C_F_Pointer(bind_var, ptr_var, shape_vars if order == "F" else shape_vars[::-1]),
+                If(
+                    IfSection(
+                        IsNot(bind_var, NIL),
+                        [C_F_Pointer(bind_var, ptr_var, shape_vars if order == "F" else shape_vars[::-1])],
+                    )
+                ),
             ]
 
         result_var = Variable(

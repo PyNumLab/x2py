@@ -36,6 +36,7 @@ __all__ = (
     "BindCModule",
     "BindCModuleVariable",
     "BindCPointer",
+    "BindCResultTupleType",
     "BindCSizeOf",
     "BindCVariable",
     "CLocFunc",
@@ -142,6 +143,68 @@ class BindCArrayType(Type, TupleType):
     @property
     def order(self):
         """Memory order is not applicable to the packed descriptor."""
+        return None
+
+    @property
+    def datatype(self):
+        """The descriptor is heterogeneous, so its datatype is the descriptor itself."""
+        return self
+
+    def shape_is_compatible(self, shape):
+        """Return whether ``shape`` has one entry with the descriptor field count."""
+        return isinstance(shape, tuple) and len(shape) == 1 and shape[0] == len(self)
+
+    def __getitem__(self, index):
+        return self._element_types[index]
+
+    def __len__(self):
+        return len(self._element_types)
+
+    def __iter__(self):
+        return iter(self._element_types)
+
+
+class BindCResultTupleType(Type, TupleType):
+    """Datatype for a heterogeneous set of C-compatible function outputs."""
+
+    __slots__ = ("_element_types",)
+    _name = "BindCResultTupleType"
+
+    @classmethod
+    def get_new(cls, element_types):
+        element_types = tuple(element_types)
+        if len(element_types) < 2:
+            raise ValueError("Bind-C result tuples require at least two elements")
+        return cls._get_new(element_types)
+
+    @classmethod
+    @cache
+    def _get_new(cls, element_types):
+        def __init__(self):
+            self._element_types = element_types
+            Type.__init__(self)
+
+        name = f"BindCResultTuple{len(element_types)}Type"
+        return type(name, (BindCResultTupleType,), {"__init__": __init__})()
+
+    @property
+    def element_types(self):
+        """Types of the packed C-compatible result fields."""
+        return self._element_types
+
+    @property
+    def container_rank(self):
+        """Rank of the packed result descriptor itself."""
+        return 1
+
+    @property
+    def rank(self):
+        """Rank of the packed result descriptor itself."""
+        return 1
+
+    @property
+    def order(self):
+        """Memory order is not applicable to the packed result descriptor."""
         return None
 
     @property

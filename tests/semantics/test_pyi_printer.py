@@ -86,10 +86,9 @@ end module
 
     assert "a: Ptr(Const(Float64))" in code
     assert "b: Ptr(Const(Float64))" in code
-    assert "c: Annotated[Ptr(Float64), Intent('out')]" in code
-    assert 'Returns["c", Float64]' not in code
-
-    assert "-> None" in code
+    assert "c: Annotated[Ptr(Float64), Intent('out')]" not in code
+    assert 'Returns["c"' not in code
+    assert ") -> Ptr(Float64): ..." in code
 
 
 def test_emit_rejects_unknown_semantic_type():
@@ -338,8 +337,7 @@ end module
     assert "Shape" not in code
     assert "x: Const(Float64[::Strided])" in code
     assert "y: Annotated[Float64[::Strided], Intent('out')]" in code
-    assert "-> None" in code
-    assert 'Returns["y", Float64[' not in code
+    assert 'Returns["y", Float64[::Strided]]' in code
 
 
 def test_emit_explicit_bound_ranges_as_extents_without_source_dimension_metadata():
@@ -419,7 +417,7 @@ end module
 
     assert "Allocatable" in code
     assert "@native_call([Return(0)])" in code
-    assert 'def build() -> Returns["x", Annotated[Float64[:], Allocatable]]: ...' in code
+    assert "def build() -> Annotated[Float64[:], Allocatable] | None: ..." in code
     assert "def make_values() -> Annotated[Float64[:], Allocatable]: ..." in code
 
 
@@ -726,7 +724,7 @@ end module
     # --------------------------------------------------------
 
     assert "K: Annotated[Float64[::Strided, ::Strided], ORDER_F" in code
-    assert 'Returns["K", Float64[' not in code
+    assert 'Returns["K", Annotated[Float64[::Strided, ::Strided], ORDER_F]]' in code
 
     assert "coords: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_F" in code
 
@@ -795,9 +793,9 @@ end module
 
     code = PyiPrinter().emit_module(smod)
 
-    assert "-> None" in code
-    assert "c: Annotated[Ptr(Float64), Intent('out')]" in code
-    assert 'Returns["c", Float64]' not in code
+    assert "c: Annotated[Ptr(Float64), Intent('out')]" not in code
+    assert 'Returns["c"' not in code
+    assert ") -> Ptr(Float64): ..." in code
 
 
 # ============================================================
@@ -1338,7 +1336,15 @@ def test_printer_emits_extended_storage_and_callable_forms():
 
 def test_printer_projection_return_helpers_and_keyword_data_members():
     printer = PyiPrinter()
-    argument = SemanticArgument("x", SemanticType("Float64"), intent="inout", optional=True)
+    argument = SemanticArgument(
+        "x",
+        SemanticType(
+            "Float64",
+            storage=SemanticStorageContract(kind="reference", mutable=True, pointer_depth=1),
+        ),
+        intent="inout",
+        optional=True,
+    )
     plain = SemanticArgument("value", SemanticType("Int32"))
     module = SemanticModule(
         name="returns",
@@ -1351,9 +1357,10 @@ def test_printer_projection_return_helpers_and_keyword_data_members():
         ],
     )
 
-    assert printer._projected_argument_return(argument) == 'Returns["x", Float64, Optional]'
+    assert printer._projected_argument_return(argument, visible=True) == 'Returns["x", Ptr(Float64), Optional]'
     assert printer._named_return(plain) == 'Returns["value", Int32]'
-    assert printer._projected_argument_return(plain) == "Int32"
+    assert printer._projected_argument_return(argument, visible=False) == "Ptr(Float64) | None"
+    assert printer._projected_argument_return(plain, visible=False) == "Int32"
     assert "var['class']: Int32" in emit_module(module)
     assert "@native_call([Return(0)])" in emit_module(module)
 
