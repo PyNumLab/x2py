@@ -279,6 +279,8 @@ class FortranToIRConverter:
             metadata["fortran_character_length"] = self._character_length(var)
             if getattr(var, "allocatable", False):
                 metadata["fortran_allocatable"] = True
+        if getattr(var, "target", False):
+            metadata["fortran_target"] = True
         shape = [self._resolve_compile_time_text(dim) for dim in var.shape]
         storage = self._array_storage_contract(var, shape) if var.rank > 0 else None
         semantic_type = SemanticType(
@@ -1466,19 +1468,38 @@ class FortranToIRConverter:
         by_name = {arg.name: arg for arg in arguments}
 
         projection: list[ProjectionMapping] = []
+        python_position = 0
+        result_position = 1 if proc.result is not None else 0
         for native_position, native_arg in enumerate(proc.arguments):
             arg = by_name[native_arg.name]
             intent = getattr(arg, "intent", "in")
+            is_copy_return_output = intent == "out" and FortranToIRConverter._is_allocatable_array(arg.semantic_type)
+            mapping_python_position = None if is_copy_return_output else python_position
+            mapping_result_position = result_position if is_copy_return_output else None
             projection.append(
                 ProjectionMapping(
                     python_name=arg.name,
                     native_name=native_arg.name,
                     native_position=native_position,
-                    python_position=native_position,
+                    python_position=mapping_python_position,
+                    result_position=mapping_result_position,
                     intent=intent,
                 )
             )
+            if is_copy_return_output:
+                result_position += 1
+            else:
+                python_position += 1
         return projection
+
+    @staticmethod
+    def _is_allocatable_array(semantic_type: SemanticType | None) -> bool:
+        return bool(
+            semantic_type is not None
+            and semantic_type.storage is not None
+            and semantic_type.storage.array is not None
+            and semantic_type.storage.array.allocatable
+        )
 
     @staticmethod
     def _base_classes(dtype: FortranDerivedType) -> list[str]:

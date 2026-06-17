@@ -419,6 +419,27 @@ end module generic_mod
     assert all(proc.visibility == "public" for proc in box.overload_sets[0].procedures)
 
 
+def test_converter_preserves_allocatable_target_metadata():
+    source = """
+module alloc_target_mod
+  real(8), allocatable, target :: values(:)
+  type :: box
+    real(8), allocatable :: field(:)
+  end type box
+end module alloc_target_mod
+"""
+    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+
+    values = module.variables[0]
+    assert values.name == "values"
+    assert values.semantic_type.storage.array.allocatable is True
+    assert values.semantic_type.metadata["fortran_target"] is True
+
+    field = module.classes[0].fields[0]
+    assert field.semantic_type.storage.array.allocatable is True
+    assert "fortran_target" not in field.semantic_type.metadata
+
+
 def test_converter_reports_missing_generic_target_as_readiness_blocker():
     converter = FortranToIRConverter()
     source = """
@@ -1603,6 +1624,17 @@ end module
     x = func.arguments[0]
 
     assert array_contract(x.semantic_type).allocatable is True
+    assert x.intent == "out"
+    assert func.projection == [
+        ProjectionMapping(
+            python_name="x",
+            native_name="x",
+            native_position=0,
+            python_position=None,
+            result_position=0,
+            intent="out",
+        )
+    ]
 
 
 # ============================================================

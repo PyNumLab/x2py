@@ -201,6 +201,89 @@ end module generic_mod
         )
 
 
+def test_allocatable_module_array_without_target_raises_before_codegen():
+    source = """
+module alloc_mod
+  real(8), allocatable :: values(:)
+end module alloc_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    with pytest.raises(ValueError, match="allocatable array without the Fortran target attribute"):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )
+
+
+def test_allocatable_result_and_output_lower_for_copy_return_codegen():
+    source = """
+module alloc_mod
+contains
+  subroutine fill(values)
+    real(8), allocatable, intent(out) :: values(:)
+  end subroutine fill
+  function make_values() result(values)
+    real(8), allocatable :: values(:)
+  end function make_values
+end module alloc_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    fill = next(function for function in codegen_module.funcs if str(function.name) == "fill")
+    values = fill.arguments[0].var
+    assert values.intent == "out"
+    assert values.memory_handling == "heap"
+    assert isinstance(values.class_type, NumpyNDArrayType)
+    assert values.class_type.rank == 1
+
+    make_values = next(function for function in codegen_module.funcs if str(function.name) == "make_values")
+    result = make_values.results.var
+    assert result.intent == "out"
+    assert result.memory_handling == "heap"
+    assert isinstance(result.class_type, NumpyNDArrayType)
+    assert result.class_type.rank == 1
+
+
+def test_allocatable_inout_and_multiple_copy_returns_raise_before_codegen():
+    inout_source = """
+module alloc_mod
+contains
+  subroutine replace(values)
+    real(8), allocatable, intent(inout) :: values(:)
+  end subroutine replace
+end module alloc_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(inout_source))
+
+    with pytest.raises(ValueError, match="allocatable inout argument 'values'"):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )
+
+    multiple_source = """
+module alloc_mod
+contains
+  subroutine make_pair(left, right)
+    real(8), allocatable, intent(out) :: left(:)
+    real(8), allocatable, intent(out) :: right(:)
+  end subroutine make_pair
+end module alloc_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(multiple_source))
+
+    with pytest.raises(ValueError, match="multiple allocatable copy-return arrays"):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )
+
+
 def test_defined_operators_and_assignment_become_named_codegen_overload_sets():
     semantic_module = fortran_module_to_semantic_module(
         parse_fortran_file(

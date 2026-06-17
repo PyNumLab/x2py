@@ -171,6 +171,17 @@ class _SemanticReadinessChecker:
         for var in module.variables:
             if not _is_public(var):
                 continue
+            if self._is_allocatable_array(var.semantic_type) and not var.semantic_type.metadata.get("fortran_target"):
+                self._add_blocker(
+                    "allocatable_module_target_missing",
+                    "Borrowed zero-copy module views require allocatable module arrays to have the Fortran target attribute.",
+                    {
+                        "owner": f"{module.name}.{var.name}",
+                        "item": var.name,
+                    },
+                    unit=f"{module.name}.{var.name}",
+                    unit_kind="variable",
+                )
             self._check_argument(
                 var,
                 owner=f"{module.name}.{var.name}",
@@ -342,6 +353,18 @@ class _SemanticReadinessChecker:
         )
         function_symbols = set(known_shape_symbols) | {arg.name for arg in func.arguments}
         for arg in func.arguments:
+            if self._is_unsupported_allocatable_output(arg.semantic_type, arg.intent):
+                self._add_blocker(
+                    "allocatable_replacement_policy_missing",
+                    "Allocatable inout arrays need a replacement policy before they can be wrapped safely.",
+                    {
+                        "owner": owner,
+                        "item": arg.name,
+                        "intent": arg.intent,
+                    },
+                    unit=unit,
+                    unit_kind=unit_kind,
+                )
             self._check_argument(
                 arg,
                 owner=f"{owner}.{arg.name}",
@@ -351,6 +374,7 @@ class _SemanticReadinessChecker:
                 unit=unit,
                 unit_kind=unit_kind,
             )
+        self._check_allocatable_copy_return_count(func, owner, unit, unit_kind)
         self._check_type(
             func.return_type,
             owner=f"{owner}.return",
@@ -430,7 +454,6 @@ class _SemanticReadinessChecker:
                 unit=unit,
                 unit_kind=unit_kind,
             )
-            return
 
         if not self.index.is_known_type(type_name, module) and not _is_external_type_ref(semantic_type):
             self._add_blocker(
@@ -450,6 +473,41 @@ class _SemanticReadinessChecker:
             unit=unit,
             unit_kind=unit_kind,
         )
+
+    @classmethod
+    def _is_unsupported_allocatable_output(cls, semantic_type: SemanticType | None, intent: str) -> bool:
+        return cls._is_allocatable_array(semantic_type) and str(intent).lower() == "inout"
+
+    def _check_allocatable_copy_return_count(
+        self,
+        func: SemanticFunction,
+        owner: str,
+        unit: str,
+        unit_kind: str,
+    ) -> None:
+        copy_return_items = []
+        if self._is_allocatable_array(func.return_type):
+            copy_return_items.append("return")
+        copy_return_items.extend(
+            arg.name
+            for arg in func.arguments
+            if self._is_allocatable_array(arg.semantic_type) and str(arg.intent).lower() == "out"
+        )
+        if len(copy_return_items) <= 1:
+            return
+        self._add_blocker(
+            "allocatable_multiple_copy_returns_unsupported",
+            "Multiple allocatable copy-return arrays are not yet supported.",
+            {"owner": owner, "item": ", ".join(copy_return_items)},
+            unit=unit,
+            unit_kind=unit_kind,
+        )
+
+    @staticmethod
+    def _is_allocatable_array(semantic_type: SemanticType | None) -> bool:
+        if semantic_type is None or semantic_type.storage is None or semantic_type.storage.array is None:
+            return False
+        return semantic_type.storage.array.allocatable
 
     def _check_callable_type(
         self,

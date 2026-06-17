@@ -406,12 +406,21 @@ subroutine build(x)
 
 end subroutine
 
+function make_values() result(x)
+
+    real(8), allocatable :: x(:)
+
+end function
+
 end module
 """
 
     code = generate_pyi(source)
 
     assert "Allocatable" in code
+    assert "@native_call([Return(0)])" in code
+    assert 'def build() -> Returns["x", Annotated[Float64[:], Allocatable]]: ...' in code
+    assert "def make_values() -> Annotated[Float64[:], Allocatable]: ..." in code
 
 
 # ============================================================
@@ -1020,6 +1029,36 @@ end module generic_mod
         "set_integer",
         "set_real",
     ]
+
+
+def test_emit_and_load_allocatable_module_variable_getter():
+    source = """
+module alloc_view_mod
+  real(8), allocatable, target :: values(:)
+  type :: box
+    real(8), allocatable :: field(:)
+  end type box
+end module alloc_view_mod
+"""
+    code = generate_pyi(source)
+
+    assert '@module_variable("values")' in code
+    assert "def get_values() -> Annotated[Float64[:], Allocatable, FortranTarget] | None: ..." in code
+    assert "field: Annotated[Float64[:], Allocatable]" in code
+
+    loaded = parse_pyi_text(code, module_name="alloc_view_mod")
+    assert [variable.name for variable in loaded.variables] == ["values"]
+    assert loaded.variables[0].metadata["module_variable_getter"] == "get_values"
+    assert loaded.variables[0].semantic_type.storage.array.allocatable is True
+    assert loaded.variables[0].semantic_type.metadata["fortran_target"] is True
+    assert loaded.classes[0].fields[0].semantic_type.storage.array.allocatable is True
+    assert "fortran_target" not in loaded.classes[0].fields[0].semantic_type.metadata
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        loaded,
+        Scope(name=loaded.name, scope_type="module"),
+    )
+    assert codegen_module.variables[0].is_target is True
 
 
 def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_source():

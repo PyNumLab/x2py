@@ -6,6 +6,7 @@ from typing import Any
 
 
 EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
+MODULE_VARIABLE_GETTER_METADATA = "module_variable_getter"
 
 
 # ============================================================

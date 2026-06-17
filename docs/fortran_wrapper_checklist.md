@@ -62,6 +62,11 @@ extension class. Fortran inheritance is retained semantically but is not yet
 Python C-type inheritance, so derived wrappers require explicit specific
 procedures.
 
+Example: a module interface `norm` with `norm_i32`, `norm_f64`, and `norm_vec`
+becomes one Python callable that dispatches by dtype and rank. This section is
+mostly straightforward now; the remaining risk is accepting two specifics that
+look different in Fortran but collapse to the same Python/NumPy signature.
+
 - [x] Define the Python API for a generic name with multiple concrete Fortran
   procedures.
 - [x] Preserve module generic interfaces in semantic IR.
@@ -86,6 +91,12 @@ semantic overload sets, mapped to Python slots or documented named methods,
 and dispatched in the generated C extension. Defined assignment is explicit
 mutating `assign(...)`; Python `=` is never intercepted.
 
+Example: `interface operator(+)` maps to `__add__` and, when argument order
+allows it, `__radd__`; `interface assignment(=)` maps to `obj.assign(rhs)`.
+The main design choice is fixed: Python syntax is used only where Python has a
+matching operation. Named Fortran operators such as `.cross.` remain named
+methods because inventing syntax would hide dispatch and error behavior.
+
 - [x] Preserve `operator(...)` and `assignment(=)` names in semantic IR.
 - [x] Resolve every operator target through its generic binding.
 - [x] Map arithmetic operators to `__add__`, `__sub__`, `__mul__`,
@@ -108,29 +119,53 @@ mutating `assign(...)`; Python `=` is never intercepted.
 
 ## 3. Output Arguments And Multiple Results
 
-Current state: intent metadata and projection information exist in semantic IR,
-but the runtime bridge does not consistently project output arguments into
-Python return values.
+Current state: intent metadata and projection information exist in semantic IR.
+Allocatable array function results and allocatable `intent(out)` array dummy
+arguments use a copy-return policy: the Fortran bridge copies allocated native
+storage into C memory, deallocates the Fortran temporary, and returns a NumPy
+array that owns the copied memory. General output projection for scalar,
+non-allocatable array, string, derived-type, and multi-output combinations is
+still incomplete.
+
+Example: `call solve(a, x, info)` where `x` and `info` are `intent(out)` could
+return `(x, info)`, or require a caller-provided mutable `x` and return only
+`info`. The choice affects allocation, tuple ordering, and whether Python can
+distinguish `intent(out)` from `intent(inout)` mutation.
+For allocatable `intent(out)` arrays and allocatable array function results the
+chosen path is copy-return. Unallocated allocatable results return `None`.
+`intent(inout)` allocatable replacement remains section 6 work because Python
+must decide whether the existing object is replaced, detached, or mutated.
 
 - [ ] Define Python return behavior for scalar `intent(out)` arguments.
-- [ ] Define Python return behavior for array `intent(out)` arguments.
+- [x] Define Python return behavior for allocatable array `intent(out)`
+  arguments.
+- [ ] Define Python return behavior for non-allocatable array `intent(out)`
+  arguments.
 - [ ] Define whether callers may provide preallocated output arrays.
 - [ ] Define tuple ordering for multiple output arguments and function results.
-- [ ] Preserve `intent(in)`, `intent(out)`, and `intent(inout)` through codegen
-  AST conversion.
+- [x] Preserve `intent(in)`, allocatable `intent(out)`, and `intent(inout)`
+  through codegen AST conversion.
+- [ ] Preserve non-allocatable `intent(out)` through codegen AST conversion.
 - [ ] Consume semantic projection mappings during wrapper generation.
 - [ ] Return newly produced scalar outputs directly to Python.
 - [ ] Return multiple outputs as a stable Python tuple.
 - [ ] Verify that `intent(inout)` mutates the supplied Python object and is not
   duplicated unnecessarily.
 - [ ] Handle a function result combined with output dummy arguments.
-- [ ] Test scalar, array, string, and derived-type outputs.
+- [x] Test allocatable array outputs and allocatable array function results.
+- [ ] Test scalar, non-allocatable array, string, and derived-type outputs.
 - [ ] Test output allocation failures and invalid preallocated output shapes.
 
 ## 4. Optional Arguments
 
 Current state: optional facts are parsed and stored in semantic IR, but codegen
 AST conversion currently drops the Python-call omission contract.
+
+Example: `subroutine step(dt, max_iter, tol)` with optional `max_iter` and
+`tol` should allow `step(dt)`, `step(dt, tol=1e-8)`, and deterministic handling
+of `None`. The key issue is that omitted and explicitly passed `None` are not
+always equivalent to Fortran `present(...)`, especially for optional outputs or
+arrays.
 
 - [ ] Preserve optional status through semantic IR to codegen AST conversion.
 - [ ] Define omission separately from explicitly passing `None`.
@@ -152,6 +187,11 @@ AST conversion currently drops the Python-call omission contract.
 Current state: `value` and procedure `bind(C)` attributes are parsed, but the
 runtime path needs explicit ABI tests and complete name handling.
 
+Example: `integer(c_int), value :: n` must be passed by value, while the same
+declaration without `value` remains by reference. Existing `bind(C,
+name="...")` procedures can sometimes be called directly, but only when every
+argument has an interoperable ABI; otherwise a Fortran shim is still needed.
+
 - [ ] Preserve by-value versus by-reference scalar calling conventions through
   code generation.
 - [ ] Preserve procedure `bind(C)` metadata in semantic IR.
@@ -167,17 +207,31 @@ runtime path needs explicit ABI tests and complete name handling.
 
 ## 6. Allocatable Dummy Arguments And Results
 
-Current state: allocatable derived-type fields work in a limited form.
-Allocatable dummy arguments, replacement semantics, and general results are not
-covered end to end.
+Current state: allocatable derived-type fields and target-backed module arrays
+are exposed as borrowed zero-copy NumPy views with `None` for unallocated
+storage. Allocatable array function results and allocatable `intent(out)` array
+dummies are copied into NumPy-owned memory before returning to Python.
+Replacement semantics for allocatable `intent(inout)` remain blocked.
 
-- [ ] Define ownership for `allocatable, intent(out)` results returned to
-  Python.
+Example: `real(c_double), allocatable :: values(:)` inside a wrapped derived
+type is read as `obj.values`, returning either `None` or a borrowed NumPy view.
+For dummy arguments such as `real, allocatable, intent(out) :: values(:)`, x2py
+uses a copy-return policy: after the native call, allocated Fortran storage is
+copied to C memory that NumPy owns through its generated base capsule, then the
+Fortran allocatable is deallocated. A plain NumPy view over Fortran-allocated
+storage would not automatically make NumPy the owner; ownership requires either
+this copy or a capsule/base object whose destructor calls the correct Fortran
+deallocation routine.
+
+- [x] Define ownership for `allocatable, intent(out)` array results returned to
+  Python using copy-return NumPy-owned storage.
 - [ ] Define replacement behavior for `allocatable, intent(inout)` arguments.
-- [ ] Define who deallocates native storage and when.
+- [x] Define who deallocates native storage and when for allocatable
+  copy-return arrays.
 - [ ] Preserve allocation state and deferred shape through all IR layers.
-- [ ] Return `None` or a documented sentinel for unallocated values.
-- [ ] Safely expose newly allocated rank-1 and multidimensional arrays.
+- [x] Return `None` for unallocated copy-return arrays.
+- [x] Safely expose newly allocated rank-1 and multidimensional copy-return
+  arrays.
 - [ ] Invalidate or detach stale Python views after native reallocation.
 - [ ] Support allocatable scalar derived types where feasible.
 - [ ] Test allocate, reallocate, deallocate, and unallocated paths.
@@ -187,6 +241,13 @@ covered end to end.
 
 Current state: pointer facts are preserved in semantic storage contracts, but
 general pointer ownership and association are not a supported runtime contract.
+
+Example: `real, pointer :: p(:)` may be associated with module storage, a
+derived-type field, a dummy argument target, or nothing. Possible paths are:
+expose only nullable borrowed views, create owner capsules for known allocated
+targets, or block all pointer results until lifetime can be proven. The hard
+issue is reassociation: Python may hold a view while Fortran points `p`
+somewhere else.
 
 - [ ] Define borrowed, owned, and nullable pointer policies.
 - [ ] Define pointer association and reassociation behavior visible to Python.
@@ -206,6 +267,12 @@ Current state: character function results have specialized support, but general
 numeric and derived-type array results do not have complete shape and ownership
 handling.
 
+Example: `function spectrum(n) result(x); real :: x(n)` can return a copied
+NumPy array because the result is temporary, while `real, pointer :: x(:)` or
+`real, allocatable :: x(:)` needs an explicit lifetime owner. The design choices
+are copy for all function arrays, zero-copy only where ownership is stable, or a
+mixed policy based on result category.
+
 - [ ] Support explicit-shape numeric array results.
 - [ ] Support automatic-shape numeric array results.
 - [ ] Support allocatable numeric array results.
@@ -221,6 +288,12 @@ handling.
 
 Current state: explicit-shape and assumed-shape arrays are tested for selected
 ranks. Several descriptor and bounds cases remain unsupported or unverified.
+
+Example: `a(n, m)` is straightforward when `n` and `m` are known arguments, but
+`a(*)`, `dimension(..)`, non-default lower bounds, and rank greater than the
+selected maximum need explicit Python-side validation rules. The main decisions
+are how callers supply missing extents, which ranks are accepted, and whether
+copies are allowed for non-contiguous or byte-swapped arrays.
 
 - [ ] Test assumed-size arrays and define how their missing final extent is
   supplied.
@@ -246,22 +319,35 @@ Current state: classes, fields, and basic type-bound methods are tested. General
 derived-type arguments, results, arrays, nested components, and ownership are
 not fully covered.
 
+Example: `subroutine update(p)` with `type(particle), intent(inout) :: p`
+should mutate the native instance behind the Python wrapper. Passing derived
+types by value, returning new derived instances, nested components, and arrays
+of derived types each need separate ownership and layout decisions; scalar
+borrowed fields are simpler than replacement of whole objects.
+
 - [ ] Support scalar derived-type arguments for `intent(in)`.
 - [ ] Support scalar derived-type arguments for `intent(inout)`.
 - [ ] Support scalar derived-type output arguments and function results.
 - [ ] Support nested derived-type components.
 - [ ] Define copy versus reference behavior for each intent.
 - [ ] Preserve private component visibility.
-- [ ] Support allocatable and pointer components using the ownership policies
-  from sections 6 and 7.
+- [x] Support allocatable components using the borrowed-view policy from
+  section 6.
+- [ ] Support pointer components using the ownership policy from section 7.
 - [ ] Support arrays of derived types or explicitly defer them.
-- [ ] Prevent use-after-free when child objects or field views outlive parents.
+- [x] Prevent parent destruction while borrowed field views exist.
 - [ ] Test identity, mutation, copy, nested fields, and destruction order.
 
 ## 11. Inheritance And Polymorphism
 
 Current state: `extends(...)` is represented semantically, while runtime
 inheritance and general polymorphic calls are not verified.
+
+Example: `class(shape), intent(in) :: s` may receive a `circle` or `box` at
+runtime. Options include Python inheritance mirroring Fortran extension types,
+explicit dynamic-type tags with checked casts, or blocking polymorphic calls.
+The difficult part is preserving Fortran dispatch and finalization when the
+declared type and dynamic type differ.
 
 - [ ] Generate Python inheritance for supported Fortran extension types.
 - [ ] Preserve base-component layout and initialization.
@@ -281,6 +367,12 @@ Current state: Python can allocate basic wrapped classes, but default component
 initialization, user constructors, and Fortran finalization are not complete
 runtime contracts.
 
+Example: a type with default field values and `final :: cleanup` should produce
+a Python object whose native storage is initialized exactly once and finalized
+exactly once. The main choices are whether construction is always generated,
+whether generic constructor interfaces map to `__init__`, and how finalizer
+failures are represented without corrupting Python object destruction.
+
 - [ ] Preserve default component initialization expressions.
 - [ ] Define the generated default Python constructor signature.
 - [ ] Map supported generic constructor interfaces to Python construction.
@@ -296,6 +388,12 @@ runtime contracts.
 
 Current state: procedure declarations and interfaces can be parsed, but callback
 signature, lifetime, threading, and exception behavior are incomplete.
+
+Example: `subroutine integrate(f)` where `f` is a dummy procedure can call a
+Python function immediately, while storing `f` for later needs a persistent
+callback handle. Possible paths are immediate-call callbacks only, registered
+callbacks with explicit unregister, or full procedure-pointer support. Stored
+callbacks require GIL, exception, and lifetime policy.
 
 - [ ] Resolve dummy procedures through explicit or abstract interfaces.
 - [ ] Represent callback argument and result types as a complete semantic
@@ -313,14 +411,26 @@ signature, lifetime, threading, and exception behavior are incomplete.
 
 ## 14. Module Variables And Constants
 
-Current state: module variables reach semantic IR and lower-level codegen has
-partial machinery, but public runtime behavior is not systematically tested.
+Current state: module variables reach semantic IR. Target-backed allocatable
+module arrays are exposed through explicit getters as borrowed zero-copy NumPy
+views with `None` for unallocated storage. Native module storage remains owned
+by the Fortran module for the process lifetime.
+
+Example: `real(c_double), allocatable, target :: values(:)` is exposed as
+`get_values() -> ndarray | None`; users call wrapped Fortran allocation and
+deallocation routines explicitly. Existing views are borrowed and are not
+tracked: if Fortran reallocates or deallocates `values`, a previous NumPy view
+may dangle, so callers must copy when they need independent lifetime. Scalar
+module variables are a separate path: they can be property-like getters/setters
+unless they are `parameter`, in which case they should become read-only Python
+constants.
 
 - [ ] Expose public scalar module variables with typed getters and setters.
-- [ ] Expose public module arrays with explicit copy/view and lifetime policy.
+- [x] Expose public allocatable module arrays with explicit copy/view and
+  lifetime policy.
 - [ ] Expose parameters as read-only Python constants.
 - [ ] Reject writes to parameters and private variables.
-- [ ] Support allocatable module variables using section 6 ownership rules.
+- [x] Support allocatable module variables using section 6 ownership rules.
 - [ ] Support pointer module variables using section 7 ownership rules.
 - [ ] Define synchronization and thread-safety expectations for global state.
 - [ ] Define whether `save` variables are exposed or remain procedure-internal.
@@ -332,6 +442,11 @@ partial machinery, but public runtime behavior is not systematically tested.
 
 Current state: `enum, bind(C)` syntax is validated, but enumerator metadata is
 not exported to semantic IR or Python.
+
+Example: `enum, bind(C); enumerator :: red = 1, blue; end enum` should preserve
+explicit and implicit integer values. The main design choice is whether Python
+gets `enum.IntEnum`, plain integer constants, or both; argument conversion and
+return values must then consistently preserve or coerce enum identity.
 
 - [ ] Add parser models for enum blocks and enumerators.
 - [ ] Preserve explicit and implicit enumerator values.
@@ -347,6 +462,12 @@ not exported to semantic IR or Python.
 
 Current state: common scalar character arguments and results work. Mutable,
 optional, array, encoding, and embedded-NUL behavior remains incomplete.
+
+Example: `character(len=8), intent(inout) :: name` can truncate, pad, and mutate
+in place, while `character(len=:), allocatable` needs allocation ownership.
+Decisions include whether Python `str` or `bytes` is the public type for each
+kind, how embedded NULs behave, and whether character arrays are supported or
+blocked with a precise diagnostic.
 
 - [ ] Support `intent(out)` scalar character arguments.
 - [ ] Support `intent(inout)` scalar character arguments.
@@ -365,6 +486,12 @@ optional, array, encoding, and embedded-NUL behavior remains incomplete.
 
 Current state: selected common 32-bit and 64-bit scalar types are exercised.
 The semantic map is broader than the runtime evidence.
+
+Example: `integer(kind=selected_int_kind(18))` may be 64-bit on one compiler and
+unavailable or different elsewhere. Straightforward cases are common C
+interoperable kinds; the riskier path needs compiler probing so kind numbers do
+not get mistaken for byte sizes. Unsupported kinds should fail before wrapper
+compilation.
 
 - [ ] Test signed integer kinds corresponding to 8, 16, 32, and 64 bits.
 - [ ] Test logical arguments, results, and arrays for supported storage sizes.
@@ -387,6 +514,12 @@ Current state: native derived types are accessed through generated wrappers,
 but complete `bind(C)`, `sequence`, and layout-sensitive contracts are not
 verified.
 
+Example: a `type, bind(C) :: point` with two `real(c_double)` components can
+share C layout if padding and alignment are proven, while ordinary Fortran
+types should use generated accessors. The decision is whether to expose direct
+memory views for interoperable types only, or always route through accessors to
+avoid compiler-layout assumptions.
+
 - [ ] Preserve `bind(C)` and `sequence` type attributes in semantic IR.
 - [ ] Preserve component declaration order and interoperable component facts.
 - [ ] Define when direct C layout access is allowed.
@@ -401,6 +534,12 @@ verified.
 
 Current state: runtime wrapper builds require one generated semantic module from
 one source path.
+
+Example: module `solver` may `use mesh, only: grid`, and a submodule may
+implement procedures declared in the parent module. The likely path is a module
+dependency graph with ordered compilation and one generated extension; open
+issues are duplicate module names, renamed imports, prebuilt module files, and
+incremental rebuild invalidation across all sources.
 
 - [ ] Accept multiple source files in one wrapper build.
 - [ ] Build a dependency graph from `use` associations.
@@ -419,6 +558,12 @@ one source path.
 Current state: some public/private and native/Python naming information exists,
 but collision behavior needs end-to-end policy and tests.
 
+Example: Fortran names `class`, `Class`, and `class_` can collide after Python
+normalization or keyword escaping. This section is mostly policy and diagnostic
+work: decide one mangling rule, apply it consistently to modules, types,
+methods, fields, and generated helpers, and fail deterministically when two
+public symbols still collide.
+
 - [ ] Export only public Fortran procedures, types, bindings, and variables.
 - [ ] Preserve private type-bound procedures as non-public implementation
   details.
@@ -436,6 +581,12 @@ but collision behavior needs end-to-end policy and tests.
 
 Current state: the tested build path uses GNU Fortran on the local/CI platform.
 Production runtime behavior and compiler portability remain broader work.
+
+Example: `error stop` inside wrapped Fortran can terminate the process unless
+the runtime path intercepts it, and a long OpenMP region may need GIL release
+without allowing unsafe Python callbacks. Possible paths are GNU-only documented
+support first, then compiler-specific verification for each additional ABI and
+platform after the core behavior is stable.
 
 - [ ] Define behavior for `stop` and `error stop` without terminating the Python
   process where technically possible.

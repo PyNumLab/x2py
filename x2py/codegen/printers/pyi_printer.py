@@ -10,6 +10,7 @@ import re
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
+    MODULE_VARIABLE_GETTER_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
@@ -162,6 +163,8 @@ class PyiPrinter:
             metadata.append(f"FortranCharacterLength({json.dumps(str(character_length))})")
         if semantic_type.metadata.get("fortran_allocatable"):
             metadata.append("FortranAllocatable")
+        if semantic_type.metadata.get("fortran_target"):
+            metadata.append("FortranTarget")
         return metadata
 
     def _emit_callable_type(self, semantic_type: SemanticType) -> str:
@@ -184,6 +187,26 @@ class PyiPrinter:
 
     def emit_data_member(self, arg: SemanticVariable) -> str:
         return self._emit_typed_name(self._annotation_target(arg.name), arg)
+
+    def emit_module_variable(self, arg: SemanticVariable) -> str:
+        if self._is_allocatable_module_array(arg):
+            return self.emit_module_variable_getter(arg)
+        return self._emit_typed_name(self._annotation_target(arg.name), arg)
+
+    def emit_module_variable_getter(self, arg: SemanticVariable) -> str:
+        getter_name = str(arg.metadata.get(MODULE_VARIABLE_GETTER_METADATA) or f"get_{arg.name}")
+        return_type = f"{self.emit_semantic_type(arg.semantic_type)} | None"
+        return f'@module_variable("{arg.name}")\ndef {getter_name}() -> {return_type}: ...'
+
+    @staticmethod
+    def _is_allocatable_module_array(arg: SemanticVariable) -> bool:
+        storage = arg.semantic_type.storage
+        return bool(
+            storage is not None
+            and storage.array is not None
+            and storage.array.allocatable
+            and arg.metadata.get(MODULE_VARIABLE_GETTER_METADATA) is not False
+        )
 
     def _emit_typed_name(
         self,
@@ -354,7 +377,7 @@ class PyiPrinter:
         sections: list[str] = []
         self._append_imports(sections, module)
         self._append_items(sections, module.classes, self.emit)
-        self._append_items(sections, module.variables, self.emit_data_member)
+        self._append_items(sections, module.variables, self.emit_module_variable)
         self._append_items(sections, module.functions, self.emit_function)
         self._append_items(sections, module.overload_sets, self.emit_overload_set)
         return "\n".join(sections)
@@ -481,9 +504,38 @@ class PyiPrinter:
             sections.append("")
 
     def _projected_return_annotation(self, func: SemanticFunction) -> str:
+        returned_args = [
+            arg
+            for _, arg in sorted(
+                self._projected_return_arguments(func),
+                key=lambda item: item[0],
+            )
+        ]
+        parts = []
         if func.return_type:
-            return self.emit_semantic_type(func.return_type)
-        return "None"
+            parts.append(self.emit_semantic_type(func.return_type))
+        parts.extend(self._projected_argument_return(arg) for arg in returned_args)
+        if not parts:
+            return "None"
+        if len(parts) == 1:
+            return parts[0]
+        return f"tuple[{', '.join(parts)}]"
+
+    @staticmethod
+    def _projected_return_arguments(func: SemanticFunction) -> list[tuple[int, SemanticArgument]]:
+        by_native_position = {
+            mapping.native_position: mapping
+            for mapping in func.projection
+            if mapping.native_position is not None
+            and mapping.result_position is not None
+            and mapping.python_position is None
+        }
+        returned = []
+        for native_position, arg in enumerate(func.arguments):
+            mapping = by_native_position.get(native_position)
+            if mapping is not None:
+                returned.append((mapping.result_position, arg))
+        return returned
 
     def _projected_argument_return(self, arg: SemanticArgument) -> str:
         if self._requires_named_return(arg):
@@ -491,7 +543,7 @@ class PyiPrinter:
         return self.emit_semantic_type(arg.semantic_type)
 
     def _requires_named_return(self, arg: SemanticArgument) -> bool:
-        return getattr(arg, "intent", "in") == "inout"
+        return getattr(arg, "intent", "in") in {"out", "inout"}
 
     def _named_return(self, arg: SemanticArgument) -> str:
         optional = ", Optional" if arg.optional else ""
@@ -571,7 +623,14 @@ class PyiPrinter:
 
     @staticmethod
     def _call_arguments(func: SemanticFunction) -> list[SemanticArgument]:
-        return list(func.arguments)
+        returned_positions = {
+            mapping.native_position
+            for mapping in func.projection
+            if mapping.native_position is not None
+            and mapping.result_position is not None
+            and mapping.python_position is None
+        }
+        return [arg for index, arg in enumerate(func.arguments) if index not in returned_positions]
 
     @staticmethod
     def _requires_intent_metadata(arg: SemanticVariable) -> bool:

@@ -207,6 +207,7 @@ class FortranVariable:
     symbolic_value: str | None = None
     value_type: str = "unknown"
     is_parameter: bool = False
+    target: bool = False
     dimensions: list[int] = field(default_factory=list)
     visibility: str = "public"
 
@@ -273,6 +274,7 @@ class FortranArgument(FortranVariable):
     pass_by_value: bool = False
     allocatable: bool = False
     pointer: bool = False
+    target: bool = False
 
     @property
     def contiguous(self) -> bool:

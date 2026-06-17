@@ -365,6 +365,9 @@ class Variable:
     is_private : bool, default: False
         Indicates if object is private within a Module.
 
+    intent : str, default: "in"
+        Native intent metadata preserved for wrapper projection decisions.
+
     shape : tuple, default: None
         The shape of the array. A tuple whose elements indicate the number of elements along
         each of the dimensions of an array. The elements of the tuple should be None or model objects.
@@ -396,6 +399,7 @@ class Variable:
         "_alloc_shape",
         "_class_type",
         "_cls_base",
+        "_intent",
         "_is_argument",
         "_is_optional",
         "_is_private",
@@ -416,6 +420,7 @@ class Variable:
         is_target=False,
         is_optional=False,
         is_private=False,
+        intent="in",
         shape=None,
         cls_base=None,
         is_argument=False,
@@ -451,6 +456,7 @@ class Variable:
             raise TypeError("is_private must be a boolean.")
         self._is_private = is_private
 
+        self._intent = str(intent).lower()
         self._cls_base = cls_base
         self._is_argument = is_argument
         self._is_temp = is_temp
@@ -591,6 +597,11 @@ class Variable:
         within the Module
         """
         return self._is_private
+
+    @property
+    def intent(self):
+        """Native intent metadata used by wrapper projection."""
+        return self._intent
 
     @property
     def is_argument(self):

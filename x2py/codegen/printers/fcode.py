@@ -664,6 +664,7 @@ class FCodePrinter(CodePrinter):
         is_target = var.is_target and not var.is_alias
         intent = expr.intent
         intent_in = intent and intent != "out"
+        deferred_string = isinstance(dtype, StringType) and not intent_in and (not shape or shape[0] is None)
         # ...
 
         dtype_str = ""
@@ -693,14 +694,14 @@ class FCodePrinter(CodePrinter):
                 # arrays are 0-based in x2py, to avoid ambiguity with range
                 start_val = self._print(convert_to_literal(0))
 
-                if intent_in:
+                if is_alias or on_heap:
+                    rankstr = ", ".join(":" * rank)
+                elif intent_in:
                     rankstr = ", ".join([f"{start_val}:"] * rank)
                 elif is_static or on_stack:
                     ordered_shape = shape[::-1] if var.order == "C" else shape
                     ubounds = [Minus(s, convert_to_literal(1)) for s in ordered_shape]
                     rankstr = ", ".join(f"{start_val}:{self._print(u)}" for u in ubounds)
-                elif is_alias or on_heap:
-                    rankstr = ", ".join(":" * rank)
                 else:
                     raise NotImplementedError("Fortran rank string undetermined")
                 rankstr = f"({rankstr})"
@@ -744,7 +745,7 @@ class FCodePrinter(CodePrinter):
             if is_alias:
                 allocatablestr = ", pointer"
 
-            elif on_heap and not intent_in and isinstance(var.class_type, NumpyNDArrayType | StringType):
+            elif (on_heap and isinstance(expr_type, NumpyNDArrayType)) or deferred_string:
                 allocatablestr = ", allocatable"
 
             # ISSUES #177: var is allocatable and target
@@ -1504,6 +1505,8 @@ class FCodePrinter(CodePrinter):
         is_function = len(out_results) == 1 and (
             func.results.var.rank == 0 or isinstance(func.results.var.class_type, StringType)
         )
+        if len(out_results) == 1 and isinstance(func.results.var.class_type, NumpyNDArrayType):
+            is_function = func.results.var.memory_handling == "heap"
 
         if func.arguments and func.arguments[0].bound_argument:
             bound_name = expr.overload_set_name if expr.overload_set else func.scope.get_python_name(func.name)

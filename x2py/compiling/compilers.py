@@ -7,6 +7,7 @@ import json
 import os
 import pathlib
 import platform
+import shlex
 import shutil
 import subprocess
 import warnings
@@ -613,8 +614,8 @@ class Compiler:
             Raises `RuntimeError` if the file does not compile.
         """
         cmd = [os.path.expandvars(c) for c in cmd]
-        if verbose > 1:
-            print(" ".join(cmd))
+        if verbose:
+            print(shlex.join(cmd))
 
         with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True) as p:
             out, err = p.communicate()

@@ -29,6 +29,7 @@ and practical usage from terminal and Python.
   - `value`
   - `allocatable`
   - `pointer`
+  - `target`
 - Array extraction:
   - `dimension(...)`
   - variable-level shape syntax (`x(:)`, `x(n)`)

@@ -23090,12 +23090,18 @@
       "n_classes": 1,
       "n_variables": 0,
       "messages": [
-        "Some shape expressions refer to symbols not supplied by the semantic interface."
+        "Some shape expressions refer to symbols not supplied by the semantic interface.",
+        "Allocatable inout arrays need a replacement policy before they can be wrapped safely."
       ],
       "blockers": [
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 6
+        },
+        {
+          "code": "allocatable_replacement_policy_missing",
+          "message": "Allocatable inout arrays need a replacement policy before they can be wrapped safely.",
           "n_items": 6
         }
       ]
@@ -23978,13 +23984,19 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+        "Allocatable inout arrays need a replacement policy before they can be wrapped safely."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
           "n_items": 3
+        },
+        {
+          "code": "allocatable_replacement_policy_missing",
+          "message": "Allocatable inout arrays need a replacement policy before they can be wrapped safely.",
+          "n_items": 8
         }
       ]
     },

@@ -10,6 +10,7 @@ from pathlib import Path
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
+    MODULE_VARIABLE_GETTER_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
@@ -93,6 +94,7 @@ class _Decorators:
     has_native_call: bool = False
     overload_target: str | None = None
     overload_generic: str | None = None
+    module_variable: str | None = None
     is_static: bool = False
 
 
@@ -294,6 +296,18 @@ class _PyiAstParser:
             if self.matches_name(node, "staticmethod"):
                 parsed.is_static = True
                 continue
+            if isinstance(node, ast.Call) and self.matches_name(node.func, "module_variable"):
+                if parsed.module_variable is not None:
+                    raise ValueError(f"Duplicate {context} module_variable decorator")
+                if len(node.args) != 1 or node.keywords:
+                    raise ValueError("module_variable expects one native variable name")
+                target = ast.literal_eval(node.args[0])
+                if not isinstance(target, str) or not target:
+                    raise ValueError("module_variable expects a non-empty native variable name")
+                parsed.module_variable = target
+                continue
+            if self.matches_name(node, "module_variable"):
+                raise ValueError("module_variable expects one native variable name")
             if isinstance(node, ast.Call) and self.matches_name(node.func, "native_call"):
                 parsed.has_native_call = True
                 parsed.projection = self.native_call(node)
@@ -789,6 +803,9 @@ class _PyiAstParser:
         if name == "FortranAllocatable":
             semantic_type.metadata["fortran_allocatable"] = True
             return True
+        if name == "FortranTarget":
+            semantic_type.metadata["fortran_target"] = True
+            return True
         return False
 
     @staticmethod
@@ -897,6 +914,7 @@ class _PyiAstParser:
             "Allocatable",
             "Constant",
             "Contiguous",
+            "FortranTarget",
             "Optional",
             "ORDER_ANY",
             "ORDER_C",
@@ -981,6 +999,37 @@ class _PyiAstParser:
             plain_return_index += 1
 
         return return_type, returned_args
+
+    def module_variable_getter(self, node: ast.FunctionDef, decorators: _Decorators) -> SemanticVariable:
+        if decorators.module_variable is None:
+            raise ValueError("module_variable getter is missing its native variable name")
+        if node.args.args or node.args.vararg or node.args.kwarg or node.args.kwonlyargs or node.args.posonlyargs:
+            raise ValueError("module_variable getter must not accept arguments")
+        self._validate_stub_callable(node)
+        if node.returns is None:
+            raise ValueError("module_variable getter must declare a return type")
+        semantic_type = self._module_variable_return_type(node.returns)
+        return SemanticVariable(
+            name=decorators.module_variable,
+            semantic_type=semantic_type,
+            visibility=decorators.visibility,
+            metadata={MODULE_VARIABLE_GETTER_METADATA: node.name},
+        )
+
+    def _module_variable_return_type(self, node: ast.expr) -> SemanticType:
+        optional = False
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+            left_none = isinstance(node.left, ast.Constant) and node.left.value is None
+            right_none = isinstance(node.right, ast.Constant) and node.right.value is None
+            if left_none == right_none:
+                raise ValueError("module_variable getter return must be T | None")
+            node = node.right if left_none else node.left
+            optional = True
+        semantic_type = self.semantic_type(node)
+        storage = semantic_type.storage
+        if not optional or storage is None or storage.array is None or not storage.array.allocatable:
+            raise ValueError("module_variable getter return must be an allocatable array unioned with None")
+        return semantic_type
 
     def returned_argument(self, node: ast.expr) -> SemanticArgument | None:
         if not self.is_subscript_of(node, "Returns"):
@@ -1231,6 +1280,8 @@ class _ClassBodyVisitor(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context="class body")
+        if decorators.module_variable is not None:
+            raise ValueError("module_variable is only valid for module-level getter functions")
         method = self.parser.method_def(
             node,
             visibility=decorators.visibility,
@@ -1278,6 +1329,8 @@ class _ModuleVisitor(ast.NodeVisitor):
         decorators = self.parser.decorators(node.decorator_list, context="class")
         if decorators.has_native_call:
             raise ValueError(f"Unsupported class decorator: {ast.unparse(node.decorator_list[-1])!r}")
+        if decorators.module_variable is not None:
+            raise ValueError("module_variable is only valid for module-level getter functions")
         if len(node.bases) == 1 and self.parser.is_subscript_of(node.bases[0], "Enum"):
             self.parser.module.classes.append(self.parser.enum_def(node, visibility=decorators.visibility))
         else:
@@ -1285,6 +1338,11 @@ class _ModuleVisitor(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context=".pyi")
+        if decorators.module_variable is not None:
+            if decorators.overload_target is not None or decorators.has_native_call:
+                raise ValueError("module_variable cannot be combined with overload or native_call")
+            self.parser.module.variables.append(self.parser.module_variable_getter(node, decorators))
+            return
         function = self.parser.function_def(
             node,
             visibility=decorators.visibility,

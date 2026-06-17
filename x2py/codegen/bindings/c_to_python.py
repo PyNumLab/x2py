@@ -6,6 +6,7 @@ which creates an interface exposing C code to Python.
 import warnings
 
 from ..bind_c import (
+    BindCArrayVariable,
     BindCArrayType,
     BindCClassDef,
     BindCClassProperty,
@@ -62,7 +63,6 @@ from .cpython_api import (
     PythonTypeObjectType,
     PyClassDef,
     PyErr_SetString,
-    PyErr_WarnEx,
     PyFunctionDef,
     PyGetSetDefElement,
     PyFunctionOverloadSet,
@@ -76,7 +76,6 @@ from .cpython_api import (
     PyModule_Create,
     PyNotImplementedError,
     PyObject_TypeCheck,
-    PyRuntimeWarning,
     PySys_GetObject,
     PyType_Ready,
     PyTypeError,
@@ -143,8 +142,8 @@ from ..scope import Scope
 
 from .base import BindingGenerator
 
-cwrapper_ndarray_imports = [
-    Import("cwrapper_ndarrays", Module("cwrapper_ndarrays", (), ())),
+cpython_ndarray_imports = [
+    Import("python_runtime_ndarrays", Module("python_runtime_ndarrays", (), ())),
     Import("ndarrays", Module("ndarrays", (), ())),
 ]
 
@@ -202,6 +201,267 @@ class CPythonBindingGenerator(BindingGenerator):
 
         self._sharedlib_dirpath = sharedlib_dirpath
         super().__init__(verbose)
+
+    def _function_docstring(self, name, func, original_func=None):
+        original_func = original_func or func
+        visible_args = [arg for arg in func.arguments if not arg.bound_argument]
+        result_vars = self._doc_python_result_vars(func, original_func)
+        signature = f"{name}({', '.join(str(arg.name) for arg in visible_args)})"
+        signature += f" -> {self._doc_result_summary(result_vars)}" if result_vars else " -> None"
+
+        sections = [signature]
+        user_doc = self._existing_docstring_text(getattr(original_func, "docstring", None))
+        if user_doc:
+            sections.extend(["", user_doc])
+
+        if visible_args:
+            sections.extend(["", "Parameters", "----------"])
+            for arg in visible_args:
+                sections.extend(self._argument_doc_lines(arg))
+
+        sections.extend(["", "Returns", "-------"])
+        if result_vars:
+            for result in result_vars:
+                sections.extend(self._variable_doc_lines(self._doc_original_var(result), result_name=True))
+        else:
+            sections.append("None")
+
+        notes = self._result_notes(result_vars)
+        if notes:
+            sections.extend(["", "Notes", "-----", *notes])
+
+        sections.extend(
+            [
+                "",
+                "Raises",
+                "------",
+                "TypeError",
+                "    If an argument has incompatible dtype, rank, shape, layout, or wrapped class.",
+            ]
+        )
+        return CommentBlock("\n".join(sections))
+
+    @staticmethod
+    def _existing_docstring_text(docstring):
+        if not docstring:
+            return ""
+        return "\n".join(str(line) for line in docstring.comments if str(line).strip())
+
+    def _argument_doc_lines(self, arg):
+        var = self._doc_original_var(arg.var)
+        can_be_none = getattr(arg.var, "is_optional", False) or getattr(var, "is_optional", False)
+        header = f"{arg.name} : {self._type_doc(var, include_none=can_be_none)}"
+        details = self._argument_detail_lines(var)
+        if can_be_none:
+            details.append("    May be omitted or passed as None.")
+        if arg.has_default:
+            details.append(f"    Default is {arg.value}.")
+        return [header, *details]
+
+    def _variable_doc_lines(self, var, *, result_name=False):
+        name = str(var.name) if result_name else "result"
+        header = f"{name} : {self._type_doc(var, include_none=self._may_return_none(var))}"
+        return [header, *self._result_detail_lines(var)]
+
+    def _argument_detail_lines(self, var):
+        intent = getattr(var, "intent", "in")
+        lines = self._value_detail_lines(var)
+        lines.append(f"    Intent: {intent}")
+        if intent == "out":
+            lines.append("    Mutates: fills in-place")
+        elif intent == "inout":
+            lines.append("    Mutates: yes")
+        return lines
+
+    def _result_detail_lines(self, var):
+        lines = self._value_detail_lines(var)
+        if var.rank and var.memory_handling == "heap":
+            lines.append("    Ownership: Python-owned")
+            lines.append("    Returns None when unallocated.")
+        elif var.rank and var.memory_handling == "alias":
+            lines.append("    Ownership: Native-owned")
+        return lines
+
+    def _borrowed_detail_lines(self, var, description):
+        lines = self._value_detail_lines(var)
+        if var.rank:
+            lines.append(f"    Ownership: {description}")
+            if self._may_return_none(var):
+                lines.append("    Returns None when unallocated.")
+        return lines
+
+    def _result_notes(self, result_vars):
+        if any(
+            self._doc_original_var(var).rank and self._doc_original_var(var).memory_handling == "alias"
+            for var in result_vars
+        ):
+            return self._borrowed_view_notes()
+        return []
+
+    @staticmethod
+    def _borrowed_view_notes():
+        return [
+            "The returned NumPy array is a zero-copy view of native Fortran memory.",
+            "",
+            "If the corresponding allocatable variable is deallocated or",
+            "reallocated on the native side, previously obtained views may",
+            "become invalid.",
+            "",
+            "Use ``x.copy()`` to obtain an independent NumPy array.",
+        ]
+
+    def _value_detail_lines(self, var):
+        lines = []
+        if var.rank:
+            shape_doc = self._shape_doc(var)
+            if shape_doc:
+                lines.append(f"    Shape: {shape_doc}")
+            lines.append(f"    Rank: {var.rank}")
+            layout_doc = self._layout_doc(var)
+            if layout_doc:
+                lines.append(f"    Layout: {layout_doc}")
+        return lines
+
+    @staticmethod
+    def _type_doc(var, *, include_none=False, signature=False):
+        if getattr(var, "is_ndarray", False):
+            doc_type = f"ndarray[{CPythonBindingGenerator._dtype_doc(var)}]"
+        else:
+            doc_type = str(var.class_type).removeprefix("numpy.")
+        if not include_none:
+            return doc_type
+        return f"{doc_type} | None" if signature else f"{doc_type} or None"
+
+    @staticmethod
+    def _dtype_doc(var):
+        return str(var.dtype).removeprefix("numpy.")
+
+    @staticmethod
+    def _may_return_none(var):
+        return bool(var.rank and var.memory_handling == "heap")
+
+    @staticmethod
+    def _shape_doc(var):
+        shape = getattr(var, "alloc_shape", None)
+        if not shape or all(dim is None for dim in shape):
+            return None
+        shape_parts = ["any" if dim is None else str(dim) for dim in shape]
+        trailing_comma = "," if len(shape_parts) == 1 else ""
+        return f"({', '.join(shape_parts)}{trailing_comma})"
+
+    @staticmethod
+    def _layout_doc(var):
+        if getattr(var, "rank", 0) <= 1:
+            return None
+        order = getattr(var, "order", None)
+        if order == "F":
+            return "F-contiguous"
+        if order == "C":
+            return "C-contiguous"
+        return "C-contiguous"
+
+    @staticmethod
+    def _doc_original_var(var):
+        return getattr(var, "original_var", var)
+
+    @staticmethod
+    def _doc_result_vars(func):
+        if func.results.var is NIL:
+            return []
+        return [
+            var
+            for var in func.scope.collect_all_tuple_elements(func.results.var)
+            if isinstance(var, Variable) and var is not NIL
+        ]
+
+    def _doc_python_result_vars(self, func, original_func):
+        result_vars = []
+        if original_func.results.var is not NIL:
+            result_vars.extend(self._doc_result_vars(original_func))
+        result_vars.extend(
+            arg.var
+            for arg in original_func.arguments
+            if not arg.bound_argument
+            and getattr(arg.var, "intent", "in") == "out"
+            and getattr(arg.var, "is_ndarray", False)
+            and getattr(arg.var, "memory_handling", None) == "heap"
+        )
+        return result_vars or self._doc_result_vars(func)
+
+    def _doc_result_summary(self, result_vars):
+        parts = [self._type_doc(self._doc_original_var(var), signature=True) for var in result_vars]
+        if len(parts) == 1:
+            result_var = self._doc_original_var(result_vars[0])
+            return self._type_doc(result_var, include_none=self._may_return_none(result_var), signature=True)
+        return f"tuple[{', '.join(parts)}]"
+
+    def _class_docstring(self, cls):
+        lines = [str(cls.name), "", "Fields", "------"]
+        if cls.attributes:
+            for attribute in cls.attributes:
+                attr_name, var = self._class_attribute_doc_target(attribute)
+                lines.append(f"{attr_name} : {self._type_doc(var, include_none=self._may_return_none(var))}")
+                lines.extend(self._borrowed_detail_lines(var, "Native-owned"))
+        else:
+            lines.append("None")
+        lines.extend(["", "Methods", "-------"])
+        public_methods = []
+        for method in cls.methods:
+            if not method.is_semantic or method.is_private:
+                continue
+            original = getattr(method, "original_function", method)
+            py_name = str(original.scope.get_python_name(original.name))
+            if py_name == "__del__":
+                continue
+            public_methods.append(py_name)
+        if public_methods:
+            lines.extend(public_methods)
+        else:
+            lines.append("None")
+        return CommentBlock("\n".join(lines))
+
+    def _class_attribute_doc_target(self, attribute):
+        if isinstance(attribute, BindCClassProperty):
+            original = attribute.getter.original_function
+            if isinstance(original, DottedVariable):
+                return attribute.python_name, self._doc_original_var(original)
+            return attribute.python_name, self._doc_original_var(original.results.var)
+        return str(attribute.name), self._doc_original_var(attribute)
+
+    def _property_docstring(self, name, func):
+        docstring = f"{name} : object" if func.results.var is NIL else self._attribute_docstring(name, func.results.var)
+        user_doc = self._existing_docstring_text(getattr(func, "docstring", None))
+        if user_doc:
+            docstring += f"\n\nNotes\n-----\n{user_doc}"
+        return docstring
+
+    def _attribute_docstring(self, name, var):
+        var = self._doc_original_var(var)
+        lines = [
+            f"{name} : {self._type_doc(var, include_none=self._may_return_none(var))}",
+            *self._borrowed_detail_lines(var, "Native-owned"),
+        ]
+        if not var.rank:
+            lines.append("    Assigning writes through the generated setter when available.")
+        elif var.memory_handling in {"heap", "alias"}:
+            lines.extend(["", "Notes", "-----", *self._borrowed_view_notes()])
+        return "\n".join(lines)
+
+    def _module_array_getter_docstring(self, name, var):
+        var = self._doc_original_var(var)
+        lines = [
+            f"{name}() -> {self._type_doc(var, include_none=True, signature=True)}",
+            "",
+            "Returns",
+            "-------",
+            f"{var.name} : {self._type_doc(var, include_none=True)}",
+            *self._borrowed_detail_lines(var, "Native-owned"),
+            "",
+            "Notes",
+            "-----",
+            *self._borrowed_view_notes(),
+        ]
+        return CommentBlock("\n".join(lines))
 
     def get_new_PyObject(self, name, dtype=None, is_temp=False):
         """
@@ -309,8 +569,8 @@ class CPythonBindingGenerator(BindingGenerator):
         >>> wrapper_args
         [Variable('self', dtype=PythonObjectType()), Variable('args', dtype=PythonObjectType()), Variable('kwargs', dtype=PythonObjectType())]
         >>> body
-        [<x2py.ast.cwrapper.PyArgKeywords object at 0x7f99ec128cc0>, <x2py.ast.core.If object at 0x7f99ed3a5b20>]
-        >>> CWrapperCodePrinter('wrapper_file.c').doprint(expr)
+        [<x2py.codegen.bindings.cpython_api.PyArgKeywords object at 0x7f99ec128cc0>, <x2py.codegen.models.core.If object at 0x7f99ed3a5b20>]
+        >>> CPythonCodePrinter('wrapper_file.c').doprint(expr)
         static char *kwlist[] = {
             "x",
             NULL
@@ -983,6 +1243,8 @@ class CPythonBindingGenerator(BindingGenerator):
         for v in expr.variables:
             if v.is_private:
                 continue
+            if isinstance(v, BindCArrayVariable) and v.memory_handling == "heap":
+                continue
             body.extend(self._wrap(v))
             wrapped_var = self._python_object_map[v]
             var_name = self.scope.get_python_name(v.name)
@@ -1569,7 +1831,7 @@ class CPythonBindingGenerator(BindingGenerator):
                 struct_name,
                 type_name,
                 self.scope.new_child_scope(name, "class"),
-                docstring=c.docstring,
+                docstring=self._class_docstring(c),
                 class_type=dtype,
             )
 
@@ -1592,6 +1854,12 @@ class CPythonBindingGenerator(BindingGenerator):
             funcs_to_wrap.extend(removed_functions)
 
         funcs = [self._visit(f) for f in funcs_to_wrap]
+        if isinstance(expr, BindCModule):
+            funcs.extend(
+                self._get_allocatable_module_array_getter(variable)
+                for variable in expr.variable_wrappers
+                if variable.memory_handling == "heap"
+            )
 
         # Wrap interfaces
         interfaces = [self._visit(i) for i in expr.overload_sets]
@@ -2017,7 +2285,7 @@ class CPythonBindingGenerator(BindingGenerator):
             body,
             func_results,
             scope=func_scope,
-            docstring=expr.docstring,
+            docstring=self._function_docstring(original_func_name, expr, original_func),
             original_function=original_func,
         )
 
@@ -2026,11 +2294,7 @@ class CPythonBindingGenerator(BindingGenerator):
 
         if "property" in original_func.decorators:
             python_name = original_func.scope.get_python_name(original_func.name)
-            docstring = convert_to_literal(
-                "\n".join(original_func.docstring.comments)
-                if original_func.docstring
-                else f"The attribute {python_name}"
-            )
+            docstring = convert_to_literal(self._property_docstring(python_name, original_func))
             return PyGetSetDefElement(python_name, function, None, CStrStr(docstring))
         return function
 
@@ -2216,13 +2480,15 @@ class CPythonBindingGenerator(BindingGenerator):
         call = Assign(PythonTuple(ObjectAddress(data_var), *shape), var_wrapper())
 
         # Create the resulting Variable with datatype `PythonObjectType`
-        py_equiv = self.scope.get_temporary_variable(PythonObjectType(), memory_handling="alias")
+        py_equiv = self.get_new_PyObject(f"{v.name}_obj", dtype=v.dtype)
         self._python_object_map[expr] = py_equiv
 
         release_memory = False
+        unallocated_guard = self._return_none_if_unallocated(data_var) if expr.memory_handling == "heap" else []
         # Save the ndarray to vars_to_wrap to be handled as if it came from C
         return [
             call,
+            *unallocated_guard,
             AliasAssign(
                 py_equiv,
                 to_pyarray(
@@ -2234,6 +2500,50 @@ class CPythonBindingGenerator(BindingGenerator):
                     convert_to_literal(release_memory),
                 ),
             ),
+        ]
+
+    def _get_allocatable_module_array_getter(self, expr):
+        python_name = f"get_{self.scope.get_python_name(expr.name)}"
+        wrapper_name = self.scope.get_new_name(f"{python_name}_wrapper", object_type="wrapper")
+        original_name = self.scope.get_new_name(python_name, object_type="function")
+        original = FunctionDef(
+            original_name,
+            (),
+            (),
+            FunctionDefResult(expr),
+            scope=self.scope,
+        )
+        func_scope = self.scope.new_child_scope(wrapper_name, "function")
+        self.scope = func_scope
+
+        func_args, body = self._unpack_python_args(())
+        body.extend(self._visit_BindCArrayVariable(expr))
+        py_result = self._python_object_map.pop(expr)
+        body.append(Return(py_result))
+        self.exit_scope()
+
+        return PyFunctionDef(
+            wrapper_name,
+            [FunctionDefArgument(arg) for arg in func_args],
+            body,
+            FunctionDefResult(py_result),
+            scope=func_scope,
+            docstring=self._module_array_getter_docstring(python_name, expr),
+            original_function=original,
+        )
+
+    @staticmethod
+    def _return_none_if_unallocated(data_ptr):
+        return [
+            If(
+                IfSection(
+                    Is(data_ptr, NIL),
+                    [
+                        Py_INCREF(Py_None),
+                        Return(Py_None),
+                    ],
+                )
+            )
         ]
 
     def _visit_DottedVariable(self, expr):
@@ -2405,7 +2715,7 @@ class CPythonBindingGenerator(BindingGenerator):
             python_name,
             getter,
             setter,
-            CStrStr(convert_to_literal(f"The attribute {python_name}")),
+            CStrStr(convert_to_literal(self._attribute_docstring(python_name, expr))),
         )
 
     def _visit_BindCClassProperty(self, expr):
@@ -2547,7 +2857,9 @@ class CPythonBindingGenerator(BindingGenerator):
         self._error_exit_code = NIL
 
         docstring = convert_to_literal(
-            "\n".join(expr.docstring.comments) if expr.docstring else f"The attribute {expr.python_name}"
+            "\n".join(expr.docstring.comments)
+            if expr.docstring
+            else self._attribute_docstring(expr.python_name, wrapped_var)
         )
         return PyGetSetDefElement(expr.python_name, getter, setter, CStrStr(docstring))
 
@@ -3367,33 +3679,8 @@ class CPythonBindingGenerator(BindingGenerator):
                 ),
             )
         ]
-        if isinstance(orig_var, DottedVariable) and orig_var.memory_handling == "heap":
-            warning_status = PyErr_WarnEx(
-                PyRuntimeWarning,
-                CStrStr(convert_to_literal(f"{orig_var.name} is not allocated; returning None.")),
-                convert_to_literal(1),
-            )
-            body = [
-                If(
-                    IfSection(
-                        Is(ObjectAddress(data_var), NIL),
-                        [
-                            If(
-                                IfSection(
-                                    Lt(
-                                        warning_status,
-                                        convert_to_literal(0, dtype=CNativeInt()),
-                                    ),
-                                    [Return(NIL)],
-                                )
-                            ),
-                            Py_INCREF(Py_None),
-                            Return(Py_None),
-                        ],
-                    )
-                ),
-                *body,
-            ]
+        if getattr(orig_var, "memory_handling", None) == "heap":
+            body = [*self._return_none_if_unallocated(data_var), *body]
 
         shape_vars = [IndexedElement(shape_var, i) for i in range(orig_var.rank)]
         c_result_vars = PythonTuple(ObjectAddress(data_var), *shape_vars)

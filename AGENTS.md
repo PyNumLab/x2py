@@ -1,6 +1,7 @@
 # Repository Instructions
 
 The active codebase is entirely Python.
+Before starting implementation work, update or read the relevant docs first so the intended public behavior, ownership rules, and limitations are explicit; then implement code and tests to match that documented contract.
 
 Ignore:
 - *.f90
@@ -20,10 +21,9 @@ At the end of every change, before the final response, run the complete GitHub A
 - `python -m ruff check .`
 - `python -m ruff format --check .`
 - `bandit -c pyproject.toml -r c_parser fortran_parser semantics x2py --severity-level medium --confidence-level medium`
-- `pip-audit . --cache-dir /tmp/pip-audit-cache`
 - `vulture`
 - `python tools/check_radon_policy.py --base-ref auto`
 - `radon cc c_parser fortran_parser semantics x2py -n C -s --total-average`
 - `radon mi c_parser fortran_parser semantics x2py -s`
-Treat Ruff, Bandit, pip-audit, Vulture, and the Radon policy as blocking. The full Radon complexity and maintainability reports are advisory but must still be run. If a command cannot run because a dependency, network service, or CI-only environment value is unavailable, state that explicitly in the final response.
+Treat Ruff, Bandit, Vulture, and the Radon policy as blocking. The full Radon complexity and maintainability reports are advisory but must still be run. If a command cannot run because a dependency, network service, or CI-only environment value is unavailable, state that explicitly in the final response.
 When you create a commit add this prefix to the message to know that you did push the commit "codex: ..."

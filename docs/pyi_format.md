@@ -139,6 +139,7 @@ Generated canonical metadata:
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
 | `FortranCharacterLength("n")` | Fortran character storage length for `String` contracts |
 | `FortranAllocatable` | Fortran scalar character storage is allocatable |
+| `FortranTarget` | native storage has the Fortran `target` attribute needed for module zero-copy views |
 
 Loaded compatibility metadata:
 
@@ -434,6 +435,63 @@ specific must be a two-argument subroutine whose wrapped derived-type LHS has
 `intent(out)` or `intent(inout)` and whose RHS has `intent(in)`. Unsafe or
 unsupported forms are readiness blockers.
 
+## Allocatable Borrowed Views
+
+Supported Fortran allocatable module arrays and derived-type array fields are
+exposed as zero-copy NumPy views over native storage. The NumPy array does not
+own the memory. For derived-type fields, NumPy's `base` object is the containing
+Python wrapper, so the wrapper cannot be destroyed while the view exists.
+For module variables, the Fortran module owns the storage for the process
+lifetime.
+
+Unallocated allocatable arrays return `None`. A fresh getter call after native
+deallocation also returns `None`. Existing views are not invalidated, detached,
+or tracked. If a wrapped Fortran procedure reallocates or deallocates the native
+storage while Python still holds an old view, that old view is stale; reading or
+writing it is unsupported and may crash the process. Users who need independent
+lifetime must copy explicitly:
+
+```python
+x = obj.values        # borrowed zero-copy NumPy view, or None
+y = obj.values.copy() # independent NumPy-owned storage
+obj.reset_values()    # may invalidate x; y remains valid
+```
+
+Derived-type allocatable fields remain fields in `.pyi`:
+
+```python
+class buffer:
+    values: Annotated[Float64[:], Allocatable]
+```
+
+Python cannot directly replace or reallocate such fields. Assigning a new array
+to the field raises `AttributeError`; explicit wrapped Fortran procedures must
+perform allocation, reallocation, and deallocation.
+
+Module allocatable arrays are emitted as explicit getter functions so
+unallocated storage can be represented as `None`:
+
+```python
+@module_variable("module_values")
+def get_module_values() -> Annotated[Float64[:], Allocatable, FortranTarget] | None: ...
+```
+
+`@module_variable("name")` is x2py metadata linking the getter to the native
+module variable. The getter must take no arguments and must return an
+allocatable array type unioned with `None`. `FortranTarget` is required for
+module allocatable arrays because the generated Fortran bridge needs `c_loc` on
+the native storage. Without that native `target` attribute, readiness and direct
+code generation report a blocker instead of generating a copied fallback.
+
+Allocatable array function results and allocatable `intent(out)` array arguments
+use a copy-return policy. The generated bridge copies allocated Fortran storage
+into C memory that becomes owned by the returned NumPy array, then deallocates
+the Fortran allocatable. If the Fortran value remains unallocated, Python
+receives `None`.
+
+Allocatable `intent(inout)` arguments remain blocked. They need a replacement
+policy for the caller-visible object before x2py can safely expose them.
+
 ## Visibility And Names
 
 `@private` marks classes, functions and methods private:
@@ -497,6 +555,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Functions/subroutines | exact native argument order and direct return type |
 | Fortran scalar references | `Ptr(Const(T))`, `Ptr(T)`, `Intent("out")` |
 | Arrays | shaped storage with extents, strided axes, `ORDER_F` for multidimensional Fortran arrays |
+| Allocatable borrowed views | derived-type fields and target-backed module arrays, with `None` for unallocated storage |
 | Constants | `Final[T]` module variables |
 | C enums | open `Enum[T]` class plus module-level enumerators |
 | Fortran derived types | classes with fields and methods when resolvable |
@@ -533,6 +592,7 @@ The loader intentionally rejects syntax that would be ambiguous or stale:
 - nested enum declarations.
 - ordinary function bodies instead of `...`.
 - unsupported decorators other than `@private`, `@native_call`,
+  `@module_variable("native_name")`,
   `@overload("specific")`, its documented `generic=` form, and
   `@staticmethod`.
 - bare `@overload` or `typing.overload`; overload links require one concrete

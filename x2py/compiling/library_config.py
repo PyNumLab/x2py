@@ -131,11 +131,11 @@ class StdlibInstaller:
         return new_obj
 
 
-class CWrapperInstaller(StdlibInstaller):
+class CPythonSupportInstaller(StdlibInstaller):
     """
-    A class describing how the cwrapper library is installed.
+    A class describing how the x2py CPython support library is installed.
 
-    A class describing how the cwrapper library is installed. This class inherits from
+    A class describing how the x2py CPython support library is installed. This class inherits from
     StdlibInstaller. The specialisation is required to ensure that the file describing
     the NumPy version is also created.
 
@@ -660,7 +660,7 @@ recognised_libs = {
     "pyc_math_c": StdlibInstaller("pyc_math_c.c", "math", dependencies=("stc",)),
     "pyc_math_cpp": StdlibInstaller("pyc_math_cpp.cpp", "math"),
     "pyc_tools_f90": StdlibInstaller("pyc_tools_f90.f90", "tools"),
-    "cwrapper": CWrapperInstaller("cwrapper.c", "cwrapper", extra_compilation_tools=("python",)),
+    "x2py_runtime": CPythonSupportInstaller("python_runtime.c", "x2py_runtime", extra_compilation_tools=("python",)),
     "STC_Extensions": StdlibInstaller("STC_Extensions", "STC_Extensions", has_target_file=False, dependencies=("stc",)),
     "gFTL_functions": StdlibInstaller(
         "gFTL_functions",

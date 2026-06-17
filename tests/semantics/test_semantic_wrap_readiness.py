@@ -87,6 +87,48 @@ def step(
     assert report["wrappability_blockers"] == []
 
 
+def test_allocatable_policy_blockers_are_reported_for_only_unsupported_cases():
+    report = _readiness_from_pyi(
+        """
+values: Annotated[Float64[:], Allocatable]
+target_values: Annotated[Float64[:], Allocatable, FortranTarget]
+
+def fill() -> Returns["values", Annotated[Float64[:], Allocatable]]: ...
+
+def make_values() -> Annotated[Float64[:], Allocatable]: ...
+
+def replace(values: Annotated[Float64[:], Allocatable]) -> Returns["values", Annotated[Float64[:], Allocatable]]: ...
+
+def make_pair() -> tuple[Returns["left", Annotated[Float64[:], Allocatable]], Returns["right", Annotated[Float64[:], Allocatable]]]: ...
+"""
+    )
+
+    assert _blocker_codes(report) >= {
+        "allocatable_module_target_missing",
+        "allocatable_replacement_policy_missing",
+        "allocatable_multiple_copy_returns_unsupported",
+    }
+    assert "allocatable_owner_policy_missing" not in _blocker_codes(report)
+    target_blocker = next(
+        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "allocatable_module_target_missing"
+    )
+    assert target_blocker["items"] == [{"owner": "solver.values", "item": "values"}]
+
+    replacement_blocker = next(
+        blocker
+        for blocker in report["wrappability_blockers"]
+        if blocker["code"] == "allocatable_replacement_policy_missing"
+    )
+    assert replacement_blocker["items"] == [{"owner": "solver.replace", "item": "values", "intent": "inout"}]
+
+    multiple_blocker = next(
+        blocker
+        for blocker in report["wrappability_blockers"]
+        if blocker["code"] == "allocatable_multiple_copy_returns_unsupported"
+    )
+    assert multiple_blocker["items"] == [{"owner": "solver.make_pair", "item": "left, right"}]
+
+
 def test_imported_type_can_complete_semantic_readiness():
     report = _readiness_from_pyi(
         """

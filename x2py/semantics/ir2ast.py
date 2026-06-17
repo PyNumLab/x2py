@@ -135,6 +135,44 @@ def _raise_for_unresolved_generic_targets(node: models.SemanticModule | models.S
         raise ValueError(f"Generic interface {generic!r} does not declare any specific procedures")
 
 
+def _is_allocatable_array(semantic_type: models.SemanticType | None) -> bool:
+    return bool(
+        semantic_type is not None
+        and semantic_type.storage is not None
+        and semantic_type.storage.array is not None
+        and semantic_type.storage.array.allocatable
+    )
+
+
+def _raise_for_unsupported_allocatable_module_variables(node: models.SemanticModule) -> None:
+    for variable in node.variables:
+        semantic_type = variable.semantic_type
+        if _is_allocatable_array(semantic_type) and not semantic_type.metadata.get("fortran_target"):
+            raise ValueError(
+                f"Module variable {variable.name!r} is an allocatable array without the Fortran target attribute; "
+                "borrowed zero-copy module views require target storage"
+            )
+
+
+def _raise_for_unsupported_allocatable_outputs(node: models.SemanticFunction) -> None:
+    copy_return_count = int(_is_allocatable_array(node.return_type))
+    copy_return_count += sum(
+        1
+        for argument in node.arguments
+        if _is_allocatable_array(argument.semantic_type) and str(argument.intent).lower() == "out"
+    )
+    if copy_return_count > 1:
+        raise ValueError(
+            f"Function {node.name!r} has multiple allocatable copy-return arrays, which are not yet supported"
+        )
+    for argument in node.arguments:
+        if _is_allocatable_array(argument.semantic_type) and str(argument.intent).lower() == "inout":
+            raise ValueError(
+                f"Function {node.name!r} has allocatable inout argument {argument.name!r}, "
+                "which needs a replacement policy"
+            )
+
+
 def semantic_ir_to_codegen_ast(
     node,
     scope,
@@ -147,6 +185,7 @@ def semantic_ir_to_codegen_ast(
 
     if isinstance(node, models.SemanticModule):
         _raise_for_unresolved_generic_targets(node)
+        _raise_for_unsupported_allocatable_module_variables(node)
         custom_types = dict(custom_types or {})
         for semantic_class in node.classes:
             custom_types.setdefault(semantic_class.name, _class_type(semantic_class))
@@ -211,6 +250,7 @@ def semantic_ir_to_codegen_ast(
         return overload_set
 
     if isinstance(node, models.SemanticFunction):
+        _raise_for_unsupported_allocatable_outputs(node)
         func_scope = scope.new_child_scope(name=node.name, scope_type="function")
         passed_object_position = _passed_object_position(node)
         declarations = [
@@ -225,17 +265,21 @@ def semantic_ir_to_codegen_ast(
         ]
         if node.return_type:
             return_dtype = _codegen_type(node.return_type.dtype, custom_types)
+            if node.return_type.rank > 0:
+                return_dtype = NumpyNDArrayType.get_new(
+                    return_dtype,
+                    node.return_type.rank,
+                    order=_numpy_array_order(node.return_type, node.return_type.rank),
+                    allows_strides=_array_allows_strides(node.return_type),
+                )
             result_shape = _string_shape(node.return_type) if isinstance(return_dtype, StringType) else None
-            result_memory = (
-                "heap"
-                if isinstance(return_dtype, StringType) and node.return_type.metadata.get("fortran_allocatable")
-                else "stack"
-            )
+            result_memory = _memory_handling(node.return_type)
             result_var = Variable(
                 return_dtype,
                 node.name,
                 shape=result_shape,
                 memory_handling=result_memory,
+                intent="out",
             )
             func_scope.insert_variable(result_var, name=node.name)
             result = FunctionDefResult(result_var)
@@ -335,6 +379,8 @@ def semantic_ir_to_codegen_ast(
             shape=shape,
             memory_handling=_memory_handling(semantic_type),
             is_private=node.visibility == "private",
+            is_target=bool(semantic_type.metadata.get("fortran_target")),
+            intent=getattr(node, "intent", "in"),
             cls_base=cls_base,
         )
         scope.insert_variable(var, name=node.name)

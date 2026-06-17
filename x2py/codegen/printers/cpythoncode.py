@@ -38,7 +38,7 @@ __all__ = ("CPythonCodePrinter",)
 module_imports = [
     Import("numpy_version", Module("numpy_version", (), ())),
     Import("numpy/arrayobject", Module("numpy/arrayobject", (), ())),
-    Import("cwrapper", Module("cwrapper", (), ())),
+    Import("x2py_runtime/python_runtime", Module("x2py_runtime", (), ())),
 ]
 
 
@@ -384,6 +384,22 @@ class CPythonCodePrinter(CCodePrinter):
 
         method_def_name = self.scope.get_new_name(f"{expr.name}_methods", object_type="wrapper")
         method_def = f"static PyMethodDef {method_def_name}[] = {{\n{method_def_func}{{ NULL, NULL, 0, NULL}}\n}};\n"
+        module_doc_lines = [
+            str(expr.name),
+            "",
+            "Functions",
+            "---------",
+            *[
+                self.get_python_name(expr.scope, f.original_function)
+                for f in funcs
+                if not getattr(f, "is_header", False)
+            ],
+            "",
+            "Classes",
+            "-------",
+            *[str(expr.scope.get_python_name(c.name)) for c in expr.classes],
+        ]
+        module_docstring = self._print(CStrStr(convert_to_literal("\n".join(module_doc_lines))))
 
         module_def = (
             f"static struct PyModuleDef {expr.module_def_name} = {{\n"
@@ -391,7 +407,7 @@ class CPythonCodePrinter(CCodePrinter):
             "/* name of module */\n"
             f'"{self._module_name}",\n'
             "/* module documentation, may be NULL */\n"
-            "NULL,\n"  # TODO: Add documentation
+            f"{module_docstring},\n"
             "/* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */\n"
             "0,\n"
             f"{method_def_name},\n"
@@ -432,7 +448,7 @@ class CPythonCodePrinter(CCodePrinter):
         struct_name = expr.struct_name
         type_name = expr.type_name
         name = self.scope.get_python_name(expr.name)
-        docstring = (
+        class_docstring = (
             self._print(CStrStr(convert_to_literal("\n".join(expr.docstring.comments)))) if expr.docstring else '""'
         )
 
@@ -451,21 +467,21 @@ class CPythonCodePrinter(CCodePrinter):
             elif py_name == "__del__":
                 del_string = f"    .tp_dealloc = (destructor) {f.name},\n"
             else:
-                docstring = (
+                method_docstring = (
                     self._print(CStrStr(convert_to_literal("\n".join(f.docstring.comments)))) if f.docstring else '""'
                 )
                 original_args = f.original_function.arguments
                 flags = "METH_VARARGS | METH_KEYWORDS"
                 if not original_args or not original_args[0].bound_argument:
                     flags += " | METH_STATIC"
-                funcs[py_name] = (f.name, docstring, flags)
+                funcs[py_name] = (f.name, method_docstring, flags)
 
         for f in expr.overload_sets:
             py_name = self.get_python_name(original_scope, f.original_function)
-            docstring = (
+            method_docstring = (
                 self._print(CStrStr(convert_to_literal("\n".join(f.docstring.comments)))) if f.docstring else '""'
             )
-            funcs[py_name] = (f.name, docstring, "METH_VARARGS | METH_KEYWORDS")
+            funcs[py_name] = (f.name, method_docstring, "METH_VARARGS | METH_KEYWORDS")
 
         property_definitions = "".join(
             "".join(
@@ -596,7 +612,7 @@ class CPythonCodePrinter(CCodePrinter):
             f"    .tp_as_number = &{number_magic_method_name},\n"
             f"    .tp_as_sequence = &{seq_magic_method_name},\n"
             f"    .tp_as_mapping = &{map_magic_method_name},\n"
-            f"    .tp_doc = PyDoc_STR({docstring}),\n"
+            f"    .tp_doc = PyDoc_STR({class_docstring}),\n"
             f"    .tp_basicsize = sizeof(struct {struct_name}),\n"
             "    .tp_itemsize = 0,\n"
             "    .tp_flags = Py_TPFLAGS_DEFAULT,\n"

@@ -129,7 +129,7 @@ PyArray_ITEMSIZE = FunctionDef(
     results=FunctionDefResult(Variable(NumpyInt32Type(), name="s")),
 )
 
-# NumPy array to c ndarray : function definition in x2py/stdlib/cwrapper/cwrapper_ndarrays.c
+# NumPy array to c ndarray : function definition in x2py/stdlib/x2py_runtime/python_runtime.c
 pyarray_to_ndarray = FunctionDef(
     name="pyarray_to_ndarray",
     body=[],
@@ -144,7 +144,7 @@ numpy_to_stc_strides = FunctionDef(
     results=FunctionDefResult(Variable(NumpyNDArrayType.get_new(NumpyInt32Type(), 1, None, raw=True), "strides")),
 )
 
-# NumPy array check elements : function definition in x2py/stdlib/cwrapper/cwrapper_ndarrays.c
+# NumPy array check elements : function definition in x2py/stdlib/x2py_runtime/python_runtime.c
 pyarray_check = FunctionDef(
     name="pyarray_check",
     arguments=[
@@ -244,7 +244,7 @@ numpy_flag_c_contig = Variable(CNativeInt(), name="NPY_ARRAY_C_CONTIGUOUS")
 # https://numpy.org/doc/stable/reference/c-api/array.html#c.NPY_ARRAY_F_CONTIGUOUS
 numpy_flag_f_contig = Variable(CNativeInt(), name="NPY_ARRAY_F_CONTIGUOUS")
 
-# Custom Array Flags defined in x2py/stdlib/cwrapper/cwrapper_ndarrays.h
+# Custom Array Flags defined in x2py/stdlib/x2py_runtime/python_runtime.h
 no_type_check = Variable(CNativeInt(), name="NO_TYPE_CHECK")
 no_order_check = Variable(CNativeInt(), name="NO_ORDER_CHECK")
 require_c_contiguous = Variable(CNativeInt(), name="REQUIRE_C_CONTIGUOUS")

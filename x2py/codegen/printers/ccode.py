@@ -1121,6 +1121,7 @@ class CCodePrinter(CodePrinter):
             if get_direct_module(v) is None:
                 args.append(ObjectAddress(v))
 
+        output_args = []
         if (
             parent_assign is not None
             and isinstance(func.results.var, BindCVariable)
@@ -1134,7 +1135,11 @@ class CCodePrinter(CodePrinter):
                 output_arg = ObjectAddress(arg)
                 if not isinstance(arg, ObjectAddress) and self.is_c_pointer(arg):
                     output_arg = ObjectAddress(output_arg)
-                args.append(output_arg)
+                output_args.append(output_arg)
+            if func.arguments and func.arguments[0].bound_argument:
+                args = args[:1] + output_args + args[1:]
+            else:
+                args = output_args + args
 
         self._temporary_args = []
         args = ", ".join(self._print(ai) for a in args for ai in self.scope.collect_all_tuple_elements(a))

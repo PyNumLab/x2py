@@ -85,9 +85,9 @@ def _expected_generated_files(
         output_dir / f"{module_name}_wrapper.o",
         shared_library,
     ]
-    cwrapper_dir = output_dir / "cwrapper"
-    if cwrapper_dir.is_dir():
-        candidates.extend(sorted(path for path in cwrapper_dir.rglob("*") if path.is_file()))
+    runtime_support_dir = output_dir / "x2py_runtime"
+    if runtime_support_dir.is_dir():
+        candidates.extend(sorted(path for path in runtime_support_dir.rglob("*") if path.is_file()))
     return tuple(path for path in candidates if path.exists())
 
 

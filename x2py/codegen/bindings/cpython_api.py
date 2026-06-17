@@ -1,6 +1,6 @@
 """
 Module representing objects (functions/variables etc) required for the interface
-between Python code and C code (using Python/C Api and cwrapper.c).
+between Python code and C code (using Python/C Api and x2py_runtime/python_runtime.c).
 This file contains classes but also many FunctionDef/Variable instances representing
 objects defined in Python.h.
 """
@@ -1226,10 +1226,10 @@ pytype_parse_registry = {
 }
 
 # -------------------------------------------------------------------
-#                      cwrapper.h functions
+#                      python_runtime.h functions
 # -------------------------------------------------------------------
 
-# Functions definitions are defined in x2py/stdlib/cwrapper/cwrapper.c
+# Functions definitions are defined in x2py/stdlib/x2py_runtime/python_runtime.c
 py_to_c_registry = {
     (PrimitiveBooleanType(), -1): "PyBool_to_Bool",
     (PrimitiveIntegerType(), 1): "PyInt8_to_Int8",
@@ -1285,7 +1285,7 @@ def C_to_Python(c_object):
     )
 
 
-# Functions definitions are defined in x2py/stdlib/cwrapper/cwrapper.c
+# Functions definitions are defined in x2py/stdlib/x2py_runtime/python_runtime.c
 c_to_py_registry = {
     NumpyBoolType(): "Bool_to_PyBool",
     NumpyInt64Type(): "Int" + str(NumpyInt64Type().precision * 8) + "_to_PyLong",
@@ -1477,7 +1477,7 @@ PyUnicode_Check = FunctionDef(
     body=[],
 )
 
-# Functions definitions are defined in x2py/stdlib/cwrapper/cwrapper.c
+# Functions definitions are defined in x2py/stdlib/x2py_runtime/python_runtime.c
 check_type_registry = {
     NumpyBoolType(): "PyIs_Bool",
     NumpyInt64Type(): "PyIs_NativeInt",

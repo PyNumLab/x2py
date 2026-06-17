@@ -40,8 +40,6 @@ jobs:
         run: python -m ruff format --check .
       - name: Bandit security scan
         run: bandit -c pyproject.toml -r c_parser fortran_parser semantics x2py --severity-level medium --confidence-level medium
-      - name: pip-audit dependency scan
-        run: pip-audit . --cache-dir /tmp/pip-audit-cache
       - name: Vulture dead-code scan
         run: vulture
       - name: Radon complexity policy

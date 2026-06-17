@@ -1,13 +1,13 @@
 /*
- * File containing functions useful for the cwrapper.
+ * File containing functions useful for the x2py CPython support layer.
  * There are 3 types of functions:
  * - Functions converting PythonObjects to standard C types
  * - Functions converting standard C types to PythonObjects
  * - Functions which test the type of PythonObjects
  */
 
-#ifndef CWRAPPER_H
-# define CWRAPPER_H
+#ifndef X2PY_PYTHON_RUNTIME_H
+# define X2PY_PYTHON_RUNTIME_H
 # define PY_SSIZE_T_CLEAN
 
 # include "Python.h"

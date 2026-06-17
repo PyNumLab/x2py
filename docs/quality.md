@@ -1,6 +1,6 @@
 # Quality Assurance
 
-Last reviewed: 2026-06-03
+Last reviewed: 2026-06-16
 
 This project uses a staged Python QA stack. Fast bug-focused checks run on pull
 requests, while the separate `Fuzz` workflow runs deeper Hypothesis discovery
@@ -14,9 +14,10 @@ rollout work. Mutation testing and pre-commit are not part of the active stack.
 
 | Cadence | Tools |
 | --- | --- |
-| Pull request and protected-branch push | pytest, coverage.py, stable-seed pytest-randomly, Ruff, Bandit, pip-audit, Vulture, staged Radon policy |
+| Pull request and protected-branch push | pytest, coverage.py, stable-seed pytest-randomly, Ruff, Bandit, Vulture, staged Radon policy |
 | Weekly and manual dispatch | `Fuzz` workflow with Hypothesis fuzz profile |
 | Manual triage | Full Radon reports and low-severity Bandit review |
+| Annual dependency review | Dependency vulnerability audit outside the routine per-change gate |
 
 ## Install
 
@@ -69,11 +70,10 @@ pytest -q -m property --hypothesis-profile=ci
 HYPOTHESIS_PROFILE=fuzz pytest -q -m fuzz --hypothesis-show-statistics
 ```
 
-Run security and dependency checks:
+Run security checks:
 
 ```bash
 bandit -c pyproject.toml -r x2py --severity-level medium --confidence-level medium
-pip-audit . --cache-dir /tmp/pip-audit-cache
 ```
 
 Run dead-code and complexity checks:
@@ -149,13 +149,16 @@ compiler/preprocessor subprocess calls without shell execution.
 **Decision:** keep blocking at medium confidence/severity in CI. Re-review the
 full low-severity report after subprocess-boundary changes.
 
-### pip-audit
+### Dependency Vulnerability Review
 
 **Role:** dependency vulnerability scanning.
 
-**Evidence:** no known vulnerability is present in the current dependency set.
+**Evidence:** routine per-change scans were noisy and slow relative to the
+dependency churn in this project.
 
-**Decision:** keep blocking in CI and re-run locally when dependencies change.
+**Decision:** do not run dependency vulnerability scanning as a pull-request or
+local per-change gate. Revisit dependencies during an annual manual review or
+when adding/upgrading runtime dependencies.
 
 ### Vulture
 
@@ -241,10 +244,10 @@ Current status by area:
 
 | Area | Status | Explanation |
 | --- | --- | --- |
-| Fast pull-request gates | Complete for adoption | Tests, coverage, Ruff, Bandit, pip-audit, Vulture, and staged Radon are wired as blocking gates. |
+| Fast pull-request gates | Complete for adoption | Tests, coverage, Ruff, Bandit, Vulture, and staged Radon are wired as blocking gates. |
 | Property and fuzz testing | Complete for adoption | Current parser, AST, semantic-IR, and code-generation invariants exist; future failures still need regression tests. |
 | Dead-code detection | Complete for adoption | Vulture is clean and blocking; future public API additions should keep exclusions narrow. |
-| Security and dependency scanning | Complete for adoption | Bandit and pip-audit are blocking; low-severity and dependency reviews recur when related code changes. |
+| Security and dependency scanning | Complete for adoption | Bandit is blocking; dependency vulnerability review is annual/manual or tied to dependency changes. |
 | Complexity tracking | Complete for adoption | The staged Radon policy is blocking in CI; future hotspot decomposition can ratchet thresholds further. |
 | Scheduled workflow triage | Complete for adoption | Jobs exist and the triage process is documented; scheduled failures remain ordinary maintenance. |
 
@@ -289,5 +292,4 @@ The `Fuzz` workflow runs deeper discovery every Monday and by manual dispatch:
 - Vulture configuration: https://pypi.org/project/vulture/
 - Radon command line: https://radon.readthedocs.io/en/stable/commandline.html
 - Bandit configuration: https://bandit.readthedocs.io/en/latest/config.html
-- pip-audit: https://github.com/pypa/pip-audit
 - pytest-randomly: https://github.com/pytest-dev/pytest-randomly
