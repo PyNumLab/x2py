@@ -8,6 +8,11 @@ Work through the sections in order unless a section explicitly has no
 dependency on earlier work. A feature is complete only when its generated
 extension is compiled, imported, and exercised from Python.
 
+Most remaining implementation work in this checklist is expected to be in
+`x2py/semantics/ir2ast.py` and `x2py/codegen/`. Some items may still require
+targeted changes elsewhere, but those two areas should contain nearly all of
+the wrapper behavior work.
+
 ## Status Rules
 
 - `[x]` means the behavior has an end-to-end runtime wrapper test.
