@@ -180,6 +180,41 @@ end subroutine legacy_specs
 
     assert [arg.name for arg in sig.arguments] == ["x"]
     assert sig.arguments[0].base_type == "real"
+    assert sig.common_variables == ["tmp"]
+
+
+@pytest.mark.parametrize(
+    ("code", "unit_kind", "expected"),
+    [
+        (
+            """
+module common_mod
+  real :: value, values(4)
+  logical :: flag
+  common /shared/ value, values /other/ flag
+end module common_mod
+""",
+            "module",
+            ["value", "values", "flag"],
+        ),
+        (
+            """
+subroutine common_proc()
+  real :: value, values(4)
+  logical :: flag
+  common /shared/ value, values /other/ flag
+end subroutine common_proc
+""",
+            "procedure",
+            ["value", "values", "flag"],
+        ),
+    ],
+)
+def test_common_block_members_are_recorded_for_non_export(code, unit_kind, expected):
+    parsed = parse_fortran_file(code, filename="common_block.f90")
+    unit = parsed.modules[0] if unit_kind == "module" else parsed.procedures[0]
+
+    assert unit.common_variables == expected
 
 
 def test_execution_part_boundaries_and_local_types_are_not_misread_as_declarations():

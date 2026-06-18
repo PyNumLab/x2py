@@ -392,7 +392,7 @@ class _SemanticReadinessChecker:
             unit_kind=unit_kind,
         )
         function_symbols = set(known_shape_symbols) | {arg.name for arg in func.arguments}
-        self._check_bind_c_abi(func, owner=owner, unit=unit, unit_kind=unit_kind)
+        self._check_bind_c_abi(func, module=module, owner=owner, unit=unit, unit_kind=unit_kind)
         for arg in func.arguments:
             if self._is_unsupported_polymorphic_argument(func, arg, module=module):
                 self._add_blocker(
@@ -475,6 +475,7 @@ class _SemanticReadinessChecker:
         self,
         func: SemanticFunction | SemanticMethod,
         *,
+        module: SemanticModule,
         owner: str,
         unit: str,
         unit_kind: str,
@@ -484,6 +485,20 @@ class _SemanticReadinessChecker:
         for arg in func.arguments:
             semantic_type = arg.semantic_type
             if semantic_type.rank > 0:
+                continue
+            if self.index.is_bind_c_class(semantic_type.name, module):
+                continue
+            if self.index.is_wrapped_class(semantic_type.name, module):
+                is_value = bool(getattr(arg.origin, "metadata", {}).get("value"))
+                transfer = "by-value " if is_value else ""
+                self._add_blocker(
+                    "fortran_bind_c_derived_type_unsupported",
+                    f"Fortran bind(C) {transfer}derived-type arguments must use a type declared bind(C); "
+                    "x2py will not infer aggregate layout.",
+                    {"owner": owner, "item": arg.name},
+                    unit=unit,
+                    unit_kind=unit_kind,
+                )
                 continue
             if not self._has_known_iso_c_kind(semantic_type):
                 self._add_blocker(
@@ -496,11 +511,23 @@ class _SemanticReadinessChecker:
         if (
             func.return_type is not None
             and func.return_type.rank == 0
+            and not self.index.is_bind_c_class(func.return_type.name, module)
             and not self._has_known_iso_c_kind(func.return_type)
         ):
+            if self.index.is_wrapped_class(func.return_type.name, module):
+                code = "fortran_bind_c_derived_type_unsupported"
+                message = (
+                    "Fortran bind(C) derived-type results must use a type declared bind(C); "
+                    "x2py will not infer aggregate layout."
+                )
+            else:
+                code = "fortran_bind_c_abi_unsupported"
+                message = (
+                    "Fortran bind(C) scalar declarations need a supported ISO C binding kind before wrapper generation."
+                )
             self._add_blocker(
-                "fortran_bind_c_abi_unsupported",
-                "Fortran bind(C) scalar declarations need a supported ISO C binding kind before wrapper generation.",
+                code,
+                message,
                 {"owner": owner, "item": "return"},
                 unit=unit,
                 unit_kind=unit_kind,
@@ -935,6 +962,7 @@ class _SemanticTypeIndex:
     def __init__(self, modules: list[SemanticModule]):
         self.known_types = set(_BUILTIN_TYPES)
         self.wrapped_class_names: set[str] = set()
+        self.bind_c_class_names: set[str] = set()
         self.imported_modules_by_module: dict[str, set[str]] = {}
         self.import_aliases_by_module: dict[str, set[str]] = {}
 
@@ -944,6 +972,8 @@ class _SemanticTypeIndex:
                     names = _class_type_names(declaration, module_name=module.name)
                     self.known_types.update(names)
                     self.wrapped_class_names.update(names)
+                    if declaration.metadata.get("fortran_bind_c"):
+                        self.bind_c_class_names.update(names)
                 else:
                     self.known_types.add(declaration.name)
                     self.known_types.add(f"{module.name}.{declaration.name}")
@@ -968,6 +998,12 @@ class _SemanticTypeIndex:
             return True
         qualified = f"{module.name}.{name}"
         return qualified in self.wrapped_class_names
+
+    def is_bind_c_class(self, name: str, module: SemanticModule) -> bool:
+        if name in self.bind_c_class_names:
+            return True
+        qualified = f"{module.name}.{name}"
+        return qualified in self.bind_c_class_names
 
 
 def _import_index(imports: list[str | SemanticImport]) -> tuple[set[str], set[str], set[str]]:

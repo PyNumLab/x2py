@@ -38,7 +38,8 @@ def scale(
 
 Function and method bodies must be `...`. Positional-only, keyword-only,
 `*args`, `**kwargs`, untyped parameters and ordinary Python statements are not
-part of the semantic format.
+part of the semantic format. The generated keyword-only derived-type
+constructor described below is the only keyword-only exception.
 
 `load_pyi_modules(...)` can load one file, several files, or a directory tree.
 Directory loading derives dotted module names from relative `.pyi` paths and
@@ -284,6 +285,9 @@ def projected(x: Float64) -> Returns["x", Float64]: ...
 `Returns["name", T]` records an output value associated with an argument name.
 `Returns["name", T, Optional]` marks the returned output optional. Plain tuple
 return components after the first are converted to generated output arguments.
+When the name matches an existing Python-visible argument, the argument remains
+an input and the return item represents replacement-style `intent(inout)`
+behavior for immutable public values such as Python `str`.
 
 Class methods use the same stub form. An untyped leading `self` is allowed in a
 method and is not treated as a native argument.
@@ -477,6 +481,24 @@ Python cannot directly replace or reallocate such fields. Assigning a new array
 to the field raises `AttributeError`; explicit wrapped Fortran procedures must
 perform allocation, reallocation, and deallocation.
 
+Fortran classes with public rank-0 numeric, logical, or complex components
+emit a generated keyword-only constructor. Every constructor keyword is
+optional: omitted components keep the native allocation state, including any
+Fortran default component initializer.
+
+```python
+class state:
+    def __init__(
+        self,
+        *,
+        id: Int32 = 7,
+        scale: Float64 = 2.5
+    ) -> None: ...
+
+    id: Int32 = 7
+    scale: Float64 = 2.5
+```
+
 Module allocatable arrays are emitted as explicit getter functions so
 unallocated storage can be represented as `None`:
 
@@ -491,6 +513,28 @@ allocatable array type unioned with `None`. `FortranTarget` is required for
 module allocatable arrays because the generated Fortran bridge needs `c_loc` on
 the native storage. Without that native `target` attribute, readiness and direct
 code generation report a blocker instead of generating a copied fallback.
+
+Public scalar Fortran module variables use explicit accessors. The getter reads
+current native storage; the setter writes through to the Fortran module
+variable. The variable itself is not added as a mutable Python module
+attribute.
+
+```python
+def get_counter() -> Int32: ...
+
+def set_counter(value: Int32) -> None: ...
+```
+
+Fortran `parameter` declarations are emitted as `Final[...]` constants when
+their literal value can be represented in `.pyi`:
+
+```python
+nmax: Final[Int32] = 12
+```
+
+No setter is generated for parameters. Python module namespaces remain ordinary
+Python module namespaces, so assigning to `mod.nmax` can rebind that Python name
+without modifying native Fortran state.
 
 Allocatable array function results and allocatable `intent(out)` array arguments
 use a copy-return policy. The generated bridge copies allocated Fortran storage
@@ -622,7 +666,8 @@ The loader intentionally rejects syntax that would be ambiguous or stale:
 - non-dimensional subscriptions such as `Float64[ORDER_F]`.
 - `Ptr[1](T)`.
 - untyped callable parameters.
-- positional-only, keyword-only, vararg or kwarg function parameters.
+- positional-only, keyword-only, vararg or kwarg function parameters, except
+  for the generated derived-type constructor shape.
 - nested enum declarations.
 - ordinary function bodies instead of `...`.
 - unsupported decorators other than `@private`, `@native_call`,

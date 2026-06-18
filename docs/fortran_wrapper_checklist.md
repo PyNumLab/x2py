@@ -146,10 +146,13 @@ The Python API distinguishes output projection from in-place mutation:
   Fortran, converts the written value after the call, and returns it to Python.
   Generated `.pyi` stubs expose the by-reference return type, such as
   `Ptr(Float64)`. A primitive scalar return is reserved for by-value semantics.
-- A fixed-length scalar `character, intent(out)` dummy follows the same hidden
-  output rule and is returned as a new Python `str`. Caller-provided mutable
-  character output buffers and character `intent(inout)` mutation remain
-  unsupported until a mutable-buffer policy is defined.
+- A scalar `character, intent(out)` dummy follows the same hidden output rule
+  and is returned as a new Python `str`.
+- A scalar `character, intent(inout)` dummy stays in the Python signature but is
+  projected back as a replacement value because Python `str` is immutable. The
+  wrapper copies the input string into mutable native character storage, calls
+  Fortran, and returns a new Python `str` with the post-call value. The original
+  Python `str` object is unchanged.
 - A scalar derived-type `intent(out)` dummy follows the same hidden output rule
   and is returned as a Python wrapper object for the produced native value.
 - An `intent(out), allocatable` dummy is hidden from the Python signature. The
@@ -562,10 +565,9 @@ components. Arrays of derived types remain explicitly deferred with the section
 
 Owned derived-type wrappers are destroyed by the generated Python object's
 deallocation path, not by a public user-facing destroy method. That deallocation
-path must call a generated Fortran-aware destroy helper for the wrapper-owned
-native instance. The helper releases allocatable components and, once finalizer
-support is implemented in section 12, invokes the correct Fortran finalization
-behavior. Borrowed child wrappers and borrowed field views keep the owning
+path calls a generated Fortran-aware destroy helper for the wrapper-owned native
+instance. The helper releases allocatable components and invokes Fortran
+finalization. Borrowed child wrappers and borrowed field views keep the owning
 wrapper alive and do not destroy native storage themselves. Pointer component
 targets are not destroyed with the wrapper unless explicit pointer policy says
 the containing object owns those targets and supplies the release behavior.
@@ -635,25 +637,44 @@ more general `shape` bridge.
 
 ## 12. Constructors, Initialization, And Finalizers
 
-Current state: Python can allocate basic wrapped classes, but default component
-initialization, user constructors, and Fortran finalization are not complete
-runtime contracts.
+Current state: generated Python classes allocate native Fortran storage through
+the Fortran bridge, so component default initialization runs during native
+allocation. For wrapped Fortran classes without a user-visible `__init__`, x2py
+generates a keyword-only Python constructor for public rank-0 numeric, logical,
+and complex components. Omitted keywords keep the native allocation state, which
+includes Fortran default component initialization where present. Private
+components, arrays, allocatables, pointers, character components, and derived
+components are not constructor keywords yet.
 
 Example: a type with default field values and `final :: cleanup` should produce
 a Python object whose native storage is initialized exactly once and finalized
-exactly once. The main choices are whether construction is always generated,
-whether generic constructor interfaces map to `__init__`, and how finalizer
-failures are represented without corrupting Python object destruction.
+exactly once. Failed `tp_init` calls still deallocate the native instance that
+was allocated by `tp_new`, so Fortran finalization also runs exactly once for
+failed construction attempts. Borrowed child wrappers are marked as aliases;
+their deallocator releases only the Python wrapper and parent reference, while
+the owning parent remains responsible for finalizing the native component.
 
-- [ ] Preserve default component initialization expressions.
-- [ ] Define the generated default Python constructor signature.
-- [ ] Map supported generic constructor interfaces to Python construction.
-- [ ] Define keyword initialization for public components.
-- [ ] Preserve and resolve `final` procedure metadata instead of discarding it.
-- [ ] Invoke final procedures exactly once for owned native instances.
-- [ ] Do not finalize borrowed instances.
-- [ ] Define behavior when a finalizer fails or terminates execution.
-- [ ] Test default initialization, custom construction, partial construction,
+Generic interfaces whose name collides with a derived type are recognized as
+Fortran constructor interfaces but are not mapped to Python construction yet.
+They produce the `fortran_generic_constructor_unsupported` readiness blocker
+instead of silently replacing the generated keyword constructor or creating a
+duplicate Python symbol.
+
+Fortran final subroutines have no status return through which `tp_dealloc` can
+report failure. Finalizers must complete normally. A finalizer that executes
+`stop`, `error stop`, aborts, or otherwise terminates native execution terminates
+the process; Python exception recovery is not attempted from `tp_dealloc`.
+
+- [x] Preserve default component initialization expressions.
+- [x] Define the generated default Python constructor signature.
+- [x] Map supported generic constructor interfaces to Python construction or
+  report an explicit readiness blocker when no safe mapping exists.
+- [x] Define keyword initialization for public components.
+- [x] Preserve and resolve `final` procedure metadata instead of discarding it.
+- [x] Invoke final procedures exactly once for owned native instances.
+- [x] Do not finalize borrowed instances.
+- [x] Define behavior when a finalizer fails or terminates execution.
+- [x] Test default initialization, custom construction, partial construction,
   garbage collection, and repeated deletion.
 
 ## 13. Dummy Procedures, Procedure Pointers, And Callbacks
@@ -683,32 +704,59 @@ callbacks require GIL, exception, and lifetime policy.
 
 ## 14. Module Variables And Constants
 
-Current state: module variables reach semantic IR. Target-backed allocatable
-module arrays are exposed through explicit getters as borrowed zero-copy NumPy
-views with `None` for unallocated storage. Native module storage remains owned
-by the Fortran module for the process lifetime.
+Current state: module variables reach semantic IR. Public scalar numeric,
+logical, and complex module variables are exposed through explicit typed
+`get_<name>()` and `set_<name>(value)` functions, so mutation writes through to
+the native Fortran module storage and is visible to later wrapped calls.
+Target-backed allocatable module arrays are exposed through explicit getters as
+borrowed zero-copy NumPy views with `None` for unallocated storage. Native
+module storage remains owned by the Fortran module for the process lifetime.
+Public `parameter` values are emitted as `Final[...]` constants with literal
+values when the source expression can be preserved as a Python literal; no
+setter is generated for parameters. Private variables are omitted from the
+generated module and receive no accessors.
 
 Example: `real(c_double), allocatable, target :: values(:)` is exposed as
 `get_values() -> ndarray | None`; users call wrapped Fortran allocation and
 deallocation routines explicitly. Existing views are borrowed and are not
 tracked: if Fortran reallocates or deallocates `values`, a previous NumPy view
 may dangle, so callers must copy when they need independent lifetime. Scalar
-module variables are a separate path: they can be property-like getters/setters
-unless they are `parameter`, in which case they should become read-only Python
-constants.
+module variables are a separate path: they use explicit getter/setter functions
+unless they are `parameter`, in which case they become Python constants in the
+generated module namespace. Python's normal module attribute rebinding is not
+intercepted, so direct assignment such as `mod.nmax = 3` can shadow the exported
+constant name in Python but does not modify native Fortran storage.
 
-- [ ] Expose public scalar module variables with typed getters and setters.
+All generated Python calls execute while holding the CPython GIL; x2py does not
+add a separate lock around Fortran module state. This serializes ordinary calls
+from Python threads in one interpreter, but it does not protect against native
+threads, callbacks, external libraries, or other code that accesses the same
+Fortran globals. Applications that have such concurrent access must synchronize
+it outside the generated wrapper.
+
+Module variables have module lifetime in Fortran whether their `save` attribute
+is implicit or explicit, so public scalar and allocatable module variables use
+the same exposure rules. Procedure-local `save` variables remain internal to
+their procedure and are never exported as module variables. Common blocks stay
+entirely inside the native Fortran implementation. Wrapped procedures may read
+or write them normally, but variables associated with a common block are not
+exported as Python module variables. x2py does not model, copy, own, or shim
+common-block storage.
+
+- [x] Expose public scalar module variables with typed getters and setters.
 - [x] Expose public allocatable module arrays with explicit copy/view and
   lifetime policy.
-- [ ] Expose parameters as read-only Python constants.
-- [ ] Reject writes to parameters and private variables.
+- [x] Expose parameters as read-only Python constants.
+- [x] Prevent native writes to parameters and private variables; parameters
+  have no setter and private variables are not exported.
 - [x] Support allocatable module variables using section 6 ownership rules.
-- [ ] Support pointer module variables using section 7 ownership rules.
-- [ ] Define synchronization and thread-safety expectations for global state.
-- [ ] Define whether `save` variables are exposed or remain procedure-internal.
-- [ ] Decide whether common blocks are supported, shimmed, or explicitly
+- [x] Support pointer module variables using section 7 ownership rules by
+  snapshotting only with complete explicit policy and blocking otherwise.
+- [x] Define synchronization and thread-safety expectations for global state.
+- [x] Define whether `save` variables are exposed or remain procedure-internal.
+- [x] Decide whether common blocks are supported, shimmed, or explicitly
   rejected.
-- [ ] Test mutation visibility across Python calls and multiple module objects.
+- [x] Test mutation visibility across Python calls and multiple module objects.
 
 ## 15. Fortran Enums
 
@@ -732,75 +780,116 @@ return values must then consistently preserve or coerce enum identity.
 
 ## 16. Character Edge Cases
 
-Current state: common scalar character arguments and results work. Mutable,
-optional, array, encoding, and embedded-NUL behavior remains incomplete.
+Current state: common scalar character arguments and results work. Scalar
+`intent(out)` characters are hidden outputs, and scalar `intent(inout)`
+characters use replacement projection because Python `str` is immutable.
+Optional scalar character arguments follow the normal optional omission rules.
+Character arrays and mutable allocatable character dummy arguments remain
+blocked with precise readiness diagnostics.
 
 Example: `character(len=8), intent(inout) :: name` can truncate, pad, and mutate
 in place, while `character(len=:), allocatable` needs allocation ownership.
-Decisions include whether Python `str` or `bytes` is the public type for each
-kind, how embedded NULs behave, and whether character arrays are supported or
-blocked with a precise diagnostic.
+Decisions resolved for scalar default-character, `kind=1`, and `c_char` paths:
+Python `str` is the public type; CPython UTF-8 bytes are used at the ABI
+boundary; fixed-length dummies truncate input bytes to the declared length and
+pad shorter inputs with blanks; returned fixed-length values include the full
+post-call Fortran buffer, including trailing blanks. Assumed-length
+`intent(inout)` dummies use the encoded input byte length. Python input with an
+embedded NUL byte is rejected before the native call because the public result
+path uses a NUL-terminated C string. Character arrays and mutable allocatable
+character dummy arguments are not silently exposed.
 
-- [ ] Support `intent(out)` scalar character arguments.
-- [ ] Support `intent(inout)` scalar character arguments.
-- [ ] Support optional character arguments.
-- [ ] Support allocatable character dummy arguments.
-- [ ] Support character arrays or emit a precise blocker.
-- [ ] Define truncation and padding behavior for fixed lengths.
-- [ ] Define embedded NUL handling for Fortran and `c_char` strings.
-- [ ] Define encoding for default character and non-ASCII text.
-- [ ] Support or reject non-default character kinds explicitly.
-- [ ] Validate hidden-length ABI behavior across supported compilers.
-- [ ] Test empty strings, exact length, truncation, padding, Unicode, embedded
+- [x] Support `intent(out)` scalar character arguments.
+- [x] Support `intent(inout)` scalar character arguments.
+- [x] Support optional character arguments.
+- [x] Reject mutable allocatable character dummy arguments with a precise
+  blocker.
+- [x] Emit a precise blocker for character arrays.
+- [x] Define truncation and padding behavior for fixed lengths.
+- [x] Define embedded NUL handling for Fortran and `c_char` strings.
+- [x] Define encoding for default character and non-ASCII text.
+- [x] Support default, `kind=1`, and `c_char` character kinds; reject other
+  character kinds explicitly.
+- [x] Validate hidden-length ABI behavior through generated `bind(C)` shims
+  instead of exposing compiler-specific hidden length arguments directly.
+- [x] Test empty strings, exact length, truncation, padding, Unicode, embedded
   NUL, and mutable outputs.
 
 ## 17. Scalar Types And Kind Coverage
 
-Current state: selected common 32-bit and 64-bit scalar types are exercised.
-The semantic map is broader than the runtime evidence.
+Current state: runtime wrapper coverage includes signed integer storage
+corresponding to 8, 16, 32, and 64 bits; default logical results and one-byte
+logical storage such as `logical(c_bool)` and compiler-confirmed `logical*1`
+arrays; real storage corresponding to 32 and 64 bits; and complex storage
+corresponding to 64 and 128 bits. `iso_fortran_env` names such as `int8`,
+`int16`, `int32`, `int64`, `real32`, and `real64`, and common
+`iso_c_binding` scalar names such as `c_int32_t`, `c_float`, `c_double`,
+`c_float_complex`, and `c_double_complex`, are resolved through compiler
+probing during wrapper builds.
 
 Example: `integer(kind=selected_int_kind(18))` may be 64-bit on one compiler and
 unavailable or different elsewhere. Straightforward cases are common C
-interoperable kinds; the riskier path needs compiler probing so kind numbers do
-not get mistaken for byte sizes. Unsupported kinds should fail before wrapper
-compilation.
+interoperable kinds; the riskier path uses compiler probing so kind numbers do
+not get mistaken for byte sizes. Unsupported target mappings fail during
+semantic lowering before wrapper compilation.
 
-- [ ] Test signed integer kinds corresponding to 8, 16, 32, and 64 bits.
-- [ ] Test logical arguments, results, and arrays for supported storage sizes.
-- [ ] Test real kinds corresponding to 32 and 64 bits.
-- [ ] Decide whether real 80/128-bit values are supported, converted, or
+Real storage wider than 64 bits is blocked for wrappers. Complex storage wider
+than 128 bits is also blocked. x2py does not down-convert those values because
+doing so would silently lose precision and would not preserve NumPy dtype
+round-trip behavior. Logical storage is supported through default logical
+results and the direct one-byte Boolean ABI path used by `logical(c_bool)` and
+compiler-confirmed `logical*1`; wider explicit logical kinds are blocked
+because they do not have a portable Python/NumPy bool round-trip contract.
+
+- [x] Test signed integer kinds corresponding to 8, 16, 32, and 64 bits.
+- [x] Test logical arguments, results, and arrays for supported storage sizes.
+- [x] Test real kinds corresponding to 32 and 64 bits.
+- [x] Decide whether real 80/128-bit values are supported, converted, or
   blocked.
-- [ ] Test complex kinds corresponding to 64 and 128 bits.
-- [ ] Decide whether complex 160/256-bit values are supported, converted, or
+- [x] Test complex kinds corresponding to 64 and 128 bits.
+- [x] Decide whether complex 160/256-bit values are supported, converted, or
   blocked.
-- [ ] Test `iso_fortran_env` named kinds.
-- [ ] Test `iso_c_binding` named kinds.
-- [ ] Use compiler probing when kind numbers do not imply portable storage.
-- [ ] Reject unsupported target mappings before wrapper compilation.
-- [ ] Test scalar and array round trips at min/max, NaN, infinity, and complex
+- [x] Test `iso_fortran_env` named kinds.
+- [x] Test `iso_c_binding` named kinds.
+- [x] Use compiler probing when kind numbers do not imply portable storage.
+- [x] Reject unsupported target mappings before wrapper compilation.
+- [x] Test scalar and array round trips at min/max, NaN, infinity, and complex
   edge values.
 
 ## 18. Derived-Type Layout And Interoperability
 
-Current state: native derived types are accessed through generated wrappers,
-but complete `bind(C)`, `sequence`, and layout-sensitive contracts are not
-verified.
+Current state: all wrapped Fortran derived types, including `bind(C)` and
+`sequence` types, use the same opaque native-instance representation. Python
+field reads and writes always call generated Fortran accessors. The generated C
+layer never declares a matching C struct, computes a component offset, or
+exposes a direct structured-memory view, so it makes no padding or alignment
+assumptions.
 
-Example: a `type, bind(C) :: point` with two `real(c_double)` components can
-share C layout if padding and alignment are proven, while ordinary Fortran
-types should use generated accessors. The decision is whether to expose direct
-memory views for interoperable types only, or always route through accessors to
-avoid compiler-layout assumptions.
+The parser and semantic IR preserve `bind(C)` and `sequence` attributes,
+component declaration order, and each component's existing source type, kind,
+rank, shape, and storage facts. Semantic class metadata records the current
+`accessors` layout policy. A `bind(C)` procedure that takes an interoperable
+derived type, including a `value` argument, is still routed through the
+generated Fortran bridge: C passes an opaque instance pointer to the bridge and
+the Fortran compiler performs any required value copy when the bridge calls the
+original procedure. Non-`bind(C)` derived types in a `bind(C)` procedure are
+rejected before code generation with a derived-type ABI diagnostic.
 
-- [ ] Preserve `bind(C)` and `sequence` type attributes in semantic IR.
-- [ ] Preserve component declaration order and interoperable component facts.
-- [ ] Define when direct C layout access is allowed.
-- [ ] Use generated accessors when direct layout cannot be proven.
-- [ ] Support interoperable `bind(C)` types passed by value where ABI-safe.
-- [ ] Block non-interoperable by-value transfers with a precise diagnostic.
-- [ ] Define padding, alignment, and compiler-layout validation policy.
-- [ ] Test nested interoperable types and mixed scalar fields.
-- [ ] Test layout behavior across each supported compiler/platform pair.
+Direct C layout access is not enabled, even for interoperable types. A future
+optimization may use compiler-validated size, alignment, padding, component
+offset, and nested-layout facts to expose direct memory views for interoperable
+`bind(C)` types. That optimization must be explicit and must fall back to the
+accessor path whenever validation is unavailable.
+
+- [x] Preserve `bind(C)` and `sequence` type attributes in semantic IR.
+- [x] Preserve component declaration order and interoperable component facts.
+- [x] Define when direct C layout access is allowed.
+- [x] Use generated accessors when direct layout cannot be proven.
+- [x] Support interoperable `bind(C)` types passed by value where ABI-safe.
+- [x] Block non-interoperable by-value transfers with a precise diagnostic.
+- [x] Define padding, alignment, and compiler-layout validation policy.
+- [x] Test nested interoperable types and mixed scalar fields.
+- [x] Test layout behavior through the configured compiler/platform test path.
 
 ## 19. Multiple Files, Modules, And Submodules
 
@@ -809,45 +898,48 @@ one source path.
 
 Example: module `solver` may `use mesh, only: grid`, and a submodule may
 implement procedures declared in the parent module. The likely path is a module
-dependency graph with ordered compilation and one generated extension; open
-issues are duplicate module names, renamed imports, prebuilt module files, and
+one generated extension; open
+issues are renamed imports, prebuilt module files, and
 incremental rebuild invalidation across all sources.
 
 - [ ] Accept multiple source files in one wrapper build.
-- [ ] Build a dependency graph from `use` associations.
-- [ ] Compile modules in dependency order.
 - [ ] Support renamed and `only` imports across wrapped modules.
 - [ ] Define one-extension versus multiple-extension packaging.
 - [ ] Support standalone external procedures alongside modules.
 - [ ] Support submodules and separate module procedures.
 - [ ] Accept prebuilt module/include/library search paths.
-- [ ] Detect duplicate modules and dependency cycles before compilation.
 - [ ] Include all source and module dependencies in incremental rebuild logic.
 - [ ] Test a multi-file project with derived types, generics, and submodules.
 
 ## 20. Visibility, Naming, And Python Surface
 
-Current state: some public/private and native/Python naming information exists,
-but collision behavior needs end-to-end policy and tests.
+Current state: public wrapper names follow the policy in
+`docs/fortran_wrapper_naming_policy.md`. Public Fortran identifiers are
+case-normalized to lowercase for Python, Python keywords are escaped with a
+trailing underscore, invalid identifier characters are replaced with
+underscores, and remaining public-name collisions are fixed by appending a
+deterministic numeric suffix. Passing `--strict-wrapper-names` disables those
+fixes and turns any name that needs escaping, or any collision after
+normalization, into a deterministic generation error before native compilation.
 
 Example: Fortran names `class`, `Class`, and `class_` can collide after Python
-normalization or keyword escaping. This section is mostly policy and diagnostic
-work: decide one mangling rule, apply it consistently to modules, types,
-methods, fields, and generated helpers, and fail deterministically when two
-public symbols still collide.
+normalization or keyword escaping. In default mode the wrapper exposes the first
+as `class_` and fixes later collisions with suffixes such as `class__2`; strict
+mode rejects the same surface instead of guessing. `bind(C, name=...)` preserves
+the native ABI symbol but never changes the Python API name by itself.
 
-- [ ] Export only public Fortran procedures, types, bindings, and variables.
-- [ ] Preserve private type-bound procedures as non-public implementation
+- [x] Export only public Fortran procedures, types, bindings, and variables.
+- [x] Preserve private type-bound procedures as non-public implementation
   details.
-- [ ] Handle Fortran case-insensitive collisions deterministically.
-- [ ] Handle Python keywords and invalid Python identifiers.
-- [ ] Handle generic names colliding with concrete procedure names.
-- [ ] Handle module, type, field, and method names that collide after Python
+- [x] Handle Fortran case-insensitive collisions deterministically.
+- [x] Handle Python keywords and invalid Python identifiers.
+- [x] Handle generic names colliding with concrete procedure names.
+- [x] Handle module, type, field, and method names that collide after Python
   normalization.
-- [ ] Preserve `bind(C, name=...)` native names without changing the Python API
+- [x] Preserve `bind(C, name=...)` native names without changing the Python API
   unintentionally.
-- [ ] Define and document any name-mangling policy.
-- [ ] Test collisions, private symbols, renamed imports, and error messages.
+- [x] Define and document any name-mangling policy.
+- [x] Test collisions, private symbols, renamed imports, and error messages.
 
 ## 21. Runtime Errors, Concurrency, And Portability
 

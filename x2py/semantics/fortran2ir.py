@@ -96,26 +96,18 @@ FORTRAN_TYPE_MAP = {
     ("real", None): "Float32",
     ("real", "4"): "Float32",
     ("real", "8"): "Float64",
-    ("real", "16"): "Float128",
     ("real", "real32"): "Float32",
     ("real", "real64"): "Float64",
-    ("real", "real128"): "Float128",
     ("real", "c_float"): "Float32",
     ("real", "c_double"): "Float64",
     ("complex", None): "Complex64",
     ("complex", "4"): "Complex64",
     ("complex", "8"): "Complex128",
-    ("complex", "16"): "Complex256",
     ("complex", "real32"): "Complex64",
     ("complex", "real64"): "Complex128",
-    ("complex", "real128"): "Complex256",
     ("complex", "c_float_complex"): "Complex64",
     ("complex", "c_double_complex"): "Complex128",
     ("logical", None): "Bool",
-    ("logical", "1"): "Bool",
-    ("logical", "2"): "Bool",
-    ("logical", "4"): "Bool",
-    ("logical", "8"): "Bool",
     ("logical", "c_bool"): "Bool",
     ("character", None): "String",
     ("character", "1"): "String",
@@ -125,8 +117,8 @@ FORTRAN_TYPE_MAP = {
 _FORTRAN_INTRINSIC_TYPES = frozenset({"integer", "real", "complex", "logical", "character"})
 _FORTRAN_STORAGE_TYPE_MAP = {
     "integer": {8: "Int8", 16: "Int16", 32: "Int32", 64: "Int64"},
-    "real": {32: "Float32", 64: "Float64", 80: "Float128", 96: "Float128", 128: "Float128"},
-    "complex": {64: "Complex64", 128: "Complex128", 160: "Complex256", 192: "Complex256", 256: "Complex256"},
+    "real": {32: "Float32", 64: "Float64"},
+    "complex": {64: "Complex64", 128: "Complex128"},
 }
 
 
@@ -314,10 +306,11 @@ class FortranToIRConverter:
         derived_type_context: _DerivedTypeContext | None = None,
     ) -> SemanticArgument:
         semantic_type = self.visit_variable(arg, derived_type_context=derived_type_context)
-        resolved_intent = intent if intent is not None else getattr(arg, "intent", "in")
+        raw_intent = getattr(arg, "intent", "in")
+        resolved_intent = intent if intent is not None else raw_intent
         resolved_intent = str(resolved_intent).lower().replace(" ", "")
         if resolved_intent == "unknown":
-            resolved_intent = "inout"
+            resolved_intent = "in" if semantic_type.name == "String" and semantic_type.rank == 0 else "inout"
         if semantic_type.rank > 0:
             self._apply_array_argument_contract(semantic_type, arg, resolved_intent)
         elif not getattr(arg, "pass_by_value", False):
@@ -346,10 +339,15 @@ class FortranToIRConverter:
         if semantic_type.storage is not None and semantic_type.storage.array is not None:
             semantic_type.storage.array.allocatable = getattr(var, "allocatable", False)
             semantic_type.storage.array.pointer = getattr(var, "pointer", False)
+        metadata = {}
+        if getattr(var, "symbolic_value", None) is not None:
+            metadata["fortran_initializer"] = var.symbolic_value
         binding = binding_cls(
             name=var.name,
             semantic_type=semantic_type,
             visibility=getattr(var, "visibility", "public"),
+            default_value=getattr(var, "value", None),
+            metadata=metadata,
             origin=self._data_origin(var, source_kind=source_kind),
         )
         binding.intent = intent
@@ -399,11 +397,25 @@ class FortranToIRConverter:
         )
         methods = self._bound_methods(dtype, lookup)
         overload_sets, overload_blockers = self._bound_overload_sets(dtype, methods)
-        metadata = {}
+        type_attributes = list(dict.fromkeys(str(attr).casefold() for attr in dtype.attributes))
+        metadata = {
+            "fortran_type_attributes": type_attributes,
+            "fortran_component_order": [field.name for field in dtype.fields],
+            "fortran_component_facts": [self._derived_type_component_fact(field) for field in dtype.fields],
+            "fortran_layout_policy": "accessors",
+            "fortran_direct_layout": False,
+        }
+        if "bind(c)" in type_attributes:
+            metadata["fortran_bind_c"] = True
+        if "sequence" in type_attributes:
+            metadata["fortran_sequence"] = True
         readiness_blockers = [
             *self._type_attribute_blockers(dtype),
             *overload_blockers,
         ]
+        final_procedures = list(getattr(dtype, "final_procedures", []))
+        if final_procedures:
+            metadata["fortran_final_procedures"] = final_procedures
         if readiness_blockers:
             metadata["readiness_blockers"] = readiness_blockers
         return SemanticClass(
@@ -431,6 +443,19 @@ class FortranToIRConverter:
                 source_kind="derived_type",
             ),
         )
+
+    @staticmethod
+    def _derived_type_component_fact(field: FortranArgument) -> dict[str, object]:
+        return {
+            "name": field.name,
+            "source_type": FortranToIRConverter._fortran_source_type(field),
+            "kind": field.kind,
+            "rank": field.rank,
+            "shape": list(field.shape),
+            "allocatable": field.allocatable,
+            "pointer": field.pointer,
+            "target": field.target,
+        }
 
     def visit_module(self, module: FortranModule) -> SemanticModule:
         context = self._module_derived_type_context(module)
@@ -464,6 +489,7 @@ class FortranToIRConverter:
         metadata = {}
         if overload_blockers:
             metadata["readiness_blockers"] = overload_blockers
+        common_variables = {name.casefold() for name in module.common_variables}
         return SemanticModule(
             name=module.name,
             functions=semantic_functions,
@@ -472,6 +498,7 @@ class FortranToIRConverter:
             variables=[
                 self.visit_data_member(var, intent="in", derived_type_context=context)
                 for var in getattr(module, "variables", [])
+                if var.name.casefold() not in common_variables
             ],
             imports=self._module_imports(module),
             metadata=metadata,
@@ -709,9 +736,9 @@ class FortranToIRConverter:
         base_type = var.base_type.lower()
         kind = self._resolve_compile_time_text(str(raw_kind)).strip().lower()
         if base_type == "character":
-            return None
+            return FortranToIRConverter._character_kind_key(kind, character_length_syntax=var.character_length_syntax)
         if base_type == "logical":
-            return "c_bool" if kind == "c_bool" else None
+            return "c_bool" if kind == "c_bool" else kind
         literal_kind = FortranToIRConverter._literal_kind_key(kind)
         if literal_kind is not None:
             return literal_kind
@@ -734,6 +761,17 @@ class FortranToIRConverter:
                 return base_type, None
         return base_type, kind
 
+    @staticmethod
+    def _character_kind_key(kind: str, *, character_length_syntax: bool = False) -> str | None:
+        if character_length_syntax:
+            return None
+        kind_match = re.search(r"(?:^|,)\s*kind\s*=\s*([^,]+)", kind)
+        if kind_match is not None:
+            kind = kind_match.group(1).strip()
+        elif re.match(r"^len\s*=", kind):
+            return None
+        return kind or None
+
     def _target_type_fact(self, var: FortranVariable) -> dict[str, object] | None:
         if var.declared_storage_bits is not None:
             return {
@@ -747,9 +785,13 @@ class FortranToIRConverter:
     @staticmethod
     def _semantic_type_from_target_fact(fact: dict[str, object]) -> str | None:
         base_type = str(fact.get("base_type") or "").lower()
+        kind = fact.get("kind")
+        kind_key = None if kind is None else str(kind).lower()
         bits = int(fact.get("bits") or 0)
         if base_type == "logical":
-            return "Bool"
+            if kind_key in {None, "c_bool"} or bits == 8:
+                return "Bool"
+            return None
         if base_type == "character":
             return "String"
         return _FORTRAN_STORAGE_TYPE_MAP.get(base_type, {}).get(bits)
@@ -1103,6 +1145,7 @@ class FortranToIRConverter:
     ) -> tuple[list[ProcedureOverloadSet], list[dict[str, object]]]:
         overload_sets: list[ProcedureOverloadSet] = []
         blockers: list[dict[str, object]] = []
+        class_map = {semantic_class.name.casefold(): semantic_class for semantic_class in semantic_classes}
         for interface in module.interfaces:
             if not interface.name or interface.abstract:
                 continue
@@ -1126,9 +1169,11 @@ class FortranToIRConverter:
                     overload_sets.append(ProcedureOverloadSet(interface.name))
                 continue
             if self._is_procedure_generic_name(interface.name):
+                if interface.name.casefold() in class_map:
+                    blockers.append(self._unsupported_generic_constructor_blocker(module.name, interface.name))
+                    continue
                 overload_sets.append(self._normal_overload_set(interface.name, procedures))
                 continue
-            class_map = {semantic_class.name.casefold(): semantic_class for semantic_class in semantic_classes}
             defined_sets, defined_blockers = self._defined_overload_sets(
                 interface.name,
                 procedures,
@@ -1140,6 +1185,17 @@ class FortranToIRConverter:
                 self._merge_overload_sets(semantic_class.overload_sets, class_sets)
             blockers.extend(defined_blockers)
         return overload_sets, blockers
+
+    @staticmethod
+    def _unsupported_generic_constructor_blocker(owner: str, name: str) -> dict[str, object]:
+        return {
+            "code": "fortran_generic_constructor_unsupported",
+            "message": (
+                "Fortran generic constructor interfaces are not mapped to Python class construction; "
+                "use the generated field constructor until an explicit constructor projection is implemented."
+            ),
+            "items": [{"owner": owner, "item": name, "generic": name}],
+        }
 
     def _bound_overload_sets(
         self,
@@ -1605,9 +1661,14 @@ class FortranToIRConverter:
                 arg.semantic_type
             )
             is_scalar_copy_return = FortranToIRConverter._is_scalar_copy_return(arg.semantic_type)
+            is_character_replacement = intent == "inout" and FortranToIRConverter._is_scalar_character(
+                arg.semantic_type
+            )
             is_returned_output = (
-                is_output and (is_scalar_copy_return or arg.semantic_type.rank > 0)
-            ) or is_allocatable_replacement
+                (is_output and (is_scalar_copy_return or arg.semantic_type.rank > 0))
+                or is_allocatable_replacement
+                or is_character_replacement
+            )
             is_hidden_output = is_output and (
                 is_scalar_copy_return or FortranToIRConverter._is_allocatable_array(arg.semantic_type)
             )
@@ -1641,6 +1702,10 @@ class FortranToIRConverter:
     @staticmethod
     def _is_scalar_copy_return(semantic_type: SemanticType | None) -> bool:
         return bool(semantic_type is not None and semantic_type.rank == 0)
+
+    @staticmethod
+    def _is_scalar_character(semantic_type: SemanticType | None) -> bool:
+        return bool(semantic_type is not None and semantic_type.rank == 0 and semantic_type.name == "String")
 
     @staticmethod
     def _base_classes(dtype: FortranDerivedType) -> list[str]:

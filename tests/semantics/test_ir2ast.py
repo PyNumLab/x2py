@@ -334,6 +334,91 @@ end module pointer_mod
         )
 
 
+def test_pointer_module_variables_raise_before_codegen_without_policy():
+    source = """
+module pointer_module_mod
+  real(8), pointer :: values(:)
+end module pointer_module_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    with pytest.raises(ValueError, match="pointer array owner, lifetime, shape, and release policy are unknown"):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )
+
+
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        (
+            """
+module constructor_generic_mod
+  type :: item
+    integer :: value
+  end type item
+  interface item
+    module procedure make_item
+  end interface item
+contains
+  type(item) function make_item(value) result(instance)
+    integer, intent(in) :: value
+    instance%value = value
+  end function make_item
+end module constructor_generic_mod
+""",
+            "generic constructor interfaces are not mapped",
+        ),
+    ],
+)
+def test_unsupported_section_12_feature_raises_before_codegen(source, message):
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    with pytest.raises(ValueError, match=message):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )
+
+
+def test_bind_c_derived_value_uses_fortran_bridge_and_noninteroperable_type_is_rejected():
+    interoperable_source = """
+module bind_c_value_mod
+  use iso_c_binding
+  type, bind(C) :: point
+    real(c_double) :: x
+  end type point
+contains
+  subroutine consume(value) bind(C)
+    type(point), value :: value
+  end subroutine consume
+end module bind_c_value_mod
+"""
+    noninteroperable_source = (
+        interoperable_source.replace("type, bind(C) :: point", "type :: point")
+        .replace("module bind_c_value_mod", "module bad_bind_c_value_mod")
+        .replace("end module bind_c_value_mod", "end module bad_bind_c_value_mod")
+    )
+
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(interoperable_source))
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+    argument = codegen_module.funcs[0].arguments[0].var
+
+    assert isinstance(argument.class_type, CustomDataType)
+    assert argument.passes_by_value is True
+
+    bad_module = fortran_module_to_semantic_module(parse_fortran_file(noninteroperable_source))
+    with pytest.raises(ValueError, match=r"by-value derived-type argument.*not declared bind\(C\)"):
+        semantic_ir_to_codegen_ast(
+            bad_module,
+            Scope(name=bad_module.name, scope_type="module"),
+        )
+
+
 def test_scalar_polymorphic_input_arguments_become_dispatch_overload_sets():
     source = """
 module polymorphic_codegen_mod

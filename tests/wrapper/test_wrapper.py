@@ -27,6 +27,187 @@ ALLOCATABLE_VIEW_F90_SOURCE = Path(__file__).with_name("fallocatable_views_f90.f
 OUTPUTS_F90_SOURCE = Path(__file__).with_name("foutputs_f90.f90")
 
 
+SCALAR_KINDS_F90_TEXT = """
+module fscalar_kinds_f90
+  use iso_fortran_env, only: int8, int16, int32, int64, real32, real64
+  use iso_c_binding, only: c_bool, c_int32_t, c_float, c_double, c_float_complex, c_double_complex
+  implicit none
+contains
+  integer(int8) function id_i8(value) result(out)
+    integer(int8), intent(in) :: value
+
+    out = value
+  end function id_i8
+
+  integer(int16) function id_i16(value) result(out)
+    integer(int16), intent(in) :: value
+
+    out = value
+  end function id_i16
+
+  integer(int32) function id_i32(value) result(out)
+    integer(int32), intent(in) :: value
+
+    out = value
+  end function id_i32
+
+  integer(int64) function id_i64(value) result(out)
+    integer(int64), intent(in) :: value
+
+    out = value
+  end function id_i64
+
+  subroutine copy_i16(n, values, out)
+    integer, intent(in) :: n
+    integer(int16), intent(in) :: values(n)
+    integer(int16), intent(out) :: out(n)
+
+    out = values
+  end subroutine copy_i16
+
+  logical(c_bool) function not_flag(value) result(out)
+    logical(c_bool), intent(in) :: value
+
+    out = .not. value
+  end function not_flag
+
+  subroutine invert_flags(n, values, out)
+    integer, intent(in) :: n
+    logical(c_bool), intent(in) :: values(n)
+    logical(c_bool), intent(out) :: out(n)
+
+    out = .not. values
+  end subroutine invert_flags
+
+  real(real32) function id_r32(value) result(out)
+    real(real32), intent(in) :: value
+
+    out = value
+  end function id_r32
+
+  real(real64) function id_r64(value) result(out)
+    real(real64), intent(in) :: value
+
+    out = value
+  end function id_r64
+
+  subroutine copy_r64(n, values, out)
+    integer, intent(in) :: n
+    real(real64), intent(in) :: values(n)
+    real(real64), intent(out) :: out(n)
+
+    out = values
+  end subroutine copy_r64
+
+  complex(real32) function conj_c64(value) result(out)
+    complex(real32), intent(in) :: value
+
+    out = conjg(value)
+  end function conj_c64
+
+  complex(real64) function shift_c128(value) result(out)
+    complex(real64), intent(in) :: value
+
+    out = value + cmplx(1.0_real64, -2.0_real64, kind=real64)
+  end function shift_c128
+
+  subroutine copy_c128(n, values, out)
+    integer, intent(in) :: n
+    complex(real64), intent(in) :: values(n)
+    complex(real64), intent(out) :: out(n)
+
+    out = values
+  end subroutine copy_c128
+
+  integer(c_int32_t) function id_c_i32(value) result(out)
+    integer(c_int32_t), intent(in) :: value
+
+    out = value
+  end function id_c_i32
+
+  real(c_float) function id_c_float(value) result(out)
+    real(c_float), intent(in) :: value
+
+    out = value
+  end function id_c_float
+
+  real(c_double) function id_c_double(value) result(out)
+    real(c_double), intent(in) :: value
+
+    out = value
+  end function id_c_double
+
+  complex(c_float_complex) function conj_c_float_complex(value) result(out)
+    complex(c_float_complex), intent(in) :: value
+
+    out = conjg(value)
+  end function conj_c_float_complex
+
+  complex(c_double_complex) function conj_c_double_complex(value) result(out)
+    complex(c_double_complex), intent(in) :: value
+
+    out = conjg(value)
+  end function conj_c_double_complex
+end module fscalar_kinds_f90
+"""
+
+
+NAMING_F90_TEXT = """
+module fnaming_f90
+  implicit none
+  private
+  public :: lambda, lambda_, get_value, value, visible_t
+
+  integer :: value = 7
+
+  type :: hidden_t
+    integer :: value = 99
+  end type hidden_t
+
+  type :: visible_t
+    integer :: lambda = 3
+    integer :: lambda_ = 4
+  contains
+    procedure, public :: from => visible_from
+    procedure, private :: hidden => visible_hidden
+  end type visible_t
+
+contains
+  integer function lambda(value) result(out)
+    integer, intent(in) :: value
+
+    out = value + 1
+  end function lambda
+
+  integer function lambda_(value) result(out)
+    integer, intent(in) :: value
+
+    out = value + 2
+  end function lambda_
+
+  integer function get_value() result(out)
+    out = 100
+  end function get_value
+
+  integer function visible_from(self) result(out)
+    class(visible_t), intent(in) :: self
+
+    out = self%lambda + self%lambda_
+  end function visible_from
+
+  integer function visible_hidden(self) result(out)
+    class(visible_t), intent(in) :: self
+
+    out = -1
+  end function visible_hidden
+
+  integer function hidden_proc() result(out)
+    out = -10
+  end function hidden_proc
+end module fnaming_f90
+"""
+
+
 POINTERS_F90_TEXT = """
 module fpointers_f90
 contains
@@ -199,6 +380,208 @@ OPTIONAL_FIXED_TEXT = """
       optional_scale = base
       if (present(factor)) optional_scale = optional_scale + factor
       end function optional_scale
+"""
+
+
+CHARACTER_EDGES_F90_TEXT = """
+module fcharacter_edges_f90
+  implicit none
+contains
+  subroutine fixed_inout(name)
+    character(len=8), intent(inout) :: name
+
+    name(1:1) = 'Z'
+    name(8:8) = '!'
+  end subroutine fixed_inout
+
+  subroutine assumed_inout(name)
+    character(len=*), intent(inout) :: name
+
+    if (len(name) > 0) name(1:1) = 'Q'
+  end subroutine assumed_inout
+
+  subroutine optional_inout(label)
+    character(len=*), intent(inout), optional :: label
+
+    if (present(label)) then
+      if (len(label) > 0) label(1:1) = 'P'
+    end if
+  end subroutine optional_inout
+
+  subroutine make_out(label)
+    character(len=6), intent(out) :: label
+
+    label = 'go'
+  end subroutine make_out
+
+  character(len=5) function unicode_echo(label) result(out)
+    character(len=*), intent(in) :: label
+
+    out = label
+  end function unicode_echo
+end module fcharacter_edges_f90
+"""
+
+
+CONSTRUCTOR_F90_TEXT = """
+module fconstructors_f90
+  implicit none
+  private
+  public :: initialized, get_final_count, reset_final_count
+
+  integer :: final_count = 0
+
+  type :: initialized
+    integer :: id = 7
+    real(8) :: scale = 2.5
+  contains
+    final :: cleanup_initialized
+  end type initialized
+
+contains
+  subroutine cleanup_initialized(self)
+    type(initialized) :: self
+
+    final_count = final_count + 1
+  end subroutine cleanup_initialized
+
+  integer function get_final_count()
+    get_final_count = final_count
+  end function get_final_count
+
+  subroutine reset_final_count()
+    final_count = 0
+  end subroutine reset_final_count
+end module fconstructors_f90
+"""
+
+
+BORROWED_FINALIZER_F90_TEXT = """
+module fborrowed_finalizer_f90
+  implicit none
+  private
+  public :: child, parent, get_final_count, reset_final_count
+
+  integer :: final_count = 0
+
+  type :: child
+  contains
+    final :: cleanup_child
+  end type child
+
+  type :: parent
+    type(child) :: value
+  end type parent
+
+contains
+  subroutine cleanup_child(self)
+    type(child) :: self
+
+    final_count = final_count + 1
+  end subroutine cleanup_child
+
+  integer function get_final_count()
+    get_final_count = final_count
+  end function get_final_count
+
+  subroutine reset_final_count()
+    final_count = 0
+  end subroutine reset_final_count
+end module fborrowed_finalizer_f90
+"""
+
+
+MODULE_VARIABLES_F90_TEXT = """
+module fmodule_vars_f90
+  use iso_c_binding
+  implicit none
+  private
+  public :: nmax, counter, scale, saved_counter, summarize, scaled_counter, next_local
+
+  integer(c_int), parameter :: nmax = 12
+  integer(c_int) :: counter = 3
+  real(c_double) :: scale = 1.5d0
+  integer(c_int), save :: saved_counter = 6
+  integer(c_int) :: hidden_counter = 17
+
+contains
+  integer(c_int) function summarize() result(value)
+    value = counter + nmax
+  end function summarize
+
+  real(c_double) function scaled_counter() result(value)
+    value = real(counter, c_double) * scale
+  end function scaled_counter
+
+  integer(c_int) function next_local() result(value)
+    integer(c_int), save :: local_counter = 0
+
+    local_counter = local_counter + 1
+    value = local_counter
+  end function next_local
+end module fmodule_vars_f90
+"""
+
+
+COMMON_BLOCK_F90_TEXT = """
+module fcommon_block_f90
+  use iso_c_binding
+  implicit none
+  public :: shared_value, write_shared, read_shared
+
+  integer(c_int) :: shared_value
+  common /shared_state/ shared_value
+
+contains
+  subroutine write_shared(value)
+    integer(c_int), intent(in) :: value
+
+    shared_value = value
+  end subroutine write_shared
+
+  integer(c_int) function read_shared() result(value)
+    value = shared_value
+  end function read_shared
+end module fcommon_block_f90
+"""
+
+
+BIND_C_DERIVED_LAYOUT_F90_TEXT = """
+module fbind_c_derived_layout_f90
+  use iso_c_binding
+  implicit none
+  private
+  public :: point, tagged_point, populate, score_by_value
+
+  type, bind(C) :: point
+    real(c_double) :: x
+    integer(c_int) :: axis
+  end type point
+
+  type, bind(C) :: tagged_point
+    type(point) :: position
+    complex(c_double_complex) :: weight
+  end type tagged_point
+
+contains
+  subroutine populate(value, x, axis, weight) bind(C)
+    type(tagged_point), intent(inout) :: value
+    real(c_double), value, intent(in) :: x
+    integer(c_int), value, intent(in) :: axis
+    complex(c_double_complex), value, intent(in) :: weight
+
+    value%position%x = x
+    value%position%axis = axis
+    value%weight = weight
+  end subroutine populate
+
+  real(c_double) function score_by_value(value) result(score) bind(C)
+    type(tagged_point), value :: value
+
+    value%position%x = value%position%x + 100.0_c_double
+    score = value%position%x + real(value%position%axis, c_double) + real(value%weight, c_double)
+  end function score_by_value
+end module fbind_c_derived_layout_f90
 """
 
 
@@ -596,17 +979,18 @@ end module finheritance_f90
 
 def _assert_fmath_examples(module):
     cases = fmath_cases()
-    missing = sorted(name for name, _, _ in cases if not hasattr(module, name))
+    missing = sorted(name.lower() for name, _, _ in cases if not hasattr(module, name.lower()))
     assert missing == []
 
     for name, args, expected in cases:
-        actual = getattr(module, name)(*args)
+        public_name = name.lower()
+        actual = getattr(module, public_name)(*args)
         if isinstance(expected, bool):
-            assert bool(actual) is expected, name
+            assert bool(actual) is expected, public_name
         elif isinstance(expected, int):
-            assert actual == expected, name
+            assert actual == expected, public_name
         else:
-            np.testing.assert_allclose(actual, expected, rtol=1e-6, atol=1e-6, err_msg=name)
+            np.testing.assert_allclose(actual, expected, rtol=1e-6, atol=1e-6, err_msg=public_name)
 
 
 def _build_and_import(source_template: Path, workdir: Path, expected_generated_sources: set[str]):
@@ -718,12 +1102,14 @@ def _assert_array_result(function_name, result, expected, size):
 
 def _assert_fmath_array_examples(module, *, suffix="", strided=False):
     cases = fmath_cases()
-    missing = sorted(f"{name}{suffix}" for name, _, _ in cases if not hasattr(module, f"{name}{suffix}"))
+    missing = sorted(
+        f"{name}{suffix}".lower() for name, _, _ in cases if not hasattr(module, f"{name}{suffix}".lower())
+    )
     assert missing == []
 
     size = 4
     for function_name, scalar_args, expected in cases:
-        wrapped_name = f"{function_name}{suffix}"
+        wrapped_name = f"{function_name}{suffix}".lower()
         array_args = [_array_argument(scalar_arg, size, strided=strided) for scalar_arg in scalar_args]
         result = _array_result(expected, size, strided=strided)
 
@@ -738,20 +1124,20 @@ def _assert_array_rejects_strided_views(module, function_name):
     result = _array_result(np.float32(4.0), size, strided=True)
 
     with pytest.raises(TypeError, match="contiguous"):
-        getattr(module, function_name)(np.int32(size), values, result)
+        getattr(module, function_name.lower())(np.int32(size), values, result)
 
 
 def _assert_legacy_string_examples(module):
-    assert module.CHAR_CODE_DEFAULT("A") == ord("A")
-    assert module.CHAR_CODE_STAR1(np.str_("B")) == ord("B")
-    assert module.STRING_LEN_STAR8("short") == 5
-    assert module.STRING_LEN_STAR8("too-long-value") == 8
-    assert module.STRING_LEN_ASSUMED("variable length") == 15
-    assert module.STRING_LEN_ENTITY("python") == 6
-    assert module.CHAR_RESULT_DEFAULT() == "L"
-    assert module.STRING_RESULT_STAR8() == "LEGACY!!"
-    assert module.STRING_RESULT_PADDED() == "PAD     "
-    assert module.STRING_RESULT_DECLARED() == "STRING"
+    assert module.char_code_default("A") == ord("A")
+    assert module.char_code_star1(np.str_("B")) == ord("B")
+    assert module.string_len_star8("short") == 5
+    assert module.string_len_star8("too-long-value") == 8
+    assert module.string_len_assumed("variable length") == 15
+    assert module.string_len_entity("python") == 6
+    assert module.char_result_default() == "L"
+    assert module.string_result_star8() == "LEGACY!!"
+    assert module.string_result_padded() == "PAD     "
+    assert module.string_result_declared() == "STRING"
 
 
 def _assert_modern_string_examples(module):
@@ -818,6 +1204,108 @@ def _assert_modern_class_examples(module):
 
     made = module.vector_store.make(np.int64(4), np.float64(1.5))
     np.testing.assert_allclose(made.values, np.full(4, 1.5, dtype=np.float64))
+
+
+def test_scalar_kind_coverage_uses_compiler_probed_wrapper_types(tmp_path: Path):
+    module = _build_text_and_import(
+        SCALAR_KINDS_F90_TEXT,
+        "fscalar_kinds_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fscalar_kinds_f90_wrapper.f90",
+            "fscalar_kinds_f90_wrapper.c",
+            "fscalar_kinds_f90_wrapper.h",
+        },
+    )
+
+    assert module.id_i8(np.int8(np.iinfo(np.int8).min)) == np.iinfo(np.int8).min
+    assert module.id_i16(np.int16(np.iinfo(np.int16).max)) == np.iinfo(np.int16).max
+    assert module.id_i32(np.int32(np.iinfo(np.int32).min)) == np.iinfo(np.int32).min
+    assert module.id_i64(np.int64(2**40)) == 2**40
+    assert module.id_c_i32(np.int32(123456)) == 123456
+
+    values_i16 = np.array([np.iinfo(np.int16).min, -1, np.iinfo(np.int16).max], dtype=np.int16)
+    out_i16 = np.empty_like(values_i16)
+    module.copy_i16(np.int32(values_i16.size), values_i16, out_i16)
+    np.testing.assert_array_equal(out_i16, values_i16)
+
+    assert bool(module.not_flag(True)) is False
+    flags = np.array([True, False, True], dtype=np.bool_)
+    inverted = np.empty_like(flags)
+    module.invert_flags(np.int32(flags.size), flags, inverted)
+    np.testing.assert_array_equal(inverted, np.logical_not(flags))
+
+    assert np.isnan(module.id_r32(np.float32(np.nan)))
+    assert np.isposinf(module.id_r64(np.float64(np.inf)))
+    assert module.id_c_float(np.float32(1.25)) == np.float32(1.25)
+    assert module.id_c_double(np.float64(-2.5)) == np.float64(-2.5)
+
+    values_r64 = np.array([np.finfo(np.float64).min, np.inf, np.nan], dtype=np.float64)
+    out_r64 = np.empty_like(values_r64)
+    module.copy_r64(np.int32(values_r64.size), values_r64, out_r64)
+    np.testing.assert_allclose(out_r64, values_r64, equal_nan=True)
+
+    np.testing.assert_allclose(module.conj_c64(np.complex64(1 + 2j)), np.complex64(1 - 2j))
+    np.testing.assert_allclose(module.shift_c128(np.complex128(2 + 3j)), np.complex128(3 + 1j))
+    np.testing.assert_allclose(module.conj_c_float_complex(np.complex64(-1 + 4j)), np.complex64(-1 - 4j))
+    np.testing.assert_allclose(
+        module.conj_c_double_complex(np.complex128(-2 - 5j)),
+        np.complex128(-2 + 5j),
+    )
+
+    values_c128 = np.array([1 + 2j, np.inf - 3j, np.nan + 4j], dtype=np.complex128)
+    out_c128 = np.empty_like(values_c128)
+    module.copy_c128(np.int32(values_c128.size), values_c128, out_c128)
+    np.testing.assert_allclose(out_c128, values_c128, equal_nan=True)
+
+
+def test_visibility_and_default_python_name_fixing_policy(tmp_path: Path):
+    module = _build_text_and_import(
+        NAMING_F90_TEXT,
+        "fnaming_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fnaming_f90_wrapper.f90",
+            "fnaming_f90_wrapper.c",
+            "fnaming_f90_wrapper.h",
+        },
+    )
+
+    assert module.lambda_(np.int32(3)) == 4
+    assert module.lambda__2(np.int32(3)) == 5
+    assert module.get_value() == 100
+    assert module.get_value_2() == 7
+    module.set_value(np.int32(11))
+    assert module.get_value_2() == 11
+
+    assert not hasattr(module, "hidden_t")
+    assert not hasattr(module, "hidden_proc")
+
+    item = module.visible_t(lambda_=np.int32(5), lambda__2=np.int32(6))
+    assert item.lambda_ == 5
+    assert item.lambda__2 == 6
+    assert item.from_() == 11
+    assert not hasattr(item, "hidden")
+
+
+def test_strict_wrapper_names_reject_python_name_fixes(tmp_path: Path):
+    source = tmp_path / "fnaming_f90.f90"
+    source.write_text(NAMING_F90_TEXT, encoding="utf-8")
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "x2py",
+        str(source),
+        "--out-dir",
+        str(tmp_path),
+        "--json",
+        "--strict-wrapper-names",
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+
+    assert result.returncode != 0
+    assert "strict wrapper naming" in result.stderr
 
 
 def test_scalar_derived_types_cross_procedure_boundaries(tmp_path: Path):
@@ -1002,6 +1490,37 @@ def test_modern_fortran_character_arguments_and_results(tmp_path: Path):
     _assert_modern_string_examples(module)
 
 
+def test_fortran_character_edge_cases_follow_copy_in_copy_out_policy(tmp_path: Path):
+    module = _build_text_and_import(
+        CHARACTER_EDGES_F90_TEXT,
+        "fcharacter_edges_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fcharacter_edges_f90_wrapper.f90",
+            "fcharacter_edges_f90_wrapper.c",
+            "fcharacter_edges_f90_wrapper.h",
+        },
+    )
+
+    original = "abc"
+    assert module.fixed_inout(original) == "Zbc    !"
+    assert original == "abc"
+    assert module.fixed_inout("abcdefgh") == "Zbcdefg!"
+    assert module.fixed_inout("abcdefghi") == "Zbcdefg!"
+    assert module.assumed_inout("abc") == "Qbc"
+    assert module.assumed_inout("") == ""
+    assert module.optional_inout() is None
+    assert module.optional_inout(None) is None
+    assert module.optional_inout("abc") == "Pbc"
+    assert module.make_out() == "go    "
+    assert module.unicode_echo("café") == "café"
+
+    with pytest.raises(TypeError, match="embedded NUL"):
+        module.assumed_inout("a\0b")
+    with pytest.raises(TypeError, match="embedded NUL"):
+        module.unicode_echo("a\0b")
+
+
 def test_modern_fortran_derived_type_exposes_class_and_type_bound_methods(tmp_path: Path):
     module = _build_and_import(
         CLASS_F90_SOURCE,
@@ -1014,6 +1533,89 @@ def test_modern_fortran_derived_type_exposes_class_and_type_bound_methods(tmp_pa
     )
 
     _assert_modern_class_examples(module)
+
+
+def test_fortran_default_constructor_keywords_and_finalization(tmp_path: Path):
+    module = _build_text_and_import(
+        CONSTRUCTOR_F90_TEXT,
+        "fconstructors_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fconstructors_f90_wrapper.f90",
+            "fconstructors_f90_wrapper.c",
+            "fconstructors_f90_wrapper.h",
+        },
+    )
+
+    module.reset_final_count()
+
+    defaulted = module.initialized()
+    assert defaulted.id == np.int32(7)
+    assert defaulted.scale == np.float64(2.5)
+
+    partial = module.initialized(id=np.int32(11))
+    assert partial.id == np.int32(11)
+    assert partial.scale == np.float64(2.5)
+
+    keyword = module.initialized(id=np.int32(4), scale=np.float64(6.5))
+    assert keyword.id == np.int32(4)
+    assert keyword.scale == np.float64(6.5)
+
+    del defaulted
+    gc.collect()
+    gc.collect()
+    assert module.get_final_count() == np.int32(1)
+
+    del partial
+    del keyword
+    gc.collect()
+    gc.collect()
+    assert module.get_final_count() == np.int32(3)
+
+    with pytest.raises(TypeError):
+        module.initialized(np.int32(1))
+    gc.collect()
+    assert module.get_final_count() == np.int32(4)
+
+    with pytest.raises(TypeError):
+        module.initialized(missing=np.int32(1))
+    gc.collect()
+    assert module.get_final_count() == np.int32(5)
+
+    gc.collect()
+    gc.collect()
+    assert module.get_final_count() == np.int32(5)
+
+
+def test_borrowed_child_wrapper_never_finalizes_native_component(tmp_path: Path):
+    module = _build_text_and_import(
+        BORROWED_FINALIZER_F90_TEXT,
+        "fborrowed_finalizer_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fborrowed_finalizer_f90_wrapper.f90",
+            "fborrowed_finalizer_f90_wrapper.c",
+            "fborrowed_finalizer_f90_wrapper.h",
+        },
+    )
+
+    module.reset_final_count()
+    owner = module.parent()
+    borrowed = owner.value
+
+    del borrowed
+    gc.collect()
+    assert module.get_final_count() == np.int32(0)
+
+    borrowed = owner.value
+    del owner
+    gc.collect()
+    assert module.get_final_count() == np.int32(0)
+
+    del borrowed
+    gc.collect()
+    gc.collect()
+    assert module.get_final_count() == np.int32(1)
 
 
 def test_fortran_generic_interfaces_dispatch_in_generated_c_extension(tmp_path: Path):
@@ -1047,6 +1649,121 @@ def test_fortran_generic_interfaces_dispatch_in_generated_c_extension(tmp_path: 
         module.convert("not numeric")
     with pytest.raises(TypeError):
         value.add(np.complex128(1.0 + 0.0j))
+
+
+def test_scalar_module_variables_use_accessors_and_parameters_have_no_setter(tmp_path: Path):
+    module = _build_text_and_import(
+        MODULE_VARIABLES_F90_TEXT,
+        "fmodule_vars_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fmodule_vars_f90_wrapper.f90",
+            "fmodule_vars_f90_wrapper.c",
+            "fmodule_vars_f90_wrapper.h",
+        },
+    )
+
+    assert module.nmax == np.int32(12)
+    assert not hasattr(module, "counter")
+    assert not hasattr(module, "scale")
+    assert not hasattr(module, "set_nmax")
+    assert not hasattr(module, "hidden_counter")
+    assert not hasattr(module, "get_hidden_counter")
+
+    assert module.get_counter() == np.int32(3)
+    assert module.summarize() == np.int32(15)
+    module.set_counter(np.int32(9))
+    assert module.get_counter() == np.int32(9)
+    assert module.summarize() == np.int32(21)
+
+    assert module.get_scale() == np.float64(1.5)
+    module.set_scale(np.float64(2.0))
+    assert module.scaled_counter() == np.float64(18.0)
+
+    assert module.get_saved_counter() == np.int32(6)
+    module.set_saved_counter(np.int32(8))
+    assert module.get_saved_counter() == np.int32(8)
+    assert module.next_local() == np.int32(1)
+    assert module.next_local() == np.int32(2)
+    assert not hasattr(module, "get_local_counter")
+
+    sys.modules.pop("fmodule_vars_f90", None)
+    sys.path.insert(0, str(tmp_path))
+    try:
+        second_module = importlib.import_module("fmodule_vars_f90")
+    finally:
+        sys.path.remove(str(tmp_path))
+
+    assert second_module is not module
+    assert second_module.get_counter() == np.int32(9)
+    assert second_module.get_saved_counter() == np.int32(8)
+    second_module.set_counter(np.int32(4))
+    assert module.get_counter() == np.int32(4)
+
+    module.nmax = np.int32(99)
+    assert module.nmax == np.int32(99)
+    assert second_module.nmax == np.int32(12)
+    assert module.summarize() == np.int32(16)
+    assert second_module.summarize() == np.int32(16)
+
+
+def test_common_block_storage_stays_internal_to_wrapped_fortran(tmp_path: Path):
+    module = _build_text_and_import(
+        COMMON_BLOCK_F90_TEXT,
+        "fcommon_block_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fcommon_block_f90_wrapper.f90",
+            "fcommon_block_f90_wrapper.c",
+            "fcommon_block_f90_wrapper.h",
+        },
+    )
+
+    assert not hasattr(module, "shared_value")
+    assert not hasattr(module, "get_shared_value")
+    assert not hasattr(module, "set_shared_value")
+
+    module.write_shared(np.int32(17))
+    assert module.read_shared() == np.int32(17)
+    module.write_shared(np.int32(-3))
+    assert module.read_shared() == np.int32(-3)
+
+
+def test_bind_c_derived_types_use_accessors_and_fortran_value_copy(tmp_path: Path):
+    module = _build_text_and_import(
+        BIND_C_DERIVED_LAYOUT_F90_TEXT,
+        "fbind_c_derived_layout_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fbind_c_derived_layout_f90_wrapper.f90",
+            "fbind_c_derived_layout_f90_wrapper.c",
+            "fbind_c_derived_layout_f90_wrapper.h",
+        },
+    )
+    bridge_source = (tmp_path / "bind_c_fbind_c_derived_layout_f90_wrapper.f90").read_text()
+
+    assert "function tagged_point_position_getter" in bridge_source
+    assert "subroutine tagged_point_position_setter" in bridge_source
+    assert "function tagged_point_weight_getter" in bridge_source
+    assert "subroutine tagged_point_weight_setter" in bridge_source
+    assert "type(c_ptr), value :: bound_value" in bridge_source
+    assert "type(tagged_point), pointer :: value_0001" in bridge_source
+
+    value = module.tagged_point()
+    module.populate(
+        value,
+        np.float64(2.5),
+        np.int32(4),
+        np.complex128(3.0 + 2.0j),
+    )
+
+    position = value.position
+    assert position.x == np.float64(2.5)
+    assert position.axis == np.int32(4)
+    assert value.weight == np.complex128(3.0 + 2.0j)
+
+    assert module.score_by_value(value) == np.float64(109.5)
+    assert position.x == np.float64(2.5)
 
 
 def test_fixed_form_fortran_generic_interface_dispatches_in_generated_c_extension(tmp_path: Path):

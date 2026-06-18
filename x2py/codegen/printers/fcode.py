@@ -12,6 +12,7 @@ from ..bind_c import (
     BindCClassDef,
     BindCFunctionDef,
     BindCModule,
+    BindCModuleConstant,
     BindCPointer,
     BindCVariable,
     FortranTransfer,
@@ -365,7 +366,11 @@ class FCodePrinter(CodePrinter):
         decs += "\n".join(c[0] for c in class_decs_and_methods)
         # ...
 
-        declarations = list(expr.declarations)
+        declarations = [
+            declaration
+            for declaration in expr.declarations
+            if not isinstance(declaration.variable, BindCModuleConstant)
+        ]
         # look for external functions and declare their result type
         self._get_external_declarations(declarations)
         decs += "".join(self._print(d) for d in declarations)
@@ -380,7 +385,7 @@ class FCodePrinter(CodePrinter):
             for n in chain(
                 (c.name for c in expr.classes),
                 (f.name for f in funcs_to_print if not f.is_private and f.is_semantic),
-                (v.name for v in expr.variables if not v.is_private),
+                (v.name for v in expr.variables if not v.is_private and not isinstance(v, BindCModuleConstant)),
             )
         )
 
@@ -1571,7 +1576,11 @@ class FCodePrinter(CodePrinter):
             is_function = parent_assign is not None or func.results.var.memory_handling in {"alias", "heap"}
 
         if func.arguments and func.arguments[0].bound_argument:
-            bound_name = expr.overload_set_name if expr.overload_set else func.scope.get_python_name(func.name)
+            bound_name = (
+                expr.overload_set_name
+                if expr.overload_set
+                else (func.type_bound_name or func.scope.get_python_name(func.name))
+            )
             f_name = self._print(bound_name)
             class_variable = args[0].value
             args = args[1:]

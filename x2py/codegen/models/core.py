@@ -409,6 +409,7 @@ class Variable:
         "_assumed_rank",
         "_class_type",
         "_cls_base",
+        "_default_value",
         "_intent",
         "_is_argument",
         "_is_optional",
@@ -438,6 +439,7 @@ class Variable:
         assumed_rank=False,
         shape=None,
         cls_base=None,
+        default_value=None,
         is_argument=False,
         is_temp=False,
     ):
@@ -480,6 +482,7 @@ class Variable:
             raise TypeError("assumed_rank must be a boolean.")
         self._assumed_rank = assumed_rank
         self._cls_base = cls_base
+        self._default_value = default_value
         self._is_argument = is_argument
         self._is_temp = is_temp
 
@@ -584,6 +587,11 @@ class Variable:
     def cls_base(self):
         """Class from which the Variable inherits"""
         return self._cls_base
+
+    @property
+    def default_value(self):
+        """Source-level literal value associated with this variable, when any."""
+        return self._default_value
 
     @property
     def is_temp(self):
@@ -2575,6 +2583,10 @@ class FunctionDef:
         Existing Fortran ``bind(C, name=...)`` symbol that may be called
         directly when its ABI is safe.
 
+    type_bound_name : str, optional
+        Native Fortran type-bound binding name used when dispatching through a
+        passed-object argument.
+
     scope : parser.scope.Scope
         The scope containing all objects scoped to the inside of this function.
 
@@ -2637,6 +2649,7 @@ class FunctionDef:
         "_overload_sets",
         "_result_pointer_map",
         "_results",
+        "_type_bound_name",
     )
 
     _attribute_nodes = (
@@ -2674,6 +2687,7 @@ class FunctionDef:
         result_pointer_map=None,
         docstring=None,
         bind_c_external_name=None,
+        type_bound_name=None,
         scope=None,
     ):
         if result_pointer_map is None:
@@ -2764,6 +2778,7 @@ class FunctionDef:
         self._result_pointer_map = result_pointer_map
         self._docstring = docstring
         self._bind_c_external_name = bind_c_external_name
+        self._type_bound_name = type_bound_name
         init_model_object(self, scope=scope)
         self._is_semantic = True
 
@@ -2837,6 +2852,11 @@ class FunctionDef:
     @cls_name.setter
     def cls_name(self, cls_name):
         self._cls_name = cls_name
+
+    @property
+    def type_bound_name(self):
+        """Native Fortran binding name used for type-bound dispatch."""
+        return self._type_bound_name
 
     @property
     def imports(self):
@@ -3034,6 +3054,7 @@ class FunctionDef:
             "overload_sets": self._overload_sets,
             "docstring": self._docstring,
             "bind_c_external_name": self._bind_c_external_name,
+            "type_bound_name": self._type_bound_name,
             "scope": self._scope,
         }
         return args, kwargs

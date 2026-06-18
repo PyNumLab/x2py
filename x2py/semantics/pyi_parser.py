@@ -32,6 +32,7 @@ from .models import (
     SemanticImportItem,
     SemanticMethod,
     SemanticModule,
+    SemanticOrigin,
     SemanticStorageContract,
     SemanticType,
     SemanticVariable,
@@ -146,6 +147,7 @@ class _PyiAstParser:
             base_classes=base_classes,
             metadata=self._class_metadata(base_classes),
             visibility=visibility,
+            origin=SemanticOrigin(source_language="fortran") if body.constructor_from_fields else SemanticOrigin(),
         )
         self._pending_overloads.extend(
             _PendingOverload(semantic_class, declaration, target, generic_name)
@@ -1344,6 +1346,7 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         self.methods: list[SemanticMethod] = []
         self.pending_overloads: list[tuple[SemanticMethod, str, str | None]] = []
         self.classes: list[SemanticClass] = []
+        self.constructor_from_fields = False
 
     def visit_body(self, nodes: list[ast.stmt]) -> None:
         for node in nodes:
@@ -1359,6 +1362,9 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         decorators = self.parser.decorators(node.decorator_list, context="class body")
         if decorators.module_variable is not None:
             raise ValueError("module_variable is only valid for module-level getter functions")
+        if not node.decorator_list and self._is_generated_constructor(node):
+            self.constructor_from_fields = True
+            return
         method = self.parser.method_def(
             node,
             visibility=decorators.visibility,
@@ -1369,6 +1375,22 @@ class _ClassBodyVisitor(ast.NodeVisitor):
             self.pending_overloads.append((method, decorators.overload_target, decorators.overload_generic))
         else:
             self.methods.append(method)
+
+    @staticmethod
+    def _is_generated_constructor(node: ast.FunctionDef) -> bool:
+        args = node.args
+        return (
+            node.name == "__init__"
+            and len(args.args) == 1
+            and args.args[0].arg == "self"
+            and args.args[0].annotation is None
+            and not args.defaults
+            and bool(args.kwonlyargs)
+            and all(default is not None for default in args.kw_defaults)
+            and not args.vararg
+            and not args.kwarg
+            and not args.posonlyargs
+        )
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context="class body")

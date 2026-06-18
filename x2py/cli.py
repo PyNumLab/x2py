@@ -704,7 +704,7 @@ def _validate_fortran_type_probe_options(
             parser.error("Fortran type probe options require --language fortran")
         return
     if options_used and not has_semantic_stage:
-        parser.error("Fortran type probe options require --semantics, --pyi, or --wrap-readiness")
+        parser.error("Fortran type probe options require --semantics, --pyi, --wrap-readiness, or --wrap")
     if report_path and any(automatic_options):
         parser.error("--fortran-type-report cannot be combined with automatic Fortran type probe options")
 
@@ -809,7 +809,7 @@ def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentPa
     _validate_c_type_probe_options(args, parser)
     _validate_fortran_type_probe_options(
         language=args.language,
-        has_semantic_stage=_has_semantic_stage(args),
+        has_semantic_stage=_has_semantic_stage(args) or _should_run_wrap(args),
         report_path=getattr(args, "fortran_type_report", None),
         automatic_options=_automatic_fortran_type_probe_options(args),
         parser=parser,
@@ -934,6 +934,11 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
         args.paths[0],
         output_dir=getattr(args, "out_dir", None),
         preprocessing=preprocessing,
+        strict_wrapper_names=getattr(args, "strict_wrapper_names", False),
+        fortran_type_report=_load_fortran_type_report_for_stages(args),
+        fortran_type_probe_runner=getattr(args, "fortran_type_probe_runner", None),
+        fortran_type_probe_cache_dir=getattr(args, "fortran_type_probe_cache_dir", None),
+        refresh_fortran_type_probe=getattr(args, "refresh_fortran_type_probe", False),
         verbose=1 if getattr(args, "verbose", False) else 0,
     )
 
@@ -1338,6 +1343,11 @@ def main() -> int:
         "--wrap",
         action="store_true",
         help="Explicitly build a Python extension module from one Fortran source file",
+    )
+    parser.add_argument(
+        "--strict-wrapper-names",
+        action="store_true",
+        help="Reject Python wrapper names that require escaping or collision suffixes",
     )
     parser.add_argument(
         "--semantics", action="store_true", help="Generate semantic IR models from parsed source modules"

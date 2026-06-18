@@ -13,8 +13,14 @@ from x2py.compiling.basic import CompileObj
 from x2py.compiling.compilers import Compiler, get_condaless_search_path
 from x2py.compiling.python_wrapper import create_shared_library
 from x2py.fortran_parser.parser import parse_fortran_file
+from x2py.fortran_type_probe import evaluate_fortran_type_facts, evaluate_fortran_type_requirements
+from x2py.naming.public import PublicNamePolicy
 from x2py.preprocessing import PreprocessingConfig, preprocess_source
-from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
+from x2py.semantics.fortran2ir import (
+    collect_fortran_type_storage_requirements,
+    collect_semantic_compile_time_requirements,
+    fortran_file_to_semantic_modules,
+)
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
 
 
@@ -105,11 +111,69 @@ def _source_compile_object(source_path: Path, output_dir: Path) -> CompileObj:
     return compile_obj
 
 
+def _can_probe_fortran_types(preprocessing: PreprocessingConfig) -> bool:
+    return preprocessing.uses_compiler and bool(preprocessing.compiler)
+
+
+def _wrap_compile_time_values(
+    parsed,
+    preprocessing: PreprocessingConfig,
+    *,
+    report=None,
+    runner: list[str] | None = None,
+    cache_dir: str | Path | None = None,
+    refresh: bool = False,
+) -> dict[str, int] | None:
+    if report is None and not _can_probe_fortran_types(preprocessing):
+        return None
+    requirements = collect_semantic_compile_time_requirements(parsed)
+    if not requirements:
+        return None
+    return evaluate_fortran_type_requirements(
+        preprocessing,
+        requirements,
+        report=report,
+        runner=runner,
+        cache_dir=cache_dir,
+        refresh=refresh,
+    )
+
+
+def _wrap_type_facts(
+    parsed,
+    preprocessing: PreprocessingConfig,
+    *,
+    compile_time_values: dict[str, int] | None,
+    report=None,
+    runner: list[str] | None = None,
+    cache_dir: str | Path | None = None,
+    refresh: bool = False,
+) -> dict[tuple[str, str | None], dict[str, object]] | None:
+    if report is None and not _can_probe_fortran_types(preprocessing):
+        return None
+    requirements = collect_fortran_type_storage_requirements(parsed, compile_time_values=compile_time_values)
+    if not requirements:
+        return None
+    return evaluate_fortran_type_facts(
+        preprocessing,
+        requirements,
+        report=report,
+        runner=runner,
+        cache_dir=cache_dir,
+        refresh=refresh,
+    )
+
+
 def build_fortran_extension(
     source: str | Path,
     *,
     output_dir: str | Path | None = None,
     preprocessing: PreprocessingConfig | None = None,
+    strict_wrapper_names: bool = False,
+    fortran_type_report=None,
+    fortran_type_probe_runner: list[str] | None = None,
+    fortran_type_probe_cache_dir: str | Path | None = None,
+    refresh_fortran_type_probe: bool = False,
     verbose: bool | int = False,
 ) -> WrapperBuildResult:
     """Build a Python extension module from one Fortran source file."""
@@ -125,7 +189,28 @@ def build_fortran_extension(
 
     preprocessed_source = _fortran_source_for_pipeline(source_path, preprocessing)
     parsed = parse_fortran_file(preprocessed_source, filename=str(source_path))
-    modules = fortran_file_to_semantic_modules(parsed)
+    compile_time_values = _wrap_compile_time_values(
+        parsed,
+        preprocessing,
+        report=fortran_type_report,
+        runner=fortran_type_probe_runner,
+        cache_dir=fortran_type_probe_cache_dir,
+        refresh=refresh_fortran_type_probe,
+    )
+    type_facts = _wrap_type_facts(
+        parsed,
+        preprocessing,
+        compile_time_values=compile_time_values,
+        report=fortran_type_report,
+        runner=fortran_type_probe_runner,
+        cache_dir=fortran_type_probe_cache_dir,
+        refresh=refresh_fortran_type_probe,
+    )
+    modules = fortran_file_to_semantic_modules(
+        parsed,
+        compile_time_values=compile_time_values,
+        type_facts=type_facts,
+    )
     if len(modules) != 1:
         names = ", ".join(module.name for module in modules) or "<none>"
         raise ValueError(
@@ -134,9 +219,14 @@ def build_fortran_extension(
         )
 
     module = modules[0]
-    module_name = module.name
-    scope = Scope(name=module_name, scope_type="module")
+    scope = Scope(
+        name=module.name,
+        scope_type="module",
+        public_name_policy=PublicNamePolicy(strict=strict_wrapper_names),
+        public_namespace=(module.name.casefold(),),
+    )
     codegen_ast = semantic_ir_to_codegen_ast(module, scope, legacy=_is_fixed_form_legacy_source(source_path))
+    module_name = str(codegen_ast.scope.get_python_name(codegen_ast.name))
 
     compiler = _new_gnu_compiler()
     source_obj = _source_compile_object(source_path, output_path)

@@ -8,6 +8,7 @@ import keyword
 import re
 
 from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA
+from x2py.numpy_types import SEMANTIC_DTYPE_TO_NUMPY_DTYPE
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
@@ -201,9 +202,25 @@ class PyiPrinter:
         return self._emit_typed_name(self._annotation_target(arg.name), arg)
 
     def emit_module_variable(self, arg: SemanticVariable) -> str:
+        if self._is_constant(arg.semantic_type):
+            return self._emit_typed_name(self._annotation_target(arg.name), arg)
         if self._is_allocatable_module_array(arg):
             return self.emit_module_variable_getter(arg)
+        if self._is_scalar_module_variable(arg):
+            return self.emit_scalar_module_variable_accessors(arg)
         return self._emit_typed_name(self._annotation_target(arg.name), arg)
+
+    def emit_scalar_module_variable_accessors(self, arg: SemanticVariable) -> str:
+        type_text = self.emit_semantic_type(arg.semantic_type)
+        getter_name = str(arg.metadata.get(MODULE_VARIABLE_GETTER_METADATA) or f"get_{arg.name}")
+        setter_name = str(arg.metadata.get("module_variable_setter") or f"set_{arg.name}")
+        return "\n".join(
+            (
+                f"def {getter_name}() -> {type_text}: ...",
+                "",
+                f"def {setter_name}(value: {type_text}) -> None: ...",
+            )
+        )
 
     def emit_module_variable_getter(self, arg: SemanticVariable) -> str:
         getter_name = str(arg.metadata.get(MODULE_VARIABLE_GETTER_METADATA) or f"get_{arg.name}")
@@ -218,6 +235,16 @@ class PyiPrinter:
             and storage.array is not None
             and storage.array.allocatable
             and arg.metadata.get(MODULE_VARIABLE_GETTER_METADATA) is not False
+        )
+
+    @staticmethod
+    def _is_scalar_module_variable(arg: SemanticVariable) -> bool:
+        return (
+            arg.origin.source_language == "fortran"
+            and arg.visibility == "public"
+            and arg.semantic_type.rank == 0
+            and arg.semantic_type.name != "String"
+            and arg.semantic_type.name in SEMANTIC_DTYPE_TO_NUMPY_DTYPE
         )
 
     @staticmethod
@@ -249,10 +276,10 @@ class PyiPrinter:
         text = f"{name}: {type_text}"
         if arg.optional:
             text += " = ..."
-        elif self._is_enum_constant(arg):
-            enum_value = self._enum_default_value(arg)
-            if enum_value is not None:
-                text += f" = {enum_value}"
+        else:
+            default_value = self._pyi_default_value(arg)
+            if default_value is not None:
+                text += f" = {default_value}"
         return text
 
     @staticmethod
@@ -280,6 +307,31 @@ class PyiPrinter:
         if arg.origin.source_language == "c":
             return None
         return arg.default_value
+
+    @staticmethod
+    def _pyi_default_value(arg: SemanticVariable) -> str | None:
+        if (self_value := arg.metadata.get("pyi_default_value")) and isinstance(self_value, str):
+            return self_value
+        if PyiPrinter._is_enum_constant(arg):
+            return PyiPrinter._enum_default_value(arg)
+        if initializer := arg.metadata.get("fortran_initializer"):
+            return PyiPrinter._python_literal_text(initializer) or PyiPrinter._python_literal_text(arg.default_value)
+        return PyiPrinter._python_literal_text(arg.default_value)
+
+    @staticmethod
+    def _python_literal_text(value: str | None) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        text = re.sub(r"\.true\.", "True", text, flags=re.IGNORECASE)
+        text = re.sub(r"\.false\.", "False", text, flags=re.IGNORECASE)
+        text = re.sub(r"(?<=\d)[dD](?=[+-]?\d)", "e", text)
+        try:
+            return ast.unparse(ast.parse(text, mode="eval").body)
+        except SyntaxError:
+            return None
 
     @staticmethod
     def _without_constant_constraint(semantic_type: SemanticType) -> SemanticType:
@@ -424,6 +476,10 @@ class PyiPrinter:
         if nested_classes:
             body_parts.append(nested_classes)
 
+        constructor = self._class_constructor(cls)
+        if constructor:
+            body_parts.append(constructor)
+
         fields = "\n".join(f"    {self.emit_data_member(field)}" for field in cls.fields)
         if fields:
             body_parts.append(fields)
@@ -441,6 +497,45 @@ class PyiPrinter:
         if not body_parts:
             return "    pass"
         return "\n\n".join(body_parts)
+
+    def _class_constructor(self, cls: SemanticClass) -> str:
+        if cls.origin.source_language != "fortran":
+            return ""
+        arguments = [
+            self._constructor_argument(field) for field in cls.fields if self._constructor_accepts_field(field)
+        ]
+        if not arguments:
+            return ""
+        return self._emit_callable(
+            name="__init__",
+            arguments=["self", "*", *arguments],
+            return_type="None",
+            decorator="",
+            def_indent="    ",
+            parameter_indent="        ",
+        ).rstrip()
+
+    def _constructor_argument(self, field: SemanticVariable) -> str:
+        name = self._parameter_target(field.name)
+        semantic_type = self._without_constant_constraint(field.semantic_type)
+        type_text = self.emit_semantic_type(semantic_type)
+        initializer = field.metadata.get("fortran_initializer")
+        default_value = (
+            self._python_literal_text(initializer) or self._python_literal_text(field.default_value) or "..."
+        )
+        if name != field.name:
+            type_text = self._annotated_type_text(type_text, [f"Name({json.dumps(field.name)})"])
+        return f"{name}: {type_text} = {default_value}"
+
+    @staticmethod
+    def _constructor_accepts_field(field: SemanticVariable) -> bool:
+        semantic_type = field.semantic_type
+        return (
+            field.visibility == "public"
+            and semantic_type.rank == 0
+            and semantic_type.name != "String"
+            and semantic_type.name in SEMANTIC_DTYPE_TO_NUMPY_DTYPE
+        )
 
     @staticmethod
     def _indent_block(text: str, indent: str) -> str:
@@ -632,7 +727,7 @@ class PyiPrinter:
     @staticmethod
     def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
         if mapping.intent == "inout":
-            return mapping.python_position != mapping.native_position
+            return mapping.result_position is not None or mapping.python_position != mapping.native_position
         if mapping.intent == "out" and mapping.result_position is not None:
             return True
         if mapping.intent != "in":

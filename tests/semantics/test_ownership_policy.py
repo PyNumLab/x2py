@@ -79,6 +79,11 @@ def test_default_policy_decisions_cover_public_object_kinds():
     assert string.owner is OwnershipOwner.PYTHON
     assert string.transfer is TransferMode.COPY_RETURN
 
+    string_replacement = resolver.decide_semantic_type(_string_type(), OwnershipContext.argument("inout"))
+    assert string_replacement.owner is OwnershipOwner.PYTHON
+    assert string_replacement.transfer is TransferMode.COPY_RETURN
+    assert "immutable Python strings" in string_replacement.reason
+
     caller_array = resolver.decide_semantic_type(_array_type(), OwnershipContext.argument("out"))
     assert caller_array.owner is OwnershipOwner.CALLER
     assert caller_array.transfer is TransferMode.IN_PLACE

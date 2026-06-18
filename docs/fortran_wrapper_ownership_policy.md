@@ -95,8 +95,9 @@ object.
 The wrapper object's deallocation path owns destruction. Users do not need a
 normal public `destroy()` method for wrapper-owned values. Internally,
 `tp_dealloc` must call a generated Fortran-aware destroy helper for owned
-instances. That helper releases allocatable components and, when finalizer
-support is implemented, invokes the correct Fortran finalization behavior.
+instances. That helper releases allocatable components and deallocates the
+native Fortran instance through the Fortran bridge, which invokes Fortran
+finalization for owned instances.
 
 Examples:
 
@@ -107,6 +108,13 @@ Examples:
 Wrapper-owned does not mean Python may directly call `free()` on Fortran
 allocatable components. Destruction must go through generated Fortran-aware
 code.
+
+Borrowed child wrappers set the generated alias flag. Their Python deallocator
+does not invoke the native destroy helper or finalization; it releases the child
+wrapper and its retained parent reference. Finalization occurs only when the
+owning wrapper is destroyed. Fortran final subroutines have no recoverable
+status channel through `tp_dealloc`; they must complete normally. Native
+termination from a finalizer terminates the process.
 
 ### Native-Owned
 
@@ -326,6 +334,14 @@ count = get_count()
 
 No native destruction is needed for primitive Python scalar results.
 
+When a Python-visible value type is immutable but the Fortran dummy argument is
+mutable, the wrapper must not claim in-place mutation. It must either block the
+form or use replacement projection: copy the Python value into mutable native
+temporary storage, call Fortran, copy the final native value back, and return a
+new Python-owned value. This rule applies to scalar strings today and is the
+default policy for any future immutable public type that needs `intent(inout)`
+semantics.
+
 ## Strings
 
 Python `str` results are Python-owned. Native character storage is copied into
@@ -346,10 +362,23 @@ Deferred-length or allocatable character results follow the same visible
 ownership rule: Python receives a new `str`, and the native temporary is
 released by the bridge.
 
-Mutable character buffers, character `intent(inout)`, and character arrays need
-their own buffer, encoding, truncation, and hidden-length policy. Until that
-policy is implemented, wrapper generation must block those forms instead of
-guessing.
+Scalar `character, intent(inout)` arguments use the immutable-value replacement
+policy: Python passes a `str`, the wrapper copies it into mutable native
+character storage for the call, and Python receives a new `str` containing the
+post-call value. The original Python `str` is unchanged.
+
+Scalar character conversion is byte-oriented at the ABI boundary. Python input
+is encoded with CPython's UTF-8 representation. Fixed-length character dummies
+truncate input bytes to the declared length and pad shorter input with blanks;
+the returned Python `str` reflects the full fixed-length Fortran buffer,
+including trailing blanks. Assumed-length dummies use the encoded input byte
+length. Embedded NUL bytes in Python input are rejected before the native call
+because the public result path is a NUL-terminated C string.
+
+Character arrays and mutable allocatable character dummy arguments need their
+own array storage, allocation, encoding, truncation, and hidden-length policy.
+Until that policy is implemented, wrapper generation must block those forms
+instead of guessing.
 
 ## Ordinary NumPy Array Arguments
 
@@ -506,14 +535,46 @@ views are not automatically invalidated. The wrapper may expose
 Python does not own the module variable. Calling those routines asks Fortran to
 change its own storage.
 
+Public scalar numeric, logical, and complex module variables are exposed
+through `get_<name>()` and `set_<name>(value)` functions. The getter reads the
+current native module storage, and the setter writes through to that storage.
+The Python extension module does not own the scalar variable and does not add it
+as a mutable module attribute.
+
+Fortran `parameter` declarations are exported as Python constants when their
+literal value is available. No setter is generated for a parameter, and
+rebinding the Python module attribute does not change native Fortran state.
+
+Private module variables are not exported and receive no getter or setter.
+Explicitly saved public module variables follow the same accessor policy as
+other module variables because Fortran module storage already has module
+lifetime. Procedure-local `save` variables remain implementation details of the
+wrapped procedure.
+
 Pointer module variables follow the pointer policy. They are snapshot-copy or
 blocked unless explicit metadata proves owner, lifetime, deallocation, shape,
 dtype, contiguity, nullability, mutability, and aliasing behavior.
+
+Generated calls hold the CPython GIL and x2py adds no independent lock for
+module state. The GIL serializes ordinary calls from Python threads in one
+interpreter, but callers must synchronize any concurrent native or external
+access themselves. Common blocks remain native implementation details: wrapped
+Fortran procedures may access them, but x2py does not expose common-associated
+variables, model their layout, or assume ownership of their storage.
 
 ## Derived-Type Instances
 
 A generated Python class for a Fortran derived type owns a native instance when
 Python constructs or receives that object as a result.
+
+`bind(C)` and `sequence` do not change the Python ownership or representation
+policy. Every derived-type instance remains opaque to generated C code, and
+component access goes through generated Fortran getters and setters. The bridge
+does not infer struct padding, alignment, or component offsets. For a `value`
+dummy, it passes the opaque instance to a generated Fortran bridge and lets the
+Fortran compiler perform the value copy when calling the original procedure.
+Direct memory views for compiler-validated interoperable `bind(C)` types are a
+possible future optimization, not the default representation.
 
 ```fortran
 type :: point

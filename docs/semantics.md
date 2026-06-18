@@ -387,7 +387,9 @@ use `Annotated[T[...], Constraint, ...]`.
 - `Pointer` for a Fortran pointer array.
 - `Intent("out")` when a visible exact-native argument has source intent
   `out`; `intent(inout)` is the default writable reference/array spelling and
-  does not need metadata.
+  does not need metadata. Immutable Python-visible values can still use
+  replacement projection, where the argument remains visible and a
+  `Returns["name", T]` item carries the post-call value.
 
 Plain multidimensional array notation is C-oriented (`ORDER_C`) by default.
 Under the current Fortran generation policy, every multidimensional Fortran
@@ -436,17 +438,41 @@ def update(
 ) -> None: ...
 ```
 
-Fortran module variables and derived-type fields are data declarations, not
-procedure dummy arguments. Scalar fields and variables therefore remain direct
-types:
+Fortran derived-type fields are data declarations, not procedure dummy
+arguments. Scalar fields therefore remain direct types:
 
 ```python
-answer: Final[Int32]
-
 class particle:
     id: Int32
     position: Float64[3]
 ```
+
+Fortran `bind(C)` and `sequence` type attributes are preserved on semantic
+class metadata together with an `accessors` layout policy. Field list order is
+the native declaration order, and every field retains its source type, kind,
+rank, shape, and storage metadata. This metadata does not authorize direct C
+struct access: generated wrappers treat every Fortran derived type as opaque
+and route component access through Fortran accessors.
+
+Fortran module variables are native module storage. Public scalar numeric,
+logical, and complex module variables are represented in the generated Python
+surface by explicit `get_<name>()` and `set_<name>(value)` functions. Public
+Fortran parameters are semantic constants and use `Final[T]`:
+
+```python
+answer: Final[Int32]
+
+def get_counter() -> Int32: ...
+
+def set_counter(value: Int32) -> None: ...
+```
+
+Fortran generic interfaces whose name matches a derived type are constructor
+interfaces. They currently produce the
+`fortran_generic_constructor_unsupported` readiness blocker; they are not
+silently emitted over the generated field-based class constructor. Persistent
+pointer module variables use the ownership-policy checker and remain blocked
+unless complete snapshot metadata makes the transfer safe.
 
 ### Implemented Fortran Arrays
 

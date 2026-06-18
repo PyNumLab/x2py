@@ -319,6 +319,7 @@ class FortranProcedureSignature:
     uses: dict[str, list[FortranUseMapping]] = field(default_factory=dict)
     in_interface: bool = False
     variables: dict[str, FortranVariable] = field(default_factory=dict)
+    common_variables: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -327,6 +328,7 @@ class FortranDerivedType:
     module: str | None = None
     fields: list[FortranArgument] = field(default_factory=list)
     methods: list[str] = field(default_factory=list)
+    final_procedures: list[str] = field(default_factory=list)
     extends: FortranDerivedType | str | None = None
     attributes: list[str] = field(default_factory=list)
     procedure_bindings: list[dict] = field(default_factory=list)
@@ -354,6 +356,7 @@ class FortranModule:
     default_visibility: str = "public"
     public_symbols: list[str] = field(default_factory=list)
     private_symbols: list[str] = field(default_factory=list)
+    common_variables: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -367,6 +370,7 @@ class FortranSubmodule:
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
     derived_types: list[FortranDerivedType] = field(default_factory=list)
     interfaces: list[FortranInterface] = field(default_factory=list)
+    common_variables: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -376,6 +380,7 @@ class FortranProgram:
     uses: dict[str, list[FortranUseMapping]] = field(default_factory=dict)
     variables: list[FortranVariable] = field(default_factory=list)
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
+    common_variables: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -383,6 +388,7 @@ class FortranBlockData:
     name: str | None = None
     filename: str | None = None
     variables: list[FortranVariable] = field(default_factory=list)
+    common_variables: list[str] = field(default_factory=list)
 
 
 @dataclass

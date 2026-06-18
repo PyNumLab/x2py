@@ -3,6 +3,7 @@ Module describing the code-wrapping class : CToPythonWrapper
 which creates an interface exposing C code to Python.
 """
 
+import ast
 import warnings
 
 from x2py.ownership_policy import (
@@ -94,7 +95,11 @@ from .cpython_api import (
     PyUnicode_FromString,
     WrapperCustomDataType,
     check_type_registry,
+    c_memcpy,
+    c_memset,
+    c_strlen,
     py_to_c_registry,
+    x2py_malloc,
 )
 from ..models.datatypes import (
     CharType,
@@ -144,6 +149,7 @@ from ..models.datatypes import (
     NumpyNDArrayType,
 )
 from ..models.core import (
+    Add,
     And,
     IfTernaryOperator,
     Eq,
@@ -654,7 +660,7 @@ class CPythonBindingGenerator(BindingGenerator):
         self._python_object_map.update(dict(zip(args, collect_args, strict=False)))
         return collect_args
 
-    def _unpack_python_args(self, args, class_base=None):
+    def _unpack_python_args(self, args, class_base=None, *, python_arg_names=None):
         """
         Unpack the arguments received from Python into the expected Python variables.
 
@@ -702,6 +708,8 @@ class CPythonBindingGenerator(BindingGenerator):
         has_bound_arg = class_base is not None
         bound_arg = args[0] if has_bound_arg else None
         args = args[int(has_bound_arg) :]
+        if python_arg_names is not None:
+            python_arg_names = python_arg_names[int(has_bound_arg) :]
         # Create necessary variables
         func_args = [self.get_new_PyObject("self", class_base)] + [self.get_new_PyObject(n) for n in ("args", "kwargs")]
         arg_vars = self._get_python_argument_variables(args)
@@ -711,7 +719,10 @@ class CPythonBindingGenerator(BindingGenerator):
             self._python_object_map[bound_arg] = func_args[0]
 
         # Create the list of argument names
-        arg_names = ["" if a.is_posonly else getattr(a.var, "original_var", a.var).name for a in args]
+        if python_arg_names is None:
+            arg_names = ["" if a.is_posonly else getattr(a.var, "original_var", a.var).name for a in args]
+        else:
+            arg_names = ["" if a.is_posonly else name for a, name in zip(args, python_arg_names, strict=False)]
         keyword_list = PyArgKeywords(keyword_list_name, arg_names)
 
         # Parse arguments
@@ -728,6 +739,14 @@ class CPythonBindingGenerator(BindingGenerator):
         body.append(If(IfSection(Not(parse_node), [Return(self._error_exit_code)])))
 
         return func_args, body
+
+    @staticmethod
+    def _function_argument_python_name(original_func, function_arg):
+        source_var = getattr(function_arg.var, "original_var", function_arg.var)
+        try:
+            return original_func.scope.get_python_name(source_var.name)
+        except RuntimeError:
+            return str(source_var.name)
 
     def _get_python_result_variables(self, results):
         """
@@ -1400,7 +1419,7 @@ class CPythonBindingGenerator(BindingGenerator):
                 continue
             if isinstance(v, BindCArrayVariable) and v.memory_handling == "heap":
                 continue
-            body.extend(self._wrap(v))
+            body.extend(self._visit(v))
             wrapped_var = self._python_object_map[v]
             var_name = self.scope.get_python_name(v.name)
             body.extend(self._add_object_to_mod(module_var, wrapped_var, var_name, initialised))
@@ -1713,6 +1732,96 @@ class CPythonBindingGenerator(BindingGenerator):
 
         return function
 
+    @staticmethod
+    def _default_constructor_property(prop):
+        setter = prop.setter
+        if setter is None:
+            return None
+        source_property = getattr(setter, "original_function", None)
+        if not isinstance(source_property, BindCClassProperty):
+            return None
+        original = getattr(source_property.getter, "original_function", None)
+        if not isinstance(original, DottedVariable):
+            return None
+        if original.rank != 0 or not isinstance(original.class_type, FixedSizeNumericType):
+            return None
+        return prop
+
+    def _get_default_class_initialiser(self, wrapped_class, cls_dtype):
+        """Create the generated keyword-only component initializer."""
+        init_name = wrapped_class.original_class.scope.get_new_name("__init__", object_type="function")
+        original_function = FunctionDef(
+            init_name,
+            [],
+            [],
+            FunctionDefResult(NIL),
+            scope=wrapped_class.original_class.scope,
+        )
+        properties = [
+            prop
+            for prop in (self._default_constructor_property(item) for item in wrapped_class.properties)
+            if prop is not None
+        ]
+
+        func_name = self.scope.get_new_name(f"{cls_dtype.name}__default_init_wrapper", object_type="wrapper")
+        func_scope = self.scope.new_child_scope(func_name, "function")
+        self.scope = func_scope
+        self._error_exit_code = convert_to_literal(-1, dtype=CNativeInt())
+
+        bound_arg = FunctionDefArgument(
+            Variable(cls_dtype, self.scope.get_new_name("self"), cls_base=wrapped_class.original_class),
+            bound_argument=True,
+        )
+        field_args = [
+            FunctionDefArgument(
+                Variable(PythonObjectType(), prop.python_name, memory_handling="alias"),
+                value=Py_None,
+                kwonly=True,
+            )
+            for prop in properties
+        ]
+        unpack_args = [bound_arg, *field_args]
+        func_args, body = self._unpack_python_args(unpack_args, cls_dtype)
+        self_obj = func_args[0]
+
+        for prop, field_arg in zip(properties, field_args, strict=True):
+            field_obj = self._python_object_map[field_arg]
+            body.append(
+                If(
+                    IfSection(
+                        IsNot(field_obj, Py_None),
+                        [
+                            If(
+                                IfSection(
+                                    Lt(
+                                        prop.setter(self_obj, field_obj, NIL), convert_to_literal(0, dtype=CNativeInt())
+                                    ),
+                                    [Return(self._error_exit_code)],
+                                )
+                            )
+                        ],
+                    )
+                )
+            )
+        body.append(Return(convert_to_literal(0, dtype=CNativeInt())))
+        result = FunctionDefResult(self.scope.get_temporary_variable(CNativeInt()))
+        self.exit_scope()
+
+        for arg in unpack_args:
+            self._python_object_map.pop(arg, None)
+
+        function = PyFunctionDef(
+            func_name,
+            [FunctionDefArgument(arg) for arg in func_args],
+            body,
+            result,
+            scope=func_scope,
+            original_function=original_function,
+        )
+        self.scope.insert_function(function, func_scope.get_python_name(func_name))
+        self._error_exit_code = NIL
+        return function
+
     def _get_class_destructor(self, del_function, cls_dtype, wrapper_scope):
         """
         Create the destructor for the class.
@@ -1926,8 +2035,13 @@ class CPythonBindingGenerator(BindingGenerator):
                 output_owned.append(native_owned_results[native_index])
                 native_index += 1
                 continue
+            if self._is_string_replacement_argument(orig_var) and native_index < len(native_py_results):
+                output_items.append(native_py_results[native_index])
+                output_owned.append(native_owned_results[native_index])
+                native_index += 1
+                continue
             if getattr(orig_var, "intent", "in") == "out":
-                visible_object = visible_outputs.get(orig_var)
+                visible_object = visible_outputs.get(orig_var) or visible_outputs.get(getattr(orig_var, "name", None))
                 if visible_object is not None:
                     output_items.append(visible_object)
                     output_owned.append(False)
@@ -1964,6 +2078,7 @@ class CPythonBindingGenerator(BindingGenerator):
             orig_var = getattr(var, "original_var", var)
             if getattr(orig_var, "intent", "in") == "out":
                 outputs[orig_var] = self._python_object_map[argument]
+                outputs[getattr(orig_var, "name", None)] = self._python_object_map[argument]
         return outputs
 
     def connect_pointer_targets(self, orig_var, python_res, funcdef, is_bind_c):
@@ -2037,6 +2152,8 @@ class CPythonBindingGenerator(BindingGenerator):
             name=original_mod_name,
             used_symbols=scope.local_used_symbols.copy(),
             original_symbols=scope.python_names.copy(),
+            public_name_policy=scope.public_name_policy,
+            public_namespace=scope.public_namespace,
             scope_type="module",
         )
         self.scope = mod_scope
@@ -2097,7 +2214,7 @@ class CPythonBindingGenerator(BindingGenerator):
             )
 
         # Wrap interfaces
-        interfaces = [self._visit(i) for i in expr.overload_sets]
+        interfaces = [self._visit(i) for i in expr.overload_sets if not i.is_private]
 
         module_def_name = self.scope.get_new_name("module")
         init_func = self._build_module_init_function(expr, imports, module_def_name)
@@ -2446,7 +2563,12 @@ class CPythonBindingGenerator(BindingGenerator):
                 func_args = [FunctionDefArgument(a) for a in self._get_python_argument_variables(python_args)]
                 body = []
             else:
-                func_args, body = self._unpack_python_args(python_args, class_dtype)
+                python_arg_names = [self._function_argument_python_name(original_func, arg) for arg in python_args]
+                func_args, body = self._unpack_python_args(
+                    python_args,
+                    class_dtype,
+                    python_arg_names=python_arg_names,
+                )
                 func_args = [FunctionDefArgument(a) for a in func_args]
 
         # Get the code required to extract the C-compatible arguments from the Python arguments
@@ -2774,10 +2896,44 @@ class CPythonBindingGenerator(BindingGenerator):
             ),
         ]
 
+    @staticmethod
+    def _module_constant_literal(expr):
+        value = expr.default_value
+        if value is None:
+            raise ValueError(f"Module constant {expr.name} needs a literal value before wrapper generation")
+        dtype = expr.class_type.underlying_type if isinstance(expr.class_type, FinalType) else expr.class_type
+        text = str(value).strip()
+        if isinstance(dtype, NumpyBoolType):
+            return convert_to_literal(text.lower() in {".true.", "true", "1"}, dtype=dtype)
+        if isinstance(dtype, StringType):
+            return convert_to_literal(str(ast.literal_eval(text)), dtype=dtype)
+        if isinstance(dtype.primitive_type, PrimitiveIntegerType):
+            return convert_to_literal(int(ast.literal_eval(text)), dtype=dtype)
+        if isinstance(dtype.primitive_type, PrimitiveFloatingPointType):
+            return convert_to_literal(float(text.replace("d", "e").replace("D", "E")), dtype=dtype)
+        if isinstance(dtype.primitive_type, PrimitiveComplexType):
+            parts = ast.literal_eval(text.replace("d", "e").replace("D", "E"))
+            return convert_to_literal(complex(parts[0], parts[1]), dtype=dtype)
+        raise TypeError(f"No Python constant conversion registered for {expr.class_type}")
+
+    def _visit_BindCModuleConstant(self, expr):
+        py_equiv = self.scope.get_temporary_variable(PythonObjectType(), memory_handling="alias")
+        self._python_object_map[expr] = py_equiv
+        dtype = expr.class_type.underlying_type if isinstance(expr.class_type, FinalType) else expr.class_type
+        c_value = self.scope.get_temporary_variable(dtype, name=f"{expr.name}_value")
+        return [
+            Assign(c_value, self._module_constant_literal(expr)),
+            AliasAssign(py_equiv, FunctionCall(C_to_Python(c_value), [c_value])),
+        ]
+
     def _get_allocatable_module_array_getter(self, expr):
         python_name = f"get_{self.scope.get_python_name(expr.name)}"
         wrapper_name = self.scope.get_new_name(f"{python_name}_wrapper", object_type="wrapper")
-        original_name = self.scope.get_new_name(python_name, object_type="function")
+        original_name = self.scope.get_new_public_name(
+            python_name,
+            object_type="function",
+            owner=f"module array getter {python_name}",
+        )
         original = FunctionDef(
             original_name,
             (),
@@ -3194,9 +3350,12 @@ class CPythonBindingGenerator(BindingGenerator):
         wrapped_class = self._python_object_map[expr]
 
         orig_scope = expr.scope
+        has_initialiser = False
 
         for f in expr.methods:
             if not f.is_semantic:
+                continue
+            if f.is_private:
                 continue
             orig_f = getattr(f, "original_function", f)
             name = orig_f.name
@@ -3204,6 +3363,7 @@ class CPythonBindingGenerator(BindingGenerator):
             if python_name == "__del__":
                 wrapped_class.add_new_method(self._get_class_destructor(f, orig_cls_dtype, wrapped_class.scope))
             elif python_name == "__init__":
+                has_initialiser = True
                 wrapped_class.add_new_method(self._get_class_initialiser(f, orig_cls_dtype))
             elif python_name in (*magic_binary_funcs, "__len__"):
                 wrapped_class.add_new_magic_method(self._visit(f))
@@ -3213,6 +3373,8 @@ class CPythonBindingGenerator(BindingGenerator):
                 wrapped_class.add_new_method(self._visit(f))
 
         for i in expr.overload_sets:
+            if i.is_private:
+                continue
             for f in i.functions:
                 self._visit(f)
             wrapped_overload_set = self._visit(i)
@@ -3237,6 +3399,9 @@ class CPythonBindingGenerator(BindingGenerator):
                     wrapped_class.add_property(self._visit(a))
                 else:
                     wrapped_class.add_property(self._visit(a.clone(a.name, new_class=DottedVariable, lhs=pseudo_self)))
+
+        if not has_initialiser:
+            wrapped_class.add_new_method(self._get_default_class_initialiser(wrapped_class, orig_cls_dtype))
 
         return wrapped_class
 
@@ -3732,6 +3897,80 @@ class CPythonBindingGenerator(BindingGenerator):
             )
         )
 
+    @staticmethod
+    def _is_string_replacement_argument(var):
+        return isinstance(var.class_type, StringType) and getattr(var, "intent", "in") == "inout"
+
+    def _bind_c_string_arg_parts(self, orig_var, *, writable):
+        class_type = NumpyNDArrayType.get_new(CharType(), 1, None, raw=True)
+        if not writable:
+            class_type = FinalType.get_new(class_type)
+        data_var = Variable(
+            class_type,
+            self.scope.get_expected_name(orig_var.name),
+            shape=(None,),
+            memory_handling="alias",
+        )
+        size_var = Variable(NumpyInt64Type(), self.scope.get_new_name(f"{data_var.name}_size"))
+        arg_var = Variable(
+            BindCArrayType.get_new(1, False),
+            self.scope.get_new_name(orig_var.name),
+            shape=(convert_to_literal(2),),
+        )
+        self.scope.insert_variable(data_var, orig_var.name)
+        self.scope.insert_variable(size_var)
+        data_element = IndexedElement(arg_var, convert_to_literal(0))
+        size_element = IndexedElement(arg_var, convert_to_literal(1))
+        self.scope.insert_symbolic_alias(data_element, ObjectAddress(data_var))
+        self.scope.insert_symbolic_alias(size_element, size_var)
+        return data_var, size_var, arg_var
+
+    def _string_utf8_source(self, orig_var, collect_arg):
+        source_var = Variable(
+            FinalType.get_new(CharType()),
+            self.scope.get_new_name(f"{orig_var.name}_utf8"),
+            memory_handling="alias",
+        )
+        source_size = Variable(NumpyInt64Type(), self.scope.get_new_name(f"{orig_var.name}_utf8_size"))
+        self.scope.insert_variable(source_var)
+        self.scope.insert_variable(source_size)
+        body = [
+            AliasAssign(source_var, PyUnicode_AsUTF8AndSize(collect_arg, ObjectAddress(source_size))),
+            If(IfSection(Is(source_var, NIL), [Return(self._error_exit_code)])),
+            If(
+                IfSection(
+                    Ne(cast_to(c_strlen(source_var), NumpyInt64Type()), source_size),
+                    [
+                        PyErr_SetString(
+                            PyTypeError,
+                            CStrStr(convert_to_literal(f"Argument {orig_var.name} cannot contain embedded NUL")),
+                        ),
+                        Return(self._error_exit_code),
+                    ],
+                )
+            ),
+        ]
+        return source_var, source_size, body
+
+    def _string_replacement_payload_size(self, orig_var, source_size):
+        fixed_len = orig_var.alloc_shape[0]
+        return source_size if fixed_len is None else fixed_len
+
+    @staticmethod
+    def _string_replacement_copy_body(data_var, source_var, source_size, payload_size, *, fixed_length):
+        if not fixed_length:
+            return [c_memcpy(data_var, source_var, payload_size)]
+        return [
+            c_memset(data_var, convert_to_literal(ord(" ")), payload_size),
+            If(
+                IfSection(
+                    Lt(source_size, payload_size),
+                    [c_memcpy(data_var, source_var, source_size)],
+                ),
+                IfSection(convert_to_literal(True), [c_memcpy(data_var, source_var, payload_size)]),
+            ),
+        ]
+
     def _extract_StringType_FunctionDefArgument(
         self, orig_var, collect_arg, bound_argument, is_bind_c_argument, *, arg_var=None
     ):
@@ -3774,50 +4013,48 @@ class CPythonBindingGenerator(BindingGenerator):
         assert bound_argument is False
 
         if is_bind_c_argument:
-            if arg_var is None:
-                data_var = Variable(
-                    FinalType.get_new(NumpyNDArrayType.get_new(CharType(), 1, None, raw=True)),
-                    self.scope.get_expected_name(orig_var.name),
-                    shape=(None,),
-                    memory_handling="alias",
-                )
-                size_var = Variable(NumpyInt64Type(), self.scope.get_new_name(f"{data_var.name}_size"))
-                arg_var = Variable(
-                    BindCArrayType.get_new(1, False),
-                    self.scope.get_new_name(orig_var.name),
-                    shape=(convert_to_literal(2),),
-                )
-                self.scope.insert_variable(data_var, orig_var.name)
-                self.scope.insert_variable(size_var)
-                data_element = IndexedElement(arg_var, convert_to_literal(0))
-                size_element = IndexedElement(arg_var, convert_to_literal(1))
-                self.scope.insert_symbolic_alias(data_element, ObjectAddress(data_var))
-                self.scope.insert_symbolic_alias(size_element, size_var)
-            else:
-                size_element = IndexedElement(arg_var, convert_to_literal(1))
+            writable = self._is_string_replacement_argument(orig_var)
+            if arg_var is not None:
+                raise NotImplementedError("Reusing an existing Bind-C string descriptor is not supported.")
+            data_var, size_var, arg_var = self._bind_c_string_arg_parts(orig_var, writable=writable)
 
-            if getattr(orig_var, "is_optional", False):
-                body = [
-                    AliasAssign(
-                        data_var,
-                        PyUnicode_AsUTF8AndSize(
-                            collect_arg,
-                            ObjectAddress(self.scope.collect_tuple_element(size_element)),
+            source_var, source_size, body = self._string_utf8_source(orig_var, collect_arg)
+            if writable:
+                payload_size = self._string_replacement_payload_size(orig_var, source_size)
+                fixed_length = payload_size is not source_size
+                body.extend(
+                    [
+                        Assign(size_var, payload_size),
+                        Assign(ObjectAddress(data_var), x2py_malloc(Add(payload_size, convert_to_literal(1)))),
+                        If(
+                            IfSection(
+                                Is(data_var, NIL),
+                                [
+                                    PyErr_SetString(
+                                        PyMemoryError,
+                                        CStrStr(
+                                            convert_to_literal(
+                                                f"Unable to allocate mutable string buffer for argument {orig_var.name}."
+                                            )
+                                        ),
+                                    ),
+                                    Return(self._error_exit_code),
+                                ],
+                            )
                         ),
-                    ),
-                ]
+                        *self._string_replacement_copy_body(
+                            data_var,
+                            source_var,
+                            source_size,
+                            payload_size,
+                            fixed_length=fixed_length,
+                        ),
+                    ]
+                )
             else:
-                body = [
-                    Assign(
-                        orig_var,
-                        PyUnicode_AsUTF8AndSize(
-                            collect_arg,
-                            ObjectAddress(self.scope.collect_tuple_element(size_element)),
-                        ),
-                    ),
-                ]
+                body.extend([Assign(ObjectAddress(data_var), ObjectAddress(source_var)), Assign(size_var, source_size)])
 
-            default_init = [AliasAssign(data_var, NIL), Assign(size_var, 0)]
+            default_init = [Assign(ObjectAddress(data_var), NIL), Assign(size_var, 0)]
         else:
             if arg_var is None:
                 kwargs = {"new_class": Variable, "is_argument": False}
@@ -4160,22 +4397,36 @@ class CPythonBindingGenerator(BindingGenerator):
             result = [c_res]
 
         if is_bind_c:
-            body = [
-                If(
-                    IfSection(
-                        Is(c_res, NIL),
-                        [
-                            PyErr_SetString(
-                                PyMemoryError,
-                                CStrStr(convert_to_literal("Unable to allocate copy-return output string.")),
-                            ),
-                            Return(self._error_exit_code),
-                        ],
+            if getattr(orig_var, "is_optional", False):
+                body = [
+                    If(
+                        IfSection(
+                            Is(c_res, NIL),
+                            [AliasAssign(py_res, Py_None), Py_INCREF(Py_None)],
+                        ),
+                        IfSection(
+                            convert_to_literal(True),
+                            [AliasAssign(py_res, PyBuildValueNode([char_data])), Deallocate(c_res)],
+                        ),
                     )
-                ),
-                AliasAssign(py_res, PyBuildValueNode([char_data])),
-            ]
-            body.append(Deallocate(c_res))
+                ]
+            else:
+                body = [
+                    If(
+                        IfSection(
+                            Is(c_res, NIL),
+                            [
+                                PyErr_SetString(
+                                    PyMemoryError,
+                                    CStrStr(convert_to_literal("Unable to allocate copy-return output string.")),
+                                ),
+                                Return(self._error_exit_code),
+                            ],
+                        )
+                    ),
+                    AliasAssign(py_res, PyBuildValueNode([char_data])),
+                    Deallocate(c_res),
+                ]
         else:
             body = [AliasAssign(py_res, PyBuildValueNode([char_data]))]
         return {"c_results": result, "py_result": py_res, "body": body}

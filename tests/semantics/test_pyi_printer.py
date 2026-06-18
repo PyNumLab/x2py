@@ -421,6 +421,24 @@ end module
     assert "def make_values() -> Annotated[Float64[:], Allocatable]: ..." in code
 
 
+def test_emit_scalar_character_inout_as_replacement_return():
+    source = """
+module m
+contains
+subroutine normalize(name)
+    character(len=8), intent(inout) :: name
+end subroutine
+end module
+"""
+
+    code = generate_pyi(source)
+
+    annotation = 'Annotated[Ptr(String), FortranCharacterLength("8")]'
+    assert "@native_call([Arg(0)])" in code
+    assert f"name: {annotation}" in code
+    assert f') -> Returns["name", {annotation}]: ...' in code
+
+
 # ============================================================
 # Derived type emission
 # ============================================================
@@ -948,6 +966,36 @@ end module vector_mod
     assert "        self: vector" not in code
 
 
+def test_emit_fortran_type_default_constructor_and_field_values():
+    source = """
+module constructor_mod
+  type :: state
+    integer :: id = 7
+    real(8) :: scale = 2.5
+    logical :: enabled = .true.
+  end type state
+end module constructor_mod
+"""
+
+    code = generate_pyi(source)
+
+    assert normalize(
+        """
+class state:
+    def __init__(
+        self,
+        *,
+        id: Int32 = 7,
+        scale: Float64 = 2.5,
+        enabled: Bool = True
+    ) -> None: ...
+"""
+    ) in normalize(code)
+    assert "    id: Int32 = 7" in code
+    assert "    scale: Float64 = 2.5" in code
+    assert "    enabled: Bool = True" in code
+
+
 def test_emit_explicit_pass_name_and_nopass_methods():
     source = """
 module pass_mod
@@ -1143,7 +1191,9 @@ end module
 """
     code = generate_pyi(source)
     assert "answer: private[Final[Int32]]" in code
-    assert "counter: Int32" in code
+    assert "def get_counter() -> Int32: ..." in code
+    assert "def set_counter(value: Int32) -> None: ..." in code
+    assert "counter: Int32" not in code
     assert "hidden_scale: private[Float64]" in code
 
 

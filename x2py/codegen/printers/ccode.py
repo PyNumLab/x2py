@@ -1101,6 +1101,8 @@ class CCodePrinter(CodePrinter):
 
     def _print_FunctionCall(self, expr):
         func = expr.funcdef
+        if func.name in {"memcpy", "memset", "strlen"}:
+            self.add_import(c_imports["string"])
         parent_assign = get_direct_assignment(expr)
         returns_via_output_args = self._returns_via_output_args(func)
         # Ensure the correct syntax is used for pointers

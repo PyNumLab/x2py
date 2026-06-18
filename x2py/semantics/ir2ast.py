@@ -25,6 +25,7 @@ from x2py.codegen.models.core import (
 )
 from x2py.codegen.models.datatypes import (
     DataTypeFactory,
+    FinalType,
     NIL,
     NumpyNDArrayType,
     StringType,
@@ -79,6 +80,10 @@ def _codegen_type(dtype: str, custom_types: dict[str, object] | None = None):
         return StringType()
     numpy_type = _numpy_type(SEMANTIC_DTYPE_TO_NUMPY_DTYPE[dtype])
     return original_type_to_x2py_type[numpy_type]
+
+
+def _is_constant(semantic_type: models.SemanticType) -> bool:
+    return any(constraint.name == "Constant" for constraint in semantic_type.constraints)
 
 
 def _string_shape(semantic_type: models.SemanticType):
@@ -266,6 +271,15 @@ def _raise_for_unresolved_generic_targets(node: models.SemanticModule | models.S
             targets = ", ".join(str(target) for target in missing)
             raise ValueError(f"Generic interface {generic!r} references missing specific procedure(s): {targets}")
         raise ValueError(f"Generic interface {generic!r} does not declare any specific procedures")
+
+
+def _raise_for_unsupported_fortran_module_features(node: models.SemanticModule) -> None:
+    owners = [node, *node.functions]
+    blocking_codes = {"fortran_generic_constructor_unsupported"}
+    for owner in owners:
+        for blocker in owner.metadata.get("readiness_blockers", ()):
+            if blocker.get("code") in blocking_codes:
+                raise ValueError(str(blocker.get("message") or "Unsupported Fortran wrapper feature."))
 
 
 def _is_allocatable_array(semantic_type: models.SemanticType | None) -> bool:
@@ -631,20 +645,50 @@ def _raise_for_unsupported_allocatable_scalar_outputs(node: models.SemanticFunct
             )
 
 
-def _raise_for_unsupported_bind_c_abi(node: models.SemanticFunction) -> None:
+def _is_bind_c_derived_type(
+    semantic_type: models.SemanticType,
+    class_lookup: dict[str, models.SemanticClass],
+) -> bool:
+    semantic_class = class_lookup.get(semantic_type.name)
+    return semantic_class is not None and bool(semantic_class.metadata.get("fortran_bind_c"))
+
+
+def _raise_for_unsupported_bind_c_abi(
+    node: models.SemanticFunction,
+    class_lookup: dict[str, models.SemanticClass],
+) -> None:
     if not node.metadata.get("fortran_bind_c"):
         return
     for argument in node.arguments:
         semantic_type = argument.semantic_type
         if semantic_type.rank > 0:
             continue
+        if _is_bind_c_derived_type(semantic_type, class_lookup):
+            continue
+        if semantic_type.name in class_lookup:
+            is_value = bool(getattr(argument.origin, "metadata", {}).get("value"))
+            transfer = "by-value " if is_value else ""
+            raise ValueError(
+                f"Function {node.name!r} has bind(C) {transfer}derived-type argument {argument.name!r} "
+                "whose type is not declared bind(C); aggregate layout is not inferred"
+            )
         if not _has_known_iso_c_kind(semantic_type):
             raise ValueError(
                 f"Function {node.name!r} has bind(C) scalar argument {argument.name!r} "
                 "without a supported ISO C binding kind"
             )
-    if node.return_type is not None and node.return_type.rank == 0 and not _has_known_iso_c_kind(node.return_type):
-        raise ValueError(f"Function {node.name!r} has a bind(C) scalar result without a supported ISO C binding kind")
+    if node.return_type is not None and node.return_type.rank == 0:
+        if _is_bind_c_derived_type(node.return_type, class_lookup):
+            return
+        if node.return_type.name in class_lookup:
+            raise ValueError(
+                f"Function {node.name!r} has a bind(C) derived-type result whose type is not declared bind(C); "
+                "aggregate layout is not inferred"
+            )
+        if not _has_known_iso_c_kind(node.return_type):
+            raise ValueError(
+                f"Function {node.name!r} has a bind(C) scalar result without a supported ISO C binding kind"
+            )
 
 
 def _raise_for_blocked_ownership_contracts_in_function(node: models.SemanticFunction) -> None:
@@ -681,6 +725,85 @@ def _raise_for_blocked_ownership_contracts(node: models.SemanticModule) -> None:
         _raise_for_blocked_ownership_contracts_in_class(semantic_class)
 
 
+def _is_public(node) -> bool:
+    return getattr(node, "visibility", "public") != "private"
+
+
+def _references_private_type(semantic_type: models.SemanticType | None, private_type_names: set[str]) -> bool:
+    return bool(semantic_type is not None and semantic_type.name in private_type_names)
+
+
+def _raise_if_private_type_exposed(
+    owner: str,
+    semantic_type: models.SemanticType | None,
+    private_type_names: set[str],
+) -> None:
+    if _references_private_type(semantic_type, private_type_names):
+        raise ValueError(f"{owner} exposes private derived type {semantic_type.name!r} in the Python wrapper API")
+
+
+def _raise_for_private_type_exposure_in_function(
+    node: models.SemanticFunction,
+    private_type_names: set[str],
+) -> None:
+    if not _is_public(node):
+        return
+    for argument in node.arguments:
+        _raise_if_private_type_exposed(
+            f"Public function {node.name!r} argument {argument.name!r}",
+            argument.semantic_type,
+            private_type_names,
+        )
+    _raise_if_private_type_exposed(f"Public function {node.name!r} result", node.return_type, private_type_names)
+
+
+def _raise_for_private_type_exposure_in_class(
+    node: models.SemanticClass,
+    private_type_names: set[str],
+) -> None:
+    if not _is_public(node):
+        return
+    for base_name in node.base_classes:
+        if base_name in private_type_names:
+            raise ValueError(f"Public type {node.name!r} extends private derived type {base_name!r}")
+    for field in node.fields:
+        if _is_public(field):
+            _raise_if_private_type_exposed(
+                f"Public type {node.name!r} field {field.name!r}",
+                field.semantic_type,
+                private_type_names,
+            )
+    for method in node.methods:
+        _raise_for_private_type_exposure_in_function(method, private_type_names)
+    for overload_set in node.overload_sets:
+        if _is_public(overload_set):
+            for procedure in overload_set.procedures:
+                _raise_for_private_type_exposure_in_function(procedure, private_type_names)
+
+
+def _raise_for_private_type_exposure(node: models.SemanticModule) -> None:
+    private_type_names = {
+        semantic_class.name for semantic_class in _iter_semantic_classes(node.classes) if not _is_public(semantic_class)
+    }
+    if not private_type_names:
+        return
+    for variable in node.variables:
+        if _is_public(variable):
+            _raise_if_private_type_exposed(
+                f"Public module variable {variable.name!r}",
+                variable.semantic_type,
+                private_type_names,
+            )
+    for function in node.functions:
+        _raise_for_private_type_exposure_in_function(function, private_type_names)
+    for overload_set in node.overload_sets:
+        if _is_public(overload_set):
+            for procedure in overload_set.procedures:
+                _raise_for_private_type_exposure_in_function(procedure, private_type_names)
+    for semantic_class in node.classes:
+        _raise_for_private_type_exposure_in_class(semantic_class, private_type_names)
+
+
 def _has_known_iso_c_kind(semantic_type: models.SemanticType) -> bool:
     source_type = (semantic_type.origin.source_type or "").casefold()
     return any(token in source_type for token in _ISO_C_KIND_TOKENS)
@@ -702,9 +825,11 @@ def semantic_ir_to_codegen_ast(
 
     if isinstance(node, models.SemanticModule):
         _raise_for_unresolved_generic_targets(node)
+        _raise_for_unsupported_fortran_module_features(node)
         _raise_for_unsupported_allocatable_module_variables(node)
         _raise_for_unsupported_array_contracts(node)
         _raise_for_blocked_ownership_contracts(node)
+        _raise_for_private_type_exposure(node)
         custom_types = dict(custom_types or {})
         class_lookup = _semantic_class_lookup(node.classes)
         class_descendants = _semantic_class_descendants(node.classes)
@@ -724,6 +849,7 @@ def semantic_ir_to_codegen_ast(
                 class_order=class_order,
             )
             for item in node.classes
+            if _is_public(item)
         ]
         funcs = []
         generated_overload_sets = []
@@ -763,7 +889,7 @@ def semantic_ir_to_codegen_ast(
             )
             for item in node.variables
         ]
-        name = scope.get_new_name(node.name)
+        name = scope.get_new_public_name(node.name, object_type="module", owner=node.name)
         return Module(name, declarations, funcs, overload_sets=overload_sets, classes=classes, scope=scope)
 
     if isinstance(node, models.ProcedureOverloadSet):
@@ -787,13 +913,13 @@ def semantic_ir_to_codegen_ast(
             else:
                 functions.append(converted)
                 native_names.append(native_name)
-        name = scope.get_new_name(node.name)
+        name = scope.get_new_public_name(node.name, object_type="function", owner=f"generic {node.name}")
         overload_set = FunctionOverloadSet(str(name), functions, native_names=native_names)
         scope.insert_function(overload_set, name)
         return overload_set
 
     if isinstance(node, models.SemanticFunction):
-        _raise_for_unsupported_bind_c_abi(node)
+        _raise_for_unsupported_bind_c_abi(node, class_lookup or {})
         _raise_for_unsupported_allocatable_scalar_outputs(node)
         _raise_for_unsupported_pointer_outputs(node)
         _raise_for_blocked_ownership_contracts_in_function(node)
@@ -844,7 +970,11 @@ def semantic_ir_to_codegen_ast(
             )
             scope.insert_function(overload_set, name)
             return overload_set
-        func_scope = scope.new_child_scope(name=node.name, scope_type="function")
+        func_scope = scope.new_child_scope(
+            name=node.name,
+            scope_type="function",
+            public_namespace=scope.child_public_namespace("function", node.name),
+        )
         declarations = [
             semantic_ir_to_codegen_ast(
                 item,
@@ -890,9 +1020,15 @@ def semantic_ir_to_codegen_ast(
 
         args = _codegen_function_arguments(declarations, passed_object_position)
         native_name = node.native_name or node.name
-        name = scope.get_new_name(native_name)
-        if native_name != node.name:
-            scope.python_names[name] = node.name
+        if _is_public(node):
+            name = scope.get_new_public_name(
+                native_name,
+                python_name=node.name,
+                object_type="function",
+                owner=f"function {node.name}",
+            )
+        else:
+            name = scope.get_new_name(native_name, object_type="function")
         func = FunctionDef(
             name,
             args,
@@ -906,6 +1042,7 @@ def semantic_ir_to_codegen_ast(
                 if node.metadata.get("fortran_bind_c")
                 else None
             ),
+            type_bound_name=node.name if cls_base is not None else None,
         )
         scope._locals["functions"][name] = func
         return func
@@ -920,8 +1057,15 @@ def semantic_ir_to_codegen_ast(
                 custom_types[node.name] = class_type
             scope.insert_cls_construct(class_type)
 
-        name = scope.get_new_name(node.name, object_type="class")
-        class_scope = scope.new_child_scope(name=str(name), scope_type="class")
+        if _is_public(node):
+            name = scope.get_new_public_name(node.name, object_type="class", owner=f"type {node.name}")
+        else:
+            name = scope.get_new_name(node.name, object_type="class")
+        class_scope = scope.new_child_scope(
+            name=str(name),
+            scope_type="class",
+            public_namespace=scope.child_public_namespace("class", scope.get_python_name(name)),
+        )
         attributes = [
             semantic_ir_to_codegen_ast(
                 item,
@@ -977,6 +1121,8 @@ def semantic_ir_to_codegen_ast(
         semantic_type = node.semantic_type
         rank = semantic_type.rank
         dtype = _codegen_type(semantic_type.dtype, custom_types)
+        if _is_constant(semantic_type):
+            dtype = FinalType.get_new(dtype)
         if rank > 0:
             dtype = NumpyNDArrayType.get_new(
                 dtype,
@@ -991,7 +1137,17 @@ def semantic_ir_to_codegen_ast(
         try:
             name = scope.get_expected_name(node.name)
         except RuntimeError:
-            name = scope.get_new_name(node.name)
+            is_module_mutable = getattr(scope, "_scope_type", None) == "module" and not _is_constant(semantic_type)
+            if isinstance(node, models.SemanticArgument):
+                object_type = "argument"
+            elif isinstance(node, models.SemanticField):
+                object_type = "field"
+            else:
+                object_type = "variable"
+            if _is_public(node) and not is_module_mutable:
+                name = scope.get_new_public_name(node.name, object_type=object_type, owner=f"{object_type} {node.name}")
+            else:
+                name = scope.get_new_name(node.name)
         ownership_context = _ownership_context_for_variable(node, scope)
         ownership_decision = _ownership_decision(semantic_type, ownership_context)
         var = Variable(
@@ -1007,6 +1163,7 @@ def semantic_ir_to_codegen_ast(
             ownership_decision=ownership_decision,
             assumed_rank=_is_assumed_rank(semantic_type),
             cls_base=cls_base,
+            default_value=node.default_value,
         )
         scope.insert_variable(var, name=node.name)
         return var

@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import asdict
 from pathlib import Path
 
@@ -496,6 +497,76 @@ end module generic_mod
     assert FortranToIRConverter._literal_kind_key("kind(1)") is None
 
 
+def test_converter_blocks_generic_constructor_interfaces_explicitly():
+    source = """
+module constructor_generic_mod
+  type :: item
+    integer :: value
+  end type item
+  interface item
+    module procedure make_item
+  end interface item
+contains
+  type(item) function make_item(value) result(instance)
+    integer, intent(in) :: value
+    instance%value = value
+  end function make_item
+end module constructor_generic_mod
+"""
+
+    module = fortran_module_to_semantic_module(parse_fortran_source(source))
+    report = assess_semantic_wrap_readiness(module)
+
+    assert module.overload_sets == []
+    blocker = next(
+        blocker
+        for blocker in report["wrappability_blockers"]
+        if blocker["code"] == "fortran_generic_constructor_unsupported"
+    )
+    assert blocker["items"] == [
+        {
+            "owner": "constructor_generic_mod",
+            "item": "item",
+            "generic": "item",
+        }
+    ]
+
+
+def test_converter_keeps_module_common_block_storage_internal():
+    source = """
+module common_mod
+  public :: value, read_value
+  real :: value
+  common /shared/ value
+contains
+  real function read_value()
+    read_value = value
+  end function read_value
+end module common_mod
+"""
+
+    module = fortran_module_to_semantic_module(parse_fortran_source(source))
+
+    assert module.variables == []
+    assert [function.name for function in module.functions] == ["read_value"]
+
+
+def test_converter_allows_procedure_common_block_storage():
+    source = """
+module procedure_common_mod
+contains
+  subroutine work()
+    real :: value
+    common /shared/ value
+  end subroutine work
+end module procedure_common_mod
+"""
+
+    module = fortran_module_to_semantic_module(parse_fortran_source(source))
+
+    assert [function.name for function in module.functions] == ["work"]
+
+
 def test_converter_leaves_defined_operators_and_assignment_for_operator_lowering():
     source = """
 module operator_mod
@@ -934,6 +1005,8 @@ def test_semantic_compile_time_requirements_cover_all_parser_contexts():
         "bad_integer",
         "bad_real",
         "bad_complex",
+        "bad_logical",
+        "bad_character",
     }
     resolved_kind = collect_semantic_compile_time_requirements(
         FortranFile(variables=[FortranVariable(name="resolved_bad", base_type="real", kind="rk + 1")]),
@@ -1128,6 +1201,139 @@ end module constants_mod
     assert variables["origin"].shape == ["3"]
 
 
+def test_derived_type_initializers_and_finalizers_reach_semantic_ir():
+    source = """
+module lifecycle_mod
+  type :: state
+    integer :: count = 7
+  contains
+    final :: cleanup
+  end type state
+contains
+  subroutine cleanup(self)
+    type(state), intent(inout) :: self
+  end subroutine cleanup
+end module lifecycle_mod
+"""
+
+    parsed = parse_fortran_source(source)
+    module = fortran_module_to_semantic_module(parsed)
+    state = module.classes[0]
+
+    assert state.fields[0].default_value == "7"
+    assert state.fields[0].metadata["fortran_initializer"] == "7"
+    assert state.metadata["fortran_final_procedures"] == ["cleanup"]
+
+
+def test_bind_c_and_sequence_types_preserve_accessor_layout_metadata():
+    source = """
+module layout_mod
+  use iso_c_binding
+  type, bind(C) :: point
+    real(c_double) :: x
+    integer(c_int) :: axis
+  end type point
+  type, bind(C) :: tagged_point
+    type(point) :: position
+    logical(c_bool) :: active
+    complex(c_double_complex) :: weight
+  end type tagged_point
+  type :: ordered_pair
+    sequence
+    integer :: first
+    integer :: second
+  end type ordered_pair
+end module layout_mod
+"""
+
+    module = fortran_module_to_semantic_module(parse_fortran_source(source))
+    point, tagged, ordered = module.classes
+
+    assert point.metadata["fortran_type_attributes"] == ["bind(c)"]
+    assert point.metadata["fortran_bind_c"] is True
+    assert point.metadata["fortran_layout_policy"] == "accessors"
+    assert point.metadata["fortran_direct_layout"] is False
+    assert point.metadata["fortran_component_order"] == ["x", "axis"]
+    assert point.metadata["fortran_component_facts"] == [
+        {
+            "name": "x",
+            "source_type": "real(kind=c_double)",
+            "kind": "c_double",
+            "rank": 0,
+            "shape": [],
+            "allocatable": False,
+            "pointer": False,
+            "target": False,
+        },
+        {
+            "name": "axis",
+            "source_type": "integer(kind=c_int)",
+            "kind": "c_int",
+            "rank": 0,
+            "shape": [],
+            "allocatable": False,
+            "pointer": False,
+            "target": False,
+        },
+    ]
+    assert [field.name for field in tagged.fields] == ["position", "active", "weight"]
+    assert tagged.fields[0].origin.source_type == "type(point)"
+    assert tagged.fields[1].origin.source_type == "logical(kind=c_bool)"
+    assert tagged.fields[2].origin.source_type == "complex(kind=c_double_complex)"
+    assert ordered.metadata["fortran_type_attributes"] == ["sequence"]
+    assert ordered.metadata["fortran_sequence"] is True
+    assert ordered.metadata["fortran_layout_policy"] == "accessors"
+
+
+def test_bind_c_derived_value_argument_is_accessor_routed_and_noninteroperable_value_is_blocked():
+    interoperable_source = """
+module bind_c_value_mod
+  use iso_c_binding
+  type, bind(C) :: point
+    real(c_double) :: x
+  end type point
+contains
+  subroutine consume(value) bind(C)
+    type(point), value :: value
+  end subroutine consume
+end module bind_c_value_mod
+"""
+    noninteroperable_source = """
+module bad_bind_c_value_mod
+  use iso_c_binding
+  type :: point
+    real(c_double) :: x
+  end type point
+contains
+  subroutine consume(value) bind(C)
+    type(point), value :: value
+  end subroutine consume
+end module bad_bind_c_value_mod
+"""
+
+    interoperable = fortran_module_to_semantic_module(parse_fortran_source(interoperable_source))
+    assert assess_semantic_wrap_readiness(interoperable)["wrappable"] is True
+
+    noninteroperable = fortran_module_to_semantic_module(parse_fortran_source(noninteroperable_source))
+    report = assess_semantic_wrap_readiness(noninteroperable)
+    blocker = next(
+        item for item in report["wrappability_blockers"] if item["code"] == "fortran_bind_c_derived_type_unsupported"
+    )
+    assert "by-value derived-type arguments must use a type declared bind(C)" in blocker["message"]
+
+
+def test_module_parameters_preserve_literal_values_in_semantic_ir():
+    source = """
+module constants_mod
+  integer, parameter :: nmax = 12
+end module constants_mod
+"""
+
+    module = fortran_module_to_semantic_module(parse_fortran_source(source))
+
+    assert module.variables[0].default_value == "12"
+
+
 def test_intrinsic_builtin_kinds_map_to_semantic_types():
     converter = FortranToIRConverter()
     cases = [
@@ -1151,29 +1357,20 @@ def test_intrinsic_builtin_kinds_map_to_semantic_types():
         ("real", None, "Float32"),
         ("real", "4", "Float32"),
         ("real", "8", "Float64"),
-        ("real", "16", "Float128"),
         ("real", "real32", "Float32"),
         ("real", "real64", "Float64"),
-        ("real", "real128", "Float128"),
         ("real", "c_float", "Float32"),
         ("real", "c_double", "Float64"),
         ("real", "kind(1.0e0)", "Float32"),
         ("real", "kind(1.0d0)", "Float64"),
-        ("real", "kind(1.0q0)", "Float128"),
         ("complex", None, "Complex64"),
         ("complex", "4", "Complex64"),
         ("complex", "8", "Complex128"),
-        ("complex", "16", "Complex256"),
         ("complex", "real32", "Complex64"),
         ("complex", "real64", "Complex128"),
-        ("complex", "real128", "Complex256"),
         ("complex", "c_float_complex", "Complex64"),
         ("complex", "c_double_complex", "Complex128"),
         ("logical", None, "Bool"),
-        ("logical", "1", "Bool"),
-        ("logical", "2", "Bool"),
-        ("logical", "4", "Bool"),
-        ("logical", "8", "Bool"),
         ("logical", "c_bool", "Bool"),
         ("character", None, "String"),
         ("character", "1", "String"),
@@ -1185,6 +1382,24 @@ def test_intrinsic_builtin_kinds_map_to_semantic_types():
     for base_type, kind, expected in cases:
         variable = FortranVariable(name=f"{base_type}_{kind or 'default'}", base_type=base_type, kind=kind)
         assert converter.visit_variable(variable).name == expected
+
+
+@pytest.mark.parametrize(
+    ("base_type", "kind", "message"),
+    [
+        ("real", "16", "real(kind=16)"),
+        ("real", "real128", "real(kind=real128)"),
+        ("real", "kind(1.0q0)", "real(kind=16)"),
+        ("complex", "16", "complex(kind=16)"),
+        ("complex", "real128", "complex(kind=real128)"),
+        ("logical", "8", "logical(kind=8)"),
+    ],
+)
+def test_intrinsic_builtin_kinds_reject_unsupported_wrapper_mappings(base_type, kind, message):
+    variable = FortranVariable(name="value", base_type=base_type, kind=kind)
+
+    with pytest.raises(ValueError, match=re.escape(message)):
+        FortranToIRConverter().visit_variable(variable)
 
 
 def test_fortran2ir_uses_compiler_probed_storage_facts_and_preserves_provenance():
@@ -1203,6 +1418,19 @@ def test_fortran2ir_uses_compiler_probed_storage_facts_and_preserves_provenance(
     assert semantic_type.metadata["fortran_type_fact"] == fact
     assert semantic_type.metadata["fortran_type_fact_source"] == "compiler_probe"
 
+    logical_fact = {
+        "base_type": "logical",
+        "kind": "1",
+        "bits": 8,
+        "expression": "storage_size(logical(.false.,kind=1))",
+    }
+    logical_type = FortranToIRConverter(type_facts={("logical", "1"): logical_fact}).visit_variable(
+        FortranVariable(name="flag", base_type="logical", kind="1")
+    )
+
+    assert logical_type.name == "Bool"
+    assert logical_type.metadata["fortran_type_fact"] == logical_fact
+
 
 def test_fortran2ir_rejects_compiler_storage_without_semantic_dtype():
     fact = {
@@ -1215,6 +1443,21 @@ def test_fortran2ir_rejects_compiler_storage_without_semantic_dtype():
     with pytest.raises(ValueError, match="integer uses 48-bit storage"):
         FortranToIRConverter(type_facts={("integer", None): fact}).visit_variable(
             FortranVariable(name="value", base_type="integer")
+        )
+
+
+@pytest.mark.parametrize(
+    "fact",
+    [
+        {"base_type": "real", "kind": "16", "bits": 128},
+        {"base_type": "complex", "kind": "16", "bits": 256},
+        {"base_type": "logical", "kind": "8", "bits": 64},
+    ],
+)
+def test_fortran2ir_rejects_compiler_probed_unsupported_wrapper_storage(fact):
+    with pytest.raises(ValueError, match="Unsupported Fortran target storage"):
+        FortranToIRConverter(type_facts={(fact["base_type"], fact["kind"]): fact}).visit_variable(
+            FortranVariable(name="value", base_type=fact["base_type"], kind=fact["kind"])
         )
 
 
@@ -2025,6 +2268,28 @@ end subroutine scale
     assert func.projection[0].python_position == 0
     assert func.projection[1].python_position == 1
     assert func.projection[1].result_position is None
+
+
+def test_scalar_character_inout_is_projected_as_replacement_return():
+    parsed = parse_fortran_source(
+        """
+module chars
+contains
+  subroutine normalize(name)
+    character(len=8), intent(inout) :: name
+  end subroutine normalize
+end module chars
+"""
+    )
+
+    func = get_function(fortran_module_to_semantic_module(parsed), "normalize")
+    mapping = func.projection[0]
+
+    assert func.arguments[0].semantic_type.name == "String"
+    assert mapping.python_position == 0
+    assert mapping.native_position == 0
+    assert mapping.result_position == 0
+    assert mapping.intent == "inout"
 
 
 def test_imported_derived_type_is_an_opaque_external_reference_by_default():

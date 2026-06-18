@@ -118,6 +118,30 @@ def make_pair() -> tuple[Returns["left", Annotated[Float64[:], Allocatable]], Re
     assert target_blocker["items"] == [{"owner": "solver.values", "item": "values"}]
 
 
+def test_pointer_module_variable_uses_snapshot_or_block_ownership_policy():
+    parsed = parse_fortran_file(
+        """
+module pointer_module_mod
+  real(8), pointer :: values(:)
+end module pointer_module_mod
+"""
+    )
+    module = fortran_module_to_semantic_module(parsed.modules[0])
+
+    report = assess_semantic_wrap_readiness(module)
+
+    blocker = next(
+        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_ownership_policy_blocked"
+    )
+    assert blocker["items"] == [
+        {
+            "owner": "pointer_module_mod.values",
+            "item": "values",
+            "policy": "pointer array owner, lifetime, shape, and release policy are unknown",
+        }
+    ]
+
+
 def test_allocatable_scalar_derived_replacement_reports_precise_blocker():
     parsed = parse_fortran_file(
         """
@@ -142,6 +166,30 @@ end module alloc_scalar_mod
     )
     assert blocker["items"] == [
         {"owner": "alloc_scalar_mod.replace", "item": "value", "intent": "inout"},
+    ]
+
+
+def test_allocatable_scalar_character_replacement_reports_precise_blocker():
+    parsed = parse_fortran_file(
+        """
+module alloc_character_mod
+contains
+  subroutine replace(label)
+    character(len=:), allocatable, intent(inout) :: label
+  end subroutine replace
+end module alloc_character_mod
+"""
+    )
+    module = fortran_module_to_semantic_module(parsed.modules[0])
+    report = assess_semantic_wrap_readiness(module, source="alloc_character_mod.f90")
+
+    blocker = next(
+        blocker
+        for blocker in report["wrappability_blockers"]
+        if blocker["code"] == "allocatable_scalar_replacement_unsupported"
+    )
+    assert blocker["items"] == [
+        {"owner": "alloc_character_mod.replace", "item": "label", "intent": "inout"},
     ]
 
 

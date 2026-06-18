@@ -67,6 +67,8 @@ class Scope:
         "_name",
         "_original_symbol",
         "_parent_scope",
+        "_public_name_policy",
+        "_public_namespace",
         "_scope_type",
         "_sons_scopes",
         "_symbol_prefix",
@@ -93,6 +95,8 @@ class Scope:
         parent_scope=None,
         used_symbols=None,
         original_symbols=None,
+        public_name_policy=None,
+        public_namespace=None,
         symbolic_aliases=None,
         scope_type,
     ):
@@ -120,6 +124,12 @@ class Scope:
 
         self._used_symbols = used_symbols or {}
         self._original_symbol = original_symbols or {}
+        if public_name_policy is None and parent_scope is not None:
+            public_name_policy = parent_scope.public_name_policy
+        if public_namespace is None and parent_scope is not None:
+            public_namespace = parent_scope.public_namespace
+        self._public_name_policy = public_name_policy
+        self._public_namespace = tuple(public_namespace or ())
 
         self._dummy_counter = 0
 
@@ -169,6 +179,20 @@ class Scope:
         self.add_son(name, child)
 
         return child
+
+    @property
+    def public_name_policy(self):
+        """Policy used to reserve Python-visible wrapper names."""
+        return self._public_name_policy
+
+    @property
+    def public_namespace(self):
+        """Namespace key used for public wrapper name reservations."""
+        return self._public_namespace
+
+    def child_public_namespace(self, *parts):
+        """Return a child public namespace below the current scope."""
+        return (*self._public_namespace, *(str(part) for part in parts))
 
     @property
     def name(self):
@@ -811,6 +835,37 @@ class Scope:
         self._used_symbols[collisionless_symbol] = collisionless_symbol
         self._original_symbol[collisionless_symbol] = collisionless_symbol
         return self.insert_symbol(collisionless_symbol, object_type)
+
+    def reserve_public_name(self, raw_name, *, object_type="variable", owner=None):
+        """Reserve a Python-visible name in this scope's public namespace."""
+        if self._public_name_policy is None:
+            return str(raw_name)
+        return self._public_name_policy.reserve(
+            self._public_namespace,
+            raw_name,
+            category=object_type,
+            owner=owner,
+        )
+
+    def get_new_public_name(
+        self,
+        current_name=None,
+        *,
+        python_name=None,
+        is_temp=None,
+        object_type="variable",
+        owner=None,
+    ):
+        """Create a low-level symbol and map it to a reserved Python public name."""
+        raw_public_name = current_name if python_name is None else python_name
+        public_name = self.reserve_public_name(raw_public_name, object_type=object_type, owner=owner)
+        symbol = self.get_new_name(
+            current_name if current_name is not None else public_name,
+            is_temp=is_temp,
+            object_type=object_type,
+        )
+        self._original_symbol[symbol] = public_name
+        return symbol
 
     def get_temporary_variable(self, dtype_or_var, name=None, **kwargs):
         """

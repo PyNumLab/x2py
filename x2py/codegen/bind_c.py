@@ -34,9 +34,11 @@ __all__ = (
     "BindCClassProperty",
     "BindCFunctionDef",
     "BindCModule",
+    "BindCModuleConstant",
     "BindCModuleVariable",
     "BindCPointer",
     "BindCResultTupleType",
+    "BindCScalarModuleVariable",
     "BindCSizeOf",
     "BindCVariable",
     "CLocFunc",
@@ -477,6 +479,41 @@ class BindCModuleVariable(Variable):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+
+class BindCModuleConstant(Variable):
+    """
+    A Python-exported constant that has no mutable native storage.
+    """
+
+    __slots__ = ()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class BindCScalarModuleVariable(Variable):
+    """
+    Generated getter and setter wrappers for a scalar module variable.
+    """
+
+    __slots__ = ("_getter_function", "_setter_function")
+    _attribute_nodes = ("_getter_function", "_setter_function")
+
+    def __init__(self, *args, getter_function, setter_function, **kwargs):
+        self._getter_function = getter_function
+        self._setter_function = setter_function
+        super().__init__(*args, **kwargs)
+
+    @property
+    def getter_function(self):
+        """Generated native getter for this module variable."""
+        return self._getter_function
+
+    @property
+    def setter_function(self):
+        """Generated native setter for this module variable."""
+        return self._setter_function
 
 
 # =======================================================================================

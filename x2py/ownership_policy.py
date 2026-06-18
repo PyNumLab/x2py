@@ -342,6 +342,14 @@ class OwnershipPolicyResolver:
                 DestructionPolicy.PYTHON_REFCOUNT,
                 reason="string output is copied into a Python string",
             )
+        if context.intent == "inout":
+            return OwnershipDecision(
+                ObjectKind.STRING,
+                OwnershipOwner.PYTHON,
+                TransferMode.COPY_RETURN,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                reason="immutable Python strings use copy-in/copy-out replacement for inout",
+            )
         return self._scalar_decision(facts, context)
 
     def _array_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:

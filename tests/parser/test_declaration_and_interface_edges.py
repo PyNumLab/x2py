@@ -324,7 +324,9 @@ end module type_contains_valid_mod
 """
 
     parsed = parse_fortran_file(valid_code, filename="type_contains_valid.f90")
-    assert parsed.modules[0].derived_types[0].methods == ["update"]
+    dtype = parsed.modules[0].derived_types[0]
+    assert dtype.methods == ["update"]
+    assert dtype.final_procedures == ["destroy"]
 
     for invalid_line in ("call ignored_statement()", "!$omp declare target", "integer, public :: bad_binding"):
         code = f"""
@@ -337,6 +339,25 @@ end module type_contains_bad_mod
 """
         with pytest.raises(FortranParseError, match="Unsupported or malformed type-bound declaration"):
             parse_fortran_file(code, filename="type_contains_bad.f90")
+
+
+def test_derived_type_field_default_initializers_are_preserved():
+    code = """
+module init_mod
+  type :: state
+    integer :: count = 7
+    logical :: enabled = .true.
+  end type state
+end module init_mod
+"""
+
+    dtype = parse_fortran_file(code).modules[0].derived_types[0]
+    fields = {field.name: field for field in dtype.fields}
+
+    assert fields["count"].value == "7"
+    assert fields["count"].symbolic_value == "7"
+    assert fields["enabled"].value == "1"
+    assert fields["enabled"].symbolic_value == ".true."
 
 
 def test_contains_alternative_line_validation_accepts_spec_lines_without_mutating_scope():
@@ -428,6 +449,25 @@ end module type_field_edges_mod
     dtype = parse_fortran_file(code, filename="type_field_edges.f90").modules[0].derived_types[0]
 
     assert [field.name for field in dtype.fields] == ["first", "second"]
+    assert dtype.attributes == ["sequence"]
+
+
+def test_bind_c_derived_type_attribute_and_component_order_are_preserved():
+    code = """
+module bind_c_type_mod
+  use iso_c_binding
+  type, bind(C) :: sample
+    real(c_double) :: x
+    integer(c_int) :: tag
+    logical(c_bool) :: active
+  end type sample
+end module bind_c_type_mod
+"""
+
+    dtype = parse_fortran_file(code, filename="bind_c_type.f90").modules[0].derived_types[0]
+
+    assert dtype.attributes == ["bind(c)"]
+    assert [field.name for field in dtype.fields] == ["x", "tag", "active"]
 
 
 @pytest.mark.parametrize("invalid_line", ["type :: nested_marker", "call invalid_in_type_spec()"])

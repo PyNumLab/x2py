@@ -94,6 +94,10 @@ __all__ = (
     "PythonObjectType",
     "PythonTypeObjectType",
     "WrapperCustomDataType",
+    "c_memcpy",
+    "c_memset",
+    "c_strlen",
+    "x2py_malloc",
 )
 
 
@@ -1476,6 +1480,42 @@ PyUnicode_Check = FunctionDef(
     name="PyUnicode_Check",
     arguments=[FunctionDefArgument(Variable(PythonObjectType(), "str", memory_handling="alias"))],
     results=FunctionDefResult(Variable(CNativeInt(), "out")),
+    body=[],
+)
+
+c_memcpy = FunctionDef(
+    name="memcpy",
+    arguments=[
+        FunctionDefArgument(Variable(VoidType(), "dest", memory_handling="alias")),
+        FunctionDefArgument(Variable(VoidType(), "src", memory_handling="alias")),
+        FunctionDefArgument(Variable(NumpyInt64Type(), "n")),
+    ],
+    results=FunctionDefResult(NIL),
+    body=[],
+)
+
+c_memset = FunctionDef(
+    name="memset",
+    arguments=[
+        FunctionDefArgument(Variable(VoidType(), "s", memory_handling="alias")),
+        FunctionDefArgument(Variable(CNativeInt(), "c")),
+        FunctionDefArgument(Variable(NumpyInt64Type(), "n")),
+    ],
+    results=FunctionDefResult(NIL),
+    body=[],
+)
+
+c_strlen = FunctionDef(
+    name="strlen",
+    arguments=[FunctionDefArgument(Variable(CharType(), "s", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(CNativeInt(), "n")),
+    body=[],
+)
+
+x2py_malloc = FunctionDef(
+    name="x2py_malloc",
+    arguments=[FunctionDefArgument(Variable(NumpyInt64Type(), "size"))],
+    results=FunctionDefResult(Variable(VoidType(), "ptr", memory_handling="alias")),
     body=[],
 )
 

@@ -2424,6 +2424,7 @@ class FortranParser:
             "imports": set(),
             "external_symbols": set(),
             "includes": [],
+            "common_variables": [],
             "filename": None,
             "local_type_depth": 0,
         }
@@ -2637,6 +2638,10 @@ class FortranParser:
         stripped = line.strip()
         lower = stripped.lower()
 
+        if re.match(r"^common\b", stripped, flags=re.IGNORECASE):
+            self._record_common_variables(target.common_variables, stripped)
+            return
+
         if self._is_openmp_declarative_directive(stripped):
             owner_kind, owner_name = self._variable_scope_label(target)
             raise FortranParseError(
@@ -2753,6 +2758,9 @@ class FortranParser:
             scope.
         """
         stripped = line.strip()
+        if re.match(r"^common\b", stripped, flags=re.IGNORECASE):
+            self._record_common_variables(proc_state["common_variables"], stripped)
+            return
         if self._is_openmp_declarative_directive(stripped):
             raise FortranParseError(
                 f"Unsupported OpenMP declarative directive in procedure '{proc_state['signature'].name}': {stripped}",
@@ -2848,7 +2856,11 @@ class FortranParser:
                 source_line=source_line,
                 code="PARSE_MISSING_DERIVED_TYPE_END",
             )
-        if stripped.lower() in {"sequence", "private"}:
+        if stripped.lower() == "sequence":
+            if "sequence" not in dtype.attributes:
+                dtype.attributes.append("sequence")
+            return
+        if stripped.lower() == "private":
             return
         if self._is_openmp_declarative_directive(stripped):
             raise FortranParseError(
@@ -2915,6 +2927,7 @@ class FortranParser:
             return
 
         if re.match(r"^final\s*::\s*[A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*\s*$", line, re.IGNORECASE):
+            dtype.final_procedures.extend(split_csv(line.split("::", 1)[1]))
             return
 
         raise FortranParseError(
@@ -3183,6 +3196,10 @@ class FortranParser:
             if role == "type_field":
                 field = FortranArgument(name=normalized_name)
                 self._apply(field, entity_meta, shape)
+                if initializer is not None:
+                    field.value = self._normalize_parameter_value(initializer)
+                    field.symbolic_value = initializer
+                    field.value_type = "expression"
                 target.fields.append(field)
                 continue
             var = FortranArgument(name=normalized_name)
@@ -3715,7 +3732,23 @@ class FortranParser:
             if attr not in sig.attributes:
                 sig.attributes.append(attr)
         sig.uses = dict(state["uses"])
+        sig.common_variables = list(state["common_variables"])
         return replace(sig)
+
+    @staticmethod
+    def _record_common_variables(output: list[str], statement: str) -> None:
+        """Record common-block object names without modeling native storage."""
+        body = re.sub(r"^common\b", "", statement, count=1, flags=re.IGNORECASE).strip()
+        body = re.sub(r"/[^/]*/", ",", body)
+        known = {name.casefold() for name in output}
+        for entity in split_csv(body):
+            match = re.match(r"\s*([A-Za-z_]\w*)", entity)
+            if match is None:
+                continue
+            name = match.group(1)
+            if name.casefold() not in known:
+                output.append(name)
+                known.add(name.casefold())
 
     @staticmethod
     def _validate_all_args_declared(

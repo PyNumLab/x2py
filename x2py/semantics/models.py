@@ -467,7 +467,7 @@ def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
     if mapping.value_kind:
         return True
     if mapping.intent == "inout":
-        return mapping.python_position != mapping.native_position
+        return mapping.result_position is not None or mapping.python_position != mapping.native_position
     if mapping.intent != "in":
         return mapping.python_position is None
     if mapping.result_position is not None:
