@@ -606,6 +606,13 @@ class CPythonCodePrinter(CCodePrinter):
             )
             richcompare_slot = f"    .tp_richcompare = {richcompare_name},\n"
 
+        base_slot = ""
+        if expr.original_class.superclasses:
+            base_class = expr.original_class.superclasses[0]
+            base_python_name = base_class.scope.get_python_name(base_class.name)
+            wrapped_base = self.scope.find(base_python_name, "classes", raise_if_missing=True)
+            base_slot = f"    .tp_base = &{wrapped_base.type_name},\n"
+
         type_code = (
             f"static PyTypeObject {type_name} = {{\n"
             "    PyVarObject_HEAD_INIT(NULL, 0)\n"
@@ -616,8 +623,9 @@ class CPythonCodePrinter(CCodePrinter):
             f"    .tp_doc = PyDoc_STR({class_docstring}),\n"
             f"    .tp_basicsize = sizeof(struct {struct_name}),\n"
             "    .tp_itemsize = 0,\n"
-            "    .tp_flags = Py_TPFLAGS_DEFAULT,\n"
+            "    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,\n"
             f"    .tp_new = {expr.new_func.name},\n"
+            f"{base_slot}"
             f"{init_string}{del_string}"
             f"{richcompare_slot}"
             f"    .tp_methods = {method_def_name},\n"

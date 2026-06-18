@@ -2285,6 +2285,8 @@ class FortranParser:
         if parsed_prefix:
             result.base_type, result.kind = parsed_prefix
             self._apply_type_spelling_metadata(result, type_prefix)
+            if re.match(r"^class\s*\(", type_prefix, re.IGNORECASE):
+                result._fortran_polymorphic = True
 
         attributes = self._attrs(m.group("prefix"), m.group("tail"))
         sig = FortranProcedureSignature(
@@ -2483,8 +2485,13 @@ class FortranParser:
             "base_type": meta["base_type"],
             "kind": meta["kind"],
         }
-        for metadata_key in ("target_kind_expression", "character_length_syntax", "declared_storage_bits"):
-            if metadata_key in meta:
+        for metadata_key in (
+            "target_kind_expression",
+            "character_length_syntax",
+            "declared_storage_bits",
+            "polymorphic",
+        ):
+            if metadata_key in meta and (metadata_key != "polymorphic" or meta[metadata_key]):
                 declared_type[metadata_key] = meta[metadata_key]
         proc_state["declared_local_types"][key] = declared_type
 
@@ -3062,9 +3069,9 @@ class FortranParser:
             return meta, split_csv(tail.strip().lstrip(", "))
         if derived or class_derived:
             decl = derived or class_derived
-            return self._new_decl_meta("derived", decl.group("dtype")), split_csv(
-                (decl.group("attrs") or "").strip().lstrip(", ")
-            )
+            meta = self._new_decl_meta("derived", decl.group("dtype"))
+            meta["polymorphic"] = class_derived is not None
+            return meta, split_csv((decl.group("attrs") or "").strip().lstrip(", "))
         if re.match(r"^procedure\s*\(", left, re.IGNORECASE):
             procm = _REGEX["procedure_dummy"].match(left)
             iface = procm.group("iface").lower() if procm else None
@@ -3218,6 +3225,8 @@ class FortranParser:
             "contiguous": False,
             "external": False,
             "parameter": False,
+            "polymorphic": False,
+            "visibility": "public",
         }
 
     @staticmethod
@@ -3281,6 +3290,8 @@ class FortranParser:
                 meta["external"] = True
             elif la == "parameter":
                 meta["parameter"] = True
+            elif la in {"public", "private"}:
+                meta["visibility"] = la
             elif la.startswith("dimension") and "(" in a and ")" in a:
                 shape = split_csv(a[a.find("(") + 1 : a.rfind(")")])
                 meta["shape"] = shape
@@ -3334,6 +3345,7 @@ class FortranParser:
         arg.target = meta["target"]
         arg.contiguous = meta["contiguous"]
         arg.is_parameter = meta["parameter"]
+        arg.visibility = meta["visibility"]
         FortranParser._apply_internal_type_metadata(arg, meta)
         if shape:
             arg.shape = shape
@@ -3352,6 +3364,8 @@ class FortranParser:
             arg._character_length_syntax = True
         if meta.get("declared_storage_bits") is not None:
             arg._declared_storage_bits = int(meta["declared_storage_bits"])
+        if meta.get("polymorphic"):
+            arg._fortran_polymorphic = True
 
     @staticmethod
     def _split_dim_bounds(dim: str) -> tuple[str | None, str | None]:

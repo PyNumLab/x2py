@@ -334,6 +334,55 @@ end module pointer_mod
         )
 
 
+def test_scalar_polymorphic_input_arguments_become_dispatch_overload_sets():
+    source = """
+module polymorphic_codegen_mod
+  type :: base
+  end type base
+  type, extends(base) :: child
+  end type child
+contains
+  subroutine accept(value)
+    class(base), intent(in) :: value
+  end subroutine accept
+end module polymorphic_codegen_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    assert codegen_module.funcs == ()
+    assert len(codegen_module.overload_sets) == 1
+    dispatch = codegen_module.overload_sets[0]
+    assert isinstance(dispatch, FunctionOverloadSet)
+    assert str(dispatch.name) == "accept"
+    assert [func.arguments[0].var.class_type.name for func in dispatch.functions] == ["child", "base"]
+
+
+@pytest.mark.parametrize("intent", ["out", "inout"])
+def test_polymorphic_replacement_arguments_raise_before_codegen_without_policy(intent):
+    source = f"""
+module polymorphic_codegen_mod
+  type :: base
+  end type base
+contains
+  subroutine replace(value)
+    class(base), intent({intent}) :: value
+  end subroutine replace
+end module polymorphic_codegen_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    with pytest.raises(ValueError, match="polymorphic argument 'value'"):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )
+
+
 def test_non_default_lower_bound_extent_reaches_codegen_shape_validation():
     source = """
 module lower_bound_mod

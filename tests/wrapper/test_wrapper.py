@@ -276,6 +276,18 @@ def _assumed_rank_bump_cases() -> str:
     return "".join(cases)
 
 
+def _assumed_rank_score_cases(name: str, factor: int) -> str:
+    cases = []
+    for rank in range(1, _MAX_WRAPPER_TEST_RANK + 1):
+        cases.append(
+            f"""
+    rank({rank})
+      score = score + {factor * rank} + int(sum({name}))
+"""
+        )
+    return "".join(cases)
+
+
 ARRAY_RESULTS_F90_TEXT = (
     """
 module farray_results_f90
@@ -433,9 +445,153 @@ contains
       return
     end select
   end subroutine bump_assumed_rank
+
+  integer function rank_pair_score(left, right) result(score)
+    real(8), intent(in) :: left(..)
+    real(8), intent(in) :: right(..)
+
+    score = 0
+    select rank(left)
+"""
+    + _assumed_rank_score_cases("left", 100)
+    + """
+    rank default
+      score = score - 100000
+    end select
+
+    select rank(right)
+"""
+    + _assumed_rank_score_cases("right", 1)
+    + """
+    rank default
+      score = score - 100000
+    end select
+  end function rank_pair_score
 end module fassumed_rank_f90
 """
 )
+
+
+DERIVED_BOUNDARY_F90_TEXT = """
+module fderived_boundary_f90
+  implicit none
+
+  type :: point
+    real(8) :: x
+    real(8) :: y
+    real(8), private :: hidden
+  end type point
+
+  type :: holder
+    type(point) :: origin
+    real(8) :: scale
+  end type holder
+contains
+  real(8) function point_sum(p) result(total)
+    type(point), intent(in) :: p
+
+    total = p%x + p%y
+  end function point_sum
+
+  subroutine move_point(p, dx, dy)
+    type(point), intent(inout) :: p
+    real(8), intent(in) :: dx
+    real(8), intent(in) :: dy
+
+    p%x = p%x + dx
+    p%y = p%y + dy
+  end subroutine move_point
+
+  subroutine make_point_out(p, x, y)
+    type(point), intent(out) :: p
+    real(8), intent(in) :: x
+    real(8), intent(in) :: y
+
+    p%x = x
+    p%y = y
+    p%hidden = 99.0_8
+  end subroutine make_point_out
+
+  type(point) function make_point(x, y) result(p)
+    real(8), intent(in) :: x
+    real(8), intent(in) :: y
+
+    p%x = x
+    p%y = y
+    p%hidden = 123.0_8
+  end function make_point
+
+  subroutine set_holder_origin(h, p)
+    type(holder), intent(inout) :: h
+    type(point), intent(in) :: p
+
+    h%origin = p
+  end subroutine set_holder_origin
+
+  real(8) function holder_origin_x(h) result(value)
+    type(holder), intent(in) :: h
+
+    value = h%origin%x
+  end function holder_origin_x
+end module fderived_boundary_f90
+"""
+
+
+INHERITANCE_F90_TEXT = """
+module finheritance_f90
+  implicit none
+
+  type :: base_shape
+    real(8) :: size
+  contains
+    procedure :: area => base_area
+    procedure :: set_size => base_set_size
+  end type base_shape
+
+  type, extends(base_shape) :: circle
+    real(8) :: radius
+  contains
+    procedure :: area => circle_area
+  end type circle
+
+  type, extends(base_shape) :: box
+    real(8) :: width
+  contains
+    procedure :: area => box_area
+  end type box
+contains
+  real(8) function base_area(self) result(value)
+    class(base_shape), intent(in) :: self
+
+    value = self%size
+  end function base_area
+
+  subroutine base_set_size(self, value)
+    class(base_shape), intent(inout) :: self
+    real(8), intent(in) :: value
+
+    self%size = value
+  end subroutine base_set_size
+
+  real(8) function circle_area(self) result(value)
+    class(circle), intent(in) :: self
+
+    value = self%size + self%radius * self%radius
+  end function circle_area
+
+  real(8) function box_area(self) result(value)
+    class(box), intent(in) :: self
+
+    value = self%size + 10.0_8 * self%width
+  end function box_area
+
+  real(8) function describe_shape(item) result(value)
+    class(base_shape), intent(in) :: item
+
+    value = item%area()
+  end function describe_shape
+end module finheritance_f90
+"""
 
 
 def _assert_fmath_examples(module):
@@ -662,6 +818,93 @@ def _assert_modern_class_examples(module):
 
     made = module.vector_store.make(np.int64(4), np.float64(1.5))
     np.testing.assert_allclose(made.values, np.full(4, 1.5, dtype=np.float64))
+
+
+def test_scalar_derived_types_cross_procedure_boundaries(tmp_path: Path):
+    module = _build_text_and_import(
+        DERIVED_BOUNDARY_F90_TEXT,
+        "fderived_boundary_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fderived_boundary_f90_wrapper.f90",
+            "fderived_boundary_f90_wrapper.c",
+            "fderived_boundary_f90_wrapper.h",
+        },
+    )
+
+    point = module.point()
+    point.x = np.float64(1.0)
+    point.y = np.float64(2.0)
+    assert not hasattr(point, "hidden")
+    assert module.point_sum(point) == np.float64(3.0)
+
+    identity = id(point)
+    assert module.move_point(point, np.float64(4.0), np.float64(5.0)) is None
+    assert id(point) == identity
+    assert point.x == np.float64(5.0)
+    assert point.y == np.float64(7.0)
+
+    out_point = module.make_point_out(np.float64(8.0), np.float64(9.0))
+    assert isinstance(out_point, module.point)
+    assert out_point.x == np.float64(8.0)
+    assert out_point.y == np.float64(9.0)
+
+    result_point = module.make_point(np.float64(10.0), np.float64(11.0))
+    assert isinstance(result_point, module.point)
+    assert result_point.x == np.float64(10.0)
+    assert result_point.y == np.float64(11.0)
+
+    holder = module.holder()
+    holder.scale = np.float64(2.5)
+    assert module.set_holder_origin(holder, result_point) is None
+    origin = holder.origin
+    assert isinstance(origin, module.point)
+    assert origin.x == np.float64(10.0)
+    origin.x = np.float64(12.0)
+    assert module.holder_origin_x(holder) == np.float64(12.0)
+
+    del holder
+    gc.collect()
+    assert origin.x == np.float64(12.0)
+
+
+def test_fortran_extension_types_generate_python_inheritance(tmp_path: Path):
+    module = _build_text_and_import(
+        INHERITANCE_F90_TEXT,
+        "finheritance_f90.f90",
+        tmp_path,
+        {
+            "bind_c_finheritance_f90_wrapper.f90",
+            "finheritance_f90_wrapper.c",
+            "finheritance_f90_wrapper.h",
+        },
+    )
+
+    assert issubclass(module.circle, module.base_shape)
+    assert issubclass(module.box, module.base_shape)
+
+    base = module.base_shape()
+    base.size = np.float64(3.0)
+    assert base.area() == np.float64(3.0)
+    assert module.describe_shape(base) == np.float64(3.0)
+
+    circle = module.circle()
+    assert isinstance(circle, module.base_shape)
+    circle.set_size(np.float64(5.0))
+    circle.radius = np.float64(2.0)
+    assert circle.size == np.float64(5.0)
+    assert circle.area() == np.float64(9.0)
+    assert module.describe_shape(circle) == np.float64(9.0)
+
+    module.base_shape.set_size(circle, np.float64(7.0))
+    assert circle.size == np.float64(7.0)
+
+    box = module.box()
+    assert isinstance(box, module.base_shape)
+    box.set_size(np.float64(2.0))
+    box.width = np.float64(3.0)
+    assert box.area() == np.float64(32.0)
+    assert module.describe_shape(box) == np.float64(32.0)
 
 
 def test_fortran_wrapper_pipeline_builds_importable_extension(tmp_path: Path):
@@ -1190,6 +1433,28 @@ def test_assumed_rank_arguments_dispatch_to_runtime_rank(tmp_path: Path):
     rank16 = np.empty((1,) * (_MAX_WRAPPER_TEST_RANK + 1), dtype=np.float64, order="F")
     with pytest.raises(TypeError):
         module.rank_weighted_sum(rank16)
+
+
+def test_assumed_rank_bridge_dispatches_each_runtime_rank_argument(tmp_path: Path):
+    module = _build_text_and_import(
+        ASSUMED_RANK_F90_TEXT,
+        "fassumed_rank_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fassumed_rank_f90_wrapper.f90",
+            "fassumed_rank_f90_wrapper.c",
+            "fassumed_rank_f90_wrapper.h",
+        },
+    )
+
+    for left_rank in range(1, _MAX_WRAPPER_TEST_RANK + 1):
+        right_rank = _MAX_WRAPPER_TEST_RANK + 1 - left_rank
+        left_shape = (2, *([1] * (left_rank - 1)))
+        right_shape = (2, *([1] * (right_rank - 1)))
+        left = np.ones(left_shape, dtype=np.float64, order="F")
+        right = np.ones(right_shape, dtype=np.float64, order="F")
+
+        assert module.rank_pair_score(left, right) == 100 * left_rank + right_rank + 4
 
 
 def test_value_and_existing_bind_c_renamed_symbol_use_correct_abi(tmp_path: Path):

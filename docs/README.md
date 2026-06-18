@@ -19,6 +19,7 @@ overview. Contribution and pull-request requirements remain in
 - [Semantic IR reference](semantics.md)
 - [Semantic `.pyi` format](pyi_format.md)
 - [Diagnostic code registry](diagnostic_codes.md)
+- [Fortran wrapper ownership and lifetime policy](fortran_wrapper_ownership_policy.md)
 
 These files identify implemented, maintained contracts. Any design-only
 material inside them must be labeled explicitly. The tutorial and examples

@@ -2021,6 +2021,10 @@ class CPythonBindingGenerator(BindingGenerator):
             )()
 
             type_name = self.scope.get_new_name(f"Py{python_name}Type")
+            superclasses = tuple(
+                self.scope.find(base.scope.get_python_name(base.name), "classes", raise_if_missing=True)
+                for base in c.superclasses
+            )
             wrapped_class = PyClassDef(
                 c,
                 struct_name,
@@ -2028,6 +2032,7 @@ class CPythonBindingGenerator(BindingGenerator):
                 self.scope.new_child_scope(name, "class"),
                 docstring=self._class_docstring(c),
                 class_type=dtype,
+                superclasses=superclasses,
             )
 
             orig_cls_dtype = c.scope.parent_scope.cls_constructs[python_name]
@@ -3870,7 +3875,14 @@ class CPythonBindingGenerator(BindingGenerator):
         orig_var = getattr(wrapped_var, "original_var", wrapped_var)
         name = orig_var.name
         python_res = self.get_new_PyObject(f"{name}_obj", orig_var.dtype)
-        setup = self._allocate_class_instance(python_res, python_res.cls_base.scope, orig_var.is_alias)
+        original_function = getattr(funcdef, "original_function", None)
+        is_alias = (
+            orig_var.is_alias
+            or isinstance(orig_var, DottedVariable)
+            or isinstance(wrapped_var, DottedVariable)
+            or isinstance(original_function, DottedVariable)
+        )
+        setup = self._allocate_class_instance(python_res, python_res.cls_base.scope, is_alias)
         if is_bind_c:
             c_res = orig_var.clone(
                 self.scope.get_new_name(orig_var.name),

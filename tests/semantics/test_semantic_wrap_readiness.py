@@ -245,6 +245,60 @@ end module array_contract_mod
     assert "fortran_assumed_rank_policy_missing" not in _blocker_codes(report)
 
 
+def test_polymorphic_arguments_block_except_type_bound_passed_object():
+    parsed = parse_fortran_file(
+        """
+module polymorphic_readiness_mod
+  type :: base
+  contains
+    procedure :: touch
+  end type base
+contains
+  subroutine touch(self)
+    class(base), intent(inout) :: self
+  end subroutine touch
+  subroutine accept(value)
+    class(base), intent(in) :: value
+  end subroutine accept
+  subroutine replace(value)
+    class(base), intent(inout) :: value
+  end subroutine replace
+end module polymorphic_readiness_mod
+"""
+    )
+    module = fortran_module_to_semantic_module(parsed.modules[0])
+
+    report = assess_semantic_wrap_readiness(module, source="polymorphic_readiness_mod.f90")
+
+    blocker = next(
+        blocker
+        for blocker in report["wrappability_blockers"]
+        if blocker["code"] == "fortran_polymorphic_policy_missing"
+    )
+    assert blocker["items"] == [{"owner": "polymorphic_readiness_mod.replace", "item": "value"}]
+
+
+def test_abstract_types_and_deferred_bindings_report_readiness_blockers():
+    parsed = parse_fortran_file(
+        """
+module abstract_readiness_mod
+  type, abstract :: shape
+  contains
+    procedure, deferred :: area
+  end type shape
+end module abstract_readiness_mod
+"""
+    )
+    module = fortran_module_to_semantic_module(parsed.modules[0])
+
+    report = assess_semantic_wrap_readiness(module, source="abstract_readiness_mod.f90")
+
+    assert _blocker_codes(report) >= {
+        "fortran_abstract_type_policy_missing",
+        "fortran_deferred_type_bound_procedure_unsupported",
+    }
+
+
 def test_imported_type_can_complete_semantic_readiness():
     report = _readiness_from_pyi(
         """

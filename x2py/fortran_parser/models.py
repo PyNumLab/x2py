@@ -260,6 +260,11 @@ class FortranVariable:
         return bool(getattr(self, "_character_length_syntax", False))
 
     @property
+    def polymorphic(self) -> bool:
+        """Whether this variable was declared with Fortran ``class(...)``."""
+        return bool(getattr(self, "_fortran_polymorphic", False))
+
+    @property
     def declared_storage_bits(self) -> int | None:
         """Fixed storage width carried by a legacy numeric ``type*N`` form."""
         bits = getattr(self, "_declared_storage_bits", None)

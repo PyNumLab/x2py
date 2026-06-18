@@ -376,6 +376,14 @@ class _SemanticReadinessChecker:
         function_symbols = set(known_shape_symbols) | {arg.name for arg in func.arguments}
         self._check_bind_c_abi(func, owner=owner, unit=unit, unit_kind=unit_kind)
         for arg in func.arguments:
+            if self._is_unsupported_polymorphic_argument(func, arg, module=module):
+                self._add_blocker(
+                    "fortran_polymorphic_policy_missing",
+                    "Fortran class(...) arguments need an explicit dynamic-type and dispatch policy before they can be wrapped safely.",
+                    {"owner": owner, "item": arg.name},
+                    unit=unit,
+                    unit_kind=unit_kind,
+                )
             if self._is_unsupported_allocatable_output(arg.semantic_type, arg.intent):
                 self._add_blocker(
                     "allocatable_scalar_replacement_unsupported",
@@ -406,6 +414,14 @@ class _SemanticReadinessChecker:
                 module=module,
                 known_shape_symbols=function_symbols,
                 constant_names=constant_names,
+                unit=unit,
+                unit_kind=unit_kind,
+            )
+        if self._is_fortran_polymorphic(func.return_type):
+            self._add_blocker(
+                "fortran_polymorphic_policy_missing",
+                "Fortran class(...) results need an explicit dynamic-type, allocation, and ownership policy before they can be wrapped safely.",
+                {"owner": owner, "item": "return"},
                 unit=unit,
                 unit_kind=unit_kind,
             )
@@ -506,6 +522,15 @@ class _SemanticReadinessChecker:
             unit=unit,
             unit_kind=unit_kind,
         )
+        if self._is_assumed_type(semantic_type):
+            self._add_blocker(
+                "fortran_assumed_type_policy_missing",
+                "Fortran assumed-type type(*) arguments need an explicit dtype and descriptor policy.",
+                {"owner": owner, "item": item},
+                unit=unit,
+                unit_kind=unit_kind,
+            )
+            return
         self._check_array_contract(
             semantic_type,
             owner=owner,
@@ -630,6 +655,48 @@ class _SemanticReadinessChecker:
             return False
         source_type = (semantic_type.origin.source_type or "").casefold().replace(" ", "")
         return "type(*)" in source_type or "class(*)" in source_type
+
+    def _is_unsupported_polymorphic_argument(
+        self,
+        func: SemanticFunction | SemanticMethod,
+        arg: SemanticArgument,
+        *,
+        module: SemanticModule,
+    ) -> bool:
+        if not self._is_fortran_polymorphic(arg.semantic_type):
+            return False
+        if isinstance(func, SemanticMethod) and not func.is_static and str(func.passed_object_name) == str(arg.name):
+            return False
+        if func.metadata.get("fortran_type_bound_target") and str(
+            func.metadata.get("fortran_passed_object_name")
+        ) == str(arg.name):
+            return False
+        return not self._is_supported_scalar_polymorphic_input_argument(arg, module=module)
+
+    def _is_supported_scalar_polymorphic_input_argument(
+        self,
+        arg: SemanticArgument,
+        *,
+        module: SemanticModule,
+    ) -> bool:
+        semantic_type = arg.semantic_type
+        if semantic_type is None or semantic_type.rank != 0:
+            return False
+        if str(arg.intent).lower() != "in":
+            return False
+        if semantic_type.metadata.get("fortran_allocatable"):
+            return False
+        if getattr(arg.origin, "metadata", {}).get("pointer"):
+            return False
+        return self.index.is_wrapped_class(semantic_type.name, module)
+
+    @staticmethod
+    def _is_fortran_polymorphic(semantic_type: SemanticType | None) -> bool:
+        return bool(
+            semantic_type is not None
+            and semantic_type.metadata.get("fortran_polymorphic")
+            and not _SemanticReadinessChecker._is_assumed_type(semantic_type)
+        )
 
     @staticmethod
     def _has_known_iso_c_kind(semantic_type: SemanticType) -> bool:
@@ -799,13 +866,16 @@ class _SemanticReadinessChecker:
 class _SemanticTypeIndex:
     def __init__(self, modules: list[SemanticModule]):
         self.known_types = set(_BUILTIN_TYPES)
+        self.wrapped_class_names: set[str] = set()
         self.imported_modules_by_module: dict[str, set[str]] = {}
         self.import_aliases_by_module: dict[str, set[str]] = {}
 
         for module in modules:
             for declaration in module.classes:
                 if isinstance(declaration, SemanticClass):
-                    self.known_types.update(_class_type_names(declaration, module_name=module.name))
+                    names = _class_type_names(declaration, module_name=module.name)
+                    self.known_types.update(names)
+                    self.wrapped_class_names.update(names)
                 else:
                     self.known_types.add(declaration.name)
                     self.known_types.add(f"{module.name}.{declaration.name}")
@@ -824,6 +894,12 @@ class _SemanticTypeIndex:
         imported_modules = self.imported_modules_by_module.get(module.name, set())
         import_aliases = self.import_aliases_by_module.get(module.name, set())
         return module_name in imported_modules or first_part in import_aliases
+
+    def is_wrapped_class(self, name: str, module: SemanticModule) -> bool:
+        if name in self.wrapped_class_names:
+            return True
+        qualified = f"{module.name}.{name}"
+        return qualified in self.wrapped_class_names
 
 
 def _import_index(imports: list[str | SemanticImport]) -> tuple[set[str], set[str], set[str]]:

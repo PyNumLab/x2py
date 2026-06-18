@@ -181,7 +181,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             return [*body, helper(func(*args), results[0])]
 
         if any(arg.get("assumed_rank") for arg in generated_args):
-            return [*body, self._assumed_rank_dispatch(func, generated_args, results)]
+            return [*body, *self._assumed_rank_dispatch(func, generated_args, results)]
 
         return [*body, *self._native_call_body(func, args, results)]
 
@@ -234,7 +234,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 )
             )
         sections.append(CaseSection(None, [Return(None)]))
-        return SelectCase(info["rank_var"], *sections)
+        return [SelectCase(info["rank_var"], *sections)]
 
     @staticmethod
     def _replacement_function_argument(original, value):
@@ -1312,6 +1312,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             attributes=properties_getters + properties,
             docstring=expr.docstring,
             class_type=expr.class_type,
+            superclasses=expr.superclasses,
         )
 
     def _extract_FunctionDefResult(self, orig_var, orig_func_scope):

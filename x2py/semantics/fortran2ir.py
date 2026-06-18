@@ -279,6 +279,8 @@ class FortranToIRConverter:
             metadata["fortran_character_length"] = self._character_length(var)
         if var.rank == 0 and getattr(var, "allocatable", False):
             metadata["fortran_allocatable"] = True
+        if getattr(var, "polymorphic", False):
+            metadata["fortran_polymorphic"] = True
         if getattr(var, "target", False):
             metadata["fortran_target"] = True
         shape = [self._resolve_compile_time_text(dim) for dim in var.shape]
@@ -379,7 +381,7 @@ class FortranToIRConverter:
                 native_name=proc.name,
                 native_scope=proc.module,
                 source_kind=proc.kind,
-                metadata=metadata,
+                metadata=dict(metadata),
             ),
         )
 
@@ -398,8 +400,12 @@ class FortranToIRConverter:
         methods = self._bound_methods(dtype, lookup)
         overload_sets, overload_blockers = self._bound_overload_sets(dtype, methods)
         metadata = {}
-        if overload_blockers:
-            metadata["readiness_blockers"] = overload_blockers
+        readiness_blockers = [
+            *self._type_attribute_blockers(dtype),
+            *overload_blockers,
+        ]
+        if readiness_blockers:
+            metadata["readiness_blockers"] = readiness_blockers
         return SemanticClass(
             name=dtype.name,
             native_name=dtype.name,
@@ -799,6 +805,10 @@ class FortranToIRConverter:
 
     @staticmethod
     def _fortran_source_type(var: FortranVariable) -> str:
+        if var.base_type == "derived":
+            specifier = "class" if getattr(var, "polymorphic", False) else "type"
+            dtype = str(var.kind or "*")
+            return f"{specifier}({dtype})"
         if var.kind:
             return f"{var.base_type}(kind={var.kind})"
         return var.base_type
@@ -822,6 +832,8 @@ class FortranToIRConverter:
                     "contiguous": getattr(var, "contiguous", False),
                 }
             )
+        if getattr(var, "polymorphic", False):
+            metadata["polymorphic"] = True
         if getattr(var, "is_parameter", False):
             metadata["constant"] = True
         return metadata
@@ -1032,6 +1044,13 @@ class FortranToIRConverter:
                 visibility = "public"
             is_static = "nopass" in attrs
             passed_object_name, passed_object_position = self._passed_object_argument(proc, binding_attributes)
+            proc.metadata["fortran_type_bound_target"] = True
+            proc.metadata["fortran_passed_object_name"] = passed_object_name
+            proc.metadata["fortran_passed_object_position"] = passed_object_position
+            method_metadata = dict(proc.metadata)
+            method_metadata.pop("fortran_type_bound_target", None)
+            method_metadata.pop("fortran_passed_object_name", None)
+            method_metadata.pop("fortran_passed_object_position", None)
             methods.append(
                 SemanticMethod(
                     name=binding_name,
@@ -1040,7 +1059,7 @@ class FortranToIRConverter:
                     return_type=proc.return_type,
                     contracts=proc.contracts,
                     projection=proc.projection,
-                    metadata=dict(proc.metadata),
+                    metadata=method_metadata,
                     visibility=visibility,
                     is_static=is_static,
                     passed_object_name=passed_object_name,
@@ -1050,6 +1069,30 @@ class FortranToIRConverter:
                 )
             )
         return methods
+
+    @staticmethod
+    def _type_attribute_blockers(dtype: FortranDerivedType) -> list[dict[str, object]]:
+        blockers: list[dict[str, object]] = []
+        type_attrs = {str(attr).casefold() for attr in getattr(dtype, "attributes", ())}
+        if "abstract" in type_attrs:
+            blockers.append(
+                {
+                    "code": "fortran_abstract_type_policy_missing",
+                    "message": "Fortran abstract types need a non-instantiable Python base-class policy before wrapper generation.",
+                    "items": [{"owner": dtype.name, "item": dtype.name}],
+                }
+            )
+        for binding in getattr(dtype, "procedure_bindings", ()) or ():
+            attrs = {str(attr).casefold() for attr in binding.get("attrs", ())}
+            if "deferred" in attrs:
+                blockers.append(
+                    {
+                        "code": "fortran_deferred_type_bound_procedure_unsupported",
+                        "message": "Fortran deferred type-bound procedures need an explicit override and dispatch policy before wrapper generation.",
+                        "items": [{"owner": dtype.name, "item": binding.get("name")}],
+                    }
+                )
+        return blockers
 
     def _module_overload_sets(
         self,

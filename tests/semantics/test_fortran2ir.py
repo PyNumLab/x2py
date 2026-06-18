@@ -1732,6 +1732,35 @@ end module
     assert "base_matrix" in cls.base_classes
 
 
+def test_class_declarations_preserve_polymorphic_source_fact():
+    source = """
+module polymorphic_source_mod
+  type :: base
+  contains
+    procedure :: touch
+  end type base
+contains
+  subroutine touch(self)
+    class(base), intent(inout) :: self
+  end subroutine touch
+  subroutine accept(value)
+    class(base), intent(in) :: value
+  end subroutine accept
+end module polymorphic_source_mod
+"""
+
+    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+    touch_self = module.functions[0].arguments[0].semantic_type
+    accept_value = module.functions[1].arguments[0].semantic_type
+
+    assert touch_self.origin.source_type == "class(base)"
+    assert touch_self.metadata["fortran_polymorphic"] is True
+    assert module.functions[0].metadata["fortran_type_bound_target"] is True
+    assert module.functions[0].metadata["fortran_passed_object_name"] == "self"
+    assert accept_value.origin.source_type == "class(base)"
+    assert accept_value.metadata["fortran_polymorphic"] is True
+
+
 # ============================================================
 # Function return type
 # ============================================================
