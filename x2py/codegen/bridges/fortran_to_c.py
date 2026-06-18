@@ -97,6 +97,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self._generator_names_dict = {}
         super().__init__(verbose)
 
+    @staticmethod
+    def _has_optional_arguments(func: FunctionDef) -> bool:
+        return any(getattr(argument.var, "is_optional", False) for argument in func.arguments)
+
     def _get_function_def_body(self, func, generated_args, results, handled=()):
         """
         Get the body of the bind c function definition.
@@ -378,7 +382,11 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self.exit_scope()
 
         imports = []
-        if expr.is_external and expr.scope.get_python_name(expr.name) != "__del__":
+        if (
+            expr.is_external
+            and expr.scope.get_python_name(expr.name) != "__del__"
+            and not self._has_optional_arguments(expr)
+        ):
             imports.append(Import(expr.name, target=(), mod=expr))
 
         func = BindCFunctionDef(
@@ -502,7 +510,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                     is_kwarg=expr.is_kwarg,
                 )
 
-                if getattr(func, "is_external", False):
+                if getattr(func, "is_external", False) and not self._has_optional_arguments(func):
                     func_def_argument_dict["f_arg"] = FunctionCallArgument(func_def_argument_dict["f_arg"])
                 else:
                     func_def_argument_dict["f_arg"] = FunctionCallArgument(

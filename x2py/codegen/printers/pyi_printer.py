@@ -583,6 +583,8 @@ class PyiPrinter:
         if mapping.python_position is not None:
             return f"Arg({mapping.python_position})"
         if mapping.result_position is not None:
+            if mapping.native_name:
+                return f"Return({mapping.native_name!r}, {mapping.result_position})"
             return f"Return({mapping.result_position})"
         raise ValueError("native_call cannot represent a native-only projection entry")
 
@@ -619,6 +621,8 @@ class PyiPrinter:
     def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
         if mapping.intent == "inout":
             return mapping.python_position != mapping.native_position
+        if mapping.intent == "out" and mapping.result_position is not None:
+            return True
         if mapping.intent != "in":
             return mapping.python_position is None
         if mapping.result_position is not None:

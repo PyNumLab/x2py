@@ -548,7 +548,7 @@ whose Python-visible signature intentionally differs from the exact native
 signature:
 
 ```python
-@native_call([Arg(0), Arg(0).shape[0], Return(0)])
+@native_call([Arg(0), Arg(0).shape[0], Return("result", 0)])
 def normalize(values: Float64[:]) -> Float64: ...
 ```
 
@@ -558,6 +558,7 @@ Loaded projection entries:
 | --- | --- |
 | `Arg(i)` | native argument is Python argument `i` |
 | `Return(i)` | native argument is supplied by projected return slot `i` |
+| `Return("name", i)` | named native argument is supplied by projected return slot `i` |
 | `Const(value)` | hidden native literal |
 | `Len(Arg(i))`, `Len(Return(i))`, `Len(Work("name"))` | hidden native length metadata |
 | `Arg(i).shape[d]`, `Return(i).shape[d]`, `Work("name").shape[d]` | hidden native shape metadata |

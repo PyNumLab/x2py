@@ -203,8 +203,10 @@ must decide whether the existing object is replaced, detached, or mutated.
 
 ## 4. Optional Arguments
 
-Current state: optional facts are parsed and stored in semantic IR, but codegen
-AST conversion currently drops the Python-call omission contract.
+Current state: optional facts are parsed and stored in semantic IR, preserved
+through codegen AST conversion, and consumed by the generated Python, C, and
+Fortran binding layers. Python-visible optionals may be omitted or passed as
+`None`; supplied concrete values make the native Fortran dummy present.
 
 Example: `subroutine step(dt, max_iter, tol)` with optional `max_iter` and
 `tol` should allow `step(dt)`, `step(dt, tol=1e-8)`, and deterministic handling
@@ -212,20 +214,45 @@ of `None`. The key issue is that omitted and explicitly passed `None` are not
 always equivalent to Fortran `present(...)`, especially for optional outputs or
 arrays.
 
-- [ ] Preserve optional status through semantic IR to codegen AST conversion.
-- [ ] Define omission separately from explicitly passing `None`.
-- [ ] Generate correct Fortran `present(...)` behavior through the binding
+The Python wrapper contract is:
+
+- Optional Python parameters are emitted after required parameters, but the
+  native dummy argument name and position are preserved in the generated binding
   layer.
-- [ ] Ensure positional and keyword calls preserve native argument order.
-- [ ] Place optional Python parameters after required parameters without
+- Omitting a Python-visible optional argument means no actual argument is
+  passed to the Fortran procedure, so `present(dummy)` is false.
+- Passing `None` is accepted for Python-visible optional arguments and also
+  means no native actual argument is passed. It is distinct from passing a real
+  scalar, array, string, or derived-type wrapper value, all of which make
+  `present(dummy)` true.
+- Optional `intent(inout)` arguments are Python-visible optional parameters.
+  When supplied, they are mutated according to the normal inout rules. When
+  omitted or passed as `None`, the native dummy is absent and no mutation
+  occurs.
+- Optional caller-provided `intent(out)` arrays are Python-visible optional
+  parameters. Supplying an array makes the dummy present, validates the array,
+  mutates it in place, and returns the same array according to the Section 3
+  output-projection rules. Omitting it or passing `None` makes the dummy absent
+  and returns `None` for that output position.
+- Optional scalar or derived-type `intent(out)` dummies remain hidden outputs.
+  Because they are return values rather than Python parameters, the wrapper
+  requests them by passing native temporary storage, so `present(dummy)` is
+  true and the produced value is returned using the Section 3 projection rules.
+
+- [x] Preserve optional status through semantic IR to codegen AST conversion.
+- [x] Define omission separately from explicitly passing `None`.
+- [x] Generate correct Fortran `present(...)` behavior through the binding
+  layer.
+- [x] Ensure positional and keyword calls preserve native argument order.
+- [x] Place optional Python parameters after required parameters without
   changing native positions.
-- [ ] Support optional scalar arguments.
-- [ ] Support optional array arguments.
-- [ ] Support optional character arguments.
-- [ ] Support optional derived-type arguments.
-- [ ] Support optional output and inout arguments.
-- [ ] Test omitted, supplied, and `None` cases.
-- [ ] Test multiple independent optional arguments and mixed keyword calls.
+- [x] Support optional scalar arguments.
+- [x] Support optional array arguments.
+- [x] Support optional character arguments.
+- [x] Support optional derived-type arguments.
+- [x] Support optional output and inout arguments.
+- [x] Test omitted, supplied, and `None` cases.
+- [x] Test multiple independent optional arguments and mixed keyword calls.
 
 ## 5. `value` And Existing `bind(C)` Calls
 

@@ -194,6 +194,34 @@ class FCodePrinter(CodePrinter):
             macros.append(macro)
         return "".join(macros)
 
+    def _bind_c_external_optional_interfaces(self, expr):
+        original_module = getattr(expr, "original_module", None)
+        if original_module is None:
+            return ""
+        interfaces = [
+            self._external_optional_interface(func)
+            for func in original_module.funcs
+            if func.is_external and any(getattr(arg.var, "is_optional", False) for arg in func.arguments)
+        ]
+        return "".join(interfaces)
+
+    def _external_optional_interface(self, func):
+        args = ", ".join(self._print(arg.name) for arg in func.arguments)
+        result_vars = [var for var in func.scope.collect_all_tuple_elements(func.results.var) if var]
+        is_function = len(result_vars) == 1
+        func_type = "function" if is_function else "subroutine"
+        lines = [f"{func_type} {self._print(func.name)}({args})", "import"]
+        if is_function:
+            lines.append(self._print(Declare(result_vars[0])).rstrip())
+        for arg in func.arguments:
+            var = arg.var
+            declare_intent = (
+                getattr(var, "intent", None) if var.rank > 0 or isinstance(var.class_type, StringType) else None
+            )
+            lines.append(self._print(Declare(var, intent=declare_intent)).rstrip())
+        lines.append(f"end {func_type} {self._print(func.name)}")
+        return "\n".join(lines) + "\n"
+
     def _format_code(self, lines):
         """
         Format code in order to match readable Fortran practices.
@@ -357,6 +385,7 @@ class FCodePrinter(CodePrinter):
         # ...
         sep = self._print(SeparatorComment(40))
         if isinstance(expr, BindCModule):
+            external_optional_interfaces = self._bind_c_external_optional_interfaces(expr)
             interfaces = (
                 "interface\n"
                 'function c_malloc(size) bind(C,name="x2py_malloc") result(ptr)\n'
@@ -364,6 +393,7 @@ class FCodePrinter(CodePrinter):
                 "integer(c_size_t), value, intent(in) :: size\n"
                 "type(c_ptr) :: ptr\n"
                 "end function c_malloc\n"
+                f"{external_optional_interfaces}"
                 "end interface\n"
             )
         else:

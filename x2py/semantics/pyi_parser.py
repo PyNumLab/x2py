@@ -39,6 +39,9 @@ from .models import (
 __all__ = ("convert_pyi_to_ir", "load_pyi_file", "load_pyi_modules", "parse_pyi_text")
 
 
+_PYI_OPTIONAL_RETURN_METADATA = "_pyi_optional_return"
+
+
 def load_pyi_file(path: str | Path, *, module_name: str | None = None, encoding: str = "utf-8") -> SemanticModule:
     pyi_path = Path(path)
     return parse_pyi_text(
@@ -559,11 +562,17 @@ class _PyiAstParser:
                 python_position=int(ast.literal_eval(node.args[0])),
             )
         if helper == "Return":
-            if len(node.args) != 1:
-                raise ValueError("Return expects one positional index")
+            if len(node.args) not in {1, 2}:
+                raise ValueError("Return expects one positional index or a name and index")
+            native_name = ""
+            position_arg = node.args[0]
+            if len(node.args) == 2:
+                native_name = str(ast.literal_eval(node.args[0]))
+                position_arg = node.args[1]
             return ProjectionMapping(
+                native_name=native_name,
                 native_position=native_position,
-                result_position=int(ast.literal_eval(node.args[0])),
+                result_position=int(ast.literal_eval(position_arg)),
                 intent="out",
             )
         if helper == "Const":
@@ -969,13 +978,19 @@ class _PyiAstParser:
             },
         )
 
-    def return_projection(self, node: ast.expr) -> tuple[SemanticType | None, list[SemanticArgument]]:
+    def return_projection(
+        self,
+        node: ast.expr,
+        *,
+        optional_return_positions: set[int] | None = None,
+    ) -> tuple[SemanticType | None, list[SemanticArgument]]:
         if isinstance(node, ast.Constant) and node.value is None:
             return None, []
 
         return_type: SemanticType | None = None
         returned_args: list[SemanticArgument] = []
         plain_return_index = 0
+        optional_positions = optional_return_positions or set()
 
         for item_index, item in enumerate(self.return_items(node)):
             returned = self.returned_argument(item)
@@ -984,8 +999,13 @@ class _PyiAstParser:
                 returned_args.append(returned)
                 continue
 
-            semantic_type = self.semantic_type(item)
+            semantic_type, optional = self._return_item_type(
+                item,
+                unwrap_optional=item_index in optional_positions,
+            )
             if item_index == 0:
+                if optional:
+                    semantic_type.metadata[_PYI_OPTIONAL_RETURN_METADATA] = True
                 return_type = semantic_type
             else:
                 returned_args.append(
@@ -993,12 +1013,31 @@ class _PyiAstParser:
                         name=f"__return_{plain_return_index}",
                         semantic_type=semantic_type,
                         intent="out",
+                        optional=optional,
                         metadata={"return_position": item_index},
                     )
                 )
             plain_return_index += 1
 
         return return_type, returned_args
+
+    def _return_item_type(self, node: ast.expr, *, unwrap_optional: bool) -> tuple[SemanticType, bool]:
+        if not unwrap_optional:
+            return self.semantic_type(node), False
+        optional_node = self._optional_union_item(node)
+        if optional_node is None:
+            return self.semantic_type(node), False
+        return self.semantic_type(optional_node), True
+
+    @staticmethod
+    def _optional_union_item(node: ast.expr) -> ast.expr | None:
+        if not isinstance(node, ast.BinOp) or not isinstance(node.op, ast.BitOr):
+            return None
+        left_none = isinstance(node.left, ast.Constant) and node.left.value is None
+        right_none = isinstance(node.right, ast.Constant) and node.right.value is None
+        if left_none == right_none:
+            return None
+        return node.right if left_none else node.left
 
     def module_variable_getter(self, node: ast.FunctionDef, decorators: _Decorators) -> SemanticVariable:
         if decorators.module_variable is None:
@@ -1146,11 +1185,20 @@ class _PyiAstParser:
             args = args[1:]
 
         semantic_args = [self._callable_argument(arg, default) for arg, default in args]
-        return_type, returned_args = self.return_projection(node.returns)
+        visible_args = list(semantic_args)
+        optional_return_positions = {
+            mapping.result_position
+            for mapping in projection
+            if mapping.result_position is not None and mapping.python_position is None
+        }
+        return_type, returned_args = self.return_projection(
+            node.returns,
+            optional_return_positions=optional_return_positions,
+        )
         return_type, returned_args = self._apply_native_call_returns(return_type, returned_args, projection)
         return_positions = self._return_positions_by_name(returned_args)
         self._apply_projected_returns(semantic_args, returned_args)
-        self._apply_native_call_argument_names(semantic_args, return_positions, projection)
+        self._apply_native_call_argument_names(visible_args, return_positions, projection)
         return semantic_args, return_type
 
     def _callable_argument(self, arg: ast.arg, default: ast.expr | None) -> SemanticArgument:
@@ -1192,7 +1240,11 @@ class _PyiAstParser:
                 returned.intent = "out"
                 returned.semantic_type.ownership.mutable = True
                 returned.metadata.pop("return_position", None)
-                semantic_args.append(returned)
+                native_position = returned.metadata.pop("native_position", None)
+                if isinstance(native_position, int) and 0 <= native_position <= len(semantic_args):
+                    semantic_args.insert(native_position, returned)
+                else:
+                    semantic_args.append(returned)
                 continue
             existing.intent = "inout"
             existing.semantic_type.ownership.mutable = True
@@ -1210,6 +1262,8 @@ class _PyiAstParser:
         }
         if return_type is not None and 0 in output_by_result:
             mapping = output_by_result[0]
+            if mapping.native_name and not mapping.python_name:
+                mapping.python_name = mapping.native_name
             return_type.ownership.mutable = True
             returned_args.insert(
                 0,
@@ -1217,6 +1271,8 @@ class _PyiAstParser:
                     name=mapping.native_name or f"__return_{mapping.result_position}",
                     semantic_type=return_type,
                     intent=mapping.intent,
+                    optional=bool(return_type.metadata.pop(_PYI_OPTIONAL_RETURN_METADATA, False)),
+                    metadata={"native_position": mapping.native_position},
                 ),
             )
             return_type = None
@@ -1225,10 +1281,13 @@ class _PyiAstParser:
             position = returned.metadata.get("return_position")
             mapping = output_by_result.get(position)
             if mapping is not None:
+                if mapping.native_name and not mapping.python_name:
+                    mapping.python_name = mapping.native_name
                 if mapping.native_name:
                     returned.name = mapping.native_name
                 returned.intent = mapping.intent
                 returned.semantic_type.ownership.mutable = True
+                returned.metadata["native_position"] = mapping.native_position
         return return_type, returned_args
 
     @staticmethod
@@ -1250,8 +1309,10 @@ class _PyiAstParser:
             mapping.python_name = arg.name
             if not mapping.native_name:
                 mapping.native_name = arg.name
+            if arg.intent == "inout" and arg.name in return_positions:
+                arg.intent = "out"
             mapping.intent = arg.intent
-            if arg.intent == "inout" and mapping.result_position is None:
+            if arg.intent in {"out", "inout"} and mapping.result_position is None:
                 mapping.result_position = return_positions.get(arg.name)
 
     def return_items(self, node: ast.expr) -> list[ast.expr]:

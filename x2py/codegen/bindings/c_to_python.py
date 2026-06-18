@@ -3260,11 +3260,16 @@ class CPythonBindingGenerator(BindingGenerator):
             class_type = orig_var.class_type
             if isinstance(class_type, FinalType):
                 class_type = class_type.underlying_type
+            kwargs = {
+                "new_class": Variable,
+                "is_argument": False,
+                "class_type": class_type,
+            }
+            if getattr(orig_var, "is_optional", False):
+                kwargs["memory_handling"] = "alias"
             arg_var = orig_var.clone(
                 self.scope.get_expected_name(orig_var.name),
-                new_class=Variable,
-                is_argument=False,
-                class_type=class_type,
+                **kwargs,
             )
             self.scope.insert_variable(arg_var, orig_var.name)
 
@@ -3283,7 +3288,12 @@ class CPythonBindingGenerator(BindingGenerator):
         body = [Assign(arg_var, cast_func(collect_arg))]
 
         if getattr(orig_var, "is_optional", False):
-            memory_var = self.scope.get_temporary_variable(arg_var, name=arg_var.name + "_memory", is_optional=False)
+            memory_var = self.scope.get_temporary_variable(
+                arg_var,
+                name=arg_var.name + "_memory",
+                is_optional=False,
+                memory_handling="stack",
+            )
             body.insert(0, AliasAssign(arg_var, memory_var))
 
         return {"body": body, "args": [arg_var]}
@@ -3583,7 +3593,7 @@ class CPythonBindingGenerator(BindingGenerator):
             if getattr(orig_var, "is_optional", False):
                 body = [
                     AliasAssign(
-                        orig_var,
+                        data_var,
                         PyUnicode_AsUTF8AndSize(
                             collect_arg,
                             ObjectAddress(self.scope.collect_tuple_element(size_element)),
@@ -3604,10 +3614,12 @@ class CPythonBindingGenerator(BindingGenerator):
             default_init = [AliasAssign(data_var, NIL), Assign(size_var, 0)]
         else:
             if arg_var is None:
+                kwargs = {"new_class": Variable, "is_argument": False}
+                if getattr(orig_var, "is_optional", False):
+                    kwargs["memory_handling"] = "alias"
                 arg_var = orig_var.clone(
                     self.scope.get_expected_name(orig_var.name),
-                    new_class=Variable,
-                    is_argument=False,
+                    **kwargs,
                 )
                 self.scope.insert_variable(arg_var, orig_var.name)
 
@@ -3619,6 +3631,7 @@ class CPythonBindingGenerator(BindingGenerator):
                     arg_var,
                     name=arg_var.name + "_memory",
                     is_optional=False,
+                    memory_handling="stack",
                 )
                 body.insert(0, AliasAssign(arg_var, memory_var))
 

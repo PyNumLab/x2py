@@ -362,7 +362,9 @@ class FortranToIRConverter:
         derived_type_context: _DerivedTypeContext | None = None,
     ) -> SemanticFunction:
         context = self._procedure_derived_type_context(proc, derived_type_context)
-        arguments = [self.visit_argument(arg, derived_type_context=context) for arg in proc.arguments]
+        arguments = [
+            self.visit_argument(arg, derived_type_context=context) for arg in self._projected_procedure_arguments(proc)
+        ]
         return SemanticFunction(
             name=proc.name,
             native_name=proc.name,
@@ -1523,9 +1525,8 @@ class FortranToIRConverter:
     def _projected_procedure_arguments(proc: FortranProcedureSignature) -> list[FortranArgument]:
         args = list(proc.arguments)
         return [
-            *[arg for arg in args if getattr(arg, "intent", "in") != "out" and not getattr(arg, "optional", False)],
-            *[arg for arg in args if getattr(arg, "intent", "in") != "out" and getattr(arg, "optional", False)],
-            *[arg for arg in args if getattr(arg, "intent", "in") == "out"],
+            *[arg for arg in args if not getattr(arg, "optional", False)],
+            *[arg for arg in args if getattr(arg, "optional", False)],
         ]
 
     @staticmethod

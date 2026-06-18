@@ -14,14 +14,14 @@ counter: Int32
 
 hidden_scale: private[Float64]
 
+@native_call([Return('p', 0), Arg(0), Arg(1), Arg(2), Arg(3), Arg(4)])
 def init_particle(
-    p: Annotated[Ptr(particle), Intent('out')],
     pid: Ptr(Const(Int32)),
     mass: Ptr(Const(Float64)),
     x: Ptr(Const(Float64)),
     y: Ptr(Const(Float64)),
     z: Ptr(Const(Float64))
-) -> None: ...
+) -> Ptr(particle): ...
 
 def kinetic_energy(
     p: Ptr(Const(particle)),
@@ -40,9 +40,10 @@ def dot3(
     b: Const(Float64[3])
 ) -> Float64: ...
 
+@native_call([Arg(0)])
 def fill_identity3(
     a: Annotated[Float64[3, 3], ORDER_F, Intent('out')]
-) -> None: ...
+) -> Returns["a", Annotated[Float64[3, 3], ORDER_F]]: ...
 
 def normalize_particle(
     p: Ptr(particle)

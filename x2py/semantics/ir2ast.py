@@ -131,6 +131,7 @@ def _codegen_function_arguments(declarations: list[Variable], passed_object_posi
     native_args = [
         FunctionDefArgument(
             item,
+            value=NIL if item.is_optional else None,
             bound_argument=index == passed_object_position,
             bound_argument_position=index if index == passed_object_position else None,
         )
@@ -417,6 +418,7 @@ def semantic_ir_to_codegen_ast(
             memory_handling=_memory_handling(semantic_type),
             is_private=node.visibility == "private",
             is_target=bool(semantic_type.metadata.get("fortran_target")),
+            is_optional=getattr(node, "optional", False),
             intent=getattr(node, "intent", "in"),
             cls_base=cls_base,
         )

@@ -416,7 +416,7 @@ end module
     code = generate_pyi(source)
 
     assert "Allocatable" in code
-    assert "@native_call([Return(0)])" in code
+    assert "@native_call([Return('x', 0)])" in code
     assert "def build() -> Annotated[Float64[:], Allocatable] | None: ..." in code
     assert "def make_values() -> Annotated[Float64[:], Allocatable]: ..." in code
 

@@ -691,6 +691,67 @@ def add(
     assert from_pyi.functions[0].projection[2].native_position == 2
 
 
+def test_native_call_return_entry_can_preserve_output_name():
+    from_pyi = parse_pyi_text(
+        """
+@native_call([Arg(0), Arg(1), Return("c", 0)])
+def add(
+    a: Float64,
+    b: Float64
+) -> Float64: ...
+""",
+        module_name="edited",
+    )
+    func = from_pyi.functions[0]
+
+    assert [arg.name for arg in func.arguments] == ["a", "b", "c"]
+    assert func.arguments[2].intent == "out"
+    assert func.projection[2].native_name == "c"
+    assert func.projection[2].python_name == "c"
+    assert func.projection[2].result_position == 0
+
+
+def test_native_call_return_entry_preserves_optional_pointer_return():
+    from_pyi = parse_pyi_text(
+        """
+@native_call([Arg(0), Return("status", 0)])
+def maybe_status(
+    base: Ptr(Const(Int32))
+) -> Ptr(Int32) | None: ...
+""",
+        module_name="edited",
+    )
+    func = from_pyi.functions[0]
+    returned = func.arguments[1]
+
+    assert returned.name == "status"
+    assert returned.optional is True
+    assert returned.semantic_type.name == "Int32"
+    assert returned.semantic_type.storage is not None
+    assert returned.semantic_type.storage.kind == "reference"
+    assert func.projection[1].python_name == "status"
+
+
+def test_native_call_later_return_entry_preserves_native_position_and_name():
+    from_pyi = parse_pyi_text(
+        """
+@native_call([Arg(0), Return("status", 1), Arg(1)])
+def fill(
+    values: Annotated[Float64[n], Intent("out")],
+    n: Ptr(Int32)
+) -> tuple[Returns["values", Float64[n]], Ptr(Int32)]: ...
+""",
+        module_name="edited",
+    )
+    func = from_pyi.functions[0]
+
+    assert [arg.name for arg in func.arguments] == ["values", "status", "n"]
+    assert [arg.intent for arg in func.arguments] == ["out", "out", "inout"]
+    assert func.projection[1].python_name == "status"
+    assert func.projection[1].native_name == "status"
+    assert func.projection[1].result_position == 1
+
+
 def test_native_call_accepts_hidden_native_values():
     module = parse_pyi_text(
         """
@@ -981,7 +1042,10 @@ class vector:
         ("@native_call([1])\ndef f(x: Int32) -> None: ...\n", "native_call expects projection entry calls"),
         ("@native_call([Arg(1)])\ndef f(x: Int32) -> None: ...\n", "native_call argument position is out of range: 1"),
         ("@native_call([Arg()])\ndef f(x: Int32) -> None: ...\n", "Arg expects one positional index"),
-        ("@native_call([Return()])\ndef f(x: Int32) -> None: ...\n", "Return expects one positional index"),
+        (
+            "@native_call([Return()])\ndef f(x: Int32) -> None: ...\n",
+            "Return expects one positional index or a name and index",
+        ),
         ("@native_call([Const()])\ndef f(x: Int32) -> None: ...\n", "Const expects one value"),
         ("@native_call([Len()])\ndef f(x: Int32) -> None: ...\n", "Len expects one value reference"),
         ("@native_call([IsPresent()])\ndef f(x: Int32) -> None: ...\n", "IsPresent expects one value reference"),
@@ -1048,7 +1112,7 @@ end module solver_mod
     pyi = "\n\n".join(emit_module(module) for module in modules)
     reparsed = parse_pyi_text(pyi, module_name="solver_mod")
 
-    assert "@native_call" not in pyi
+    assert "@native_call([Arg(0), Return('x', 0), Arg(1)])" in pyi
     func = reparsed.functions[0]
     assert func.name == "solve"
     assert [arg.name for arg in func.arguments] == ["a", "x", "b"]

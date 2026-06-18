@@ -6,6 +6,7 @@ from x2py import parse_fortran_file
 from x2py.codegen.models.core import ClassDef, FunctionOverloadSet
 from x2py.codegen.models.datatypes import (
     CustomDataType,
+    NIL,
     NumpyFloat64Type,
     NumpyInt64Type,
     NumpyNDArrayType,
@@ -306,6 +307,33 @@ end module alloc_mod
     make_pair = next(function for function in codegen_module.funcs if str(function.name) == "make_pair")
     assert [argument.var.intent for argument in make_pair.arguments] == ["out", "out"]
     assert all(argument.var.memory_handling == "heap" for argument in make_pair.arguments)
+
+
+def test_optional_arguments_preserve_status_and_python_defaults_in_codegen_ast():
+    source = """
+module optional_mod
+contains
+  subroutine step(tol, dt, values, status)
+    real(8), intent(in), optional :: tol
+    integer, intent(in) :: dt
+    real(8), intent(inout), optional :: values(:)
+    integer, intent(out) :: status
+  end subroutine step
+end module optional_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    step = next(function for function in codegen_module.funcs if str(function.name) == "step")
+    assert [str(argument.name) for argument in step.arguments] == ["dt", "status", "tol", "values"]
+    assert [argument.var.is_optional for argument in step.arguments] == [False, False, True, True]
+    assert [argument.has_default for argument in step.arguments] == [False, False, True, True]
+    assert step.arguments[2].value is NIL
+    assert step.arguments[3].value is NIL
 
 
 def test_defined_operators_and_assignment_become_named_codegen_overload_sets():
