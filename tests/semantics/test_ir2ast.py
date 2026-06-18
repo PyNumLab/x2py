@@ -267,6 +267,25 @@ end module alloc_mod
         )
 
 
+@pytest.mark.parametrize("intent", ["out", "inout"])
+def test_pointer_output_arguments_raise_before_codegen_without_policy(intent):
+    source = f"""
+module pointer_mod
+contains
+  subroutine attach(values)
+    real(8), pointer, intent({intent}) :: values(:)
+  end subroutine attach
+end module pointer_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    with pytest.raises(ValueError, match=rf"pointer {intent} argument 'values'"):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )
+
+
 def test_multiple_allocatable_copy_returns_lower_before_codegen():
     multiple_source = """
 module alloc_mod

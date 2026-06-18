@@ -636,6 +636,9 @@ class FCodePrinter(CodePrinter):
     def _print_ArrayAllocated(self, expr):
         return f"allocated({self._print(expr.arg)})"
 
+    def _print_ArrayAssociated(self, expr):
+        return f"associated({self._print(expr.arg)})"
+
     def _print_Declare(self, expr):
         # ... ignored declarations
         var = expr.variable
@@ -1522,7 +1525,7 @@ class FCodePrinter(CodePrinter):
             func.results.var.rank == 0 or isinstance(func.results.var.class_type, StringType)
         )
         if len(out_results) == 1 and isinstance(func.results.var.class_type, NumpyNDArrayType):
-            is_function = func.results.var.memory_handling == "heap"
+            is_function = func.results.var.memory_handling in {"alias", "heap"}
 
         if func.arguments and func.arguments[0].bound_argument:
             bound_name = expr.overload_set_name if expr.overload_set else func.scope.get_python_name(func.name)

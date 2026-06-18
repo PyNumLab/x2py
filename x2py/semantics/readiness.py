@@ -365,6 +365,18 @@ class _SemanticReadinessChecker:
                     unit=unit,
                     unit_kind=unit_kind,
                 )
+            if self._is_unsupported_pointer_output(arg.semantic_type, arg.intent):
+                self._add_blocker(
+                    "fortran_pointer_output_policy_missing",
+                    "Fortran pointer output arguments need explicit ownership, lifetime, shape, contiguity, and deallocation policy before they can be wrapped safely.",
+                    {
+                        "owner": owner,
+                        "item": arg.name,
+                        "intent": arg.intent,
+                    },
+                    unit=unit,
+                    unit_kind=unit_kind,
+                )
             self._check_argument(
                 arg,
                 owner=f"{owner}.{arg.name}",
@@ -477,11 +489,21 @@ class _SemanticReadinessChecker:
     def _is_unsupported_allocatable_output(cls, semantic_type: SemanticType | None, intent: str) -> bool:
         return cls._is_allocatable_array(semantic_type) and str(intent).lower() == "inout"
 
+    @classmethod
+    def _is_unsupported_pointer_output(cls, semantic_type: SemanticType | None, intent: str) -> bool:
+        return cls._is_pointer_array(semantic_type) and str(intent).lower() in {"out", "inout"}
+
     @staticmethod
     def _is_allocatable_array(semantic_type: SemanticType | None) -> bool:
         if semantic_type is None or semantic_type.storage is None or semantic_type.storage.array is None:
             return False
         return semantic_type.storage.array.allocatable
+
+    @staticmethod
+    def _is_pointer_array(semantic_type: SemanticType | None) -> bool:
+        if semantic_type is None or semantic_type.storage is None or semantic_type.storage.array is None:
+            return False
+        return semantic_type.storage.array.pointer
 
     def _check_callable_type(
         self,

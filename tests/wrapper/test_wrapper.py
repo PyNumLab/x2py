@@ -27,6 +27,34 @@ ALLOCATABLE_VIEW_F90_SOURCE = Path(__file__).with_name("fallocatable_views_f90.f
 OUTPUTS_F90_SOURCE = Path(__file__).with_name("foutputs_f90.f90")
 
 
+POINTERS_F90_TEXT = """
+module fpointers_f90
+contains
+  real(8) function sum_pointer(values)
+    real(8), pointer, intent(in) :: values(:)
+    integer :: i
+
+    sum_pointer = 0.0_8
+    do i = 1, size(values)
+      sum_pointer = sum_pointer + values(i)
+    end do
+  end function sum_pointer
+
+  function pointer_to_values(values, use_values) result(selected)
+    real(8), target, intent(in) :: values(:)
+    integer, intent(in) :: use_values
+    real(8), pointer :: selected(:)
+
+    if (use_values /= 0) then
+      selected => values
+    else
+      nullify(selected)
+    end if
+  end function pointer_to_values
+end module fpointers_f90
+"""
+
+
 def _assert_fmath_examples(module):
     cases = fmath_cases()
     missing = sorted(name for name, _, _ in cases if not hasattr(module, name))
@@ -66,6 +94,35 @@ def _build_and_import(source_template: Path, workdir: Path, expected_generated_s
     assert {Path(path).name for path in payload["generated_sources"]} == expected_generated_sources
     generated_files = [Path(path) for path in payload["generated_files"]]
     assert any(path.name == "python_runtime.c" and path.parent.name == "x2py_runtime" for path in generated_files)
+
+    sys.modules.pop(module_name, None)
+    sys.path.insert(0, str(workdir))
+    try:
+        return importlib.import_module(module_name)
+    finally:
+        sys.path.remove(str(workdir))
+
+
+def _build_text_and_import(source_text: str, filename: str, workdir: Path, expected_generated_sources: set[str]):
+    source = workdir / filename
+    source.write_text(source_text, encoding="utf-8")
+    module_name = source.stem
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "x2py",
+        str(source),
+        "--out-dir",
+        str(workdir),
+        "--json",
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(result.stdout)
+
+    shared_library = Path(payload["shared_library"])
+    assert shared_library.exists()
+    assert {Path(path).name for path in payload["generated_sources"]} == expected_generated_sources
 
     sys.modules.pop(module_name, None)
     sys.path.insert(0, str(workdir))
@@ -555,6 +612,37 @@ def test_allocatable_module_and_derived_type_arrays_are_borrowed_views(tmp_path:
     owner = retained_view.base
     owner.deallocate_values()
     assert owner.values is None
+
+
+def test_pointer_arrays_use_call_local_inputs_and_snapshot_results(tmp_path: Path):
+    module = _build_text_and_import(
+        POINTERS_F90_TEXT,
+        "fpointers_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fpointers_f90_wrapper.f90",
+            "fpointers_f90_wrapper.c",
+            "fpointers_f90_wrapper.h",
+        },
+    )
+
+    values = np.array([1.0, 2.0, 3.0], dtype=np.float64)
+    assert module.sum_pointer(values) == np.float64(6.0)
+
+    selected = module.pointer_to_values(values, np.int32(1))
+    np.testing.assert_allclose(selected, values)
+    assert selected.base is not None
+
+    selected[0] = np.float64(99.0)
+    np.testing.assert_allclose(values, np.array([1.0, 2.0, 3.0], dtype=np.float64))
+
+    assert module.pointer_to_values(values, np.int32(0)) is None
+    assert "pointer_to_values(values, use_values) -> ndarray[float64] | None" in module.pointer_to_values.__doc__
+    assert "Pointer array results are copied into Python-owned NumPy arrays." in module.pointer_to_values.__doc__
+    assert "Unassociated pointer results return None." in module.pointer_to_values.__doc__
+
+    with pytest.raises(TypeError):
+        module.sum_pointer(np.array([1.0, 2.0, 3.0], dtype=np.float32))
 
 
 def test_output_arguments_and_multiple_results_follow_python_projection_rules(

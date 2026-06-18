@@ -279,7 +279,10 @@ class CPythonBindingGenerator(BindingGenerator):
 
     def _result_detail_lines(self, var):
         lines = self._value_detail_lines(var)
-        if var.rank and var.memory_handling == "heap":
+        if self._is_pointer_snapshot_result(var):
+            lines.append("    Ownership: Python-owned")
+            lines.append("    Returns None when unassociated.")
+        elif var.rank and var.memory_handling == "heap":
             lines.append("    Ownership: Python-owned")
             lines.append("    Returns None when unallocated.")
         elif var.rank and getattr(var, "intent", "in") == "out":
@@ -308,8 +311,19 @@ class CPythonBindingGenerator(BindingGenerator):
                     "This copy adds overhead proportional to the returned array size.",
                 ]
             )
+        if any(self._is_pointer_snapshot_result(self._doc_original_var(var)) for var in result_vars):
+            if notes:
+                notes.append("")
+            notes.extend(
+                [
+                    "Pointer array results are copied into Python-owned NumPy arrays.",
+                    "Unassociated pointer results return None.",
+                ]
+            )
         if any(
-            self._doc_original_var(var).rank and self._doc_original_var(var).memory_handling == "alias"
+            self._doc_original_var(var).rank
+            and self._doc_original_var(var).memory_handling == "alias"
+            and not self._is_pointer_snapshot_result(self._doc_original_var(var))
             for var in result_vars
         ):
             if notes:
@@ -357,7 +371,18 @@ class CPythonBindingGenerator(BindingGenerator):
 
     @staticmethod
     def _may_return_none(var):
-        return bool(var.rank and var.memory_handling == "heap")
+        return bool(
+            var.rank and (var.memory_handling == "heap" or CPythonBindingGenerator._is_pointer_snapshot_result(var))
+        )
+
+    @staticmethod
+    def _is_pointer_snapshot_result(var):
+        return bool(
+            getattr(var, "rank", 0)
+            and getattr(var, "memory_handling", None) == "alias"
+            and not isinstance(var, DottedVariable)
+            and getattr(var, "intent", "in") == "out"
+        )
 
     @staticmethod
     def _shape_doc(var):
@@ -3867,7 +3892,7 @@ class CPythonBindingGenerator(BindingGenerator):
         )
         shape_vars = [IndexedElement(shape_var, i) for i in range(orig_var.rank)]
         body = [array_to_python]
-        if getattr(orig_var, "memory_handling", None) == "heap":
+        if getattr(orig_var, "memory_handling", None) == "heap" or self._is_pointer_snapshot_result(orig_var):
             if tuple_item:
                 body = [
                     self._set_none_if_unallocated(data_var, py_res, shape_vars),

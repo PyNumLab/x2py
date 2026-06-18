@@ -122,6 +122,30 @@ def make_pair() -> tuple[Returns["left", Annotated[Float64[:], Allocatable]], Re
     assert replacement_blocker["items"] == [{"owner": "solver.replace", "item": "values", "intent": "inout"}]
 
 
+def test_pointer_output_policy_blockers_are_reported_for_output_dummies():
+    report = _readiness_from_pyi(
+        """
+def inspect(values: Annotated[Float64[:], Pointer, Intent("in")]) -> None: ...
+
+def attach() -> Returns["values", Annotated[Float64[:], Pointer]]: ...
+
+def replace(values: Annotated[Float64[:], Pointer]) -> Returns["values", Annotated[Float64[:], Pointer]]: ...
+
+def choose() -> Annotated[Float64[:], Pointer]: ...
+"""
+    )
+
+    pointer_blocker = next(
+        blocker
+        for blocker in report["wrappability_blockers"]
+        if blocker["code"] == "fortran_pointer_output_policy_missing"
+    )
+    assert pointer_blocker["items"] == [
+        {"owner": "solver.attach", "item": "values", "intent": "out"},
+        {"owner": "solver.replace", "item": "values", "intent": "inout"},
+    ]
+
+
 def test_imported_type_can_complete_semantic_readiness():
     report = _readiness_from_pyi(
         """

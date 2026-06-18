@@ -228,7 +228,51 @@ end subroutine
 ```
 
 The wrapper must define whether `x` becomes a borrowed view, an owned Python
-object, or a blocked interface unless the user supplies more policy.
+object, or a blocked interface unless the user supplies more policy. Until
+that policy exists, Fortran pointer `intent(out)` and `intent(inout)` dummy
+arguments should remain blocked by default. A final associated pointer does not
+prove whether the target was allocated for this return, borrowed from module
+storage, borrowed from a derived-type field, associated with another dummy
+argument, or kept alive elsewhere by native code.
+
+The narrow first contract for procedure pointer arrays is implemented as:
+
+- Pointer `intent(in)` dummy arrays may be call-local associations to
+  Python-owned storage. Reassociation or saving the pointer beyond the call is
+  unsupported unless an explicit policy says otherwise.
+- Pointer array function results are copied into Python-owned values when
+  association, shape, dtype, and contiguity are known. An unassociated result
+  maps to `None`.
+- Pointer `intent(out)` and `intent(inout)` dummy arguments require explicit
+  policy metadata before they can be projected to Python returns or mutable
+  Python-visible arguments.
+- Borrowed views for module pointer variables and derived-type pointer fields
+  require owner tracking and stale-view rules, so they are a separate runtime
+  contract from procedure snapshot copies.
+
+Scalar pointer dummies and scalar pointer results still need their own runtime
+contract.
+
+Future `.pyi` pointer policy should make each missing fact explicit:
+
+| Policy fact | Why the wrapper needs it |
+| --- | --- |
+| Nullability | Defines whether an unassociated pointer is valid and whether Python should receive `None` or raise an error. |
+| Transfer mode | Distinguishes snapshot copy, borrowed NumPy view, native-owned capsule, Python-owned input storage, and blocked exact-native pointer passing. |
+| Target owner | Identifies who owns the storage: a Python argument, a containing wrapper instance, a module variable, a callee allocation, an external library, or unknown native state. |
+| Lifetime | States how long a borrowed target remains valid: call only, owner object lifetime, module lifetime, explicit release, or unknown. |
+| Deallocation policy | Says whether the wrapper must never deallocate, should deallocate after copying, should attach a destructor capsule, or must call a named native release routine. This is the main missing fact for pointer outputs. |
+| Shape source | Provides extents for array pointers, such as explicit `.pyi` dimensions, companion size arguments, descriptor bounds, or source pointer bounds. |
+| Contiguity and strides | Decides whether only contiguous targets are supported, whether strided sections may become NumPy views, or whether non-contiguous targets must be copied or rejected. |
+| Reassociation behavior | Defines what happens when Fortran points the dummy somewhere else: ignore the original Python input, return the final association as a snapshot, write back association state, invalidate old views, or block. |
+| Aliasing | States whether two returned pointers may share one target and whether Python must preserve that identity or may return independent copies. |
+| Mutability | Declares whether Python may write through a borrowed view and whether native code may write while Python holds it. |
+
+These facts are policy, not parser facts. The parser and semantic IR should
+preserve the native pointer, target, rank, bounds, intent, and contiguity
+information they can observe, but wrapper readiness should keep reporting a
+blocker when the user-supplied policy is not strong enough for the requested
+Python behavior.
 
 ### Fortran Assumed-Rank Wrappers
 

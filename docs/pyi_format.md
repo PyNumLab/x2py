@@ -492,6 +492,30 @@ receives `None`.
 Allocatable `intent(inout)` arguments remain blocked. They need a replacement
 policy for the caller-visible object before x2py can safely expose them.
 
+## Pointer Procedure Snapshot Subset
+
+Fortran pointer array facts are emitted and loaded with `Pointer` metadata:
+
+```python
+def sum_values(values: Annotated[Float64[:], Pointer, Intent("in")]) -> Float64: ...
+def choose_values(flag: Int32) -> Annotated[Float64[:], Pointer] | None: ...
+```
+
+The supported runtime subset is procedure-local and copy-based:
+
+- A pointer array `intent(in)` dummy is associated with the Python-owned NumPy
+  buffer only for the duration of the native call. The wrapper does not expose
+  or preserve pointer association identity after the call.
+- A pointer array function result is copied into a new Python-owned NumPy
+  array. If the Fortran result is unassociated, Python receives `None`.
+- Pointer array `intent(out)` and `intent(inout)` dummy arguments remain
+  blocked unless future policy metadata supplies ownership, lifetime, shape,
+  contiguity, reassociation, and deallocation behavior.
+
+The returned NumPy array from a pointer function result is a snapshot. Mutating
+it does not mutate the original Fortran target. Borrowed views for module
+pointer variables and derived-type pointer fields are not part of this subset.
+
 ## Visibility And Names
 
 `@private` marks classes, functions and methods private:

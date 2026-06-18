@@ -31,6 +31,7 @@ from ..models.core import (
     AliasAssign,
     Allocate,
     ArrayAllocated,
+    ArrayAssociated,
     ArrayShapeElement,
     ArraySize,
     AsName,
@@ -400,6 +401,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     @staticmethod
     def _is_allocatable_copy_return_argument(var):
         return var.is_ndarray and var.memory_handling == "heap" and getattr(var, "intent", "in") == "out"
+
+    @staticmethod
+    def _is_pointer_snapshot_result(var):
+        return var.is_ndarray and var.memory_handling == "alias" and not isinstance(var, DottedVariable)
 
     @classmethod
     def _is_hidden_output_argument(cls, var):
@@ -1149,7 +1154,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         )
         scope.insert_variable(local_var, name)
 
-        if orig_var.is_alias or isinstance(orig_var, DottedVariable):
+        if self._is_pointer_snapshot_result(orig_var):
+            result = self._get_pointer_snapshot_bind_c_array(name, orig_var, local_var)
+        elif orig_var.is_alias or isinstance(orig_var, DottedVariable):
             result = self._get_bind_c_array(name, orig_var, local_var.shape, local_var)
         else:
             copy_shape = (
@@ -1189,6 +1196,76 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     def _extract_HomogeneousTupleType_FunctionDefResult(self, orig_var, orig_func_scope):
         return self._extract_NumpyNDArrayType_FunctionDefResult(orig_var, orig_func_scope)
+
+    def _get_pointer_snapshot_bind_c_array(self, name, orig_var, pointer_var):
+        dtype = orig_var.dtype
+        rank = orig_var.rank
+        order = orig_var.order
+        scope = self.scope
+
+        bind_var = Variable(BindCPointer(), scope.get_new_name("bound_" + name), memory_handling="alias")
+        shape_vars = [Variable(NumpyInt32Type(), scope.get_new_name(f"{name}_shape_{i + 1}")) for i in range(rank)]
+
+        numpy_dtype = numpy_precision_map[(dtype.primitive_type, dtype.precision)]
+        ptr_var = Variable(
+            NumpyNDArrayType.get_new(numpy_dtype, rank, order),
+            scope.get_new_name(name + "_ptr"),
+            memory_handling="alias",
+        )
+        elem_var = Variable(dtype, scope.get_new_name(name + "_elem"))
+        scope.insert_variable(ptr_var)
+        scope.insert_variable(elem_var)
+
+        shape_assignments = [
+            Assign(
+                shape_var,
+                cast_to(ArrayShapeElement(pointer_var, convert_to_literal(index)), NumpyInt32Type()),
+            )
+            for index, shape_var in enumerate(shape_vars)
+        ]
+        size = reduce(Mul, [BindCSizeOf(elem_var), *shape_vars])
+        copy_body = [
+            *shape_assignments,
+            Assign(bind_var, c_malloc(size)),
+            If(
+                IfSection(
+                    IsNot(bind_var, NIL),
+                    [
+                        C_F_Pointer(bind_var, ptr_var, shape_vars if order == "F" else shape_vars[::-1]),
+                        Assign(ptr_var, pointer_var),
+                    ],
+                )
+            ),
+        ]
+        unassociated_body = [
+            Assign(bind_var, NIL),
+            *[Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type())) for shape_var in shape_vars],
+        ]
+        body = [
+            If(
+                IfSection(ArrayAssociated(pointer_var), copy_body),
+                IfSection(convert_to_literal(True), unassociated_body),
+            )
+        ]
+
+        result_var = Variable(
+            BindCArrayType.get_new(rank, has_strides=False),
+            scope.get_new_name(),
+            shape=(rank + 1,),
+        )
+        c_result = BindCVariable(result_var, orig_var)
+        for descriptor in (result_var, c_result):
+            scope.insert_symbolic_alias(IndexedElement(descriptor, convert_to_literal(0)), bind_var)
+            for index, shape_var in enumerate(shape_vars):
+                scope.insert_symbolic_alias(IndexedElement(descriptor, convert_to_literal(index + 1)), shape_var)
+
+        return {
+            "c_result": c_result,
+            "body": body,
+            "f_array": ptr_var,
+            "bind_var": bind_var,
+            "shape_vars": shape_vars,
+        }
 
     def _extract_StringType_FunctionDefResult(self, orig_var, orig_func_scope):
         name = orig_var.name

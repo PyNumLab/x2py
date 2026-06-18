@@ -47,6 +47,7 @@ __all__ = (
     "And",
     "ArithmeticOperator",
     "ArrayAllocated",
+    "ArrayAssociated",
     "ArrayShapeElement",
     "ArraySize",
     "AsName",
@@ -4652,6 +4653,26 @@ class ArrayAllocated(Function):
         return self._args[0]
 
 
+class ArrayAssociated(Function):
+    """
+    Tests whether a Fortran pointer array is associated.
+    """
+
+    __slots__ = ()
+    name = "associated"
+
+    _shape = None
+    _class_type = NumpyBoolType()
+
+    def __init__(self, arg):
+        super().__init__(arg)
+
+    @property
+    def arg(self):
+        """Object whose pointer association status is investigated."""
+        return self._args[0]
+
+
 class Slice:
     """
     Represents a slice in the code.
@@ -4868,6 +4889,7 @@ for _model_cls in (
     If,
     Function,
     ArrayAllocated,
+    ArrayAssociated,
     ArrayShapeElement,
     Slice,
     PythonTuple,

@@ -168,6 +168,15 @@ def _is_allocatable_array(semantic_type: models.SemanticType | None) -> bool:
     )
 
 
+def _is_pointer_array(semantic_type: models.SemanticType | None) -> bool:
+    return bool(
+        semantic_type is not None
+        and semantic_type.storage is not None
+        and semantic_type.storage.array is not None
+        and semantic_type.storage.array.pointer
+    )
+
+
 def _raise_for_unsupported_allocatable_module_variables(node: models.SemanticModule) -> None:
     for variable in node.variables:
         semantic_type = variable.semantic_type
@@ -184,6 +193,16 @@ def _raise_for_unsupported_allocatable_outputs(node: models.SemanticFunction) ->
             raise ValueError(
                 f"Function {node.name!r} has allocatable inout argument {argument.name!r}, "
                 "which needs a replacement policy"
+            )
+
+
+def _raise_for_unsupported_pointer_outputs(node: models.SemanticFunction) -> None:
+    for argument in node.arguments:
+        intent = str(argument.intent).lower()
+        if _is_pointer_array(argument.semantic_type) and intent in {"out", "inout"}:
+            raise ValueError(
+                f"Function {node.name!r} has pointer {intent} argument {argument.name!r}, "
+                "which needs explicit pointer ownership, lifetime, shape, contiguity, and deallocation policy"
             )
 
 
@@ -265,6 +284,7 @@ def semantic_ir_to_codegen_ast(
 
     if isinstance(node, models.SemanticFunction):
         _raise_for_unsupported_allocatable_outputs(node)
+        _raise_for_unsupported_pointer_outputs(node)
         func_scope = scope.new_child_scope(name=node.name, scope_type="function")
         passed_object_position = _passed_object_position(node)
         declarations = [

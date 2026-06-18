@@ -284,24 +284,70 @@ deallocation routine.
 
 ## 7. Pointer Arguments, Results, And Association
 
-Current state: pointer facts are preserved in semantic storage contracts, but
-general pointer ownership and association are not a supported runtime contract.
+Current state: pointer facts are preserved in semantic storage contracts.
+Procedure-level pointer array support exists for the conservative snapshot
+subset: pointer `intent(in)` arrays are call-local associations to Python-owned
+NumPy storage, and pointer array function results are copied into Python-owned
+NumPy arrays with `None` for unassociated results. General pointer ownership,
+borrowed pointer views, scalar pointer results, and pointer reassociation are
+not supported runtime contracts.
 
 Example: `real, pointer :: p(:)` may be associated with module storage, a
-derived-type field, a dummy argument target, or nothing. Possible paths are:
-expose only nullable borrowed views, create owner capsules for known allocated
-targets, or block all pointer results until lifetime can be proven. The hard
-issue is reassociation: Python may hold a view while Fortran points `p`
-somewhere else.
+derived-type field, a dummy argument target, newly allocated storage, or
+nothing. The final association state alone does not say who owns the target,
+whether Python may free it, whether another Fortran object still aliases it, or
+whether the target remains valid after the call.
 
-- [ ] Define borrowed, owned, and nullable pointer policies.
-- [ ] Define pointer association and reassociation behavior visible to Python.
-- [ ] Preserve target and contiguity requirements needed by the pointer.
-- [ ] Support associated and unassociated scalar pointers.
-- [ ] Support associated and unassociated array pointers.
-- [ ] Keep native pointer targets alive while Python views reference them.
+The procedure-level subset is narrower than general Fortran pointer support:
+
+- A pointer `intent(in)` array dummy may be associated with Python-owned NumPy
+  array storage only for the duration of the native call. If Fortran saves or
+  re-associates that pointer, the behavior is outside the supported contract.
+- A pointer array function result is returned as a snapshot copy when the wrapper
+  can prove association state, shape, dtype, and contiguity. Associated results
+  become Python-owned values; unassociated results become `None`.
+- Pointer `intent(out)` and `intent(inout)` dummy arguments are blocked by
+  default. They need extra user policy before wrapper generation because an
+  associated result could be a callee allocation that should be deallocated
+  after copying, a borrowed module or field target that must not be deallocated,
+  a strided section, or a target with a longer native lifetime.
+- Module pointer variables and derived-type pointer components remain borrowed
+  view work. They need owner tracking and stale-view/reassociation rules before
+  Python can safely expose them.
+
+Future `.pyi` policy must provide the missing pointer facts explicitly before
+blocked pointer outputs can be enabled. The required facts are described in
+`docs/wrapper_design_notes.md#fortran-allocatable-and-pointer-reassociation`;
+they include nullability, transfer mode, owner/lifetime, shape source,
+contiguity or stride rules, deallocation policy, reassociation behavior,
+aliasing, and mutability.
+
+- [x] Define temporary association for pointer `intent(in)` array arguments.
+- [ ] Define temporary association for pointer `intent(in)` scalar arguments.
+- [x] Define snapshot-copy behavior for associated pointer array function
+  results and `None` for unassociated results.
+- [ ] Define snapshot-copy behavior for associated scalar pointer function
+  results and `None` for unassociated results.
+- [x] Block pointer `intent(out)` and `intent(inout)` dummy arguments unless
+  explicit pointer policy metadata supplies ownership, lifetime, shape,
+  contiguity, and deallocation behavior.
+- [ ] Preserve target, pointer, rank, bounds, contiguity, and association facts
+  needed by pointer wrappers.
+- [ ] Add semantic `.pyi` policy metadata for nullable pointers, transfer mode,
+  target owner, lifetime, deallocation, shape source, contiguity, reassociation,
+  aliasing, and mutability.
+- [x] Report precise readiness blockers when pointer policy metadata is missing
+  or contradicts the native declaration.
+- [ ] Support associated and unassociated scalar pointer results.
+- [x] Support associated and unassociated array pointer results.
+- [ ] Keep native pointer targets alive while Python borrowed views reference
+  them.
 - [ ] Prevent Python from freeing borrowed native storage.
 - [ ] Detect or block dangling pointer results when lifetime cannot be proven.
+- [x] Test pointer `intent(in)` call-local association.
+- [x] Test pointer array result snapshot copies and unassociated `None`.
+- [x] Test blocked pointer `intent(out)` and `intent(inout)` arguments without
+  explicit policy metadata.
 - [ ] Test aliasing between two Python-visible pointers to the same target.
 - [ ] Test null association, reassociation, owner destruction, and target
   reallocation.
