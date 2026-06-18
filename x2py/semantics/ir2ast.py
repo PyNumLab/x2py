@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+import ast
 import numpy as np
 
 from x2py import SEMANTIC_DTYPE_TO_NUMPY_DTYPE
 from x2py.codegen.models.core import (
+    Add,
     ClassDef,
+    Div,
     FunctionDef,
     FunctionDefArgument,
     FunctionDefResult,
     FunctionOverloadSet,
+    Minus,
     Module,
+    Mul,
+    UnarySub,
     Variable,
 )
 from x2py.codegen.models.datatypes import (
@@ -34,6 +40,7 @@ _SEMANTIC_ORDER_TO_NUMPY_ORDER = {
     "ORDER_C": "C",
     "ORDER_F": "F",
 }
+_MAX_SUPPORTED_ARRAY_RANK = 15
 _ISO_C_KIND_TOKENS = frozenset(
     {
         "c_bool",
@@ -98,6 +105,39 @@ def _array_allows_strides(semantic_type: models.SemanticType) -> bool:
     return contract is None or contract.contiguous is not True
 
 
+def _codegen_dimension_expression(text: str, scope):
+    try:
+        parsed = ast.parse(text, mode="eval").body
+    except SyntaxError:
+        return None
+    return _codegen_expression_node(parsed, scope)
+
+
+def _codegen_expression_node(node: ast.AST, scope):
+    if isinstance(node, ast.Constant) and isinstance(node.value, int):
+        return convert_to_literal(node.value)
+    if isinstance(node, ast.Name):
+        return scope.find(node.id, "variables")
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+        operand = _codegen_expression_node(node.operand, scope)
+        return None if operand is None else UnarySub(operand)
+    if isinstance(node, ast.BinOp):
+        left = _codegen_expression_node(node.left, scope)
+        right = _codegen_expression_node(node.right, scope)
+        if left is None or right is None:
+            return None
+        operators = {
+            ast.Add: Add,
+            ast.Sub: Minus,
+            ast.Mult: Mul,
+            ast.Div: Div,
+        }
+        for ast_op, codegen_op in operators.items():
+            if isinstance(node.op, ast_op):
+                return codegen_op(left, right)
+    return None
+
+
 def _codegen_array_shape(semantic_type: models.SemanticType, scope) -> tuple[object | None, ...] | None:
     if semantic_type.rank <= 0:
         return None
@@ -115,10 +155,8 @@ def _codegen_array_shape(semantic_type: models.SemanticType, scope) -> tuple[obj
             result.append(None)
         elif text.isdigit():
             result.append(convert_to_literal(int(text)))
-        elif text.isidentifier():
-            result.append(scope.find(text, "variables"))
         else:
-            result.append(None)
+            result.append(_codegen_dimension_expression(text, scope))
     return tuple(result)
 
 
@@ -213,6 +251,93 @@ def _is_pointer_array(semantic_type: models.SemanticType | None) -> bool:
     )
 
 
+def _array_contract_category(semantic_type: models.SemanticType | None) -> str | None:
+    contract = _array_contract(semantic_type) if semantic_type is not None else None
+    return None if contract is None else contract.category
+
+
+def _is_assumed_rank(semantic_type: models.SemanticType | None) -> bool:
+    return _array_contract_category(semantic_type) == "assumed_rank"
+
+
+def _is_assumed_type(semantic_type: models.SemanticType | None) -> bool:
+    if semantic_type is None:
+        return False
+    source_type = (semantic_type.origin.source_type or "").casefold().replace(" ", "")
+    return "type(*)" in source_type or "class(*)" in source_type
+
+
+def _is_character_array(semantic_type: models.SemanticType | None) -> bool:
+    return bool(semantic_type is not None and semantic_type.rank > 0 and semantic_type.name == "String")
+
+
+def _is_derived_type_array(semantic_type: models.SemanticType | None) -> bool:
+    return bool(
+        semantic_type is not None
+        and semantic_type.rank > 0
+        and semantic_type.name not in SEMANTIC_DTYPE_TO_NUMPY_DTYPE
+        and semantic_type.name != "String"
+    )
+
+
+def _raise_for_unsupported_array_contracts_in_type(
+    owner: str,
+    semantic_type: models.SemanticType | None,
+) -> None:
+    if semantic_type is None or semantic_type.rank <= 0:
+        return
+    if semantic_type.rank > _MAX_SUPPORTED_ARRAY_RANK:
+        raise ValueError(
+            f"{owner} has rank {semantic_type.rank}, but wrapper generation supports ranks "
+            f"1 through {_MAX_SUPPORTED_ARRAY_RANK}"
+        )
+    if _is_assumed_type(semantic_type):
+        raise ValueError(
+            f"{owner} uses assumed-type type(*), which needs an explicit dtype and descriptor policy "
+            "before wrapper generation"
+        )
+    if _is_character_array(semantic_type):
+        raise ValueError(f"{owner} is an array of character values, which is not supported by wrapper generation")
+    if _is_derived_type_array(semantic_type):
+        raise ValueError(
+            f"{owner} is an array of derived type values, which needs explicit layout and ownership policy"
+        )
+
+
+def _raise_for_unsupported_array_contracts_in_function(node: models.SemanticFunction) -> None:
+    for argument in node.arguments:
+        _raise_for_unsupported_array_contracts_in_type(
+            f"Function {node.name!r} argument {argument.name!r}",
+            argument.semantic_type,
+        )
+    _raise_for_unsupported_array_contracts_in_type(f"Function {node.name!r} result", node.return_type)
+
+
+def _raise_for_unsupported_array_contracts_in_class(node: models.SemanticClass) -> None:
+    for field in node.fields:
+        _raise_for_unsupported_array_contracts_in_type(
+            f"Class {node.name!r} field {field.name!r}",
+            field.semantic_type,
+        )
+    for method in node.methods:
+        _raise_for_unsupported_array_contracts_in_function(method)
+
+
+def _raise_for_unsupported_array_contracts(node: models.SemanticModule) -> None:
+    for variable in node.variables:
+        _raise_for_unsupported_array_contracts_in_type(
+            f"Module variable {variable.name!r}",
+            variable.semantic_type,
+        )
+    for function in node.functions:
+        _raise_for_unsupported_array_contracts_in_function(function)
+    for overload_set in node.overload_sets:
+        for procedure in overload_set.procedures:
+            _raise_for_unsupported_array_contracts_in_function(procedure)
+    for semantic_class in node.classes:
+        _raise_for_unsupported_array_contracts_in_class(semantic_class)
+
+
 def _raise_for_unsupported_allocatable_module_variables(node: models.SemanticModule) -> None:
     for variable in node.variables:
         semantic_type = variable.semantic_type
@@ -277,6 +402,7 @@ def semantic_ir_to_codegen_ast(
     if isinstance(node, models.SemanticModule):
         _raise_for_unresolved_generic_targets(node)
         _raise_for_unsupported_allocatable_module_variables(node)
+        _raise_for_unsupported_array_contracts(node)
         custom_types = dict(custom_types or {})
         for semantic_class in node.classes:
             custom_types.setdefault(semantic_class.name, _class_type(semantic_class))
@@ -344,6 +470,7 @@ def semantic_ir_to_codegen_ast(
         _raise_for_unsupported_bind_c_abi(node)
         _raise_for_unsupported_allocatable_scalar_outputs(node)
         _raise_for_unsupported_pointer_outputs(node)
+        _raise_for_unsupported_array_contracts_in_function(node)
         func_scope = scope.new_child_scope(name=node.name, scope_type="function")
         passed_object_position = _passed_object_position(node)
         declarations = [
@@ -365,7 +492,12 @@ def semantic_ir_to_codegen_ast(
                     order=_numpy_array_order(node.return_type, node.return_type.rank),
                     allows_strides=_array_allows_strides(node.return_type),
                 )
-            result_shape = _string_shape(node.return_type) if isinstance(return_dtype, StringType) else None
+            if isinstance(return_dtype, StringType):
+                result_shape = _string_shape(node.return_type)
+            elif node.return_type.rank > 0:
+                result_shape = _codegen_array_shape(node.return_type, func_scope)
+            else:
+                result_shape = None
             result_memory = _memory_handling(node.return_type)
             result_var = Variable(
                 return_dtype,
@@ -484,6 +616,7 @@ def semantic_ir_to_codegen_ast(
             is_optional=getattr(node, "optional", False),
             intent=getattr(node, "intent", "in"),
             passes_by_value=_passes_by_value(node),
+            assumed_rank=_is_assumed_rank(semantic_type),
             cls_base=cls_base,
         )
         scope.insert_variable(var, name=node.name)

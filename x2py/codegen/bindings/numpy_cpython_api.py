@@ -86,7 +86,7 @@ def get_numpy_max_acceptable_version_file():
 PyArray_Check = FunctionDef(
     name="PyArray_Check",
     body=[],
-    arguments=[FunctionDefArgument(Variable(PythonObjectType(), name="o"))],
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), name="o", memory_handling="alias"))],
     results=FunctionDefResult(Variable(NumpyBoolType(), name="b")),
 )
 
@@ -95,6 +95,20 @@ PyArray_DATA = FunctionDef(
     body=[],
     arguments=[FunctionDefArgument(Variable(NumpyArrayObjectType(), name="o", memory_handling="alias"))],
     results=FunctionDefResult(Variable(VoidType(), name="b", memory_handling="alias")),
+)
+
+PyArray_NDIM = FunctionDef(
+    name="PyArray_NDIM",
+    body=[],
+    arguments=[FunctionDefArgument(Variable(NumpyArrayObjectType(), name="o", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(CNativeInt(), name="nd")),
+)
+
+PyArray_TYPE = FunctionDef(
+    name="PyArray_TYPE",
+    body=[],
+    arguments=[FunctionDefArgument(Variable(NumpyArrayObjectType(), name="o", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(CNativeInt(), name="typenum")),
 )
 
 PyArray_BASE = FunctionDef(
@@ -219,6 +233,23 @@ PyArray_SetBaseObject = FunctionDef(
     results=FunctionDefResult(Variable(CNativeInt(), name="d")),
 )
 
+PyArray_CHKFLAGS = FunctionDef(
+    name="PyArray_CHKFLAGS",
+    body=[],
+    arguments=[
+        FunctionDefArgument(Variable(NumpyArrayObjectType(), name="arr", memory_handling="alias")),
+        FunctionDefArgument(Variable(CNativeInt(), name="flags")),
+    ],
+    results=FunctionDefResult(Variable(NumpyBoolType(), name="b")),
+)
+
+PyArray_ISNOTSWAPPED = FunctionDef(
+    name="PyArray_ISNOTSWAPPED",
+    body=[],
+    arguments=[FunctionDefArgument(Variable(NumpyArrayObjectType(), name="arr", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(NumpyBoolType(), name="b")),
+)
+
 to_pyarray = FunctionDef(
     name="to_pyarray",
     body=[],
@@ -239,6 +270,10 @@ import_array = FunctionDef("import_array", (), ())
 # Basic Array Flags
 # https://numpy.org/doc/stable/reference/c-api/array.html#c.NPY_ARRAY_OWNDATA
 numpy_flag_own_data = Variable(CNativeInt(), name="NPY_ARRAY_OWNDATA")
+# https://numpy.org/doc/stable/reference/c-api/array.html#c.NPY_ARRAY_WRITEABLE
+numpy_flag_writeable = Variable(CNativeInt(), name="NPY_ARRAY_WRITEABLE")
+# https://numpy.org/doc/stable/reference/c-api/array.html#c.NPY_ARRAY_ALIGNED
+numpy_flag_aligned = Variable(CNativeInt(), name="NPY_ARRAY_ALIGNED")
 # https://numpy.org/doc/stable/reference/c-api/array.html#c.NPY_ARRAY_C_CONTIGUOUS
 numpy_flag_c_contig = Variable(CNativeInt(), name="NPY_ARRAY_C_CONTIGUOUS")
 # https://numpy.org/doc/stable/reference/c-api/array.html#c.NPY_ARRAY_F_CONTIGUOUS

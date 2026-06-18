@@ -1279,6 +1279,17 @@ class FCodePrinter(CodePrinter):
 
         return "".join(lines)
 
+    def _print_SelectCase(self, expr):
+        lines = [f"select case ({self._print(expr.expr)})\n"]
+        for section in expr.sections:
+            if section.label is None:
+                lines.append("case default\n")
+            else:
+                lines.append(f"case ({self._print(section.label)})\n")
+            lines.append(self._print(section.body))
+        lines.append("end select\n")
+        return "".join(lines)
+
     def _print_IfTernaryOperator(self, expr):
         cond = (
             cast_to(expr.cond, NumpyBoolType())
@@ -1557,7 +1568,7 @@ class FCodePrinter(CodePrinter):
             func.results.var.rank == 0 or isinstance(func.results.var.class_type, StringType)
         )
         if len(out_results) == 1 and isinstance(func.results.var.class_type, NumpyNDArrayType):
-            is_function = func.results.var.memory_handling in {"alias", "heap"}
+            is_function = parent_assign is not None or func.results.var.memory_handling in {"alias", "heap"}
 
         if func.arguments and func.arguments[0].bound_argument:
             bound_name = expr.overload_set_name if expr.overload_set else func.scope.get_python_name(func.name)

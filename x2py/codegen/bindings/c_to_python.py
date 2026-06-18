@@ -108,16 +108,23 @@ from ..models.datatypes import (
 )
 from ..models.core import Slice
 from .numpy_cpython_api import (
+    PyArray_Check,
     PyArray_DATA,
+    PyArray_CHKFLAGS,
+    PyArray_ISNOTSWAPPED,
+    PyArray_NDIM,
     PyArray_SetBaseObject,
+    PyArray_TYPE,
     NumpyArrayObjectType,
     get_strides_and_shape_from_numpy_array,
     import_array,
     is_numpy_array,
     no_order_check,
     numpy_dtype_registry,
+    numpy_flag_aligned,
     numpy_flag_c_contig,
     numpy_flag_f_contig,
+    numpy_flag_writeable,
     pyarray_check,
     require_any_contiguous,
     require_c_contiguous,
@@ -130,10 +137,13 @@ from ..models.datatypes import (
     NumpyNDArrayType,
 )
 from ..models.core import (
+    And,
     IfTernaryOperator,
     Eq,
+    Ge,
     Is,
     IsNot,
+    Le,
     Lt,
     Ne,
     Not,
@@ -148,6 +158,7 @@ cpython_ndarray_imports = [
     Import("python_runtime_ndarrays", Module("python_runtime_ndarrays", (), ())),
     Import("ndarrays", Module("ndarrays", (), ())),
 ]
+_MAX_SUPPORTED_ASSUMED_RANK = 15
 
 StackArrayClass = ClassDef("stack_array")
 
@@ -359,7 +370,10 @@ class CPythonBindingGenerator(BindingGenerator):
             shape_doc = self._shape_doc(var)
             if shape_doc:
                 lines.append(f"    Shape: {shape_doc}")
-            lines.append(f"    Rank: {var.rank}")
+            if self._is_assumed_rank_array(var):
+                lines.append(f"    Rank: 1..{_MAX_SUPPORTED_ASSUMED_RANK}")
+            else:
+                lines.append(f"    Rank: {var.rank}")
             layout_doc = self._layout_doc(var)
             if layout_doc:
                 lines.append(f"    Layout: {layout_doc}")
@@ -789,6 +803,19 @@ class CPythonBindingGenerator(BindingGenerator):
                 type_ref = numpy_dtype_registry[dtype]
             except KeyError:
                 raise TypeError(f"Can't check the type of an array of {dtype}") from None
+            if self._is_assumed_rank_array(arg):
+                type_check_condition = self._assumed_rank_type_check_condition(py_obj, arg, type_ref)
+                if raise_error:
+                    error_code = (
+                        PyArgumentError(
+                            PyTypeError,
+                            f"Expected a NumPy array of type {arg.dtype} with rank 1 through "
+                            f"{_MAX_SUPPORTED_ASSUMED_RANK} for argument {arg.name}. "
+                            "Received {type(arg)}",
+                            arg=py_obj,
+                        ),
+                    )
+                return type_check_condition, error_code
 
             # order/contiguity flag
             if not arg.class_type.allows_strides:
@@ -832,6 +859,29 @@ class CPythonBindingGenerator(BindingGenerator):
             error_code = (python_error,)
 
         return type_check_condition, error_code
+
+    @staticmethod
+    def _is_assumed_rank_array(arg):
+        return bool(getattr(arg, "assumed_rank", False) and isinstance(arg.class_type, NumpyNDArrayType))
+
+    @staticmethod
+    def _array_descriptor_rank(arg):
+        return _MAX_SUPPORTED_ASSUMED_RANK if CPythonBindingGenerator._is_assumed_rank_array(arg) else arg.rank
+
+    def _assumed_rank_type_check_condition(self, py_obj, arg, type_ref):
+        pyarray = PointerCast(py_obj, Variable(NumpyArrayObjectType(), "_", memory_handling="alias"))
+        pyarray_address = ObjectAddress(pyarray)
+        runtime_rank = PyArray_NDIM(pyarray_address)
+        return And(
+            PyArray_Check(py_obj),
+            Eq(PyArray_TYPE(pyarray_address), type_ref),
+            Ge(runtime_rank, convert_to_literal(1, dtype=CNativeInt())),
+            Le(runtime_rank, convert_to_literal(_MAX_SUPPORTED_ASSUMED_RANK, dtype=CNativeInt())),
+            Or(
+                Eq(runtime_rank, convert_to_literal(1, dtype=CNativeInt())),
+                PyArray_CHKFLAGS(pyarray_address, numpy_flag_f_contig),
+            ),
+        )
 
     def _get_type_check_function(self, name, args, funcs, *, allow_native_scalars=False):
         """
@@ -1729,20 +1779,26 @@ class CPythonBindingGenerator(BindingGenerator):
             self.scope.get_new_name(orig_var.name + "_data"),
             memory_handling="alias",
         )
+        descriptor_rank = self._array_descriptor_rank(orig_var)
+        actual_rank_var = (
+            self.scope.get_temporary_variable(NumpyInt64Type(), name=f"{orig_var.name}_rank")
+            if self._is_assumed_rank_array(orig_var)
+            else None
+        )
         base_shape_var = Variable(
             NumpyNDArrayType.get_new(NumpyInt64Type(), 1, None, raw=True),
             self.scope.get_new_name(orig_var.name + "_base_shape"),
-            shape=(orig_var.rank,),
+            shape=(descriptor_rank,),
         )
         ubound_var = Variable(
             NumpyNDArrayType.get_new(NumpyInt64Type(), 1, None, raw=True),
             self.scope.get_new_name(orig_var.name + "_ubound"),
-            shape=(orig_var.rank,),
+            shape=(descriptor_rank,),
         )
         stride_var = Variable(
             NumpyNDArrayType.get_new(NumpyInt64Type(), 1, None, raw=True),
             self.scope.get_new_name(orig_var.name + "_strides"),
-            shape=(orig_var.rank,),
+            shape=(descriptor_rank,),
         )
         self.scope.insert_variable(data_var)
         self.scope.insert_variable(base_shape_var)
@@ -1755,14 +1811,23 @@ class CPythonBindingGenerator(BindingGenerator):
             base_shape_var,
             ubound_var,
             stride_var,
-            convert_to_literal(orig_var.order != "F"),
+            convert_to_literal(False if self._is_assumed_rank_array(orig_var) else orig_var.order != "F"),
         )
 
-        body = [get_data, get_strides_and_shape]
+        body = [get_data]
+        if actual_rank_var is not None:
+            body.append(
+                Assign(
+                    actual_rank_var,
+                    cast_to(PyArray_NDIM(ObjectAddress(pyarray_collect_arg)), NumpyInt64Type()),
+                )
+            )
+        body.append(get_strides_and_shape)
 
         return {
             "body": body,
             "data": data_var,
+            "rank": actual_rank_var,
             "shape": base_shape_var,
             "ubounds": ubound_var,
             "strides": stride_var,
@@ -3459,36 +3524,47 @@ class CPythonBindingGenerator(BindingGenerator):
         shape = parts["shape"]
         strides = parts["strides"]
         ubounds = parts["ubounds"]
-        shape_elems = [IndexedElement(shape, i) for i in range(orig_var.rank)]
-        stride_elems = [IndexedElement(strides, i) for i in range(orig_var.rank)]
-        ubound_elems = [IndexedElement(ubounds, i) for i in range(orig_var.rank)]
+        descriptor_rank = self._array_descriptor_rank(orig_var)
+        shape_elems = [IndexedElement(shape, i) for i in range(descriptor_rank)]
+        stride_elems = [IndexedElement(strides, i) for i in range(descriptor_rank)]
+        ubound_elems = [IndexedElement(ubounds, i) for i in range(descriptor_rank)]
         args = [parts["data"], *shape_elems, *stride_elems]
         body.extend(self._array_shape_validation(orig_var, shape_elems))
+        body.extend(self._array_access_validation(orig_var, collect_arg))
         default_body = (
             [AliasAssign(parts["data"], NIL)]
+            + ([Assign(parts["rank"], 0)] if parts["rank"] is not None else [])
             + [Assign(s, 0) for s in shape_elems]
             + [Assign(s, 0) for s in ubound_elems]
             + [Assign(s, 1) for s in stride_elems]
         )
 
         if is_bind_c_argument:
-            rank = orig_var.rank
+            rank = descriptor_rank
             allows_strides = orig_var.class_type.allows_strides
+            has_rank = self._is_assumed_rank_array(orig_var)
+            descriptor_type = BindCArrayType.get_new(rank, allows_strides, has_rank=has_rank)
             arg_var = Variable(
-                BindCArrayType.get_new(rank, allows_strides),
+                descriptor_type,
                 self.scope.get_new_name(orig_var.name),
-                shape=(convert_to_literal(rank * 3 + 1 if allows_strides else rank + 1),),
+                shape=(convert_to_literal(len(descriptor_type)),),
             )
             self.scope.insert_symbolic_alias(
                 IndexedElement(arg_var, convert_to_literal(0)), ObjectAddress(parts["data"])
             )
+            offset = 1
+            if has_rank:
+                self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(1)), parts["rank"])
+                offset += 1
             for i, s in enumerate(shape_elems):
-                self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(i + 1)), s)
+                self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(i + offset)), s)
             if allows_strides:
                 for i, s in enumerate(ubound_elems):
-                    self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(i + rank + 1)), s)
+                    self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(i + rank + offset)), s)
                 for i, s in enumerate(stride_elems):
-                    self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(i + 2 * rank + 1)), s)
+                    self.scope.insert_symbolic_alias(
+                        IndexedElement(arg_var, convert_to_literal(i + 2 * rank + offset)), s
+                    )
 
             return {"body": body, "args": [arg_var], "default_init": default_body}
 
@@ -3569,6 +3645,51 @@ class CPythonBindingGenerator(BindingGenerator):
                 )
             )
         return checks
+
+    def _array_access_validation(self, orig_var, collect_arg):
+        pyarray = PointerCast(collect_arg, Variable(NumpyArrayObjectType(), "_", memory_handling="alias"))
+        checks = [
+            self._array_native_byte_order_validation(
+                pyarray,
+                f"Argument {orig_var.name} must use native byte order",
+            ),
+            self._array_flag_validation(
+                pyarray,
+                numpy_flag_aligned,
+                f"Argument {orig_var.name} must be aligned",
+            ),
+        ]
+        if getattr(orig_var, "intent", "in") in {"out", "inout"}:
+            checks.append(
+                self._array_flag_validation(
+                    pyarray,
+                    numpy_flag_writeable,
+                    f"Argument {orig_var.name} must be writeable",
+                )
+            )
+        return checks
+
+    def _array_flag_validation(self, pyarray, flag, message):
+        return If(
+            IfSection(
+                Not(PyArray_CHKFLAGS(ObjectAddress(pyarray), flag)),
+                [
+                    PyErr_SetString(PyTypeError, CStrStr(convert_to_literal(message))),
+                    Return(self._error_exit_code),
+                ],
+            )
+        )
+
+    def _array_native_byte_order_validation(self, pyarray, message):
+        return If(
+            IfSection(
+                Not(PyArray_ISNOTSWAPPED(ObjectAddress(pyarray))),
+                [
+                    PyErr_SetString(PyTypeError, CStrStr(convert_to_literal(message))),
+                    Return(self._error_exit_code),
+                ],
+            )
+        )
 
     def _extract_StringType_FunctionDefArgument(
         self, orig_var, collect_arg, bound_argument, is_bind_c_argument, *, arg_var=None

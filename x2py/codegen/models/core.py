@@ -57,6 +57,7 @@ __all__ = (
     "BinaryBooleanOperator",
     "BinaryOperator",
     "BooleanOperator",
+    "CaseSection",
     "ClassDef",
     "CodeBlock",
     "Comment",
@@ -103,6 +104,7 @@ __all__ = (
     "Program",
     "PythonTuple",
     "Return",
+    "SelectCase",
     "SeparatorComment",
     "Slice",
     "Symbol",
@@ -401,6 +403,7 @@ class Variable:
 
     __slots__ = (
         "_alloc_shape",
+        "_assumed_rank",
         "_class_type",
         "_cls_base",
         "_intent",
@@ -427,6 +430,7 @@ class Variable:
         is_private=False,
         intent="in",
         passes_by_value=False,
+        assumed_rank=False,
         shape=None,
         cls_base=None,
         is_argument=False,
@@ -466,6 +470,9 @@ class Variable:
         if not isinstance(passes_by_value, bool):
             raise TypeError("passes_by_value must be a boolean.")
         self._passes_by_value = passes_by_value
+        if not isinstance(assumed_rank, bool):
+            raise TypeError("assumed_rank must be a boolean.")
+        self._assumed_rank = assumed_rank
         self._cls_base = cls_base
         self._is_argument = is_argument
         self._is_temp = is_temp
@@ -616,6 +623,11 @@ class Variable:
     def passes_by_value(self):
         """True when the native scalar dummy uses Fortran ``value`` ABI."""
         return self._passes_by_value
+
+    @property
+    def assumed_rank(self):
+        """True when this array represents a Fortran ``dimension(..)`` dummy."""
+        return self._assumed_rank
 
     @property
     def is_argument(self):
@@ -4527,6 +4539,52 @@ class If:
     def __str__(self):
         blocks = ",".join(str(b) for b in self.blocks)
         return f"If({blocks})"
+
+
+class CaseSection:
+    """Represents one section in a select-case statement."""
+
+    __slots__ = ("_body", "_label")
+    _attribute_nodes = ("_label", "_body")
+
+    def __init__(self, label, body):
+        if isinstance(body, list | tuple):
+            body = CodeBlock(body)
+        elif not isinstance(body, CodeBlock):
+            raise TypeError("body is not iterable or CodeBlock")
+        self._label = label
+        self._body = body
+        init_model_object(self)
+
+    @property
+    def label(self):
+        return self._label
+
+    @property
+    def body(self):
+        return self._body
+
+
+class SelectCase:
+    """Represents a Fortran-style select-case statement."""
+
+    __slots__ = ("_expr", "_sections")
+    _attribute_nodes = ("_expr", "_sections")
+
+    def __init__(self, expr, *sections):
+        if not sections or not all(isinstance(section, CaseSection) for section in sections):
+            raise TypeError("SelectCase must contain CaseSection objects")
+        self._expr = expr
+        self._sections = sections
+        init_model_object(self)
+
+    @property
+    def expr(self):
+        return self._expr
+
+    @property
+    def sections(self):
+        return self._sections
 
 
 # ========================================================================================

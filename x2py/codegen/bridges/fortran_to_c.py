@@ -36,6 +36,7 @@ from ..models.core import (
     ArraySize,
     AsName,
     Assign,
+    CaseSection,
     Deallocate,
     EmptyNode,
     FunctionAddress,
@@ -50,6 +51,8 @@ from ..models.core import (
     Import,
     FunctionOverloadSet,
     Pass,
+    Return,
+    SelectCase,
 )
 from ..models.datatypes import (
     CharType,
@@ -70,6 +73,8 @@ from ..models.core import DottedVariable, IndexedElement, Variable
 from ..scope import Scope
 
 from .base import BridgeGenerator
+
+_MAX_SUPPORTED_ASSUMED_RANK = 15
 
 
 class FortranToCBridgeGenerator(BridgeGenerator):
@@ -175,12 +180,76 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             self._additional_functions.append(helper)
             return [*body, helper(func(*args), results[0])]
 
+        if any(arg.get("assumed_rank") for arg in generated_args):
+            return [*body, self._assumed_rank_dispatch(func, generated_args, results)]
+
+        return [*body, *self._native_call_body(func, args, results)]
+
+    @staticmethod
+    def _native_call_body(func, args, results):
         if len(results) == 1:
             res = results[0]
             func_call = AliasAssign(res, func(*args)) if res.is_alias else Assign(res, func(*args))
         else:
             func_call = Assign(results, func(*args))
-        return [*body, func_call]
+        return [func_call]
+
+    def _assumed_rank_dispatch(self, func, generated_args, results):
+        dispatch_args = [arg for arg in generated_args if arg.get("assumed_rank")]
+        return self._assumed_rank_dispatch_level(func, generated_args, results, dispatch_args, {}, 0)
+
+    def _assumed_rank_dispatch_level(self, func, generated_args, results, dispatch_args, replacements, index):
+        if index == len(dispatch_args):
+            args = [
+                self._replacement_function_argument(arg["f_arg"], replacements[arg["f_arg"].value])
+                if arg.get("assumed_rank")
+                else arg["f_arg"]
+                for arg in generated_args
+            ]
+            return self._native_call_body(func, args, results)
+
+        dispatch_arg = dispatch_args[index]
+        info = dispatch_arg["assumed_rank"]
+        sections = []
+        for rank in range(1, _MAX_SUPPORTED_ASSUMED_RANK + 1):
+            rank_var = info["rank_vars"][rank]
+            f_arg = self._assumed_rank_argument_view(info, rank_var, rank)
+            replacements[dispatch_arg["f_arg"].value] = f_arg
+            nested_body = self._assumed_rank_dispatch_level(
+                func,
+                generated_args,
+                results,
+                dispatch_args,
+                replacements,
+                index + 1,
+            )
+            del replacements[dispatch_arg["f_arg"].value]
+            sections.append(
+                CaseSection(
+                    convert_to_literal(rank, dtype=NumpyInt64Type()),
+                    [
+                        C_F_Pointer(info["bind_var"], rank_var, info["shape_vars"][:rank]),
+                        *nested_body,
+                    ],
+                )
+            )
+        sections.append(CaseSection(None, [Return(None)]))
+        return SelectCase(info["rank_var"], *sections)
+
+    @staticmethod
+    def _replacement_function_argument(original, value):
+        return FunctionCallArgument(value, keyword=original.keyword)
+
+    @staticmethod
+    def _assumed_rank_argument_view(info, rank_var, rank):
+        if not info["allows_strides"]:
+            return rank_var
+        start = convert_to_literal(1)
+        indexes = [
+            Slice(start, Add(stop, convert_to_literal(1)), step)
+            for step, stop in zip(info["stride_vars"][:rank], info["ubound_vars"][:rank], strict=False)
+        ]
+        return IndexedElement(rank_var, *indexes)
 
     @staticmethod
     def _uses_allocatable_function_result_helper(func, result):
@@ -473,6 +542,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     def _is_pointer_snapshot_result(var):
         return var.is_ndarray and var.memory_handling == "alias" and not isinstance(var, DottedVariable)
 
+    @staticmethod
+    def _is_assumed_rank_array(var):
+        return bool(getattr(var, "assumed_rank", False) and var.is_ndarray)
+
     @classmethod
     def _is_hidden_output_argument(cls, var):
         if getattr(var, "intent", "in") != "out":
@@ -645,6 +718,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             memory_handling="alias",
         )
 
+        if self._is_assumed_rank_array(var):
+            return self._extract_assumed_rank_array_argument(var, collisionless_name, bind_var)
+
         if self._is_allocatable_replacement_argument(var):
             arg_var = var.clone(
                 collisionless_name,
@@ -749,6 +825,85 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             f_arg = arg_var
 
         return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": f_arg, "body": body}
+
+    def _extract_assumed_rank_array_argument(self, var, collisionless_name, bind_var):
+        name = var.name
+        scope = self.scope
+        rank = _MAX_SUPPORTED_ASSUMED_RANK
+        allows_strides = var.class_type.allows_strides
+        scope.insert_variable(bind_var)
+        rank_var = scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_rank", is_argument=True)
+        shape_vars = [
+            scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_base_shape_{i + 1}", is_argument=True)
+            for i in range(rank)
+        ]
+        ubound_vars = (
+            [
+                scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_ubound_{i + 1}", is_argument=True)
+                for i in range(rank)
+            ]
+            if allows_strides
+            else []
+        )
+        stride_vars = (
+            [
+                scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_stride_{i + 1}", is_argument=True)
+                for i in range(rank)
+            ]
+            if allows_strides
+            else []
+        )
+        rank_vars = {}
+        for actual_rank in range(1, rank + 1):
+            rank_type = var.class_type.switch_rank(actual_rank, "F")
+            rank_vars[actual_rank] = Variable(
+                rank_type,
+                scope.get_new_name(f"{collisionless_name}_rank{actual_rank}"),
+                is_argument=False,
+                is_optional=False,
+                memory_handling="alias",
+            )
+            scope.insert_variable(rank_vars[actual_rank])
+
+        descriptor_type = BindCArrayType.get_new(rank, has_strides=allows_strides, has_rank=True)
+        c_arg_var = Variable(
+            descriptor_type,
+            scope.get_new_name(),
+            is_argument=True,
+            shape=(convert_to_literal(len(descriptor_type)),),
+        )
+        scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(0)), bind_var)
+        scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(1)), rank_var)
+        offset = 2
+        for i, s in enumerate(shape_vars):
+            scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(i + offset)), s)
+        if allows_strides:
+            for i, s in enumerate(ubound_vars):
+                scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(i + rank + offset)), s)
+            for i, s in enumerate(stride_vars):
+                scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(i + 2 * rank + offset)), s)
+
+        placeholder = var.clone(
+            collisionless_name,
+            is_argument=False,
+            is_optional=False,
+            memory_handling="alias",
+            new_class=Variable,
+        )
+        return {
+            "c_arg": BindCVariable(c_arg_var, var),
+            "f_arg": placeholder,
+            "body": [],
+            "assumed_rank": {
+                "allows_strides": allows_strides,
+                "bind_var": bind_var,
+                "rank_var": rank_var,
+                "rank_vars": rank_vars,
+                "shape_vars": shape_vars,
+                "stride_vars": stride_vars,
+                "ubound_vars": ubound_vars,
+            },
+        }
 
     def _extract_HomogeneousTupleType_FunctionDefArgument(self, var, func):
         name = var.name

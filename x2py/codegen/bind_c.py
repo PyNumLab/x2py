@@ -71,11 +71,11 @@ class BindCArrayType(Type, TupleType):
     shape and strides.
     """
 
-    __slots__ = ("_array_rank", "_element_types", "_has_strides")
+    __slots__ = ("_array_rank", "_element_types", "_has_rank", "_has_strides")
     _name = "BindCArrayType"
 
     @classmethod
-    def get_new(cls, rank, has_strides):
+    def get_new(cls, rank, has_strides, has_rank=False):
         """
         Get the parametrised BindCArrayType subclass.
 
@@ -87,6 +87,8 @@ class BindCArrayType(Type, TupleType):
             The rank of the array being described.
         has_strides : bool
             Indicates whether strides are used to describe the array.
+        has_rank : bool
+            Indicates whether the descriptor carries a runtime rank field.
         """
         if not isinstance(rank, int):
             raise TypeError("rank must be an integer")
@@ -94,23 +96,29 @@ class BindCArrayType(Type, TupleType):
             raise ValueError("rank must be positive")
         if not isinstance(has_strides, bool):
             raise TypeError("has_strides must be a boolean")
-        return cls._get_new(rank, has_strides)
+        if not isinstance(has_rank, bool):
+            raise TypeError("has_rank must be a boolean")
+        return cls._get_new(rank, has_strides, has_rank)
 
     @classmethod
     @cache
-    def _get_new(cls, rank, has_strides):
+    def _get_new(cls, rank, has_strides, has_rank):
+        rank_types = (NumpyInt64Type(),) if has_rank else ()
         shape_types = (NumpyInt64Type(),) * rank
         ubound_types = (NumpyInt64Type(),) * rank * has_strides
         stride_types = (NumpyInt64Type(),) * rank * has_strides
-        element_types = (BindCPointer(), *shape_types, *ubound_types, *stride_types)
+        element_types = (BindCPointer(), *rank_types, *shape_types, *ubound_types, *stride_types)
 
         def __init__(self):
             self._array_rank = rank
             self._has_strides = has_strides
+            self._has_rank = has_rank
             self._element_types = element_types
             Type.__init__(self)
 
         name = f"BindCArray{rank}DType"
+        if has_rank:
+            name += "_ranked"
         if has_strides:
             name += "_strided"
         return type(name, (BindCArrayType,), {"__init__": __init__})()
@@ -124,6 +132,11 @@ class BindCArrayType(Type, TupleType):
     def has_strides(self):
         """Whether upper bounds and strides are present in the packed argument."""
         return self._has_strides
+
+    @property
+    def has_rank(self):
+        """Whether a runtime rank field is present in the packed argument."""
+        return self._has_rank
 
     @property
     def element_types(self):

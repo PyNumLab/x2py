@@ -202,6 +202,242 @@ OPTIONAL_FIXED_TEXT = """
 """
 
 
+_MAX_WRAPPER_TEST_RANK = 15
+
+
+def _rank_shape_spec(rank: int) -> str:
+    return ", ".join(["2", *(["1"] * (rank - 1))])
+
+
+def _rank_index_spec(rank: int, first_axis_index: int) -> str:
+    return ", ".join([str(first_axis_index), *(["1"] * (rank - 1))])
+
+
+def _colon_shape_spec(rank: int) -> str:
+    return ", ".join([":"] * rank)
+
+
+def _rank_result_functions() -> str:
+    functions = []
+    for rank in range(1, _MAX_WRAPPER_TEST_RANK + 1):
+        shape = _rank_shape_spec(rank)
+        second_value_index = _rank_index_spec(rank, 2)
+        functions.append(
+            f"""
+  function rank{rank}_result() result(values)
+    real(8) :: values({shape})
+
+    values = real({rank}, 8)
+    values({second_value_index}) = real({rank}, 8) + 0.5_8
+  end function rank{rank}_result
+"""
+        )
+    return "".join(functions)
+
+
+def _rank_contract_subroutines() -> str:
+    subroutines = []
+    for rank in range(1, _MAX_WRAPPER_TEST_RANK + 1):
+        shape = _colon_shape_spec(rank)
+        subroutines.append(
+            f"""
+  subroutine shift{rank}(values, out)
+    real(8), intent(in) :: values({shape})
+    real(8), intent(out) :: out({shape})
+
+    out = values + {rank}.0_8
+  end subroutine shift{rank}
+"""
+        )
+    return "".join(subroutines)
+
+
+def _assumed_rank_sum_cases() -> str:
+    cases = []
+    for rank in range(1, _MAX_WRAPPER_TEST_RANK + 1):
+        cases.append(
+            f"""
+    rank({rank})
+      total = real({rank}, 8) + sum(values)
+"""
+        )
+    return "".join(cases)
+
+
+def _assumed_rank_bump_cases() -> str:
+    cases = []
+    for rank in range(1, _MAX_WRAPPER_TEST_RANK + 1):
+        cases.append(
+            f"""
+    rank({rank})
+      values = values + real({rank}, 8)
+"""
+        )
+    return "".join(cases)
+
+
+ARRAY_RESULTS_F90_TEXT = (
+    """
+module farray_results_f90
+contains
+  function fixed_vector() result(values)
+    real(8) :: values(3)
+
+    values = [1.0_8, 2.0_8, 3.0_8]
+  end function fixed_vector
+
+  function automatic_vector(n) result(values)
+    integer, intent(in) :: n
+    real(8) :: values(n)
+    integer :: i
+
+    do i = 1, n
+      values(i) = real(i, 8) * 2.0_8
+    end do
+  end function automatic_vector
+
+  function automatic_matrix(rows, cols) result(values)
+    integer, intent(in) :: rows
+    integer, intent(in) :: cols
+    real(8) :: values(0:rows - 1, 2:cols + 1)
+    integer :: i
+    integer :: j
+
+    do j = 2, cols + 1
+      do i = 0, rows - 1
+        values(i, j) = real(10 * (i + 1) + j, 8)
+      end do
+    end do
+  end function automatic_matrix
+
+  function rank3_cube(n1, n2, n3) result(values)
+    integer, intent(in) :: n1
+    integer, intent(in) :: n2
+    integer, intent(in) :: n3
+    real(8) :: values(n1, n2, n3)
+    integer :: i
+    integer :: j
+    integer :: k
+
+    do k = 1, n3
+      do j = 1, n2
+        do i = 1, n1
+          values(i, j, k) = real(100 * i + 10 * j + k, 8)
+        end do
+      end do
+    end do
+  end function rank3_cube
+"""
+    + _rank_result_functions()
+    + """
+
+  function zero_vector() result(values)
+    real(8) :: values(0)
+  end function zero_vector
+
+  function zero_alloc_vector() result(values)
+    real(8), allocatable :: values(:)
+
+    allocate(values(0))
+  end function zero_alloc_vector
+
+  function maybe_alloc_vector(n) result(values)
+    integer, intent(in) :: n
+    real(8), allocatable :: values(:)
+    integer :: i
+
+    if (n > 0) then
+      allocate(values(n))
+      do i = 1, n
+        values(i) = real(5 * i, 8)
+      end do
+    end if
+  end function maybe_alloc_vector
+end module farray_results_f90
+"""
+)
+
+
+ARRAY_CONTRACTS_F90_TEXT = (
+    """
+module farray_contracts_f90
+contains
+  real(8) function sum_assumed_size(n, values) result(total)
+    integer, intent(in) :: n
+    real(8), intent(in) :: values(*)
+    integer :: i
+
+    total = 0.0_8
+    do i = 1, n
+      total = total + values(i)
+    end do
+  end function sum_assumed_size
+
+  subroutine scale_lower(n, values)
+    integer, intent(in) :: n
+    real(8), intent(inout) :: values(0:n - 1)
+
+    values = values * 2.0_8
+  end subroutine scale_lower
+
+  real(8) function sum_in(values) result(total)
+    real(8), intent(in) :: values(:)
+
+    total = sum(values)
+  end function sum_in
+
+  subroutine bump_inout(values)
+    real(8), intent(inout) :: values(:)
+
+    values = values + 1.0_8
+  end subroutine bump_inout
+
+  subroutine fill_out(values)
+    real(8), intent(out) :: values(:)
+
+    values = 7.0_8
+  end subroutine fill_out
+"""
+    + _rank_contract_subroutines()
+    + """
+end module farray_contracts_f90
+"""
+)
+
+
+ASSUMED_RANK_F90_TEXT = (
+    """
+module fassumed_rank_f90
+contains
+  real(8) function rank_weighted_sum(values) result(total)
+    real(8), intent(in) :: values(..)
+
+    total = -1.0_8
+    select rank(values)
+"""
+    + _assumed_rank_sum_cases()
+    + """
+    rank default
+      total = -99.0_8
+    end select
+  end function rank_weighted_sum
+
+  subroutine bump_assumed_rank(values)
+    real(8), intent(inout) :: values(..)
+
+    select rank(values)
+"""
+    + _assumed_rank_bump_cases()
+    + """
+    rank default
+      return
+    end select
+  end subroutine bump_assumed_rank
+end module fassumed_rank_f90
+"""
+)
+
+
 def _assert_fmath_examples(module):
     cases = fmath_cases()
     missing = sorted(name for name, _, _ in cases if not hasattr(module, name))
@@ -788,8 +1024,172 @@ def test_pointer_arrays_use_call_local_inputs_and_snapshot_results(tmp_path: Pat
     assert "Pointer array results are copied into Python-owned NumPy arrays." in module.pointer_to_values.__doc__
     assert "Unassociated pointer results return None." in module.pointer_to_values.__doc__
 
+    del values
+    gc.collect()
+    np.testing.assert_allclose(selected, np.array([99.0, 2.0, 3.0], dtype=np.float64))
+
     with pytest.raises(TypeError):
         module.sum_pointer(np.array([1.0, 2.0, 3.0], dtype=np.float32))
+
+
+def test_array_valued_function_results_are_python_owned_copies(tmp_path: Path):
+    module = _build_text_and_import(
+        ARRAY_RESULTS_F90_TEXT,
+        "farray_results_f90.f90",
+        tmp_path,
+        {
+            "bind_c_farray_results_f90_wrapper.f90",
+            "farray_results_f90_wrapper.c",
+            "farray_results_f90_wrapper.h",
+        },
+    )
+
+    fixed = module.fixed_vector()
+    np.testing.assert_allclose(fixed, np.array([1.0, 2.0, 3.0], dtype=np.float64))
+    assert fixed.base is not None
+
+    automatic = module.automatic_vector(np.int32(4))
+    np.testing.assert_allclose(automatic, np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))
+    assert automatic.base is not None
+
+    matrix = module.automatic_matrix(np.int32(2), np.int32(3))
+    np.testing.assert_allclose(
+        matrix,
+        np.array([[12.0, 13.0, 14.0], [22.0, 23.0, 24.0]], dtype=np.float64),
+    )
+    assert matrix.flags.f_contiguous
+    assert matrix.base is not None
+
+    cube = module.rank3_cube(np.int32(2), np.int32(2), np.int32(2))
+    expected_cube = np.empty((2, 2, 2), dtype=np.float64, order="F")
+    for i, j, k in np.ndindex(expected_cube.shape):
+        expected_cube[i, j, k] = 100.0 * (i + 1) + 10.0 * (j + 1) + (k + 1)
+    np.testing.assert_allclose(cube, expected_cube)
+    assert cube.flags.f_contiguous
+
+    rank_results = []
+    for rank in range(1, _MAX_WRAPPER_TEST_RANK + 1):
+        result = getattr(module, f"rank{rank}_result")()
+        shape = (2, *([1] * (rank - 1)))
+        expected = np.full(shape, float(rank), dtype=np.float64, order="F")
+        expected[(1, *([0] * (rank - 1)))] = float(rank) + 0.5
+
+        assert result.shape == shape
+        assert result.flags.f_contiguous
+        assert result.base is not None
+        np.testing.assert_allclose(result, expected)
+        rank_results.append((result, expected))
+
+    zero = module.zero_vector()
+    assert zero.shape == (0,)
+    assert zero.dtype == np.dtype(np.float64)
+    assert zero.base is not None
+
+    zero_alloc = module.zero_alloc_vector()
+    assert zero_alloc.shape == (0,)
+    assert zero_alloc.base is not None
+
+    allocated = module.maybe_alloc_vector(np.int32(3))
+    np.testing.assert_allclose(allocated, np.array([5.0, 10.0, 15.0], dtype=np.float64))
+    assert allocated.base is not None
+    assert module.maybe_alloc_vector(np.int32(0)) is None
+
+    del module
+    gc.collect()
+    np.testing.assert_allclose(matrix, np.array([[12.0, 13.0, 14.0], [22.0, 23.0, 24.0]], dtype=np.float64))
+    np.testing.assert_allclose(cube, expected_cube)
+    for result, expected in rank_results:
+        np.testing.assert_allclose(result, expected)
+
+
+def test_remaining_array_contracts_are_validated_before_fortran_calls(tmp_path: Path):
+    module = _build_text_and_import(
+        ARRAY_CONTRACTS_F90_TEXT,
+        "farray_contracts_f90.f90",
+        tmp_path,
+        {
+            "bind_c_farray_contracts_f90_wrapper.f90",
+            "farray_contracts_f90_wrapper.c",
+            "farray_contracts_f90_wrapper.h",
+        },
+    )
+
+    readonly = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
+    readonly.setflags(write=False)
+    assert module.sum_assumed_size(np.int32(4), readonly) == np.float64(10.0)
+    assert module.sum_in(readonly) == np.float64(10.0)
+
+    lower_bound_values = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
+    assert module.scale_lower(np.int32(4), lower_bound_values) is None
+    np.testing.assert_allclose(lower_bound_values, np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))
+    with pytest.raises(TypeError, match="incompatible shape at axis 0"):
+        module.scale_lower(np.int32(4), np.ones(3, dtype=np.float64))
+
+    with pytest.raises(TypeError, match="writeable"):
+        module.bump_inout(readonly)
+    readonly_out = np.empty(4, dtype=np.float64)
+    readonly_out.setflags(write=False)
+    with pytest.raises(TypeError, match="writeable"):
+        module.fill_out(readonly_out)
+
+    swapped_dtype = np.dtype(np.float64).newbyteorder("S")
+    swapped = np.array([1.0, 2.0], dtype=swapped_dtype)
+    with pytest.raises(TypeError, match="native byte order"):
+        module.sum_in(swapped)
+
+    storage = np.zeros(8 * 4 + 1, dtype=np.uint8)
+    misaligned = storage[1:].view(np.float64)
+    assert not misaligned.flags.aligned
+    with pytest.raises(TypeError, match="aligned"):
+        module.sum_in(misaligned)
+
+    with pytest.raises(TypeError, match="dtype"):
+        module.sum_in(np.array([1.0, 2.0], dtype=np.float32))
+
+    empty_rank4 = np.empty((0, 1, 1, 1), dtype=np.float64, order="F")
+    empty_rank4_out = np.empty_like(empty_rank4, order="F")
+    assert module.shift4(empty_rank4, empty_rank4_out) is empty_rank4_out
+    assert empty_rank4_out.shape == empty_rank4.shape
+
+    for rank in range(1, _MAX_WRAPPER_TEST_RANK + 1):
+        shape = (2, *([1] * (rank - 1)))
+        source = np.asfortranarray(np.arange(np.prod(shape), dtype=np.float64).reshape(shape, order="F"))
+        out = np.empty(shape, dtype=np.float64, order="F")
+
+        assert getattr(module, f"shift{rank}")(source, out) is out
+        np.testing.assert_allclose(out, source + rank)
+
+
+def test_assumed_rank_arguments_dispatch_to_runtime_rank(tmp_path: Path):
+    module = _build_text_and_import(
+        ASSUMED_RANK_F90_TEXT,
+        "fassumed_rank_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fassumed_rank_f90_wrapper.f90",
+            "fassumed_rank_f90_wrapper.c",
+            "fassumed_rank_f90_wrapper.h",
+        },
+    )
+
+    assert "Rank: 1..15" in module.rank_weighted_sum.__doc__
+    assert "Rank: 1..15" in module.bump_assumed_rank.__doc__
+
+    for rank in range(1, _MAX_WRAPPER_TEST_RANK + 1):
+        shape = (2, *([1] * (rank - 1)))
+        values = np.asfortranarray(np.arange(np.prod(shape), dtype=np.float64).reshape(shape, order="F"))
+        expected_sum = np.float64(rank + values.sum())
+
+        assert module.rank_weighted_sum(values) == expected_sum
+        assert module.bump_assumed_rank(values) is None
+        np.testing.assert_allclose(values, np.arange(np.prod(shape), dtype=np.float64).reshape(shape, order="F") + rank)
+
+    with pytest.raises(TypeError):
+        module.rank_weighted_sum(np.float64(1.0))
+
+    rank16 = np.empty((1,) * (_MAX_WRAPPER_TEST_RANK + 1), dtype=np.float64, order="F")
+    with pytest.raises(TypeError):
+        module.rank_weighted_sum(rank16)
 
 
 def test_value_and_existing_bind_c_renamed_symbol_use_correct_abi(tmp_path: Path):

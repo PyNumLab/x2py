@@ -300,3 +300,37 @@ The semantic layer can record that `x` is assumed-rank. The wrapper phase must
 decide whether to generate one rank-polymorphic Python entrypoint, generate rank
 specializations, require explicit `.pyi` annotations, or block the interface
 until the contract is refined.
+
+### Fortran Numeric Array Wrapper Subset
+
+The settled numeric array subset uses validation and copy rules instead of
+implicit conversion:
+
+- Numeric array function results are copy-return values. Explicit-shape and
+  automatic-shape results are copied out of the Fortran temporary into
+  Python-owned C storage. Allocatable function results use the same copy-return
+  policy and return `None` only when the Fortran result is unallocated.
+  Zero-sized allocated results remain zero-sized NumPy arrays.
+- Pointer array function results use the procedure snapshot policy: associated
+  results are copied into Python-owned NumPy arrays, and unassociated results
+  return `None`.
+- Multidimensional Fortran results and arguments preserve Fortran order.
+- The maximum supported wrapper rank is 15. Higher ranks are rejected before
+  wrapper generation. Numeric assumed-rank `dimension(..)` dummy arguments use
+  generated Fortran rank dispatch for actual NumPy array ranks 1 through 15.
+  Rank 0 scalars are not accepted by the automatic assumed-rank policy.
+- Python supplies full storage for assumed-size dummy arguments. The wrapper
+  validates the declared extents it can express from literals, constants, and
+  scalar argument names. The omitted final extent remains the caller's
+  responsibility.
+- `intent(in)` arrays may be read-only. `intent(out)` and `intent(inout)` arrays
+  must be writeable.
+- NumPy inputs must be native-endian and aligned. The wrapper does not perform
+  unsafe casts, byte swaps, or alignment-fixing copies.
+- Overlapping Python-visible arrays are not copied or de-aliased by x2py; the
+  call is forwarded to Fortran, so the native routine's aliasing contract still
+  governs behavior.
+
+Assumed-type `type(*)`, character arrays, and derived-type arrays remain
+blocked until explicit dtype, descriptor, ABI, layout, construction, and
+ownership policies are supplied.

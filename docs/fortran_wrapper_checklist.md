@@ -410,55 +410,104 @@ aliasing, and mutability.
 
 ## 8. Array-Valued Function Results
 
-Current state: character function results have specialized support, but general
-numeric and derived-type array results do not have complete shape and ownership
-handling.
+Current state: numeric array-valued function results are returned as
+copy-return NumPy arrays. Explicit-shape and automatic-shape results are copied
+from the temporary Fortran result into Python-owned C storage, and the NumPy
+array owns that copied storage through a capsule base object. Allocatable array
+function results use the same copy-return policy as allocatable output dummies:
+allocated results, including zero-sized allocations, become Python-owned NumPy
+arrays; unallocated results become `None`. Pointer array function results use
+the section 7 snapshot policy: associated results are copied into Python-owned
+NumPy arrays and unassociated results become `None`.
 
-Example: `function spectrum(n) result(x); real :: x(n)` can return a copied
-NumPy array because the result is temporary, while `real, pointer :: x(:)` or
-`real, allocatable :: x(:)` needs an explicit lifetime owner. The design choices
-are copy for all function arrays, zero-copy only where ownership is stable, or a
-mixed policy based on result category.
+Example: `function spectrum(n) result(x); real :: x(n)` returns a new NumPy
+array whose lifetime is independent of the Fortran temporary. Multidimensional
+results preserve Fortran order. Arrays of derived types are not yet exposed
+because their element layout, construction, and destruction policy are section
+10 work.
 
-- [ ] Support explicit-shape numeric array results.
-- [ ] Support automatic-shape numeric array results.
-- [ ] Support allocatable numeric array results.
-- [ ] Support pointer array results under an explicit lifetime policy.
-- [ ] Support multidimensional Fortran-order results.
-- [ ] Preserve dtype, rank, bounds, and contiguity in the returned NumPy array.
-- [ ] Define copy versus zero-copy behavior for each result category.
-- [ ] Support arrays of derived types or report a precise blocker.
-- [ ] Test zero-sized, rank-1, rank-2, and rank-3 results.
-- [ ] Test result lifetime after temporary wrapper objects are destroyed.
+Decision: array-valued function results are copy-return only. x2py does not
+expose zero-copy borrowed views for function results because the native
+temporary, allocatable result, or pointer association does not provide a stable
+Python-visible lifetime. Numeric function result arrays are supported through
+rank 15. Derived-type array results remain blocked with a precise diagnostic.
+
+- [x] Support explicit-shape numeric array results.
+- [x] Support automatic-shape numeric array results.
+- [x] Support allocatable numeric array results.
+- [x] Support pointer array results using the snapshot-copy policy from section
+  7.
+- [x] Support multidimensional Fortran-order results.
+- [x] Preserve dtype, rank, bounds, and contiguity in the returned NumPy array.
+- [x] Define copy versus zero-copy behavior for each result category.
+- [x] Support arrays of derived types or report a precise blocker.
+- [x] Test zero-sized results and every supported rank from 1 through 15.
+- [x] Test result lifetime after temporary wrapper objects are destroyed.
 
 ## 9. Remaining Array Contracts
 
-Current state: explicit-shape and assumed-shape arrays are tested for selected
-ranks. Several descriptor and bounds cases remain unsupported or unverified.
+Current state: numeric explicit-shape, assumed-size, assumed-shape,
+allocatable, pointer, and assumed-rank array contracts are supported only
+within the settled subset below. Python supplies the storage and full extents
+for assumed-size dummy arguments; the wrapper validates rank, dtype, layout,
+writeability, native byte order, alignment, and every declared extent it can
+express from integer literals, constants, and scalar argument names. The
+omitted final assumed-size extent is not inferred from companion arguments;
+callers must pass an array that is large enough for the native routine's
+documented use.
+
+The deterministic maximum supported rank is 15. Ranks above 15 are rejected
+before wrapper generation. Rank 1 arrays may be any contiguous order when the
+Fortran contract is contiguous. Rank greater than 1 arrays use Fortran order
+unless the contract explicitly comes from a C-side interface.
+
+`intent(in)` arrays may be read-only. `intent(out)` and `intent(inout)` arrays
+must be writeable. x2py requires native-endian, aligned arrays and does not
+perform implicit dtype casts or byte swaps. Overlapping Python-visible arrays
+are not copied or de-aliased by the wrapper; calls are forwarded to Fortran and
+the native aliasing rules and routine semantics apply.
+
+Assumed-rank `dimension(..)` numeric dummy arguments are supported by a
+generated rank-dispatch bridge for actual NumPy array ranks 1 through 15. The
+bridge receives the runtime rank from the Python layer, selects a rank-specific
+Fortran pointer view, and forwards that fixed-rank view to the native
+procedure. Rank 0 scalars are not accepted by the automatic `dimension(..)`
+policy. Assumed-type `type(*)` descriptors remain blocked until dtype and
+layout are supplied by a `.pyi` policy. Character arrays and derived-type
+arrays are also blocked until their element ABI, layout, construction, and
+ownership policies are defined.
 
 Example: `a(n, m)` is straightforward when `n` and `m` are known arguments, but
 `a(*)`, `dimension(..)`, non-default lower bounds, and rank greater than the
-selected maximum need explicit Python-side validation rules. The main decisions
-are how callers supply missing extents, which ranks are accepted, and whether
-copies are allowed for non-contiguous or byte-swapped arrays.
+selected maximum need explicit Python-side validation rules.
 
-- [ ] Test assumed-size arrays and define how their missing final extent is
+Decision: numeric explicit-shape, assumed-size, assumed-shape, allocatable,
+pointer, and assumed-rank dummy contracts are supported through rank 15 when
+their extents can be validated by the wrapper contract. x2py validates inputs
+and forwards the native call without implicit copying, de-aliasing, dtype
+conversion, byte swapping, or alignment repair. Assumed-rank is implemented as
+generated Fortran rank dispatch over NumPy array ranks 1 through 15.
+Assumed-type, character arrays, and derived-type arrays remain blocked until
+their descriptor, ABI, and element ownership policies are defined.
+
+- [x] Test assumed-size arrays and define how their missing final extent is
   supplied.
-- [ ] Implement deferred-shape allocatable and pointer arrays.
-- [ ] Implement assumed-rank `dimension(..)` with explicit accepted rank and
-  dtype policy.
-- [ ] Implement assumed-type `type(*)` or emit a stable readiness blocker.
-- [ ] Preserve and validate non-default lower bounds.
-- [ ] Support zero-length dimensions.
-- [ ] Test ranks 4 through the selected maximum supported rank.
-- [ ] Define a deterministic maximum rank and reject higher ranks early.
-- [ ] Support arrays of character values or emit a precise blocker.
-- [ ] Support arrays of derived types or emit a precise blocker.
-- [ ] Detect shape mismatches before entering Fortran.
-- [ ] Define overlapping input/output memory behavior.
-- [ ] Test read-only NumPy inputs for `intent(in)` and writable requirements for
+- [x] Implement supported deferred-shape allocatable and pointer arrays, and
+  block pointer replacement without explicit policy.
+- [x] Implement assumed-rank `dimension(..)` for numeric NumPy array ranks 1
+  through 15 with generated rank dispatch.
+- [x] Implement assumed-type `type(*)` or emit a stable readiness blocker.
+- [x] Preserve and validate non-default lower bounds.
+- [x] Support zero-length dimensions.
+- [x] Test every supported rank from 1 through 15.
+- [x] Define a deterministic maximum rank and reject higher ranks early.
+- [x] Support arrays of character values or emit a precise blocker.
+- [x] Support arrays of derived types or emit a precise blocker.
+- [x] Detect shape mismatches before entering Fortran.
+- [x] Define overlapping input/output memory behavior.
+- [x] Test read-only NumPy inputs for `intent(in)` and writable requirements for
   `intent(out/inout)`.
-- [ ] Test byte order, dtype mismatch, alignment, and unsafe cast failures.
+- [x] Test byte order, dtype mismatch, alignment, and unsafe cast failures.
 
 ## 10. Derived Types Across Procedure Boundaries
 

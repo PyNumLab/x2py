@@ -334,6 +334,104 @@ end module pointer_mod
         )
 
 
+def test_non_default_lower_bound_extent_reaches_codegen_shape_validation():
+    source = """
+module lower_bound_mod
+contains
+  subroutine scale_lower(n, values)
+    integer, intent(in) :: n
+    real(8), intent(inout) :: values(0:n - 1)
+  end subroutine scale_lower
+end module lower_bound_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    scale_lower = next(function for function in codegen_module.funcs if str(function.name) == "scale_lower")
+    values = scale_lower.arguments[1].var
+    assert isinstance(values.class_type, NumpyNDArrayType)
+    assert values.alloc_shape != (None,)
+    assert "n" in repr(values.alloc_shape[0])
+
+
+@pytest.mark.parametrize(
+    ("source", "match"),
+    [
+        (
+            """
+module character_array_mod
+contains
+  subroutine inspect(labels)
+    character(len=4), intent(in) :: labels(:)
+  end subroutine inspect
+end module character_array_mod
+""",
+            "array of character",
+        ),
+        (
+            """
+module derived_array_mod
+  type :: item
+    integer :: value
+  end type item
+contains
+  subroutine inspect(items)
+    type(item), intent(in) :: items(:)
+  end subroutine inspect
+end module derived_array_mod
+""",
+            "array of derived type",
+        ),
+        (
+            """
+module high_rank_mod
+contains
+  subroutine inspect(values)
+    real(8), intent(in) :: values(:, :, :, :, :, :, :, :, :, :, :, :, :, :, :, :)
+  end subroutine inspect
+end module high_rank_mod
+""",
+            "supports ranks 1 through 15",
+        ),
+    ],
+)
+def test_unsupported_remaining_array_contracts_raise_before_codegen(source, match):
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    with pytest.raises(ValueError, match=match):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )
+
+
+def test_assumed_rank_numeric_array_arguments_lower_with_dispatch_marker():
+    source = """
+module assumed_rank_mod
+contains
+  subroutine inspect(values)
+    real(8), intent(in) :: values(..)
+  end subroutine inspect
+end module assumed_rank_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    inspect = next(function for function in codegen_module.funcs if str(function.name) == "inspect")
+    values = inspect.arguments[0].var
+    assert values.assumed_rank is True
+    assert values.rank == 1
+    assert values.alloc_shape == (None,)
+
+
 def test_multiple_allocatable_copy_returns_lower_before_codegen():
     multiple_source = """
 module alloc_mod

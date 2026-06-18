@@ -50,6 +50,7 @@ _BUILTIN_TYPES = frozenset(
 )
 _CALLBACK_PLACEHOLDERS = frozenset({"Procedure", "Callback", "FunctionPointer", "CFunctionPointer"})
 _IDENTIFIER_RE = re.compile(r"\b[A-Za-z_]\w*\b")
+_MAX_SUPPORTED_ARRAY_RANK = 15
 _ISO_C_KIND_TOKENS = frozenset(
     {
         "c_bool",
@@ -505,6 +506,13 @@ class _SemanticReadinessChecker:
             unit=unit,
             unit_kind=unit_kind,
         )
+        self._check_array_contract(
+            semantic_type,
+            owner=owner,
+            item=item,
+            unit=unit,
+            unit_kind=unit_kind,
+        )
 
         type_name = semantic_type.name
         if type_name in _CALLBACK_PLACEHOLDERS:
@@ -542,6 +550,55 @@ class _SemanticReadinessChecker:
             unit_kind=unit_kind,
         )
 
+    def _check_array_contract(
+        self,
+        semantic_type: SemanticType,
+        *,
+        owner: str,
+        item: str,
+        unit: str,
+        unit_kind: str,
+    ) -> None:
+        if semantic_type.rank <= 0:
+            return
+        if semantic_type.rank > _MAX_SUPPORTED_ARRAY_RANK:
+            self._add_blocker(
+                "fortran_array_rank_unsupported",
+                f"Fortran wrappers support array ranks 1 through {_MAX_SUPPORTED_ARRAY_RANK}.",
+                {
+                    "owner": owner,
+                    "item": item,
+                    "rank": semantic_type.rank,
+                    "max_rank": _MAX_SUPPORTED_ARRAY_RANK,
+                },
+                unit=unit,
+                unit_kind=unit_kind,
+            )
+        if self._is_assumed_type(semantic_type):
+            self._add_blocker(
+                "fortran_assumed_type_policy_missing",
+                "Fortran assumed-type type(*) arguments need an explicit dtype and descriptor policy.",
+                {"owner": owner, "item": item},
+                unit=unit,
+                unit_kind=unit_kind,
+            )
+        if semantic_type.name == "String":
+            self._add_blocker(
+                "fortran_character_array_unsupported",
+                "Fortran arrays of character values are not supported by wrapper generation.",
+                {"owner": owner, "item": item},
+                unit=unit,
+                unit_kind=unit_kind,
+            )
+        elif semantic_type.name not in _BUILTIN_TYPES and not _is_external_type_ref(semantic_type):
+            self._add_blocker(
+                "fortran_derived_type_array_policy_missing",
+                "Fortran arrays of derived type values need explicit layout and ownership policy.",
+                {"owner": owner, "item": item, "type": semantic_type.name},
+                unit=unit,
+                unit_kind=unit_kind,
+            )
+
     @classmethod
     def _is_unsupported_allocatable_output(cls, semantic_type: SemanticType | None, intent: str) -> bool:
         return bool(
@@ -566,6 +623,13 @@ class _SemanticReadinessChecker:
         if semantic_type is None or semantic_type.storage is None or semantic_type.storage.array is None:
             return False
         return semantic_type.storage.array.pointer
+
+    @staticmethod
+    def _is_assumed_type(semantic_type: SemanticType | None) -> bool:
+        if semantic_type is None:
+            return False
+        source_type = (semantic_type.origin.source_type or "").casefold().replace(" ", "")
+        return "type(*)" in source_type or "class(*)" in source_type
 
     @staticmethod
     def _has_known_iso_c_kind(semantic_type: SemanticType) -> bool:

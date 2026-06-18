@@ -18,6 +18,7 @@ from x2py.semantics.models import (
     SemanticImportItem,
     SemanticMethod,
     SemanticModule,
+    SemanticOrigin,
     SemanticStorageContract,
     SemanticType,
 )
@@ -190,6 +191,58 @@ end module bad_bind_mod
         {"owner": "bad_bind_mod.unsafe", "item": "n"},
         {"owner": "bad_bind_mod.unsafe", "item": "return"},
     ]
+
+
+def test_remaining_fortran_array_contracts_report_readiness_blockers():
+    parsed = parse_fortran_file(
+        """
+module array_contract_mod
+  type :: item
+    integer :: value
+  end type item
+contains
+  subroutine assumed_rank(values)
+    real(8), intent(in) :: values(..)
+  end subroutine assumed_rank
+  subroutine character_array(labels)
+    character(len=4), intent(in) :: labels(:)
+  end subroutine character_array
+  subroutine derived_array(items)
+    type(item), intent(in) :: items(:)
+  end subroutine derived_array
+  subroutine high_rank(values)
+    real(8), intent(in) :: values(:, :, :, :, :, :, :, :, :, :, :, :, :, :, :, :)
+  end subroutine high_rank
+end module array_contract_mod
+"""
+    )
+    module = fortran_module_to_semantic_module(parsed.modules[0])
+    assumed_type = SemanticType(
+        "Any",
+        rank=1,
+        dtype="Any",
+        origin=SemanticOrigin(source_language="fortran", source_type="type(*)"),
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(rank=1, shape=[":"], source_shape=[":"]),
+        ),
+    )
+    module.functions.append(
+        SemanticFunction(
+            "assumed_type",
+            arguments=[SemanticArgument("values", assumed_type)],
+        )
+    )
+
+    report = assess_semantic_wrap_readiness(module, source="array_contract_mod.f90")
+
+    assert _blocker_codes(report) >= {
+        "fortran_assumed_type_policy_missing",
+        "fortran_character_array_unsupported",
+        "fortran_derived_type_array_policy_missing",
+        "fortran_array_rank_unsupported",
+    }
+    assert "fortran_assumed_rank_policy_missing" not in _blocker_codes(report)
 
 
 def test_imported_type_can_complete_semantic_readiness():

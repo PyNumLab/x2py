@@ -418,7 +418,7 @@ class CCodePrinter(CodePrinter):
             "    if (fail_alloc != NULL && fail_alloc[0] != '\\0' && fail_alloc[0] != '0') {\n"
             "        return NULL;\n"
             "    }\n"
-            "    return malloc(size);\n"
+            "    return malloc(size == 0 ? 1 : size);\n"
             "}\n"
         )
 
