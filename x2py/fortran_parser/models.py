@@ -310,6 +310,7 @@ class FortranProcedureSignature:
     arguments: list[FortranArgument] = field(default_factory=list)
     result: FortranArgument | None = None
     attributes: list[str] = field(default_factory=list)
+    bind_name: str | None = None
     uses: dict[str, list[FortranUseMapping]] = field(default_factory=dict)
     in_interface: bool = False
     variables: dict[str, FortranVariable] = field(default_factory=dict)

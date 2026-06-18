@@ -34,6 +34,27 @@ _SEMANTIC_ORDER_TO_NUMPY_ORDER = {
     "ORDER_C": "C",
     "ORDER_F": "F",
 }
+_ISO_C_KIND_TOKENS = frozenset(
+    {
+        "c_bool",
+        "c_char",
+        "c_double",
+        "c_double_complex",
+        "c_float",
+        "c_float_complex",
+        "c_int",
+        "c_int16_t",
+        "c_int32_t",
+        "c_int64_t",
+        "c_int8_t",
+        "c_long_double",
+        "c_long_double_complex",
+        "c_long_long",
+        "c_short",
+        "c_signed_char",
+        "c_size_t",
+    }
+)
 
 
 def _numpy_type(dtype: str):
@@ -117,6 +138,14 @@ def _memory_handling(semantic_type: models.SemanticType) -> str:
     return "stack"
 
 
+def _passes_by_value(node: models.SemanticVariable) -> bool:
+    return bool(
+        getattr(node, "origin", None) is not None
+        and isinstance(node.origin.metadata, dict)
+        and node.origin.metadata.get("value")
+    )
+
+
 def _passed_object_position(node: models.SemanticFunction) -> int | None:
     overload_kind = node.metadata.get(OVERLOAD_KIND_METADATA)
     if overload_kind in {"generic", "assignment", "named_operator", "comparison"}:
@@ -169,6 +198,12 @@ def _is_allocatable_array(semantic_type: models.SemanticType | None) -> bool:
     )
 
 
+def _is_allocatable_scalar(semantic_type: models.SemanticType | None) -> bool:
+    return bool(
+        semantic_type is not None and semantic_type.rank == 0 and semantic_type.metadata.get("fortran_allocatable")
+    )
+
+
 def _is_pointer_array(semantic_type: models.SemanticType | None) -> bool:
     return bool(
         semantic_type is not None
@@ -188,15 +223,6 @@ def _raise_for_unsupported_allocatable_module_variables(node: models.SemanticMod
             )
 
 
-def _raise_for_unsupported_allocatable_outputs(node: models.SemanticFunction) -> None:
-    for argument in node.arguments:
-        if _is_allocatable_array(argument.semantic_type) and str(argument.intent).lower() == "inout":
-            raise ValueError(
-                f"Function {node.name!r} has allocatable inout argument {argument.name!r}, "
-                "which needs a replacement policy"
-            )
-
-
 def _raise_for_unsupported_pointer_outputs(node: models.SemanticFunction) -> None:
     for argument in node.arguments:
         intent = str(argument.intent).lower()
@@ -205,6 +231,37 @@ def _raise_for_unsupported_pointer_outputs(node: models.SemanticFunction) -> Non
                 f"Function {node.name!r} has pointer {intent} argument {argument.name!r}, "
                 "which needs explicit pointer ownership, lifetime, shape, contiguity, and deallocation policy"
             )
+
+
+def _raise_for_unsupported_allocatable_scalar_outputs(node: models.SemanticFunction) -> None:
+    for argument in node.arguments:
+        intent = str(argument.intent).lower()
+        if _is_allocatable_scalar(argument.semantic_type) and intent in {"out", "inout"}:
+            raise ValueError(
+                f"Function {node.name!r} has allocatable scalar {intent} argument {argument.name!r}, "
+                "which needs explicit construction, ownership, and destruction policy"
+            )
+
+
+def _raise_for_unsupported_bind_c_abi(node: models.SemanticFunction) -> None:
+    if not node.metadata.get("fortran_bind_c"):
+        return
+    for argument in node.arguments:
+        semantic_type = argument.semantic_type
+        if semantic_type.rank > 0:
+            continue
+        if not _has_known_iso_c_kind(semantic_type):
+            raise ValueError(
+                f"Function {node.name!r} has bind(C) scalar argument {argument.name!r} "
+                "without a supported ISO C binding kind"
+            )
+    if node.return_type is not None and node.return_type.rank == 0 and not _has_known_iso_c_kind(node.return_type):
+        raise ValueError(f"Function {node.name!r} has a bind(C) scalar result without a supported ISO C binding kind")
+
+
+def _has_known_iso_c_kind(semantic_type: models.SemanticType) -> bool:
+    source_type = (semantic_type.origin.source_type or "").casefold()
+    return any(token in source_type for token in _ISO_C_KIND_TOKENS)
 
 
 def semantic_ir_to_codegen_ast(
@@ -284,7 +341,8 @@ def semantic_ir_to_codegen_ast(
         return overload_set
 
     if isinstance(node, models.SemanticFunction):
-        _raise_for_unsupported_allocatable_outputs(node)
+        _raise_for_unsupported_bind_c_abi(node)
+        _raise_for_unsupported_allocatable_scalar_outputs(node)
         _raise_for_unsupported_pointer_outputs(node)
         func_scope = scope.new_child_scope(name=node.name, scope_type="function")
         passed_object_position = _passed_object_position(node)
@@ -334,6 +392,11 @@ def semantic_ir_to_codegen_ast(
             scope=func_scope,
             is_external=legacy,
             is_private=node.visibility == "private",
+            bind_c_external_name=(
+                str(node.metadata.get("fortran_bind_c_name") or native_name)
+                if node.metadata.get("fortran_bind_c")
+                else None
+            ),
         )
         scope._locals["functions"][name] = func
         return func
@@ -420,6 +483,7 @@ def semantic_ir_to_codegen_ast(
             is_target=bool(semantic_type.metadata.get("fortran_target")),
             is_optional=getattr(node, "optional", False),
             intent=getattr(node, "intent", "in"),
+            passes_by_value=_passes_by_value(node),
             cls_base=cls_base,
         )
         scope.insert_variable(var, name=node.name)

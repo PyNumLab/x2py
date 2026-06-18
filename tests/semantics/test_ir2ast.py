@@ -250,7 +250,7 @@ end module alloc_mod
     assert result.class_type.rank == 1
 
 
-def test_allocatable_inout_raises_before_codegen():
+def test_allocatable_inout_array_reaches_codegen_as_replacement_argument():
     inout_source = """
 module alloc_mod
 contains
@@ -261,7 +261,54 @@ end module alloc_mod
 """
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(inout_source))
 
-    with pytest.raises(ValueError, match="allocatable inout argument 'values'"):
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    replace = next(function for function in codegen_module.funcs if str(function.name) == "replace")
+    values = replace.arguments[0].var
+    assert values.intent == "inout"
+    assert values.memory_handling == "heap"
+    assert isinstance(values.class_type, NumpyNDArrayType)
+    assert values.class_type.rank == 1
+
+
+@pytest.mark.parametrize("intent", ["out", "inout"])
+def test_allocatable_scalar_derived_outputs_raise_before_codegen(intent):
+    source = f"""
+module alloc_scalar_mod
+  type :: item
+    integer :: value
+  end type item
+contains
+  subroutine replace(value)
+    type(item), allocatable, intent({intent}) :: value
+  end subroutine replace
+end module alloc_scalar_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    with pytest.raises(ValueError, match=rf"allocatable scalar {intent} argument 'value'"):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )
+
+
+def test_bind_c_scalar_without_iso_c_kind_raises_before_codegen():
+    source = """
+module bad_bind_mod
+contains
+  integer function unsafe(n) bind(C) result(res)
+    integer, value, intent(in) :: n
+    res = n
+  end function unsafe
+end module bad_bind_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    with pytest.raises(ValueError, match="bind\\(C\\) scalar argument 'n'"):
         semantic_ir_to_codegen_ast(
             semantic_module,
             Scope(name=semantic_module.name, scope_type="module"),

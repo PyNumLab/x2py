@@ -84,6 +84,29 @@ def array_contract(semantic_type: SemanticType):
     return semantic_type.storage.array
 
 
+def test_bind_c_name_and_value_calling_convention_reach_semantic_ir():
+    parsed = parse_fortran_source(
+        """
+module c_api
+  use iso_c_binding
+contains
+  integer(c_int) function renamed(n) bind(C, name="x2py_renamed") result(res)
+    integer(c_int), value, intent(in) :: n
+    res = n
+  end function renamed
+end module c_api
+"""
+    )
+
+    module = fortran_module_to_semantic_module(parsed.modules[0])
+    renamed = get_function(module, "renamed")
+
+    assert renamed.metadata["fortran_bind_c"] is True
+    assert renamed.metadata["fortran_bind_c_name"] == "x2py_renamed"
+    assert renamed.arguments[0].origin.metadata["value"] is True
+    assert renamed.arguments[0].semantic_type.storage is None
+
+
 def test_converter_visitor_and_compatibility_methods_cover_public_paths():
     converter = FortranToIRConverter()
     scale = FortranVariable(name="scale", base_type="real", kind="8", is_parameter=True)

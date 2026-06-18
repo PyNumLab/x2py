@@ -277,8 +277,8 @@ class FortranToIRConverter:
             metadata[EXTERNAL_TYPE_REF_METADATA] = ref_metadata
         if var.base_type.lower() == "character":
             metadata["fortran_character_length"] = self._character_length(var)
-            if getattr(var, "allocatable", False):
-                metadata["fortran_allocatable"] = True
+        if var.rank == 0 and getattr(var, "allocatable", False):
+            metadata["fortran_allocatable"] = True
         if getattr(var, "target", False):
             metadata["fortran_target"] = True
         shape = [self._resolve_compile_time_text(dim) for dim in var.shape]
@@ -365,18 +365,21 @@ class FortranToIRConverter:
         arguments = [
             self.visit_argument(arg, derived_type_context=context) for arg in self._projected_procedure_arguments(proc)
         ]
+        metadata = self._procedure_metadata(proc)
         return SemanticFunction(
             name=proc.name,
             native_name=proc.name,
             arguments=arguments,
             return_type=self.visit_variable(proc.result, derived_type_context=context) if proc.result else None,
             projection=self._procedure_projection(proc, arguments),
+            metadata=metadata,
             visibility=visibility,
             origin=SemanticOrigin(
                 source_language="fortran",
                 native_name=proc.name,
                 native_scope=proc.module,
                 source_kind=proc.kind,
+                metadata=metadata,
             ),
         )
 
@@ -823,6 +826,17 @@ class FortranToIRConverter:
             metadata["constant"] = True
         return metadata
 
+    @staticmethod
+    def _procedure_metadata(proc: FortranProcedureSignature) -> dict[str, object]:
+        metadata: dict[str, object] = {}
+        if proc.attributes:
+            metadata["fortran_attributes"] = list(proc.attributes)
+        if "bind(c)" in proc.attributes:
+            metadata["fortran_bind_c"] = True
+            if proc.bind_name:
+                metadata["fortran_bind_c_name"] = proc.bind_name
+        return metadata
+
     def _array_storage_contract(
         self,
         var: FortranVariable,
@@ -1026,6 +1040,7 @@ class FortranToIRConverter:
                     return_type=proc.return_type,
                     contracts=proc.contracts,
                     projection=proc.projection,
+                    metadata=dict(proc.metadata),
                     visibility=visibility,
                     is_static=is_static,
                     passed_object_name=passed_object_name,
@@ -1543,8 +1558,13 @@ class FortranToIRConverter:
             arg = by_name[native_arg.name]
             intent = getattr(arg, "intent", "in")
             is_output = intent == "out"
+            is_allocatable_replacement = intent == "inout" and FortranToIRConverter._is_allocatable_array(
+                arg.semantic_type
+            )
             is_scalar_copy_return = FortranToIRConverter._is_scalar_copy_return(arg.semantic_type)
-            is_returned_output = is_output and (is_scalar_copy_return or arg.semantic_type.rank > 0)
+            is_returned_output = (
+                is_output and (is_scalar_copy_return or arg.semantic_type.rank > 0)
+            ) or is_allocatable_replacement
             is_hidden_output = is_output and (
                 is_scalar_copy_return or FortranToIRConverter._is_allocatable_array(arg.semantic_type)
             )

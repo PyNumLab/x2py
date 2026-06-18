@@ -265,7 +265,6 @@ class BindCFunctionDef(FunctionDef):
     def __init__(self, *args, original_function, **kwargs):
         self._original_function = original_function
         super().__init__(*args, **kwargs)
-        assert self.name == self.name.lower()
         assert all(isinstance(a, FunctionDefArgument) for a in self._arguments)
 
     @property
@@ -289,7 +288,6 @@ class BindCFunctionDef(FunctionDef):
         newname : str
             New name for the FunctionDef.
         """
-        assert newname == newname.lower()
         self._name = newname
 
 

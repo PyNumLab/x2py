@@ -309,6 +309,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         if expr.is_private or not expr.is_semantic:
             return EmptyNode()
 
+        if self._can_call_existing_bind_c_directly(expr):
+            return self._direct_bind_c_function(expr)
+
         orig_name = expr.cls_name or expr.name
         name = self.scope.get_new_name(f"bind_c_{orig_name.lower()}")
         self._generator_names_dict[expr.name] = name
@@ -325,12 +328,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         # Wrap the arguments and collect the expressions passed as the call argument.
         generated_args = []
-        hidden_output_results = []
+        projected_argument_results = []
         for argument in expr.arguments:
             if not argument.bound_argument and self._is_hidden_output_argument(argument.var):
                 result = self._extract_FunctionDefResult(argument.var, expr.scope)
                 self._additional_exprs.extend(result["body"])
-                hidden_output_results.append(result)
+                projected_argument_results.append(result)
                 generated_args.append(
                     {
                         "c_arg": None,
@@ -338,6 +341,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                         "body": [],
                     }
                 )
+            elif not argument.bound_argument and self._is_allocatable_replacement_argument(argument.var):
+                generated_arg = self._extract_FunctionDefArgument(argument, expr)
+                generated_args.append(generated_arg)
+                result = self._extract_allocatable_replacement_result(argument.var, generated_arg["f_arg"].value)
+                self._additional_exprs.extend(result["body"])
+                projected_argument_results.append(result)
             else:
                 generated_args.append(self._extract_FunctionDefArgument(argument, expr))
 
@@ -352,7 +361,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             self._additional_exprs.extend(result["body"])
             result_infos.append(result)
             func_call_results = self.scope.collect_all_tuple_elements(result["f_result"])
-        result_infos.extend(hidden_output_results)
+        result_infos.extend(projected_argument_results)
 
         if not result_infos:
             func_results = NIL
@@ -406,9 +415,59 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         return func
 
+    def _direct_bind_c_function(self, expr):
+        external_name = expr.bind_c_external_name
+        func = BindCFunctionDef(
+            external_name,
+            expr.arguments,
+            [],
+            expr.results,
+            is_header=True,
+            scope=expr.scope,
+            original_function=expr,
+            docstring=expr.docstring,
+            result_pointer_map=expr.result_pointer_map,
+            bind_c_external_name=external_name,
+        )
+        self.scope.insert_symbol(external_name, object_type="function")
+        self.scope.insert_function(func, external_name)
+        return func
+
+    @classmethod
+    def _can_call_existing_bind_c_directly(cls, expr):
+        if not expr.bind_c_external_name or expr.is_private or not expr.is_semantic:
+            return False
+        if expr.is_external or cls._has_optional_arguments(expr):
+            return False
+        if any(argument.bound_argument for argument in expr.arguments):
+            return False
+        if not cls._is_direct_bind_c_result(expr.results.var):
+            return False
+        return all(cls._is_direct_bind_c_argument(argument.var) for argument in expr.arguments)
+
+    @staticmethod
+    def _is_direct_bind_c_result(var):
+        if var is NIL:
+            return True
+        return var.rank == 0 and isinstance(var.class_type, FixedSizeNumericType)
+
+    @staticmethod
+    def _is_direct_bind_c_argument(var):
+        return (
+            var.rank == 0
+            and var.memory_handling == "stack"
+            and getattr(var, "intent", "in") == "in"
+            and getattr(var, "passes_by_value", False)
+            and isinstance(var.class_type, FixedSizeNumericType)
+        )
+
     @staticmethod
     def _is_allocatable_copy_return_argument(var):
         return var.is_ndarray and var.memory_handling == "heap" and getattr(var, "intent", "in") == "out"
+
+    @staticmethod
+    def _is_allocatable_replacement_argument(var):
+        return var.is_ndarray and var.memory_handling == "heap" and getattr(var, "intent", "in") == "inout"
 
     @staticmethod
     def _is_pointer_snapshot_result(var):
@@ -585,6 +644,53 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             is_optional=False,
             memory_handling="alias",
         )
+
+        if self._is_allocatable_replacement_argument(var):
+            arg_var = var.clone(
+                collisionless_name,
+                is_argument=False,
+                is_optional=False,
+                memory_handling="heap",
+                new_class=Variable,
+            )
+            input_var = var.clone(
+                scope.get_new_name(f"{name}_input"),
+                is_argument=False,
+                is_optional=False,
+                memory_handling="alias",
+                new_class=Variable,
+            )
+            scope.insert_variable(arg_var)
+            scope.insert_variable(input_var)
+            scope.insert_variable(bind_var)
+            base_shape = [
+                scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_base_shape_{i + 1}", is_argument=True)
+                for i in range(rank)
+            ]
+            body = [
+                If(
+                    IfSection(
+                        IsNot(bind_var, NIL),
+                        [
+                            C_F_Pointer(bind_var, input_var, base_shape[::-1] if order == "C" else base_shape),
+                            Allocate(arg_var, shape=tuple(base_shape), status="unallocated"),
+                            Assign(arg_var, input_var),
+                        ],
+                    )
+                )
+            ]
+            c_arg_var = Variable(
+                BindCArrayType.get_new(rank, has_strides=False),
+                scope.get_new_name(),
+                is_argument=True,
+                shape=(convert_to_literal(rank + 1),),
+            )
+            scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(0)), bind_var)
+            for i, s in enumerate(base_shape):
+                scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(i + 1)), s)
+
+            return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": arg_var, "body": body}
+
         arg_var = var.clone(
             collisionless_name,
             is_argument=False,
@@ -1200,6 +1306,34 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         result["f_result"] = local_var
 
+        return result
+
+    def _extract_allocatable_replacement_result(self, orig_var, local_var):
+        result = self._get_bind_c_array(
+            orig_var.name,
+            orig_var,
+            tuple(ArrayShapeElement(local_var, convert_to_literal(i)) for i in range(local_var.rank)),
+        )
+        result["body"].append(
+            If(
+                IfSection(
+                    IsNot(result["bind_var"], NIL),
+                    [Assign(result["f_array"], local_var)],
+                )
+            )
+        )
+        allocated_body = [*result["body"], Deallocate(local_var)]
+        unallocated_body = [
+            Assign(result["bind_var"], NIL),
+            *[Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type())) for shape_var in result["shape_vars"]],
+        ]
+        result["body"] = [
+            If(
+                IfSection(ArrayAllocated(local_var), allocated_body),
+                IfSection(convert_to_literal(True), unallocated_body),
+            )
+        ]
+        result["f_result"] = local_var
         return result
 
     def _extract_HomogeneousTupleType_FunctionDefResult(self, orig_var, orig_func_scope):

@@ -370,7 +370,9 @@ class FCodePrinter(CodePrinter):
         self._get_external_declarations(declarations)
         decs += "".join(self._print(d) for d in declarations)
 
-        funcs_to_print = list(expr.funcs) + [f for i in expr.overload_sets for f in i.functions]
+        funcs_to_print = [
+            f for f in list(expr.funcs) + [f for i in expr.overload_sets for f in i.functions] if not f.is_header
+        ]
 
         # ...
         public_decs = "".join(

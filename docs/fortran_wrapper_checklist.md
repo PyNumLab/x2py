@@ -264,18 +264,31 @@ declaration without `value` remains by reference. Existing `bind(C,
 name="...")` procedures can sometimes be called directly, but only when every
 argument has an interoperable ABI; otherwise a Fortran shim is still needed.
 
-- [ ] Preserve by-value versus by-reference scalar calling conventions through
+The Python API does not expose ABI mechanics. A scalar `value` dummy is still a
+normal Python scalar argument, but the generated native call passes the C value
+itself instead of a pointer. A scalar dummy without `value` remains a
+by-reference Fortran dummy and is routed through the generated shim. Procedure
+`bind(C)` metadata is preserved separately from the Python name. When an
+existing `bind(C)` procedure has only interoperable scalar `value` arguments and
+an interoperable scalar result or no result, the C extension calls the existing
+external symbol directly, including the spelling from `bind(C, name="...")`.
+Any non-interoperable declaration, by-reference dummy, array, character buffer,
+derived type, optional argument, output argument, pointer, or allocatable dummy
+keeps the generated Fortran shim path or raises a readiness/generation blocker
+before compilation if no safe ABI is defined.
+
+- [x] Preserve by-value versus by-reference scalar calling conventions through
   code generation.
-- [ ] Preserve procedure `bind(C)` metadata in semantic IR.
-- [ ] Preserve and use `bind(C, name="...")` external names.
-- [ ] Avoid generating an unnecessary Fortran shim when an existing C ABI can
+- [x] Preserve procedure `bind(C)` metadata in semantic IR.
+- [x] Preserve and use `bind(C, name="...")` external names.
+- [x] Avoid generating an unnecessary Fortran shim when an existing C ABI can
   be called safely.
-- [ ] Support interoperable scalar integer, real, complex, logical, and
+- [x] Support interoperable scalar integer, real, complex, logical, and
   character kinds.
-- [ ] Validate unsupported non-interoperable declarations before compilation.
-- [ ] Test by-value and by-reference versions of the same scalar type.
-- [ ] Test an existing `bind(C)` procedure with a renamed external symbol.
-- [ ] Test ABI failure diagnostics for unsupported declarations.
+- [x] Validate unsupported non-interoperable declarations before compilation.
+- [x] Test by-value and by-reference versions of the same scalar type.
+- [x] Test an existing `bind(C)` procedure with a renamed external symbol.
+- [x] Test ABI failure diagnostics for unsupported declarations.
 
 ## 6. Allocatable Dummy Arguments And Results
 
@@ -283,7 +296,7 @@ Current state: allocatable derived-type fields and target-backed module arrays
 are exposed as borrowed zero-copy NumPy views with `None` for unallocated
 storage. Allocatable array function results and allocatable `intent(out)` array
 dummies are copied into NumPy-owned memory before returning to Python.
-Replacement semantics for allocatable `intent(inout)` remain blocked.
+Allocatable array `intent(inout)` dummies use replace-and-return semantics.
 
 Example: `real(c_double), allocatable :: values(:)` inside a wrapped derived
 type is read as `obj.values`, returning either `None` or a borrowed NumPy view.
@@ -295,19 +308,35 @@ storage would not automatically make NumPy the owner; ownership requires either
 this copy or a capsule/base object whose destructor calls the correct Fortran
 deallocation routine.
 
+For an `allocatable, intent(inout)` array dummy, Python passes either `None` or
+a NumPy array with the required dtype, rank, and Fortran-compatible layout.
+`None` represents an initially unallocated native dummy. A supplied NumPy array
+is copied into a temporary native allocatable before the call; the Python array
+is never mutated in place. After the call, the final native allocation state is
+projected back using the same copy-return policy as allocatable outputs:
+unallocated becomes `None`, allocated storage becomes a new NumPy-owned array,
+and the temporary Fortran allocation is deallocated. If a caller still holds an
+old borrowed view from a field or module variable, x2py cannot invalidate that
+object after unrelated native reallocation; the supported rule is detach by
+copy for dummy-argument replacement and document borrowed-view lifetime limits
+for fields and module variables. Allocatable scalar derived-type dummy
+arguments remain blocked unless a future ownership policy defines construction,
+replacement, and destruction of the wrapped scalar object.
+
 - [x] Define ownership for `allocatable, intent(out)` array results returned to
   Python using copy-return NumPy-owned storage.
-- [ ] Define replacement behavior for `allocatable, intent(inout)` arguments.
+- [x] Define replacement behavior for `allocatable, intent(inout)` arguments.
 - [x] Define who deallocates native storage and when for allocatable
   copy-return arrays.
-- [ ] Preserve allocation state and deferred shape through all IR layers.
+- [x] Preserve allocation state and deferred shape through all IR layers.
 - [x] Return `None` for unallocated copy-return arrays.
 - [x] Safely expose newly allocated rank-1 and multidimensional copy-return
   arrays.
-- [ ] Invalidate or detach stale Python views after native reallocation.
-- [ ] Support allocatable scalar derived types where feasible.
-- [ ] Test allocate, reallocate, deallocate, and unallocated paths.
-- [ ] Test object destruction without leaks or double frees.
+- [x] Invalidate or detach stale Python views after native reallocation.
+- [x] Report a precise blocker for allocatable scalar derived types until
+  construction, replacement, and destruction ownership policy is feasible.
+- [x] Test allocate, reallocate, deallocate, and unallocated paths.
+- [x] Test object destruction without leaks or double frees.
 
 ## 7. Pointer Arguments, Results, And Association
 

@@ -251,11 +251,18 @@ class CPythonBindingGenerator(BindingGenerator):
 
     def _argument_doc_lines(self, arg):
         var = self._doc_original_var(arg.var)
-        can_be_none = getattr(arg.var, "is_optional", False) or getattr(var, "is_optional", False)
+        can_be_none = (
+            getattr(arg.var, "is_optional", False)
+            or getattr(var, "is_optional", False)
+            or self._is_allocatable_replacement_argument(var)
+        )
         header = f"{self._doc_argument_name(arg)} : {self._type_doc(var, include_none=can_be_none)}"
         details = self._argument_detail_lines(var)
         if can_be_none:
-            details.append("    May be omitted or passed as None.")
+            if self._is_allocatable_replacement_argument(var):
+                details.append("    May be passed as None for initially unallocated storage.")
+            else:
+                details.append("    May be omitted or passed as None.")
         if arg.has_default:
             details.append(f"    Default is {arg.value}.")
         return [header, *details]
@@ -274,7 +281,10 @@ class CPythonBindingGenerator(BindingGenerator):
             if getattr(var, "rank", 0):
                 lines.append("    Initial contents are ignored.")
         elif intent == "inout":
-            lines.append("    Mutates: yes")
+            if self._is_allocatable_replacement_argument(var):
+                lines.append("    Mutates: no; returns a replacement array or None")
+            else:
+                lines.append("    Mutates: yes")
         return lines
 
     def _result_detail_lines(self, var):
@@ -307,7 +317,7 @@ class CPythonBindingGenerator(BindingGenerator):
         ):
             notes.extend(
                 [
-                    "Allocatable array outputs are copied into Python-owned NumPy arrays.",
+                    "Allocatable array outputs and replacements are copied into Python-owned NumPy arrays.",
                     "This copy adds overhead proportional to the returned array size.",
                 ]
             )
@@ -385,6 +395,14 @@ class CPythonBindingGenerator(BindingGenerator):
         )
 
     @staticmethod
+    def _is_allocatable_replacement_argument(var):
+        return bool(
+            getattr(var, "is_ndarray", False)
+            and getattr(var, "memory_handling", None) == "heap"
+            and getattr(var, "intent", "in") == "inout"
+        )
+
+    @staticmethod
     def _shape_doc(var):
         shape = getattr(var, "alloc_shape", None)
         if not shape or all(dim is None for dim in shape):
@@ -428,7 +446,8 @@ class CPythonBindingGenerator(BindingGenerator):
         result_vars.extend(
             arg.var
             for arg in original_func.arguments
-            if not arg.bound_argument and getattr(arg.var, "intent", "in") == "out"
+            if not arg.bound_argument
+            and (getattr(arg.var, "intent", "in") == "out" or self._is_allocatable_replacement_argument(arg.var))
         )
         return result_vars or self._doc_result_vars(func)
 
@@ -1800,16 +1819,22 @@ class CPythonBindingGenerator(BindingGenerator):
         visible_outputs = self._visible_output_argument_objects(func)
         for argument in original_func.arguments:
             orig_var = argument.var
-            if argument.bound_argument or getattr(orig_var, "intent", "in") != "out":
+            if argument.bound_argument:
                 continue
-            visible_object = visible_outputs.get(orig_var)
-            if visible_object is not None:
-                output_items.append(visible_object)
-                output_owned.append(False)
-            else:
+            if self._is_allocatable_replacement_argument(orig_var):
                 output_items.append(native_py_results[native_index])
                 output_owned.append(native_owned_results[native_index])
                 native_index += 1
+                continue
+            if getattr(orig_var, "intent", "in") == "out":
+                visible_object = visible_outputs.get(orig_var)
+                if visible_object is not None:
+                    output_items.append(visible_object)
+                    output_owned.append(False)
+                else:
+                    output_items.append(native_py_results[native_index])
+                    output_owned.append(native_owned_results[native_index])
+                    native_index += 1
 
         if not output_items:
             return {
@@ -2029,7 +2054,7 @@ class CPythonBindingGenerator(BindingGenerator):
         # Add external functions for normal functions
         external_funcs.extend(
             FunctionDef(
-                f.name.lower(),
+                f.name,
                 f.arguments,
                 [],
                 f.results,
@@ -2040,7 +2065,7 @@ class CPythonBindingGenerator(BindingGenerator):
         )
         external_funcs.extend(
             FunctionDef(
-                f.name.lower(),
+                f.name,
                 f.arguments,
                 [],
                 f.results,
@@ -2478,10 +2503,29 @@ class CPythonBindingGenerator(BindingGenerator):
                     body.insert(0, Assign(arg_var, default_val))
 
         # Create any necessary type checks and errors
+        nullable_replacement = self._is_allocatable_replacement_argument(orig_var)
         if expr.has_default:
             check_func, err = self._get_type_check_condition(
                 collect_arg, orig_var, True, body, allow_empty_arrays=is_bind_c_argument
             )
+            body.append(
+                If(
+                    IfSection(
+                        IsNot(collect_arg, Py_None),
+                        [
+                            If(
+                                IfSection(check_func, cast),
+                                IfSection(convert_to_literal(True), [*err, Return(self._error_exit_code)]),
+                            )
+                        ],
+                    )
+                )
+            )
+        elif nullable_replacement and "default_init" in arg_extraction:
+            check_func, err = self._get_type_check_condition(
+                collect_arg, orig_var, True, body, allow_empty_arrays=is_bind_c_argument
+            )
+            body.extend(arg_extraction["default_init"])
             body.append(
                 If(
                     IfSection(

@@ -109,7 +109,10 @@ _REGEX: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
     "result": re.compile(r"results?\s*\(\s*(?P<name>\w+)\s*\)", re.IGNORECASE),
-    "bind_c": re.compile(r"bind\s*\(\s*c\s*(?:,\s*name\s*=\s*['\"][^'\"]*['x\"])?\s*\)", re.IGNORECASE),
+    "bind_c": re.compile(
+        r"bind\s*\(\s*c\s*(?:,\s*name\s*=\s*(?P<quote>['\"])(?P<name>[^'\"]*)(?P=quote))?\s*\)",
+        re.IGNORECASE,
+    ),
     "use": re.compile(
         r"^use\s*(?:,\s*(?:intrinsic|non_intrinsic)\s*)?(?:::)?\s*(?P<module>\w+)\s*(?P<rest>,\s*.*)?$",
         re.IGNORECASE,
@@ -2243,13 +2246,15 @@ class FortranParser:
 
         m = _REGEX["procedure"].match(line)
         if m:
+            attributes = self._attrs(m.group("prefix"), m.group("tail"))
             args = [FortranArgument(name=a, procedure=m.group("name")) for a in split_csv(m.group("args") or "")]
             sig = FortranProcedureSignature(
                 name=m.group("name"),
                 kind="subroutine",
                 module=module,
                 arguments=args,
-                attributes=self._attrs(m.group("prefix"), m.group("tail")),
+                attributes=attributes,
+                bind_name=self._bind_c_name(m.group("tail")) if "bind(c)" in attributes else None,
                 in_interface=in_interface,
             )
             return self._new_procedure_scope_state(
@@ -2281,13 +2286,15 @@ class FortranParser:
             result.base_type, result.kind = parsed_prefix
             self._apply_type_spelling_metadata(result, type_prefix)
 
+        attributes = self._attrs(m.group("prefix"), m.group("tail"))
         sig = FortranProcedureSignature(
             name=m.group("name"),
             kind="function",
             module=module,
             arguments=args,
             result=result,
-            attributes=self._attrs(m.group("prefix"), m.group("tail")),
+            attributes=attributes,
+            bind_name=self._bind_c_name(m.group("tail")) if "bind(c)" in attributes else None,
             in_interface=in_interface,
         )
         return self._new_procedure_scope_state(
@@ -4423,6 +4430,15 @@ class FortranParser:
         if _REGEX["bind_c"].search(tail):
             attrs.append("bind(c)")
         return attrs
+
+    @staticmethod
+    def _bind_c_name(tail: str) -> str | None:
+        """Return the explicit external name from a procedure ``bind(C)`` suffix."""
+        match = _REGEX["bind_c"].search(tail)
+        if match is None:
+            return None
+        name = match.groupdict().get("name")
+        return name if name else None
 
     @staticmethod
     def _looks_like_procedure_header(line: str) -> bool:

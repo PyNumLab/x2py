@@ -38,7 +38,7 @@ before generated wrappers should treat them as supported behavior.
 | Polymorphic `class(...)` and unlimited polymorphism | Declared base types do not fully capture dynamic type, allocation, dispatch, or `select type` behavior. | Distinguish declared type from dynamic type in semantic metadata. Treat polymorphic dummy arguments and allocatable polymorphic results as blocked until wrapper policy defines accepted dynamic types and allocation behavior. |
 | Advanced type-bound procedure details | Default `pass`, explicit `pass(name)`, `nopass`, concrete type-bound generics, and concrete type-bound operators are preserved and wrapped. Finalizers, deferred bindings, overrides, and polymorphic inheritance still need stronger contracts. | Preserve complete binding metadata on semantic classes. Type-bound generics and operators use explicit `.pyi` `@overload("specific")` links and generated C-extension dispatch; unresolved targets are readiness blockers. |
 | Derived-type layout and interoperability | `sequence`, `bind(c)`, common ABI expectations, and component layout are wrapper-critical but not yet a complete runtime contract. | Add explicit Fortran derived-type markers and metadata for `bind(c)`, `sequence`, component order, and interoperable layout. Use compiler layout probes or generated Fortran/C shims before passing derived types by value or exposing memory views. |
-| Pointer and allocatable ownership | Borrowed zero-copy views are supported for allocatable derived-type fields and target-backed module arrays. Allocatable array results and `intent(out)` dummies use copy-return NumPy-owned storage. Pointer association, allocatable `intent(inout)` replacement, and stale-view invalidation remain policy decisions. | Keep pointer/allocatable, rank, bounds, `intent`, `target`, and contiguity facts in semantic IR. Expose supported fields/module arrays as borrowed views returning `None` when unallocated. Copy allocatable array results and `intent(out)` dummies before returning to Python. Block allocatable `intent(inout)` until replacement policy is defined. |
+| Pointer and allocatable ownership | Borrowed zero-copy views are supported for allocatable derived-type fields and target-backed module arrays. Allocatable array results, `intent(out)` dummies, and `intent(inout)` replacement dummies use copy-return NumPy-owned storage. Pointer association and stale borrowed-view invalidation remain policy decisions. | Keep pointer/allocatable, rank, bounds, `intent`, `target`, and contiguity facts in semantic IR. Expose supported fields/module arrays as borrowed views returning `None` when unallocated. Copy allocatable array results and allocatable output/replacement dummies before returning to Python. Block pointer replacement and allocatable scalar derived-type replacement until ownership and destruction policy is defined. |
 | Assumed-rank, assumed-type, and optional descriptor-heavy arguments | Descriptors such as `dimension(..)` and `type(*)` can accept many native shapes that Python cannot infer safely. | Represent descriptor category, rank constraints, element type availability, optional presence, and contiguity. Generate wrappers only for explicit accepted rank/dtype policies or through backend shims that validate descriptors. |
 | Generic interfaces and operators | Named generics, defined operators, named operators, and defined assignment now preserve explicit concrete-target links. Python cannot intercept `=`, arbitrary named operators, or infer safe in-place mutation. Polymorphic inheritance is not represented by Python C-type inheritance. | Use Python data-model slots for intrinsic operators, `operator_name`/`r_operator_name` methods for named operators, and mutating `assign` methods for defined assignment. Keep exact dtype/rank/extension-class dispatch and reject indistinguishable signatures during generation. |
 | Coarrays, teams, events, and directive-driven device/offload behavior | These introduce parallel runtime or device-memory semantics outside normal host wrappers. | Treat as out of the initial wrapper scope. Preserve diagnostics where detected and require a separate runtime design before claiming support. |
@@ -205,19 +205,26 @@ subroutine build_grid(x, n)
 end subroutine
 ```
 
-The Fortran procedure may allocate or reallocate `x`. The wrapper phase must
-decide whether Python receives a new array, whether an existing object can be
-replaced, who owns the allocation, and how deallocation is handled.
+The Fortran procedure may allocate or reallocate `x`. For allocatable array
+dummy arguments, x2py uses copy-return ownership: the bridge copies allocated
+native storage into NumPy-owned memory, deallocates the temporary Fortran
+allocation, and returns the new Python object. `None` represents an unallocated
+dummy.
 
 The settled subset is narrower: allocatable derived-type fields and
 `target`-backed module allocatable arrays can be exposed as borrowed NumPy
 views. Fortran owns the storage. `None` represents an unallocated value. A view
 keeps its containing derived-type wrapper alive, but x2py does not track views
 or invalidate them when native code reallocates or deallocates the storage.
-Users must call `.copy()` when they need independent lifetime. Module
-allocatable arrays require the native `target` attribute because the bridge
-uses `c_loc`; otherwise readiness reports a blocker rather than generating a
-copying fallback.
+Users must call `.copy()` when they need independent lifetime. Allocatable
+`intent(inout)` array dummies are detached from the caller: an input array is
+copied into a temporary native allocation, Fortran may replace it, and Python
+receives a new NumPy-owned array or `None`; the original array is not mutated.
+Module allocatable arrays require the native `target` attribute because the
+bridge uses `c_loc`; otherwise readiness reports a blocker rather than
+generating a copying fallback. Allocatable scalar derived-type replacement
+remains blocked until construction, replacement, and destruction policy is
+explicit.
 
 Pointer reassociation has similar policy questions:
 

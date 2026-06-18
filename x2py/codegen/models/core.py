@@ -369,6 +369,9 @@ class Variable:
     intent : str, default: "in"
         Native intent metadata preserved for wrapper projection decisions.
 
+    passes_by_value : bool, default: False
+        True when a native scalar dummy has Fortran ``value`` ABI.
+
     shape : tuple, default: None
         The shape of the array. A tuple whose elements indicate the number of elements along
         each of the dimensions of an array. The elements of the tuple should be None or model objects.
@@ -408,6 +411,7 @@ class Variable:
         "_is_temp",
         "_memory_handling",
         "_name",
+        "_passes_by_value",
         "_shape",
     )
     _attribute_nodes = ()
@@ -422,6 +426,7 @@ class Variable:
         is_optional=False,
         is_private=False,
         intent="in",
+        passes_by_value=False,
         shape=None,
         cls_base=None,
         is_argument=False,
@@ -458,6 +463,9 @@ class Variable:
         self._is_private = is_private
 
         self._intent = str(intent).lower()
+        if not isinstance(passes_by_value, bool):
+            raise TypeError("passes_by_value must be a boolean.")
+        self._passes_by_value = passes_by_value
         self._cls_base = cls_base
         self._is_argument = is_argument
         self._is_temp = is_temp
@@ -603,6 +611,11 @@ class Variable:
     def intent(self):
         """Native intent metadata used by wrapper projection."""
         return self._intent
+
+    @property
+    def passes_by_value(self):
+        """True when the native scalar dummy uses Fortran ``value`` ABI."""
+        return self._passes_by_value
 
     @property
     def is_argument(self):
@@ -2535,6 +2548,10 @@ class FunctionDef:
     docstring : str
         The doc string of the function.
 
+    bind_c_external_name : str, optional
+        Existing Fortran ``bind(C, name=...)`` symbol that may be called
+        directly when its ABI is safe.
+
     scope : parser.scope.Scope
         The scope containing all objects scoped to the inside of this function.
 
@@ -2575,6 +2592,7 @@ class FunctionDef:
 
     __slots__ = (
         "_arguments",
+        "_bind_c_external_name",
         "_body",
         "_cls_name",
         "_decorators",
@@ -2632,6 +2650,7 @@ class FunctionDef:
         overload_sets=(),
         result_pointer_map=None,
         docstring=None,
+        bind_c_external_name=None,
         scope=None,
     ):
         if result_pointer_map is None:
@@ -2721,6 +2740,7 @@ class FunctionDef:
         self._overload_sets = overload_sets
         self._result_pointer_map = result_pointer_map
         self._docstring = docstring
+        self._bind_c_external_name = bind_c_external_name
         init_model_object(self, scope=scope)
         self._is_semantic = True
 
@@ -2927,6 +2947,11 @@ class FunctionDef:
         """
         return self._docstring
 
+    @property
+    def bind_c_external_name(self):
+        """Existing Fortran ``bind(C)`` external symbol for direct C calls."""
+        return self._bind_c_external_name
+
     def set_recursive(self):
         """Mark the function as a recursive function"""
         self._is_recursive = True
@@ -2985,6 +3010,7 @@ class FunctionDef:
             "is_imported": self._is_imported,
             "overload_sets": self._overload_sets,
             "docstring": self._docstring,
+            "bind_c_external_name": self._bind_c_external_name,
             "scope": self._scope,
         }
         return args, kwargs

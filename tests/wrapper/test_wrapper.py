@@ -55,6 +55,84 @@ end module fpointers_f90
 """
 
 
+BIND_VALUE_F90_TEXT = """
+module fbind_value_f90
+  use iso_c_binding
+contains
+  integer(c_int) function plus_value(n) bind(C, name="x2py_plus_value") result(res)
+    integer(c_int), value, intent(in) :: n
+
+    res = n + 7_c_int
+  end function plus_value
+
+  integer(c_int) function double_value(n) bind(C) result(res)
+    integer(c_int), value, intent(in) :: n
+
+    res = n * 2_c_int
+  end function double_value
+
+  integer(c_int) function plus_reference(n) bind(C) result(res)
+    integer(c_int), intent(in) :: n
+
+    res = n + 11_c_int
+  end function plus_reference
+
+  real(c_double) function scale_real(x) bind(C, name="x2py_scale_real") result(res)
+    real(c_double), value, intent(in) :: x
+
+    res = 2.5_c_double * x
+  end function scale_real
+
+  complex(c_double_complex) function conjugate_value(z) bind(C, name="x2py_conjugate_value") result(res)
+    complex(c_double_complex), value, intent(in) :: z
+
+    res = conjg(z)
+  end function conjugate_value
+
+  logical(c_bool) function invert_flag(flag) bind(C, name="x2py_invert_flag") result(res)
+    logical(c_bool), value, intent(in) :: flag
+
+    res = .not. flag
+  end function invert_flag
+
+  integer(c_int) function char_code(ch) bind(C) result(res)
+    character(kind=c_char), value, intent(in) :: ch
+
+    res = iachar(ch, c_int)
+  end function char_code
+end module fbind_value_f90
+"""
+
+
+ALLOCATABLE_INOUT_F90_TEXT = """
+module fallocatable_inout_f90
+contains
+  subroutine replace_values(values, mode)
+    real(8), allocatable, intent(inout) :: values(:)
+    integer, intent(in) :: mode
+    integer :: i
+
+    if (mode == 0) then
+      if (allocated(values)) deallocate(values)
+    else if (mode == 1) then
+      if (allocated(values)) then
+        values = values + 10.0_8
+      else
+        allocate(values(2))
+        values = [1.0_8, 2.0_8]
+      end if
+    else
+      if (allocated(values)) deallocate(values)
+      allocate(values(3))
+      do i = 1, 3
+        values(i) = real(i * mode, 8)
+      end do
+    end if
+  end subroutine replace_values
+end module fallocatable_inout_f90
+"""
+
+
 OPTIONAL_F90_TEXT = """
 module foptional_f90
   implicit none
@@ -714,6 +792,77 @@ def test_pointer_arrays_use_call_local_inputs_and_snapshot_results(tmp_path: Pat
         module.sum_pointer(np.array([1.0, 2.0, 3.0], dtype=np.float32))
 
 
+def test_value_and_existing_bind_c_renamed_symbol_use_correct_abi(tmp_path: Path):
+    module = _build_text_and_import(
+        BIND_VALUE_F90_TEXT,
+        "fbind_value_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fbind_value_f90_wrapper.f90",
+            "fbind_value_f90_wrapper.c",
+            "fbind_value_f90_wrapper.h",
+        },
+    )
+
+    assert module.plus_value(np.int32(5)) == np.int32(12)
+    assert module.double_value(np.int32(6)) == np.int32(12)
+    assert module.plus_reference(np.int32(5)) == np.int32(16)
+    assert module.scale_real(np.float64(4.0)) == np.float64(10.0)
+    assert module.conjugate_value(np.complex128(2.0 + 3.0j)) == np.complex128(2.0 - 3.0j)
+    assert bool(module.invert_flag(True)) is False
+    assert module.char_code("A") == np.int32(65)
+
+    bridge_source = (tmp_path / "bind_c_fbind_value_f90_wrapper.f90").read_text(encoding="utf-8").lower()
+    assert "bind_c_plus_value" not in bridge_source
+    assert "bind_c_double_value" not in bridge_source
+    assert "bind_c_plus_reference" in bridge_source
+    assert "bind_c_scale_real" not in bridge_source
+    assert "bind_c_conjugate_value" not in bridge_source
+    assert "bind_c_invert_flag" not in bridge_source
+    assert "bind_c_char_code" in bridge_source
+
+
+def test_allocatable_inout_arrays_are_replaced_with_python_owned_results(tmp_path: Path):
+    module = _build_text_and_import(
+        ALLOCATABLE_INOUT_F90_TEXT,
+        "fallocatable_inout_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fallocatable_inout_f90_wrapper.f90",
+            "fallocatable_inout_f90_wrapper.c",
+            "fallocatable_inout_f90_wrapper.h",
+        },
+    )
+
+    assert "values : ndarray[float64] or None" in module.replace_values.__doc__
+    assert "May be passed as None for initially unallocated storage." in module.replace_values.__doc__
+    assert "Mutates: no; returns a replacement array or None" in module.replace_values.__doc__
+
+    allocated = module.replace_values(None, np.int32(1))
+    np.testing.assert_allclose(allocated, np.array([1.0, 2.0], dtype=np.float64))
+    assert allocated.base is not None
+
+    original = np.array([3.0, 4.0], dtype=np.float64)
+    replaced = module.replace_values(original, np.int32(1))
+    np.testing.assert_allclose(original, np.array([3.0, 4.0], dtype=np.float64))
+    np.testing.assert_allclose(replaced, np.array([13.0, 14.0], dtype=np.float64))
+
+    reallocated = module.replace_values(original, np.int32(3))
+    np.testing.assert_allclose(original, np.array([3.0, 4.0], dtype=np.float64))
+    np.testing.assert_allclose(reallocated, np.array([3.0, 6.0, 9.0], dtype=np.float64))
+
+    assert module.replace_values(reallocated, np.int32(0)) is None
+    assert module.replace_values(None, np.int32(0)) is None
+
+    del allocated, replaced, reallocated
+    gc.collect()
+
+    with pytest.raises(TypeError):
+        module.replace_values(np.array([1.0], dtype=np.float32), np.int32(1))
+    with pytest.raises(TypeError):
+        module.replace_values(np.array([[1.0]], dtype=np.float64), np.int32(1))
+
+
 def test_optional_arguments_drive_fortran_present_behavior(tmp_path: Path):
     module = _build_text_and_import(
         OPTIONAL_F90_TEXT,
@@ -805,7 +954,9 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
     assert "Intent: out" in module.fill_vector.__doc__
     assert "Initial contents are ignored." in module.fill_vector.__doc__
     assert "Ownership: Python-owned" in module.fill_vector.__doc__
-    assert "Allocatable array outputs are copied into Python-owned NumPy arrays." in module.build_alloc.__doc__
+    assert "Allocatable array outputs and replacements are copied into Python-owned NumPy arrays." in (
+        module.build_alloc.__doc__
+    )
     assert "copy adds overhead" in module.build_alloc.__doc__
     assert "make_label() -> str" in module.make_label.__doc__
     assert "make_point(scale) -> output_point" in module.make_point.__doc__

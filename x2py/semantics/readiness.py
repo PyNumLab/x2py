@@ -50,6 +50,27 @@ _BUILTIN_TYPES = frozenset(
 )
 _CALLBACK_PLACEHOLDERS = frozenset({"Procedure", "Callback", "FunctionPointer", "CFunctionPointer"})
 _IDENTIFIER_RE = re.compile(r"\b[A-Za-z_]\w*\b")
+_ISO_C_KIND_TOKENS = frozenset(
+    {
+        "c_bool",
+        "c_char",
+        "c_double",
+        "c_double_complex",
+        "c_float",
+        "c_float_complex",
+        "c_int",
+        "c_int16_t",
+        "c_int32_t",
+        "c_int64_t",
+        "c_int8_t",
+        "c_long_double",
+        "c_long_double_complex",
+        "c_long_long",
+        "c_short",
+        "c_signed_char",
+        "c_size_t",
+    }
+)
 
 
 def assess_pyi_wrap_readiness(
@@ -352,11 +373,12 @@ class _SemanticReadinessChecker:
             unit_kind=unit_kind,
         )
         function_symbols = set(known_shape_symbols) | {arg.name for arg in func.arguments}
+        self._check_bind_c_abi(func, owner=owner, unit=unit, unit_kind=unit_kind)
         for arg in func.arguments:
             if self._is_unsupported_allocatable_output(arg.semantic_type, arg.intent):
                 self._add_blocker(
-                    "allocatable_replacement_policy_missing",
-                    "Allocatable inout arrays need a replacement policy before they can be wrapped safely.",
+                    "allocatable_scalar_replacement_unsupported",
+                    "Allocatable scalar replacement needs explicit construction, ownership, and destruction policy before it can be wrapped safely.",
                     {
                         "owner": owner,
                         "item": arg.name,
@@ -396,6 +418,41 @@ class _SemanticReadinessChecker:
             unit=unit,
             unit_kind=unit_kind,
         )
+
+    def _check_bind_c_abi(
+        self,
+        func: SemanticFunction | SemanticMethod,
+        *,
+        owner: str,
+        unit: str,
+        unit_kind: str,
+    ) -> None:
+        if not func.metadata.get("fortran_bind_c"):
+            return
+        for arg in func.arguments:
+            semantic_type = arg.semantic_type
+            if semantic_type.rank > 0:
+                continue
+            if not self._has_known_iso_c_kind(semantic_type):
+                self._add_blocker(
+                    "fortran_bind_c_abi_unsupported",
+                    "Fortran bind(C) scalar declarations need a supported ISO C binding kind before wrapper generation.",
+                    {"owner": owner, "item": arg.name},
+                    unit=unit,
+                    unit_kind=unit_kind,
+                )
+        if (
+            func.return_type is not None
+            and func.return_type.rank == 0
+            and not self._has_known_iso_c_kind(func.return_type)
+        ):
+            self._add_blocker(
+                "fortran_bind_c_abi_unsupported",
+                "Fortran bind(C) scalar declarations need a supported ISO C binding kind before wrapper generation.",
+                {"owner": owner, "item": "return"},
+                unit=unit,
+                unit_kind=unit_kind,
+            )
 
     def _check_argument(
         self,
@@ -487,7 +544,12 @@ class _SemanticReadinessChecker:
 
     @classmethod
     def _is_unsupported_allocatable_output(cls, semantic_type: SemanticType | None, intent: str) -> bool:
-        return cls._is_allocatable_array(semantic_type) and str(intent).lower() == "inout"
+        return bool(
+            semantic_type is not None
+            and semantic_type.rank == 0
+            and semantic_type.metadata.get("fortran_allocatable")
+            and str(intent).lower() in {"out", "inout"}
+        )
 
     @classmethod
     def _is_unsupported_pointer_output(cls, semantic_type: SemanticType | None, intent: str) -> bool:
@@ -504,6 +566,11 @@ class _SemanticReadinessChecker:
         if semantic_type is None or semantic_type.storage is None or semantic_type.storage.array is None:
             return False
         return semantic_type.storage.array.pointer
+
+    @staticmethod
+    def _has_known_iso_c_kind(semantic_type: SemanticType) -> bool:
+        source_type = (semantic_type.origin.source_type or "").casefold()
+        return any(token in source_type for token in _ISO_C_KIND_TOKENS)
 
     def _check_callable_type(
         self,

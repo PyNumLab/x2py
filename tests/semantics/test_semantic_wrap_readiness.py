@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from x2py.semantics.pyi_parser import parse_pyi_text
+from x2py import parse_fortran_file
+from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     SemanticArrayContract,
@@ -20,6 +21,7 @@ from x2py.semantics.models import (
     SemanticStorageContract,
     SemanticType,
 )
+from x2py.semantics.pyi_parser import parse_pyi_text
 from x2py.semantics.readiness import (
     _SemanticTypeIndex,
     _constant_names,
@@ -105,8 +107,8 @@ def make_pair() -> tuple[Returns["left", Annotated[Float64[:], Allocatable]], Re
 
     assert _blocker_codes(report) >= {
         "allocatable_module_target_missing",
-        "allocatable_replacement_policy_missing",
     }
+    assert "allocatable_replacement_policy_missing" not in _blocker_codes(report)
     assert "allocatable_owner_policy_missing" not in _blocker_codes(report)
     assert "allocatable_multiple_copy_returns_unsupported" not in _blocker_codes(report)
     target_blocker = next(
@@ -114,12 +116,32 @@ def make_pair() -> tuple[Returns["left", Annotated[Float64[:], Allocatable]], Re
     )
     assert target_blocker["items"] == [{"owner": "solver.values", "item": "values"}]
 
-    replacement_blocker = next(
+
+def test_allocatable_scalar_derived_replacement_reports_precise_blocker():
+    parsed = parse_fortran_file(
+        """
+module alloc_scalar_mod
+  type :: item
+    integer :: value
+  end type item
+contains
+  subroutine replace(value)
+    type(item), allocatable, intent(inout) :: value
+  end subroutine replace
+end module alloc_scalar_mod
+"""
+    )
+    module = fortran_module_to_semantic_module(parsed.modules[0])
+    report = assess_semantic_wrap_readiness(module, source="alloc_scalar_mod.f90")
+
+    blocker = next(
         blocker
         for blocker in report["wrappability_blockers"]
-        if blocker["code"] == "allocatable_replacement_policy_missing"
+        if blocker["code"] == "allocatable_scalar_replacement_unsupported"
     )
-    assert replacement_blocker["items"] == [{"owner": "solver.replace", "item": "values", "intent": "inout"}]
+    assert blocker["items"] == [
+        {"owner": "alloc_scalar_mod.replace", "item": "value", "intent": "inout"},
+    ]
 
 
 def test_pointer_output_policy_blockers_are_reported_for_output_dummies():
@@ -143,6 +165,30 @@ def choose() -> Annotated[Float64[:], Pointer]: ...
     assert pointer_blocker["items"] == [
         {"owner": "solver.attach", "item": "values", "intent": "out"},
         {"owner": "solver.replace", "item": "values", "intent": "inout"},
+    ]
+
+
+def test_bind_c_scalar_without_iso_c_kind_reports_readiness_blocker():
+    parsed = parse_fortran_file(
+        """
+module bad_bind_mod
+contains
+  integer function unsafe(n) bind(C) result(res)
+    integer, value, intent(in) :: n
+    res = n
+  end function unsafe
+end module bad_bind_mod
+"""
+    )
+    module = fortran_module_to_semantic_module(parsed.modules[0])
+    report = assess_semantic_wrap_readiness(module, source="bad_bind_mod.f90")
+
+    blocker = next(
+        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_bind_c_abi_unsupported"
+    )
+    assert blocker["items"] == [
+        {"owner": "bad_bind_mod.unsafe", "item": "n"},
+        {"owner": "bad_bind_mod.unsafe", "item": "return"},
     ]
 
 
