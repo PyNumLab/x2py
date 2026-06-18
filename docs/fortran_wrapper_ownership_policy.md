@@ -79,6 +79,91 @@ Native-owned storage may require explicit native routines for allocation,
 reallocation, or deallocation. Existing Python views are not automatically
 invalidated when native code changes the storage.
 
+Native-owned deallocation is not performed by the borrowed Python view. It
+happens only when native code executes the owning release operation. In
+practice that means one of these cases:
+
+- The wrapped Fortran module provides a routine such as `deallocate_values()`
+  that executes `deallocate(values)`. Python may call that wrapped routine, but
+  the deallocation is still performed by Fortran.
+- An external library provides a release routine such as `destroy_handle()` or
+  `free_buffer()`. Python may call a wrapper for that routine, but the library
+  owns the release semantics.
+- Native code deallocates or reallocates storage internally as part of another
+  native call.
+- If no release operation or lifetime rule is known, x2py must not invent one.
+  It should expose only safe borrowed access when the owner is stable, or block
+  the interface when lifetime is unclear.
+
+Borrowed Python views do not call those release routines when the view is
+garbage-collected. They only reference the native storage while it remains
+valid.
+
+### When Native-Owned Storage Is Destroyed
+
+Native-owned storage is destroyed only when the native owner destroys it. There
+is no universal automatic deletion at the Python boundary.
+
+Common cases:
+
+- A Fortran module allocatable variable usually lives until a wrapped Fortran
+  routine deallocates or reallocates it, or until process/library teardown. Do
+  not rely on process exit as a useful Python lifetime policy.
+- A Fortran routine may deallocate or reallocate module storage as part of its
+  own logic. Python cannot see that unless the wrapper exposes a fresh getter or
+  the routine's documentation states the effect.
+- An external library allocation lives until the library's documented release
+  routine is called.
+- Native static or global storage may live for the whole process and may never
+  have a callable release operation.
+- A pointer target with unknown owner has unknown lifetime. x2py should block
+  borrowed access unless an explicit policy supplies the owner and lifetime.
+
+Therefore, for native-owned storage, Python cleanup does not decide destruction
+time. A borrowed view may disappear before the native storage is destroyed, or
+native storage may be destroyed while a borrowed view still exists. The latter
+case can leave the view invalid, so users must copy when they need independent
+lifetime.
+
+### Native-Owned Is Not Wrapper-Owned
+
+Both native-owned and wrapper-owned storage may involve calling Fortran code,
+but the ownership obligation is different.
+
+For wrapper-owned storage, the Python object is responsible for exactly one
+release of the native instance. The release is automatic and tied to the Python
+object's `tp_dealloc` path:
+
+```python
+p = make_buffer()
+del p
+# The generated wrapper deallocation path releases the wrapper-owned native
+# buffer instance through a Fortran-aware destroy helper.
+```
+
+For native-owned storage, the Python object returned to the user is only an
+access path. It is not responsible for release. A native release routine may
+still be wrapped as a Python-callable function, but calling that function is an
+explicit operation on the native owner, not destruction of the borrowed view:
+
+```python
+allocate_values(3)
+view = get_values()
+
+del view
+# No Fortran deallocation happens.
+
+deallocate_values()
+# This calls the wrapped Fortran routine that owns and deallocates the module
+# variable.
+```
+
+The wrapper is therefore only a call adapter in the native-owned case, not the
+owner. If an external library handle or native allocation should be released
+automatically when a Python object dies, that value is no longer merely
+native-owned borrowed storage; it needs an explicit wrapper-owned handle policy
+that names the native release routine and guarantees one release.
+
 ### Borrowed View
 
 A borrowed view is a Python object that references native storage owned by
@@ -345,8 +430,13 @@ module store
 contains
   subroutine allocate_values(n)
     integer, intent(in) :: n
+    if (allocated(values)) deallocate(values)
     allocate(values(n))
   end subroutine allocate_values
+
+  subroutine deallocate_values()
+    if (allocated(values)) deallocate(values)
+  end subroutine deallocate_values
 end module store
 ```
 
@@ -359,11 +449,17 @@ view[0] = 5.0
 
 copy = view.copy()
 # copy is Python-owned and independent.
+
+deallocate_values()
+# Fortran deallocated the module variable. The borrowed view did not do it.
+# Use copy when Python needs data after native deallocation/reallocation.
 ```
 
 If native code later deallocates or reallocates `values`, previously returned
-views are not automatically invalidated. The wrapper may expose explicit native
-allocation/deallocation routines, but Python does not own the module variable.
+views are not automatically invalidated. The wrapper may expose
+`allocate_values()` and `deallocate_values()` as ordinary wrapped routines, but
+Python does not own the module variable. Calling those routines asks Fortran to
+change its own storage.
 
 Pointer module variables follow the pointer policy. They are snapshot-copy or
 blocked unless explicit metadata proves owner, lifetime, deallocation, shape,
@@ -650,7 +746,7 @@ The destruction path depends on the owner:
 | Wrapper-owned derived instance | `p = make_point()` | Python wrapper `tp_dealloc` calls a generated Fortran-aware destroy helper. |
 | Borrowed child wrapper | `origin = particle.origin` | Child keeps owner alive; child does not destroy native storage. |
 | Borrowed allocatable field view | `view = buffer.values` | View keeps wrapper owner alive; view does not destroy native storage. |
-| Native-owned module array | `view = get_values()` | Fortran module owns storage; explicit native routines allocate/deallocate. |
+| Native-owned module array | `view = get_values()` | Fortran module owns storage; wrapped native routines such as `deallocate_values()` allocate/deallocate. |
 | Pointer target | `box.values` target | Not destroyed unless explicit pointer policy says who owns it and how to release it. |
 | Call-local temporary | input conversion or bridge temporary | Released by the bridge before returning. |
 
